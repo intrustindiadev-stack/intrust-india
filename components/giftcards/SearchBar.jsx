@@ -4,28 +4,28 @@ import { Search, ChevronDown } from 'lucide-react';
 
 export default function SearchBar({ searchQuery, setSearchQuery, sortBy, setSortBy }) {
     return (
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col md:flex-row gap-4 items-center w-full">
             {/* Search */}
-            <div className="flex-1 relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <div className="relative flex-1 w-full">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <input
                     type="text"
-                    placeholder="Search brands..."
+                    placeholder="Search for brands..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#92BCEA] focus:ring-4 focus:ring-[#92BCEA]/10 transition-all"
+                    className="w-full pl-12 pr-5 py-3 bg-white rounded-xl border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all text-gray-900 placeholder-gray-400"
                 />
             </div>
 
             {/* Sort */}
-            <div className="relative sm:w-52">
+            <div className="relative w-full md:w-64">
                 <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="w-full appearance-none px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-[#92BCEA] focus:ring-4 focus:ring-[#92BCEA]/10 transition-all cursor-pointer"
+                    className="w-full appearance-none pl-5 pr-12 py-3 bg-white rounded-xl border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all text-gray-700 cursor-pointer font-medium"
                 >
                     <option value="popular">Most Popular</option>
-                    <option value="discount">Best Discount</option>
+                    <option value="discount">Highest Discount</option>
                     <option value="price-low">Price: Low to High</option>
                     <option value="price-high">Price: High to Low</option>
                 </select>
