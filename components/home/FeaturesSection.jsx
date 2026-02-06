@@ -8,7 +8,7 @@ export default function FeaturesSection({ features }) {
     const { t } = useLanguage();
 
     return (
-        <section className="py-24 md:py-32 bg-gradient-to-b from-white via-gray-50/30 to-white relative overflow-hidden">
+        <section className="py-16 md:py-24 bg-gradient-to-b from-white via-gray-50/30 to-white relative overflow-hidden">
             {/* Subtle background decoration */}
             <div className="absolute inset-0 opacity-30">
                 <div className="absolute top-20 right-10 w-72 h-72 bg-[#92BCEA]/10 rounded-full blur-3xl"></div>
@@ -22,7 +22,7 @@ export default function FeaturesSection({ features }) {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8 }}
-                    className="text-center mb-16 md:mb-20"
+                    className="text-center mb-10 md:mb-14"
                 >
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}

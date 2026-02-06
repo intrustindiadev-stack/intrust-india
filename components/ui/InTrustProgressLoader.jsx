@@ -6,16 +6,18 @@ import Image from 'next/image';
 /**
  * Premium InTrust Progress Loader
  * Features:
- * - Logo fills from 0% to 100%
- * - Smooth progress animation
- * - Percentage counter
- * - Premium gradient fill effect
+ * - Radial Gradient Spinner (CSS Optimized)
+ * - Central Brand Logo
+ * - Glassmorphism Backdrop
+ * - Smooth Entry/Exit Animations
  */
 export default function InTrustProgressLoader({
-    duration = 3000, // Duration in milliseconds
+    duration = 1200, // Default to fast/premium feel
     onComplete,
-    message = 'Loading InTrust...'
+    message = 'Loading InTrust...',
+    showProgress = false
 }) {
+    const [visible, setVisible] = useState(true);
     const [progress, setProgress] = useState(0);
 
     useEffect(() => {
@@ -23,105 +25,65 @@ export default function InTrustProgressLoader({
         const interval = setInterval(() => {
             const elapsed = Date.now() - startTime;
             const newProgress = Math.min((elapsed / duration) * 100, 100);
-
             setProgress(newProgress);
 
             if (newProgress >= 100) {
                 clearInterval(interval);
-                if (onComplete) {
-                    setTimeout(onComplete, 500); // Small delay after completion
-                }
+                // Small delay before unmounting to ensure smooth exit
+                setTimeout(() => {
+                    setVisible(false);
+                    if (onComplete) onComplete();
+                }, 300);
             }
-        }, 16); // ~60fps
+        }, 16);
 
         return () => clearInterval(interval);
     }, [duration, onComplete]);
 
+    if (!visible) return null;
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-white via-[#f8f9fa] to-[#e9ecef]">
-            <div className="flex flex-col items-center gap-8 max-w-md w-full px-8">
-                {/* Logo Container with Fill Effect */}
-                <div className="relative w-48 h-48">
-                    {/* Background Glow */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] rounded-3xl opacity-20 blur-3xl animate-pulse-slow"></div>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            {/* Glassmorphism Backdrop */}
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-md transition-all duration-500 animate-fadeIn"></div>
 
-                    {/* Logo Container */}
-                    <div className="relative w-full h-full bg-white rounded-3xl shadow-2xl overflow-hidden">
-                        {/* Filled Logo (Bottom Layer - Gradient) */}
-                        <div
-                            className="absolute inset-0 transition-all duration-300 ease-out"
-                            style={{
-                                clipPath: `inset(${100 - progress}% 0 0 0)`,
-                            }}
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-br from-[#7A93AC] via-[#92BCEA] to-[#AFB3F7] flex items-center justify-center p-8">
-                                <Image
-                                    src="/icons/intrustLogo.png"
-                                    alt="InTrust"
-                                    width={128}
-                                    height={128}
-                                    className="object-contain brightness-0 invert"
-                                    priority
-                                />
-                            </div>
-                        </div>
+            <div className="relative z-10 flex flex-col items-center gap-6 md:gap-8 animate-scaleIn max-w-[90vw]">
+                {/* Logo & Spinner Container - Grid for Perfect Centering */}
+                <div className="grid place-items-center relative">
+                    {/* Glow Effect */}
+                    <div className="col-start-1 row-start-1 w-40 h-40 bg-blue-400/20 blur-2xl rounded-full animate-pulse-slow"></div>
 
-                        {/* Unfilled Logo (Top Layer - Original) */}
-                        <div className="absolute inset-0 flex items-center justify-center p-8">
-                            <Image
-                                src="/icons/intrustLogo.png"
-                                alt="InTrust"
-                                width={128}
-                                height={128}
-                                className="object-contain"
-                                priority
-                            />
-                        </div>
+                    {/* CSS Radial Loader Ring - Explicit Size */}
+                    <div className="loader col-start-1 row-start-1 w-32 h-32 md:w-40 md:h-40"></div>
 
-                        {/* Shimmer Effect on Fill Line */}
-                        <div
-                            className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white to-transparent opacity-60 transition-all duration-300"
-                            style={{
-                                top: `${100 - progress}%`,
-                                transform: 'translateY(-50%)',
-                            }}
-                        >
-                            <div className="w-full h-full animate-shimmer-fast"></div>
-                        </div>
+                    {/* Central Logo - Explicit Size & Centered */}
+                    <div className="col-start-1 row-start-1 relative z-20 w-16 h-16 md:w-20 md:h-20 flex items-center justify-center">
+                        <Image
+                            src="/icons/intrustLogo.png"
+                            alt="InTrust"
+                            fill
+                            className="object-contain drop-shadow-md p-1"
+                            priority
+                            sizes="(max-width: 768px) 64px, 80px"
+                        />
                     </div>
                 </div>
 
-                {/* Progress Information */}
-                <div className="flex flex-col items-center gap-4 w-full">
-                    {/* Percentage Counter */}
-                    <div className="text-6xl font-bold gradient-text tabular-nums">
-                        {Math.round(progress)}%
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden shadow-inner">
-                        <div
-                            className="h-full bg-gradient-to-r from-[#7A93AC] via-[#92BCEA] to-[#AFB3F7] rounded-full transition-all duration-300 ease-out relative"
-                            style={{ width: `${progress}%` }}
-                        >
-                            {/* Animated Shine on Progress Bar */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-shimmer-fast"></div>
-                        </div>
-                    </div>
-
-                    {/* Loading Message */}
-                    <p className="text-[#617073] font-medium text-sm tracking-wide">
+                {/* Loading Message */}
+                <div className="flex flex-col items-center gap-2 text-center">
+                    <h3 className="text-xl md:text-2xl font-bold gradient-text tracking-tight">
+                        InTrust
+                    </h3>
+                    <p className="text-gray-500 text-xs md:text-sm font-medium tracking-wide uppercase animate-pulse">
                         {message}
                     </p>
 
-                    {/* Status Text Based on Progress */}
-                    <p className="text-[#7A93AC] text-xs font-medium">
-                        {progress < 30 && 'Initializing...'}
-                        {progress >= 30 && progress < 60 && 'Loading resources...'}
-                        {progress >= 60 && progress < 90 && 'Almost ready...'}
-                        {progress >= 90 && progress < 100 && 'Finalizing...'}
-                        {progress >= 100 && 'Complete!'}
-                    </p>
+                    {/* Optional Progress Indicator */}
+                    {showProgress && (
+                        <div className="text-xs text-blue-400 font-mono mt-1 opacity-80">
+                            {Math.round(progress)}%
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -129,27 +91,28 @@ export default function InTrustProgressLoader({
 }
 
 /**
- * Fast Loader - 2 second duration
+ * Fast Loader - Quick transitions (Auth, Nav)
  */
 export function FastProgressLoader({ onComplete, message }) {
     return (
         <InTrustProgressLoader
-            duration={2000}
+            duration={1000} // Snappy 1s
             onComplete={onComplete}
-            message={message || 'Loading...'}
+            message={message || 'Verifying...'}
         />
     );
 }
 
 /**
- * Slow Loader - 5 second duration for initial app load
+ * Slow Loader - Initial App Load
  */
 export function SlowProgressLoader({ onComplete, message }) {
     return (
         <InTrustProgressLoader
-            duration={5000}
+            duration={2500}
             onComplete={onComplete}
-            message={message || 'Preparing your experience...'}
+            message={message || 'Setting up your experience...'}
+            showProgress={true}
         />
     );
 }

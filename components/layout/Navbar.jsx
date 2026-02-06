@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Menu, X, ChevronRight, Globe } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { signOut } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import MobileNav from './MobileNav';
 
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
@@ -23,7 +24,6 @@ export default function Navbar() {
     }, []);
 
     useEffect(() => {
-        // Prevent body scroll when menu is open
         if (menuOpen) {
             document.body.style.overflow = 'hidden';
         } else {
@@ -40,9 +40,9 @@ export default function Navbar() {
     };
 
     const menuItems = [
-        { label: t('nav.services'), href: '#services' },
-        { label: t('nav.about'), href: '#about' },
-        { label: t('nav.contact'), href: '#contact' },
+        { label: t('nav.services'), href: 'services' },
+        { label: t('nav.about'), href: 'about' },
+        { label: t('nav.contact'), href: 'contact' },
     ];
 
     return (
@@ -56,12 +56,12 @@ export default function Navbar() {
                     ease: [0.22, 1, 0.36, 1],
                     delay: 0.1
                 }}
-                className="fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-50 w-[96%] md:w-[92%] max-w-7xl px-3 md:px-0"
+                className="fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-50 w-[90%] md:w-[85%] max-w-6xl px-0"
             >
                 <div
                     className={`
             bg-white/95 backdrop-blur-2xl rounded-2xl md:rounded-full 
-            px-4 md:px-8 py-3 md:py-4
+            px-4 md:px-8 py-2 md:py-2.5
             shadow-lg border border-gray-200/60
             transition-all duration-500 ease-out
             ${scrolled ? 'shadow-2xl bg-white border-gray-300/80' : ''}
@@ -81,6 +81,7 @@ export default function Navbar() {
                                     src="/icons/intrustLogo.png"
                                     alt="INTRUST"
                                     fill
+                                    sizes="(max-width: 768px) 32px, 40px"
                                     className="object-contain transition-transform duration-300 group-hover:scale-110"
                                     priority
                                 />
@@ -91,7 +92,7 @@ export default function Navbar() {
                         </motion.a>
 
                         {/* Desktop Menu - Center */}
-                        <div className="hidden lg:flex items-center gap-2">
+                        <div className="hidden lg:flex items-center gap-8">
                             {menuItems.map((item, index) => (
                                 <motion.a
                                     key={item.label}
@@ -106,7 +107,7 @@ export default function Navbar() {
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     className="
-                    relative px-5 py-2.5 text-[15px] font-medium 
+                    relative px-5 py-2 text-[15px] font-medium 
                     text-[#617073] hover:text-[#171A21] 
                     transition-colors duration-300 rounded-full
                     group
@@ -183,7 +184,7 @@ export default function Navbar() {
                                         transition={{ duration: 0.2 }}
                                         onClick={() => router.push('/dashboard')}
                                         className="
-                      px-5 py-2.5 text-[15px] font-medium 
+                      px-5 py-2 text-[15px] font-medium 
                       text-[#617073] hover:text-[#171A21] 
                       transition-colors duration-300 rounded-full
                       hover:bg-gradient-to-r hover:from-[#92BCEA]/10 hover:to-[#AFB3F7]/10
@@ -197,7 +198,7 @@ export default function Navbar() {
                                         transition={{ duration: 0.2 }}
                                         onClick={handleSignOut}
                                         className="
-                      px-6 py-2.5 rounded-full font-semibold text-[15px]
+                      px-6 py-2 rounded-full font-semibold text-[15px]
                       bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] 
                       text-white shadow-md hover:shadow-xl 
                       transition-all duration-300
@@ -214,7 +215,7 @@ export default function Navbar() {
                                         transition={{ duration: 0.2 }}
                                         onClick={() => router.push('/login')}
                                         className="
-                      px-5 py-2.5 text-[15px] font-medium 
+                      px-5 py-2 text-[15px] font-medium 
                       text-[#617073] hover:text-[#171A21] 
                       transition-colors duration-300 rounded-full
                       hover:bg-gradient-to-r hover:from-[#92BCEA]/10 hover:to-[#AFB3F7]/10
@@ -228,7 +229,7 @@ export default function Navbar() {
                                         transition={{ duration: 0.2 }}
                                         onClick={() => router.push('/login')}
                                         className="
-                      px-6 py-2.5 rounded-full font-semibold text-[15px]
+                      px-6 py-2 rounded-full font-semibold text-[15px]
                       bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] 
                       text-white shadow-md hover:shadow-xl 
                       transition-all duration-300
@@ -267,244 +268,17 @@ export default function Navbar() {
                 </div>
             </motion.nav>
 
-            {/* Premium Mobile Menu */}
-            <AnimatePresence mode="wait">
-                {menuOpen && (
-                    <>
-                        {/* Backdrop */}
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                            onClick={() => setMenuOpen(false)}
-                            className="fixed inset-0 bg-[#171A21]/70 backdrop-blur-md z-[998] lg:hidden"
-                        />
-
-                        {/* Menu Panel */}
-                        <motion.div
-                            initial={{ x: '100%' }}
-                            animate={{ x: 0 }}
-                            exit={{ x: '100%' }}
-                            transition={{
-                                type: 'spring',
-                                damping: 35,
-                                stiffness: 400,
-                                mass: 0.8
-                            }}
-                            className="fixed top-0 right-0 bottom-0 w-[85%] max-w-sm bg-white z-[999] lg:hidden overflow-y-auto shadow-2xl"
-                        >
-                            {/* Header */}
-                            <div className="sticky top-0 bg-white/95 backdrop-blur-xl border-b border-gray-100 p-5 flex items-center justify-between z-10">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="relative w-8 h-8">
-                                        <Image
-                                            src="/icons/intrustLogo.png"
-                                            alt="INTRUST"
-                                            fill
-                                            className="object-contain"
-                                            priority
-                                        />
-                                    </div>
-                                    <span className="text-lg font-bold bg-gradient-to-r from-[#7A93AC] to-[#92BCEA] bg-clip-text text-transparent font-[family-name:var(--font-outfit)]">
-                                        INTRUST
-                                    </span>
-                                </div>
-                                <motion.button
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => setMenuOpen(false)}
-                                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                                    aria-label="Close menu"
-                                >
-                                    <X size={24} className="text-[#171A21]" strokeWidth={2.5} />
-                                </motion.button>
-                            </div>
-
-                            {/* Menu Content */}
-                            <div className="p-5 space-y-1.5">
-                                {/* Navigation Links */}
-                                {menuItems.map((item, index) => (
-                                    <motion.a
-                                        key={item.label}
-                                        href={item.href}
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{
-                                            delay: 0.05 + index * 0.05,
-                                            duration: 0.3,
-                                            ease: [0.22, 1, 0.36, 1]
-                                        }}
-                                        onClick={() => setMenuOpen(false)}
-                                        className="
-                      group flex items-center justify-between 
-                      px-4 py-4 text-[#171A21] 
-                      hover:bg-gradient-to-r hover:from-[#92BCEA]/10 hover:to-[#AFB3F7]/10 
-                      rounded-xl font-medium text-[15px]
-                      transition-all duration-200
-                    "
-                                    >
-                                        <span>{item.label}</span>
-                                        <ChevronRight
-                                            size={18}
-                                            className="text-[#617073] group-hover:text-[#92BCEA] group-hover:translate-x-1 transition-all duration-200"
-                                            strokeWidth={2.5}
-                                        />
-                                    </motion.a>
-                                ))}
-
-                                {/* Divider */}
-                                <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent my-4" />
-
-                                {/* Auth Actions */}
-                                {isAuthenticated ? (
-                                    <>
-                                        <motion.button
-                                            initial={{ opacity: 0, x: 20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: 0.2, duration: 0.3 }}
-                                            onClick={() => { router.push('/dashboard'); setMenuOpen(false); }}
-                                            className="
-                        group w-full flex items-center justify-between 
-                        px-4 py-4 text-[#171A21] 
-                        hover:bg-gradient-to-r hover:from-[#92BCEA]/10 hover:to-[#AFB3F7]/10 
-                        rounded-xl font-medium text-[15px]
-                        transition-all duration-200
-                      "
-                                        >
-                                            <span>{t('nav.dashboard')}</span>
-                                            <ChevronRight
-                                                size={18}
-                                                className="text-[#617073] group-hover:text-[#92BCEA] group-hover:translate-x-1 transition-all duration-200"
-                                                strokeWidth={2.5}
-                                            />
-                                        </motion.button>
-                                        <motion.button
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.25, duration: 0.3 }}
-                                            onClick={handleSignOut}
-                                            className="
-                        w-full mt-3 px-4 py-4 
-                        bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] 
-                        text-white rounded-xl font-semibold text-[15px]
-                        shadow-lg hover:shadow-xl 
-                        transition-all duration-200
-                        text-center
-                      "
-                                        >
-                                            {t('nav.signout')}
-                                        </motion.button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <motion.button
-                                            initial={{ opacity: 0, x: 20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: 0.2, duration: 0.3 }}
-                                            onClick={() => { router.push('/login'); setMenuOpen(false); }}
-                                            className="
-                        group w-full flex items-center justify-between 
-                        px-4 py-4 text-[#171A21] 
-                        hover:bg-gradient-to-r hover:from-[#92BCEA]/10 hover:to-[#AFB3F7]/10 
-                        rounded-xl font-medium text-[15px]
-                        transition-all duration-200
-                      "
-                                        >
-                                            <span>{t('nav.login')}</span>
-                                            <ChevronRight
-                                                size={18}
-                                                className="text-[#617073] group-hover:text-[#92BCEA] group-hover:translate-x-1 transition-all duration-200"
-                                                strokeWidth={2.5}
-                                            />
-                                        </motion.button>
-                                        <motion.button
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.25, duration: 0.3 }}
-                                            onClick={() => { router.push('/login'); setMenuOpen(false); }}
-                                            className="
-                        w-full mt-3 px-4 py-4 
-                        bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] 
-                        text-white rounded-xl font-semibold text-[15px]
-                        shadow-lg hover:shadow-xl 
-                        transition-all duration-200
-                        text-center
-                      "
-                                        >
-                                            {t('nav.signup')}
-                                        </motion.button>
-                                    </>
-                                )}
-
-                                {/* Premium Language Toggle - Mobile (Bottom) */}
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.3, duration: 0.3 }}
-                                    className="mt-6 pt-6 border-t border-gray-100"
-                                >
-                                    <div className="flex items-center justify-between mb-3 px-1">
-                                        <div className="flex items-center gap-2">
-                                            <Globe size={16} className="text-[#617073]" strokeWidth={2.5} />
-                                            <p className="text-xs font-semibold text-[#617073] uppercase tracking-wider">
-                                                {t('nav.language') || 'Language'}
-                                            </p>
-                                        </div>
-                                        <span className="text-xs font-medium text-[#92BCEA]">
-                                            {language === 'en' ? 'English' : 'हिन्दी'}
-                                        </span>
-                                    </div>
-
-                                    <div className="relative bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-1.5 shadow-inner">
-                                        {/* Animated Background Slider */}
-                                        <motion.div
-                                            className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-white rounded-xl shadow-lg"
-                                            animate={{
-                                                left: language === 'en' ? '6px' : 'calc(50% + 0px)'
-                                            }}
-                                            transition={{
-                                                type: 'spring',
-                                                stiffness: 350,
-                                                damping: 28
-                                            }}
-                                        />
-
-                                        {/* Language Buttons */}
-                                        <div className="relative z-10 flex items-center gap-1">
-                                            <button
-                                                onClick={() => changeLanguage('en')}
-                                                className={`
-                                                    flex-1 py-3 rounded-xl text-sm font-bold 
-                                                    transition-all duration-200 text-center
-                                                    ${language === 'en'
-                                                        ? 'text-[#171A21]'
-                                                        : 'text-[#617073]'
-                                                    }
-                                                `}
-                                            >
-                                                English
-                                            </button>
-                                            <button
-                                                onClick={() => changeLanguage('hi')}
-                                                className={`
-                                                    flex-1 py-3 rounded-xl text-sm font-bold 
-                                                    transition-all duration-200 text-center
-                                                    ${language === 'hi'
-                                                        ? 'text-[#171A21]'
-                                                        : 'text-[#617073]'
-                                                    }
-                                                `}
-                                            >
-                                                हिन्दी
-                                            </button>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+            {/* Premium Mobile Menu Component */}
+            <MobileNav
+                isOpen={menuOpen}
+                onClose={() => setMenuOpen(false)}
+                isAuthenticated={isAuthenticated}
+                t={t}
+                language={language}
+                changeLanguage={changeLanguage}
+                handleSignOut={handleSignOut}
+                menuItems={menuItems}
+            />
         </>
     );
 }

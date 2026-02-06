@@ -1,100 +1,153 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowRight, ShieldCheck, Zap, Globe, Sparkles } from 'lucide-react';
-import Link from 'next/link';
+import { Apple, Smartphone, Shield, Zap, CreditCard } from 'lucide-react';
+import Image from 'next/image';
+
+const StoreButton = ({ icon: Icon, label, subLabel, href = "#", variant = "dark" }) => (
+    <motion.button
+        whileHover={{ y: -4, scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        className={`
+            relative group overflow-hidden flex items-center gap-4 px-8 py-4 rounded-2xl transition-all duration-300 border min-w-[210px] justify-start shadow-lg
+            ${variant === 'dark'
+                ? 'bg-[#171A21] border-[#171A21] text-white shadow-[#171A21]/20 hover:shadow-[#171A21]/40'
+                : 'bg-white border-slate-100 text-[#171A21] shadow-slate-200/50 hover:border-blue-200'}
+        `}
+    >
+        {/* Subtle hover gradient for dark button */}
+        {variant === 'dark' && (
+            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform translate-x-[-100%] group-hover:translate-x-[100%]" />
+        )}
+
+        <div className={`p-2 rounded-xl ${variant === 'dark' ? 'bg-white/10' : 'bg-slate-50'}`}>
+            <Icon size={28} className={variant === 'dark' ? 'text-white' : 'text-[#171A21]'} />
+        </div>
+        <div className="text-left flex flex-col leading-none">
+            <span className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${variant === 'dark' ? 'text-white/60' : 'text-slate-400'}`}>
+                {subLabel}
+            </span>
+            <span className="text-xl font-bold font-[family-name:var(--font-outfit)] tracking-tight">
+                {label}
+            </span>
+        </div>
+    </motion.button>
+);
+
+const TrustItem = ({ icon: Icon, label }) => (
+    <motion.div
+        whileHover={{ scale: 1.05 }}
+        className="flex items-center gap-2 px-4 py-2"
+    >
+        <Icon size={16} className="text-[#92BCEA]" strokeWidth={2.5} />
+        <span className="text-xs font-bold uppercase tracking-widest text-[#617073]">{label}</span>
+    </motion.div>
+);
 
 export default function CTASection() {
     return (
-        <section className="relative py-28 md:py-36 overflow-hidden bg-[#0F1115]">
-            {/* Ambient Lighting / Glow */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[800px] h-[500px] bg-gradient-to-tr from-[#92BCEA]/20 via-[#5E7CE2]/10 to-[#AFB3F7]/20 blur-[100px] rounded-full pointer-events-none" />
+        <section className="relative py-12 md:py-20 bg-white overflow-hidden font-[family-name:var(--font-outfit)] flex flex-col items-center justify-center">
 
-            {/* Grid Texture */}
-            <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03] pointer-events-none" />
+            {/* Minimal Background - Subtle & Clean */}
+            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full">
+                    <motion.div
+                        animate={{
+                            opacity: [0.3, 0.5, 0.3],
+                            scale: [1, 1.05, 1],
+                        }}
+                        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+                        className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#92BCEA]/10 rounded-full blur-[100px]"
+                    />
+                    <motion.div
+                        animate={{
+                            opacity: [0.3, 0.5, 0.3],
+                            scale: [1, 1.1, 1],
+                        }}
+                        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                        className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-[#AFB3F7]/10 rounded-full blur-[120px]"
+                    />
+                </div>
+            </div>
 
-            <div className="relative z-10 w-full max-w-5xl mx-auto px-6 text-center">
+            <div className="relative z-10 w-full max-w-4xl mx-auto px-6 flex flex-col items-center text-center">
 
-                {/* Floating Badge */}
+                {/* Brand Logo - Minimal */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6 }}
+                    className="mb-6"
+                >
+                    <Image
+                        src="/icons/intrustLogo.png"
+                        alt="INTRUST"
+                        width={64}
+                        height={64}
+                        className="object-contain drop-shadow-sm"
+                        priority
+                    />
+                </motion.div>
+
+                {/* Heading - Crisp & Modern */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-8"
+                    transition={{ duration: 0.6, delay: 0.1 }}
+                    className="mb-4"
                 >
-                    <Sparkles size={14} className="text-[#92BCEA]" />
-                    <span className="text-xs md:text-sm font-bold text-slate-300 tracking-wider uppercase">
-                        The Future of Payments
-                    </span>
+                    <h2 className="text-4xl md:text-6xl font-bold text-[#171A21] tracking-tight leading-[1.1]">
+                        The future of banking is <br />
+                        <span className="text-[#92BCEA]">here and now.</span>
+                    </h2>
                 </motion.div>
 
-                {/* Main Heading */}
-                <motion.h2
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.1 }}
-                    className="text-5xl md:text-7xl font-bold text-white mb-8 tracking-tight leading-[1.1] font-[family-name:var(--font-outfit)]"
-                >
-                    One Platform. <br className="hidden md:block" />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#92BCEA] via-[#AFB3F7] to-[#5E7CE2]">
-                        Infinite Possibilities.
-                    </span>
-                </motion.h2>
-
-                {/* Description */}
+                {/* Description - Meaningful Whitespace */}
                 <motion.p
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: 0.2 }}
-                    className="text-slate-400 text-lg md:text-xl mb-12 max-w-2xl mx-auto leading-relaxed"
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                    className="text-lg md:text-xl text-[#617073] max-w-lg mx-auto mb-8 leading-relaxed"
                 >
-                    Join over 50,000+ users who have switched to InTrust for secure, instant, and rewarding financial transactions.
+                    Join <span className="font-semibold text-[#171A21]">50,000+ users</span> experiencing the next generation of financial freedom.
                 </motion.p>
 
-                {/* Action Buttons */}
+                {/* Actions - Clean Layout */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: 0.3 }}
-                    className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                    className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full mb-8"
                 >
-                    <Link href="/signup" className="w-full sm:w-auto">
-                        <button className="group w-full sm:w-auto px-10 py-4 bg-white text-[#0F1115] rounded-2xl font-bold text-lg hover:bg-blue-50 hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]">
-                            Get Started Free <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform text-blue-600" />
-                        </button>
-                    </Link>
-                    <Link href="/services" className="w-full sm:w-auto">
-                        <button className="w-full sm:w-auto px-10 py-4 bg-white/5 text-white hover:bg-white/10 border border-white/10 rounded-2xl font-bold text-lg transition-all backdrop-blur-sm">
-                            Explore Services
-                        </button>
-                    </Link>
+                    <StoreButton
+                        icon={Apple}
+                        label="App Store"
+                        subLabel="Download on the"
+                        variant="dark"
+                    />
+                    <StoreButton
+                        icon={Smartphone}
+                        label="Google Play"
+                        subLabel="Get it on"
+                        variant="white"
+                    />
                 </motion.div>
 
-                {/* Trust Indicators - Glassmorphic Row */}
+                {/* Trust Row - Minimal Dividers */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     whileInView={{ opacity: 1 }}
                     viewport={{ once: true }}
-                    transition={{ delay: 0.4 }}
-                    className="inline-flex flex-wrap items-center justify-center gap-x-8 gap-y-4 px-8 py-6 rounded-3xl bg-white/5 border border-white/5 backdrop-blur-sm"
+                    transition={{ duration: 0.6, delay: 0.4 }}
+                    className="flex flex-wrap items-center justify-center gap-6 md:gap-12 pt-8 border-t border-slate-100 w-full max-w-2xl"
                 >
-                    <div className="flex items-center gap-3 text-slate-400 font-medium">
-                        <ShieldCheck size={20} className="text-[#92BCEA]" />
-                        <span>Bank-Grade Security</span>
-                    </div>
-                    <div className="w-px h-6 bg-white/10 hidden sm:block" />
-                    <div className="flex items-center gap-3 text-slate-400 font-medium">
-                        <Zap size={20} className="text-[#AFB3F7]" />
-                        <span>Instant Processing</span>
-                    </div>
-                    <div className="w-px h-6 bg-white/10 hidden sm:block" />
-                    <div className="flex items-center gap-3 text-slate-400 font-medium">
-                        <Globe size={20} className="text-emerald-400" />
-                        <span>Global Acceptance</span>
-                    </div>
+                    <TrustItem icon={Shield} label="Bank Grade Security" />
+                    <TrustItem icon={Zap} label="Instant Transfers" />
+                    <TrustItem icon={CreditCard} label="Zero Components" />
                 </motion.div>
 
             </div>

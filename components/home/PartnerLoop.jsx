@@ -7,7 +7,7 @@ import {
     Smartphone, ShoppingBag, Globe, Wifi, Store
 } from 'lucide-react';
 
-export default function PartnerLoop() {
+export default function PartnerLoop({ className = "", showBorder = true }) {
     const { t } = useLanguage();
 
     // Partners with specific "Trust" focus
@@ -25,14 +25,20 @@ export default function PartnerLoop() {
     const marqueePartners = [...partners, ...partners, ...partners]; // Triple for smoothness
 
     return (
-        <section className="relative py-20 bg-white border-y border-slate-50 overflow-hidden">
-            <div className="w-full max-w-7xl mx-auto px-4 md:px-6 relative z-10">
-                <div className="text-center mb-12">
-                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">Trusted By Industry Leaders</p>
+        <section className={`relative py-10 w-full overflow-hidden flex flex-col items-center justify-center ${showBorder ? 'bg-white border-y border-slate-50' : ''} ${className}`}>
+
+            {/* Main Content Container - Centered */}
+            <div className="w-full max-w-7xl px-4 md:px-6 flex flex-col items-center relative z-10">
+
+                {/* Heading - Centered */}
+                <div className="text-center mb-2 md:mb-6 w-full">
+                    <p className="text-[10px] md:text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">
+                        Trusted By Industry Leaders
+                    </p>
                 </div>
 
-                {/* Infinite Marquee - Minimal Clean */}
-                <div className="relative w-full overflow-hidden mask-linear-gradient">
+                {/* Infinite Marquee - Centered Container */}
+                <div className="relative w-full overflow-hidden mask-linear-gradient flex justify-center">
                     <motion.div
                         className="flex gap-12 md:gap-20 w-max items-center"
                         animate={{ x: "-33.33%" }}

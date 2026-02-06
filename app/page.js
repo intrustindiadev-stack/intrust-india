@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import HeroSection from '@/components/home/HeroSection';
-import PartnerLoop from '@/components/home/PartnerLoop';
 import OffersCarousel from '@/components/home/OffersCarousel';
 import StatsSection from '@/components/home/StatsSection';
 import CTASection from '@/components/home/CTASection';
@@ -44,7 +43,6 @@ export default function Home() {
         <div className="min-h-screen bg-white">
           <Navbar />
           <HeroSection />
-          <PartnerLoop />
           <OffersCarousel />
           <StatsSection stats={stats} />
           <CTASection />
