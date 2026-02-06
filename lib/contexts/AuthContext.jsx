@@ -65,8 +65,8 @@ export function AuthProvider({ children }) {
 
                     // Keep loader visible for role-based redirect
                     if (event === 'SIGNED_IN') {
-                        // Loader will auto-hide after 2 seconds (FastProgressLoader)
-                        setTimeout(() => setShowAuthLoader(false), 2500);
+                        // Loader will auto-hide after 1.2 seconds (FastProgressLoader)
+                        setTimeout(() => setShowAuthLoader(false), 1700);
                     }
                 } else {
                     setUser(null);

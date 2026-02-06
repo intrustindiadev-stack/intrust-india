@@ -11,11 +11,6 @@
   --color-white: #FFFFFF;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
 
 body {
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -310,6 +305,15 @@ html {
 }
 
 /* Utilities */
+.container-centered {
+  width: 100%;
+  max-width: 80rem;
+  /* max-w-7xl */
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+  /* px-6 */
+}
+
 .text-balance {
   text-wrap: balance;
 }
@@ -332,4 +336,77 @@ html {
 /* Smooth Transitions */
 * {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Premium Radial Loader */
+.loader {
+  --r1: 154%;
+  --r2: 68.5%;
+  border-radius: 50%;
+  background:
+    radial-gradient(var(--r1) var(--r2) at top, #0000 79.5%, var(--color-sky-blue) 80%),
+    radial-gradient(var(--r1) var(--r2) at bottom, var(--color-sky-blue) 79.5%, #0000 80%),
+    radial-gradient(var(--r1) var(--r2) at top, #0000 79.5%, var(--color-sky-blue) 80%),
+    #0000;
+  background-size: 50.5% 220%;
+  background-position: -100% 0%, 0% 0%, 100% 0%;
+  background-repeat: no-repeat;
+  animation: l9 1s infinite linear;
+  /* Faster: 1s */
+  filter: drop-shadow(0 0 5px rgba(146, 188, 234, 0.5));
+  /* Glow effect */
+}
+
+@keyframes l9 {
+  33% {
+    background-position: 0% 33%, 100% 33%, 200% 33%;
+  }
+
+  66% {
+    background-position: -100% 66%, 0% 66%, 100% 66%;
+  }
+
+  100% {
+    background-position: 0% 100%, 100% 100%, 200% 100%;
+  }
+}
+
+/* Minimal Spinner Loader */
+.spinner-loader {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e9ecef;
+  border-top-color: var(--color-sky-blue);
+  border-right-color: var(--color-lavender);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Pulse Loader */
+.pulse-loader {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-sky-blue), var(--color-lavender));
+  animation: pulse-scale 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-scale {
+
+  0%,
+  100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
