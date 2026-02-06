@@ -14,7 +14,8 @@ import {
     LogOut,
     ChevronLeft,
     ChevronRight,
-    Sparkles
+    Sparkles,
+    Gift
 } from 'lucide-react';
 
 const navigation = [
@@ -22,6 +23,7 @@ const navigation = [
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Merchants', href: '/admin/merchants', icon: Store },
     { name: 'Vendors', href: '/admin/vendors', icon: Package },
+    { name: 'Gift Cards', href: '/admin/giftcards', icon: Gift },
     { name: 'Coupons', href: '/admin/coupons', icon: Sparkles },
     { name: 'Transactions', href: '/admin/transactions', icon: Receipt },
     { name: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
@@ -79,8 +81,8 @@ export default function AdminSidebar({ isOpen, setIsOpen }) {
                                     key={item.name}
                                     href={item.href}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${isActive
-                                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30'
-                                            : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30'
+                                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
                                         }`}
                                 >
                                     <Icon size={20} className={isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'} />

@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useAuth, useIsAdmin } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
+import { getGiftCardStats } from './giftcards/actions'
 
 export default function AdminDashboard() {
     const [revenue, setRevenue] = useState(null)
+    const [giftCardStats, setGiftCardStats] = useState(null)
     const [loading, setLoading] = useState(true)
     const { isAdmin, loading: authLoading } = useIsAdmin()
     const router = useRouter()
@@ -19,6 +21,7 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (isAdmin) {
             fetchRevenue()
+            fetchGiftCardStats()
         }
     }, [isAdmin])
 
@@ -37,6 +40,17 @@ export default function AdminDashboard() {
             console.error('Error fetching revenue:', err)
         } finally {
             setLoading(false)
+        }
+    }
+
+    async function fetchGiftCardStats() {
+        try {
+            const result = await getGiftCardStats()
+            if (result.success) {
+                setGiftCardStats(result.data)
+            }
+        } catch (err) {
+            console.error('Error fetching gift card stats:', err)
         }
     }
 
@@ -95,10 +109,40 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
+                {/* Gift Card Stats */}
+                {giftCardStats && (
+                    <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Gift Card Inventory</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                                <p className="text-sm text-blue-600 mb-1">Total Gift Cards</p>
+                                <p className="text-3xl font-bold text-blue-900">{giftCardStats.total}</p>
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                                <p className="text-sm text-green-600 mb-1">Active Cards</p>
+                                <p className="text-3xl font-bold text-green-900">{giftCardStats.active}</p>
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg">
+                                <p className="text-sm text-red-600 mb-1">Expired Cards</p>
+                                <p className="text-3xl font-bold text-red-900">{giftCardStats.expired}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Quick Actions */}
                 <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
                     <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <button
+                            onClick={() => router.push('/admin/giftcards')}
+                            className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg text-left transition-colors"
+                        >
+                            <div className="text-2xl mb-2">🎁</div>
+                            <p className="font-semibold text-gray-900">Gift Cards</p>
+                            <p className="text-sm text-gray-600">Manage gift card inventory</p>
+                        </button>
+
                         <button
                             onClick={() => router.push('/admin/coupons')}
                             className="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg text-left transition-colors"
