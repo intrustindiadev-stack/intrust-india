@@ -2,7 +2,10 @@
 
 import { CheckCircle, AlertCircle, Clock, Shield } from 'lucide-react';
 
-export default function KYCStatus({ status = 'not_started', onStartKYC }) {
+export default function KYCStatus({ status, onStartKYC }) {
+    // Normalize status: if null or undefined, treat as 'not_started' or use the prop directly if valid
+    const currentStatus = (status === 'pending' || status === 'verified' || status === 'rejected') ? status : 'not_started';
+
     const statusConfig = {
         not_started: {
             color: 'from-gray-500 to-gray-600',
@@ -10,8 +13,8 @@ export default function KYCStatus({ status = 'not_started', onStartKYC }) {
             borderColor: 'border-gray-200',
             icon: AlertCircle,
             title: 'KYC Not Completed',
-            description: 'Complete your KYC verification to access all features',
-            action: 'Start KYC Verification',
+            description: 'Complete your KYC to unlock full access.',
+            action: 'Start KYC',
             actionColor: 'from-[#92BCEA] to-[#AFB3F7]'
         },
         pending: {
@@ -46,7 +49,7 @@ export default function KYCStatus({ status = 'not_started', onStartKYC }) {
         }
     };
 
-    const config = statusConfig[status];
+    const config = statusConfig[currentStatus];
     const Icon = config.icon;
 
     return (
@@ -71,15 +74,8 @@ export default function KYCStatus({ status = 'not_started', onStartKYC }) {
                         </button>
                     )}
 
-                    {status === 'pending' && (
-                        <div className="flex items-center gap-2 text-sm text-yellow-700 font-semibold">
-                            <Clock size={16} />
-                            <span>Estimated time: 24-48 hours</span>
-                        </div>
-                    )}
-
-                    {status === 'verified' && (
-                        <div className="flex items-center gap-2 text-sm text-green-700 font-semibold">
+                    {currentStatus === 'verified' && (
+                        <div className="flex items-center gap-2 text-sm text-green-700 font-semibold mt-2">
                             <Shield size={16} />
                             <span>Account fully verified</span>
                         </div>

@@ -46,7 +46,7 @@ export default function HeroSection() {
     ];
 
     return (
-        <section ref={heroRef} className="relative min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden pt-20 md:pt-32 pb-2 md:pb-10">
+        <section ref={heroRef} className="relative min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden pt-20 md:pt-32 pb-16 md:pb-20">
             {/* ... Background ... */}
             <div className="absolute inset-0 z-0">
                 <Image
@@ -134,7 +134,7 @@ export default function HeroSection() {
             </div>
 
             {/* Integrated Partner Loop at Bottom */}
-            <div className="relative w-full mt-4 md:mt-0 pb-2 md:pb-6 lg:absolute lg:bottom-0 lg:left-0 lg:z-20 pointer-events-auto">
+            <div className="relative w-full mt-20 md:mt-24 pb-2 md:pb-6 pointer-events-auto">
                 <PartnerLoop className="bg-transparent py-2 md:py-4" showBorder={false} />
             </div>
 

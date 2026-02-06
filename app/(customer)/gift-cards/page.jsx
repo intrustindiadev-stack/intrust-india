@@ -59,6 +59,7 @@ const transformCouponData = (coupon) => {
         logo: emojis[coupon.category] || '🎁',
         title: coupon.title || coupon.brand,
         description: coupon.description || "Get instant access to this premium gift card. Valid on all products.",
+        image_url: coupon.image_url,
     };
 };
 
@@ -67,7 +68,6 @@ export default function GiftCardsPage() {
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('popular');
-    const [expandedId, setExpandedId] = useState(null);
 
     // Data States (from Supabase)
     const [loading, setLoading] = useState(true);
@@ -277,8 +277,6 @@ export default function GiftCardsPage() {
                                     key={coupon.id}
                                     coupon={coupon}
                                     index={index}
-                                    isExpanded={expandedId === coupon.id}
-                                    onToggle={() => setExpandedId(expandedId === coupon.id ? null : coupon.id)}
                                 />
                             ))}
                         </div>

@@ -164,10 +164,26 @@ export default function GiftCardDetailPage({ params }) {
                         <motion.div
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-4 mb-8 flex items-center gap-3"
+                            className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-4 mb-8"
                         >
-                            <AlertCircle size={24} className="text-red-600" />
-                            <span className="font-semibold">{purchaseError}</span>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+                                <div className="flex items-center gap-3">
+                                    <AlertCircle size={24} className="text-red-600 shrink-0" />
+                                    <span className="font-semibold">
+                                        {purchaseError.includes('Only regular users') || purchaseError.includes('KYC')
+                                            ? "KYC verification is required to purchase this gift card."
+                                            : purchaseError}
+                                    </span>
+                                </div>
+                                {(purchaseError.includes('Only regular users') || purchaseError.includes('KYC')) && (
+                                    <button
+                                        onClick={() => router.push('/profile')}
+                                        className="px-5 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors shadow-sm whitespace-nowrap"
+                                    >
+                                        Complete KYC
+                                    </button>
+                                )}
+                            </div>
                         </motion.div>
                     )}
 
@@ -252,7 +268,7 @@ export default function GiftCardDetailPage({ params }) {
                                 </div>
                                 {discount > 0 && (
                                     <p className="text-sm text-green-700 font-medium">
-                                        You save <span className="font-bold">₹{faceValue - sellingPrice}</span> ({discount}%)
+                                        You save <span className="font-bold">₹{Number((faceValue - sellingPrice).toFixed(2))}</span> ({discount}%)
                                     </p>
                                 )}
                             </div>

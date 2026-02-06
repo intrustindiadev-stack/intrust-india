@@ -2,18 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Menu, X, ChevronRight, Globe } from 'lucide-react';
+import { Menu, X, ChevronRight, Globe, User } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
-import { signOut } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import MobileNav from './MobileNav';
 
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user, profile } = useAuth();
     const { language, changeLanguage, t } = useLanguage();
     const router = useRouter();
 
@@ -35,7 +36,8 @@ export default function Navbar() {
     }, [menuOpen]);
 
     const handleSignOut = async () => {
-        await signOut();
+        await supabase.auth.signOut();
+        router.refresh();
         router.push('/');
     };
 
@@ -44,6 +46,15 @@ export default function Navbar() {
         { label: t('nav.about'), href: 'about' },
         { label: t('nav.contact'), href: 'contact' },
     ];
+
+    // Get user display info
+    const getInitials = () => {
+        if (profile?.full_name) return profile.full_name.charAt(0).toUpperCase();
+        if (user?.email) return user.email.charAt(0).toUpperCase();
+        return 'U';
+    };
+
+    const hasImage = profile?.avatar_url; // Assuming avatar_url might exist in future or logic update
 
     return (
         <>
@@ -130,7 +141,7 @@ export default function Navbar() {
 
                         {/* Actions - Right */}
                         <div className="flex items-center gap-2 md:gap-3 z-10">
-                            {/* Language Switcher - Premium iOS Style with Sliding Animation */}
+                            {/* Language Switcher - Premium iOS Style */}
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
@@ -138,7 +149,6 @@ export default function Navbar() {
                                 className="hidden lg:block relative"
                             >
                                 <div className="relative bg-gray-100/80 backdrop-blur-sm rounded-full p-1 flex items-center">
-                                    {/* Animated sliding background */}
                                     <motion.div
                                         className="absolute top-1 bottom-1 bg-white rounded-full shadow-md"
                                         animate={{
@@ -151,25 +161,15 @@ export default function Navbar() {
                                             damping: 30
                                         }}
                                     />
-
-                                    {/* Language buttons */}
                                     <button
                                         onClick={() => changeLanguage('en')}
-                                        className={`
-                                            relative z-10 px-4 py-2 rounded-full text-sm font-semibold 
-                                            transition-colors duration-200 min-w-[50px] text-center
-                                            ${language === 'en' ? 'text-[#171A21]' : 'text-[#617073]'}
-                                        `}
+                                        className={`relative z-10 px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-200 min-w-[50px] text-center ${language === 'en' ? 'text-[#171A21]' : 'text-[#617073]'}`}
                                     >
                                         EN
                                     </button>
                                     <button
                                         onClick={() => changeLanguage('hi')}
-                                        className={`
-                                            relative z-10 px-4 py-2 rounded-full text-sm font-semibold 
-                                            transition-colors duration-200 min-w-[50px] text-center
-                                            ${language === 'hi' ? 'text-[#171A21]' : 'text-[#617073]'}
-                                        `}
+                                        className={`relative z-10 px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-200 min-w-[50px] text-center ${language === 'hi' ? 'text-[#171A21]' : 'text-[#617073]'}`}
                                     >
                                         हिं
                                     </button>
@@ -177,21 +177,31 @@ export default function Navbar() {
                             </motion.div>
 
                             {isAuthenticated ? (
-                                <div className="hidden lg:flex items-center gap-2">
-                                    <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        transition={{ duration: 0.2 }}
-                                        onClick={() => router.push('/dashboard')}
-                                        className="
-                      px-5 py-2 text-[15px] font-medium 
-                      text-[#617073] hover:text-[#171A21] 
-                      transition-colors duration-300 rounded-full
-                      hover:bg-gradient-to-r hover:from-[#92BCEA]/10 hover:to-[#AFB3F7]/10
-                    "
-                                    >
-                                        {t('nav.dashboard')}
-                                    </motion.button>
+                                <div className="hidden lg:flex items-center gap-4">
+                                    <Link href="/profile">
+                                        <motion.div
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            className="w-10 h-10 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] cursor-pointer"
+                                        >
+                                            <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                                {hasImage ? (
+                                                    <Image
+                                                        src={profile.avatar_url}
+                                                        alt="Profile"
+                                                        width={40}
+                                                        height={40}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <span className="font-bold text-[#7A93AC] text-lg">
+                                                        {getInitials()}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    </Link>
+
                                     <motion.button
                                         whileHover={{ scale: 1.05, y: -1 }}
                                         whileTap={{ scale: 0.95 }}
@@ -199,8 +209,7 @@ export default function Navbar() {
                                         onClick={handleSignOut}
                                         className="
                       px-6 py-2 rounded-full font-semibold text-[15px]
-                      bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] 
-                      text-white shadow-md hover:shadow-xl 
+                      bg-gray-100 text-gray-600 hover:bg-gray-200
                       transition-all duration-300
                     "
                                     >
@@ -268,7 +277,7 @@ export default function Navbar() {
                 </div>
             </motion.nav>
 
-            {/* Premium Mobile Menu Component */}
+            {/* Mobile Menu */}
             <MobileNav
                 isOpen={menuOpen}
                 onClose={() => setMenuOpen(false)}

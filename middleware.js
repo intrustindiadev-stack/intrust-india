@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient as createClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
 export async function middleware(request) {
@@ -8,58 +8,36 @@ export async function middleware(request) {
         },
     })
 
-    const supabase = createServerClient(
+    const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         {
             cookies: {
-                get(name) {
-                    return request.cookies.get(name)?.value
+                getAll() {
+                    return request.cookies.getAll()
                 },
-                set(name, value, options) {
-                    request.cookies.set({
-                        name,
-                        value,
-                        ...options,
-                    })
+                setAll(cookiesToSet) {
+                    cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
                     response = NextResponse.next({
                         request: {
                             headers: request.headers,
                         },
                     })
-                    response.cookies.set({
-                        name,
-                        value,
-                        ...options,
-                    })
-                },
-                remove(name, options) {
-                    request.cookies.set({
-                        name,
-                        value: '',
-                        ...options,
-                    })
-                    response = NextResponse.next({
-                        request: {
-                            headers: request.headers,
-                        },
-                    })
-                    response.cookies.set({
-                        name,
-                        value: '',
-                        ...options,
-                    })
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        response.cookies.set(name, value, options)
+                    )
                 },
             },
         }
     )
 
-    // Refresh session if expired
-    const {
-        data: { session },
-    } = await supabase.auth.getSession()
+    // IMPORTANT: Avoid writing any logic between createServerClient and
+    // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+    // issues with users being randomly logged out.
 
-    const { pathname } = request.nextUrl
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
 
     // Protected routes that require authentication
     const protectedRoutes = [
@@ -69,8 +47,8 @@ export async function middleware(request) {
         '/gift-cards', // Require auth to browse coupons
     ]
 
-    // Admin-only routes
     const adminRoutes = ['/admin']
+    const { pathname } = request.nextUrl
 
     // Check if current path is protected
     const isProtectedRoute = protectedRoutes.some((route) =>
@@ -79,31 +57,14 @@ export async function middleware(request) {
     const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route))
 
     // Redirect to login if accessing protected route without session
-    if (isProtectedRoute && !session) {
+    if (isProtectedRoute && !user) {
         const redirectUrl = new URL('/login', request.url)
         redirectUrl.searchParams.set('redirect', pathname)
         return NextResponse.redirect(redirectUrl)
     }
 
-    // Check admin access - TEMPORARILY DISABLED FOR TESTING
-    // TODO: Re-enable this after fixing RLS policies
-    /*
-    if (isAdminRoute && session) {
-        const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('role')
-            .eq('id', session.user.id)
-            .single()
-
-        if (profile?.role !== 'admin') {
-            // Not an admin, redirect to dashboard
-            return NextResponse.redirect(new URL('/dashboard', request.url))
-        }
-    }
-    */
-
     // Redirect to dashboard if accessing auth pages while logged in
-    if ((pathname === '/login' || pathname === '/register') && session) {
+    if ((pathname === '/login' || pathname === '/register') && user) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
