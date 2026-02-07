@@ -42,9 +42,9 @@ export default function Navbar() {
     };
 
     const menuItems = [
-        { label: t('nav.services'), href: 'services' },
-        { label: t('nav.about'), href: 'about' },
-        { label: t('nav.contact'), href: 'contact' },
+        { label: t('nav.services'), href: '/#services' },
+        { label: t('nav.about'), href: '/#about' },
+        { label: t('nav.contact'), href: '/#contact' },
     ];
 
     // Get user display info
@@ -215,6 +215,29 @@ export default function Navbar() {
                                     >
                                         {t('nav.signout')}
                                     </motion.button>
+                                    {/* Mobile/Tablet Profile Icon */}
+                                    <Link href="/profile" className="lg:hidden">
+                                        <motion.div
+                                            whileTap={{ scale: 0.95 }}
+                                            className="w-8 h-8 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] cursor-pointer"
+                                        >
+                                            <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                                {hasImage ? (
+                                                    <Image
+                                                        src={profile.avatar_url}
+                                                        alt="Profile"
+                                                        width={32}
+                                                        height={32}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <span className="font-bold text-[#7A93AC] text-sm">
+                                                        {getInitials()}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    </Link>
                                 </div>
                             ) : (
                                 <div className="hidden lg:flex items-center gap-2">
@@ -247,6 +270,32 @@ export default function Navbar() {
                                         {t('nav.signup')}
                                     </motion.button>
                                 </div>
+                            )}
+
+                            {/* Mobile/Tablet Profile Icon - Visible only when authenticated */}
+                            {isAuthenticated && (
+                                <Link href="/profile" className="lg:hidden mr-2">
+                                    <motion.div
+                                        whileTap={{ scale: 0.95 }}
+                                        className="w-9 h-9 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] cursor-pointer"
+                                    >
+                                        <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                            {hasImage ? (
+                                                <Image
+                                                    src={profile.avatar_url}
+                                                    alt="Profile"
+                                                    width={36}
+                                                    height={36}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <span className="font-bold text-[#7A93AC] text-sm">
+                                                    {getInitials()}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                </Link>
                             )}
 
                             {/* Mobile Menu Toggle */}

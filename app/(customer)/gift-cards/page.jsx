@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Search, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
-import Navigation from './components/Navigation';
+import Navbar from '../../../components/layout/Navbar';
 import Breadcrumbs from './components/Breadcrumbs';
 import SearchBar from './components/SearchBar';
 import CategoryFilter from './components/CategoryFilter';
@@ -14,6 +14,7 @@ import AdvancedFilters from './components/AdvancedFilters';
 import HeroSection from './components/HeroSection';
 import TrustBadges from './components/TrustBadges';
 import StatsBar from './components/StatsBar';
+import Footer from '../../../components/layout/Footer';
 
 // Transform Supabase data to match yogesh UI expectations
 const transformCouponData = (coupon) => {
@@ -183,7 +184,8 @@ export default function GiftCardsPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
             {/* Use existing INTRUST Navigation */}
-            <Navigation />
+            {/* Use global Navbar */}
+            <Navbar />
 
             {/* Main Content with spacing for fixed navbar */}
             <div style={{ paddingTop: '15vh' }} className="pb-24 px-4 sm:px-6">
@@ -265,13 +267,13 @@ export default function GiftCardsPage() {
 
                     {/* Cards Grid */}
                     {loading ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
                             {[...Array(8)].map((_, i) => (
                                 <GiftCardSkeleton key={i} />
                             ))}
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
                             {sortedCoupons.map((coupon, index) => (
                                 <GiftCardItem
                                     key={coupon.id}
@@ -316,6 +318,7 @@ export default function GiftCardsPage() {
                     )}
                 </div>
             </div>
+            <Footer />
         </div>
     );
 }

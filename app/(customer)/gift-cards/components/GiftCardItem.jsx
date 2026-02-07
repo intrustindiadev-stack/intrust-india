@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 
 export default function GiftCardItem({ coupon, index = 0 }) {
-    const viewingCount = Math.floor(Math.random() * 5) + 2; // Random 2-6
+
 
     return (
         <motion.div
@@ -20,7 +20,7 @@ export default function GiftCardItem({ coupon, index = 0 }) {
                 className="group relative bg-white rounded-3xl overflow-hidden border border-gray-100 hover:border-[#92BCEA]/50 transition-all duration-300 hover:shadow-2xl hover:shadow-[#92BCEA]/20 hover:-translate-y-1 h-full flex flex-col cursor-pointer block"
             >
                 {/* Card Header - Image or Premium Gradient */}
-                <div className={`relative h-48 bg-gray-50 overflow-hidden ${!coupon.image_url ? `bg-gradient-to-br ${coupon.gradient}` : ''}`}>
+                <div className={`relative h-36 sm:h-48 bg-gray-50 overflow-hidden ${!coupon.image_url ? `bg-gradient-to-br ${coupon.gradient}` : ''}`}>
 
                     {coupon.image_url ? (
                         <div className="relative w-full h-full p-6 flex items-center justify-center">
@@ -48,7 +48,7 @@ export default function GiftCardItem({ coupon, index = 0 }) {
 
                             {/* Brand Name */}
                             <div className="absolute bottom-4 left-4">
-                                <h3 className="text-2xl font-bold text-white drop-shadow-lg">
+                                <h3 className="text-lg sm:text-2xl font-bold text-white drop-shadow-lg">
                                     {coupon.brand}
                                 </h3>
                             </div>
@@ -80,13 +80,7 @@ export default function GiftCardItem({ coupon, index = 0 }) {
                         </div>
                     )}
 
-                    {/* Live Viewing Indicator */}
-                    {coupon.stock > 0 && (
-                        <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm text-gray-700 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md flex items-center gap-1.5 z-10">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            {viewingCount} viewing
-                        </div>
-                    )}
+
 
                     {/* Sold Out Overlay */}
                     {coupon.stock === 0 && (
@@ -99,12 +93,12 @@ export default function GiftCardItem({ coupon, index = 0 }) {
                 </div>
 
                 {/* Card Body - Premium */}
-                <div className="p-5 flex-1 flex flex-col bg-gradient-to-b from-white to-gray-50/50">
+                <div className="p-3 sm:p-5 flex-1 flex flex-col bg-gradient-to-b from-white to-gray-50/50">
                     {/* Price Section */}
                     <div className="flex items-baseline justify-between mb-4">
                         <div>
                             <div className="text-xs text-gray-400 font-medium mb-1 line-through">₹{coupon.value}</div>
-                            <div className="text-3xl font-bold bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] bg-clip-text text-transparent">
+                            <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] bg-clip-text text-transparent">
                                 ₹{coupon.sellingPrice}
                             </div>
                         </div>
@@ -138,7 +132,7 @@ export default function GiftCardItem({ coupon, index = 0 }) {
                     </div>
 
                     {/* CTA Button - Visual Only (Parent Link handles navigation) */}
-                    <div className="w-full py-3.5 bg-gradient-to-r from-gray-900 to-gray-800 group-hover:from-[#92BCEA] group-hover:to-[#AFB3F7] text-white font-bold text-sm rounded-2xl transition-all duration-300 group-hover:shadow-xl group-hover:shadow-[#92BCEA]/30 flex items-center justify-center gap-2 mt-auto relative z-20">
+                    <div className="w-full py-2 sm:py-3.5 bg-gradient-to-r from-gray-900 to-gray-800 group-hover:from-[#92BCEA] group-hover:to-[#AFB3F7] text-white font-bold text-sm rounded-2xl transition-all duration-300 group-hover:shadow-xl group-hover:shadow-[#92BCEA]/30 flex items-center justify-center gap-2 mt-auto relative z-20">
                         <span>Buy Now</span>
                         <span className="group-hover:translate-x-1 transition-transform">→</span>
                     </div>

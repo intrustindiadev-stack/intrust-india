@@ -53,19 +53,11 @@ export function AuthProvider({ children }) {
         const initializeAuth = async () => {
             try {
                 // 1. Get initial session
-                // Use getUser instead of getSession check validity
-                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                const { data: { session }, error } = await supabase.auth.getSession();
 
-                // Fallback to getSession if getUser fails (sometimes needed for stale tokens)
-                let finalUser = user;
-                if (!finalUser) {
-                    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                    finalUser = session?.user;
-                }
-
-                if (finalUser) {
-                    if (mounted) setUser(finalUser);
-                    const userProfile = await fetchProfile(finalUser.id);
+                if (session?.user) {
+                    if (mounted) setUser(session.user);
+                    const userProfile = await fetchProfile(session.user.id);
                     if (mounted) setProfile(userProfile);
                 }
             } catch (err) {
