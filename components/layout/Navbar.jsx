@@ -42,9 +42,9 @@ export default function Navbar() {
     };
 
     const menuItems = [
-        { label: t('nav.services'), href: '/#services' },
-        { label: t('nav.about'), href: '/#about' },
-        { label: t('nav.contact'), href: '/#contact' },
+        { label: t('nav.services'), href: 'services' },
+        { label: t('nav.about'), href: 'about' },
+        { label: t('nav.contact'), href: 'contact' },
     ];
 
     // Get user display info
