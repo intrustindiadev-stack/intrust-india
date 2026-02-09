@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithOTP, verifyOTP, signInWithGoogle } from '@/lib/supabase';
+import { signInWithOTP, verifyOTP } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient';
 import { Phone, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -65,9 +66,15 @@ export default function LoginPage() {
         setGoogleLoading(true);
         setError('');
 
-        const { error: googleError } = await signInWithGoogle();
+        const { error: googleError } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: `${window.location.origin}/auth/callback`
+            }
+        });
 
         if (googleError) {
+            console.error('Google sign-in error:', googleError);
             setError(googleError.message || 'Failed to sign in with Google');
             setGoogleLoading(false);
         }

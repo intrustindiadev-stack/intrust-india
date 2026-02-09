@@ -1,26 +1,80 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Navbar from '@/components/layout/Navbar';
-import { TrendingUp, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
-import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
-import SearchBar from '@/components/giftcards/SearchBar';
-import CategoryFilter from '@/components/giftcards/CategoryFilter';
-import GiftCardItem from '@/components/giftcards/GiftCardItem';
-import GiftCardSkeleton from '@/components/giftcards/GiftCardSkeleton';
-import AdvancedFilters from '@/components/giftcards/AdvancedFilters';
-import HeroSection from '@/components/giftcards/HeroSection';
-import TrustBadges from '@/components/giftcards/TrustBadges';
-import StatsBar from '@/components/giftcards/StatsBar';
-import DealsBanner from '@/components/customer/DealsBanner';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+import { TrendingUp, Search, AlertCircle, Loader2 } from 'lucide-react';
+import { supabase } from '../../../lib/supabaseClient';
+import Navigation from './components/Navigation';
+import Breadcrumbs from './components/Breadcrumbs';
+import SearchBar from './components/SearchBar';
+import CategoryFilter from './components/CategoryFilter';
+import GiftCardItem from './components/GiftCardItem';
+import GiftCardSkeleton from './components/GiftCardSkeleton';
+import AdvancedFilters from './components/AdvancedFilters';
+import HeroSection from './components/HeroSection';
+import TrustBadges from './components/TrustBadges';
+import StatsBar from './components/StatsBar';
+
+// Transform Supabase data to match yogesh UI expectations
+const transformCouponData = (coupon) => {
+    const sellingPrice = coupon.selling_price_paise / 100;
+    const faceValue = coupon.face_value_paise / 100;
+    const discount = ((faceValue - sellingPrice) / faceValue) * 100;
+
+    // Generate gradient based on category
+    const gradients = {
+        'Shopping': 'from-blue-600 via-blue-500 to-cyan-500',
+        'Food': 'from-orange-600 via-red-500 to-pink-500',
+        'Entertainment': 'from-purple-600 via-violet-500 to-indigo-500',
+        'Travel': 'from-green-600 via-emerald-500 to-teal-500',
+        'Electronics': 'from-yellow-600 via-amber-500 to-orange-500',
+        'Gaming': 'from-pink-600 via-purple-500 to-indigo-500',
+        'Fashion': 'from-pink-600 via-purple-500 to-indigo-500',
+    };
+
+    // Generate emoji based on category
+    const emojis = {
+        '  Shopping': '🛒',
+        'Food': '🍔',
+        'Entertainment': '🎬',
+        'Travel': '✈️',
+        'Electronics': '⚡',
+        'Gaming': '🎮',
+        'Fashion': '👗',
+    };
+
+    return {
+        id: coupon.id,
+        brand: coupon.brand,
+        value: faceValue,
+        sellingPrice: sellingPrice,
+        discount: parseFloat(discount.toFixed(1)),
+        rating: 4.5 + (Math.random() * 0.4), // Default rating 4.5-4.9
+        sold: Math.floor(Math.random() * 1000) + 100, // Random sold count
+        merchant: 'INTRUST Verified',
+        verified: true,
+        category: coupon.category,
+        stock: 50, // Default stock
+        gradient: gradients[coupon.category] || 'from-gray-600 via-gray-500 to-slate-500',
+        logo: emojis[coupon.category] || '🎁',
+        title: coupon.title || coupon.brand,
+        description: coupon.description || "Get instant access to this premium gift card. Valid on all products.",
+        image_url: coupon.image_url,
+    };
+};
 
 export default function GiftCardsPage() {
+    // UI States
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('popular');
+
+    // Data States (from Supabase)
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [coupons, setCoupons] = useState([]);
+
+    // Advanced Filter States
     const [filters, setFilters] = useState({
         priceRange: null,
         minDiscount: null,
@@ -29,107 +83,39 @@ export default function GiftCardsPage() {
         minRating: null,
     });
 
-    // Simulate loading
+    // Fetch gift cards from Supabase
+    const fetchGiftCards = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const { data, error: fetchError } = await supabase
+                .from('coupons')
+                .select('*')
+                .eq('status', 'available')
+                .gte('valid_until', new Date().toISOString())
+                .order('created_at', { ascending: false });
+
+            if (fetchError) throw fetchError;
+
+            // Transform Supabase data to yogesh UI format
+            const transformedData = (data || []).map(transformCouponData);
+            setCoupons(transformedData);
+
+        } catch (err) {
+            console.error('Error fetching gift cards:', err);
+            setError(err.message || 'Failed to load gift cards. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const timer = setTimeout(() => setLoading(false), 1000);
-        return () => clearTimeout(timer);
+        fetchGiftCards();
     }, []);
 
-    // Mock data for gift cards
-    const coupons = [
-        {
-            id: 1,
-            brand: 'Flipkart',
-            value: 500,
-            sellingPrice: 463.50,
-            discount: 7.3,
-            rating: 4.8,
-            sold: 856,
-            merchant: 'Ravi Traders',
-            verified: true,
-            category: 'Shopping',
-            stock: 25,
-            gradient: 'from-blue-600 via-blue-500 to-cyan-500',
-            logo: '🛒'
-        },
-        {
-            id: 2,
-            brand: 'Amazon',
-            value: 1000,
-            sellingPrice: 940.00,
-            discount: 6.0,
-            rating: 4.9,
-            sold: 1240,
-            merchant: 'Gift Hub',
-            verified: true,
-            category: 'Shopping',
-            stock: 12,
-            gradient: 'from-orange-500 via-amber-500 to-yellow-500',
-            logo: '📦'
-        },
-        {
-            id: 3,
-            brand: 'Swiggy',
-            value: 500,
-            sellingPrice: 425.00,
-            discount: 15.0,
-            rating: 4.7,
-            sold: 450,
-            merchant: 'Food Deals',
-            verified: true,
-            category: 'Food',
-            stock: 100,
-            gradient: 'from-orange-600 via-red-500 to-pink-500',
-            logo: '🍔'
-        },
-        {
-            id: 4,
-            brand: 'Zomato',
-            value: 250,
-            sellingPrice: 212.50,
-            discount: 15.0,
-            rating: 4.6,
-            sold: 320,
-            merchant: 'Food Deals',
-            verified: true,
-            category: 'Food',
-            stock: 5,
-            gradient: 'from-red-600 via-pink-500 to-rose-500',
-            logo: '🍕'
-        },
-        {
-            id: 5,
-            brand: 'Myntra',
-            value: 2000,
-            sellingPrice: 1800.00,
-            discount: 10.0,
-            rating: 4.8,
-            sold: 670,
-            merchant: 'Fashion Store',
-            verified: false,
-            category: 'Shopping',
-            stock: 0,
-            gradient: 'from-pink-600 via-purple-500 to-indigo-500',
-            logo: '👗'
-        },
-        {
-            id: 6,
-            brand: 'BookMyShow',
-            value: 500,
-            sellingPrice: 400.00,
-            discount: 20.0,
-            rating: 4.9,
-            sold: 210,
-            merchant: 'Ent. World',
-            verified: true,
-            category: 'Entertainment',
-            stock: 50,
-            gradient: 'from-purple-600 via-violet-500 to-indigo-500',
-            logo: '🎬'
-        }
-    ];
-
-    const categories = ['All', 'Shopping', 'Food', 'Entertainment', 'Travel'];
+    // Extract unique categories from coupons
+    const categories = ['All', ...new Set(coupons.map(c => c.category))];
 
     // Apply all filters
     const filteredCoupons = coupons.filter(c => {
@@ -173,11 +159,33 @@ export default function GiftCardsPage() {
         }
     });
 
+    // Error State UI
+    if (error && !loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
+                <div className="text-center py-16 px-6">
+                    <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+                        <AlertCircle size={24} className="text-red-500" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Something went wrong</h3>
+                    <p className="text-sm text-gray-600 mb-4">{error}</p>
+                    <button
+                        onClick={fetchGiftCards}
+                        className="px-4 py-2 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] rounded-lg text-white text-sm font-medium shadow-sm hover:shadow-md transition-shadow"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-            <Navbar />
+            {/* Use existing INTRUST Navigation */}
+            <Navigation />
 
-            {/* Main Content with 15vh top spacing */}
+            {/* Main Content with spacing for fixed navbar */}
             <div style={{ paddingTop: '15vh' }} className="pb-24 px-4 sm:px-6">
                 <div className="max-w-7xl mx-auto">
                     {/* Breadcrumbs */}
@@ -230,11 +238,6 @@ export default function GiftCardsPage() {
                         </div>
                     </motion.div>
 
-                    {/* Promotional Banner */}
-                    <div className="mb-8">
-                        <DealsBanner />
-                    </div>
-
                     {/* Categories */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -270,7 +273,11 @@ export default function GiftCardsPage() {
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
                             {sortedCoupons.map((coupon, index) => (
-                                <GiftCardItem key={coupon.id} coupon={coupon} index={index} />
+                                <GiftCardItem
+                                    key={coupon.id}
+                                    coupon={coupon}
+                                    index={index}
+                                />
                             ))}
                         </div>
                     )}
@@ -309,9 +316,6 @@ export default function GiftCardsPage() {
                     )}
                 </div>
             </div>
-
-            {/* Bottom Navigation */}
-            <CustomerBottomNav />
         </div>
     );
 }

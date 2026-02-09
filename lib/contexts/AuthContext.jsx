@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, getCurrentUser, getUserProfile } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient';
 import { FastProgressLoader } from '@/components/ui/InTrustProgressLoader';
 
 const AuthContext = createContext({});
@@ -20,39 +20,68 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
     const [showAuthLoader, setShowAuthLoader] = useState(false);
 
+    // Fetch profile helper with timeout
+    const fetchProfile = async (userId) => {
+        try {
+            // Add a timeout signal to prevent indefinite hanging
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+            const { data, error } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .eq('id', userId)
+                .single()
+                .abortSignal(controller.signal); // Use Supabase's built-in abort support if available or just catch generic timeouts
+
+            clearTimeout(timeoutId);
+
+            if (error) {
+                console.warn('Error fetching profile:', error.message);
+                return null;
+            }
+            return data;
+        } catch (err) {
+            console.error('Unexpected error fetching profile:', err);
+            return null;
+        }
+    };
+
     useEffect(() => {
-        // Check active sessions and sets the user
-        const checkUser = async () => {
+        let mounted = true;
+
+        const initializeAuth = async () => {
             try {
-                // Skip if Supabase is not configured
-                if (!supabase) {
-                    console.warn('⚠️ Supabase not configured. Auth features disabled. See SETUP.md');
-                    setLoading(false);
-                    return;
+                // 1. Get initial session
+                // Use getUser instead of getSession check validity
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+                // Fallback to getSession if getUser fails (sometimes needed for stale tokens)
+                let finalUser = user;
+                if (!finalUser) {
+                    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                    finalUser = session?.user;
                 }
 
-                const currentUser = await getCurrentUser();
-                setUser(currentUser);
-
-                if (currentUser) {
-                    const userProfile = await getUserProfile(currentUser.id);
-                    setProfile(userProfile);
+                if (finalUser) {
+                    if (mounted) setUser(finalUser);
+                    const userProfile = await fetchProfile(finalUser.id);
+                    if (mounted) setProfile(userProfile);
                 }
-            } catch (error) {
-                console.error('Auth check error:', error);
+            } catch (err) {
+                console.error('Auth initialization error:', err);
             } finally {
-                setLoading(false);
+                if (mounted) setLoading(false);
             }
         };
 
-        checkUser();
+        initializeAuth();
 
-        // Skip auth listener if no Supabase
-        if (!supabase) return;
-
-        // Listen for auth changes
+        // 2. Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
+                if (!mounted) return;
+
                 // Show loader on sign in
                 if (event === 'SIGNED_IN') {
                     setShowAuthLoader(true);
@@ -60,12 +89,12 @@ export function AuthProvider({ children }) {
 
                 if (session?.user) {
                     setUser(session.user);
-                    const userProfile = await getUserProfile(session.user.id);
-                    setProfile(userProfile);
 
-                    // Keep loader visible for role-based redirect
+                    // Simple fetch
+                    const userProfile = await fetchProfile(session.user.id);
+                    if (mounted) setProfile(userProfile);
+
                     if (event === 'SIGNED_IN') {
-                        // Loader will auto-hide after 1.2 seconds (FastProgressLoader)
                         setTimeout(() => setShowAuthLoader(false), 1700);
                     }
                 } else {
@@ -73,11 +102,13 @@ export function AuthProvider({ children }) {
                     setProfile(null);
                     setShowAuthLoader(false);
                 }
+
                 setLoading(false);
             }
         );
 
         return () => {
+            mounted = false;
             subscription?.unsubscribe();
         };
     }, []);

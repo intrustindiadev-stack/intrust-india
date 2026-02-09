@@ -54,14 +54,38 @@ export default function MerchantApplyPage() {
         bankAccount: '', ifscCode: '', panCard: '',
     });
 
+    const [error, setError] = useState('');
+
     const handleFormSubmit = async (e) => {
-        if (e) e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
         setLoading(true);
-        // Simulate a realistic API call
-        setTimeout(() => {
+        setError('');
+
+        try {
+            // Call API to create merchant account
+            const response = await fetch('/api/merchant/apply', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to submit application');
+            }
+
+            // Success! Merchant account created and auto-approved
+            console.log('✅ Merchant account created:', data);
             setLoading(false);
-            setStep(4); // Move to Success Step internally for smooth transition
-        }, 2000);
+            setStep(4); // Move to Success Step
+        } catch (err) {
+            console.error('❌ Error submitting merchant application:', err);
+            setError(err.message || 'Failed to submit application. Please try again.');
+            setLoading(false);
+        }
     };
 
     const nextStep = () => setStep(step + 1);
@@ -214,6 +238,17 @@ export default function MerchantApplyPage() {
                                 transition={{ duration: 0.3 }}
                                 className="py-2 h-full flex flex-col"
                             >
+                                {error && (
+                                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex gap-3 items-start">
+                                        <div className="bg-red-100 p-2 rounded-full text-red-600 shrink-0">
+                                            <X size={18} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-bold text-red-900 text-sm">Submission Failed</p>
+                                            <p className="text-red-700 text-sm mt-1">{error}</p>
+                                        </div>
+                                    </div>
+                                )}
                                 <KYCForm
                                     userType="merchant"
                                     onSubmit={handleFormSubmit}
@@ -250,18 +285,18 @@ export default function MerchantApplyPage() {
                                     />
                                 </div>
 
-                                <h2 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Application Submitted!</h2>
+                                <h2 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Welcome to InTrust!</h2>
                                 <p className="text-slate-500 text-lg max-w-md mx-auto mb-10 leading-relaxed">
-                                    We are verifying your documents. You can expect approval within <span className="font-bold text-slate-800">24-48 hours</span>.
+                                    Your merchant account is <span className="font-bold text-green-600">ready to use</span>! Start selling gift cards and grow your business today.
                                 </p>
 
                                 <div className="w-full max-w-xs space-y-3">
                                     <button
-                                        onClick={() => router.push('/')}
+                                        onClick={() => router.push('/merchant/dashboard')}
                                         className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl shadow-xl shadow-slate-900/10 transition-all flex items-center justify-center gap-2"
                                     >
                                         <Home size={18} />
-                                        Return to Dashboard
+                                        Go to Dashboard
                                     </button>
                                 </div>
                             </motion.div>

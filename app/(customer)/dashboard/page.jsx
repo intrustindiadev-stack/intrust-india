@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import {
     Wallet, Package, TrendingUp, Gift, Heart, Star,
@@ -13,15 +13,103 @@ import OpportunitiesSection from '@/components/customer/OpportunitiesSection';
 import MerchantOpportunityBanner from '@/components/customer/MerchantOpportunityBanner';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import Link from 'next/link';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function CustomerDashboardPage() {
-    const user = {
-        name: 'Rahul Kumar',
-        totalPurchases: 12,
-        totalSavings: 2450,
-        kycStatus: 'verified',
-        walletBalance: 2450.00
-    };
+    const { user, loading: authLoading } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [userData, setUserData] = useState({
+        name: '',
+        totalPurchases: 0,
+        totalSavings: 0,
+        kycStatus: 'pending',
+        walletBalance: 0.00,
+        activeCards: 0
+    });
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            if (!user) return;
+
+            try {
+                // 1. Fetch User Profile
+                const { data: profile, error: profileError } = await supabase
+                    .from('user_profiles')
+                    .select('full_name, role')
+                    .eq('id', user.id)
+                    .single();
+
+                // Check KYC status separately from kyc_records as it might not be in user_profiles
+                let kycStatus = 'pending';
+                // First check if profile has it (it might not based on my check)
+                // Then check kyc_records
+                const { data: kycRecord } = await supabase
+                    .from('kyc_records')
+                    .select('status')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (kycRecord) kycStatus = kycRecord.status;
+
+                // 2. Fetch Coupons (for Savings and Active Cards)
+                // Active Cards: Bought by user, sold status, valid > now
+                const now = new Date().toISOString();
+                const { data: coupons, error: couponsError } = await supabase
+                    .from('coupons')
+                    .select('face_value_paise, selling_price_paise, valid_until, status')
+                    .eq('purchased_by', user.id)
+                    .eq('status', 'sold');
+
+                let totalSavings = 0;
+                let activeCards = 0;
+                let totalPurchases = 0;
+
+                if (coupons) {
+                    totalPurchases = coupons.length;
+                    coupons.forEach(coupon => {
+                        // Savings = (Face Value - Selling Price)
+                        const faceValue = coupon.face_value_paise || 0;
+                        const sellingPrice = coupon.selling_price_paise || 0;
+                        totalSavings += (faceValue - sellingPrice);
+
+                        // Active Check
+                        if (coupon.valid_until > now) {
+                            activeCards++;
+                        }
+                    });
+                }
+
+                // Convert savings from paise to Rupee
+                totalSavings = totalSavings / 100;
+
+                // 3. Wallet Balance (Placeholder as no table exists)
+                const walletBalance = 0.00;
+
+                setUserData({
+                    name: profile?.full_name || user.email?.split('@')[0] || 'User',
+                    totalPurchases,
+                    totalSavings,
+                    kycStatus,
+                    walletBalance,
+                    activeCards
+                });
+
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (!authLoading) {
+            if (user) {
+                fetchDashboardData();
+            } else {
+                setLoading(false);
+            }
+        }
+    }, [user, authLoading]);
 
     const quickServices = [
         { id: 1, label: 'Recharge', icon: Smartphone, color: 'text-blue-600 bg-blue-50', href: '/services/recharge' },
@@ -33,10 +121,9 @@ export default function CustomerDashboardPage() {
     ];
 
     const stats = [
-        { label: 'Wallet Balance', value: `₹${user.walletBalance}`, icon: Wallet, color: 'from-blue-600 to-indigo-600' },
-        { label: 'Total Savings', value: `₹${user.totalSavings}`, icon: TrendingUp, color: 'from-emerald-500 to-teal-500' },
-        { label: 'Active Cards', value: '3', icon: Gift, color: 'from-purple-500 to-pink-500' },
-        { label: 'Wishlist', value: '8', icon: Heart, color: 'from-rose-500 to-red-500' },
+        { label: 'Wallet Balance', value: `₹${userData.walletBalance.toFixed(2)}`, icon: Wallet, color: 'from-blue-600 to-indigo-600' },
+        { label: 'Total Savings', value: `₹${userData.totalSavings.toFixed(2)}`, icon: TrendingUp, color: 'from-emerald-500 to-teal-500' },
+        { label: 'Active Cards', value: userData.activeCards.toString(), icon: Gift, color: 'from-purple-500 to-pink-500' }
     ];
 
     const recentOrders = [
@@ -44,6 +131,14 @@ export default function CustomerDashboardPage() {
         { id: 2, brand: 'Bill Payment', value: 840, status: 'success', date: 'Yesterday', logo: '⚡' },
         { id: 3, brand: 'Swiggy', value: 300, status: 'processing', date: '1 hour ago', logo: '🍔' },
     ];
+
+    if (authLoading || loading) {
+        return (
+            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center font-[family-name:var(--font-outfit)]">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] font-[family-name:var(--font-outfit)]">
@@ -61,7 +156,7 @@ export default function CustomerDashboardPage() {
                         className="mb-8"
                     >
                         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-2 tracking-tight">
-                            Welcome back, {user.name.split(' ')[0]}! 👋
+                            Welcome back, {userData.name.split(' ')[0]}! 👋
                         </h1>
                         <p className="text-slate-500 text-lg">
                             Manage your wallet, cards, and payments across the system.
@@ -69,7 +164,7 @@ export default function CustomerDashboardPage() {
                     </motion.div>
 
                     {/* Minimal Stats Grid (Replacing heavy cards) */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-10">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-10">
                         {stats.map((stat, index) => {
                             const Icon = stat.icon;
                             return (
@@ -139,8 +234,8 @@ export default function CustomerDashboardPage() {
                                                 <div className="text-sm text-slate-500">₹{order.value} • {order.date}</div>
                                             </div>
                                             <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${order.status === 'delivered' || order.status === 'success'
-                                                    ? 'bg-green-50 text-green-700'
-                                                    : 'bg-amber-50 text-amber-700'
+                                                ? 'bg-green-50 text-green-700'
+                                                : 'bg-amber-50 text-amber-700'
                                                 }`}>
                                                 {order.status === 'processing' ? <Clock size={12} /> : <CheckCircle size={12} />}
                                                 {order.status === 'delivered' ? 'Delivered' : order.status === 'success' ? 'Success' : 'Processing'}
@@ -154,7 +249,7 @@ export default function CustomerDashboardPage() {
                         {/* Sidebar */}
                         <div className="lg:col-span-1 space-y-8">
                             {/* KYC Banner */}
-                            {user.kycStatus === 'verified' && (
+                            {userData.kycStatus === 'verified' && (
                                 <MerchantOpportunityBanner />
                             )}
 

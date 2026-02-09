@@ -1,45 +1,134 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
-import { User, Mail, Phone, MapPin, Calendar, Edit2, ShieldCheck, Package, Heart } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Edit2, ShieldCheck, Package, Heart, LayoutDashboard } from 'lucide-react';
 import KYCStatus from '@/components/kyc/KYCStatus';
 import KYCForm from '@/components/kyc/KYCForm';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+import { createClient } from '@/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
 
 export default function CustomerProfilePage() {
+    const supabase = createClient();
+    const router = useRouter();
+
+    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(null);
+    const [profile, setProfile] = useState(null);
     const [showKYCForm, setShowKYCForm] = useState(false);
-    const [kycStatus, setKycStatus] = useState('not_started'); // not_started, pending, verified, rejected
+    const [kycStatus, setKycStatus] = useState('not_started');
 
-    // Mock user data
-    const user = {
-        name: 'Rahul Kumar',
-        email: 'rahul.kumar@example.com',
-        phone: '+91 98765 43210',
-        joinedDate: 'January 2024',
-        totalPurchases: 12,
-        savedAmount: '₹2,450',
-        favoriteCategories: ['Shopping', 'Food', 'Entertainment']
+    useEffect(() => {
+        fetchUserData();
+    }, []);
+
+    const fetchUserData = async () => {
+        try {
+            setLoading(true);
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+            if (authError || !user) {
+                console.error('Error fetching user:', authError);
+                return;
+            }
+
+            setUser(user);
+
+            const { data: profileData, error: profileError } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (profileError) {
+                console.error('Error fetching profile:', profileError);
+            }
+
+            if (profileData) {
+                setProfile(profileData);
+                setKycStatus(profileData.kyc_status || 'not_started');
+            } else {
+                setProfile({
+                    full_name: user.user_metadata?.full_name || '',
+                    email: user.email,
+                    phone: user.phone || '',
+                    created_at: user.created_at
+                });
+            }
+
+        } catch (error) {
+            console.error('Unexpected error:', error);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleKYCSubmit = (formData) => {
-        console.log('KYC Data:', formData);
-        setKycStatus('pending');
-        setShowKYCForm(false);
-        // In real app: send to backend API
+    const handleKYCSubmit = async (formData) => {
+        try {
+            if (!user) return;
+
+            const updates = {
+                full_name: formData.fullName,
+                phone: formData.phone,
+                date_of_birth: formData.dateOfBirth,
+                gov_id: formData.panNumber,
+                address: formData.address,
+                kyc_status: 'pending',
+                updated_at: new Date().toISOString(),
+            };
+
+            const { error } = await supabase
+                .from('user_profiles')
+                .update(updates)
+                .eq('id', user.id);
+
+            if (error) {
+                throw error;
+            }
+
+            setKycStatus('pending');
+            setShowKYCForm(false);
+            setProfile(prev => ({ ...prev, ...updates }));
+            showToast("KYC submitted successfully. Awaiting verification.");
+
+        } catch (error) {
+            console.error('Error submitting KYC:', error);
+            alert('Failed to submit KYC. Please try again.');
+        }
     };
+
+    const [toastMsg, setToastMsg] = useState('');
+    const showToast = (msg) => {
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(''), 3000);
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
+
+    if (!user) return null;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
             <Navbar />
 
+            {toastMsg && (
+                <div className="fixed top-24 right-4 bg-green-600 text-white px-6 py-3 rounded-xl shadow-xl z-50 animate-bounce">
+                    {toastMsg}
+                </div>
+            )}
+
             <div style={{ paddingTop: '15vh' }} className="pb-12 px-4 sm:px-6">
                 <div className="max-w-5xl mx-auto">
-                    {/* Breadcrumbs */}
                     <Breadcrumbs items={[{ label: 'Profile' }]} />
 
-                    {/* Header */}
                     <div className="mb-8">
                         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 font-[family-name:var(--font-outfit)]">
                             My Profile
@@ -48,40 +137,32 @@ export default function CustomerProfilePage() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Left Column: Profile Info */}
                         <div className="lg:col-span-1 space-y-6">
-                            {/* Profile Card */}
                             <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-lg">
                                 <div className="text-center mb-6">
                                     <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center text-white text-3xl font-bold shadow-lg">
-                                        {user.name.charAt(0)}
+                                        {profile?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
                                     </div>
-                                    <h2 className="text-xl font-bold text-gray-900 mb-1">{user.name}</h2>
-                                    <p className="text-sm text-gray-600">Customer since {user.joinedDate}</p>
+                                    <h2 className="text-xl font-bold text-gray-900 mb-1">{profile?.full_name || 'User'}</h2>
+                                    <p className="text-sm text-gray-600">Customer since {new Date(profile?.created_at || user.created_at).getFullYear()}</p>
                                 </div>
 
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-3 text-sm">
                                         <Mail size={18} className="text-gray-400" />
-                                        <span className="text-gray-700">{user.email}</span>
+                                        <span className="text-gray-700 truncate">{user.email}</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
                                         <Phone size={18} className="text-gray-400" />
-                                        <span className="text-gray-700">{user.phone}</span>
+                                        <span className="text-gray-700">{profile?.phone || 'No phone added'}</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
                                         <Calendar size={18} className="text-gray-400" />
-                                        <span className="text-gray-700">Joined {user.joinedDate}</span>
+                                        <span className="text-gray-700">Joined {new Date(user.created_at).toLocaleDateString()}</span>
                                     </div>
                                 </div>
-
-                                <button className="w-full mt-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-xl transition-all flex items-center justify-center gap-2">
-                                    <Edit2 size={18} />
-                                    Edit Profile
-                                </button>
                             </div>
 
-                            {/* Stats Card */}
                             <div className="bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] rounded-2xl p-6 text-white shadow-lg">
                                 <h3 className="text-lg font-bold mb-4">Your Stats</h3>
                                 <div className="space-y-3">
@@ -90,70 +171,33 @@ export default function CustomerProfilePage() {
                                             <Package size={18} />
                                             <span>Total Purchases</span>
                                         </div>
-                                        <span className="font-bold text-xl">{user.totalPurchases}</span>
+                                        <span className="font-bold text-xl">0</span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <ShieldCheck size={18} />
                                             <span>Total Saved</span>
                                         </div>
-                                        <span className="font-bold text-xl">{user.savedAmount}</span>
+                                        <span className="font-bold text-xl">₹0</span>
                                     </div>
                                 </div>
+
+                                <button
+                                    onClick={() => router.push('/dashboard')}
+                                    className="w-full mt-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/40 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                                >
+                                    Go to Dashboard
+                                    <LayoutDashboard size={18} />
+                                </button>
                             </div>
                         </div>
 
-                        {/* Right Column: KYC Section */}
                         <div className="lg:col-span-2 space-y-6">
-                            {/* KYC Status or Form */}
                             {!showKYCForm ? (
-                                <>
-                                    <KYCStatus
-                                        status={kycStatus}
-                                        onStartKYC={() => setShowKYCForm(true)}
-                                    />
-
-                                    {/* Merchant Application CTA */}
-                                    {kycStatus === 'verified' && (
-                                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-6 shadow-lg">
-                                            <div className="flex items-start gap-4">
-                                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
-                                                    <ShieldCheck size={24} className="text-white" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <h3 className="text-xl font-bold text-gray-900 mb-2">Become a Merchant</h3>
-                                                    <p className="text-gray-600 mb-4">
-                                                        Start selling gift cards and earn money. Your KYC is already verified!
-                                                    </p>
-                                                    <a
-                                                        href="/merchant-apply"
-                                                        className="inline-block px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold rounded-xl transition-all shadow-lg"
-                                                    >
-                                                        Apply as Merchant →
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Favorite Categories */}
-                                    <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-lg">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                            <Heart size={20} className="text-red-500" />
-                                            Favorite Categories
-                                        </h3>
-                                        <div className="flex flex-wrap gap-2">
-                                            {user.favoriteCategories.map((category) => (
-                                                <span
-                                                    key={category}
-                                                    className="px-4 py-2 bg-gradient-to-r from-[#92BCEA]/10 to-[#AFB3F7]/10 border-2 border-[#92BCEA]/20 text-gray-900 font-semibold rounded-xl"
-                                                >
-                                                    {category}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </>
+                                <KYCStatus
+                                    status={kycStatus}
+                                    onStartKYC={() => setShowKYCForm(true)}
+                                />
                             ) : (
                                 <div>
                                     <button
@@ -162,7 +206,16 @@ export default function CustomerProfilePage() {
                                     >
                                         ← Back to Profile
                                     </button>
-                                    <KYCForm userType="customer" onSubmit={handleKYCSubmit} />
+                                    <KYCForm
+                                        onSubmit={handleKYCSubmit}
+                                        initialData={{
+                                            fullName: profile?.full_name || '',
+                                            phone: profile?.phone || '',
+                                            address: profile?.address || '',
+                                            panNumber: profile?.gov_id || '',
+                                            dateOfBirth: profile?.date_of_birth || ''
+                                        }}
+                                    />
                                 </div>
                             )}
                         </div>
@@ -170,7 +223,6 @@ export default function CustomerProfilePage() {
                 </div>
             </div>
 
-            {/* Bottom Navigation */}
             <CustomerBottomNav />
         </div>
     );
