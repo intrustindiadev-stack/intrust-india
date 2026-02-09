@@ -78,6 +78,16 @@ export default function GiftCardDetailPage({ params }) {
         }
     }
 
+    const loadRazorpayScript = () => {
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+        });
+    };
+
     async function handlePurchase() {
         if (!user) {
             router.push('/login');
@@ -88,6 +98,7 @@ export default function GiftCardDetailPage({ params }) {
             setPurchasing(true);
             setPurchaseError(null);
 
+<<<<<<< Updated upstream
             // Call purchase API
             const response = await fetch('/api/purchase', {
                 method: 'POST',
@@ -95,24 +106,97 @@ export default function GiftCardDetailPage({ params }) {
                 body: JSON.stringify({
                     coupon_id: coupon.id,
                     payment_reference: `UPI_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+=======
+            const isScriptLoaded = await loadRazorpayScript();
+            if (!isScriptLoaded) {
+                throw new Error('Razorpay SDK failed to load. Are you online?');
+            }
+
+            // 1. Create Order
+            const response = await fetch('/api/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    giftcardId: card.id,
+>>>>>>> Stashed changes
                 })
             });
 
-            const result = await response.json();
+            const orderData = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.error || 'Purchase failed');
+                if (response.status === 403 || orderData.error === 'KYC_REQUIRED') {
+                    showToast("KYC Verification Required. Redirecting...");
+                    setTimeout(() => router.push('/profile?section=kyc'), 1500);
+                    return;
+                }
+                throw new Error(orderData.error || 'Failed to create order');
             }
 
+<<<<<<< Updated upstream
             // Success
             setPurchaseSuccess(true);
             setTimeout(() => {
                 router.push('/my-coupons');
             }, 2000);
+=======
+            // 2. Initialize Razorpay Option
+            const options = {
+                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                amount: orderData.amount,
+                currency: orderData.currency,
+                name: 'INTRUST Gift Cards',
+                description: `Purchase of ${card.title}`,
+                image: '/logo.png', // Ensure you have a logo at /public/logo.png or remove this
+                order_id: orderData.id, // Razorpay Order ID
+                handler: async function (response) {
+                    try {
+                        const verifyRes = await fetch('/api/verify-payment', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                            }),
+                        });
+
+                        const verifyData = await verifyRes.json();
+
+                        if (verifyData.success) {
+                            setPurchaseSuccess(true);
+                            setTimeout(() => {
+                                router.push('/my-coupons');
+                            }, 2000);
+                        } else {
+                            throw new Error('Payment verification failed');
+                        }
+                    } catch (error) {
+                        console.error('Verification Error:', error);
+                        setPurchaseError('Payment successful but verification failed. Contact support.');
+                    }
+                },
+                prefill: {
+                    name: user.user_metadata?.full_name || user.email,
+                    email: user.email,
+                },
+                theme: {
+                    color: '#2563EB', // Blue-600 to match theme
+                },
+            };
+
+            const paymentObject = new window.Razorpay(options);
+            paymentObject.on('payment.failed', function (response) {
+                setPurchaseError(`Payment Failed: ${response.error.description}`);
+            });
+            paymentObject.open();
+>>>>>>> Stashed changes
 
         } catch (err) {
-            console.error('Purchase error:', err);
-            setPurchaseError(err.message || 'Purchase failed. Please try again.');
+            console.error('Purchase initiation error:', err);
+            setPurchaseError(err.message || 'Could not initiate purchase.');
         } finally {
             setPurchasing(false);
         }

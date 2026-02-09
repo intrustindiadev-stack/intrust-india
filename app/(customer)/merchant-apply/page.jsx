@@ -54,17 +54,88 @@ export default function MerchantApplyPage() {
         bankAccount: '', ifscCode: '', panCard: '',
     });
 
+    const [error, setError] = useState('');
+
     const handleFormSubmit = async (e) => {
-        if (e) e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
         setLoading(true);
-        // Simulate a realistic API call
-        setTimeout(() => {
+        setError('');
+
+        try {
+            // Call API to create merchant account
+            const response = await fetch('/api/merchant/apply', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to submit application');
+            }
+
+            // Success! Merchant account created and auto-approved
+            console.log('✅ Merchant account created:', data);
             setLoading(false);
-            setStep(4); // Move to Success Step internally for smooth transition
-        }, 2000);
+            setStep(4); // Move to Success Step
+        } catch (err) {
+            console.error('❌ Error submitting merchant application:', err);
+            setError(err.message || 'Failed to submit application. Please try again.');
+            setLoading(false);
+        }
     };
 
-    const nextStep = () => setStep(step + 1);
+    const validateStep1 = () => {
+        if (!formData.businessName.trim()) return "Business Name is required";
+
+        // GSTIN Validation (15 chars: 2 digits, 5 letters, 4 digits, 1 letter, 1 alphanumeric, Z, 1 alphanumeric)
+        const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+        if (!gstinRegex.test(formData.gstNumber)) return "Invalid GSTIN format (e.g., 22AAAAA0000A1Z5)";
+
+        if (!formData.ownerName.trim()) return "Owner Name is required";
+
+        // Mobile Validation (10 digits, starts with 6-9)
+        const mobileRegex = /^[6-9]\d{9}$/;
+        if (!mobileRegex.test(formData.phone)) return "Invalid Mobile Number (must be 10 digits starting with 6-9)";
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) return "Invalid Email Address";
+
+        if (!formData.address.trim()) return "Address is required";
+
+        return null;
+    };
+
+    const validateStep2 = () => {
+        // Bank Account (11-16 digits)
+        const bankRegex = /^\d{11,16}$/;
+        if (!bankRegex.test(formData.bankAccount)) return "Bank Account must be between 11 and 16 digits";
+
+        // IFSC Code (4 letters, 0, 6 alphanumeric)
+        const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+        if (!ifscRegex.test(formData.ifscCode)) return "Invalid IFSC Code";
+
+        // PAN Card (5 letters, 4 digits, 1 letter)
+        const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+        if (!panRegex.test(formData.panCard)) return "Invalid PAN Number";
+
+        return null;
+    };
+
+    const nextStep = () => {
+        let errorMsg = null;
+        if (step === 1) errorMsg = validateStep1();
+        else if (step === 2) errorMsg = validateStep2();
+
+        if (errorMsg) {
+            alert(errorMsg);
+            return;
+        }
+        setStep(step + 1);
+    };
     const prevStep = () => setStep(step - 1);
 
     // Calculate progress for the progress bar
@@ -214,6 +285,17 @@ export default function MerchantApplyPage() {
                                 transition={{ duration: 0.3 }}
                                 className="py-2 h-full flex flex-col"
                             >
+                                {error && (
+                                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex gap-3 items-start">
+                                        <div className="bg-red-100 p-2 rounded-full text-red-600 shrink-0">
+                                            <X size={18} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-bold text-red-900 text-sm">Submission Failed</p>
+                                            <p className="text-red-700 text-sm mt-1">{error}</p>
+                                        </div>
+                                    </div>
+                                )}
                                 <KYCForm
                                     userType="merchant"
                                     onSubmit={handleFormSubmit}
@@ -250,18 +332,18 @@ export default function MerchantApplyPage() {
                                     />
                                 </div>
 
-                                <h2 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Application Submitted!</h2>
+                                <h2 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Welcome to InTrust!</h2>
                                 <p className="text-slate-500 text-lg max-w-md mx-auto mb-10 leading-relaxed">
-                                    We are verifying your documents. You can expect approval within <span className="font-bold text-slate-800">24-48 hours</span>.
+                                    Your merchant account is <span className="font-bold text-green-600">ready to use</span>! Start selling gift cards and grow your business today.
                                 </p>
 
                                 <div className="w-full max-w-xs space-y-3">
                                     <button
-                                        onClick={() => router.push('/')}
+                                        onClick={() => router.push('/merchant/dashboard')}
                                         className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl shadow-xl shadow-slate-900/10 transition-all flex items-center justify-center gap-2"
                                     >
                                         <Home size={18} />
-                                        Return to Dashboard
+                                        Go to Dashboard
                                     </button>
                                 </div>
                             </motion.div>
