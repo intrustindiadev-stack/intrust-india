@@ -1,0 +1,129 @@
+table_name,column_name,data_type,is_nullable
+admin_coupon_inventory,status,USER-DEFINED,YES
+admin_coupon_inventory,count,bigint,YES
+admin_coupon_inventory,total_value_paise,numeric,YES
+admin_coupon_inventory,avg_price_paise,numeric,YES
+admin_kyc_summary,status,USER-DEFINED,YES
+admin_kyc_summary,count,bigint,YES
+admin_revenue_summary,total_transactions,bigint,YES
+admin_revenue_summary,total_coupon_sales_paise,numeric,YES
+admin_revenue_summary,total_platform_revenue_paise,numeric,YES
+admin_revenue_summary,total_gmv_paise,numeric,YES
+admin_revenue_summary,unique_buyers,bigint,YES
+admin_revenue_summary,first_transaction,timestamp with time zone,YES
+admin_revenue_summary,last_transaction,timestamp with time zone,YES
+app_admins,user_id,uuid,NO
+app_admins,created_at,timestamp with time zone,YES
+audit_logs,id,uuid,NO
+audit_logs,actor_id,uuid,YES
+audit_logs,actor_role,USER-DEFINED,YES
+audit_logs,action,USER-DEFINED,NO
+audit_logs,entity_type,text,NO
+audit_logs,entity_id,uuid,YES
+audit_logs,description,text,NO
+audit_logs,metadata,jsonb,YES
+audit_logs,ip_address,inet,YES
+audit_logs,user_agent,text,YES
+audit_logs,created_at,timestamp with time zone,NO
+coupons,id,uuid,NO
+coupons,brand,text,NO
+coupons,title,text,NO
+coupons,description,text,NO
+coupons,category,text,NO
+coupons,face_value_paise,bigint,NO
+coupons,selling_price_paise,bigint,NO
+coupons,encrypted_code,text,NO
+coupons,masked_code,text,NO
+coupons,status,USER-DEFINED,NO
+coupons,valid_from,timestamp with time zone,NO
+coupons,valid_until,timestamp with time zone,NO
+coupons,terms_and_conditions,text,NO
+coupons,usage_instructions,text,YES
+coupons,image_url,text,YES
+coupons,tags,ARRAY,YES
+coupons,merchant_id,uuid,YES
+coupons,purchased_by,uuid,YES
+coupons,purchased_at,timestamp with time zone,YES
+coupons,created_by,uuid,YES
+coupons,created_at,timestamp with time zone,NO
+coupons,updated_at,timestamp with time zone,NO
+coupons,giftcard_id,uuid,YES
+giftcards,id,uuid,NO
+giftcards,title,text,NO
+giftcards,description,text,YES
+giftcards,price,numeric,NO
+giftcards,brand,text,YES
+giftcards,stock,integer,YES
+giftcards,is_active,boolean,YES
+giftcards,created_at,timestamp without time zone,YES
+kyc_records,id,uuid,NO
+kyc_records,user_id,uuid,NO
+kyc_records,status,USER-DEFINED,NO
+kyc_records,full_legal_name,text,NO
+kyc_records,date_of_birth,date,NO
+kyc_records,id_type,text,NO
+kyc_records,id_number_encrypted,text,NO
+kyc_records,id_number_last4,text,NO
+kyc_records,address_line1,text,NO
+kyc_records,address_line2,text,YES
+kyc_records,city,text,NO
+kyc_records,state,text,NO
+kyc_records,postal_code,text,NO
+kyc_records,country,text,NO
+kyc_records,id_document_front_url,text,NO
+kyc_records,id_document_back_url,text,YES
+kyc_records,selfie_url,text,NO
+kyc_records,reviewed_by,uuid,YES
+kyc_records,reviewed_at,timestamp with time zone,YES
+kyc_records,rejection_reason,text,YES
+kyc_records,submitted_at,timestamp with time zone,YES
+kyc_records,created_at,timestamp with time zone,NO
+kyc_records,updated_at,timestamp with time zone,NO
+orders,id,uuid,NO
+orders,user_id,uuid,YES
+orders,giftcard_id,uuid,YES
+orders,amount,numeric,NO
+orders,payment_status,text,YES
+orders,razorpay_order_id,text,YES
+orders,razorpay_payment_id,text,YES
+orders,created_at,timestamp without time zone,YES
+platform_ledger,id,uuid,NO
+platform_ledger,transaction_id,uuid,NO
+platform_ledger,entry_type,USER-DEFINED,NO
+platform_ledger,amount_paise,bigint,NO
+platform_ledger,balance_after_paise,bigint,NO
+platform_ledger,description,text,NO
+platform_ledger,created_at,timestamp with time zone,NO
+profiles,id,uuid,NO
+profiles,full_name,text,YES
+profiles,email,text,YES
+profiles,phone,text,YES
+profiles,dob,date,YES
+profiles,pan_number,text,YES
+profiles,address,text,YES
+profiles,kyc_status,text,YES
+profiles,role,text,YES
+profiles,created_at,timestamp with time zone,YES
+transactions,id,uuid,NO
+transactions,user_id,uuid,NO
+transactions,coupon_id,uuid,NO
+transactions,coupon_price_paise,bigint,NO
+transactions,buyer_fee_paise,bigint,NO
+transactions,total_paid_paise,bigint,NO
+transactions,payment_method,text,NO
+transactions,payment_reference,text,YES
+transactions,status,USER-DEFINED,NO
+transactions,created_at,timestamp with time zone,NO
+transactions,completed_at,timestamp with time zone,YES
+user_profiles,id,uuid,NO
+user_profiles,role,USER-DEFINED,NO
+user_profiles,full_name,text,NO
+user_profiles,phone,text,YES
+user_profiles,is_suspended,boolean,NO
+user_profiles,suspension_reason,text,YES
+user_profiles,created_at,timestamp with time zone,NO
+user_profiles,updated_at,timestamp with time zone,NO
+user_profiles,kyc_status,text,YES
+user_profiles,date_of_birth,date,YES
+user_profiles,gov_id,text,YES
+user_profiles,address,text,YES

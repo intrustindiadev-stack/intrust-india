@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabaseClient';
 import { Search, Loader2, ShieldCheck, ShieldAlert, BadgeCheck, AlertCircle, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 
 export default function AdminUsersPage() {
     const supabase = createClient();
@@ -83,7 +84,7 @@ export default function AdminUsersPage() {
     const StatusBadge = ({ status }) => {
         switch (status) {
             case 'verified':
-                return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"><BadgeCheck size={14} /> Verified</span>;
+                return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"><VerifiedBadge size={14} className="text-blue-600" /> Verified</span>;
             case 'pending':
                 return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><Loader2 size={14} className="animate-spin" /> Pending</span>;
             case 'rejected':

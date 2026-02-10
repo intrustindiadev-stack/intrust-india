@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 const navigation = [
-    { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Merchants', href: '/admin/merchants', icon: Store },
     { name: 'Vendors', href: '/admin/vendors', icon: Package },
@@ -51,7 +51,7 @@ export default function AdminSidebar({ isOpen, setIsOpen }) {
                 <div className="flex flex-col h-full">
                     {/* Logo & Toggle */}
                     <div className="flex items-center justify-between p-6 border-b border-gray-700">
-                        <Link href="/admin/dashboard" className="flex items-center gap-3">
+                        <Link href="/admin" className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
                                 <span className="text-white font-bold text-xl">A</span>
                             </div>
@@ -74,7 +74,10 @@ export default function AdminSidebar({ isOpen, setIsOpen }) {
                     <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
                         {navigation.map((item) => {
                             const Icon = item.icon;
-                            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+                            // Exact match for root dashboard '/admin', partial for others
+                            const isActive = item.href === '/admin'
+                                ? pathname === '/admin'
+                                : pathname === item.href || pathname?.startsWith(item.href + '/');
 
                             return (
                                 <Link

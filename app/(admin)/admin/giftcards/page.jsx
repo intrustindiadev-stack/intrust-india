@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAllGiftCards, deleteGiftCard } from './actions';
-import { Pencil, Trash2, Plus, Search, Filter, Gift, TrendingUp, Package } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search, Package, TrendingUp, Gift } from 'lucide-react';
 import Link from 'next/link';
+import EditGiftCardModal from './EditGiftCardModal';
 
 export default function GiftCardsListPage() {
     const router = useRouter();
@@ -15,6 +16,10 @@ export default function GiftCardsListPage() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [deleteLoading, setDeleteLoading] = useState(null);
+
+    // Edit Modal State
+    const [selectedCard, setSelectedCard] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     useEffect(() => {
         loadGiftCards();
@@ -79,6 +84,19 @@ export default function GiftCardsListPage() {
         }
 
         setDeleteLoading(null);
+    }
+
+    // Edit Handlers
+    function handleEditClick(card) {
+        setSelectedCard(card);
+        setIsEditModalOpen(true);
+    }
+
+    function handleUpdateSuccess(updatedCard) {
+        setGiftCards(prev => prev.map(c => c.id === updatedCard.id ? updatedCard : c));
+        // Also update filtered cards to reflect changes immediately
+        setFilteredCards(prev => prev.map(c => c.id === updatedCard.id ? updatedCard : c));
+        alert('Gift card updated successfully!');
     }
 
     function formatPrice(paise) {
@@ -265,8 +283,8 @@ export default function GiftCardsListPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${card.status === 'available' ? 'bg-green-100 text-green-700' :
-                                                    card.status === 'sold' ? 'bg-gray-100 text-gray-700' :
-                                                        'bg-red-100 text-red-700'
+                                                card.status === 'sold' ? 'bg-gray-100 text-gray-700' :
+                                                    'bg-red-100 text-red-700'
                                                 }`}>
                                                 {card.status}
                                             </span>
@@ -274,7 +292,7 @@ export default function GiftCardsListPage() {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <button
-                                                    onClick={() => router.push(`/admin/giftcards/${card.id}`)}
+                                                    onClick={() => handleEditClick(card)}
                                                     className="p-2 hover:bg-blue-100 rounded-lg text-blue-600 transition-colors"
                                                     title="Edit"
                                                 >
@@ -297,6 +315,14 @@ export default function GiftCardsListPage() {
                     </table>
                 </div>
             </div>
+
+            {/* Edit Modal */}
+            <EditGiftCardModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                giftCard={selectedCard}
+                onUpdate={handleUpdateSuccess}
+            />
         </div>
     );
 }

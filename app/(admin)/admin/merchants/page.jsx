@@ -1,185 +1,274 @@
 'use client';
 
-import { useState } from 'react';
-import Navbar from '@/components/layout/Navbar';
-import { CheckCircle, XCircle, Eye, Clock, Building2, Phone, Mail, FileText } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { CheckCircle, XCircle, Eye, Clock, Building2, Phone, Mail, FileText, RefreshCw, AlertCircle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function AdminMerchantsPage() {
     const [filter, setFilter] = useState('pending');
+    const [merchants, setMerchants] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [approving, setApproving] = useState(null);
 
-    // Mock data
-    const merchants = [
-        {
-            id: 1,
-            businessName: 'Ravi Gift Cards',
-            ownerName: 'Ravi Kumar',
-            phone: '+919876543210',
-            email: 'ravi@giftcards.com',
-            gstNumber: '22AAAAA0000A1Z5',
-            status: 'pending',
-            appliedDate: '2024-01-30',
-            documents: 4
-        },
-        {
-            id: 2,
-            businessName: 'Gift Card Hub',
-            ownerName: 'Priya Sharma',
-            phone: '+919876543211',
-            email: 'priya@hub.com',
-            gstNumber: '22BBBBB0000B1Z5',
-            status: 'pending',
-            appliedDate: '2024-01-29',
-            documents: 4
-        },
-        {
-            id: 3,
-            businessName: 'Food Deals',
-            ownerName: 'Amit Patel',
-            phone: '+919876543212',
-            email: 'amit@fooddeals.com',
-            gstNumber: '22CCCCC0000C1Z5',
-            status: 'approved',
-            appliedDate: '2024-01-28',
-            documents: 4
-        },
-    ];
+    const fetchMerchants = async () => {
+        setLoading(true);
+        try {
+            // Fetch merchants with user profile data
+            // We optimize by selecting specific fields
+            const { data, error } = await supabase
+                .from('merchants')
+                .select(`
+                    *,
+                    user_profiles:user_id (
+                        full_name,
+                        phone_number,
+                        email
+                    )
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            console.log('Fetched merchants:', data);
+
+            // Transform data to match UI expectations
+            const transformed = data.map(m => ({
+                id: m.id,
+                userId: m.user_id,
+                businessName: m.business_name || 'N/A',
+                // Use profile data if available, fallback to merchant data if it exists (it might not)
+                ownerName: m.user_profiles?.full_name || 'Unknown',
+                phone: m.user_profiles?.phone_number || 'N/A',
+                email: m.user_profiles?.email || 'N/A',
+                gstNumber: m.gst_number || 'N/A',
+                status: m.status || 'pending',
+                appliedDate: new Date(m.created_at).toLocaleDateString('en-IN', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                }),
+                documents: 0 // Placeholder
+            }));
+
+            setMerchants(transformed);
+        } catch (error) {
+            console.error('Error fetching merchants:', error);
+            toast.error('Failed to load merchant applications');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchMerchants();
+    }, []);
 
     const filteredMerchants = merchants.filter(m => m.status === filter);
 
-    const handleApprove = (id) => {
-        console.log('Approve merchant:', id);
-        // Mock approval
+    const handleApprove = async (id, userId) => {
+        if (!confirm('Are you sure you want to approve this merchant?')) return;
+
+        setApproving(id);
+        const toastId = toast.loading('Approving merchant...');
+
+        try {
+            const response = await fetch('/api/admin/approve-merchant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ applicationId: id, userId }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to approve merchant');
+            }
+
+            toast.success('Merchant approved successfully!', { id: toastId });
+
+            // Refresh list
+            fetchMerchants();
+        } catch (error) {
+            console.error('Approval error:', error);
+            toast.error(error.message, { id: toastId });
+        } finally {
+            setApproving(null);
+        }
     };
 
-    const handleReject = (id) => {
+    const handleReject = async (id) => {
+        if (!confirm('Reject this application? (This feature is currently mock-only)')) return;
+        // Placeholder for reject logic
         console.log('Reject merchant:', id);
-        // Mock rejection
+        toast.success('Merchant rejected (Mock)');
+        // In real impl, call API to update status to 'rejected'
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            <Navbar />
-
-            <div className="pt-24 pb-12">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                    {/* Header */}
-                    <div className="mb-8">
-                        <h1 className="text-4xl font-bold text-gray-900 mb-2 font-[family-name:var(--font-outfit)]">
+        <div className="min-h-screen bg-gray-50/50">
+            <div className="p-6 lg:p-12 max-w-[1600px] mx-auto">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 mb-2 font-[family-name:var(--font-outfit)]">
                             Merchant Applications
                         </h1>
-                        <p className="text-gray-600">Review and approve merchant applications</p>
+                        <p className="text-gray-600">Review and manage merchant onboarding requests</p>
                     </div>
-
-                    {/* Filter Tabs */}
-                    <div className="flex items-center gap-3 mb-6">
-                        {['pending', 'approved', 'rejected'].map((status) => (
-                            <button
-                                key={status}
-                                onClick={() => setFilter(status)}
-                                className={`px-6 py-3 rounded-xl font-semibold capitalize transition-all ${filter === status
-                                        ? 'bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] text-white shadow-lg'
-                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-                                    }`}
-                            >
-                                {status}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Merchants Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {filteredMerchants.map((merchant) => (
-                            <div key={merchant.id} className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all">
-                                {/* Header */}
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center text-white text-2xl font-bold">
-                                            {merchant.businessName.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <h3 className="text-xl font-bold text-gray-900 mb-1">{merchant.businessName}</h3>
-                                            <p className="text-sm text-gray-600">{merchant.ownerName}</p>
-                                        </div>
-                                    </div>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${merchant.status === 'pending'
-                                            ? 'bg-yellow-100 text-yellow-700'
-                                            : merchant.status === 'approved'
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-red-100 text-red-700'
-                                        }`}>
-                                        {merchant.status}
-                                    </span>
-                                </div>
-
-                                {/* Details */}
-                                <div className="space-y-3 mb-6">
-                                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                                        <Phone size={16} className="text-gray-400" />
-                                        <span>{merchant.phone}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                                        <Mail size={16} className="text-gray-400" />
-                                        <span>{merchant.email}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                                        <Building2 size={16} className="text-gray-400" />
-                                        <span>GST: {merchant.gstNumber}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                                        <Clock size={16} className="text-gray-400" />
-                                        <span>Applied: {merchant.appliedDate}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                                        <FileText size={16} className="text-gray-400" />
-                                        <span>{merchant.documents} documents uploaded</span>
-                                    </div>
-                                </div>
-
-                                {/* Actions */}
-                                {merchant.status === 'pending' && (
-                                    <div className="flex gap-3">
-                                        <button
-                                            onClick={() => handleReject(merchant.id)}
-                                            className="flex-1 py-3 bg-red-50 hover:bg-red-100 text-red-600 font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <XCircle size={18} />
-                                            Reject
-                                        </button>
-                                        <button className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-all flex items-center justify-center gap-2">
-                                            <Eye size={18} />
-                                            View Details
-                                        </button>
-                                        <button
-                                            onClick={() => handleApprove(merchant.id)}
-                                            className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <CheckCircle size={18} />
-                                            Approve
-                                        </button>
-                                    </div>
-                                )}
-
-                                {merchant.status === 'approved' && (
-                                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
-                                        <div className="flex items-center gap-2 text-green-700">
-                                            <CheckCircle size={18} />
-                                            <span className="text-sm font-medium">Approved and active</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Empty State */}
-                    {filteredMerchants.length === 0 && (
-                        <div className="text-center py-16">
-                            <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">No {filter} merchants</h3>
-                            <p className="text-gray-600">There are no merchants with {filter} status</p>
-                        </div>
-                    )}
+                    <button
+                        onClick={fetchMerchants}
+                        disabled={loading}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all font-medium text-sm shadow-sm"
+                    >
+                        <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                        Refresh List
+                    </button>
                 </div>
+
+                {/* Filter Tabs */}
+                <div className="flex items-center gap-3 mb-8">
+                    {['pending', 'approved', 'rejected'].map((status) => (
+                        <button
+                            key={status}
+                            onClick={() => setFilter(status)}
+                            className={`px-5 py-2.5 rounded-lg font-medium capitalize transition-all text-sm ${filter === status
+                                ? 'bg-slate-900 text-white shadow-md'
+                                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                                }`}
+                        >
+                            {status}
+                            <span className={`ml-2 px-1.5 py-0.5 rounded text-xs ${filter === status ? 'bg-white/20' : 'bg-gray-100'
+                                }`}>
+                                {merchants.filter(m => m.status === status).length}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+
+                {/* Loading State */}
+                {loading && (
+                    <div className="bg-white rounded-xl border border-gray-200 p-12 flex flex-col items-center justify-center">
+                        <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin mb-4"></div>
+                        <p className="text-gray-500 font-medium">Loading applications...</p>
+                    </div>
+                )}
+
+                {/* Merchants Table */}
+                {!loading && (
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-gray-50/50 border-b border-gray-100">
+                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Business Details</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact Info</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">GST Number</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Applied Date</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {filteredMerchants.length > 0 ? (
+                                        filteredMerchants.map((merchant) => (
+                                            <tr key={merchant.id} className="hover:bg-gray-50/50 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-700 font-bold text-lg">
+                                                            {merchant.businessName.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-semibold text-gray-900">{merchant.businessName}</div>
+                                                            <div className="text-sm text-gray-500">{merchant.ownerName}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                                                            <Phone size={14} className="text-gray-400" />
+                                                            {merchant.phone}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                                                            <Mail size={14} className="text-gray-400" />
+                                                            {merchant.email}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm font-inconsolata bg-gray-50 px-2 py-1 rounded border border-gray-200 inline-block text-gray-700">
+                                                        {merchant.gstNumber}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                                        <Clock size={14} className="text-gray-400" />
+                                                        {merchant.appliedDate}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize border ${merchant.status === 'pending'
+                                                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                        : merchant.status === 'approved'
+                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                            : 'bg-red-50 text-red-700 border-red-200'
+                                                        }`}>
+                                                        {merchant.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {/* <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all" title="View Details">
+                                                            <Eye size={18} />
+                                                        </button> */}
+                                                        {merchant.status === 'pending' && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => handleReject(merchant.id)}
+                                                                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                                    title="Reject"
+                                                                    disabled={approving === merchant.id}
+                                                                >
+                                                                    <XCircle size={18} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleApprove(merchant.id, merchant.userId)}
+                                                                    className={`p-2 rounded-lg transition-all ${approving === merchant.id
+                                                                            ? 'bg-emerald-50 text-emerald-600 cursor-wait'
+                                                                            : 'text-emerald-400 hover:text-emerald-600 hover:bg-emerald-50'
+                                                                        }`}
+                                                                    title="Approve"
+                                                                    disabled={approving === merchant.id}
+                                                                >
+                                                                    {approving === merchant.id ? (
+                                                                        <div className="w-[18px] h-[18px] border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+                                                                    ) : (
+                                                                        <CheckCircle size={18} />
+                                                                    )}
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colspan="6" className="text-center py-16">
+                                                <div className="bg-gray-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                                    <Building2 className="w-8 h-8 text-gray-300" />
+                                                </div>
+                                                <h3 className="text-lg font-semibold text-gray-900 mb-1">No {filter} merchants</h3>
+                                                <p className="text-gray-500">There are no merchant applications with {filter} status.</p>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Minus, Trash2, CreditCard, Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { useMerchant } from '@/hooks/useMerchant';
 
-export default function WholesalePage() {
+export default function PurchasePage() {
+    const { merchant, loading: merchantLoading, error: merchantError, isAdmin } = useMerchant();
     const [cart, setCart] = useState({});
     const [inventory, setInventory] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -12,53 +14,59 @@ export default function WholesalePage() {
     const [purchasing, setPurchasing] = useState(false);
     const [merchantBalance, setMerchantBalance] = useState(0);
 
-    // Fetch platform inventory and merchant balance
-    const fetchData = async () => {
+    // Fetch platform inventory
+    const fetchInventory = async () => {
         try {
             setLoading(true);
             setError(null);
 
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('Not authenticated');
-
-            // Get merchant profile
-            const { data: merchantData, error: merchantError } = await supabase
-                .from('merchants')
-                .select('id, wallet_balance_paise, status')
-                .eq('user_id', user.id)
-                .single();
-
-            if (merchantError) throw merchantError;
-
-            if (merchantData.status !== 'approved') {
-                throw new Error('Your merchant account is not approved yet');
-            }
-
-            setMerchantBalance(merchantData.wallet_balance_paise / 100);
-
-            // Get platform-owned coupons (not merchant-owned)
+            // Fetch coupons that are available AND not owned by any merchant (merchant_id is null)
             const { data: coupons, error: couponsError } = await supabase
                 .from('coupons')
                 .select('*')
                 .eq('status', 'available')
-                .eq('is_merchant_owned', false)
+                .is('merchant_id', null) // Key change: Check for NULL merchant_id
                 .gte('valid_until', new Date().toISOString())
                 .order('brand', { ascending: true });
 
             if (couponsError) throw couponsError;
 
             // Transform to display format
-            const transformedCoupons = (coupons || []).map(c => ({
-                id: c.id,
-                brand: c.brand,
-                faceValue: c.face_value_paise / 100,
-                price: c.selling_price_paise / 100, // Same price as customers
-                stock: 50, // Mock stock for now
-            }));
+            // const transformedCoupons = (coupons || []).map(c => ({
+            //     id: c.id,
+            //     brand: c.brand,
+            //     faceValue: c.face_value_paise / 100,
+            //     price: c.selling_price_paise / 100, // Same price as customers
+            //     stock: 50, // Mock stock for now
+            // }));
 
-            setInventory(transformedCoupons);
+            // setInventory(transformedCoupons);
+
+            // Actually, if we have 50 unique coupon rows, we might want to aggregate. 
+            // But user said "Select * ... Display ... Buy Button". 
+            // I'll group them by brand+price to show "Stock".
+
+            const grouped = {};
+            (coupons || []).forEach(c => {
+                const key = `${c.brand}-${c.face_value_paise}-${c.selling_price_paise}`;
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        id: c.id, // Use one ID for the "buy" action? Or generic?
+                        ids: [c.id],
+                        brand: c.brand,
+                        faceValue: c.face_value_paise / 100,
+                        price: c.selling_price_paise / 100,
+                        stock: 0
+                    };
+                } else {
+                    grouped[key].ids.push(c.id);
+                }
+                grouped[key].stock++;
+            });
+
+            setInventory(Object.values(grouped));
         } catch (err) {
-            console.error('Error fetching data:', err);
+            console.error('Error fetching inventory:', err);
             setError(err.message);
         } finally {
             setLoading(false);
@@ -66,8 +74,29 @@ export default function WholesalePage() {
     };
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (merchantLoading) return;
+
+        if (merchantError && !isAdmin) {
+            setError(merchantError.message || 'Error loading merchant profile');
+            setLoading(false);
+            return;
+        }
+
+        if (!merchant && !isAdmin) {
+            // Should be handled by layout, but safe fallback
+            setLoading(false);
+            return;
+        }
+
+        if (merchant && merchant.status !== 'approved' && !isAdmin) {
+            setError('Your merchant account is not approved yet.');
+            setLoading(false);
+            return;
+        }
+
+        setMerchantBalance(merchant ? (merchant.wallet_balance_paise || 0) / 100 : 0);
+        fetchInventory();
+    }, [merchant, merchantLoading, merchantError, isAdmin]);
 
     const addToCart = (item) => {
         setCart(prev => ({
@@ -104,12 +133,13 @@ export default function WholesalePage() {
 
     const merchantCommission = cartSubtotal * 0.03;
     const cartTotal = cartSubtotal + merchantCommission;
-    const cartItems = Object.entries(cart).length;
+    const cartItems = Object.entries(cart).reduce((a, b) => a + b, 0);
 
     const handlePurchase = async () => {
         if (cartItems === 0) return;
 
-        if (merchantBalance < cartTotal) {
+        // Validation for merchants (admins bypass balance check)
+        if (!isAdmin && merchantBalance < cartTotal) {
             alert(`Insufficient balance! You need ₹${cartTotal.toFixed(2)} but have ₹${merchantBalance.toFixed(2)}`);
             return;
         }
@@ -117,24 +147,36 @@ export default function WholesalePage() {
         try {
             setPurchasing(true);
 
-            // Purchase each coupon in cart
-            const purchases = Object.entries(cart).map(async ([couponId, qty]) => {
-                // For now, purchase one at a time (can be optimized later)
-                for (let i = 0; i < qty; i++) {
-                    const { data, error } = await supabase.rpc('merchant_purchase_coupon', {
-                        p_coupon_id: couponId,
-                        p_quantity: 1
-                    });
+            if (isAdmin && !merchant) {
+                // Mock purchase for admin without merchant record
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                alert('Admin Simulation: Purchase successful! (No real transaction created)');
+                setCart({});
+                return;
+            }
 
-                    if (error) throw error;
+            // Purchase each coupon in cart
+            const purchasePromises = [];
+            Object.entries(cart).forEach(([couponId, qty]) => {
+                for (let i = 0; i < qty; i++) {
+                    purchasePromises.push(
+                        supabase.rpc('merchant_purchase_coupon', {
+                            p_coupon_id: couponId,
+                            p_quantity: 1
+                        })
+                    );
                 }
             });
 
-            await Promise.all(purchases);
+            const results = await Promise.all(purchasePromises);
+            const errors = results.filter(r => r.error);
+            if (errors.length > 0) throw new Error(`Failed to purchase ${errors.length} items. Possible KYC or balance issue.`);
 
             alert('Purchase successful! Check your inventory.');
             setCart({});
-            fetchData(); // Refresh data
+            // Update balance locally and refresher
+            setMerchantBalance(prev => prev - cartTotal);
+            fetchInventory();
         } catch (err) {
             console.error('Purchase error:', err);
             alert('Purchase failed: ' + err.message);
@@ -143,7 +185,7 @@ export default function WholesalePage() {
         }
     };
 
-    if (loading) {
+    if (loading || merchantLoading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-[#92BCEA]" />
@@ -159,7 +201,7 @@ export default function WholesalePage() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Error</h3>
                     <p className="text-gray-600 mb-4">{error}</p>
                     <button
-                        onClick={fetchData}
+                        onClick={() => window.location.reload()}
                         className="px-4 py-2 bg-[#92BCEA] text-white rounded-lg hover:bg-[#7A93AC] transition-colors"
                     >
                         Try Again

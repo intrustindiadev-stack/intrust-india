@@ -50,15 +50,22 @@ export default function LoginPage() {
         }
 
         // Get user profile to check role
-        const { getUserProfile } = await import('@/lib/supabase'); // Dynamic import to avoid circular dep if any
-        const { data: profile } = await getUserProfile(data.user.id);
+        const { data: { user } } = await supabase.auth.getUser();
 
-        if (profile?.role === 'merchant') {
-            router.push('/merchant/dashboard');
-        } else if (profile?.role === 'admin') {
-            router.push('/admin/dashboard');
-        } else {
-            router.push('/dashboard'); // Default to student dashboard
+        if (user) {
+            const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+
+            if (profile?.role === 'merchant') {
+                router.push('/merchant/dashboard');
+            } else if (profile?.role === 'admin') {
+                router.push('/admin/merchants');
+            } else {
+                router.push('/dashboard'); // Default to student dashboard
+            }
         }
     };
 

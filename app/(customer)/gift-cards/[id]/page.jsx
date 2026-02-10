@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
 import Image from 'next/image';
 import { Star, ShieldCheck, Clock, CheckCircle, Heart, Share2, Loader2, AlertCircle, Sparkles } from 'lucide-react';
@@ -25,6 +26,8 @@ export default function GiftCardDetailPage({ params }) {
     const [purchaseError, setPurchaseError] = useState(null);
     const [purchaseSuccess, setPurchaseSuccess] = useState(false);
     const [quantity, setQuantity] = useState(1); // Future proofing
+    const [kycStatus, setKycStatus] = useState(null);
+    const [kycLoading, setKycLoading] = useState(true);
 
     useEffect(() => {
         if (id) fetchGiftCard();
@@ -55,6 +58,42 @@ export default function GiftCardDetailPage({ params }) {
         }
     }
 
+    useEffect(() => {
+        async function checkKYC() {
+            if (!user) {
+                setKycLoading(false);
+                return;
+            }
+            try {
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .select('kyc_status')
+                    .eq('id', user.id)
+                    .single();
+
+                if (data) {
+                    console.log("KYC Status fetched:", data.kyc_status);
+                    setKycStatus(data.kyc_status);
+                }
+            } catch (err) {
+                console.error("Error fetching KYC status:", err);
+            } finally {
+                setKycLoading(false);
+            }
+        }
+        checkKYC();
+    }, [user]);
+
+    const loadRazorpayScript = () => {
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+        });
+    };
+
     async function handlePurchase() {
         if (!user) {
             router.push('/login');
@@ -65,29 +104,87 @@ export default function GiftCardDetailPage({ params }) {
             setPurchasing(true);
             setPurchaseError(null);
 
-            const response = await fetch('/api/purchase', {
+            const isScriptLoaded = await loadRazorpayScript();
+            if (!isScriptLoaded) {
+                throw new Error('Razorpay SDK failed to load. Are you online?');
+            }
+
+            // 1. Create Order
+            const response = await fetch('/api/create-order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    coupon_id: card.id,
-                    payment_reference: `UPI_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                    giftcardId: card.id,
                 })
             });
 
-            const result = await response.json();
+            const orderData = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.error || 'Purchase failed');
+                if (response.status === 403 || orderData.error === 'KYC_REQUIRED') {
+                    toast.error("KYC Verification Required. Please complete KYC first.");
+                    // Removed auto-redirect to let user see the banner/button
+                    return;
+                }
+                throw new Error(orderData.error || 'Failed to create order');
             }
 
-            setPurchaseSuccess(true);
-            setTimeout(() => {
-                router.push('/my-coupons');
-            }, 2000); // Give user time to see success message
+            // 2. Initialize Razorpay Option
+            const options = {
+                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                amount: orderData.amount,
+                currency: orderData.currency,
+                name: 'INTRUST Gift Cards',
+                description: `Purchase of ${card.title}`,
+                image: '/logo.png', // Ensure you have a logo at /public/logo.png or remove this
+                order_id: orderData.id, // Razorpay Order ID
+                handler: async function (response) {
+                    try {
+                        const verifyRes = await fetch('/api/verify-payment', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                            }),
+                        });
+
+                        const verifyData = await verifyRes.json();
+
+                        if (verifyData.success) {
+                            setPurchaseSuccess(true);
+                            setTimeout(() => {
+                                router.push('/my-coupons');
+                            }, 2000);
+                        } else {
+                            throw new Error('Payment verification failed');
+                        }
+                    } catch (error) {
+                        console.error('Verification Error:', error);
+                        setPurchaseError('Payment successful but verification failed. Contact support.');
+                    }
+                },
+                prefill: {
+                    name: user.user_metadata?.full_name || user.email,
+                    email: user.email,
+                },
+                theme: {
+                    color: '#2563EB', // Blue-600 to match theme
+                },
+            };
+
+            const paymentObject = new window.Razorpay(options);
+            paymentObject.on('payment.failed', function (response) {
+                setPurchaseError(`Payment Failed: ${response.error.description}`);
+            });
+            paymentObject.open();
 
         } catch (err) {
-            console.error('Purchase error:', err);
-            setPurchaseError(err.message || 'Purchase failed. Please try again.');
+            console.error('Purchase initiation error:', err);
+            setPurchaseError(err.message || 'Could not initiate purchase.');
         } finally {
             setPurchasing(false);
         }
@@ -292,6 +389,29 @@ export default function GiftCardDetailPage({ params }) {
                                             <button className="px-4 text-gray-500 hover:text-gray-900 transition-colors" disabled>+</button>
                                         </div>
                                         <span className="text-xs text-gray-500 font-medium">Max 1 per order</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* KYC Warning Banner */}
+                            {user && !kycLoading && kycStatus !== 'approved' && kycStatus !== 'verified' && (
+                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                                    <div className="flex gap-3">
+                                        <div className="bg-amber-100 p-2 rounded-full h-fit text-amber-600">
+                                            <ShieldCheck size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-amber-900">KYC Verification Required</h4>
+                                            <p className="text-sm text-amber-700 mt-1 mb-3">
+                                                You need to complete your KYC verification to purchase gift cards.
+                                            </p>
+                                            <button
+                                                onClick={() => router.push('/profile?section=kyc')}
+                                                className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm"
+                                            >
+                                                Complete KYC Now
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )}

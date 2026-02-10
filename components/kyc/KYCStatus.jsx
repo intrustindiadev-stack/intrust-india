@@ -2,6 +2,8 @@
 
 import { CheckCircle, AlertCircle, Clock, Shield } from 'lucide-react';
 
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
+
 export default function KYCStatus({ status, onStartKYC }) {
     // Normalize status: if null or undefined, treat as 'not_started' or use the prop directly if valid
     const currentStatus = (status === 'pending' || status === 'verified' || status === 'rejected') ? status : 'not_started';
@@ -28,12 +30,12 @@ export default function KYCStatus({ status, onStartKYC }) {
             actionColor: null
         },
         verified: {
-            color: 'from-green-500 to-emerald-500',
-            bgColor: 'bg-green-50',
-            borderColor: 'border-green-200',
-            icon: CheckCircle,
-            title: 'KYC Verified',
-            description: 'Your account is fully verified. You can access all features.',
+            color: 'from-blue-500 to-blue-600',
+            bgColor: 'bg-blue-50',
+            borderColor: 'border-blue-200',
+            icon: VerifiedBadge,
+            title: 'Verified',
+            description: 'Your account is verified. You have full access.',
             action: null,
             actionColor: null
         },
@@ -56,13 +58,22 @@ export default function KYCStatus({ status, onStartKYC }) {
         <div className={`${config.bgColor} border-2 ${config.borderColor} rounded-2xl p-6 shadow-lg`}>
             <div className="flex items-start gap-4">
                 {/* Icon */}
-                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center flex-shrink-0 shadow-lg`}>
-                    <Icon size={28} className="text-white" />
-                </div>
+                {currentStatus === 'verified' ? (
+                    <div className="flex-shrink-0">
+                        <VerifiedBadge size={56} className="text-[#1877F2]" />
+                    </div>
+                ) : (
+                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center flex-shrink-0 shadow-lg`}>
+                        <Icon size={28} className="text-white" />
+                    </div>
+                )}
 
                 {/* Content */}
                 <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{config.title}</h3>
+                    <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-xl font-bold text-gray-900">{config.title}</h3>
+                        {currentStatus === 'verified' && <VerifiedBadge size={20} className="text-[#1877F2]" />}
+                    </div>
                     <p className="text-gray-600 mb-4">{config.description}</p>
 
                     {config.action && (
@@ -75,9 +86,9 @@ export default function KYCStatus({ status, onStartKYC }) {
                     )}
 
                     {currentStatus === 'verified' && (
-                        <div className="flex items-center gap-2 text-sm text-green-700 font-semibold mt-2">
+                        <div className="flex items-center gap-2 text-sm text-blue-700 font-semibold mt-2">
                             <Shield size={16} />
-                            <span>Account fully verified</span>
+                            <span>Identity verified safely</span>
                         </div>
                     )}
                 </div>

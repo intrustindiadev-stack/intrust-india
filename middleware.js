@@ -48,6 +48,7 @@ export async function middleware(request) {
     ]
 
     const adminRoutes = ['/admin']
+    const merchantRoutes = ['/merchant']
     const { pathname } = request.nextUrl
 
     // Check if current path is protected
@@ -55,17 +56,35 @@ export async function middleware(request) {
         pathname.startsWith(route)
     )
     const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route))
+    const isMerchantRoute = merchantRoutes.some((route) => pathname.startsWith(route))
 
     // Redirect to login if accessing protected route without session
-    if (isProtectedRoute && !user) {
+    if ((isProtectedRoute || isAdminRoute || isMerchantRoute) && !user) {
         const redirectUrl = new URL('/login', request.url)
         redirectUrl.searchParams.set('redirect', pathname)
         return NextResponse.redirect(redirectUrl)
     }
 
+    // Role-based Access Control - MOVED TO LAYOUT for better performance
+    // Middleware only enforces session presence for protected routes to avoid double DB calls.
+    // Detailed role verification will happen in the Server Component Layouts.
+
     // Redirect to dashboard if accessing auth pages while logged in
     if ((pathname === '/login' || pathname === '/register') && user) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+        // Fetch role to redirect correctly
+        const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (profile?.role === 'admin') {
+            return NextResponse.redirect(new URL('/admin/merchants', request.url))
+        } else if (profile?.role === 'merchant') {
+            return NextResponse.redirect(new URL('/merchant/dashboard', request.url))
+        } else {
+            return NextResponse.redirect(new URL('/dashboard', request.url))
+        }
     }
 
     return response

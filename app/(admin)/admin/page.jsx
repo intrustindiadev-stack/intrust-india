@@ -1,82 +1,153 @@
-'use client'
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
 
-import { useEffect, useState } from 'react'
-import { useAuth, useIsAdmin } from '@/hooks/useAuth'
-import { useRouter } from 'next/navigation'
-import { getGiftCardStats } from './giftcards/actions'
+// Helper to format price
+function formatPrice(paise) {
+    if (paise === null || paise === undefined) return '₹0.00';
+    return `₹${(paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
-export default function AdminDashboard() {
-    const [revenue, setRevenue] = useState(null)
-    const [giftCardStats, setGiftCardStats] = useState(null)
-    const [loading, setLoading] = useState(true)
-    const { isAdmin, loading: authLoading } = useIsAdmin()
-    const router = useRouter()
+export default async function AdminDashboard() {
+    const supabase = await createServerSupabaseClient();
 
-    useEffect(() => {
-        if (!authLoading && !isAdmin) {
-            router.push('/dashboard')
-        }
-    }, [isAdmin, authLoading, router])
+    // 1. Check Auth & Role
+    const { data: { user } } = await supabase.auth.getUser();
 
-    useEffect(() => {
-        if (isAdmin) {
-            fetchRevenue()
-            fetchGiftCardStats()
-        }
-    }, [isAdmin])
-
-    async function fetchRevenue() {
-        try {
-            setLoading(true)
-            const response = await fetch('/api/admin/revenue')
-            const data = await response.json()
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to fetch revenue')
-            }
-
-            setRevenue(data)
-        } catch (err) {
-            console.error('Error fetching revenue:', err)
-        } finally {
-            setLoading(false)
-        }
+    if (!user) {
+        redirect('/login');
     }
 
-    async function fetchGiftCardStats() {
-        try {
-            const result = await getGiftCardStats()
-            if (result.success) {
-                setGiftCardStats(result.data)
-            }
-        } catch (err) {
-            console.error('Error fetching gift card stats:', err)
-        }
+    const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    if (profile?.role !== 'admin') {
+        redirect('/dashboard');
     }
 
-    function formatPrice(paise) {
-        if (paise === null) return '₹0.00'
-        return `₹${(paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    }
+    // 2. Fetch Data in Parallel
+    const [
+        revenueData,
+        activeMerchantsCount,
+        totalCouponsCount,
+        todaySalesCount,
+        recentTransactions,
+        pendingApprovals
+    ] = await Promise.all([
+        // 1. Total Revenue (Paid Orders)
+        supabase.from('orders')
+            .select('amount_paise')
+            .eq('payment_status', 'paid')
+            .then(({ data, error }) => {
+                if (error) {
+                    console.error('Error fetching revenue:', error);
+                    return 0;
+                }
+                return data.reduce((sum, order) => sum + (order.amount_paise || 0), 0);
+            }),
 
-    if (authLoading || loading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
-                <div className="max-w-7xl mx-auto">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
-                    <div className="animate-pulse grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="bg-white rounded-xl p-6 h-32"></div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        )
-    }
+        // 2. Active Merchants (User Profiles with role 'merchant')
+        // Prompt requested source: user_profiles
+        supabase.from('user_profiles')
+            .select('*', { count: 'exact', head: true })
+            .eq('role', 'merchant')
+            .then(({ count, error }) => {
+                if (error) console.error('Error fetching merchants count:', error);
+                return count || 0;
+            }),
 
-    if (!isAdmin) {
-        return null
-    }
+        // 3. Total Coupons
+        supabase.from('coupons')
+            .select('*', { count: 'exact', head: true })
+            .then(({ count, error }) => {
+                if (error) console.error('Error fetching coupons count:', error);
+                return count || 0;
+            }),
+
+        // 4. Today Sales
+        supabase.from('orders')
+            .select('*', { count: 'exact', head: true })
+            .eq('payment_status', 'paid')
+            .gte('created_at', new Date().toISOString().split('T')[0]) // YYYY-MM-DD
+            .then(({ count, error }) => {
+                if (error) console.error('Error fetching today sales:', error);
+                return count || 0;
+            }),
+
+        // 5. Recent Transactions (Last 10 paid orders)
+        // Fetches orders and joins related data
+        // Note: Joining across tables in Supabase JS client is done via select syntax if FKs exist
+        // orders -> coupons (giftcard_id) -> merchants (merchant_id)
+        // orders -> auth.users (user_id) - cannot join auth schema easily, but user_profiles exists?
+        // Let's try to join user_profiles if FK exists. create_orders_table.sql didn't show explicit FK to user_profiles, 
+        // only to auth.users. But usually RLS/Helpers handle mapping.
+        // If no FK to user_profiles, we might need a separate fetch or reliance on `user_id` being same.
+        // We will Select orders first, then enrich. Or try deep select if relationships exist.
+        // Given existing schema knowledge, `orders` has `user_id`. `user_profiles` has `id`.
+        // If there is no foreign key constraint, Supabase select nesting won't work.
+        // Assuming we need to fetch manually if join fails.
+        // However, `orders` has `giftcard_id` referencing `coupons`.
+
+        supabase.from('orders')
+            .select(`
+                id,
+                amount_paise,
+                created_at,
+                payment_status,
+                user_id,
+                giftcard_id,
+                coupons (
+                    id,
+                    brand,
+                    merchant_id,
+                    merchants (
+                        id,
+                        business_name
+                    )
+                )
+            `)
+            .eq('payment_status', 'paid')
+            .order('created_at', { ascending: false })
+            .limit(10)
+            .then(async ({ data: orders, error }) => {
+                if (error) {
+                    console.error('Error fetching transactions:', error);
+                    return [];
+                }
+
+                // Fetch buyer names separately since we can't always join auth/user_profiles easily without explicit FK
+                if (!orders?.length) return [];
+
+                const userIds = [...new Set(orders.map(o => o.user_id))];
+                const { data: profiles } = await supabase
+                    .from('user_profiles')
+                    .select('id, full_name, email')
+                    .in('id', userIds);
+
+                const profileMap = (profiles || []).reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+
+                return orders.map(order => ({
+                    ...order,
+                    buyer_name: profileMap[order.user_id]?.full_name || profileMap[order.user_id]?.email || 'Unknown User',
+                    brand: order.coupons?.brand || 'Unknown Brand',
+                    merchant_name: order.coupons?.merchants?.business_name || 'Platform' // Or merchant name if joined
+                }));
+            }),
+
+        // 6. Pending Approvals
+        supabase.from('merchants')
+            .select('*')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(5)
+            .then(({ data, error }) => {
+                if (error) console.error('Error fetching pending approvals:', error);
+                return data || [];
+            })
+    ]);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
@@ -86,134 +157,158 @@ export default function AdminDashboard() {
                     <p className="text-gray-600">Platform overview and management</p>
                 </div>
 
-                {/* Revenue Cards */}
+                {/* KPI Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    {/* Total Revenue */}
                     <div className="bg-white rounded-xl shadow-lg p-6">
-                        <p className="text-sm text-gray-600 mb-2">Total Transactions</p>
-                        <p className="text-3xl font-bold text-gray-900">{revenue?.total_transactions || 0}</p>
+                        <p className="text-sm text-gray-600 mb-2">Total Revenue</p>
+                        <p className="text-3xl font-bold text-blue-600">{formatPrice(revenueData)}</p>
                     </div>
 
+                    {/* Active Merchants */}
                     <div className="bg-white rounded-xl shadow-lg p-6">
-                        <p className="text-sm text-gray-600 mb-2">Gross Merchandise Value</p>
-                        <p className="text-3xl font-bold text-blue-600">{formatPrice(revenue?.total_gmv_paise || 0)}</p>
+                        <p className="text-sm text-gray-600 mb-2">Active Merchants</p>
+                        <p className="text-3xl font-bold text-purple-600">{activeMerchantsCount}</p>
                     </div>
 
+                    {/* Total Coupons */}
                     <div className="bg-white rounded-xl shadow-lg p-6">
-                        <p className="text-sm text-gray-600 mb-2">Platform Revenue (3% Fee)</p>
-                        <p className="text-3xl font-bold text-green-600">{formatPrice(revenue?.total_platform_revenue_paise || 0)}</p>
+                        <p className="text-sm text-gray-600 mb-2">Total Coupons</p>
+                        <p className="text-3xl font-bold text-green-600">{totalCouponsCount}</p>
                     </div>
 
+                    {/* Today Sales */}
                     <div className="bg-white rounded-xl shadow-lg p-6">
-                        <p className="text-sm text-gray-600 mb-2">Unique Buyers</p>
-                        <p className="text-3xl font-bold text-purple-600">{revenue?.unique_buyers || 0}</p>
+                        <p className="text-sm text-gray-600 mb-2">Today's Sales</p>
+                        <p className="text-3xl font-bold text-orange-600">{todaySalesCount}</p>
                     </div>
                 </div>
 
-                {/* Gift Card Stats */}
-                {giftCardStats && (
+                {/* Pending Approvals */}
+                {pendingApprovals.length > 0 && (
                     <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Gift Card Inventory</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
-                                <p className="text-sm text-blue-600 mb-1">Total Gift Cards</p>
-                                <p className="text-3xl font-bold text-blue-900">{giftCardStats.total}</p>
-                            </div>
-                            <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
-                                <p className="text-sm text-green-600 mb-1">Active Cards</p>
-                                <p className="text-3xl font-bold text-green-900">{giftCardStats.active}</p>
-                            </div>
-                            <div className="p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg">
-                                <p className="text-sm text-red-600 mb-1">Expired Cards</p>
-                                <p className="text-3xl font-bold text-red-900">{giftCardStats.expired}</p>
-                            </div>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-2xl font-bold text-gray-900">Pending Merchant Approvals</h2>
+                            <Link href="/admin/merchants" className="text-blue-600 hover:text-blue-800 text-sm font-semibold">
+                                View All
+                            </Link>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Business Name</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied Date</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {pendingApprovals.map((merchant) => (
+                                        <tr key={merchant.id}>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                {merchant.business_name}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {new Date(merchant.created_at).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                                    Pending
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                <Link href={`/admin/merchants?id=${merchant.id}`} className="text-indigo-600 hover:text-indigo-900">
+                                                    Review
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 )}
+
+                {/* Recent Transactions */}
+                <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-bold text-gray-900">Recent Transactions</h2>
+                        <Link href="/admin/transactions" className="text-blue-600 hover:text-blue-800 text-sm font-semibold">
+                            View All
+                        </Link>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buyer</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Merchant</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {recentTransactions.length > 0 ? (
+                                    recentTransactions.map((tx) => (
+                                        <tr key={tx.id}>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {new Date(tx.created_at).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                {tx.buyer_name}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {tx.brand}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {tx.merchant_name}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
+                                                {formatPrice(tx.amount_paise)}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                                            No recent transactions
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
                 {/* Quick Actions */}
-                <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <button
-                            onClick={() => router.push('/admin/giftcards')}
-                            className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg text-left transition-colors"
-                        >
-                            <div className="text-2xl mb-2">🎁</div>
-                            <p className="font-semibold text-gray-900">Gift Cards</p>
-                            <p className="text-sm text-gray-600">Manage gift card inventory</p>
-                        </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Link href="/admin/giftcards" className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg text-left transition-colors">
+                        <div className="text-2xl mb-2">🎁</div>
+                        <p className="font-semibold text-gray-900">Gift Cards</p>
+                        <p className="text-sm text-gray-600">Manage inventory</p>
+                    </Link>
 
-                        <button
-                            onClick={() => router.push('/admin/coupons')}
-                            className="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg text-left transition-colors"
-                        >
-                            <div className="text-2xl mb-2">🎟️</div>
-                            <p className="font-semibold text-gray-900">Manage Coupons</p>
-                            <p className="text-sm text-gray-600">Create and manage coupons</p>
-                        </button>
+                    <Link href="/admin/coupons" className="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg text-left transition-colors">
+                        <div className="text-2xl mb-2">🎟️</div>
+                        <p className="font-semibold text-gray-900">Manage Coupons</p>
+                        <p className="text-sm text-gray-600">Create & edit</p>
+                    </Link>
 
-                        <button
-                            onClick={() => router.push('/admin/transactions')}
-                            className="p-4 bg-green-50 hover:bg-green-100 rounded-lg text-left transition-colors"
-                        >
-                            <div className="text-2xl mb-2">💰</div>
-                            <p className="font-semibold text-gray-900">Transactions</p>
-                            <p className="text-sm text-gray-600">View all transactions</p>
-                        </button>
+                    <Link href="/admin/users" className="p-4 bg-green-50 hover:bg-green-100 rounded-lg text-left transition-colors">
+                        <div className="text-2xl mb-2">👥</div>
+                        <p className="font-semibold text-gray-900">User Management</p>
+                        <p className="text-sm text-gray-600">Roles & KYC</p>
+                    </Link>
 
-                        <button
-                            onClick={() => router.push('/admin/users')}
-                            className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg text-left transition-colors"
-                        >
-                            <div className="text-2xl mb-2">👥</div>
-                            <p className="font-semibold text-gray-900">User Management</p>
-                            <p className="text-sm text-gray-600">Manage users and KYC</p>
-                        </button>
-
-                        <button
-                            onClick={() => router.push('/admin/audit-logs')}
-                            className="p-4 bg-orange-50 hover:bg-orange-100 rounded-lg text-left transition-colors"
-                        >
-                            <div className="text-2xl mb-2">📋</div>
-                            <p className="font-semibold text-gray-900">Audit Logs</p>
-                            <p className="text-sm text-gray-600">View activity logs</p>
-                        </button>
-                    </div>
+                    <Link href="/admin/merchants" className="p-4 bg-orange-50 hover:bg-orange-100 rounded-lg text-left transition-colors">
+                        <div className="text-2xl mb-2">🏪</div>
+                        <p className="font-semibold text-gray-900">Merchants</p>
+                        <p className="text-sm text-gray-600">Approvals & list</p>
+                    </Link>
                 </div>
-
-                {/* Recent Activity */}
-                {revenue && (
-                    <div className="bg-white rounded-xl shadow-lg p-6">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Platform Activity</h2>
-                        <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                                <span className="text-gray-600">First Transaction</span>
-                                <span className="font-semibold">
-                                    {revenue.first_transaction
-                                        ? new Date(revenue.first_transaction).toLocaleDateString()
-                                        : 'N/A'}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Latest Transaction</span>
-                                <span className="font-semibold">
-                                    {revenue.last_transaction
-                                        ? new Date(revenue.last_transaction).toLocaleDateString()
-                                        : 'N/A'}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Average Transaction Value</span>
-                                <span className="font-semibold">
-                                    {revenue.total_transactions > 0
-                                        ? formatPrice(Math.floor((revenue.total_gmv_paise || 0) / revenue.total_transactions))
-                                        : '₹0.00'}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
-    )
+    );
 }
