@@ -1,82 +1,56 @@
-'use client';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { Wallet, ArrowUpRight, ArrowDownLeft, AlertCircle } from 'lucide-react';
+import { redirect } from 'next/navigation';
 
-import { useState, useEffect } from 'react';
-import { Wallet, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
-import { useMerchant } from '@/hooks/useMerchant';
+export const dynamic = 'force-dynamic';
 
-export default function WalletPage() {
-    const { merchant, loading: merchantLoading, error: merchantError } = useMerchant();
-    const [transactions, setTransactions] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+export default async function WalletPage() {
+    const supabase = await createServerSupabaseClient();
 
-    const fetchWalletData = async () => {
-        try {
-            setLoading(true);
-            setError(null);
+    // 1. Get User & Auth
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
 
-            // Fetch transactions (mocked for now as we don't have a transactions table structure fully defined in context)
-            // Assuming we might have a `transactions` table or `wallet_transactions`
-            // For now, I'll fetch from `transactions` if it exists, or mock it.
-            // Requirement says: "Show merchant balance, Show transaction history"
-
-            // Let's assume a simple fetch for now or placeholders if table missing.
-            // Checking existing code might reveal transaction structure.
-            // But relying on requirements: "Show transaction history"
-
-            // I'll mock transactions for now to avoid breaking if table doesn't exist, 
-            // but structure it to be easily replaced.
-
-            const mockTransactions = [
-                { id: 1, type: 'credit', amount: 500000, description: 'Initial Deposit', date: new Date().toISOString() },
-                { id: 2, type: 'debit', amount: 150000, description: 'Purchase of Coupons', date: new Date(Date.now() - 86400000).toISOString() },
-            ];
-
-            setTransactions(mockTransactions);
-
-        } catch (err) {
-            console.error('Error fetching wallet data:', err);
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (merchantLoading) return;
-        if (merchantError) {
-            setError(merchantError.message || 'Error loading merchant profile');
-            setLoading(false);
-            return;
-        }
-        if (!merchant) {
-            setLoading(false);
-            return;
-        }
-
-        fetchWalletData();
-    }, [merchant, merchantLoading, merchantError]);
-
-    if (loading || merchantLoading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-[#92BCEA]" />
-            </div>
-        );
+    if (!user) {
+        redirect('/login');
     }
 
-    if (error) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-                <div className="text-center">
-                    <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Wallet</h3>
-                    <p className="text-gray-600 mb-4">{error}</p>
-                </div>
-            </div>
-        );
+    // 2. Get Merchant
+    const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    let merchant = null;
+
+    if (profile?.role === 'admin') {
+        const { data } = await supabase
+            .from('merchants')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+        merchant = data;
+    } else {
+        const { data } = await supabase
+            .from('merchants')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+        merchant = data;
     }
+
+    if (!merchant) {
+        redirect('/merchant-apply');
+    }
+
+    // 3. Mock transactions (replace with real query when table is ready)
+    const mockTransactions = [
+        { id: 1, type: 'credit', amount: 500000, description: 'Initial Deposit', date: new Date().toISOString() },
+        { id: 2, type: 'debit', amount: 150000, description: 'Purchase of Coupons', date: new Date(Date.now() - 86400000).toISOString() },
+    ];
 
     const balance = (merchant.wallet_balance_paise || 0) / 100;
 
@@ -122,7 +96,7 @@ export default function WalletPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {transactions.map((tx) => (
+                                    {mockTransactions.map((tx) => (
                                         <tr key={tx.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4">
                                                 <div className={`flex items-center gap-2 font-semibold ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'
@@ -141,7 +115,7 @@ export default function WalletPage() {
                                             </td>
                                         </tr>
                                     ))}
-                                    {transactions.length === 0 && (
+                                    {mockTransactions.length === 0 && (
                                         <tr>
                                             <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
                                                 No transactions found

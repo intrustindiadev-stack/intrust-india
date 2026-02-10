@@ -1,22 +1,49 @@
-'use client';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { BarChart3, DollarSign } from 'lucide-react';
+import { redirect } from 'next/navigation';
 
-import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, DollarSign, Calendar, Loader2 } from 'lucide-react';
-import { useMerchant } from '@/hooks/useMerchant';
+export const dynamic = 'force-dynamic';
 
-export default function AnalyticsPage() {
-    const { merchant, loading: merchantLoading, error: merchantError } = useMerchant();
+export default async function AnalyticsPage() {
+    const supabase = await createServerSupabaseClient();
 
-    if (merchantLoading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-[#92BCEA]" />
-            </div>
-        );
+    // 1. Get User & Auth
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+        redirect('/login');
     }
 
-    if (merchantError || !merchant) {
-        return <div className="p-8 text-center text-red-500">Error: {merchantError || 'Merchant not found'}</div>;
+    // 2. Get Merchant
+    const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    let merchant = null;
+
+    if (profile?.role === 'admin') {
+        const { data } = await supabase
+            .from('merchants')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+        merchant = data;
+    } else {
+        const { data } = await supabase
+            .from('merchants')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+        merchant = data;
+    }
+
+    if (!merchant) {
+        redirect('/merchant-apply');
     }
 
     return (
