@@ -13,45 +13,54 @@ export default function PurchasePage() {
     const [error, setError] = useState(null);
     const [purchasing, setPurchasing] = useState(false);
     const [merchantBalance, setMerchantBalance] = useState(0);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
 
-    // Fetch platform inventory
-    const fetchInventory = async () => {
+    const PAGE_SIZE = 50;
+
+    // Fetch platform inventory with pagination
+    const fetchInventory = async (append = false) => {
         try {
-            setLoading(true);
+            if (!append) {
+                setLoading(true);
+            } else {
+                setLoadingMore(true);
+            }
             setError(null);
 
-            // Fetch coupons that are available AND not owned by any merchant (merchant_id is null)
-            const { data: coupons, error: couponsError } = await supabase
+            const startIndex = append ? inventory.length : 0;
+            const endIndex = startIndex + PAGE_SIZE - 1;
+
+            // Build query
+            let query = supabase
                 .from('coupons')
                 .select('*')
                 .eq('status', 'available')
-                .is('merchant_id', null) // Key change: Check for NULL merchant_id
+                .is('merchant_id', null)
                 .gte('valid_until', new Date().toISOString())
-                .order('brand', { ascending: true });
+                .order('brand', { ascending: true })
+                .range(startIndex, endIndex);
+
+            // Add search filter if searchQuery exists
+            if (searchQuery) {
+                query = query.ilike('brand', `%${searchQuery}%`);
+            }
+
+            const { data: coupons, error: couponsError } = await query;
 
             if (couponsError) throw couponsError;
 
-            // Transform to display format
-            // const transformedCoupons = (coupons || []).map(c => ({
-            //     id: c.id,
-            //     brand: c.brand,
-            //     faceValue: c.face_value_paise / 100,
-            //     price: c.selling_price_paise / 100, // Same price as customers
-            //     stock: 50, // Mock stock for now
-            // }));
+            // Check if there are more items
+            setHasMore(coupons && coupons.length === PAGE_SIZE);
 
-            // setInventory(transformedCoupons);
-
-            // Actually, if we have 50 unique coupon rows, we might want to aggregate. 
-            // But user said "Select * ... Display ... Buy Button". 
-            // I'll group them by brand+price to show "Stock".
-
+            // Group coupons by brand+price
             const grouped = {};
             (coupons || []).forEach(c => {
                 const key = `${c.brand}-${c.face_value_paise}-${c.selling_price_paise}`;
                 if (!grouped[key]) {
                     grouped[key] = {
-                        id: c.id, // Use one ID for the "buy" action? Or generic?
+                        id: c.id,
                         ids: [c.id],
                         brand: c.brand,
                         faceValue: c.face_value_paise / 100,
@@ -64,12 +73,14 @@ export default function PurchasePage() {
                 grouped[key].stock++;
             });
 
-            setInventory(Object.values(grouped));
+            const newItems = Object.values(grouped);
+            setInventory(append ? [...inventory, ...newItems] : newItems);
         } catch (err) {
             console.error('Error fetching inventory:', err);
             setError(err.message);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
         }
     };
 
@@ -97,6 +108,15 @@ export default function PurchasePage() {
         setMerchantBalance(merchant ? (merchant.wallet_balance_paise || 0) / 100 : 0);
         fetchInventory();
     }, [merchant, merchantLoading, merchantError, isAdmin]);
+
+    // Handle search query changes
+    useEffect(() => {
+        if (!merchant && !isAdmin) return;
+        const debounceTimer = setTimeout(() => {
+            fetchInventory(false); // Reset to first page on search
+        }, 500);
+        return () => clearTimeout(debounceTimer);
+    }, [searchQuery]);
 
     const addToCart = (item) => {
         setCart(prev => ({
@@ -230,6 +250,17 @@ export default function PurchasePage() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Inventory Grid */}
                         <div className="lg:col-span-2">
+                            {/* Search Bar */}
+                            <div className="mb-6">
+                                <input
+                                    type="text"
+                                    placeholder="Search by brand name..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#92BCEA] focus:ring-2 focus:ring-[#92BCEA]/20 transition-all"
+                                />
+                            </div>
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 {inventory.map((item) => {
                                     const commission = item.price * 0.03;
@@ -286,6 +317,26 @@ export default function PurchasePage() {
                                     );
                                 })}
                             </div>
+
+                            {/* Load More Button */}
+                            {hasMore && inventory.length > 0 && (
+                                <div className="mt-8 text-center">
+                                    <button
+                                        onClick={() => fetchInventory(true)}
+                                        disabled={loadingMore}
+                                        className="px-8 py-3 bg-white border-2 border-[#92BCEA] text-[#92BCEA] font-bold rounded-xl hover:bg-[#92BCEA] hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {loadingMore ? (
+                                            <>
+                                                <Loader2 className="inline-block animate-spin mr-2" size={18} />
+                                                Loading...
+                                            </>
+                                        ) : (
+                                            'Load More'
+                                        )}
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Cart Sidebar */}
