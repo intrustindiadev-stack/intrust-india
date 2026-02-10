@@ -15,7 +15,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Sparkles,
-    Gift
+    Gift,
+    Home
 } from 'lucide-react';
 
 const navigation = [
@@ -51,15 +52,29 @@ export default function AdminSidebar({ isOpen, setIsOpen }) {
                 <div className="flex flex-col h-full">
                     {/* Logo & Toggle */}
                     <div className="flex items-center justify-between p-6 border-b border-gray-700">
-                        <Link href="/admin" className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
-                                <span className="text-white font-bold text-xl">A</span>
-                            </div>
-                            <div>
-                                <div className="text-white font-bold text-lg">InTrust</div>
-                                <div className="text-purple-400 text-xs font-semibold">Admin Panel</div>
-                            </div>
-                        </Link>
+                        <div className="flex items-center gap-3">
+                            <Link href="/admin" className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                                    <span className="text-white font-bold text-xl">A</span>
+                                </div>
+                                <div>
+                                    <div className="text-white font-bold text-lg">InTrust</div>
+                                    <div className="text-purple-400 text-xs font-semibold">Admin Panel</div>
+                                </div>
+                            </Link>
+
+                            {/* Home Button */}
+                            <Link
+                                href="/"
+                                className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-all group relative"
+                                title="Go to Home Page"
+                            >
+                                <Home size={18} />
+                                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                    Home Page
+                                </span>
+                            </Link>
+                        </div>
 
                         {/* Close button for mobile */}
                         <button

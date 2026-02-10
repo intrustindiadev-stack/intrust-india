@@ -1,16 +1,19 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createAdminClient } from '@/lib/supabaseServer';
 import UsersTable from './UsersTable';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminUsersPage({ searchParams }) {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
+
+    // Await searchParams for Next.js 16 compatibility
+    const params = await searchParams;
 
     // Pagination params
-    const page = Number(searchParams?.page) || 1;
+    const page = Number(params?.page) || 1;
     const limit = 10;
     const offset = (page - 1) * limit;
-    const search = searchParams?.search || '';
+    const search = params?.search || '';
 
     // Build query
     let query = supabase
@@ -28,6 +31,12 @@ export default async function AdminUsersPage({ searchParams }) {
 
     if (error) {
         console.error('Error fetching users:', error);
+        console.error('Error details:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+        });
         return (
             <div className="p-6 text-center text-red-600">
                 Failed to load users. Please try again later.

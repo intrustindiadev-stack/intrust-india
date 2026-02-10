@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Loader2, ShieldAlert, CheckCircle, Verified, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabaseClient';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
@@ -16,6 +16,18 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
     const [toastMsg, setToastMsg] = useState({ message: '', type: '' });
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
     const [isSearching, setIsSearching] = useState(false);
+
+    // Debug: Log when users data changes
+    useEffect(() => {
+        console.log('[Admin Users] Users updated:', {
+            count: initialUsers?.length || 0,
+            total: initialTotal,
+            page: currentPage,
+            users: initialUsers
+        });
+        setUsers(initialUsers);
+        setIsSearching(false);
+    }, [initialUsers, initialTotal, currentPage]);
 
     const showToast = (message, type = 'success') => {
         setToastMsg({ message, type });
@@ -33,12 +45,16 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
             params.delete('search');
         }
         params.set('page', '1'); // Reset to page 1 on search
+
+        console.log('[Admin Users] Search triggered:', { term, newUrl: `${pathname}?${params.toString()}` });
         router.replace(`${pathname}?${params.toString()}`);
     };
 
     const handlePageChange = (page) => {
         const params = new URLSearchParams(searchParams);
         params.set('page', page.toString());
+
+        console.log('[Admin Users] Page change:', { page, newUrl: `${pathname}?${params.toString()}` });
         router.push(`${pathname}?${params.toString()}`);
     };
 
