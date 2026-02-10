@@ -1,123 +1,121 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { TrendingUp, Package, DollarSign, ShoppingBag, Plus, Eye, Edit, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { TrendingUp, Package, DollarSign, ShoppingBag, AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useMerchant } from '@/hooks/useMerchant';
+import { redirect } from 'next/navigation';
 
-export default function MerchantDashboardPage() {
-    const { merchant, loading: merchantLoading, error: merchantError } = useMerchant();
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [stats, setStats] = useState({
-        totalSales: 0,
-        activeCoupons: 0,
-        listedCoupons: 0,
-        totalRevenue: 0,
-        totalCommission: 0,
-    });
-    const [coupons, setCoupons] = useState([]);
+export const dynamic = 'force-dynamic';
 
-    useEffect(() => {
-        if (merchantLoading) return;
-        if (merchantError) {
-            setError(merchantError.message); // Assuming error is an Error object
-            setLoading(false);
-            return;
-        }
-        if (!merchant) {
-            // This case means no merchant record found for the user, or admin without selected merchant
-            setLoading(false);
-            return;
-        }
+export default async function MerchantDashboardPage() {
+    const supabase = await createServerSupabaseClient();
 
-        const fetchDashboardData = async () => {
-            try {
-                setLoading(true);
-                setError(null);
+    // 1. Get User
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
 
-                // Get merchant coupons
-                const { data: merchantCoupons, error: couponsError } = await supabase
-                    .from('coupons')
-                    .select('*')
-                    .eq('merchant_id', merchant.id)
-                    .eq('is_merchant_owned', true)
-                    .order('created_at', { ascending: false });
-
-                if (couponsError) throw couponsError;
-
-                // Calculate stats
-                const activeCoupons = merchantCoupons.filter(c => c.status === 'available').length;
-                const listedCoupons = merchantCoupons.filter(c => c.listed_on_marketplace).length;
-                const soldCoupons = merchantCoupons.filter(c => c.status === 'sold').length;
-
-                // Calculate total revenue (from sold coupons)
-                const totalRevenue = merchantCoupons
-                    .filter(c => c.status === 'sold')
-                    .reduce((sum, c) => {
-                        const sellingPrice = (c.merchant_selling_price_paise || 0) / 100;
-                        const purchasePrice = (c.merchant_purchase_price_paise || 0) / 100;
-                        const commission = (c.merchant_commission_paise || 0) / 100;
-                        return sum + (sellingPrice - purchasePrice - commission);
-                    }, 0);
-
-                setStats({
-                    totalSales: soldCoupons,
-                    activeCoupons: activeCoupons,
-                    listedCoupons: listedCoupons,
-                    totalRevenue: totalRevenue,
-                    totalCommission: (merchant.total_commission_paid_paise || 0) / 100,
-                });
-
-                // Transform coupons for display
-                const transformedCoupons = merchantCoupons.map(c => ({
-                    id: c.id,
-                    brand: c.brand,
-                    faceValue: c.face_value_paise / 100,
-                    purchasePrice: (c.merchant_purchase_price_paise || 0) / 100,
-                    sellingPrice: (c.merchant_selling_price_paise || 0) / 100,
-                    commission: (c.merchant_commission_paise || 0) / 100,
-                    status: c.status,
-                    listed: c.listed_on_marketplace,
-                }));
-
-                setCoupons(transformedCoupons);
-            } catch (err) {
-                console.error('Error fetching dashboard data:', err);
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchDashboardData();
-    }, [merchant, merchantLoading, merchantError]);
-
-    if (loading || merchantLoading) { // Combine loading states
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-[#92BCEA]" />
-            </div>
-        );
+    if (!user) {
+        redirect('/login');
     }
 
-    if (error) {
+    // 2. Get Merchant Profile & Role
+    const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    let merchant = null;
+
+    if (profile?.role === 'admin') {
+        // Admin: Fetch most recent merchant (consistent with useMerchant)
+        const { data } = await supabase
+            .from('merchants')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+        merchant = data;
+    } else {
+        // Merchant: Fetch own record
+        const { data } = await supabase
+            .from('merchants')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+        merchant = data;
+    }
+
+    if (!merchant) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Dashboard</h3>
-                    <p className="text-gray-600 mb-4">{error}</p>
-                    <button
-                        onClick={fetchDashboardData}
-                        className="px-4 py-2 bg-[#92BCEA] text-white rounded-lg hover:bg-[#7A93AC] transition-colors"
-                    >
-                        Try Again
-                    </button>
+                    <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900">Merchant Account Not Found</h3>
+                    <p className="text-gray-500 mt-2">Please contact support or complete your application.</p>
                 </div>
             </div>
         );
     }
+
+    // 3. Fetch Data in Parallel
+    const [couponsRes, soldCouponsRes] = await Promise.all([
+        // Fetch recent coupons for table (limit 10)
+        supabase
+            .from('coupons')
+            .select('*')
+            .eq('merchant_id', merchant.id)
+            .eq('is_merchant_owned', true)
+            .order('created_at', { ascending: false })
+            .limit(10),
+
+        // Fetch ALL sold coupons for revenue calculation (only necessary columns)
+        supabase
+            .from('coupons')
+            .select('merchant_selling_price_paise, merchant_purchase_price_paise, merchant_commission_paise')
+            .eq('merchant_id', merchant.id)
+            .eq('status', 'sold')
+    ]);
+
+    // Also get counts
+    const [activeCountRes, listedCountRes, soldCountRes] = await Promise.all([
+        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'available'),
+        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
+        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'sold')
+    ]);
+
+    const coupons = couponsRes.data || [];
+    const soldCouponsData = soldCouponsRes.data || [];
+    const activeCount = activeCountRes.count || 0;
+    const listedCount = listedCountRes.count || 0;
+    const soldCount = soldCountRes.count || 0;
+
+    // Calculate Revenue
+    const totalRevenue = soldCouponsData.reduce((sum, c) => {
+        const sellingPrice = (c.merchant_selling_price_paise || 0) / 100;
+        const purchasePrice = (c.merchant_purchase_price_paise || 0) / 100;
+        const commission = (c.merchant_commission_paise || 0) / 100;
+        return sum + (sellingPrice - purchasePrice - commission);
+    }, 0);
+
+    const stats = {
+        totalSales: soldCount,
+        activeCoupons: activeCount,
+        listedCoupons: listedCount,
+        totalRevenue: totalRevenue,
+        totalCommission: (merchant.total_commission_paid_paise || 0) / 100,
+    };
+
+    // Transform coupons for display
+    const transformedCoupons = coupons.map(c => ({
+        id: c.id,
+        brand: c.brand,
+        faceValue: c.face_value_paise / 100,
+        purchasePrice: (c.merchant_purchase_price_paise || 0) / 100,
+        sellingPrice: (c.merchant_selling_price_paise || 0) / 100,
+        commission: (c.merchant_commission_paise || 0) / 100,
+        status: c.status,
+        listed: c.listed_on_marketplace,
+    }));
 
     const statsDisplay = [
         { label: 'Total Sales', value: stats.totalSales.toString(), change: '', icon: ShoppingBag, color: 'from-green-500 to-emerald-500' },
@@ -180,7 +178,7 @@ export default function MerchantDashboardPage() {
                     {/* Coupons Table */}
                     <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
                         <div className="p-6 border-b border-gray-200">
-                            <h2 className="text-2xl font-bold text-gray-900">Your Coupons</h2>
+                            <h2 className="text-2xl font-bold text-gray-900">Recent Coupons</h2>
                         </div>
 
                         <div className="overflow-x-auto">
@@ -197,63 +195,71 @@ export default function MerchantDashboardPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {coupons.map((coupon) => {
-                                        const profit = coupon.sellingPrice - coupon.purchasePrice - coupon.commission;
+                                    {transformedCoupons.length > 0 ? (
+                                        transformedCoupons.map((coupon) => {
+                                            const profit = coupon.sellingPrice - coupon.purchasePrice - coupon.commission;
 
-                                        return (
-                                            <tr key={coupon.id} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-6 py-4">
-                                                    <div className="font-semibold text-gray-900">{coupon.brand}</div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="text-gray-900">₹{coupon.faceValue.toLocaleString()}</div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="text-gray-900">₹{coupon.purchasePrice.toLocaleString()}</div>
-                                                    <div className="text-xs text-gray-500">+ ₹{coupon.commission.toFixed(2)} fee</div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {coupon.listed ? (
-                                                        <div className="text-[#92BCEA] font-semibold">₹{coupon.sellingPrice.toLocaleString()}</div>
-                                                    ) : (
-                                                        <div className="text-gray-400">Not listed</div>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {coupon.listed ? (
-                                                        <div className={`font-semibold ${profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                            ₹{profit.toFixed(2)}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="text-gray-400">-</div>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${coupon.status === 'sold' ? 'bg-green-100 text-green-700' :
-                                                        coupon.listed ? 'bg-blue-100 text-blue-700' :
-                                                            'bg-gray-100 text-gray-700'
-                                                        }`}>
-                                                        {coupon.status === 'sold' ? 'Sold' : coupon.listed ? 'Listed' : 'Unlisted'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <Link
-                                                        href="/merchant/inventory"
-                                                        className="text-[#92BCEA] hover:text-[#7A93AC] font-semibold text-sm"
-                                                    >
-                                                        Manage
-                                                    </Link>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                            return (
+                                                <tr key={coupon.id} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-semibold text-gray-900">{coupon.brand}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-gray-900">₹{coupon.faceValue.toLocaleString()}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-gray-900">₹{coupon.purchasePrice.toLocaleString()}</div>
+                                                        <div className="text-xs text-gray-500">+ ₹{coupon.commission.toFixed(2)} fee</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {coupon.listed ? (
+                                                            <div className="text-[#92BCEA] font-semibold">₹{coupon.sellingPrice.toLocaleString()}</div>
+                                                        ) : (
+                                                            <div className="text-gray-400">Not listed</div>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {coupon.listed ? (
+                                                            <div className={`font-semibold ${profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                                ₹{profit.toFixed(2)}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-gray-400">-</div>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${coupon.status === 'sold' ? 'bg-green-100 text-green-700' :
+                                                            coupon.listed ? 'bg-blue-100 text-blue-700' :
+                                                                'bg-gray-100 text-gray-700'
+                                                            }`}>
+                                                            {coupon.status === 'sold' ? 'Sold' : coupon.listed ? 'Listed' : 'Unlisted'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <Link
+                                                            href="/merchant/inventory"
+                                                            className="text-[#92BCEA] hover:text-[#7A93AC] font-semibold text-sm"
+                                                        >
+                                                            Manage
+                                                        </Link>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                                                No recent coupons found.
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
 
-                        {/* Empty State */}
-                        {coupons.length === 0 && (
-                            <div className="text-center py-16">
+                        {/* Empty State Link */}
+                        {transformedCoupons.length === 0 && (
+                            <div className="text-center pb-12">
                                 <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                                 <p className="text-gray-600 mb-4">No coupons in your inventory yet</p>
                                 <Link
