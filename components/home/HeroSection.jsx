@@ -46,8 +46,8 @@ export default function HeroSection() {
     ];
 
     return (
-        <section ref={heroRef} className="relative min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden pt-20 md:pt-32 pb-16 md:pb-20">
-            {/* ... Background ... */}
+        <section ref={heroRef} className="relative h-screen flex flex-col items-center justify-center overflow-hidden">
+            {/* Background */}
             <div className="absolute inset-0 z-0">
                 <Image
                     src="/images/hero-bg-flow.png"
@@ -56,10 +56,10 @@ export default function HeroSection() {
                     className="object-cover opacity-90"
                     priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/70 to-white/90 backdrop-blur-[2px]" />
+                <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/80 to-white/95" />
             </div>
 
-            {/* ... Floating Icons ... */}
+            {/* Floating Icons */}
             <div className="absolute inset-0 pointer-events-none">
                 {floatingIcons.map(({ Icon, position, delay, color, mobilePosition }, index) => (
                     <motion.div
@@ -76,76 +76,184 @@ export default function HeroSection() {
                                 rotate: [0, 5, -5, 0],
                             }}
                             transition={{
-                                duration: 6 + index * 0.5, // Slower, more gentle
+                                duration: 6 + index * 0.5,
                                 repeat: Infinity,
                                 ease: "easeInOut"
                             }}
                             className="p-3 lg:p-4 rounded-3xl bg-white/40 shadow-lg backdrop-blur-xl border border-white/50"
                             style={{
                                 boxShadow: `0 8px 32px 0 ${color}20`,
-                                opacity: 0.6
+                                opacity: 0.5
                             }}
                         >
-                            <Icon size={24} className="lg:w-8 lg:h-8" style={{ color }} strokeWidth={1.5} />
+                            <Icon size={20} className="lg:w-8 lg:h-8" style={{ color }} strokeWidth={1.5} />
                         </motion.div>
                     </motion.div>
                 ))}
             </div>
 
-            {/* Main Content */}
-            <div className="relative z-10 max-w-5xl mx-auto px-6 text-center flex-grow flex flex-col justify-center gap-4 md:gap-8">
-                {/* Headline - Balanced */}
+            {/* Main Content Container - Full Height Flex */}
+            <div className="relative z-10 w-full h-full max-w-6xl mx-auto px-6 flex flex-col items-center justify-center pt-16 md:pt-20 pb-4 md:pb-6">
+
+                {/* Content Wrapper */}
+                <div className="flex-1 flex flex-col items-center justify-center text-center gap-6 md:gap-8 max-w-4xl">
+
+                    {/* INTRUST - Multi-Color Wordmark */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                        <h1 className="text-7xl sm:text-7xl md:text-7xl font-extrabold leading-tight tracking-tight font-[family-name:var(--font-poppins)]">
+
+                            <span className="letter-i">I</span>
+                            <span className="letter-n">N</span>
+                            <span className="letter-t">T</span>
+                            <span className="letter-r">R</span>
+                            <span className="letter-u">U</span>
+                            <span className="letter-s">S</span>
+                            <span className="letter-t2">T</span>
+                        </h1>
+                    </motion.div>
+
+                    {/* Premium Search Bar */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                        className="w-full max-w-2xl mx-auto mt-2 md:mt-4"
+                    >
+                        <SearchBar />
+                    </motion.div>
+
+                    {/* Premium Prelink Pills */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                        className="mt-2 md:mt-4"
+                    >
+                        <Pills items={prelinks} />
+                    </motion.div>
+                </div>
+
+                {/* Partner Loop - Pushed to Bottom */}
                 <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 0.6 }}
+                    className="w-full mt-auto pt-6 md:pt-8"
                 >
-                    <h1 className="text-[2.5rem] sm:text-5xl lg:text-7xl font-bold text-[#171A21] leading-[1.1] font-[family-name:var(--font-outfit)] mt-8 md:mt-0">
-                        {t('hero.title')}
-                        <br />
-                        <span className="bg-gradient-to-r from-[#7A93AC] via-[#92BCEA] to-[#AFB3F7] bg-clip-text text-transparent">
-                            {t('hero.subtitle')}
-                        </span>
-                    </h1>
+                    <PartnerLoop className="bg-transparent py-2 md:py-3" showBorder={false} />
                 </motion.div>
-
-                {/* Subtitle - Cleaner */}
-                <motion.p
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                    className="text-base sm:text-xl text-[#617073] max-w-2xl mx-auto leading-relaxed"
-                >
-                    {t('hero.description')}
-                </motion.p>
-
-                {/* Premium Search Bar - Centered */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                    className="w-full max-w-2xl mx-auto"
-                >
-                    <SearchBar />
-                </motion.div>
-
-                {/* Premium Prelink Pills - Justified */}
-                <Pills items={prelinks} className="" />
             </div>
 
-            {/* Integrated Partner Loop at Bottom */}
-            <div className="relative w-full mt-20 md:mt-24 pb-2 md:pb-6 pointer-events-auto">
-                <PartnerLoop className="bg-transparent py-2 md:py-4" showBorder={false} />
-            </div>
-
-            {/* CSS to make icons fully visible on desktop */}
+            {/* Custom Styles */}
             <style jsx>{`
-        @media (min-width: 1024px) {
-          .absolute > div {
-            opacity: 1 !important;
-          }
-        }
-      `}</style>
-        </section >
+                /* Clean Fintech INTRUST Gradients */
+                .letter-i {
+                    background: linear-gradient(135deg, #5B7C99 0%, #7A93AC 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                    display: inline-block;
+                }
+
+                .letter-n {
+                    background: linear-gradient(135deg, #7A93AC 0%, #92BCEA 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                    display: inline-block;
+                }
+
+                .letter-t {
+                    background: linear-gradient(135deg, #92BCEA 0%, #AFB3F7 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                    display: inline-block;
+                }
+
+                .letter-r {
+                    background: linear-gradient(135deg, #AFB3F7 0%, #C5C9FF 50%, #92BCEA 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                    display: inline-block;
+                }
+
+                .letter-u {
+                    background: linear-gradient(135deg, #92BCEA 0%, #AFB3F7 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                    display: inline-block;
+                }
+
+                .letter-s {
+                    background: linear-gradient(135deg, #7A93AC 0%, #92BCEA 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                    display: inline-block;
+                }
+
+                .letter-t2 {
+                    background: linear-gradient(135deg, #5B7C99 0%, #7A93AC 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                    display: inline-block;
+                }
+
+                /* Elegant hover effect with subtle glow */
+                h1:hover span {
+                    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+
+                h1:hover .letter-i { 
+                    transform: translateY(-5px) scale(1.03); 
+                    transition-delay: 0s;
+                    filter: drop-shadow(0 0 12px rgba(122, 147, 172, 0.5));
+                }
+                h1:hover .letter-n { 
+                    transform: translateY(-5px) scale(1.03); 
+                    transition-delay: 0.05s;
+                    filter: drop-shadow(0 0 12px rgba(146, 188, 234, 0.5));
+                }
+                h1:hover .letter-t { 
+                    transform: translateY(-5px) scale(1.03); 
+                    transition-delay: 0.1s;
+                    filter: drop-shadow(0 0 12px rgba(175, 179, 247, 0.5));
+                }
+                h1:hover .letter-r { 
+                    transform: translateY(-5px) scale(1.03); 
+                    transition-delay: 0.15s;
+                    filter: drop-shadow(0 0 12px rgba(146, 188, 234, 0.5));
+                }
+                h1:hover .letter-u { 
+                    transform: translateY(-5px) scale(1.03); 
+                    transition-delay: 0.2s;
+                    filter: drop-shadow(0 0 12px rgba(175, 179, 247, 0.5));
+                }
+                h1:hover .letter-s { 
+                    transform: translateY(-5px) scale(1.03); 
+                    transition-delay: 0.25s;
+                    filter: drop-shadow(0 0 12px rgba(146, 188, 234, 0.5));
+                }
+                h1:hover .letter-t2 { 
+                    transform: translateY(-5px) scale(1.03); 
+                    transition-delay: 0.3s;
+                    filter: drop-shadow(0 0 12px rgba(122, 147, 172, 0.5));
+                }
+
+                @media (min-width: 1024px) {
+                    .absolute > div {
+                        opacity: 1 !important;
+                    }
+                }
+            `}</style>
+        </section>
     );
 }
