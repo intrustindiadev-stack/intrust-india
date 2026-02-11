@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Loader2, ShieldAlert, CheckCircle, Verified, AlertCircle } from 'lucide-react';
+import { Search, Loader2, ShieldAlert, CheckCircle, AlertCircle, Eye } from 'lucide-react';
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
+import KYCModal from '@/components/admin/KYCModal';
 import { createClient } from '@/lib/supabaseClient';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
@@ -12,10 +14,14 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
     const searchParams = useSearchParams();
 
     const [users, setUsers] = useState(initialUsers);
-    const [updatingId, setUpdatingId] = useState(null);
     const [toastMsg, setToastMsg] = useState({ message: '', type: '' });
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
     const [isSearching, setIsSearching] = useState(false);
+    const [updatingId, setUpdatingId] = useState(null);
+
+    // KYC Modal state
+    const [selectedKYC, setSelectedKYC] = useState(null);
+    const [showKYCModal, setShowKYCModal] = useState(false);
 
     // Debug: Log when users data changes
     useEffect(() => {
@@ -58,6 +64,46 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
         router.push(`${pathname}?${params.toString()}`);
     };
 
+    const openKYCModal = (user) => {
+        // Get the first KYC record (should only be one per user)
+        const kycRecord = user.kyc_records?.[0];
+
+        if (!kycRecord) {
+            showToast('No KYC record found for this user', 'error');
+            return;
+        }
+
+        // Add user email to KYC data for display
+        setSelectedKYC({
+            ...kycRecord,
+            user_email: user.email
+        });
+        setShowKYCModal(true);
+    };
+
+    const closeKYCModal = () => {
+        setShowKYCModal(false);
+        setSelectedKYC(null);
+        // Refresh the page to get updated data
+        router.refresh();
+    };
+
+    const getKYCStatus = (user) => {
+        const kycRecord = user.kyc_records?.[0];
+
+        // If KYC record exists, use its status (new schema)
+        if (kycRecord) {
+            return kycRecord.verification_status || kycRecord.status || 'not_started';
+        }
+
+        // Fall back to user_profiles.kyc_status for users without KYC records
+        return user.kyc_status || 'not_started';
+    };
+
+    const hasKYCRecord = (user) => {
+        return user.kyc_records && user.kyc_records.length > 0;
+    };
+
     const updateKYCStatus = async (userId, newStatus) => {
         setUpdatingId(userId);
         try {
@@ -68,13 +114,13 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
 
             if (error) throw error;
 
-            // Update local state without refresh for better specific UX
+            // Update local state
             setUsers(users.map(u =>
                 u.id === userId ? { ...u, kyc_status: newStatus } : u
             ));
 
             showToast(`Status updated to ${newStatus?.toUpperCase()}`, 'success');
-            router.refresh(); // Refresh server data in background
+            router.refresh();
         } catch (error) {
             console.error('Error updating status:', error);
             showToast('Failed to update status: ' + error.message, 'error');
@@ -86,7 +132,12 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
     const StatusBadge = ({ status }) => {
         switch (status) {
             case 'verified':
-                return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"><Verified size={14} className="text-blue-600" /> Verified</span>;
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                        Verified
+                        <CheckCircle size={14} />
+                    </span>
+                );
             case 'pending':
                 return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><Loader2 size={14} className="animate-spin" /> Pending</span>;
             case 'rejected':
@@ -105,6 +156,14 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
                     {toastMsg.type === 'error' ? <ShieldAlert size={20} /> : <CheckCircle size={20} />}
                     <span className="font-medium">{toastMsg.message}</span>
                 </div>
+            )}
+
+            {/* KYC Modal */}
+            {showKYCModal && selectedKYC && (
+                <KYCModal
+                    kyc={selectedKYC}
+                    onClose={closeKYCModal}
+                />
             )}
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -163,26 +222,38 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
                                             {new Date(user.created_at).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <StatusBadge status={user.kyc_status} />
+                                            <StatusBadge status={getKYCStatus(user)} />
                                         </td>
                                         <td className="px-6 py-4">
-                                            {updatingId === user.id ? (
-                                                <div className="flex items-center gap-2 text-blue-600">
-                                                    <Loader2 size={16} className="animate-spin" />
-                                                    <span className="text-xs font-medium">Updating...</span>
-                                                </div>
-                                            ) : (
-                                                <select
-                                                    className="block w-full text-sm border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border bg-white disabled:opacity-50 disabled:bg-gray-100"
-                                                    value={user.kyc_status || 'not_started'}
-                                                    onChange={(e) => updateKYCStatus(user.id, e.target.value)}
-                                                    disabled={user.role === 'admin'}
+                                            {hasKYCRecord(user) ? (
+                                                <button
+                                                    onClick={() => openKYCModal(user)}
+                                                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
                                                 >
-                                                    <option value="not_started" disabled>Select Status</option>
-                                                    <option value="pending">Pending</option>
-                                                    <option value="verified">Verified</option>
-                                                    <option value="rejected">Rejected</option>
-                                                </select>
+                                                    <Eye size={16} />
+                                                    View KYC
+                                                </button>
+                                            ) : (
+                                                <>
+                                                    {updatingId === user.id ? (
+                                                        <div className="flex items-center gap-2 text-blue-600">
+                                                            <Loader2 size={16} className="animate-spin" />
+                                                            <span className="text-xs font-medium">Updating...</span>
+                                                        </div>
+                                                    ) : (
+                                                        <select
+                                                            className="block w-full text-sm border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border bg-white disabled:opacity-50 disabled:bg-gray-100"
+                                                            value={user.kyc_status || 'not_started'}
+                                                            onChange={(e) => updateKYCStatus(user.id, e.target.value)}
+                                                            disabled={user.role === 'admin'}
+                                                        >
+                                                            <option value="not_started" disabled>Select Status</option>
+                                                            <option value="pending">Pending</option>
+                                                            <option value="verified">Verified</option>
+                                                            <option value="rejected">Rejected</option>
+                                                        </select>
+                                                    )}
+                                                </>
                                             )}
                                         </td>
                                     </tr>

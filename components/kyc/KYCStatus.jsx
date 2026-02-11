@@ -33,7 +33,7 @@ export default function KYCStatus({ status, onStartKYC }) {
             color: 'from-blue-500 to-blue-600',
             bgColor: 'bg-blue-50',
             borderColor: 'border-blue-200',
-            icon: VerifiedBadge,
+            icon: null, // No icon on the left needed
             title: 'Verified',
             description: 'Your account is verified. You have full access.',
             action: null,
@@ -57,12 +57,8 @@ export default function KYCStatus({ status, onStartKYC }) {
     return (
         <div className={`${config.bgColor} border-2 ${config.borderColor} rounded-2xl p-6 shadow-lg`}>
             <div className="flex items-start gap-4">
-                {/* Icon */}
-                {currentStatus === 'verified' ? (
-                    <div className="flex-shrink-0">
-                        <VerifiedBadge size={56} className="text-[#1877F2]" />
-                    </div>
-                ) : (
+                {/* Icon - Only show if not verified (since verified has inline badge) */}
+                {currentStatus !== 'verified' && (
                     <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center flex-shrink-0 shadow-lg`}>
                         <Icon size={28} className="text-white" />
                     </div>
@@ -72,7 +68,7 @@ export default function KYCStatus({ status, onStartKYC }) {
                 <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-xl font-bold text-gray-900">{config.title}</h3>
-                        {currentStatus === 'verified' && <VerifiedBadge size={20} className="text-[#1877F2]" />}
+                        {currentStatus === 'verified' && <VerifiedBadge size="md" />}
                     </div>
                     <p className="text-gray-600 mb-4">{config.description}</p>
 

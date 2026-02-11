@@ -7,7 +7,7 @@ import {
     Loader2, ChevronLeft, Store, TrendingUp, Users, Check, Sparkles, CreditCard, Banknote, X, Home
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import KYCForm from '@/components/kyc/KYCForm';
+import KYCForm from '@/components/forms/KYCForm';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -303,11 +303,19 @@ export default function MerchantApplyPage() {
                                 )}
                                 <KYCForm
                                     userType="merchant"
-                                    onSubmit={handleFormSubmit}
                                     initialData={{
                                         fullName: formData.ownerName,
                                         panNumber: formData.panCard,
-                                        address: formData.address
+                                        fullAddress: formData.address,
+                                        phone: formData.phone
+                                    }}
+                                    onSuccess={async (kycData) => {
+                                        // KYC submitted successfully, now submit merchant application
+                                        console.log('✅ KYC submitted:', kycData);
+                                        await handleFormSubmit();
+                                    }}
+                                    onError={(errorMsg) => {
+                                        setError(errorMsg);
                                     }}
                                 />
                             </motion.div>
