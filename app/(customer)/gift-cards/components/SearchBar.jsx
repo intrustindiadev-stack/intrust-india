@@ -1,8 +1,9 @@
 'use client';
 
+import { memo } from 'react';
 import { Search, ChevronDown } from 'lucide-react';
 
-export default function SearchBar({ searchQuery, setSearchQuery, sortBy, setSortBy }) {
+const SearchBar = memo(function SearchBar({ searchQuery, setSearchQuery, sortBy, setSortBy }) {
     return (
         <div className="flex flex-col sm:flex-row gap-3">
             {/* Search */}
@@ -33,4 +34,6 @@ export default function SearchBar({ searchQuery, setSearchQuery, sortBy, setSort
             </div>
         </div>
     );
-}
+});
+
+export default SearchBar;

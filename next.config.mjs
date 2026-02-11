@@ -9,11 +9,22 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**', // Allow all external images
       },
-      {
-        protocol: 'http',
-        hostname: '**',
-      },
     ],
+  },
+  // Performance optimizations
+  compress: true,
+  poweredByHeader: false,
+  reactStrictMode: true,
+  swcMinify: true,
+
+  // Remove development features in production
+  productionBrowserSourceMaps: false,
+
+  // Optimize imports
+  modularizeImports: {
+    'lucide-react': {
+      transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}',
+    },
   },
 };
 

@@ -55,19 +55,22 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         let mounted = true;
+        let profileCache = null;
 
         const initializeAuth = async () => {
             try {
                 // 1. Get initial session
                 const { data: { session }, error } = await supabase.auth.getSession();
 
-                if (session?.user) {
-                    if (mounted) setUser(session.user);
-                    const userProfile = await fetchProfile(session.user.id);
-                    if (mounted) setProfile(userProfile);
+                if (error) throw error;
+
+                if (session?.user && mounted) {
+                    setUser(session.user);
+                    profileCache = await fetchProfile(session.user.id);
+                    if (mounted) setProfile(profileCache);
                 }
             } catch (err) {
-                console.error('Auth initialization error:', err);
+                console.error('Error initializing auth:', err);
             } finally {
                 if (mounted) setLoading(false);
             }
@@ -88,9 +91,11 @@ export function AuthProvider({ children }) {
                 if (session?.user) {
                     setUser(session.user);
 
-                    // Simple fetch
-                    const userProfile = await fetchProfile(session.user.id);
-                    if (mounted) setProfile(userProfile);
+                    // Only fetch profile if user changed or no cache
+                    if (!profileCache || profileCache.id !== session.user.id) {
+                        profileCache = await fetchProfile(session.user.id);
+                        if (mounted) setProfile(profileCache);
+                    }
 
                     if (event === 'SIGNED_IN') {
                         setTimeout(() => setShowAuthLoader(false), 1700);
@@ -98,6 +103,7 @@ export function AuthProvider({ children }) {
                 } else {
                     setUser(null);
                     setProfile(null);
+                    profileCache = null;
                     setShowAuthLoader(false);
                 }
 

@@ -19,7 +19,17 @@ export default function Navbar() {
     const router = useRouter();
 
     useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 50);
+        const handleScroll = () => {
+            const shouldScroll = window.scrollY > 50;
+            setScrolled(prev => {
+                // Only update if value actually changed
+                if (prev !== shouldScroll) {
+                    return shouldScroll;
+                }
+                return prev;
+            });
+        };
+
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);

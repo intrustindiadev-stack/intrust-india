@@ -1,12 +1,13 @@
 'use client';
 
+import { memo } from 'react';
 import { Star, Flame } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import VerifiedBadge from '@/components/ui/VerifiedBadge';
 
-export default function GiftCardItem({ coupon, index = 0 }) {
+const GiftCardItem = memo(function GiftCardItem({ coupon, index = 0 }) {
 
 
     return (
@@ -139,4 +140,6 @@ export default function GiftCardItem({ coupon, index = 0 }) {
             </Link>
         </motion.div>
     );
-}
+});
+
+export default GiftCardItem;

@@ -1,6 +1,6 @@
 'use client';
 
-import { Shield, Zap, Award, HeadphonesIcon, TrendingUp, Users, ShoppingBag } from 'lucide-react';
+import { Shield, Zap, Award, Headphones, TrendingUp, Users, ShoppingBag } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function TrustBadges() {
@@ -24,7 +24,7 @@ export default function TrustBadges() {
             color: 'from-green-500 to-emerald-500'
         },
         {
-            icon: HeadphonesIcon,
+            icon: Headphones,
             title: '24/7 Support',
             subtitle: 'Always here to help',
             color: 'from-purple-500 to-pink-500'

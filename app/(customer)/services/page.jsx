@@ -6,7 +6,7 @@ import Navbar from '@/components/layout/Navbar';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import Link from 'next/link';
 import {
-    Zap, Banknote, ShoppingBag, HeadphonesIcon,
+    Zap, Banknote, ShoppingBag, Headphones,
     Smartphone, Tv, Car, Flame, Wallet, CreditCard,
     Landmark, Gift, FileText, Heart, HelpCircle,
     ArrowRight, Search, LayoutGrid, ChevronRight
@@ -46,7 +46,7 @@ export default function ServicesPage() {
         { id: 'rewards', category: 'shopping', title: "Redeem Points", subtitle: "Use your points", icon: Heart, href: "/rewards" },
 
         // Support
-        { id: 'chat', category: 'support', title: "Live Chat", subtitle: "Talk to us", icon: HeadphonesIcon, href: "/support" },
+        { id: 'chat', category: 'support', title: "Live Chat", subtitle: "Talk to us", icon: Headphones, href: "/support" },
         { id: 'faq', category: 'support', title: "FAQs", subtitle: "Usually asked", icon: HelpCircle, href: "/faqs" },
     ];
 

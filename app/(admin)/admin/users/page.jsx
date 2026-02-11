@@ -15,10 +15,11 @@ export default async function AdminUsersPage({ searchParams }) {
     const offset = (page - 1) * limit;
     const search = params?.search || '';
 
-    // Fetch users first
+    // Single optimized query with JOIN (fixes N+1 problem)
+    // Using explicit foreign key syntax !user_id to resolve ambiguous relationship
     let userQuery = supabase
         .from('user_profiles')
-        .select('*', { count: 'exact' })
+        .select('*, kyc_records!user_id(*)', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
@@ -44,24 +45,6 @@ export default async function AdminUsersPage({ searchParams }) {
         );
     }
 
-    // Fetch all KYC records separately
-    let usersWithKYC = users;
-    if (users && users.length > 0) {
-        const userIds = users.map(u => u.id);
-        const { data: kycRecords } = await supabase
-            .from('kyc_records')
-            .select('*')
-            .in('user_id', userIds);
-
-        // Manually merge KYC records with users
-        if (kycRecords) {
-            usersWithKYC = users.map(user => ({
-                ...user,
-                kyc_records: kycRecords.filter(kr => kr.user_id === user.id)
-            }));
-        }
-    }
-
     const totalPages = Math.ceil((count || 0) / limit);
 
     return (
@@ -72,7 +55,7 @@ export default async function AdminUsersPage({ searchParams }) {
             </div>
 
             <UsersTable
-                initialUsers={usersWithKYC || []}
+                initialUsers={users || []}
                 initialTotal={count || 0}
                 currentPage={page}
                 totalPages={totalPages}

@@ -99,34 +99,18 @@ export async function middleware(request) {
             return NextResponse.redirect(redirectUrl)
         }
 
-        // Role-based Access Control - MOVED TO LAYOUT for better performance
-        // Middleware only enforces session presence for protected routes to avoid double DB calls.
-        // Detailed role verification will happen in the Server Component Layouts.
-
-        // Redirect to dashboard if accessing auth pages while logged in
+        // Simplified redirect - let layouts handle role-based routing
+        // This removes the expensive database query that ran on every auth page visit
         if ((pathname === '/login' || pathname === '/register') && user) {
-            // Fetch role to redirect correctly
-            const { data: profile } = await supabase
-                .from('user_profiles')
-                .select('role')
-                .eq('id', user.id)
-                .single()
-
             const elapsed = Date.now() - startTime;
             console.log('[MIDDLEWARE:END]', {
                 requestId,
                 userId: user?.id,
                 elapsed,
-                path: pathname
+                path: pathname,
+                action: 'redirect_to_dashboard'
             });
-
-            if (profile?.role === 'admin') {
-                return NextResponse.redirect(new URL('/admin', request.url))
-            } else if (profile?.role === 'merchant') {
-                return NextResponse.redirect(new URL('/merchant/dashboard', request.url))
-            } else {
-                return NextResponse.redirect(new URL('/dashboard', request.url))
-            }
+            return NextResponse.redirect(new URL('/dashboard', request.url))
         }
 
         const elapsed = Date.now() - startTime;

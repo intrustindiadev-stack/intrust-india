@@ -64,9 +64,15 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
         router.push(`${pathname}?${params.toString()}`);
     };
 
+    const getKYCRecord = (user) => {
+        if (!user.kyc_records) return null;
+        // Handle both array (legacy/1:N) and object (1:1 join) formats
+        return Array.isArray(user.kyc_records) ? user.kyc_records[0] : user.kyc_records;
+    };
+
     const openKYCModal = (user) => {
-        // Get the first KYC record (should only be one per user)
-        const kycRecord = user.kyc_records?.[0];
+        // Get the KYC record safely
+        const kycRecord = getKYCRecord(user);
 
         if (!kycRecord) {
             showToast('No KYC record found for this user', 'error');
@@ -89,7 +95,7 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
     };
 
     const getKYCStatus = (user) => {
-        const kycRecord = user.kyc_records?.[0];
+        const kycRecord = getKYCRecord(user);
 
         // If KYC record exists, use its status (new schema)
         if (kycRecord) {
@@ -101,7 +107,8 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
     };
 
     const hasKYCRecord = (user) => {
-        return user.kyc_records && user.kyc_records.length > 0;
+        const record = getKYCRecord(user);
+        return !!record;
     };
 
     const updateKYCStatus = async (userId, newStatus) => {

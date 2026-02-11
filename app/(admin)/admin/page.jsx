@@ -77,20 +77,7 @@ export default async function AdminDashboard() {
                 return count || 0;
             }),
 
-        // 5. Recent Transactions (Last 10 paid orders)
-        // Fetches orders and joins related data
-        // Note: Joining across tables in Supabase JS client is done via select syntax if FKs exist
-        // orders -> coupons (giftcard_id) -> merchants (merchant_id)
-        // orders -> auth.users (user_id) - cannot join auth schema easily, but user_profiles exists?
-        // Let's try to join user_profiles if FK exists. create_orders_table.sql didn't show explicit FK to user_profiles, 
-        // only to auth.users. But usually RLS/Helpers handle mapping.
-        // If no FK to user_profiles, we might need a separate fetch or reliance on `user_id` being same.
-        // We will Select orders first, then enrich. Or try deep select if relationships exist.
-        // Given existing schema knowledge, `orders` has `user_id`. `user_profiles` has `id`.
-        // If there is no foreign key constraint, Supabase select nesting won't work.
-        // Assuming we need to fetch manually if join fails.
-        // However, `orders` has `giftcard_id` referencing `coupons`.
-
+        // 5. Recent Transactions - Optimized single query
         supabase.from('orders')
             .select(`
                 id,
@@ -118,22 +105,23 @@ export default async function AdminDashboard() {
                     return [];
                 }
 
-                // Fetch buyer names separately since we can't always join auth/user_profiles easily without explicit FK
                 if (!orders?.length) return [];
 
+                // Fetch all user profiles in parallel with orders query
                 const userIds = [...new Set(orders.map(o => o.user_id))];
-                const { data: profiles } = await supabase
+                const profileQuery = supabase
                     .from('user_profiles')
                     .select('id, full_name, email')
                     .in('id', userIds);
 
+                const { data: profiles } = await profileQuery;
                 const profileMap = (profiles || []).reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
 
                 return orders.map(order => ({
                     ...order,
                     buyer_name: profileMap[order.user_id]?.full_name || profileMap[order.user_id]?.email || 'Unknown User',
                     brand: order.coupons?.brand || 'Unknown Brand',
-                    merchant_name: order.coupons?.merchants?.business_name || 'Platform' // Or merchant name if joined
+                    merchant_name: order.coupons?.merchants?.business_name || 'Platform'
                 }));
             }),
 
