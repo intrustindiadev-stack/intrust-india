@@ -60,11 +60,11 @@ export default function LoginPage() {
                 .single();
 
             if (profile?.role === 'merchant') {
-                router.push('/merchant/dashboard');
+                router.replace('/merchant/dashboard');
             } else if (profile?.role === 'admin') {
-                router.push('/admin/merchants');
+                router.replace('/admin');
             } else {
-                router.push('/dashboard'); // Default to student dashboard
+                router.replace('/dashboard'); // Default to student dashboard
             }
         }
     };

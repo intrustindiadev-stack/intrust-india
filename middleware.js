@@ -121,7 +121,7 @@ export async function middleware(request) {
             });
 
             if (profile?.role === 'admin') {
-                return NextResponse.redirect(new URL('/admin/merchants', request.url))
+                return NextResponse.redirect(new URL('/admin', request.url))
             } else if (profile?.role === 'merchant') {
                 return NextResponse.redirect(new URL('/merchant/dashboard', request.url))
             } else {

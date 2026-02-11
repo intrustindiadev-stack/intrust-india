@@ -36,9 +36,12 @@ export default function Navbar() {
     }, [menuOpen]);
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut();
-        router.refresh();
-        router.push('/');
+        try {
+            await supabase.auth.signOut();
+            router.replace('/');
+        } catch (error) {
+            console.error('Sign out error:', error);
+        }
     };
 
     const menuItems = [

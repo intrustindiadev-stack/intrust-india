@@ -39,7 +39,7 @@ export async function GET(request) {
                     .single();
 
                 if (profile?.role === 'admin') {
-                    return NextResponse.redirect(new URL('/admin/merchants', requestUrl.origin));
+                    return NextResponse.redirect(new URL('/admin', requestUrl.origin));
                 } else if (profile?.role === 'merchant') {
                     return NextResponse.redirect(new URL('/merchant/dashboard', requestUrl.origin));
                 }
