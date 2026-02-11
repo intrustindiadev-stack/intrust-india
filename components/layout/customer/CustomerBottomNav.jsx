@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 const navItems = [
     { icon: Home, label: 'Home', href: '/dashboard' },
     { icon: LayoutGrid, label: 'Services', href: '/services' },
-    { icon: ShoppingBag, label: 'My Cards', href: '/my-coupons' },
+    { icon: ShoppingBag, label: 'My Cards', href: '/my-giftcards' },
     { icon: User, label: 'Profile', href: '/profile' },
 ];
 

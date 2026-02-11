@@ -75,7 +75,7 @@ export async function middleware(request) {
         // Protected routes that require authentication
         const protectedRoutes = [
             '/dashboard',
-            '/my-coupons',
+            '/my-giftcards',
             '/profile',
             // '/gift-cards' removed - browsing should be public, only purchase requires auth
         ]

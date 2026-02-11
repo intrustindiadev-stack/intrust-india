@@ -42,7 +42,7 @@ export default function ServicesPage() {
         // Shopping
         { id: 'gift', category: 'shopping', title: "Gift Cards", subtitle: "For your loved ones", icon: Gift, href: "/gift-cards" },
         { id: 'store', category: 'shopping', title: "Online Store", subtitle: "Exclusive Deals", icon: ShoppingBag, href: "/marketplace", badge: "New" },
-        { id: 'coupons', category: 'shopping', title: "My Coupons", subtitle: "Rewards & Codes", icon: FileText, href: "/my-coupons" },
+        { id: 'coupons', category: 'shopping', title: "My Coupons", subtitle: "Rewards & Codes", icon: FileText, href: "/my-giftcards" },
         { id: 'rewards', category: 'shopping', title: "Redeem Points", subtitle: "Use your points", icon: Heart, href: "/rewards" },
 
         // Support

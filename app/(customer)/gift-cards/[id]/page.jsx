@@ -208,7 +208,7 @@ export default function GiftCardDetailPage({ params }) {
                         if (verifyData.success) {
                             setPurchaseSuccess(true);
                             setTimeout(() => {
-                                router.push('/my-coupons');
+                                router.push('/my-giftcards');
                             }, 2000);
                         } else {
                             throw new Error('Payment verification failed');

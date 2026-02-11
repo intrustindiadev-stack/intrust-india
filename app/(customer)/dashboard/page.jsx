@@ -221,7 +221,7 @@ export default function CustomerDashboardPage() {
                             >
                                 <div className="flex items-center justify-between mb-6">
                                     <h2 className="text-xl font-bold text-slate-900">Recent Activity</h2>
-                                    <Link href="/my-coupons" className="text-blue-600 text-sm font-bold hover:underline">View All</Link>
+                                    <Link href="/my-giftcards" className="text-blue-600 text-sm font-bold hover:underline">View All</Link>
                                 </div>
                                 <div className="space-y-4">
                                     {recentOrders.map((order) => (
@@ -269,7 +269,7 @@ export default function CustomerDashboardPage() {
                                         <div className="font-bold text-slate-700 group-hover:text-blue-700">Buy Gift Cards</div>
                                         <ChevronRight size={16} className="ml-auto text-slate-400" />
                                     </Link>
-                                    <Link href="/my-coupons" className="flex items-center gap-3 p-3 rounded-xl hover:bg-purple-50 group transition-colors">
+                                    <Link href="/my-giftcards" className="flex items-center gap-3 p-3 rounded-xl hover:bg-purple-50 group transition-colors">
                                         <div className="w-10 h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
                                             <Package size={20} />
                                         </div>

@@ -65,9 +65,33 @@ export async function POST(request) {
             });
 
         if (rpcError) {
-            logger.error('RPC error', rpcError);
+            logger.error('RPC error (DETAILED):', {
+                message: rpcError.message,
+                details: rpcError.details,
+                hint: rpcError.hint,
+                code: rpcError.code,
+                orderId: order.id,
+                paymentId: razorpay_payment_id
+            });
+            console.error('RPC FULL ERROR:', JSON.stringify(rpcError, null, 2));
             return NextResponse.json(
-                { message: "Order finalization failed", success: false },
+                {
+                    message: "Order finalization failed",
+                    success: false,
+                    debug: rpcError.message // Include error in response for debugging
+                },
+                { status: 500 }
+            );
+        }
+
+        if (!rpcResult || !rpcResult.success) {
+            logger.error('RPC returned failure', rpcResult);
+            console.error('RPC RESULT:', JSON.stringify(rpcResult, null, 2));
+            return NextResponse.json(
+                {
+                    message: rpcResult?.message || "Order finalization failed",
+                    success: false
+                },
                 { status: 500 }
             );
         }
