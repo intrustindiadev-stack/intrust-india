@@ -7,7 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
-import { supabase } from '@/lib/supabaseClient';
+
 import { useRouter } from 'next/navigation';
 import MobileNav from './MobileNav';
 
@@ -35,13 +35,12 @@ export default function Navbar() {
         };
     }, [menuOpen]);
 
-    const handleSignOut = async () => {
-        try {
-            await supabase.auth.signOut();
-            router.replace('/');
-        } catch (error) {
-            console.error('Sign out error:', error);
-        }
+    const handleLogout = async () => {
+        await fetch('/auth/logout', {
+            method: 'POST',
+        });
+
+        window.location.href = '/';
     };
 
     const menuItems = [
@@ -209,7 +208,7 @@ export default function Navbar() {
                                         whileHover={{ scale: 1.05, y: -1 }}
                                         whileTap={{ scale: 0.95 }}
                                         transition={{ duration: 0.2 }}
-                                        onClick={handleSignOut}
+                                        onClick={handleLogout}
                                         className="
                       px-6 py-2 rounded-full font-semibold text-[15px]
                       bg-gray-100 text-gray-600 hover:bg-gray-200
@@ -337,7 +336,7 @@ export default function Navbar() {
                 t={t}
                 language={language}
                 changeLanguage={changeLanguage}
-                handleSignOut={handleSignOut}
+                handleSignOut={handleLogout}
                 menuItems={menuItems}
             />
         </>

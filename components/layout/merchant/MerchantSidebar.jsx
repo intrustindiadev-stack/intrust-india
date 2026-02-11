@@ -68,8 +68,10 @@ export default function MerchantSidebar({ isOpen, setIsOpen }) {
     };
 
     const handleLogout = async () => {
-        await supabase.auth.signOut();
-        router.push('/login');
+        await fetch('/auth/logout', {
+            method: 'POST',
+        });
+        window.location.href = '/login';
     };
 
     const getInitials = (name) => {

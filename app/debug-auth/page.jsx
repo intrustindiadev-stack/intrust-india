@@ -63,8 +63,10 @@ export default function DebugAuthPage() {
     }
 
     async function handleLogout() {
-        await supabase.auth.signOut();
-        router.push('/login');
+        await fetch('/auth/logout', {
+            method: 'POST',
+        });
+        window.location.href = '/login';
     }
 
     if (loading) {
