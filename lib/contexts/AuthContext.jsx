@@ -24,8 +24,9 @@ export function AuthProvider({ children }) {
     const fetchProfile = async (userId) => {
         try {
             // Add a timeout signal to prevent indefinite hanging
+            // Increased to 15s for Vercel's slower cold starts
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
             const { data, error } = await supabase
                 .from('user_profiles')
@@ -42,7 +43,12 @@ export function AuthProvider({ children }) {
             }
             return data;
         } catch (err) {
-            console.error('Unexpected error fetching profile:', err);
+            // Don't log abort errors as errors - they're expected timeouts
+            if (err.name === 'AbortError') {
+                console.warn('Profile fetch timed out, continuing without profile');
+            } else {
+                console.error('Unexpected error fetching profile:', err);
+            }
             return null;
         }
     };
