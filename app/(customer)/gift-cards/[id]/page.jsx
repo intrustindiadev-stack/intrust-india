@@ -29,60 +29,75 @@ export default function GiftCardDetailPage({ params }) {
     const [kycStatus, setKycStatus] = useState(null);
     const [kycLoading, setKycLoading] = useState(true);
 
+    // ✅ COMBINED useEffect - fetch card and KYC in parallel
     useEffect(() => {
-        if (id) fetchGiftCard();
-    }, [id]);
+        if (!id) return;
 
-    async function fetchGiftCard() {
-        try {
-            setLoading(true);
-            setError(null);
+        let isMounted = true; // Prevent state updates on unmounted component
 
-            // Fetching from 'coupons' table as 'gift_cards' table does not exist in schema.
-            // Using * to ensure we get all available fields including image_url.
-            const { data, error } = await supabase
-                .from('coupons')
-                .select("*")
-                .eq("id", id)
-                .single();
-
-            if (error) throw error;
-            if (!data) throw new Error('Gift card not found');
-
-            setCard(data);
-        } catch (err) {
-            console.error('Error fetching gift card:', err);
-            setError(err.message || 'Failed to load gift card');
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    useEffect(() => {
-        async function checkKYC() {
-            if (!user) {
-                setKycLoading(false);
-                return;
-            }
+        async function fetchData() {
             try {
-                const { data, error } = await supabase
-                    .from('user_profiles')
-                    .select('kyc_status')
-                    .eq('id', user.id)
-                    .single();
+                setLoading(true);
+                setKycLoading(true);
+                setError(null);
 
-                if (data) {
-                    console.log("KYC Status fetched:", data.kyc_status);
-                    setKycStatus(data.kyc_status);
+                // Parallel fetch
+                const fetchPromises = [
+                    supabase
+                        .from('coupons')
+                        .select("*")
+                        .eq("id", id)
+                        .single()
+                ];
+
+                // Only fetch KYC if user is logged in
+                if (user) {
+                    fetchPromises.push(
+                        supabase
+                            .from('user_profiles')
+                            .select('kyc_status')
+                            .eq('id', user.id)
+                            .single()
+                    );
+                }
+
+                const results = await Promise.all(fetchPromises);
+                const { data: cardData, error: cardError } = results[0];
+                const kycResult = results[1];
+
+                if (!isMounted) return; // Don't update state if unmounted
+
+                if (cardError) throw cardError;
+                if (!cardData) throw new Error('Gift card not found');
+
+                setCard(cardData);
+
+                if (user && kycResult) {
+                    const { data: profileData } = kycResult;
+                    if (profileData) {
+                        console.log("KYC Status fetched:", profileData.kyc_status);
+                        setKycStatus(profileData.kyc_status);
+                    }
                 }
             } catch (err) {
-                console.error("Error fetching KYC status:", err);
+                if (!isMounted) return;
+                console.error('Error fetching data:', err);
+                setError(err.message || 'Failed to load gift card');
             } finally {
-                setKycLoading(false);
+                if (isMounted) {
+                    setLoading(false);
+                    setKycLoading(false);
+                }
             }
         }
-        checkKYC();
-    }, [user]);
+
+        fetchData();
+
+        // Cleanup function
+        return () => {
+            isMounted = false;
+        };
+    }, [id, user]); // Include user in dependencies
 
     const loadRazorpayScript = () => {
         return new Promise((resolve) => {
@@ -95,62 +110,98 @@ export default function GiftCardDetailPage({ params }) {
     };
 
     async function handlePurchase() {
+        const purchaseId = Math.random().toString(36).slice(2);
+        console.log('[PURCHASE:START]', { purchaseId, cardId: card.id });
+
         if (!user) {
             router.push('/login');
             return;
         }
 
+        // Create AbortController for this purchase
+        const abortController = new AbortController();
+        const timeoutId = setTimeout(() => abortController.abort(), 15000); // 15s timeout
+
         try {
             setPurchasing(true);
             setPurchaseError(null);
 
+            // Log Razorpay script load
+            const scriptStart = Date.now();
             const isScriptLoaded = await loadRazorpayScript();
+            console.log('[PURCHASE:SCRIPT_LOADED]', {
+                purchaseId,
+                elapsed: Date.now() - scriptStart,
+                success: isScriptLoaded
+            });
+
             if (!isScriptLoaded) {
                 throw new Error('Razorpay SDK failed to load. Are you online?');
             }
 
-            // 1. Create Order
+            // 1. Create Order with AbortController
+            const orderStart = Date.now();
+            console.log('[PURCHASE:CREATE_ORDER_START]', { purchaseId });
+
             const response = await fetch('/api/create-order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    giftcardId: card.id,
-                })
+                body: JSON.stringify({ giftcardId: card.id }),
+                signal: abortController.signal // ← Add abort signal
+            });
+
+            clearTimeout(timeoutId); // Clear timeout on success
+
+            console.log('[PURCHASE:CREATE_ORDER_END]', {
+                purchaseId,
+                elapsed: Date.now() - orderStart,
+                status: response.status,
+                ok: response.ok
             });
 
             const orderData = await response.json();
 
             if (!response.ok) {
+                console.error('[PURCHASE:CREATE_ORDER_FAILED]', {
+                    purchaseId,
+                    status: response.status,
+                    error: orderData.error
+                });
+
                 if (response.status === 403 || orderData.error === 'KYC_REQUIRED') {
                     toast.error("KYC Verification Required. Please complete KYC first.");
-                    // Removed auto-redirect to let user see the banner/button
                     return;
                 }
                 throw new Error(orderData.error || 'Failed to create order');
             }
 
-            // 2. Initialize Razorpay Option
+            // 2. Initialize Razorpay
             const options = {
                 key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
                 amount: orderData.amount,
                 currency: orderData.currency,
                 name: 'INTRUST Gift Cards',
                 description: `Purchase of ${card.title}`,
-                image: '/logo.png', // Ensure you have a logo at /public/logo.png or remove this
-                order_id: orderData.id, // Razorpay Order ID
-                handler: async function (response) {
+                image: '/logo.png',
+                order_id: orderData.id,
+                handler: async function (razorpayResponse) {
                     try {
+                        // Create new AbortController for verification
+                        const verifyAbortController = new AbortController();
+                        const verifyTimeoutId = setTimeout(() => verifyAbortController.abort(), 10000);
+
                         const verifyRes = await fetch('/api/verify-payment', {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature,
+                                razorpay_order_id: razorpayResponse.razorpay_order_id,
+                                razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+                                razorpay_signature: razorpayResponse.razorpay_signature,
                             }),
+                            signal: verifyAbortController.signal // ← Add abort signal
                         });
+
+                        clearTimeout(verifyTimeoutId);
 
                         const verifyData = await verifyRes.json();
 
@@ -164,7 +215,11 @@ export default function GiftCardDetailPage({ params }) {
                         }
                     } catch (error) {
                         console.error('Verification Error:', error);
-                        setPurchaseError('Payment successful but verification failed. Contact support.');
+                        if (error.name === 'AbortError') {
+                            setPurchaseError('Payment verification timed out. Please contact support with your payment ID.');
+                        } else {
+                            setPurchaseError('Payment successful but verification failed. Contact support.');
+                        }
                     }
                 },
                 prefill: {
@@ -172,8 +227,13 @@ export default function GiftCardDetailPage({ params }) {
                     email: user.email,
                 },
                 theme: {
-                    color: '#2563EB', // Blue-600 to match theme
+                    color: '#2563EB',
                 },
+                modal: {
+                    ondismiss: function () {
+                        abortController.abort(); // Cancel pending requests if user closes modal
+                    }
+                }
             };
 
             const paymentObject = new window.Razorpay(options);
@@ -183,9 +243,21 @@ export default function GiftCardDetailPage({ params }) {
             paymentObject.open();
 
         } catch (err) {
-            console.error('Purchase initiation error:', err);
-            setPurchaseError(err.message || 'Could not initiate purchase.');
+            console.error('[PURCHASE:ERROR]', {
+                purchaseId,
+                error: err.message,
+                stack: err.stack,
+                userAgent: navigator.userAgent
+            });
+
+            // Better error messages for different abort scenarios
+            if (err.name === 'AbortError') {
+                setPurchaseError('Request timed out. Please check your connection and try again.');
+            } else {
+                setPurchaseError(err.message || 'Could not initiate purchase.');
+            }
         } finally {
+            clearTimeout(timeoutId);
             setPurchasing(false);
         }
     }

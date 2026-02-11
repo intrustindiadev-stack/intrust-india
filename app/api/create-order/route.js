@@ -1,17 +1,25 @@
 import Razorpay from 'razorpay';
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createRequestLogger } from '@/lib/logger';
+
+// Force Node.js runtime (Razorpay requires Node crypto)
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
+  const logger = createRequestLogger('create-order');
+  const startTime = Date.now();
+
   try {
+    logger.info('Request received');
     const body = await request.json();
     const { giftcardId } = body;
 
-    console.log("🔹 [API] Create Order Request Received");
-    console.log("🔹 [API] Payload:", body);
+    logger.info('Body parsed', { giftcardId });
 
     if (!giftcardId) {
-      console.error("❌ [API] Missing giftcardId in request body");
+      logger.error('Missing giftcardId');
       return NextResponse.json(
         { error: 'Gift Card ID (giftcardId) is required' },
         { status: 400 }
@@ -25,23 +33,38 @@ export async function POST(request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.error("❌ [API] Unauthorized access attempt", authError);
+      logger.error('Unauthorized access attempt', authError);
       return NextResponse.json(
         { error: 'Unauthorized: Please login to purchase' },
         { status: 401 }
       );
     }
-    console.log("🔹 [API] User authenticated:", user.id);
 
-    // 0. KYC Check (CRITICAL)
-    const { data: userProfile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('kyc_status')
-      .eq('id', user.id)
-      .single();
+    logger.info('User authenticated', { userId: user.id });
 
+    // ✅ OPTIMIZATION: Fetch KYC and Coupon in parallel
+    const kycStart = Date.now();
+    const [
+      { data: userProfile, error: profileError },
+      { data: coupon, error: couponError }
+    ] = await Promise.all([
+      supabase
+        .from('user_profiles')
+        .select('kyc_status')
+        .eq('id', user.id)
+        .single(),
+      supabase
+        .from('coupons')
+        .select('*')
+        .eq('id', giftcardId)
+        .single()
+    ]);
+
+    logger.info('Parallel queries complete', { elapsed: Date.now() - kycStart });
+
+    // Check KYC Status
     if (profileError || !userProfile) {
-      console.error("❌ [API] Failed to fetch user profile for KYC check", profileError);
+      logger.error('Failed to fetch user profile for KYC check', profileError);
       return NextResponse.json(
         { error: 'Failed to verify KYC status' },
         { status: 500 }
@@ -49,50 +72,42 @@ export async function POST(request) {
     }
 
     if (userProfile.kyc_status !== 'approved' && userProfile.kyc_status !== 'verified') {
-      console.warn(`⚠️ [API] KYC not approved. Status: ${userProfile.kyc_status}`);
+      logger.info('KYC not approved', { status: userProfile.kyc_status });
       return NextResponse.json(
         { error: 'KYC_REQUIRED', message: 'You must complete KYC to purchase gift cards.' },
         { status: 403 }
       );
     }
 
-    console.log("✅ [API] KYC Verified: approved");
+    logger.info('KYC Verified', { status: userProfile.kyc_status });
 
-    // 1. Fetch Coupon (Using 'coupons' table)
-    console.log(`🔹 [API] Fetching coupon with ID: ${giftcardId}...`);
-
-    const { data: coupon, error: couponError } = await supabase
-      .from('coupons')
-      .select('*')
-      .eq('id', giftcardId)
-      .single();
-
+    // Check Coupon
     if (couponError) {
-      console.error("❌ [API] Database Error fetching coupon:", couponError);
+      logger.error('Database Error fetching coupon', couponError);
       return NextResponse.json({ error: 'Database error fetching coupon' }, { status: 500 });
     }
 
     if (!coupon) {
-      console.error(`❌ [API] Coupon not found for ID: ${giftcardId}`);
+      logger.error('Coupon not found', { giftcardId });
       return NextResponse.json({ error: 'Gift card not found' }, { status: 404 });
     }
 
-    console.log("✅ [API] Coupon found:", {
+    logger.info('Coupon found', {
       id: coupon.id,
       status: coupon.status,
       price: coupon.selling_price_paise
     });
 
-    // 2. Check Availability
+    // Check Availability
     if (coupon.status !== 'available') {
-      console.warn(`⚠️ [API] Coupon unavailable. Status: ${coupon.status}`);
+      logger.info('Coupon unavailable', { status: coupon.status });
       return NextResponse.json(
         { error: 'This gift card is no longer available' },
         { status: 400 }
       );
     }
 
-    // 3. Initialize Razorpay
+    // Initialize Razorpay
     const instance = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID,
       key_secret: process.env.RAZORPAY_KEY_SECRET,
@@ -100,9 +115,10 @@ export async function POST(request) {
 
     const amountPaise = coupon.selling_price_paise;
 
-    console.log(`🔹 [API] Creating Razorpay order for amount: ${amountPaise} paise`);
+    logger.info('Creating Razorpay order', { amount: amountPaise });
 
-    // 4. Create Razorpay Order
+    // Create Razorpay Order
+    const razorpayStart = Date.now();
     const razorpayOrder = await instance.orders.create({
       amount: amountPaise,
       currency: 'INR',
@@ -113,11 +129,12 @@ export async function POST(request) {
       }
     });
 
-    console.log("✅ [API] Razorpay Order created:", razorpayOrder.id);
+    logger.info('Razorpay order created', {
+      elapsed: Date.now() - razorpayStart,
+      orderId: razorpayOrder.id
+    });
 
-    // 5. Insert into Orders Table
-    // NOTE: Using 'orders' table as per prompt requirements.
-    // Mapping giftcard_id -> coupon.id
+    // Insert into Orders Table
     const orderPayload = {
       user_id: user.id,
       giftcard_id: coupon.id,
@@ -126,8 +143,6 @@ export async function POST(request) {
       razorpay_order_id: razorpayOrder.id
     };
 
-    console.log("🔹 [API] Inserting into orders table:", orderPayload);
-
     const { data: orderData, error: orderError } = await supabase
       .from('orders')
       .insert(orderPayload)
@@ -135,24 +150,27 @@ export async function POST(request) {
       .single();
 
     if (orderError) {
-      console.error("❌ [API] Order Insertion Failed:", orderError);
+      logger.error('Order Insertion Failed', orderError);
       return NextResponse.json(
         { error: 'Failed to create internal order record', details: orderError.message },
         { status: 500 }
       );
     }
 
-    console.log("✅ [API] Internal Order created:", orderData.id);
+    logger.info('Order created successfully', {
+      totalElapsed: Date.now() - startTime,
+      orderId: orderData.id
+    });
 
     return NextResponse.json({
-      id: razorpayOrder.id, // Standard Razorpay response expected by frontend
+      id: razorpayOrder.id,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
-      order_id: orderData.id // Our internal ID
+      order_id: orderData.id
     });
 
   } catch (error) {
-    console.error('❌ [API] Critical Error in Create Order:', error);
+    logger.error('Critical Error in Create Order', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
