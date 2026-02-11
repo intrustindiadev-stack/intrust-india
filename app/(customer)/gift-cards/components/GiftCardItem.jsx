@@ -1,9 +1,10 @@
 'use client';
 
-import { Star, ShieldCheck, Flame } from 'lucide-react';
+import { Star, Flame } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 
 export default function GiftCardItem({ coupon, index = 0 }) {
 
@@ -17,7 +18,7 @@ export default function GiftCardItem({ coupon, index = 0 }) {
         >
             <Link
                 href={`/gift-cards/${coupon.id}`}
-                className="group relative bg-white rounded-3xl overflow-hidden border border-gray-100 hover:border-[#92BCEA]/50 transition-all duration-300 hover:shadow-2xl hover:shadow-[#92BCEA]/20 hover:-translate-y-1 h-full flex flex-col cursor-pointer block"
+                className="group relative bg-white rounded-3xl overflow-hidden border border-gray-100 hover:border-[#92BCEA]/50 transition-all duration-300 hover:shadow-2xl hover:shadow-[#92BCEA]/20 hover:-translate-y-1 h-full flex flex-col cursor-pointer"
             >
                 {/* Card Header - Image or Premium Gradient */}
                 <div className={`relative h-36 sm:h-48 bg-gray-50 overflow-hidden ${!coupon.image_url ? `bg-gradient-to-br ${coupon.gradient}` : ''}`}>
@@ -115,9 +116,7 @@ export default function GiftCardItem({ coupon, index = 0 }) {
                             <div className="text-sm font-semibold text-gray-900 truncate flex items-center gap-1.5 mb-1">
                                 {coupon.merchant}
                                 {coupon.verified && (
-                                    <div className="flex-shrink-0 bg-blue-100 rounded-full p-0.5">
-                                        <ShieldCheck size={12} className="text-blue-600" />
-                                    </div>
+                                    <VerifiedBadge size="sm" className="ml-0.5" />
                                 )}
                             </div>
                             <div className="flex items-center gap-2 text-xs">
