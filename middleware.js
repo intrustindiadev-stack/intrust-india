@@ -77,7 +77,7 @@ export async function middleware(request) {
             '/dashboard',
             '/my-coupons',
             '/profile',
-            '/gift-cards', // Require auth to browse coupons
+            // '/gift-cards' removed - browsing should be public, only purchase requires auth
         ]
 
         const adminRoutes = ['/admin']
