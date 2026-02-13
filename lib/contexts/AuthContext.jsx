@@ -24,9 +24,9 @@ export function AuthProvider({ children }) {
     const fetchProfile = async (userId) => {
         try {
             // Add a timeout signal to prevent indefinite hanging
-            // Increased to 15s for Vercel's slower cold starts
+            // Decreased to 3s for better UX on Vercel cold starts or RLS blocks
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+            const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
 
             const { data, error } = await supabase
                 .from('user_profiles')

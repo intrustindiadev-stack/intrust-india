@@ -33,34 +33,49 @@ export default function CustomerDashboardPage() {
             if (!user) return;
 
             try {
-                // 1. Fetch User Profile
-                const { data: profile, error: profileError } = await supabase
-                    .from('user_profiles')
-                    .select('full_name, role')
-                    .eq('id', user.id)
-                    .single();
-
-                // Check KYC status separately from kyc_records as it might not be in user_profiles
-                let kycStatus = 'pending';
-                // First check if profile has it (it might not based on my check)
-                // Then check kyc_records
-                const { data: kycRecord } = await supabase
-                    .from('kyc_records')
-                    .select('status')
-                    .eq('user_id', user.id)
-                    .single();
-
-                if (kycRecord) kycStatus = kycRecord.status;
-
-                // 2. Fetch Coupons (for Savings and Active Cards)
-                // Active Cards: Bought by user, sold status, valid > now
                 const now = new Date().toISOString();
-                const { data: coupons, error: couponsError } = await supabase
-                    .from('coupons')
-                    .select('face_value_paise, selling_price_paise, valid_until, status')
-                    .eq('purchased_by', user.id)
-                    .eq('status', 'sold');
 
+                console.log('[DASHBOARD] fetching data with 5s timeout...');
+
+                // Create a timeout promise to reject after 5s
+                const timeoutTx = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Dashboard fetch timeout')), 5000)
+                );
+
+                // Race the fetch bundle against timeout
+                const mainFetch = Promise.allSettled([
+                    supabase.from('user_profiles').select('full_name, role').eq('id', user.id).single(),
+                    supabase.from('kyc_records').select('status').eq('user_id', user.id).single(),
+                    supabase.from('coupons').select('face_value_paise, selling_price_paise, valid_until, status').eq('purchased_by', user.id).eq('status', 'sold')
+                ]);
+
+                const results = await Promise.race([mainFetch, timeoutTx]);
+
+                // Process results (allSettled returns objects with { status, value })
+                const profileResult = results[0];
+                const kycResult = results[1];
+                const couponsResult = results[2];
+
+                // 1. Process Profile
+                let profile = null;
+                if (profileResult.status === 'fulfilled' && profileResult.value.data) {
+                    profile = profileResult.value.data;
+                    console.log('[DASHBOARD] Profile loaded:', profile);
+                } else {
+                    console.warn('[DASHBOARD] Profile fetch failed or empty:', profileResult);
+                }
+
+                // 2. Process KYC
+                let kycStatus = 'pending';
+                if (kycResult.status === 'fulfilled' && kycResult.value.data) {
+                    kycStatus = kycResult.value.data.status;
+                }
+
+                // 3. Process Coupons
+                let coupons = [];
+                if (couponsResult.status === 'fulfilled' && couponsResult.value.data) {
+                    coupons = couponsResult.value.data;
+                }
                 let totalSavings = 0;
                 let activeCards = 0;
                 let totalPurchases = 0;
@@ -83,7 +98,7 @@ export default function CustomerDashboardPage() {
                 // Convert savings from paise to Rupee
                 totalSavings = totalSavings / 100;
 
-                // 3. Wallet Balance (Placeholder as no table exists)
+                // 3. Wallet Balance (Placeholder)
                 const walletBalance = 0.00;
 
                 setUserData({
@@ -103,11 +118,16 @@ export default function CustomerDashboardPage() {
         };
 
         if (!authLoading) {
+            console.log('[DASHBOARD] Auth finished. User:', user?.id);
             if (user) {
+                console.log('[DASHBOARD] Fetching data...');
                 fetchDashboardData();
             } else {
+                console.log('[DASHBOARD] No user, stopping loading.');
                 setLoading(false);
             }
+        } else {
+            console.log('[DASHBOARD] Waiting for auth...');
         }
     }, [user, authLoading]);
 

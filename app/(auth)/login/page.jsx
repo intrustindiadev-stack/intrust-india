@@ -40,32 +40,58 @@ export default function LoginPage() {
         setError('');
         setLoading(true);
 
-        const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
-        const { data, error: verifyError } = await verifyOTP(formattedPhone, otp);
+        try {
+            const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
+            console.log('[LOGIN] Verifying OTP for:', formattedPhone);
 
-        if (verifyError) {
-            setError(verifyError.message || 'Invalid OTP');
-            setLoading(false);
-            return;
-        }
+            const { data, error: verifyError } = await verifyOTP(formattedPhone, otp);
 
-        // Get user profile to check role
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (user) {
-            const { data: profile } = await supabase
-                .from('user_profiles')
-                .select('role')
-                .eq('id', user.id)
-                .single();
-
-            if (profile?.role === 'merchant') {
-                router.replace('/merchant/dashboard');
-            } else if (profile?.role === 'admin') {
-                router.replace('/admin');
-            } else {
-                router.replace('/dashboard'); // Default to student dashboard
+            if (verifyError) {
+                console.error('[LOGIN] Verify error:', verifyError);
+                setError(verifyError.message || 'Invalid OTP');
+                setLoading(false);
+                return;
             }
+
+            console.log('[LOGIN] Verification success. User:', data?.user?.id);
+
+            // Use the user from the response directly
+            const user = data?.user;
+
+            if (user) {
+                console.log('[LOGIN] Session established. Fetching profile...');
+
+                // Fetch profile to check role
+                const { data: profile, error: profileError } = await supabase
+                    .from('user_profiles')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profileError) {
+                    console.warn('[LOGIN] Profile fetch failed, defaulting to dashboard:', profileError);
+                }
+
+                const role = profile?.role;
+                console.log('[LOGIN] Redirecting for role:', role);
+
+                // Force hard redirect
+                if (role === 'merchant') {
+                    window.location.href = '/merchant/dashboard';
+                } else if (role === 'admin') {
+                    window.location.href = '/admin';
+                } else {
+                    window.location.href = '/dashboard';
+                }
+            } else {
+                console.error('[LOGIN] No user returned from verifyOTP');
+                setError('Login failed. Please try again.');
+                setLoading(false);
+            }
+        } catch (err) {
+            console.error('[LOGIN] Unexpected error:', err);
+            setError('An unexpected error occurred. Please try again.');
+            setLoading(false);
         }
     };
 

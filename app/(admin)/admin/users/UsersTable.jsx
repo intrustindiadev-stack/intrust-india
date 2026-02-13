@@ -114,17 +114,60 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
     const updateKYCStatus = async (userId, newStatus) => {
         setUpdatingId(userId);
         try {
-            const { error } = await supabase
-                .from('user_profiles')
-                .update({ kyc_status: newStatus })
-                .eq('id', userId);
+            const updates = [];
+            const user = users.find(u => u.id === userId);
+            const kycRecord = getKYCRecord(user);
 
-            if (error) throw error;
+            // 1. Update kyc_records if it exists (Source of Truth)
+            if (kycRecord) {
+                const kycUpdate = {
+                    verification_status: newStatus,
+                    verified_at: newStatus === 'verified' || newStatus === 'rejected' ? new Date().toISOString() : null,
+                    // We can't easily get current admin ID here without auth context, 
+                    // but RLS/Triggers might handle it, or we leave it for now.
+                    // Ideal: verified_by: supabase.auth.user().id
+                };
+
+                updates.push(
+                    supabase
+                        .from('kyc_records')
+                        .update(kycUpdate)
+                        .eq('id', kycRecord.id)
+                );
+            }
+
+            // 2. Always update user_profiles (Legacy/Fallback)
+            updates.push(
+                supabase
+                    .from('user_profiles')
+                    .update({ kyc_status: newStatus })
+                    .eq('id', userId)
+            );
+
+            // Execute all updates
+            const results = await Promise.all(updates);
+
+            // Check for errors
+            const errors = results.filter(r => r.error).map(r => r.error);
+            if (errors.length > 0) throw errors[0];
 
             // Update local state
-            setUsers(users.map(u =>
-                u.id === userId ? { ...u, kyc_status: newStatus } : u
-            ));
+            setUsers(users.map(u => {
+                if (u.id !== userId) return u;
+
+                // Update both profile and nested record for UI reflection
+                const updatedUser = { ...u, kyc_status: newStatus };
+
+                if (u.kyc_records) {
+                    if (Array.isArray(u.kyc_records)) {
+                        updatedUser.kyc_records = u.kyc_records.map(r => ({ ...r, verification_status: newStatus }));
+                    } else {
+                        updatedUser.kyc_records = { ...u.kyc_records, verification_status: newStatus };
+                    }
+                }
+
+                return updatedUser;
+            }));
 
             showToast(`Status updated to ${newStatus?.toUpperCase()}`, 'success');
             router.refresh();

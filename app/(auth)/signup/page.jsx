@@ -48,25 +48,31 @@ export default function SignupPage() {
         setError('');
         setLoading(true);
 
-        const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
-        const { data, error: verifyError } = await verifyOTP(formattedPhone, otp);
+        try {
+            const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
+            console.log('[SIGNUP] Verifying OTP for:', formattedPhone);
+            // Pass full_name to verifyOTP so it can be saved during account creation
+            const { data, error: verifyError } = await verifyOTP(formattedPhone, otp, name);
+            console.log('[SIGNUP] Verification result:', { success: !verifyError, error: verifyError });
 
-        if (verifyError) {
-            setError(verifyError.message || 'Invalid OTP');
+            if (verifyError) {
+                setError(verifyError.message || 'Invalid OTP');
+                setLoading(false);
+                return;
+            }
+
+            // Successfully verified & logged in
+            console.log('[SIGNUP] Session established. Redirecting...');
+
+            // Force hard redirect to ensure fresh state and middleware check
+            // Skip profile check for now to speed up - new users are always 'user' role
+            // If they are merchant, they can switch or be redirected later
+            window.location.href = '/dashboard';
+
+        } catch (err) {
+            console.error('Signup error:', err);
+            setError('An unexpected error occurred. Please try again.');
             setLoading(false);
-            return;
-        }
-
-        // Get user profile to check role (default to dashboard for new users)
-        const { getUserProfile } = await import('@/lib/supabase');
-        const { data: profile } = await getUserProfile(data.user.id);
-
-        if (profile?.role === 'merchant') {
-            router.push('/merchant/dashboard');
-        } else if (profile?.role === 'admin') {
-            router.push('/admin/dashboard');
-        } else {
-            router.push('/dashboard');
         }
     };
 
