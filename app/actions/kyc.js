@@ -12,8 +12,6 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
 import { validateKYCForm, sanitizeKYCData } from '@/app/types/kyc';
-<<<<<<< HEAD
-=======
 import { sprintVerify } from '@/lib/sprintVerify';
 
 
@@ -42,39 +40,16 @@ async function uploadFile(supabase, userId, file, bucket = 'kyc-documents') {
     // For this implementation, we'll store the full path to be safe.
     return data.path;
 }
->>>>>>> origin/yogesh
 
 /**
  * Submits or updates a KYC record for the authenticated user
  * 
-<<<<<<< HEAD
- * @param {FormData | Object} formData - Form data from KYC form
-=======
  * @param {FormData} formData - Form data from KYC form
->>>>>>> origin/yogesh
  * @returns {Promise<{success: boolean, error?: string, data?: Object}>} Result object
  */
 export async function submitKYC(formData) {
     console.log('SERVER ACTION: submitKYC started');
     try {
-<<<<<<< HEAD
-        // Create Supabase client with SSR
-        const supabase = await createServerSupabaseClient();
-
-        // Get authenticated user
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        console.log('SERVER ACTION: submitKYC auth check', { userId: user?.id, error: authError });
-
-        if (authError || !user) {
-            return {
-                success: false,
-                error: 'You must be logged in to submit KYC verification'
-            };
-        }
-
-        // Extract form data (works with both FormData and plain objects)
-        const data = formData instanceof FormData ? {
-=======
         const supabase = await createServerSupabaseClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -105,81 +80,11 @@ export async function submitKYC(formData) {
 
         // 2. Extract Text Data
         const rawData = {
->>>>>>> origin/yogesh
             fullName: formData.get('fullName'),
             phoneNumber: formData.get('phoneNumber'),
             dateOfBirth: formData.get('dateOfBirth'),
             panNumber: formData.get('panNumber'),
             fullAddress: formData.get('fullAddress'),
-<<<<<<< HEAD
-            bankGradeSecurity: formData.get('bankGradeSecurity') === 'true' || formData.get('bankGradeSecurity') === true
-        } : formData;
-
-        console.log('SERVER ACTION: submitKYC data received', { ...data, panNumber: 'REDACTED' });
-
-        // Sanitize input data
-        const sanitizedData = sanitizeKYCData(data);
-
-        // Validate form data
-        const validation = validateKYCForm(sanitizedData);
-        if (!validation.valid) {
-            console.warn('SERVER ACTION: Validation failed', validation.errors);
-            return {
-                success: false,
-                error: Object.values(validation.errors)[0] || 'Validation failed',
-                errors: validation.errors
-            };
-        }
-
-        // Check if user already has a KYC record
-        const { data: existingRecord, error: fetchError } = await supabase
-            .from('kyc_records')
-            .select('id, status')
-            .eq('user_id', user.id)
-            .single();
-
-        if (fetchError && fetchError.code !== 'PGRST116') {
-            console.error('Error fetching existing KYC record:', fetchError);
-            return {
-                success: false,
-                error: 'Failed to check existing KYC record',
-                dbError: fetchError
-            };
-        }
-
-        // Prepare KYC record data matching the ACTUAL database schema
-        // Based on Supabase Snippet Public Schema Column Inventory.csv
-        const kycRecord = {
-            user_id: user.id,
-            full_legal_name: sanitizedData.fullName,
-            phone_number: sanitizedData.phoneNumber, // Added in migration
-            pan_number: sanitizedData.panNumber, // Added in migration
-            date_of_birth: sanitizedData.dateOfBirth,
-
-            // Mapping for existing required columns
-            status: 'pending', // Enum: likely pending, verified, rejected
-            verification_status: 'pending', // Enum added in migration
-
-            // Required columns from original schema - mapping best effort
-            id_type: 'pan',
-            id_number_encrypted: sanitizedData.panNumber, // Ideally should be encrypted, but verified schema says text
-            id_number_last4: sanitizedData.panNumber.slice(-4),
-
-            // Address parsing (simple split for now, user provides full address string)
-            address_line1: sanitizedData.fullAddress.substring(0, 100),
-            address_line2: sanitizedData.fullAddress.length > 100 ? sanitizedData.fullAddress.substring(100) : null,
-            city: 'Unknown', // Placeholder as form doesn't check this yet
-            state: 'Unknown', // Placeholder
-            postal_code: '000000', // Placeholder
-            country: 'India',
-
-            // Required URLs - placeholders for now as file upload is not yet implemented
-            id_document_front_url: 'placeholder_front.jpg',
-            selfie_url: 'placeholder_selfie.jpg',
-
-            full_address: sanitizedData.fullAddress, // Added in migration
-            bank_grade_security: sanitizedData.bankGradeSecurity, // Added in migration
-=======
             bankGradeSecurity: formData.get('bankGradeSecurity') === 'true'
         };
 
@@ -270,99 +175,10 @@ export async function submitKYC(formData) {
             sprint_verify_status: verificationStatus,
             sprint_verify_data: sprintVerifyData,
             sprint_verify_timestamp: new Date().toISOString(),
->>>>>>> origin/yogesh
 
             updated_at: new Date().toISOString()
         };
 
-<<<<<<< HEAD
-        let result;
-
-        if (existingRecord) {
-            console.log('SERVER ACTION: Updating existing record', existingRecord.id);
-            // Check if existing record can be updated
-            // Note: unexpected column name 'status' vs 'verification_status'. checking both.
-            const status = existingRecord.verification_status || existingRecord.status;
-
-            if (status === 'verified') {
-                return {
-                    success: false,
-                    error: 'Your KYC is already verified and cannot be modified'
-                };
-            }
-
-            if (status === 'rejected') {
-                // Allow updating rejected records, but reset to pending
-                kycRecord.status = 'pending';
-                kycRecord.verification_status = 'pending';
-                kycRecord.reviewed_by = null; // unexpected column 'reviewed_by' vs 'verified_by'
-                kycRecord.verified_by = null;
-                kycRecord.verified_at = null;
-                kycRecord.rejection_reason = null;
-            }
-
-            // Update existing record
-            const { data: updatedRecord, error: updateError } = await supabase
-                .from('kyc_records')
-                .update(kycRecord)
-                .eq('id', existingRecord.id)
-                .eq('user_id', user.id) // Extra safety check
-                .select()
-                .single();
-
-            if (updateError) {
-                console.error('Error updating KYC record:', updateError);
-                return {
-                    success: false,
-                    error: 'Failed to update KYC record. Please try again.',
-                    dbError: updateError
-                };
-            }
-
-            result = updatedRecord;
-        } else {
-            console.log('SERVER ACTION: Creating new record');
-            // Create new record
-            kycRecord.created_at = new Date().toISOString();
-            kycRecord.submitted_at = new Date().toISOString(); // From inventory
-
-            const { data: newRecord, error: insertError } = await supabase
-                .from('kyc_records')
-                .insert([kycRecord])
-                .select()
-                .single();
-
-            if (insertError) {
-                console.error('Error inserting KYC record:', insertError);
-                return {
-                    success: false,
-                    error: 'Failed to submit KYC record. Please try again.',
-                    dbError: insertError
-                };
-            }
-
-            result = newRecord;
-        }
-
-        // Revalidate relevant paths
-        revalidatePath('/profile/kyc');
-        revalidatePath('/merchant-apply');
-
-        console.log('SERVER ACTION: submitKYC success');
-        return {
-            success: true,
-            data: result,
-            message: 'KYC verification submitted successfully. Your request is pending admin approval.'
-        };
-
-    } catch (error) {
-        console.error('Unexpected error in submitKYC:', error);
-        return {
-            success: false,
-            error: 'An unexpected error occurred. Please try again later.',
-            details: error.message
-        };
-=======
         // ... (Existing Upsert Logic) ...
         // Check existing
         const { data: existing } = await supabase.from('kyc_records').select('id').eq('user_id', user.id).single();
@@ -409,7 +225,6 @@ export async function verifyPANAction(panNumber) {
         return { success: result.valid, message: result.message, data: result.data };
     } catch (error) {
         return { success: false, error: 'Verification service unavailable' };
->>>>>>> origin/yogesh
     }
 }
 
