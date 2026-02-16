@@ -18,21 +18,14 @@ import { useState, useEffect } from 'react';
 import { CheckCircle, Shield, ChevronRight, AlertCircle, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-<<<<<<< HEAD
-import { submitKYC } from '@/app/actions/kyc';
-=======
 import { submitKYC, verifyPANAction } from '@/app/actions/kyc'; // Import verify action
->>>>>>> origin/yogesh
 import {
     validateKYCForm,
     formatPANInput,
     formatPhoneInput,
     sanitizeKYCData
 } from '@/app/types/kyc';
-<<<<<<< HEAD
-=======
 import { Camera, Upload, Check, Loader } from 'lucide-react'; // Add icons
->>>>>>> origin/yogesh
 
 /**
  * @typedef {Object} KYCFormProps
@@ -54,11 +47,6 @@ export default function KYCForm({
         dateOfBirth: initialData.dateOfBirth || '',
         panNumber: initialData.panNumber || initialData.panCard || '',
         fullAddress: initialData.address || initialData.fullAddress || '',
-<<<<<<< HEAD
-        bankGradeSecurity: initialData.bankGradeSecurity || false
-    });
-
-=======
         bankGradeSecurity: initialData.bankGradeSecurity || false,
         // Files (stored as File objects)
         selfieImage: null,
@@ -68,7 +56,6 @@ export default function KYCForm({
     const [panVerified, setPanVerified] = useState(false);
     const [verifyingPan, setVerifyingPan] = useState(false);
 
->>>>>>> origin/yogesh
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -103,8 +90,6 @@ export default function KYCForm({
         }
     };
 
-<<<<<<< HEAD
-=======
     const handleFileChange = (fieldName, e) => {
         const file = e.target.files[0];
         if (file) {
@@ -142,7 +127,6 @@ export default function KYCForm({
         }
     };
 
->>>>>>> origin/yogesh
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -155,15 +139,6 @@ export default function KYCForm({
             fullAddress: true
         });
 
-<<<<<<< HEAD
-        // Validate entire form
-        const sanitized = sanitizeKYCData(formData);
-        const validation = validateKYCForm(sanitized);
-
-        if (!validation.valid) {
-            setErrors(validation.errors);
-            toast.error(Object.values(validation.errors)[0] || 'Please fix the errors in the form');
-=======
         // Simple File Validation
         const newErrors = {};
         if (!formData.selfieImage) newErrors.selfieImage = 'Selfie is required';
@@ -177,16 +152,12 @@ export default function KYCForm({
             const allErrors = { ...validation.errors, ...newErrors };
             setErrors(allErrors);
             toast.error('Please complete all required fields');
->>>>>>> origin/yogesh
             return;
         }
 
         setIsSubmitting(true);
 
         try {
-<<<<<<< HEAD
-            const result = await submitKYC(sanitized);
-=======
             // Need to use FormData for file upload support in Server Actions
             const submitData = new FormData();
             submitData.append('fullName', formData.fullName);
@@ -200,7 +171,6 @@ export default function KYCForm({
             if (formData.idDocumentFront) submitData.append('idDocumentFront', formData.idDocumentFront);
 
             const result = await submitKYC(submitData);
->>>>>>> origin/yogesh
 
             if (result.success) {
                 toast.success(result.message || 'KYC verification submitted successfully!', {
@@ -309,13 +279,6 @@ export default function KYCForm({
                         </p>
                     </div>
 
-<<<<<<< HEAD
-                    <div>
-                        <FloatingInput
-                            label="PAN Number"
-                            value={formData.panNumber}
-                            onChange={e => handleChange('panNumber', formatPANInput(e.target.value))}
-=======
                 </div>
 
                 <div>
@@ -327,18 +290,12 @@ export default function KYCForm({
                                 handleChange('panNumber', formatPANInput(e.target.value));
                                 setPanVerified(false); // Reset verification on change
                             }}
->>>>>>> origin/yogesh
                             onBlur={() => handleBlur('panNumber')}
                             error={touched.panNumber ? errors.panNumber : null}
                             maxLength={10}
                             placeholder="ABCDE1234F"
                             autoComplete="off"
                         />
-<<<<<<< HEAD
-                        <p className="text-xs text-slate-400 mt-1 ml-1">
-                            Format: 5 letters + 4 digits + 1 letter
-                        </p>
-=======
                         <button
                             type="button"
                             onClick={handleVerifyPAN}
@@ -425,7 +382,6 @@ export default function KYCForm({
                                 {errors.idDocumentFront && <p className="text-xs text-red-500 mt-2">{errors.idDocumentFront}</p>}
                             </div>
                         </div>
->>>>>>> origin/yogesh
                     </div>
                 </div>
 
@@ -499,13 +455,8 @@ export default function KYCForm({
                 <p className="text-center text-xs text-slate-400">
                     Your information is encrypted and secure. We never share your data with third parties.
                 </p>
-<<<<<<< HEAD
-            </form>
-        </div>
-=======
             </form >
         </div >
->>>>>>> origin/yogesh
     );
 }
 
