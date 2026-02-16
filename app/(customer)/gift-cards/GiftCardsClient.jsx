@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Search, AlertCircle } from 'lucide-react';
+import { TrendingUp, Search, AlertCircle, Store } from 'lucide-react';
 import Navbar from '../../../components/layout/Navbar';
 import Breadcrumbs from './components/Breadcrumbs';
 import SearchBar from './components/SearchBar';
@@ -49,7 +49,9 @@ const transformCouponData = (coupon) => {
         discount: parseFloat(discount.toFixed(1)),
         rating: 4.5 + (Math.random() * 0.4),
         sold: Math.floor(Math.random() * 1000) + 100,
-        merchant: 'INTRUST Verified',
+        // NEW: Display merchant name from database
+        merchant: coupon.merchant_name || coupon.merchant?.business_name || 'INTRUST Verified',
+        merchantId: coupon.merchant_id,
         verified: true,
         category: coupon.category,
         stock: 50,
@@ -66,6 +68,7 @@ export default function GiftCardsClient({ initialCoupons }) {
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('popular');
+    const [merchantFilter, setMerchantFilter] = useState('all');
 
     // Advanced Filter States
     const [filters, setFilters] = useState({
@@ -88,11 +91,19 @@ export default function GiftCardsClient({ initialCoupons }) {
         [coupons]
     );
 
+    // Extract unique merchants
+    const merchants = useMemo(() =>
+        ['all', ...new Set(coupons.map(c => c.merchant).filter(Boolean))].sort(),
+        [coupons]
+    );
+
     // Apply all filters with useMemo for performance
     const filteredCoupons = useMemo(() => {
         return coupons.filter(c => {
             const matchesCategory = selectedCategory === 'All' || c.category === selectedCategory;
-            const matchesSearch = c.brand.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesSearch = c.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                c.merchant.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesMerchant = merchantFilter === 'all' || c.merchant === merchantFilter;
             const matchesPrice = !filters.priceRange ||
                 (c.sellingPrice >= filters.priceRange[0] && c.sellingPrice <= filters.priceRange[1]);
             const matchesDiscount = !filters.minDiscount || c.discount >= filters.minDiscount;
@@ -100,10 +111,10 @@ export default function GiftCardsClient({ initialCoupons }) {
             const matchesVerified = !filters.verifiedOnly || c.verified;
             const matchesRating = !filters.minRating || c.rating >= filters.minRating;
 
-            return matchesCategory && matchesSearch && matchesPrice && matchesDiscount &&
-                matchesStock && matchesVerified && matchesRating;
+            return matchesCategory && matchesSearch && matchesMerchant && matchesPrice &&
+                matchesDiscount && matchesStock && matchesVerified && matchesRating;
         });
-    }, [coupons, selectedCategory, searchQuery, filters]);
+    }, [coupons, selectedCategory, searchQuery, merchantFilter, filters]);
 
     // Sort coupons with useMemo
     const sortedCoupons = useMemo(() => {
@@ -187,10 +198,49 @@ export default function GiftCardsClient({ initialCoupons }) {
                         />
                     </motion.div>
 
+                    {/* NEW: Merchant Filter */}
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
+                        <div className="flex items-center gap-3 mb-4">
+                            <Store className="text-[#92BCEA]" size={24} />
+                            <h3 className="text-lg font-bold text-gray-900">Filter by Merchant</h3>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                            <button
+                                onClick={() => setMerchantFilter('all')}
+                                className={`px-5 py-2.5 rounded-xl font-semibold transition-all transform hover:scale-105 ${merchantFilter === 'all'
+                                    ? 'bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] text-white shadow-lg'
+                                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-[#92BCEA]'
+                                    }`}
+                            >
+                                All Merchants
+                            </button>
+                            {merchants.slice(1).map((merchant) => (
+                                <button
+                                    key={merchant}
+                                    onClick={() => setMerchantFilter(merchant)}
+                                    className={`px-5 py-2.5 rounded-xl font-semibold transition-all transform hover:scale-105 ${merchantFilter === merchant
+                                        ? 'bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] text-white shadow-lg'
+                                        : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-[#92BCEA]'
+                                        }`}
+                                >
+                                    {merchant}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-lg font-bold text-gray-900">
-                            {sortedCoupons.length} {sortedCoupons.length === 1 ? 'Card' : 'Cards'} Available
-                        </h2>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.4, delay: 0.5 }}
+                            className="text-gray-600"
+                        >
+                            Showing <span className="font-bold text-gray-900">{sortedCoupons.length}</span> gift cards
+                            {merchantFilter !== 'all' && (
+                                <span className="ml-1">from <span className="font-bold text-[#92BCEA]">{merchantFilter}</span></span>
+                            )}
+                        </motion.div>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                             <TrendingUp size={16} />
                             <span className="hidden sm:inline">Updated just now</span>
@@ -224,6 +274,7 @@ export default function GiftCardsClient({ initialCoupons }) {
                                 onClick={() => {
                                     setSearchQuery('');
                                     setSelectedCategory('All');
+                                    setMerchantFilter('all');
                                     setFilters({
                                         priceRange: null,
                                         minDiscount: null,

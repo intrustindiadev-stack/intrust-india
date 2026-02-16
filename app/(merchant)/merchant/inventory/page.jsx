@@ -67,22 +67,14 @@ export default async function InventoryPage({ searchParams }) {
 
     // 4. Fetch stats in parallel (using COUNT)
     const [totalRes, listedRes, unlistedRes, totalValueRes] = await Promise.all([
-        isAdmin
-            ? supabase.from('coupons').select('*', { count: 'exact', head: true })
-            : supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id),
+        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id),
 
-        isAdmin
-            ? supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('listed_on_marketplace', true)
-            : supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
+        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
 
-        isAdmin
-            ? supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('listed_on_marketplace', false)
-            : supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', false),
+        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', false),
 
         // For total value, we need to actually fetch the prices
-        isAdmin
-            ? supabase.from('coupons').select('merchant_purchase_price_paise')
-            : supabase.from('coupons').select('merchant_purchase_price_paise').eq('merchant_id', merchant.id)
+        supabase.from('coupons').select('merchant_purchase_price_paise').eq('merchant_id', merchant.id)
     ]);
 
     const stats = {
@@ -99,7 +91,7 @@ export default async function InventoryPage({ searchParams }) {
         .order('created_at', { ascending: false })
         .range((page - 1) * limit, page * limit - 1);
 
-    if (!isAdmin && merchant) {
+    if (merchant) {
         inventoryQuery = inventoryQuery.eq('merchant_id', merchant.id);
     }
 
@@ -110,7 +102,49 @@ export default async function InventoryPage({ searchParams }) {
         inventoryQuery = inventoryQuery.eq('listed_on_marketplace', false);
     }
 
-    const { data: inventory } = await inventoryQuery;
+    const { data: rawInventory, error: inventoryError } = await inventoryQuery;
+
+    if (inventoryError) {
+        console.error('Inventory Fetch Error:', inventoryError);
+    }
+
+    console.log('Raw Inventory Count:', rawInventory?.length);
+    console.log('First Item:', rawInventory?.[0]);
+
+    // 6. Fetch stats for these coupons (Purchase Price) separately to avoid Join issues
+    let transactions = [];
+    if (rawInventory && rawInventory.length > 0) {
+        const couponIds = rawInventory.map(c => c.id);
+        const { data: txData } = await supabase
+            .from('merchant_transactions')
+            .select('amount_paise, commission_paise, coupon_id')
+            .eq('transaction_type', 'purchase')
+            .eq('merchant_id', merchant.id)
+            .in('coupon_id', couponIds);
+
+        if (txData) transactions = txData;
+    }
+
+    // Transform inventory to include purchase price from transactions
+    const inventory = rawInventory?.map(item => {
+        // Find the purchase transaction
+        const purchaseTx = transactions.find(t => t.coupon_id === item.id);
+
+        // Calculate values in Rupees
+        const purchasePrice = purchaseTx
+            ? purchaseTx.amount_paise / 100
+            : (item.merchant_purchase_price_paise ? item.merchant_purchase_price_paise / 100 : null);
+
+        const commission = purchaseTx
+            ? purchaseTx.commission_paise / 100
+            : (item.merchant_commission_paise ? item.merchant_commission_paise / 100 : null);
+
+        return {
+            ...item,
+            purchase_price: purchasePrice, // Can be null
+            commission: commission
+        };
+    });
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -171,28 +205,28 @@ export default async function InventoryPage({ searchParams }) {
                     <div className="flex gap-2 mb-6">
                         <Link
                             href="/merchant/inventory?filter=all"
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${filter === 'all'
+                            className={`px-4 py - 2 rounded - lg font - semibold transition - all ${filter === 'all'
                                 ? 'bg-[#92BCEA] text-white'
                                 : 'bg-white text-gray-600 hover:bg-gray-50'
-                                }`}
+                                } `}
                         >
                             All ({stats.total})
                         </Link>
                         <Link
                             href="/merchant/inventory?filter=listed"
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${filter === 'listed'
+                            className={`px - 4 py - 2 rounded - lg font - semibold transition - all ${filter === 'listed'
                                 ? 'bg-[#92BCEA] text-white'
                                 : 'bg-white text-gray-600 hover:bg-gray-50'
-                                }`}
+                                } `}
                         >
                             Listed ({stats.listed})
                         </Link>
                         <Link
                             href="/merchant/inventory?filter=unlisted"
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${filter === 'unlisted'
+                            className={`px - 4 py - 2 rounded - lg font - semibold transition - all ${filter === 'unlisted'
                                 ? 'bg-[#92BCEA] text-white'
                                 : 'bg-white text-gray-600 hover:bg-gray-50'
-                                }`}
+                                } `}
                         >
                             Unlisted ({stats.unlisted})
                         </Link>

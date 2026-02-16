@@ -12,16 +12,22 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess, isAdmin 
     const [error, setError] = useState(null);
 
     // Calculate values
-    const purchasePrice = (coupon.merchant_purchase_price_paise || 0) / 100;
-    const commission = (coupon.merchant_commission_paise || 0) / 100;
     const faceValue = (coupon.face_value_paise || 0) / 100;
+
+    // Use the mapped purchase_price from backend, or fallback to face_value
+    const purchasePrice = coupon.purchase_price ?? faceValue;
+    const commission = coupon.commission ?? (purchasePrice * 0.03); // Fallback estimate if no commission record
 
     const sellingPriceNum = parseFloat(sellingPrice) || 0;
     const customerFee = sellingPriceNum * 0.03;
     const customerTotal = sellingPriceNum + customerFee;
     const merchantProfit = sellingPriceNum - purchasePrice - commission;
     const customerDiscount = ((faceValue - sellingPriceNum) / faceValue) * 100;
-    const markup = ((sellingPriceNum - purchasePrice) / purchasePrice) * 100;
+
+    // Profit markup %
+    const markup = purchasePrice > 0
+        ? ((merchantProfit / purchasePrice) * 100)
+        : 100; // If purchase price is 0 (shouldn't happen), assume 100% markup
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -31,22 +37,12 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess, isAdmin 
             return;
         }
 
-        if (sellingPriceNum <= purchasePrice) {
-            setError('Selling price must be higher than purchase price to make profit');
-            return;
-        }
+        // Removed the hard block "Selling price must be higher than purchase price"
+        // to allow selling at loss (liquidation), but kept the warning in UI.
 
         try {
             setLoading(true);
             setError(null);
-
-            if (isAdmin) {
-                // Mock success for admin
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                console.log('Admin Simulation: Listing successful');
-                onSuccess();
-                return;
-            }
 
             // Call the merchant_list_to_marketplace function
             const { data, error: listError } = await supabase.rpc('merchant_list_to_marketplace', {
@@ -89,9 +85,13 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess, isAdmin 
                                 <div className="text-xl font-bold text-gray-900">₹{faceValue.toLocaleString()}</div>
                             </div>
                             <div>
-                                <div className="text-gray-600">Your Purchase Price</div>
+                                <div className="text-gray-600">Purchase Price</div>
                                 <div className="text-xl font-bold text-gray-900">₹{purchasePrice.toLocaleString()}</div>
-                                <div className="text-xs text-gray-500">+ ₹{commission.toFixed(2)} commission paid</div>
+                                <div className="text-xs text-gray-500">
+                                    {coupon.purchase_price !== null
+                                        ? `+ ₹${commission.toFixed(2)} commission pd.`
+                                        : '(Estimated)'}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -111,7 +111,7 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess, isAdmin 
                             required
                         />
                         <p className="text-xs text-gray-500 mt-1">
-                            This is the price customers will see before platform fee
+                            This is the price customers will see excluding fee
                         </p>
                     </div>
 
@@ -119,23 +119,48 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess, isAdmin 
                     {sellingPriceNum > 0 && (
                         <div className="space-y-4">
                             {/* Merchant Profit */}
-                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-4 border border-green-200">
+                            <div className={`rounded-2xl p-4 border ${merchantProfit >= 0 ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
                                 <div className="flex items-center gap-2 mb-2">
-                                    <DollarSign size={20} className="text-green-600" />
-                                    <h4 className="font-semibold text-green-900">Your Profit</h4>
+                                    <DollarSign size={20} className={merchantProfit >= 0 ? 'text-green-600' : 'text-red-600'} />
+                                    <h4 className={`font-semibold ${merchantProfit >= 0 ? 'text-green-900' : 'text-red-900'}`}>
+                                        {merchantProfit >= 0 ? 'Your Profit' : 'Loss'}
+                                    </h4>
                                 </div>
-                                <div className="text-3xl font-bold text-green-600 mb-2">
+                                <div className={`text-3xl font-bold mb-2 ${merchantProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     ₹{merchantProfit.toFixed(2)}
                                 </div>
-                                <div className="text-sm text-green-700 space-y-1">
-                                    <div>Selling Price: ₹{sellingPriceNum.toFixed(2)}</div>
-                                    <div>- Purchase Price: ₹{purchasePrice.toFixed(2)}</div>
-                                    <div>- Commission Paid: ₹{commission.toFixed(2)}</div>
-                                    <div className="pt-1 border-t border-green-300 font-semibold">
-                                        = Net Profit: ₹{merchantProfit.toFixed(2)} ({markup.toFixed(1)}% markup)
+                                <div className={`text-sm space-y-1 ${merchantProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                    <div className="flex justify-between">
+                                        <span>Selling Price:</span>
+                                        <span>₹{sellingPriceNum.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>- Purchase Price:</span>
+                                        <span>₹{purchasePrice.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>- Commission:</span>
+                                        <span>₹{commission.toFixed(2)}</span>
+                                    </div>
+                                    <div className={`pt-1 border-t font-semibold flex justify-between ${merchantProfit >= 0 ? 'border-green-300' : 'border-red-300'}`}>
+                                        <span>= Net {merchantProfit >= 0 ? 'Profit' : 'Loss'}:</span>
+                                        <span>₹{merchantProfit.toFixed(2)} ({markup.toFixed(2)}%)</span>
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Warning if selling at loss */}
+                            {merchantProfit < 0 && (
+                                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-start gap-3">
+                                    <Calculator className="text-orange-500 mt-0.5" size={20} />
+                                    <div>
+                                        <h5 className="font-bold text-orange-800">You are selling at a loss</h5>
+                                        <p className="text-sm text-orange-700 mt-1">
+                                            Your selling price of ₹{sellingPriceNum} is lower than your total cost (₹{(purchasePrice + commission).toFixed(2)}).
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Customer View */}
                             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 border border-blue-200">

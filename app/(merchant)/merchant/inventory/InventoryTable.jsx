@@ -51,8 +51,9 @@ export default function InventoryTable({ initialCoupons, isAdmin }) {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                         {inventory.map((coupon) => {
-                            const purchasePrice = (coupon.merchant_purchase_price_paise || 0) / 100;
-                            const commission = (coupon.merchant_commission_paise || 0) / 100;
+                            // Use mapped values from page.jsx
+                            const purchasePrice = coupon.purchase_price ?? ((coupon.merchant_purchase_price_paise || 0) / 100);
+                            const commission = coupon.commission ?? ((coupon.merchant_commission_paise || 0) / 100);
                             const sellingPrice = (coupon.merchant_selling_price_paise || 0) / 100;
                             const profit = sellingPrice - purchasePrice - commission;
 
