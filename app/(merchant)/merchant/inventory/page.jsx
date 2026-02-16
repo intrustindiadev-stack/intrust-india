@@ -67,7 +67,6 @@ export default async function InventoryPage({ searchParams }) {
 
     // 4. Fetch stats in parallel (using COUNT)
     const [totalRes, listedRes, unlistedRes, totalValueRes] = await Promise.all([
-<<<<<<< HEAD
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id),
 
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
@@ -76,24 +75,6 @@ export default async function InventoryPage({ searchParams }) {
 
         // For total value, we need to actually fetch the prices
         supabase.from('coupons').select('merchant_purchase_price_paise').eq('merchant_id', merchant.id)
-=======
-        isAdmin
-            ? supabase.from('coupons').select('*', { count: 'exact', head: true })
-            : supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id),
-
-        isAdmin
-            ? supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('listed_on_marketplace', true)
-            : supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
-
-        isAdmin
-            ? supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('listed_on_marketplace', false)
-            : supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', false),
-
-        // For total value, we need to actually fetch the prices
-        isAdmin
-            ? supabase.from('coupons').select('merchant_purchase_price_paise')
-            : supabase.from('coupons').select('merchant_purchase_price_paise').eq('merchant_id', merchant.id)
->>>>>>> origin/yogesh
     ]);
 
     const stats = {
@@ -110,11 +91,7 @@ export default async function InventoryPage({ searchParams }) {
         .order('created_at', { ascending: false })
         .range((page - 1) * limit, page * limit - 1);
 
-<<<<<<< HEAD
     if (merchant) {
-=======
-    if (!isAdmin && merchant) {
->>>>>>> origin/yogesh
         inventoryQuery = inventoryQuery.eq('merchant_id', merchant.id);
     }
 
@@ -125,7 +102,6 @@ export default async function InventoryPage({ searchParams }) {
         inventoryQuery = inventoryQuery.eq('listed_on_marketplace', false);
     }
 
-<<<<<<< HEAD
     const { data: rawInventory, error: inventoryError } = await inventoryQuery;
 
     if (inventoryError) {
@@ -169,9 +145,6 @@ export default async function InventoryPage({ searchParams }) {
             commission: commission
         };
     });
-=======
-    const { data: inventory } = await inventoryQuery;
->>>>>>> origin/yogesh
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -232,49 +205,28 @@ export default async function InventoryPage({ searchParams }) {
                     <div className="flex gap-2 mb-6">
                         <Link
                             href="/merchant/inventory?filter=all"
-<<<<<<< HEAD
                             className={`px-4 py - 2 rounded - lg font - semibold transition - all ${filter === 'all'
                                 ? 'bg-[#92BCEA] text-white'
                                 : 'bg-white text-gray-600 hover:bg-gray-50'
                                 } `}
-=======
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${filter === 'all'
-                                ? 'bg-[#92BCEA] text-white'
-                                : 'bg-white text-gray-600 hover:bg-gray-50'
-                                }`}
->>>>>>> origin/yogesh
                         >
                             All ({stats.total})
                         </Link>
                         <Link
                             href="/merchant/inventory?filter=listed"
-<<<<<<< HEAD
                             className={`px - 4 py - 2 rounded - lg font - semibold transition - all ${filter === 'listed'
                                 ? 'bg-[#92BCEA] text-white'
                                 : 'bg-white text-gray-600 hover:bg-gray-50'
                                 } `}
-=======
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${filter === 'listed'
-                                ? 'bg-[#92BCEA] text-white'
-                                : 'bg-white text-gray-600 hover:bg-gray-50'
-                                }`}
->>>>>>> origin/yogesh
                         >
                             Listed ({stats.listed})
                         </Link>
                         <Link
                             href="/merchant/inventory?filter=unlisted"
-<<<<<<< HEAD
                             className={`px - 4 py - 2 rounded - lg font - semibold transition - all ${filter === 'unlisted'
                                 ? 'bg-[#92BCEA] text-white'
                                 : 'bg-white text-gray-600 hover:bg-gray-50'
                                 } `}
-=======
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${filter === 'unlisted'
-                                ? 'bg-[#92BCEA] text-white'
-                                : 'bg-white text-gray-600 hover:bg-gray-50'
-                                }`}
->>>>>>> origin/yogesh
                         >
                             Unlisted ({stats.unlisted})
                         </Link>
