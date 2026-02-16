@@ -19,6 +19,7 @@ export default async function GiftCardsPage() {
     );
 
     // Server-side data fetch
+<<<<<<< HEAD
     // NEW: Only fetch cards that merchants have listed on the marketplace
     // Includes merchant join to get business_name for display
     const { data: coupons, error } = await supabase
@@ -33,6 +34,12 @@ export default async function GiftCardsPage() {
         .eq('status', 'available')
         .eq('listed_on_marketplace', true)
         .not('merchant_id', 'is', null)
+=======
+    const { data: coupons, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('status', 'available')
+>>>>>>> origin/yogesh
         .gte('valid_until', new Date().toISOString())
         .order('created_at', { ascending: false });
 

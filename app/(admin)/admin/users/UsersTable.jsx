@@ -3,7 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Search, Loader2, ShieldAlert, CheckCircle, AlertCircle, Eye } from 'lucide-react';
 import VerifiedBadge from '@/components/ui/VerifiedBadge';
+<<<<<<< HEAD
 import KYCModal from '@/components/admin/KYCModal';
+=======
+>>>>>>> origin/yogesh
 import { createClient } from '@/lib/supabaseClient';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
@@ -17,11 +20,14 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
     const [toastMsg, setToastMsg] = useState({ message: '', type: '' });
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
     const [isSearching, setIsSearching] = useState(false);
+<<<<<<< HEAD
     const [updatingId, setUpdatingId] = useState(null);
 
     // KYC Modal state
     const [selectedKYC, setSelectedKYC] = useState(null);
     const [showKYCModal, setShowKYCModal] = useState(false);
+=======
+>>>>>>> origin/yogesh
 
     // Debug: Log when users data changes
     useEffect(() => {
@@ -70,7 +76,11 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
         return Array.isArray(user.kyc_records) ? user.kyc_records[0] : user.kyc_records;
     };
 
+<<<<<<< HEAD
     const openKYCModal = (user) => {
+=======
+    const viewKYCDetails = (user) => {
+>>>>>>> origin/yogesh
         // Get the KYC record safely
         const kycRecord = getKYCRecord(user);
 
@@ -79,6 +89,7 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
             return;
         }
 
+<<<<<<< HEAD
         // Add user email to KYC data for display
         setSelectedKYC({
             ...kycRecord,
@@ -92,6 +103,20 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
         setSelectedKYC(null);
         // Refresh the page to get updated data
         router.refresh();
+=======
+        // For now, show a simple alert with KYC details
+        // In future, we can create a read-only modal
+        const details = `
+            KYC Status: ${kycRecord.verification_status}
+            PAN: ${kycRecord.pan_number || 'N/A'}
+            Name: ${kycRecord.full_legal_name || 'N/A'}
+            Phone: ${kycRecord.phone_number || 'N/A'}
+            SprintVerify Status: ${kycRecord.sprint_verify_status || 'N/A'}
+            Submitted: ${new Date(kycRecord.created_at).toLocaleDateString()}
+        `;
+        
+        alert(details.trim());
+>>>>>>> origin/yogesh
     };
 
     const getKYCStatus = (user) => {
@@ -111,6 +136,7 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
         return !!record;
     };
 
+<<<<<<< HEAD
     const updateKYCStatus = async (userId, newStatus) => {
         setUpdatingId(userId);
         try {
@@ -179,11 +205,14 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
         }
     };
 
+=======
+>>>>>>> origin/yogesh
     const StatusBadge = ({ status }) => {
         switch (status) {
             case 'verified':
                 return (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+<<<<<<< HEAD
                         Verified
                         <CheckCircle size={14} />
                     </span>
@@ -194,6 +223,26 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
                 return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"><ShieldAlert size={14} /> Rejected</span>;
             default:
                 return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"><AlertCircle size={14} /> Not Started</span>;
+=======
+                        Verified (Auto)
+                        <CheckCircle size={14} />
+                    </span>
+                );
+            case 'rejected':
+                return (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                        Rejected (API)
+                        <ShieldAlert size={14} />
+                    </span>
+                );
+            default:
+                return (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                        Not Started
+                        <AlertCircle size={14} />
+                    </span>
+                );
+>>>>>>> origin/yogesh
         }
     };
 
@@ -208,6 +257,7 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
                 </div>
             )}
 
+<<<<<<< HEAD
             {/* KYC Modal */}
             {showKYCModal && selectedKYC && (
                 <KYCModal
@@ -216,6 +266,8 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
                 />
             )}
 
+=======
+>>>>>>> origin/yogesh
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -277,6 +329,7 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
                                         <td className="px-6 py-4">
                                             {hasKYCRecord(user) ? (
                                                 <button
+<<<<<<< HEAD
                                                     onClick={() => openKYCModal(user)}
                                                     className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
                                                 >
@@ -304,6 +357,16 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
                                                         </select>
                                                     )}
                                                 </>
+=======
+                                                    onClick={() => viewKYCDetails(user)}
+                                                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                                                >
+                                                    <Eye size={16} />
+                                                    View KYC Details
+                                                </button>
+                                            ) : (
+                                                <span className="text-sm text-gray-500 italic">No KYC Record</span>
+>>>>>>> origin/yogesh
                                             )}
                                         </td>
                                     </tr>

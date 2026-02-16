@@ -5,8 +5,8 @@ import { CheckCircle, AlertCircle, Clock, Shield } from 'lucide-react';
 import VerifiedBadge from '@/components/ui/VerifiedBadge';
 
 export default function KYCStatus({ status, onStartKYC }) {
-    // Normalize status: if null or undefined, treat as 'not_started' or use the prop directly if valid
-    const currentStatus = (status === 'pending' || status === 'verified' || status === 'rejected') ? status : 'not_started';
+    // Normalize status: pending is now just a temporary state during API call
+    const currentStatus = (status === 'verified' || status === 'rejected') ? status : 'not_started';
 
     const statusConfig = {
         not_started: {
@@ -15,27 +15,17 @@ export default function KYCStatus({ status, onStartKYC }) {
             borderColor: 'border-gray-200',
             icon: AlertCircle,
             title: 'KYC Not Completed',
-            description: 'Complete your KYC to unlock full access.',
+            description: 'Complete your KYC to unlock full access. Verification is instant via SprintVerify API.',
             action: 'Start KYC',
             actionColor: 'from-[#92BCEA] to-[#AFB3F7]'
-        },
-        pending: {
-            color: 'from-yellow-500 to-orange-500',
-            bgColor: 'bg-yellow-50',
-            borderColor: 'border-yellow-200',
-            icon: Clock,
-            title: 'KYC Under Review',
-            description: 'Your documents are being verified. This usually takes 24-48 hours.',
-            action: null,
-            actionColor: null
         },
         verified: {
             color: 'from-blue-500 to-blue-600',
             bgColor: 'bg-blue-50',
             borderColor: 'border-blue-200',
             icon: null, // No icon on the left needed
-            title: 'Verified',
-            description: 'Your account is verified. You have full access.',
+            title: 'Verified Instantly',
+            description: 'Your account has been verified automatically via SprintVerify API. You have full access.',
             action: null,
             actionColor: null
         },
@@ -44,8 +34,8 @@ export default function KYCStatus({ status, onStartKYC }) {
             bgColor: 'bg-red-50',
             borderColor: 'border-red-200',
             icon: AlertCircle,
-            title: 'KYC Rejected',
-            description: 'Your verification was rejected. Please resubmit with correct documents.',
+            title: 'KYC Verification Failed',
+            description: 'Your verification failed via SprintVerify API. Please resubmit with correct information.',
             action: 'Resubmit KYC',
             actionColor: 'from-red-500 to-rose-500'
         }
@@ -84,7 +74,7 @@ export default function KYCStatus({ status, onStartKYC }) {
                     {currentStatus === 'verified' && (
                         <div className="flex items-center gap-2 text-sm text-blue-700 font-semibold mt-2">
                             <Shield size={16} />
-                            <span>Identity verified safely</span>
+                            <span>Verified instantly via SprintVerify API</span>
                         </div>
                     )}
                 </div>

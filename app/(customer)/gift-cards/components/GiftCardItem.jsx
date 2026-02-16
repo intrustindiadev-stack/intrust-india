@@ -1,7 +1,11 @@
 'use client';
 
 import { memo } from 'react';
+<<<<<<< HEAD
 import { Star, Flame, Store } from 'lucide-react';
+=======
+import { Star, Flame } from 'lucide-react';
+>>>>>>> origin/yogesh
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
@@ -111,6 +115,7 @@ const GiftCardItem = memo(function GiftCardItem({ coupon, index = 0 }) {
                         </div>
                     </div>
 
+<<<<<<< HEAD
                     {/* NEW: Merchant Badge - Prominent */}
                     <div className="mb-3 bg-gradient-to-r from-[#92BCEA]/10 to-[#AFB3F7]/10 rounded-xl px-3 py-2 border border-[#92BCEA]/20">
                         <div className="flex items-center gap-2">
@@ -133,6 +138,26 @@ const GiftCardItem = memo(function GiftCardItem({ coupon, index = 0 }) {
                         </div>
                         <span className="text-gray-400 text-xs">•</span>
                         <span className="text-xs text-gray-600 font-medium">{coupon.sold} sold</span>
+=======
+                    {/* Merchant Info - Trust Focused */}
+                    <div className="flex items-center gap-2 pb-4 border-b border-gray-100 mb-4">
+                        <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold text-gray-900 truncate flex items-center gap-1.5 mb-1">
+                                {coupon.merchant}
+                                {coupon.verified && (
+                                    <VerifiedBadge size="sm" className="ml-0.5" />
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                                <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-full">
+                                    <Star size={11} className="fill-yellow-400 text-yellow-400" />
+                                    <span className="font-bold text-gray-900">{coupon.rating.toFixed(1)}</span>
+                                </div>
+                                <span className="text-gray-400">•</span>
+                                <span className="text-gray-600 font-medium">{coupon.sold} sold</span>
+                            </div>
+                        </div>
+>>>>>>> origin/yogesh
                     </div>
 
                     {/* CTA Button - Visual Only (Parent Link handles navigation) */}

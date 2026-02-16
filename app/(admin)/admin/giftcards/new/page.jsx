@@ -97,6 +97,7 @@ export default function NewGiftCardPage() {
                     <ArrowLeft size={24} className="text-gray-700" />
                 </Link>
                 <div>
+<<<<<<< HEAD
                     <h1 className="text-3xl font-bold text-gray-900">
                         Add Gift Card to Platform Inventory
                     </h1>
@@ -104,6 +105,10 @@ export default function NewGiftCardPage() {
                         Add gift cards for merchants to purchase in bulk.
                         Merchants will list them on the marketplace at their own prices.
                     </p>
+=======
+                    <h1 className="text-3xl font-bold text-gray-900">Add New Gift Card</h1>
+                    <p className="text-gray-600 mt-1">Create a new gift card in your inventory</p>
+>>>>>>> origin/yogesh
                 </div>
             </div>
 

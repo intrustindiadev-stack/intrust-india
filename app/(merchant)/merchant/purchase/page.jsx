@@ -238,12 +238,18 @@ export default function PurchasePage() {
                     {/* Header */}
                     <div className="mb-8">
                         <h1 className="text-4xl font-bold text-gray-900 mb-2 font-[family-name:var(--font-outfit)]">
+<<<<<<< HEAD
                             Purchase Gift Cards
                         </h1>
                         <p className="text-gray-600 text-lg">
                             Buy gift cards in bulk from platform inventory.
                             List them on the marketplace at your own prices to earn profits.
                         </p>
+=======
+                            Purchase Coupons
+                        </h1>
+                        <p className="text-gray-600">Buy gift cards at customer prices + 3% commission</p>
+>>>>>>> origin/yogesh
                         <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-xl">
                             <span className="text-sm font-semibold text-green-900">Wallet Balance:</span>
                             <span className="text-lg font-bold text-green-600">₹{merchantBalance.toLocaleString()}</span>

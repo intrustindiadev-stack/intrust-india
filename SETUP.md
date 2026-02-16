@@ -42,6 +42,16 @@ cp .env.example .env.local
 # Edit .env.local and add your Supabase credentials:
 NEXT_PUBLIC_SUPABASE_URL=your-project-url.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# SprintVerify API Configuration (for automated KYC)
+SPRINT_VERIFY_BASE_URL=https://uat.paysprint.in/sprintverify-uat/api/v1
+SPRINT_VERIFY_JWT_KEY=your-jwt-token-from-sprintverify
+SPRINT_VERIFY_AUTHORIZED_KEY=your-authorized-key-from-sprintverify
+
+# Razorpay Payment Gateway (optional)
+RAZORPAY_KEY_ID=your-razorpay-key-id
+RAZORPAY_KEY_SECRET=your-razorpay-key-secret
 ```
 
 ### 3. Set Up Database Schema
@@ -62,7 +72,32 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 # 4. Add your callback URL: http://localhost:3000/auth/callback
 ```
 
-### 5. Start Development Server
+### 5. Configure SprintVerify API (Automated KYC)
+```bash
+# 1. Contact SprintVerify to get API credentials
+# 2. Get JWT Token and Authorized Key for PAN verification
+# 3. Update environment variables with your credentials
+# 4. Test API connectivity using the test script:
+npm run test:sprint-verify
+
+# The KYC system will now automatically:
+# - Verify PAN numbers via SprintVerify API
+# - Approve KYC if PAN is valid
+# - Reject KYC if PAN is invalid
+# - Retry failed API calls up to 3 times
+```
+
+### 6. Set Up Database Schema
+```bash
+# 1. Go to Supabase Dashboard → SQL Editor
+# 2. Run database scripts in order:
+#    - kyc_schema_migration.sql
+#    - kyc_rls_policies.sql
+#    - sprint_verify_final.sql
+# 3. Verify tables are created in Table Editor
+```
+
+### 7. Start Development Server
 ```bash
 npm run dev
 # Open http://localhost:3000
@@ -85,6 +120,17 @@ npm run dev
 - ✅ Click "Continue" → OTP sent
 - ✅ Enter 6-digit OTP
 - ✅ Verify & Login → Redirects to dashboard
+
+### KYC Verification (`http://localhost:3000/profile/kyc`)
+- ✅ Fill out KYC form with PAN number
+- ✅ Submit → Automatically verified via SprintVerify
+- ✅ Check status: "Verified (Auto)" or "Rejected (API)"
+- ✅ Admin panel shows read-only KYC details
+
+### Admin Panel (`http://localhost:3000/admin/users`)
+- ✅ View all users and their KYC status
+- ✅ Click "View KYC Details" to see verification info
+- ✅ No manual approval required - fully automated
 
 ---
 

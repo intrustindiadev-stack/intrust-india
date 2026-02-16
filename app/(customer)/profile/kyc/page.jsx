@@ -27,6 +27,10 @@ export default function ProfileKYCPage() {
     const [kycRecord, setKycRecord] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
+<<<<<<< HEAD
+=======
+    const [isPolling, setIsPolling] = useState(false);
+>>>>>>> origin/yogesh
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -39,6 +43,49 @@ export default function ProfileKYCPage() {
         }
     }, [user, authLoading, router]);
 
+<<<<<<< HEAD
+=======
+    // Poll for status updates when KYC is pending
+    useEffect(() => {
+        if (kycRecord?.verification_status === 'pending' && !isPolling) {
+            setIsPolling(true);
+            const pollInterval = setInterval(async () => {
+                try {
+                    const result = await getKYCRecord();
+                    if (result.data && result.data.verification_status !== 'pending') {
+                        setKycRecord(result.data);
+                        setShowForm(false);
+                        setIsPolling(false);
+                        clearInterval(pollInterval);
+                        
+                        if (result.data.verification_status === 'verified') {
+                            toast.success('🎉 KYC Verified Instantly!', {
+                                duration: 5000,
+                                icon: '✅'
+                            });
+                        } else if (result.data.verification_status === 'rejected') {
+                            toast.error(`❌ KYC Verification Failed: ${result.data.rejection_reason || 'Please try again'}`, {
+                                duration: 5000,
+                                icon: '❌'
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error polling KYC status:', error);
+                }
+            }, 2000); // Poll every 2 seconds
+
+            // Stop polling after 30 seconds max
+            setTimeout(() => {
+                clearInterval(pollInterval);
+                setIsPolling(false);
+            }, 30000);
+
+            return () => clearInterval(pollInterval);
+        }
+    }, [kycRecord?.verification_status]);
+
+>>>>>>> origin/yogesh
     const fetchKYCRecord = async () => {
         console.log('CLIENT: fetchKYCRecord started');
         setLoading(true);
@@ -54,9 +101,19 @@ export default function ProfileKYCPage() {
 
             setKycRecord(result.data);
 
+<<<<<<< HEAD
             // Show form if no record, or record is pending/rejected
             if (!result.data || result.data.verification_status === 'pending' || result.data.verification_status === 'rejected') {
                 setShowForm(true);
+=======
+            // Show form if no record, or record is rejected (not pending since KYC is automated)
+            if (!result.data || result.data.verification_status === 'rejected') {
+                setShowForm(true);
+            } else if (result.data.verification_status === 'pending') {
+                setShowForm(false); // Hide form during automated verification
+            } else {
+                setShowForm(false); // Hide form for verified status
+>>>>>>> origin/yogesh
             }
         } catch (error) {
             console.error('Error fetching KYC record:', error);
@@ -69,9 +126,20 @@ export default function ProfileKYCPage() {
 
     const handleKYCSuccess = () => {
         // Refresh KYC record after successful submission
+<<<<<<< HEAD
         fetchKYCRecord();
         setShowForm(false);
         toast.success('KYC updated successfully! Your request is pending admin approval.');
+=======
+        fetchKYCRecord().then(() => {
+            // Start polling for automated verification result
+            if (kycRecord?.verification_status === 'pending') {
+                setIsPolling(true);
+            }
+        });
+        setShowForm(false);
+        toast.success('KYC submitted successfully! Your verification will be processed instantly.');
+>>>>>>> origin/yogesh
     };
 
     if (loading) {
@@ -182,6 +250,17 @@ export default function ProfileKYCPage() {
                 )}
 
                 {/* KYC Form */}
+<<<<<<< HEAD
+=======
+                {isPolling && (
+                    <div className="flex items-center justify-center py-2">
+                        <div className="flex items-center gap-2 text-sm text-blue-600 font-medium">
+                            <Loader2 size={16} className="animate-spin" />
+                            Processing verification...
+                        </div>
+                    </div>
+                )}
+>>>>>>> origin/yogesh
                 {showForm && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -211,6 +290,7 @@ export default function ProfileKYCPage() {
                         <ul className="space-y-2 text-sm text-slate-600">
                             <li className="flex items-start gap-2">
                                 <CheckCircle size={16} className="text-green-600 mt-0.5 shrink-0" />
+<<<<<<< HEAD
                                 <span>Our team will review your KYC information within 24-48 hours</span>
                             </li>
                             <li className="flex items-start gap-2">
@@ -220,6 +300,17 @@ export default function ProfileKYCPage() {
                             <li className="flex items-start gap-2">
                                 <CheckCircle size={16} className="text-green-600 mt-0.5 shrink-0" />
                                 <span>After verification, you'll have full access to all platform features</span>
+=======
+                                <span>Your KYC is being verified automatically via SprintVerify API</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <CheckCircle size={16} className="text-green-600 mt-0.5 shrink-0" />
+                                <span>Verification usually completes within a few seconds</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <CheckCircle size={16} className="text-green-600 mt-0.5 shrink-0" />
+                                <span>You'll see the result instantly on this page</span>
+>>>>>>> origin/yogesh
                             </li>
                         </ul>
                     </div>
@@ -239,9 +330,15 @@ function StatusBanner({ status, rejectionReason }) {
             border: 'border-yellow-200',
             icon: <Clock size={24} className="text-yellow-600" />,
             iconBg: 'bg-yellow-100',
+<<<<<<< HEAD
             title: 'KYC Verification Pending',
             titleColor: 'text-yellow-900',
             description: 'Your KYC verification is under review. We will notify you once its approved.',
+=======
+            title: 'KYC Verification in Progress',
+            titleColor: 'text-yellow-900',
+            description: 'Your KYC is being processed automatically via SprintVerify API. This usually takes just a few seconds.',
+>>>>>>> origin/yogesh
             descColor: 'text-yellow-700'
         },
         verified: {
@@ -249,9 +346,15 @@ function StatusBanner({ status, rejectionReason }) {
             border: 'border-green-200',
             icon: <CheckCircle size={24} className="text-green-600" />,
             iconBg: 'bg-green-100',
+<<<<<<< HEAD
             title: 'KYC Verified ✓',
             titleColor: 'text-green-900',
             description: 'Your identity has been verified. You have full access to all platform features.',
+=======
+            title: 'KYC Verified Instantly ✓',
+            titleColor: 'text-green-900',
+            description: 'Your identity has been verified automatically via SprintVerify API. You have full access to all platform features.',
+>>>>>>> origin/yogesh
             descColor: 'text-green-700'
         },
         rejected: {

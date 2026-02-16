@@ -46,8 +46,11 @@ export default function LoginPage() {
 
             const { data, error: verifyError } = await verifyOTP(formattedPhone, otp);
 
+<<<<<<< HEAD
             console.log('[LOGIN] verifyOTP returned. Error:', verifyError);
 
+=======
+>>>>>>> origin/yogesh
             if (verifyError) {
                 console.error('[LOGIN] Verify error:', verifyError);
                 setError(verifyError.message || 'Invalid OTP');
@@ -72,8 +75,11 @@ export default function LoginPage() {
 
                 if (profileError) {
                     console.warn('[LOGIN] Profile fetch failed, defaulting to dashboard:', profileError);
+<<<<<<< HEAD
                 } else {
                     console.log('[LOGIN] Profile fetched. Role:', profile?.role);
+=======
+>>>>>>> origin/yogesh
                 }
 
                 const role = profile?.role;

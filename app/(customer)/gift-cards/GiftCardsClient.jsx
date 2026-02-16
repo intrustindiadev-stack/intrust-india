@@ -2,7 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+<<<<<<< HEAD
 import { TrendingUp, Search, AlertCircle, Store } from 'lucide-react';
+=======
+import { TrendingUp, Search, AlertCircle } from 'lucide-react';
+>>>>>>> origin/yogesh
 import Navbar from '../../../components/layout/Navbar';
 import Breadcrumbs from './components/Breadcrumbs';
 import SearchBar from './components/SearchBar';
@@ -49,9 +53,13 @@ const transformCouponData = (coupon) => {
         discount: parseFloat(discount.toFixed(1)),
         rating: 4.5 + (Math.random() * 0.4),
         sold: Math.floor(Math.random() * 1000) + 100,
+<<<<<<< HEAD
         // NEW: Display merchant name from database
         merchant: coupon.merchant_name || coupon.merchant?.business_name || 'INTRUST Verified',
         merchantId: coupon.merchant_id,
+=======
+        merchant: 'INTRUST Verified',
+>>>>>>> origin/yogesh
         verified: true,
         category: coupon.category,
         stock: 50,
@@ -68,7 +76,10 @@ export default function GiftCardsClient({ initialCoupons }) {
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('popular');
+<<<<<<< HEAD
     const [merchantFilter, setMerchantFilter] = useState('all');
+=======
+>>>>>>> origin/yogesh
 
     // Advanced Filter States
     const [filters, setFilters] = useState({
@@ -91,19 +102,26 @@ export default function GiftCardsClient({ initialCoupons }) {
         [coupons]
     );
 
+<<<<<<< HEAD
     // Extract unique merchants
     const merchants = useMemo(() =>
         ['all', ...new Set(coupons.map(c => c.merchant).filter(Boolean))].sort(),
         [coupons]
     );
 
+=======
+>>>>>>> origin/yogesh
     // Apply all filters with useMemo for performance
     const filteredCoupons = useMemo(() => {
         return coupons.filter(c => {
             const matchesCategory = selectedCategory === 'All' || c.category === selectedCategory;
+<<<<<<< HEAD
             const matchesSearch = c.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 c.merchant.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesMerchant = merchantFilter === 'all' || c.merchant === merchantFilter;
+=======
+            const matchesSearch = c.brand.toLowerCase().includes(searchQuery.toLowerCase());
+>>>>>>> origin/yogesh
             const matchesPrice = !filters.priceRange ||
                 (c.sellingPrice >= filters.priceRange[0] && c.sellingPrice <= filters.priceRange[1]);
             const matchesDiscount = !filters.minDiscount || c.discount >= filters.minDiscount;
@@ -111,10 +129,17 @@ export default function GiftCardsClient({ initialCoupons }) {
             const matchesVerified = !filters.verifiedOnly || c.verified;
             const matchesRating = !filters.minRating || c.rating >= filters.minRating;
 
+<<<<<<< HEAD
             return matchesCategory && matchesSearch && matchesMerchant && matchesPrice &&
                 matchesDiscount && matchesStock && matchesVerified && matchesRating;
         });
     }, [coupons, selectedCategory, searchQuery, merchantFilter, filters]);
+=======
+            return matchesCategory && matchesSearch && matchesPrice && matchesDiscount &&
+                matchesStock && matchesVerified && matchesRating;
+        });
+    }, [coupons, selectedCategory, searchQuery, filters]);
+>>>>>>> origin/yogesh
 
     // Sort coupons with useMemo
     const sortedCoupons = useMemo(() => {
@@ -198,6 +223,7 @@ export default function GiftCardsClient({ initialCoupons }) {
                         />
                     </motion.div>
 
+<<<<<<< HEAD
                     {/* NEW: Merchant Filter */}
                     <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
                         <div className="flex items-center gap-3 mb-4">
@@ -241,6 +267,12 @@ export default function GiftCardsClient({ initialCoupons }) {
                                 <span className="ml-1">from <span className="font-bold text-[#92BCEA]">{merchantFilter}</span></span>
                             )}
                         </motion.div>
+=======
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-lg font-bold text-gray-900">
+                            {sortedCoupons.length} {sortedCoupons.length === 1 ? 'Card' : 'Cards'} Available
+                        </h2>
+>>>>>>> origin/yogesh
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                             <TrendingUp size={16} />
                             <span className="hidden sm:inline">Updated just now</span>
@@ -274,7 +306,10 @@ export default function GiftCardsClient({ initialCoupons }) {
                                 onClick={() => {
                                     setSearchQuery('');
                                     setSelectedCategory('All');
+<<<<<<< HEAD
                                     setMerchantFilter('all');
+=======
+>>>>>>> origin/yogesh
                                     setFilters({
                                         priceRange: null,
                                         minDiscount: null,

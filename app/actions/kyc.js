@@ -12,16 +12,52 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
 import { validateKYCForm, sanitizeKYCData } from '@/app/types/kyc';
+<<<<<<< HEAD
+=======
+import { sprintVerify } from '@/lib/sprintVerify';
+
+
+// Helper to upload file to Supabase Storage
+async function uploadFile(supabase, userId, file, bucket = 'kyc-documents') {
+    if (!file || typeof file === 'string') return null; // Skip if already a string (URL) or empty
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    const { data, error } = await supabase.storage
+        .from(bucket)
+        .upload(fileName, file);
+
+    if (error) {
+        console.error('Storage upload error:', error);
+        throw error;
+    }
+
+    // Get public URL (or signed URL if private - assume private for KYC)
+    // For now returning the path, we can construct URL or use createSignedUrl later
+    // But typically for admin viewing we might just store the path or a constrained URL
+
+    // Let's get a public URL for simplicity if bucket is public, else path.
+    // If bucket is private (recommended), we should store the path and generate signed URLs on view.
+    // For this implementation, we'll store the full path to be safe.
+    return data.path;
+}
+>>>>>>> origin/yogesh
 
 /**
  * Submits or updates a KYC record for the authenticated user
  * 
+<<<<<<< HEAD
  * @param {FormData | Object} formData - Form data from KYC form
+=======
+ * @param {FormData} formData - Form data from KYC form
+>>>>>>> origin/yogesh
  * @returns {Promise<{success: boolean, error?: string, data?: Object}>} Result object
  */
 export async function submitKYC(formData) {
     console.log('SERVER ACTION: submitKYC started');
     try {
+<<<<<<< HEAD
         // Create Supabase client with SSR
         const supabase = await createServerSupabaseClient();
 
@@ -38,11 +74,44 @@ export async function submitKYC(formData) {
 
         // Extract form data (works with both FormData and plain objects)
         const data = formData instanceof FormData ? {
+=======
+        const supabase = await createServerSupabaseClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            return { success: false, error: 'Unauthorized' };
+        }
+
+        // 1. Handle File Uploads
+        const selfieFile = formData.get('selfieImage');
+        const docFrontFile = formData.get('idDocumentFront');
+
+        // We need converting FormData Entry to Buffer/Blob if it's a file
+        // IN Next.js Server Actions, File objects are passed as is.
+
+        let selfiePath = null;
+        let docFrontPath = null;
+
+        try {
+            if (selfieFile && selfieFile.size > 0) {
+                selfiePath = await uploadFile(supabase, user.id, selfieFile);
+            }
+            if (docFrontFile && docFrontFile.size > 0) {
+                docFrontPath = await uploadFile(supabase, user.id, docFrontFile);
+            }
+        } catch (uploadErr) {
+            return { success: false, error: 'Failed to upload documents. Please try again.' };
+        }
+
+        // 2. Extract Text Data
+        const rawData = {
+>>>>>>> origin/yogesh
             fullName: formData.get('fullName'),
             phoneNumber: formData.get('phoneNumber'),
             dateOfBirth: formData.get('dateOfBirth'),
             panNumber: formData.get('panNumber'),
             fullAddress: formData.get('fullAddress'),
+<<<<<<< HEAD
             bankGradeSecurity: formData.get('bankGradeSecurity') === 'true' || formData.get('bankGradeSecurity') === true
         } : formData;
 
@@ -110,10 +179,103 @@ export async function submitKYC(formData) {
 
             full_address: sanitizedData.fullAddress, // Added in migration
             bank_grade_security: sanitizedData.bankGradeSecurity, // Added in migration
+=======
+            bankGradeSecurity: formData.get('bankGradeSecurity') === 'true'
+        };
+
+        const sanitizedData = sanitizeKYCData(rawData);
+        const validation = validateKYCForm(sanitizedData);
+
+        if (!validation.valid) {
+            return { success: false, error: Object.values(validation.errors)[0] };
+        }
+
+        // 3. Perform SprintVerify PAN Verification (API-Only Approach)
+        let verificationStatus = 'rejected'; // Default to rejected
+        let sprintVerifyData = {};
+        let rejectionReason = null;
+
+        try {
+            console.log('Starting SprintVerify PAN verification...');
+            const panResult = await sprintVerify.verifyPAN(sanitizedData.panNumber);
+            sprintVerifyData.pan_check = panResult;
+
+            if (panResult.valid) {
+                verificationStatus = 'verified';
+                console.log('SprintVerify PAN verification successful');
+            } else {
+                verificationStatus = 'rejected';
+                rejectionReason = `PAN verification failed: ${panResult.message}`;
+                console.warn('SprintVerify PAN check failed:', panResult.message);
+            }
+        } catch (svError) {
+            console.error('SprintVerify API error:', svError);
+            verificationStatus = 'rejected';
+            // Show the actual error message for better debugging
+            rejectionReason = `Verification failed: ${svError.message}`;
+            sprintVerifyData.error = svError.message;
+        }
+
+        // 4. Set Final Status based purely on SprintVerify results
+        const isVerified = verificationStatus === 'verified';
+        const finalStatus = isVerified ? 'approved' : 'rejected';
+
+        // 4. Save to Database
+        // NOTE: The schema requires specific address fields and ID details. 
+        // We map 'fullAddress' to 'address_line1' and provide defaults for others 
+        // to satisfy NOT NULL constraints.
+        const kycRecord = {
+            user_id: user.id,
+
+            // Personal Info
+            full_legal_name: sanitizedData.fullName,
+            date_of_birth: sanitizedData.dateOfBirth,
+            phone_number: sanitizedData.phoneNumber,
+
+            // ID Details (Schema Requirements)
+            id_type: 'pan',
+            id_number_encrypted: sanitizedData.panNumber, // Storing raw for now (encryption recommended)
+            id_number_last4: sanitizedData.panNumber.slice(-4),
+            pan_number: sanitizedData.panNumber,
+
+            // Address Details (Schema Requirements)
+            address_line1: sanitizedData.fullAddress,
+            address_line2: '',
+            city: 'Not Provided', // Placeholder to satisfy NOT NULL
+            state: 'Not Provided',
+            postal_code: '000000',
+            country: 'IN',
+            full_address: sanitizedData.fullAddress,
+
+            // Security
+            bank_grade_security: sanitizedData.bankGradeSecurity,
+
+            // Files
+            selfie_url: selfiePath,
+            id_document_front_url: docFrontPath,
+
+            // Status Logic (Pure API-driven)
+            status: finalStatus,
+            verification_status: verificationStatus,
+            rejection_reason: rejectionReason,
+
+            // Review Details (Auto-reviewed by system)
+            reviewed_by: user.id, // System auto-review
+            reviewed_at: new Date().toISOString(),
+            verified_by: isVerified ? user.id : null,
+            verified_at: isVerified ? new Date().toISOString() : null,
+
+            // SprintVerify Data
+            sprint_verify_ref_id: sprintVerifyData.pan_check?.data?.ref_id || null,
+            sprint_verify_status: verificationStatus,
+            sprint_verify_data: sprintVerifyData,
+            sprint_verify_timestamp: new Date().toISOString(),
+>>>>>>> origin/yogesh
 
             updated_at: new Date().toISOString()
         };
 
+<<<<<<< HEAD
         let result;
 
         if (existingRecord) {
@@ -200,6 +362,54 @@ export async function submitKYC(formData) {
             error: 'An unexpected error occurred. Please try again later.',
             details: error.message
         };
+=======
+        // ... (Existing Upsert Logic) ...
+        // Check existing
+        const { data: existing } = await supabase.from('kyc_records').select('id').eq('user_id', user.id).single();
+
+        let result;
+        if (existing) {
+            const { data: updated, error: updateError } = await supabase
+                .from('kyc_records')
+                .update(kycRecord)
+                .eq('id', existing.id)
+                .select().single();
+            if (updateError) throw updateError;
+            result = updated;
+        } else {
+            kycRecord.created_at = new Date().toISOString();
+            const { data: inserted, error: insertError } = await supabase
+                .from('kyc_records')
+                .insert(kycRecord)
+                .select().single();
+            if (insertError) throw insertError;
+            result = inserted;
+        }
+
+        revalidatePath('/profile/kyc');
+        
+        const message = isVerified 
+            ? 'KYC Verified Successfully via SprintVerify' 
+            : `KYC Verification Failed: ${rejectionReason}`;
+            
+        return { success: true, data: result, message };
+
+    } catch (error) {
+        console.error('submitKYC error:', error);
+        return { success: false, error: 'Internal Server Error' };
+    }
+}
+
+/**
+ * Standalone PAN Verification Action
+ */
+export async function verifyPANAction(panNumber) {
+    try {
+        const result = await sprintVerify.verifyPAN(panNumber);
+        return { success: result.valid, message: result.message, data: result.data };
+    } catch (error) {
+        return { success: false, error: 'Verification service unavailable' };
+>>>>>>> origin/yogesh
     }
 }
 
