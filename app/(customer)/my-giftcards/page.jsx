@@ -57,7 +57,11 @@ export default async function MyCouponsPage() {
                 face_value_paise,
                 status,
                 purchased_at,
-                valid_until
+                valid_until,
+                merchant_id,
+                merchant:merchants(
+                    business_name
+                )
             )
         `)
         .eq('user_id', user.id)
@@ -88,6 +92,9 @@ export default async function MyCouponsPage() {
         if (coupon.status === 'used') uiStatus = 'used';
         if (coupon.status === 'sold' && !isExpired) uiStatus = 'active';
 
+        // Resolve Merchant Name
+        const merchantName = coupon.merchant?.business_name || 'INTRUST Marketplace';
+
         return {
             orderId: order.id,
             ...coupon,
@@ -97,7 +104,7 @@ export default async function MyCouponsPage() {
             sellingPrice: coupon.selling_price_paise / 100,
             gradient: getBrandGradient(coupon.brand),
             logo: getBrandLogo(coupon.brand),
-            merchant: 'INTRUST Marketplace',
+            merchant: merchantName,
             formattedDate: new Date(coupon.purchased_at).toLocaleDateString(),
             formattedExpiry: new Date(coupon.valid_until).toLocaleDateString()
         };

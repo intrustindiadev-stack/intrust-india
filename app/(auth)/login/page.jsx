@@ -22,6 +22,33 @@ export default function LoginPage() {
         setError('');
         setLoading(true);
 
+        // 1. Check if user exists (Feature: Phone Validation)
+        try {
+            // Use RPC to securely check existence even with RLS enabled
+            const { data: userId, error: checkError } = await supabase
+                .rpc('get_user_id_by_phone', { phone_number: phone });
+
+            if (checkError) {
+                console.error('[LOGIN] Phone check error:', checkError);
+                setError('Something went wrong, please try again.');
+                setLoading(false);
+                return;
+            }
+
+            if (!userId) {
+                setError('No account found with this phone number. Redirecting to signup...');
+                setTimeout(() => {
+                    router.push('/signup');
+                }, 1500);
+                return;
+            }
+        } catch (err) {
+            console.error('[LOGIN] Unexpected error:', err);
+            setError('Something went wrong, please try again.');
+            setLoading(false);
+            return;
+        }
+
         const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
         const { error: otpError } = await signInWithOTP(formattedPhone);
 
@@ -79,13 +106,16 @@ export default function LoginPage() {
                 const role = profile?.role;
                 console.log('[LOGIN] Redirecting for role:', role);
 
-                // Force hard redirect
+                // Refresh to ensure middleware/server components see the new session
+                router.refresh();
+
+                // Client-side redirect
                 if (role === 'merchant') {
-                    window.location.href = '/merchant/dashboard';
+                    router.push('/merchant/dashboard');
                 } else if (role === 'admin') {
-                    window.location.href = '/admin';
+                    router.push('/admin');
                 } else {
-                    window.location.href = '/dashboard';
+                    router.push('/dashboard');
                 }
             } else {
                 console.error('[LOGIN] No user returned from verifyOTP');
