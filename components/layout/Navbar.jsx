@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Menu, X, ChevronRight, Globe, User, Moon, Sun } from 'lucide-react';
+import { Menu, X, ChevronRight, User, Moon, Sun } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { useLanguage } from '@/lib/i18n/LanguageContext';
+
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
 import MobileNav from './MobileNav';
@@ -15,7 +15,7 @@ export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const { isAuthenticated, user, profile } = useAuth();
-    const { language, changeLanguage, t } = useLanguage();
+
     const { theme, toggleTheme } = useTheme();
     const router = useRouter();
 
@@ -55,9 +55,9 @@ export default function Navbar() {
     };
 
     const menuItems = [
-        { label: t('nav.services'), href: 'services' },
-        { label: t('nav.about'), href: 'about' },
-        { label: t('nav.contact'), href: 'contact' },
+        { label: 'Services', href: 'services' },
+        { label: 'About', href: 'about' },
+        { label: 'Contact', href: 'contact' },
     ];
 
     // Get user display info
@@ -165,40 +165,7 @@ export default function Navbar() {
                                 {theme === 'light' ? <Sun size={20} /> : <Moon size={20} />}
                             </motion.button>
 
-                            {/* Language Switcher - Premium iOS Style */}
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.5, duration: 0.4 }}
-                                className="hidden lg:block relative"
-                            >
-                                <div className="relative bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-1 flex items-center">
-                                    <motion.div
-                                        className="absolute top-1 bottom-1 bg-white dark:bg-gray-700 rounded-full shadow-md"
-                                        animate={{
-                                            left: language === 'en' ? '4px' : '50%',
-                                            width: 'calc(50% - 4px)'
-                                        }}
-                                        transition={{
-                                            type: 'spring',
-                                            stiffness: 400,
-                                            damping: 30
-                                        }}
-                                    />
-                                    <button
-                                        onClick={() => changeLanguage('en')}
-                                        className={`relative z-10 px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-200 min-w-[50px] text-center ${language === 'en' ? 'text-[#171A21]' : 'text-[#617073] dark:text-gray-400'}`}
-                                    >
-                                        EN
-                                    </button>
-                                    <button
-                                        onClick={() => changeLanguage('hi')}
-                                        className={`relative z-10 px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-200 min-w-[50px] text-center ${language === 'hi' ? 'text-[#171A21]' : 'text-[#617073] dark:text-gray-400'}`}
-                                    >
-                                        हिं
-                                    </button>
-                                </div>
-                            </motion.div>
+
 
                             {isAuthenticated ? (
                                 <div className="hidden lg:flex items-center gap-4">
@@ -238,7 +205,7 @@ export default function Navbar() {
                       transition-all duration-300
                     "
                                     >
-                                        {t('nav.signout')}
+                                        Sign Out
                                     </motion.button>
                                     {/* Mobile/Tablet Profile Icon */}
                                     <Link href="/profile" className="lg:hidden">
@@ -278,7 +245,7 @@ export default function Navbar() {
                       hover:bg-gradient-to-r hover:from-[#92BCEA]/10 hover:to-[#AFB3F7]/10
                     "
                                     >
-                                        {t('nav.login')}
+                                        Log In
                                     </motion.button>
                                     <motion.button
                                         whileHover={{ scale: 1.05, y: -1 }}
@@ -292,7 +259,7 @@ export default function Navbar() {
                       transition-all duration-300
                     "
                                     >
-                                        {t('nav.signup')}
+                                        Sign Up
                                     </motion.button>
                                 </div>
                             )}
@@ -356,9 +323,6 @@ export default function Navbar() {
                 isOpen={menuOpen}
                 onClose={() => setMenuOpen(false)}
                 isAuthenticated={isAuthenticated}
-                t={t}
-                language={language}
-                changeLanguage={changeLanguage}
                 theme={theme}
                 toggleTheme={toggleTheme}
                 handleSignOut={handleLogout}

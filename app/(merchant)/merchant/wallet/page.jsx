@@ -31,6 +31,8 @@ export default function WalletPage() {
 
             if (!res.ok) throw new Error('Failed to fetch wallet data');
             const data = await res.json();
+            console.log('[WalletPage] API response:', data);
+            console.log('[WalletPage] Transactions count:', data.transactions?.length);
             setWallet(data.wallet);
             setTransactions(data.transactions || []);
         } catch (err) {

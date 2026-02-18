@@ -7,10 +7,11 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
 import Image from 'next/image';
-import { Star, ShieldCheck, Clock, CheckCircle, Heart, Share2, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { Star, ShieldCheck, Clock, CheckCircle, Share2, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
 
 
 export default function GiftCardDetailPage({ params }) {
@@ -29,6 +30,7 @@ export default function GiftCardDetailPage({ params }) {
     const [quantity, setQuantity] = useState(1); // Future proofing
     const [kycStatus, setKycStatus] = useState(null);
     const [kycLoading, setKycLoading] = useState(true);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
     // ✅ COMBINED useEffect - fetch card and KYC in parallel
     useEffect(() => {
         if (!id) return;
@@ -99,167 +101,12 @@ export default function GiftCardDetailPage({ params }) {
         };
     }, [id, user]); // Include user in dependencies
 
-    const loadRazorpayScript = () => {
-        return new Promise((resolve) => {
-            const script = document.createElement('script');
-            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-            script.onload = () => resolve(true);
-            script.onerror = () => resolve(false);
-            document.body.appendChild(script);
-        });
-    };
-
-    async function handlePurchase() {
-        const purchaseId = Math.random().toString(36).slice(2);
-        console.log('[PURCHASE:START]', { purchaseId, cardId: card.id });
-
+    function handlePurchase() {
         if (!user) {
             router.push('/login');
             return;
         }
-
-        // Create AbortController for this purchase
-        const abortController = new AbortController();
-        const timeoutId = setTimeout(() => abortController.abort(), 15000); // 15s timeout
-
-        try {
-            setPurchasing(true);
-            setPurchaseError(null);
-
-            // Log Razorpay script load
-            const scriptStart = Date.now();
-            const isScriptLoaded = await loadRazorpayScript();
-            console.log('[PURCHASE:SCRIPT_LOADED]', {
-                purchaseId,
-                elapsed: Date.now() - scriptStart,
-                success: isScriptLoaded
-            });
-
-            if (!isScriptLoaded) {
-                throw new Error('Razorpay SDK failed to load. Are you online?');
-            }
-
-            // 1. Create Order with AbortController
-            const orderStart = Date.now();
-            console.log('[PURCHASE:CREATE_ORDER_START]', { purchaseId });
-
-            const response = await fetch('/api/create-order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ giftcardId: card.id }),
-                signal: abortController.signal // ← Add abort signal
-            });
-
-            clearTimeout(timeoutId); // Clear timeout on success
-
-            console.log('[PURCHASE:CREATE_ORDER_END]', {
-                purchaseId,
-                elapsed: Date.now() - orderStart,
-                status: response.status,
-                ok: response.ok
-            });
-
-            const orderData = await response.json();
-
-            if (!response.ok) {
-                console.error('[PURCHASE:CREATE_ORDER_FAILED]', {
-                    purchaseId,
-                    status: response.status,
-                    error: orderData.error
-                });
-
-                if (response.status === 403 || orderData.error === 'KYC_REQUIRED') {
-                    toast.error("KYC Verification Required. Please complete KYC first.");
-                    return;
-                }
-                throw new Error(orderData.error || 'Failed to create order');
-            }
-
-            // 2. Initialize Razorpay
-            const options = {
-                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-                amount: orderData.amount,
-                currency: orderData.currency,
-                name: 'INTRUST Gift Cards',
-                description: `Purchase of ${card.title}`,
-                image: '/logo.png',
-                order_id: orderData.id,
-                handler: async function (razorpayResponse) {
-                    try {
-                        // Create new AbortController for verification
-                        const verifyAbortController = new AbortController();
-                        const verifyTimeoutId = setTimeout(() => verifyAbortController.abort(), 10000);
-
-                        const verifyRes = await fetch('/api/verify-payment', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                razorpay_order_id: razorpayResponse.razorpay_order_id,
-                                razorpay_payment_id: razorpayResponse.razorpay_payment_id,
-                                razorpay_signature: razorpayResponse.razorpay_signature,
-                            }),
-                            signal: verifyAbortController.signal // ← Add abort signal
-                        });
-
-                        clearTimeout(verifyTimeoutId);
-
-                        const verifyData = await verifyRes.json();
-
-                        if (verifyData.success) {
-                            setPurchaseSuccess(true);
-                            setTimeout(() => {
-                                router.push('/my-giftcards');
-                            }, 2000);
-                        } else {
-                            throw new Error('Payment verification failed');
-                        }
-                    } catch (error) {
-                        console.error('Verification Error:', error);
-                        if (error.name === 'AbortError') {
-                            setPurchaseError('Payment verification timed out. Please contact support with your payment ID.');
-                        } else {
-                            setPurchaseError('Payment successful but verification failed. Contact support.');
-                        }
-                    }
-                },
-                prefill: {
-                    name: user.user_metadata?.full_name || user.email,
-                    email: user.email,
-                },
-                theme: {
-                    color: '#2563EB',
-                },
-                modal: {
-                    ondismiss: function () {
-                        abortController.abort(); // Cancel pending requests if user closes modal
-                    }
-                }
-            };
-
-            const paymentObject = new window.Razorpay(options);
-            paymentObject.on('payment.failed', function (response) {
-                setPurchaseError(`Payment Failed: ${response.error.description}`);
-            });
-            paymentObject.open();
-
-        } catch (err) {
-            console.error('[PURCHASE:ERROR]', {
-                purchaseId,
-                error: err.message,
-                stack: err.stack,
-                userAgent: navigator.userAgent
-            });
-
-            // Better error messages for different abort scenarios
-            if (err.name === 'AbortError') {
-                setPurchaseError('Request timed out. Please check your connection and try again.');
-            } else {
-                setPurchaseError(err.message || 'Could not initiate purchase.');
-            }
-        } finally {
-            clearTimeout(timeoutId);
-            setPurchasing(false);
-        }
+        setShowPaymentModal(true);
     }
 
     // Calculation Helper - Handling Paise vs Rupees
@@ -546,6 +393,17 @@ export default function GiftCardDetailPage({ params }) {
             </div>
 
             <CustomerBottomNav />
+
+            {/* Sabpaisa Payment Modal */}
+            {card && user && (
+                <SabpaisaPaymentModal
+                    isOpen={showPaymentModal}
+                    onClose={() => setShowPaymentModal(false)}
+                    amount={card.selling_price_paise / 100}
+                    user={user}
+                    productInfo={{ id: card.id, title: card.title }}
+                />
+            )}
 
         </div>
     );

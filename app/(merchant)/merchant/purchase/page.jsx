@@ -175,24 +175,54 @@ export default function PurchasePage() {
                 return;
             }
 
+            console.log('Starting purchase with merchant:', merchant?.id);
             // Purchase each coupon in cart
             const purchasePromises = [];
-            Object.entries(cart).forEach(([couponId, qty]) => {
-                for (let i = 0; i < qty; i++) {
+            Object.entries(cart).forEach(([inventoryId, qty]) => {
+                const item = inventory.find(i => i.id === inventoryId);
+                // We need to buy 'qty' number of coupons from this group
+                // item.ids contains all available coupon IDs for this group
+
+                if (!item || !item.ids || item.ids.length < qty) {
+                    console.error(`Not enough stock for ${item?.brand}`);
+                    return;
+                }
+
+                // Take the first 'qty' IDs
+                const couponsToBuy = item.ids.slice(0, qty);
+                console.log('Buying coupons:', couponsToBuy);
+
+                couponsToBuy.forEach(couponId => {
                     purchasePromises.push(
                         supabase.rpc('merchant_purchase_coupon', {
                             p_coupon_id: couponId,
-                            p_quantity: 1
+                            p_quantity: 1,
+                            p_merchant_id: merchant.id
                         })
                     );
-                }
+                });
             });
+
+            console.log('Promises created:', purchasePromises.length);
+            if (purchasePromises.length === 0) {
+                alert('Debug: No purchase promises created. Check console logs.');
+                setPurchasing(false);
+                return;
+            }
 
             const results = await Promise.all(purchasePromises);
             const errors = results.filter(r => r.error);
-            if (errors.length > 0) throw new Error(`Failed to purchase ${errors.length} items. Possible KYC or balance issue.`);
 
-            alert('Purchase successful! Check your inventory.');
+            if (errors.length > 0) {
+                console.error('Purchase errors:', errors);
+                // Show the first specific error message
+                throw new Error(errors[0].error.message || `Failed to purchase ${errors.length} items.`);
+            }
+
+            const firstSuccess = results.find(r => r.data && r.data.success);
+            const txId = firstSuccess ? firstSuccess.data.transaction_id : 'N/A';
+
+            alert(`Purchase successful! Transaction ID: ${txId}. Check your inventory.`);
             setCart({});
             // Update balance locally and refresher
             setMerchantBalance(prev => prev - cartTotal);
