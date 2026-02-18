@@ -36,11 +36,7 @@ export default function ContactPage() {
     ];
 
     return (
-<<<<<<< HEAD
-        <div className="min-h-screen bg-[#FAFAFA]">
-=======
         <div className="min-h-screen bg-[#FAFAFA] dark:bg-gray-900">
->>>>>>> origin/yogesh-final
             <Navbar />
 
             <PageHero
@@ -63,24 +59,15 @@ export default function ContactPage() {
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.2 + (index * 0.1) }}
-<<<<<<< HEAD
-                                    className="block p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group"
-=======
                                     className="block p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-300 group"
->>>>>>> origin/yogesh-final
                                 >
                                     <div className="flex gap-4">
                                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${item.color} group-hover:scale-110 transition-transform duration-300`}>
                                             <item.icon size={24} />
                                         </div>
                                         <div>
-<<<<<<< HEAD
-                                            <h3 className="font-bold text-gray-900 mb-1">{item.title}</h3>
-                                            <p className="text-sm text-gray-500 mb-3 leading-relaxed">{item.details}</p>
-=======
                                             <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1">{item.title}</h3>
                                             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">{item.details}</p>
->>>>>>> origin/yogesh-final
                                             <span className="text-sm font-semibold text-[#7A93AC] group-hover:text-[#171A21] transition-colors flex items-center gap-1">
                                                 {item.linkText} <ExternalLink size={14} />
                                             </span>
@@ -95,11 +82,7 @@ export default function ContactPage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.5 }}
-<<<<<<< HEAD
-                            className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100"
-=======
                             className="bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700"
->>>>>>> origin/yogesh-final
                         >
                             <div className="rounded-xl overflow-hidden h-64 relative group">
                                 <iframe
@@ -112,11 +95,7 @@ export default function ContactPage() {
                                     className="group-hover:scale-105 transition-transform duration-700"
                                 ></iframe>
 
-<<<<<<< HEAD
-                                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/50 text-xs font-bold text-gray-800 flex items-center gap-2">
-=======
                                 <div className="absolute top-4 right-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/50 dark:border-gray-700 text-xs font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
->>>>>>> origin/yogesh-final
                                     <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Open Now
                                 </div>
                             </div>

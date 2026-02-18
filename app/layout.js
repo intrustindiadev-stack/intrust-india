@@ -1,11 +1,8 @@
 import { Inter, Outfit, Poppins } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
-<<<<<<< HEAD
 import { LanguageProvider } from '@/lib/i18n/LanguageContext';
-=======
 import { ThemeProvider } from '@/lib/contexts/ThemeContext';
->>>>>>> origin/yogesh-final
 
 const inter = Inter({
   variable: "--font-inter",
@@ -33,19 +30,13 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${outfit.variable} ${poppins.variable}`}>
       <body className="antialiased">
-<<<<<<< HEAD
-        <LanguageProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </LanguageProvider>
-=======
         <ThemeProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </LanguageProvider>
         </ThemeProvider>
->>>>>>> origin/yogesh-final
       </body>
     </html>
   );

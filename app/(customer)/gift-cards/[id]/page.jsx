@@ -11,10 +11,7 @@ import { Star, ShieldCheck, Clock, CheckCircle, Heart, Share2, Loader2, AlertCir
 import { motion } from 'framer-motion';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
-<<<<<<< HEAD
-import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
-=======
->>>>>>> origin/yogesh-final
+
 
 export default function GiftCardDetailPage({ params }) {
     const { user } = useAuth();
@@ -25,14 +22,6 @@ export default function GiftCardDetailPage({ params }) {
 
     const [card, setCard] = useState(null);
     const [loading, setLoading] = useState(true);
-<<<<<<< HEAD
-    const [kycStatus, setKycStatus] = useState(null);
-    const [kycLoading, setKycLoading] = useState(true);
-
-    // Payment Modal State
-    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-
-=======
     const [purchasing, setPurchasing] = useState(false);
     const [error, setError] = useState(null);
     const [purchaseError, setPurchaseError] = useState(null);
@@ -40,8 +29,6 @@ export default function GiftCardDetailPage({ params }) {
     const [quantity, setQuantity] = useState(1); // Future proofing
     const [kycStatus, setKycStatus] = useState(null);
     const [kycLoading, setKycLoading] = useState(true);
-
->>>>>>> origin/yogesh-final
     // ✅ COMBINED useEffect - fetch card and KYC in parallel
     useEffect(() => {
         if (!id) return;
@@ -52,10 +39,7 @@ export default function GiftCardDetailPage({ params }) {
             try {
                 setLoading(true);
                 setKycLoading(true);
-<<<<<<< HEAD
-=======
                 setError(null);
->>>>>>> origin/yogesh-final
 
                 // Parallel fetch
                 const fetchPromises = [
@@ -98,11 +82,7 @@ export default function GiftCardDetailPage({ params }) {
             } catch (err) {
                 if (!isMounted) return;
                 console.error('Error fetching data:', err);
-<<<<<<< HEAD
-                toast.error('Failed to load gift card details');
-=======
                 setError(err.message || 'Failed to load gift card');
->>>>>>> origin/yogesh-final
             } finally {
                 if (isMounted) {
                     setLoading(false);
@@ -117,12 +97,6 @@ export default function GiftCardDetailPage({ params }) {
         return () => {
             isMounted = false;
         };
-<<<<<<< HEAD
-    }, [id, user]);
-
-
-    function handleBuyNow() {
-=======
     }, [id, user]); // Include user in dependencies
 
     const loadRazorpayScript = () => {
@@ -139,21 +113,11 @@ export default function GiftCardDetailPage({ params }) {
         const purchaseId = Math.random().toString(36).slice(2);
         console.log('[PURCHASE:START]', { purchaseId, cardId: card.id });
 
->>>>>>> origin/yogesh-final
         if (!user) {
             router.push('/login');
             return;
         }
 
-<<<<<<< HEAD
-        // Optional: Block purchase if KYC mandatory
-        if (kycStatus !== 'approved' && kycStatus !== 'verified') {
-            // toast.error("Please complete KYC first");
-            // return;
-        }
-
-        setIsPaymentModalOpen(true);
-=======
         // Create AbortController for this purchase
         const abortController = new AbortController();
         const timeoutId = setTimeout(() => abortController.abort(), 15000); // 15s timeout
@@ -296,7 +260,6 @@ export default function GiftCardDetailPage({ params }) {
             clearTimeout(timeoutId);
             setPurchasing(false);
         }
->>>>>>> origin/yogesh-final
     }
 
     // Calculation Helper - Handling Paise vs Rupees
@@ -318,22 +281,14 @@ export default function GiftCardDetailPage({ params }) {
         );
     }
 
-<<<<<<< HEAD
-    if (!card) {
-=======
     if (error || !card) {
->>>>>>> origin/yogesh-final
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col">
                 <Navbar />
                 <div className="flex-1 flex flex-col items-center justify-center pt-24 px-6 text-center">
                     <AlertCircle size={64} className="text-red-500 mb-4" />
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Unavailable</h2>
-<<<<<<< HEAD
-                    <p className="text-gray-600 mb-6">Failed to load gift card.</p>
-=======
                     <p className="text-gray-600 mb-6">{error || 'This gift card is usually not accessible.'}</p>
->>>>>>> origin/yogesh-final
                     <button
                         onClick={() => router.push('/gift-cards')}
                         className="px-6 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors"
@@ -362,8 +317,6 @@ export default function GiftCardDetailPage({ params }) {
                         />
                     </div>
 
-<<<<<<< HEAD
-=======
                     {/* Purchase Feedback */}
                     {purchaseSuccess && (
                         <motion.div
@@ -403,7 +356,6 @@ export default function GiftCardDetailPage({ params }) {
                         </motion.div>
                     )}
 
->>>>>>> origin/yogesh-final
                     {/* Main Layout Grid */}
                     <div className="grid md:grid-cols-2 gap-10 lg:gap-16 items-start">
 
@@ -498,8 +450,6 @@ export default function GiftCardDetailPage({ params }) {
                                 </p>
                             </div>
 
-<<<<<<< HEAD
-=======
                             {/* Quantity Selector (Visual Only for now) */}
                             {isAvailable && (
                                 <div>
@@ -515,7 +465,6 @@ export default function GiftCardDetailPage({ params }) {
                                 </div>
                             )}
 
->>>>>>> origin/yogesh-final
                             {/* KYC Warning Banner */}
                             {user && !kycLoading && kycStatus !== 'approved' && kycStatus !== 'verified' && (
                                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
@@ -542,13 +491,8 @@ export default function GiftCardDetailPage({ params }) {
                             {/* Action Buttons */}
                             <div className="flex flex-col gap-3 mt-2">
                                 <button
-<<<<<<< HEAD
-                                    onClick={handleBuyNow}
-                                    disabled={!isAvailable}
-=======
                                     onClick={handlePurchase}
                                     disabled={!isAvailable || purchasing}
->>>>>>> origin/yogesh-final
                                     className={`
                                         w-full py-4 rounded-xl text-white font-semibold text-lg shadow-lg shadow-blue-200
                                         bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 transition-all
@@ -556,9 +500,6 @@ export default function GiftCardDetailPage({ params }) {
                                         flex items-center justify-center gap-2
                                     `}
                                 >
-<<<<<<< HEAD
-                                    {!isAvailable ? 'Sold Out' : 'Buy Now'}
-=======
                                     {purchasing ? (
                                         <>
                                             <Loader2 size={24} className="animate-spin" />
@@ -569,7 +510,6 @@ export default function GiftCardDetailPage({ params }) {
                                     ) : (
                                         'Buy Now'
                                     )}
->>>>>>> origin/yogesh-final
                                 </button>
 
                                 <button className="w-full py-3.5 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
@@ -606,18 +546,7 @@ export default function GiftCardDetailPage({ params }) {
             </div>
 
             <CustomerBottomNav />
-<<<<<<< HEAD
 
-            {/* Payment Modal */}
-            <SabpaisaPaymentModal
-                isOpen={isPaymentModalOpen}
-                onClose={() => setIsPaymentModalOpen(false)}
-                amount={sellingPrice}
-                user={user}
-                productInfo={card}
-            />
-=======
->>>>>>> origin/yogesh-final
         </div>
     );
 }

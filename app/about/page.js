@@ -5,19 +5,10 @@ import Footer from '@/components/layout/Footer';
 import PageHero from '@/components/ui/PageHero';
 import StatsSection from '@/components/home/StatsSection';
 import { motion, useScroll, useSpring } from 'framer-motion';
-<<<<<<< HEAD
-import { ShieldCheck, Users, Target, TrendingUp, ArrowRight, Wallet, CreditCard, Lightbulb } from 'lucide-react';
-import { useRef } from 'react';
-import { useLanguage } from '@/lib/i18n/LanguageContext';
-
-export default function AboutPage() {
-    const { t } = useLanguage();
-=======
 import { Shield, Users, Target, TrendingUp, Heart, Zap, ShieldCheck, Lightbulb, ArrowRight } from 'lucide-react';
 import { useRef } from 'react';
 
 export default function AboutPage() {
->>>>>>> origin/yogesh-final
 
     const values = [
         {
@@ -58,11 +49,7 @@ export default function AboutPage() {
     ];
 
     return (
-<<<<<<< HEAD
-        <div className="min-h-screen bg-gray-50">
-=======
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
->>>>>>> origin/yogesh-final
             <Navbar />
 
             <PageHero
@@ -94,56 +81,31 @@ export default function AboutPage() {
                                 Our Mission
                             </div>
 
-<<<<<<< HEAD
-                            <h2 className="text-4xl md:text-5xl font-black font-outfit text-gray-900 leading-tight">
-                                Empowering India with <span className="gradient-text">Financial Freedom</span>
-                            </h2>
-
-                            <p className="text-lg text-gray-600 leading-relaxed font-inter">
-=======
                             <h2 className="text-4xl md:text-5xl font-black font-outfit text-gray-900 dark:text-gray-100 leading-tight">
                                 Empowering India with <span className="gradient-text">Financial Freedom</span>
                             </h2>
 
                             <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed font-inter">
->>>>>>> origin/yogesh-final
                                 We envision a world where financial services are not just accessible but intuitive and empowering. By combining cutting-edge technology with deep consumer insights, we are removing friction from money management.
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-<<<<<<< HEAD
-                                <div className="flex items-center gap-4 p-4 rounded-xl bg-white shadow-sm border border-gray-100">
-=======
                                 <div className="flex items-center gap-4 p-4 rounded-xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700">
->>>>>>> origin/yogesh-final
                                     <div className="bg-green-100 p-3 rounded-lg text-green-600">
                                         <ShieldCheck size={24} />
                                     </div>
                                     <div>
-<<<<<<< HEAD
-                                        <h4 className="font-bold text-gray-900">100% Secure</h4>
-                                        <p className="text-sm text-gray-500">Bank-grade encryption</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4 p-4 rounded-xl bg-white shadow-sm border border-gray-100">
-=======
                                         <h4 className="font-bold text-gray-900 dark:text-gray-100">100% Secure</h4>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">Bank-grade encryption</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4 p-4 rounded-xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700">
->>>>>>> origin/yogesh-final
                                     <div className="bg-indigo-100 p-3 rounded-lg text-indigo-600">
                                         <Users size={24} />
                                     </div>
                                     <div>
-<<<<<<< HEAD
-                                        <h4 className="font-bold text-gray-900">User First</h4>
-                                        <p className="text-sm text-gray-500">24/7 Support</p>
-=======
                                         <h4 className="font-bold text-gray-900 dark:text-gray-100">User First</h4>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">24/7 Support</p>
->>>>>>> origin/yogesh-final
                                     </div>
                                 </div>
                             </div>
@@ -157,32 +119,19 @@ export default function AboutPage() {
                             className="relative"
                         >
                             <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-2xl rotate-3 opacity-20 blur-lg"></div>
-<<<<<<< HEAD
-                            <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl bg-white border border-gray-100 flex items-center justify-center p-8 group hover:scale-[1.01] transition-transform duration-500">
-                                {/* Abstract visual representation */}
-                                <div className="relative w-full h-full bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center">
-=======
                             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex items-center justify-center p-8 group hover:scale-[1.01] transition-transform duration-500">
                                 {/* Abstract visual representation */}
                                 <div className="relative w-full h-full bg-gray-50 dark:bg-gray-900 rounded-xl overflow-hidden flex items-center justify-center">
->>>>>>> origin/yogesh-final
                                     <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#7A93AC_1px,transparent_1px)] [background-size:16px_16px]"></div>
                                     <ShieldCheck size={180} className="text-gray-200 group-hover:text-blue-100 transition-colors duration-500" />
                                     <div className="absolute inset-0 flex items-center justify-center">
                                         <motion.div
                                             animate={{ y: [0, -10, 0] }}
                                             transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-<<<<<<< HEAD
-                                            className="bg-white/80 backdrop-blur-md border border-white/50 p-6 rounded-2xl shadow-xl text-center"
-                                        >
-                                            <p className="text-gray-500 text-sm font-semibold mb-1">Total Trust Secured</p>
-                                            <h3 className="text-4xl font-black text-gray-900 gradient-text">₹500Cr+</h3>
-=======
                                             className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border border-white/50 dark:border-gray-700 p-6 rounded-2xl shadow-xl text-center"
                                         >
                                             <p className="text-gray-500 dark:text-gray-400 text-sm font-semibold mb-1">Total Trust Secured</p>
                                             <h3 className="text-4xl font-black text-gray-900 dark:text-gray-100 gradient-text">₹500Cr+</h3>
->>>>>>> origin/yogesh-final
                                         </motion.div>
                                     </div>
                                 </div>
@@ -193,19 +142,11 @@ export default function AboutPage() {
             </section>
 
             {/* Values Section with Glass Cards */}
-<<<<<<< HEAD
-            <section className="py-24 bg-white relative">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="text-center max-w-3xl mx-auto mb-20">
-                        <h2 className="text-3xl font-bold font-outfit text-gray-900 mb-4">Core Principles</h2>
-                        <p className="text-gray-600 text-lg">Our values define who we are and how we serve you.</p>
-=======
             <section className="py-24 bg-white dark:bg-gray-900 relative">
                 <div className="max-w-7xl mx-auto px-6">
                     <div className="text-center max-w-3xl mx-auto mb-20">
                         <h2 className="text-3xl font-bold font-outfit text-gray-900 dark:text-gray-100 mb-4">Core Principles</h2>
                         <p className="text-gray-600 dark:text-gray-300 text-lg">Our values define who we are and how we serve you.</p>
->>>>>>> origin/yogesh-final
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -217,11 +158,7 @@ export default function AboutPage() {
                                 viewport={{ once: true }}
                                 transition={{ delay: index * 0.1, duration: 0.5 }}
                                 whileHover={{ y: -10 }}
-<<<<<<< HEAD
-                                className="group relative bg-white p-8 rounded-3xl shadow-lg hover:shadow-2xl border border-gray-100 transition-all duration-300 overflow-hidden"
-=======
                                 className="group relative bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-lg hover:shadow-2xl border border-gray-100 dark:border-gray-700 transition-all duration-300 overflow-hidden"
->>>>>>> origin/yogesh-final
                             >
                                 {/* Hover Gradient Background */}
                                 <div className={`absolute inset-0 bg-gradient-to-br ${value.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
@@ -230,13 +167,8 @@ export default function AboutPage() {
                                     <div className={`w-14 h-14 ${value.gradient} bg-opacity-20 rounded-2xl flex items-center justify-center ${value.iconColor} mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300`}>
                                         <value.icon size={28} strokeWidth={2} />
                                     </div>
-<<<<<<< HEAD
-                                    <h3 className="text-2xl font-bold font-outfit text-gray-900 mb-4 group-hover:text-gray-800">{value.title}</h3>
-                                    <p className="text-gray-600 font-inter leading-relaxed group-hover:text-gray-700">
-=======
                                     <h3 className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100 mb-4 group-hover:text-gray-800 dark:group-hover:text-gray-200">{value.title}</h3>
                                     <p className="text-gray-600 dark:text-gray-300 font-inter leading-relaxed group-hover:text-gray-700 dark:group-hover:text-gray-400">
->>>>>>> origin/yogesh-final
                                         {value.description}
                                     </p>
                                 </div>
@@ -288,11 +220,7 @@ function TimelineSection({ steps }) {
     });
 
     return (
-<<<<<<< HEAD
-        <section ref={containerRef} className="py-32 px-6 relative bg-gray-50/50 overflow-hidden">
-=======
         <section ref={containerRef} className="py-32 px-6 relative bg-gray-50/50 dark:bg-gray-950 overflow-hidden">
->>>>>>> origin/yogesh-final
             <div className="max-w-5xl mx-auto relative z-10">
                 <div className="text-center mb-24">
                     <motion.span
@@ -308,11 +236,7 @@ function TimelineSection({ steps }) {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ delay: 0.1 }}
-<<<<<<< HEAD
-                        className="text-5xl md:text-6xl font-black font-outfit text-gray-900 tracking-tight"
-=======
                         className="text-5xl md:text-6xl font-black font-outfit text-gray-900 dark:text-gray-100 tracking-tight"
->>>>>>> origin/yogesh-final
                     >
                         A Decade of <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Innovation</span>
                     </motion.h2>
@@ -320,11 +244,7 @@ function TimelineSection({ steps }) {
 
                 <div className="relative">
                     {/* Central Track - Subtle */}
-<<<<<<< HEAD
-                    <div className="absolute left-[28px] md:left-1/2 transform md:-translate-x-1/2 top-0 bottom-0 w-[2px] bg-gray-200/60" />
-=======
                     <div className="absolute left-[28px] md:left-1/2 transform md:-translate-x-1/2 top-0 bottom-0 w-[2px] bg-gray-200/60 dark:bg-gray-800/60" />
->>>>>>> origin/yogesh-final
 
                     {/* Animated Progress Bar */}
                     <motion.div
@@ -359,15 +279,6 @@ function TimelineItem({ step, index }) {
             {/* Content Card */}
             <div className={`flex-1 w-full pl-20 md:pl-0 text-left ${isEven ? 'md:text-left' : 'md:text-right'} group`}>
                 <div className={`relative z-10 ${!isEven ? 'md:flex md:flex-col md:items-end' : ''}`}>
-<<<<<<< HEAD
-                    <span className="inline-block text-6xl md:text-8xl font-black text-gray-100 absolute -top-10 -z-10 select-none transition-colors duration-500 group-hover:text-blue-50/80">
-                        {step.year}
-                    </span>
-
-                    <div className="relative bg-white/60 backdrop-blur-sm p-8 rounded-2xl border border-gray-100/50 shadow-sm hover:shadow-xl hover:border-blue-100/50 transition-all duration-500 hover:-translate-y-1">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-3 font-outfit tracking-tight">{step.title}</h3>
-                        <p className="text-gray-600 leading-relaxed font-inter text-lg">{step.description}</p>
-=======
                     <span className="inline-block text-6xl md:text-8xl font-black text-gray-100 dark:text-gray-800 absolute -top-10 -z-10 select-none transition-colors duration-500 group-hover:text-blue-50/80 dark:group-hover:text-blue-900/20">
                         {step.year}
                     </span>
@@ -375,7 +286,6 @@ function TimelineItem({ step, index }) {
                     <div className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm p-8 rounded-2xl border border-gray-100/50 dark:border-gray-700/50 shadow-sm hover:shadow-xl hover:border-blue-100/50 dark:hover:border-blue-500/30 transition-all duration-500 hover:-translate-y-1">
                         <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3 font-outfit tracking-tight">{step.title}</h3>
                         <p className="text-gray-600 dark:text-gray-300 leading-relaxed font-inter text-lg">{step.description}</p>
->>>>>>> origin/yogesh-final
 
                         {/* Decorative Year Tag */}
                         <div className={`absolute -top-3 ${isEven ? 'right-6' : 'right-6 md:left-6 md:right-auto'} bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg`}>
@@ -387,11 +297,7 @@ function TimelineItem({ step, index }) {
 
             {/* Central Node */}
             <div className="absolute left-[20px] md:left-1/2 transform md:-translate-x-1/2 flex items-center justify-center">
-<<<<<<< HEAD
-                <div className="w-[18px] h-[18px] bg-white rounded-full border-4 border-gray-200 z-10 transition-colors duration-500 group-hover:border-blue-500 shadow-sm" />
-=======
                 <div className="w-[18px] h-[18px] bg-white dark:bg-gray-900 rounded-full border-4 border-gray-200 dark:border-gray-700 z-10 transition-colors duration-500 group-hover:border-blue-500 shadow-sm" />
->>>>>>> origin/yogesh-final
 
                 {/* Pulsing effect when in view */}
                 <motion.div

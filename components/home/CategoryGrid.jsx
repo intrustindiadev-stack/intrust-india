@@ -3,10 +3,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Gift, CreditCard, Sun, Smartphone, ShoppingBag, Plane } from 'lucide-react';
-<<<<<<< HEAD
-import { useLanguage } from '@/lib/i18n/LanguageContext';
-=======
->>>>>>> origin/yogesh-final
+
 
 const categories = [
     { id: 'gift-cards', label: 'Gift Cards', icon: Gift, href: '/gift-cards' },
@@ -18,19 +15,13 @@ const categories = [
 ];
 
 export default function CategoryGrid() {
-<<<<<<< HEAD
-    const { t } = useLanguage();
-=======
->>>>>>> origin/yogesh-final
+
 
     return (
         <div className="grid grid-cols-3 md:grid-cols-6 gap-4 md:gap-6 w-full max-w-4xl mx-auto mt-10 px-4 justify-items-center">
             {categories.map((cat, idx) => {
                 const Icon = cat.icon;
-                // Correct label usage with fallback
-                const key = `hero.categories.${cat.id.replace('-', '')}`;
-                const translation = t(key);
-                const label = (translation && translation !== key) ? translation : cat.label;
+                const label = cat.label;
 
                 return (
                     <Link href={cat.href} key={cat.id} className="group">

@@ -1,11 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
-<<<<<<< HEAD
-=======
 @variant dark (.dark &);
-
->>>>>>> origin/yogesh-final
 /* Premium Color Palette */
 :root {
   --color-dark-navy: #171A21;
@@ -14,9 +10,6 @@
   --color-sky-blue: #92BCEA;
   --color-lavender: #AFB3F7;
   --color-white: #FFFFFF;
-<<<<<<< HEAD
-=======
-
   /* Light mode colors */
   --bg-primary: #FFFFFF;
   --bg-secondary: #F8F9FA;
@@ -45,7 +38,6 @@
 body,
 .theme-transition {
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
->>>>>>> origin/yogesh-final
 }
 
 
@@ -54,9 +46,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-<<<<<<< HEAD
-  background: var(--color-white);
-=======
   background-color: #FFFFFF;
   color: #171A21;
 }
@@ -64,7 +53,6 @@ body {
 .dark body {
   background-color: #111827;
   color: #F3F4F6;
->>>>>>> origin/yogesh-final
 }
 
 /* Smooth Scrolling */
@@ -317,19 +305,6 @@ html {
 
 /* Glassmorphism */
 .glass {
-<<<<<<< HEAD
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.glass-dark {
-  background: rgba(23, 26, 33, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-=======
   background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -341,7 +316,6 @@ html {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
->>>>>>> origin/yogesh-final
 }
 
 /* Glow Effects */

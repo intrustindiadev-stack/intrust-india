@@ -44,13 +44,8 @@ export default function CustomerProfilePage() {
 
     if (authLoading) {
         return (
-<<<<<<< HEAD
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-=======
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
->>>>>>> origin/yogesh-final
             </div>
         );
     }
@@ -61,11 +56,7 @@ export default function CustomerProfilePage() {
     }
 
     return (
-<<<<<<< HEAD
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-=======
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
->>>>>>> origin/yogesh-final
             <Navbar />
 
             {toastMsg && (
@@ -79,53 +70,26 @@ export default function CustomerProfilePage() {
                     <Breadcrumbs items={[{ label: 'Profile' }]} />
 
                     <div className="mb-8">
-<<<<<<< HEAD
-                        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 font-[family-name:var(--font-outfit)]">
-                            My Profile
-                        </h1>
-                        <p className="text-gray-600">Manage your account and KYC verification</p>
-=======
                         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2 font-[family-name:var(--font-outfit)]">
                             My Profile
                         </h1>
                         <p className="text-gray-600 dark:text-gray-400">Manage your account and KYC verification</p>
->>>>>>> origin/yogesh-final
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-1 space-y-6">
-<<<<<<< HEAD
-                            <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-lg">
-=======
                             <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
->>>>>>> origin/yogesh-final
                                 <div className="text-center mb-6">
                                     <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center text-white text-3xl font-bold shadow-lg">
                                         {profile?.full_name?.charAt(0) || authUser.email?.charAt(0) || 'U'}
                                     </div>
-<<<<<<< HEAD
-                                    <h2 className="text-xl font-bold text-gray-900 mb-1">{profile?.full_name || 'User'}</h2>
-                                    <p className="text-sm text-gray-600">Customer since {new Date(profile?.created_at || authUser.created_at).getFullYear()}</p>
-=======
                                     <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">{profile?.full_name || 'User'}</h2>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">Customer since {new Date(profile?.created_at || authUser.created_at).getFullYear()}</p>
->>>>>>> origin/yogesh-final
                                 </div>
 
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-3 text-sm">
                                         <Mail size={18} className="text-gray-400" />
-<<<<<<< HEAD
-                                        <span className="text-gray-700 truncate">{authUser.email}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm">
-                                        <Phone size={18} className="text-gray-400" />
-                                        <span className="text-gray-700">{profile?.phone || 'No phone added'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm">
-                                        <Calendar size={18} className="text-gray-400" />
-                                        <span className="text-gray-700">Joined {new Date(authUser.created_at).toLocaleDateString()}</span>
-=======
                                         <span className="text-gray-700 dark:text-gray-300 truncate">{authUser.email}</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
@@ -135,7 +99,6 @@ export default function CustomerProfilePage() {
                                     <div className="flex items-center gap-3 text-sm">
                                         <Calendar size={18} className="text-gray-400" />
                                         <span className="text-gray-700 dark:text-gray-300">Joined {new Date(authUser.created_at).toLocaleDateString()}</span>
->>>>>>> origin/yogesh-final
                                     </div>
                                 </div>
                             </div>

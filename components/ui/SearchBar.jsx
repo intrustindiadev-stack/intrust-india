@@ -3,31 +3,18 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ArrowRight, X } from 'lucide-react';
-<<<<<<< HEAD
-import { useLanguage } from '@/lib/i18n/LanguageContext';
-=======
->>>>>>> origin/yogesh-final
+
 
 export default function SearchBar({ className = '' }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchFocused, setSearchFocused] = useState(false);
     const inputRef = useRef(null);
-<<<<<<< HEAD
-    const { t } = useLanguage();
-
-    const suggestions = [
-        t('suggestions.loans'),
-        t('suggestions.giftCards'),
-        t('suggestions.recharge'),
-        t('suggestions.solar'),
-=======
 
     const suggestions = [
         'Personal Loans',
         'Gift Cards',
         'Mobile Recharge',
         'Solar Solutions',
->>>>>>> origin/yogesh-final
     ];
 
     const handleSearch = (e) => {
@@ -66,23 +53,14 @@ export default function SearchBar({ className = '' }) {
                         className={`
                             relative flex items-center
                             w-full
-<<<<<<< HEAD
-                            bg-white/70 backdrop-blur-2xl
-=======
                             bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl
->>>>>>> origin/yogesh-final
                             border transition-all duration-300
                             rounded-full
                             shadow-[0_8px_30px_rgb(0,0,0,0.04)]
                             hover:shadow-[0_15px_30px_rgb(0,0,0,0.08)]
                             ${searchFocused
-<<<<<<< HEAD
-                                ? 'border-[#92BCEA] shadow-[0_0_0_4px_rgba(146,188,234,0.1)] bg-white/95'
-                                : 'border-white/50 hover:border-white/80'
-=======
                                 ? 'border-[#92BCEA] shadow-[0_0_0_4px_rgba(146,188,234,0.1)] bg-white/95 dark:bg-gray-800/95'
                                 : 'border-white/50 dark:border-gray-700/50 hover:border-white/80 dark:hover:border-gray-600/80'
->>>>>>> origin/yogesh-final
                             }
                             pl-5 pr-2 py-2 md:pl-8 md:py-3
                         `}
@@ -103,21 +81,13 @@ export default function SearchBar({ className = '' }) {
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onFocus={() => setSearchFocused(true)}
                             onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-<<<<<<< HEAD
-                            placeholder={t('hero.searchPlaceholder')}
-=======
                             placeholder="Search for services, offers, and more..."
->>>>>>> origin/yogesh-final
                             className="
                                 flex-1 w-full
                                 bg-transparent
                                 border-none outline-none ring-0
                                 p-0
-<<<<<<< HEAD
-                                text-slate-800 placeholder:text-slate-400
-=======
                                 text-slate-800 dark:text-gray-100 placeholder:text-slate-400 dark:placeholder:text-gray-500
->>>>>>> origin/yogesh-final
                                 text-base md:text-lg font-medium
                                 overflow-hidden text-ellipsis whitespace-nowrap
                             "
@@ -174,13 +144,8 @@ export default function SearchBar({ className = '' }) {
                             className="
                                 absolute top-full left-0 right-0 mt-4
                                 p-2
-<<<<<<< HEAD
-                                bg-white/90 backdrop-blur-xl
-                                border border-white/50
-=======
                                 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl
                                 border border-white/50 dark:border-gray-700/50
->>>>>>> origin/yogesh-final
                                 rounded-3xl
                                 shadow-2xl shadow-blue-900/5
                                 overflow-hidden
@@ -200,13 +165,8 @@ export default function SearchBar({ className = '' }) {
                                             flex items-center gap-3
                                             w-full px-4 py-3
                                             rounded-2xl
-<<<<<<< HEAD
-                                            text-left text-slate-700
-                                            hover:bg-blue-50 hover:text-blue-600
-=======
                                             text-left text-slate-700 dark:text-gray-300
                                             hover:bg-blue-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400
->>>>>>> origin/yogesh-final
                                             transition-colors group
                                         "
                                         onClick={() => setSearchQuery(suggestion)}

@@ -1,11 +1,7 @@
 import { createAdminClient } from '@/lib/supabaseServer';
-<<<<<<< HEAD
-import UsersTable from './UsersTable';
-=======
 import Link from 'next/link';
 import { Users } from 'lucide-react';
 import UserCard from '@/components/admin/users/UserCard';
->>>>>>> origin/yogesh-final
 
 export const dynamic = 'force-dynamic';
 
@@ -60,14 +56,6 @@ export default async function AdminUsersPage({ searchParams }) {
                 <p className="text-gray-500 mt-1">Manage user profiles and KYC verification</p>
             </div>
 
-<<<<<<< HEAD
-            <UsersTable
-                initialUsers={users || []}
-                initialTotal={count || 0}
-                currentPage={page}
-                totalPages={totalPages}
-            />
-=======
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {(users || []).map((user) => (
                     <UserCard key={user.id} user={user} />
@@ -113,7 +101,6 @@ export default async function AdminUsersPage({ searchParams }) {
                     </Link>
                 </div>
             </div>
->>>>>>> origin/yogesh-final
         </div>
     );
 }

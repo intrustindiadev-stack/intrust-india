@@ -40,21 +40,13 @@ const TrustItem = ({ icon: Icon, label }) => (
         className="flex items-center gap-2 px-4 py-2"
     >
         <Icon size={16} className="text-[#92BCEA]" strokeWidth={2.5} />
-<<<<<<< HEAD
-        <span className="text-xs font-bold uppercase tracking-widest text-[#617073]">{label}</span>
-=======
         <span className="text-xs font-bold uppercase tracking-widest text-[#617073] dark:text-gray-400">{label}</span>
->>>>>>> origin/yogesh-final
     </motion.div>
 );
 
 export default function CTASection() {
     return (
-<<<<<<< HEAD
-        <section className="relative py-12 md:py-20 bg-white overflow-hidden font-[family-name:var(--font-outfit)] flex flex-col items-center justify-center">
-=======
         <section className="relative py-12 md:py-20 bg-white dark:bg-gray-900 overflow-hidden font-[family-name:var(--font-outfit)] flex flex-col items-center justify-center">
->>>>>>> origin/yogesh-final
 
             {/* Minimal Background - Subtle & Clean */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
@@ -106,11 +98,7 @@ export default function CTASection() {
                     transition={{ duration: 0.6, delay: 0.1 }}
                     className="mb-4"
                 >
-<<<<<<< HEAD
-                    <h2 className="text-4xl md:text-6xl font-bold text-[#171A21] tracking-tight leading-[1.1]">
-=======
                     <h2 className="text-4xl md:text-6xl font-bold text-[#171A21] dark:text-gray-100 tracking-tight leading-[1.1]">
->>>>>>> origin/yogesh-final
                         The future of banking is <br />
                         <span className="text-[#92BCEA]">here and now.</span>
                     </h2>
@@ -122,15 +110,9 @@ export default function CTASection() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.6, delay: 0.2 }}
-<<<<<<< HEAD
-                    className="text-lg md:text-xl text-[#617073] max-w-lg mx-auto mb-8 leading-relaxed"
-                >
-                    Join <span className="font-semibold text-[#171A21]">50,000+ users</span> experiencing the next generation of financial freedom.
-=======
                     className="text-lg md:text-xl text-[#617073] dark:text-gray-300 max-w-lg mx-auto mb-8 leading-relaxed"
                 >
                     Join <span className="font-semibold text-[#171A21] dark:text-gray-100">50,000+ users</span> experiencing the next generation of financial freedom.
->>>>>>> origin/yogesh-final
                 </motion.p>
 
                 {/* Actions - Clean Layout */}

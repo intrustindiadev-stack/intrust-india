@@ -22,7 +22,6 @@ export default function LoginPage() {
         setError('');
         setLoading(true);
 
-<<<<<<< HEAD
         // 1. Check if user exists (Feature: Phone Validation)
         try {
             // Use RPC to securely check existence even with RLS enabled
@@ -49,9 +48,6 @@ export default function LoginPage() {
             setLoading(false);
             return;
         }
-
-=======
->>>>>>> origin/yogesh-final
         const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
         const { error: otpError } = await signInWithOTP(formattedPhone);
 
@@ -109,18 +105,6 @@ export default function LoginPage() {
                 const role = profile?.role;
                 console.log('[LOGIN] Redirecting for role:', role);
 
-<<<<<<< HEAD
-                // Refresh to ensure middleware/server components see the new session
-                router.refresh();
-
-                // Client-side redirect
-                if (role === 'merchant') {
-                    router.push('/merchant/dashboard');
-                } else if (role === 'admin') {
-                    router.push('/admin');
-                } else {
-                    router.push('/dashboard');
-=======
                 // Force hard redirect
                 if (role === 'merchant') {
                     window.location.href = '/merchant/dashboard';
@@ -128,7 +112,6 @@ export default function LoginPage() {
                     window.location.href = '/admin';
                 } else {
                     window.location.href = '/dashboard';
->>>>>>> origin/yogesh-final
                 }
             } else {
                 console.error('[LOGIN] No user returned from verifyOTP');

@@ -33,25 +33,15 @@ export default function Pills({ items, className = '' }) {
                             boxShadow: '0 8px 20px rgba(146, 188, 234, 0.15)',
                         }}
                         whileTap={{ scale: 0.98 }}
-<<<<<<< HEAD
-                        className="flex items-center gap-2 md:gap-3 px-4 py-2 md:px-6 md:py-3 bg-white/60 border border-white/80 rounded-xl hover:bg-white/95 hover:border-[#92BCEA]/50 transition-all group shadow-sm hover:shadow-md backdrop-blur-md"
-=======
                         className="flex items-center gap-2 md:gap-3 px-4 py-2 md:px-6 md:py-3 bg-white/60 dark:bg-gray-800/60 border border-white/80 dark:border-gray-700/80 rounded-xl hover:bg-white/95 dark:hover:bg-gray-700/95 hover:border-[#92BCEA]/50 transition-all group shadow-sm hover:shadow-md backdrop-blur-md"
->>>>>>> origin/yogesh-final
                     >
                         <motion.div
                             whileHover={{ rotate: 15 }}
                             transition={{ duration: 0.3 }}
                         >
-<<<<<<< HEAD
-                            <Icon size={18} className="text-[#617073] group-hover:text-[#92BCEA] transition-colors" strokeWidth={2} />
-                        </motion.div>
-                        <span className="text-sm font-medium text-[#171A21] tracking-wide">
-=======
                             <Icon size={18} className="text-[#617073] dark:text-gray-400 group-hover:text-[#92BCEA] transition-colors" strokeWidth={2} />
                         </motion.div>
                         <span className="text-sm font-medium text-[#171A21] dark:text-gray-100 tracking-wide">
->>>>>>> origin/yogesh-final
                             {item.label}
                         </span>
                     </motion.a>

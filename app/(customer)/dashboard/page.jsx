@@ -154,23 +154,14 @@ export default function CustomerDashboardPage() {
 
     if (authLoading || loading) {
         return (
-<<<<<<< HEAD
-            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center font-[family-name:var(--font-outfit)]">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-=======
             <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 flex items-center justify-center font-[family-name:var(--font-outfit)]">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 dark:border-blue-400"></div>
->>>>>>> origin/yogesh-final
             </div>
         );
     }
 
     return (
-<<<<<<< HEAD
-        <div className="min-h-screen bg-[#F8FAFC] font-[family-name:var(--font-outfit)]">
-=======
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)]">
->>>>>>> origin/yogesh-final
             <Navbar />
 
             <div style={{ paddingTop: '15vh' }} className="pb-24 px-4 sm:px-6">
@@ -184,17 +175,10 @@ export default function CustomerDashboardPage() {
                         transition={{ duration: 0.5 }}
                         className="mb-8"
                     >
-<<<<<<< HEAD
-                        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-2 tracking-tight">
-                            Welcome back, {userData.name.split(' ')[0]}! 👋
-                        </h1>
-                        <p className="text-slate-500 text-lg">
-=======
                         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-gray-100 mb-2 tracking-tight">
                             Welcome back, {userData.name.split(' ')[0]}! 👋
                         </h1>
                         <p className="text-slate-500 dark:text-gray-400 text-lg">
->>>>>>> origin/yogesh-final
                             Manage your wallet, cards, and payments across the system.
                         </p>
                     </motion.div>
@@ -209,22 +193,13 @@ export default function CustomerDashboardPage() {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.5, delay: index * 0.1 }}
-<<<<<<< HEAD
-                                    className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-all group"
-=======
                                     className="bg-white dark:bg-gray-800 rounded-2xl border border-slate-100 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-all group"
->>>>>>> origin/yogesh-final
                                 >
                                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-4 shadow-lg shadow-gray-200 group-hover:scale-110 transition-transform`}>
                                         <Icon size={20} className="text-white" />
                                     </div>
-<<<<<<< HEAD
-                                    <div className="text-2xl font-bold text-slate-900 mb-1">{stat.value}</div>
-                                    <div className="text-sm font-medium text-slate-500">{stat.label}</div>
-=======
                                     <div className="text-2xl font-bold text-slate-900 dark:text-gray-100 mb-1">{stat.value}</div>
                                     <div className="text-sm font-medium text-slate-500 dark:text-gray-400">{stat.label}</div>
->>>>>>> origin/yogesh-final
                                 </motion.div>
                             );
                         })}
@@ -239,17 +214,10 @@ export default function CustomerDashboardPage() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.3 }}
-<<<<<<< HEAD
-                                className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm"
-                            >
-                                <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-xl font-bold text-slate-900">Quick Services</h2>
-=======
                                 className="bg-white dark:bg-gray-800 rounded-3xl border border-slate-100 dark:border-gray-700 p-8 shadow-sm"
                             >
                                 <div className="flex items-center justify-between mb-6">
                                     <h2 className="text-xl font-bold text-slate-900 dark:text-gray-100">Quick Services</h2>
->>>>>>> origin/yogesh-final
                                     <Link href="/services" className="text-blue-600 text-sm font-bold hover:underline">View All</Link>
                                 </div>
                                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-6">
@@ -258,11 +226,7 @@ export default function CustomerDashboardPage() {
                                             <div className={`w-14 h-14 rounded-2xl ${service.color} flex items-center justify-center transition-transform group-hover:scale-110`}>
                                                 <service.icon size={24} />
                                             </div>
-<<<<<<< HEAD
-                                            <span className="text-xs font-bold text-slate-600 group-hover:text-blue-600 transition-colors">{service.label}</span>
-=======
                                             <span className="text-xs font-bold text-slate-600 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{service.label}</span>
->>>>>>> origin/yogesh-final
                                         </Link>
                                     ))}
                                 </div>
@@ -273,30 +237,14 @@ export default function CustomerDashboardPage() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.4 }}
-<<<<<<< HEAD
-                                className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm"
-                            >
-                                <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-xl font-bold text-slate-900">Recent Activity</h2>
-=======
                                 className="bg-white dark:bg-gray-800 rounded-3xl border border-slate-100 dark:border-gray-700 p-8 shadow-sm"
                             >
                                 <div className="flex items-center justify-between mb-6">
                                     <h2 className="text-xl font-bold text-slate-900 dark:text-gray-100">Recent Activity</h2>
->>>>>>> origin/yogesh-final
                                     <Link href="/my-giftcards" className="text-blue-600 text-sm font-bold hover:underline">View All</Link>
                                 </div>
                                 <div className="space-y-4">
                                     {recentOrders.map((order) => (
-<<<<<<< HEAD
-                                        <div key={order.id} className="flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
-                                            <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-2xl">
-                                                {order.logo}
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="font-bold text-slate-900">{order.brand}</div>
-                                                <div className="text-sm text-slate-500">₹{order.value} • {order.date}</div>
-=======
                                         <div key={order.id} className="flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-gray-600">
                                             <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-gray-700 flex items-center justify-center text-2xl">
                                                 {order.logo}
@@ -304,7 +252,6 @@ export default function CustomerDashboardPage() {
                                             <div className="flex-1">
                                                 <div className="font-bold text-slate-900 dark:text-gray-100">{order.brand}</div>
                                                 <div className="text-sm text-slate-500 dark:text-gray-400">₹{order.value} • {order.date}</div>
->>>>>>> origin/yogesh-final
                                             </div>
                                             <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${order.status === 'delivered' || order.status === 'success'
                                                 ? 'bg-green-50 text-green-700'
@@ -331,24 +278,6 @@ export default function CustomerDashboardPage() {
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.5 }}
-<<<<<<< HEAD
-                                className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm"
-                            >
-                                <h3 className="font-bold text-slate-900 mb-4">Quick Actions</h3>
-                                <div className="space-y-2">
-                                    <Link href="/gift-cards" className="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 group transition-colors">
-                                        <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                            <Gift size={20} />
-                                        </div>
-                                        <div className="font-bold text-slate-700 group-hover:text-blue-700">Buy Gift Cards</div>
-                                        <ChevronRight size={16} className="ml-auto text-slate-400" />
-                                    </Link>
-                                    <Link href="/my-giftcards" className="flex items-center gap-3 p-3 rounded-xl hover:bg-purple-50 group transition-colors">
-                                        <div className="w-10 h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                                            <Package size={20} />
-                                        </div>
-                                        <div className="font-bold text-slate-700 group-hover:text-purple-700">My Orders</div>
-=======
                                 className="bg-white dark:bg-gray-800 rounded-3xl border border-slate-100 dark:border-gray-700 p-6 shadow-sm"
                             >
                                 <h3 className="font-bold text-slate-900 dark:text-gray-100 mb-4">Quick Actions</h3>
@@ -365,7 +294,6 @@ export default function CustomerDashboardPage() {
                                             <Package size={20} />
                                         </div>
                                         <div className="font-bold text-slate-700 dark:text-gray-300 group-hover:text-purple-700 dark:group-hover:text-purple-400">My Orders</div>
->>>>>>> origin/yogesh-final
                                         <ChevronRight size={16} className="ml-auto text-slate-400" />
                                     </Link>
                                 </div>

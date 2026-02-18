@@ -6,18 +6,12 @@ import { CreditCard, TrendingUp, Wallet, DollarSign, Gift, Smartphone, Zap, Shie
 import SearchBar from '@/components/ui/SearchBar';
 import Pills from '@/components/ui/Pills';
 import Image from 'next/image';
-<<<<<<< HEAD
-import { useLanguage } from '@/lib/i18n/LanguageContext';
-=======
->>>>>>> origin/yogesh-final
+
 import PartnerLoop from '@/components/home/PartnerLoop';
 
 export default function HeroSection() {
     const heroRef = useRef(null);
-<<<<<<< HEAD
-    const { t } = useLanguage();
-=======
->>>>>>> origin/yogesh-final
+
 
     const { scrollYProgress } = useScroll({
         target: heroRef,
@@ -39,18 +33,6 @@ export default function HeroSection() {
         { Icon: Shield, position: 'hidden lg:block bottom-20 left-[25%]', delay: 1.4, color: '#AFB3F7', mobilePosition: 'hidden' }, // Moved away from center
     ];
 
-<<<<<<< HEAD
-    // All services from BRD - now with i18n
-    const prelinks = [
-        { icon: Gift, label: t('prelinks.giftCards'), href: '/gift-cards' },
-        { icon: CreditCard, label: t('prelinks.loans'), href: '/loans' },
-        { icon: Sun, label: t('prelinks.solar'), href: '/solar' },
-        { icon: Smartphone, label: t('prelinks.recharge'), href: '/recharge' },
-        { icon: ShoppingBag, label: t('prelinks.shopping'), href: '/shopping' },
-        { icon: Plane, label: t('prelinks.travel'), href: '/travel' },
-        { icon: Zap, label: t('prelinks.bills'), href: '/bills' },
-        { icon: Wallet, label: t('prelinks.wallet'), href: '/wallet' },
-=======
     // All services from BRD
     const prelinks = [
         { icon: Gift, label: 'Gift Cards', href: '/gift-cards' },
@@ -61,7 +43,6 @@ export default function HeroSection() {
         { icon: Plane, label: 'Travel', href: '/travel' },
         { icon: Zap, label: 'Bills', href: '/bills' },
         { icon: Wallet, label: 'Wallet', href: '/wallet' },
->>>>>>> origin/yogesh-final
     ];
 
     return (
@@ -75,11 +56,7 @@ export default function HeroSection() {
                     className="object-cover opacity-90"
                     priority
                 />
-<<<<<<< HEAD
-                <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/80 to-white/95" />
-=======
                 <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/80 to-white/95 dark:from-gray-900/95 dark:via-gray-900/80 dark:to-gray-900/95" />
->>>>>>> origin/yogesh-final
             </div>
 
             {/* Floating Icons */}
@@ -103,11 +80,7 @@ export default function HeroSection() {
                                 repeat: Infinity,
                                 ease: "easeInOut"
                             }}
-<<<<<<< HEAD
-                            className="p-3 lg:p-4 rounded-3xl bg-white/40 shadow-lg backdrop-blur-xl border border-white/50"
-=======
                             className="p-3 lg:p-4 rounded-3xl bg-white/40 dark:bg-gray-800/40 shadow-lg backdrop-blur-xl border border-white/50 dark:border-gray-700/50"
->>>>>>> origin/yogesh-final
                             style={{
                                 boxShadow: `0 8px 32px 0 ${color}20`,
                                 opacity: 0.5

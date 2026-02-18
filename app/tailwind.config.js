@@ -1,15 +1,11 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: ["class"],
-<<<<<<< HEAD
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-=======
   content: [
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './lib/**/*.{js,ts,jsx,tsx,mdx}',
   ],
->>>>>>> origin/yogesh-final
   theme: {
     extend: {
       colors: {
