@@ -29,16 +29,26 @@ export function useMerchant() {
                 setIsAdmin(isUserAdmin);
 
                 if (isUserAdmin) {
-                    // Admin: Fetch most recent merchant for now
-                    // TODO: Add context switcher for admins
-                    const { data, error: merchantError } = await supabase
+                    // 1. Try to fetch own merchant first
+                    const { data: ownMerchant, error: ownMerchantError } = await supabase
                         .from('merchants')
                         .select('*')
-                        .order('created_at', { ascending: false })
-                        .limit(1);
+                        .eq('user_id', user.id)
+                        .single();
 
-                    if (merchantError) throw merchantError;
-                    setMerchant(data?.[0] || null); // Return null if no merchants exist
+                    if (ownMerchant) {
+                        setMerchant(ownMerchant);
+                    } else {
+                        // 2. Fallback: Fetch most recent merchant for debug/admin view
+                        const { data, error: merchantError } = await supabase
+                            .from('merchants')
+                            .select('*')
+                            .order('created_at', { ascending: false })
+                            .limit(1);
+
+                        if (merchantError) throw merchantError;
+                        setMerchant(data?.[0] || null);
+                    }
                 } else {
                     // Merchant: Fetch own record
                     const { data, error: merchantError } = await supabase
@@ -47,14 +57,14 @@ export function useMerchant() {
                         .eq('user_id', user.id)
                         .single();
 
-                    if (merchantError && merchantError.code !== 'PGRST116') { // Ignore "no rows" error for single()
+                    if (merchantError && merchantError.code !== 'PGRST116') {
                         throw merchantError;
                     }
                     setMerchant(data || null);
                 }
 
             } catch (err) {
-                console.error('Error fetching merchant:', err);
+                console.error('[useMerchant] Error fetching merchant:', err);
                 setError(err.message);
             } finally {
                 setLoading(false);
@@ -63,6 +73,11 @@ export function useMerchant() {
 
         fetchMerchant();
     }, []);
+
+    // Debug log
+    useEffect(() => {
+        if (!loading) console.log('[useMerchant] State:', { merchant, isAdmin, loading, error });
+    }, [loading, merchant, isAdmin, error]);
 
     return { merchant, loading, error, isAdmin };
 }

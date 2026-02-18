@@ -11,6 +11,7 @@ import { Star, ShieldCheck, Clock, CheckCircle, Heart, Share2, Loader2, AlertCir
 import { motion } from 'framer-motion';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
 
 export default function GiftCardDetailPage({ params }) {
     const { user } = useAuth();
@@ -21,13 +22,11 @@ export default function GiftCardDetailPage({ params }) {
 
     const [card, setCard] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [purchasing, setPurchasing] = useState(false);
-    const [error, setError] = useState(null);
-    const [purchaseError, setPurchaseError] = useState(null);
-    const [purchaseSuccess, setPurchaseSuccess] = useState(false);
-    const [quantity, setQuantity] = useState(1); // Future proofing
     const [kycStatus, setKycStatus] = useState(null);
     const [kycLoading, setKycLoading] = useState(true);
+
+    // Payment Modal State
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     // ✅ COMBINED useEffect - fetch card and KYC in parallel
     useEffect(() => {
@@ -39,7 +38,6 @@ export default function GiftCardDetailPage({ params }) {
             try {
                 setLoading(true);
                 setKycLoading(true);
-                setError(null);
 
                 // Parallel fetch
                 const fetchPromises = [
@@ -82,7 +80,7 @@ export default function GiftCardDetailPage({ params }) {
             } catch (err) {
                 if (!isMounted) return;
                 console.error('Error fetching data:', err);
-                setError(err.message || 'Failed to load gift card');
+                toast.error('Failed to load gift card details');
             } finally {
                 if (isMounted) {
                     setLoading(false);
@@ -97,169 +95,22 @@ export default function GiftCardDetailPage({ params }) {
         return () => {
             isMounted = false;
         };
-    }, [id, user]); // Include user in dependencies
+    }, [id, user]);
 
-    const loadRazorpayScript = () => {
-        return new Promise((resolve) => {
-            const script = document.createElement('script');
-            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-            script.onload = () => resolve(true);
-            script.onerror = () => resolve(false);
-            document.body.appendChild(script);
-        });
-    };
 
-    async function handlePurchase() {
-        const purchaseId = Math.random().toString(36).slice(2);
-        console.log('[PURCHASE:START]', { purchaseId, cardId: card.id });
-
+    function handleBuyNow() {
         if (!user) {
             router.push('/login');
             return;
         }
 
-        // Create AbortController for this purchase
-        const abortController = new AbortController();
-        const timeoutId = setTimeout(() => abortController.abort(), 15000); // 15s timeout
-
-        try {
-            setPurchasing(true);
-            setPurchaseError(null);
-
-            // Log Razorpay script load
-            const scriptStart = Date.now();
-            const isScriptLoaded = await loadRazorpayScript();
-            console.log('[PURCHASE:SCRIPT_LOADED]', {
-                purchaseId,
-                elapsed: Date.now() - scriptStart,
-                success: isScriptLoaded
-            });
-
-            if (!isScriptLoaded) {
-                throw new Error('Razorpay SDK failed to load. Are you online?');
-            }
-
-            // 1. Create Order with AbortController
-            const orderStart = Date.now();
-            console.log('[PURCHASE:CREATE_ORDER_START]', { purchaseId });
-
-            const response = await fetch('/api/create-order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ giftcardId: card.id }),
-                signal: abortController.signal // ← Add abort signal
-            });
-
-            clearTimeout(timeoutId); // Clear timeout on success
-
-            console.log('[PURCHASE:CREATE_ORDER_END]', {
-                purchaseId,
-                elapsed: Date.now() - orderStart,
-                status: response.status,
-                ok: response.ok
-            });
-
-            const orderData = await response.json();
-
-            if (!response.ok) {
-                console.error('[PURCHASE:CREATE_ORDER_FAILED]', {
-                    purchaseId,
-                    status: response.status,
-                    error: orderData.error
-                });
-
-                if (response.status === 403 || orderData.error === 'KYC_REQUIRED') {
-                    toast.error("KYC Verification Required. Please complete KYC first.");
-                    return;
-                }
-                throw new Error(orderData.error || 'Failed to create order');
-            }
-
-            // 2. Initialize Razorpay
-            const options = {
-                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-                amount: orderData.amount,
-                currency: orderData.currency,
-                name: 'INTRUST Gift Cards',
-                description: `Purchase of ${card.title}`,
-                image: '/logo.png',
-                order_id: orderData.id,
-                handler: async function (razorpayResponse) {
-                    try {
-                        // Create new AbortController for verification
-                        const verifyAbortController = new AbortController();
-                        const verifyTimeoutId = setTimeout(() => verifyAbortController.abort(), 10000);
-
-                        const verifyRes = await fetch('/api/verify-payment', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                razorpay_order_id: razorpayResponse.razorpay_order_id,
-                                razorpay_payment_id: razorpayResponse.razorpay_payment_id,
-                                razorpay_signature: razorpayResponse.razorpay_signature,
-                            }),
-                            signal: verifyAbortController.signal // ← Add abort signal
-                        });
-
-                        clearTimeout(verifyTimeoutId);
-
-                        const verifyData = await verifyRes.json();
-
-                        if (verifyData.success) {
-                            setPurchaseSuccess(true);
-                            setTimeout(() => {
-                                router.push('/my-giftcards');
-                            }, 2000);
-                        } else {
-                            throw new Error('Payment verification failed');
-                        }
-                    } catch (error) {
-                        console.error('Verification Error:', error);
-                        if (error.name === 'AbortError') {
-                            setPurchaseError('Payment verification timed out. Please contact support with your payment ID.');
-                        } else {
-                            setPurchaseError('Payment successful but verification failed. Contact support.');
-                        }
-                    }
-                },
-                prefill: {
-                    name: user.user_metadata?.full_name || user.email,
-                    email: user.email,
-                },
-                theme: {
-                    color: '#2563EB',
-                },
-                modal: {
-                    ondismiss: function () {
-                        abortController.abort(); // Cancel pending requests if user closes modal
-                    }
-                }
-            };
-
-            const paymentObject = new window.Razorpay(options);
-            paymentObject.on('payment.failed', function (response) {
-                setPurchaseError(`Payment Failed: ${response.error.description}`);
-            });
-            paymentObject.open();
-
-        } catch (err) {
-            console.error('[PURCHASE:ERROR]', {
-                purchaseId,
-                error: err.message,
-                stack: err.stack,
-                userAgent: navigator.userAgent
-            });
-
-            // Better error messages for different abort scenarios
-            if (err.name === 'AbortError') {
-                setPurchaseError('Request timed out. Please check your connection and try again.');
-            } else {
-                setPurchaseError(err.message || 'Could not initiate purchase.');
-            }
-        } finally {
-            clearTimeout(timeoutId);
-            setPurchasing(false);
+        // Optional: Block purchase if KYC mandatory
+        if (kycStatus !== 'approved' && kycStatus !== 'verified') {
+            // toast.error("Please complete KYC first");
+            // return;
         }
+
+        setIsPaymentModalOpen(true);
     }
 
     // Calculation Helper - Handling Paise vs Rupees
@@ -281,14 +132,14 @@ export default function GiftCardDetailPage({ params }) {
         );
     }
 
-    if (error || !card) {
+    if (!card) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col">
                 <Navbar />
                 <div className="flex-1 flex flex-col items-center justify-center pt-24 px-6 text-center">
                     <AlertCircle size={64} className="text-red-500 mb-4" />
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Unavailable</h2>
-                    <p className="text-gray-600 mb-6">{error || 'This gift card is usually not accessible.'}</p>
+                    <p className="text-gray-600 mb-6">Failed to load gift card.</p>
                     <button
                         onClick={() => router.push('/gift-cards')}
                         className="px-6 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors"
@@ -316,45 +167,6 @@ export default function GiftCardDetailPage({ params }) {
                             ]}
                         />
                     </div>
-
-                    {/* Purchase Feedback */}
-                    {purchaseSuccess && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-green-50 border border-green-200 text-green-800 rounded-xl p-4 mb-8 flex items-center gap-3"
-                        >
-                            <CheckCircle size={24} className="text-green-600" />
-                            <span className="font-semibold">Purchase Successful! Redirecting you to your coupons...</span>
-                        </motion.div>
-                    )}
-
-                    {purchaseError && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-4 mb-8"
-                        >
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
-                                <div className="flex items-center gap-3">
-                                    <AlertCircle size={24} className="text-red-600 shrink-0" />
-                                    <span className="font-semibold">
-                                        {purchaseError.includes('Only regular users') || purchaseError.includes('KYC')
-                                            ? "KYC verification is required to purchase this gift card."
-                                            : purchaseError}
-                                    </span>
-                                </div>
-                                {(purchaseError.includes('Only regular users') || purchaseError.includes('KYC')) && (
-                                    <button
-                                        onClick={() => router.push('/profile')}
-                                        className="px-5 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors shadow-sm whitespace-nowrap"
-                                    >
-                                        Complete KYC
-                                    </button>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
 
                     {/* Main Layout Grid */}
                     <div className="grid md:grid-cols-2 gap-10 lg:gap-16 items-start">
@@ -450,21 +262,6 @@ export default function GiftCardDetailPage({ params }) {
                                 </p>
                             </div>
 
-                            {/* Quantity Selector (Visual Only for now) */}
-                            {isAvailable && (
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-900 mb-3">Quantity</label>
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex items-center border border-gray-300 rounded-xl bg-white h-12">
-                                            <button className="px-4 text-gray-500 hover:text-gray-900 transition-colors" disabled>-</button>
-                                            <span className="w-8 text-center font-bold text-gray-900">1</span>
-                                            <button className="px-4 text-gray-500 hover:text-gray-900 transition-colors" disabled>+</button>
-                                        </div>
-                                        <span className="text-xs text-gray-500 font-medium">Max 1 per order</span>
-                                    </div>
-                                </div>
-                            )}
-
                             {/* KYC Warning Banner */}
                             {user && !kycLoading && kycStatus !== 'approved' && kycStatus !== 'verified' && (
                                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
@@ -491,8 +288,8 @@ export default function GiftCardDetailPage({ params }) {
                             {/* Action Buttons */}
                             <div className="flex flex-col gap-3 mt-2">
                                 <button
-                                    onClick={handlePurchase}
-                                    disabled={!isAvailable || purchasing}
+                                    onClick={handleBuyNow}
+                                    disabled={!isAvailable}
                                     className={`
                                         w-full py-4 rounded-xl text-white font-semibold text-lg shadow-lg shadow-blue-200
                                         bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 transition-all
@@ -500,16 +297,7 @@ export default function GiftCardDetailPage({ params }) {
                                         flex items-center justify-center gap-2
                                     `}
                                 >
-                                    {purchasing ? (
-                                        <>
-                                            <Loader2 size={24} className="animate-spin" />
-                                            Processing...
-                                        </>
-                                    ) : !isAvailable ? (
-                                        'Sold Out'
-                                    ) : (
-                                        'Buy Now'
-                                    )}
+                                    {!isAvailable ? 'Sold Out' : 'Buy Now'}
                                 </button>
 
                                 <button className="w-full py-3.5 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
@@ -546,6 +334,15 @@ export default function GiftCardDetailPage({ params }) {
             </div>
 
             <CustomerBottomNav />
+
+            {/* Payment Modal */}
+            <SabpaisaPaymentModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                amount={sellingPrice}
+                user={user}
+                productInfo={card}
+            />
         </div>
     );
 }

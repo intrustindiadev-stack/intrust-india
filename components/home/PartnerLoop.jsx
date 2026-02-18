@@ -15,7 +15,8 @@ export default function PartnerLoop({ className = "", showBorder = true }) {
         { name: 'HDFC Bank', icon: Building2 },
         { name: 'ICICI Bank', icon: Landmark },
         { name: 'SBI', icon: CreditCard },
-        { name: 'Razorpay', icon: Shield },
+        // { name: 'Razorpay', icon: Shield }, // Removed
+
         { name: 'BBPS', icon: Zap },
         { name: 'NPCI', icon: Smartphone },
         { name: 'Visa', icon: Globe },

@@ -17,6 +17,8 @@ export default async function MerchantDashboardPage() {
         redirect('/login');
     }
 
+    console.log('[Dashboard] Authenticated User ID:', user.id);
+
     // 2. Get Merchant Profile & Role
     const { data: profile } = await supabase
         .from('user_profiles')
@@ -27,14 +29,25 @@ export default async function MerchantDashboardPage() {
     let merchant = null;
 
     if (profile?.role === 'admin') {
-        // Admin: Fetch most recent merchant (consistent with useMerchant)
-        const { data } = await supabase
+        // 1. Try to fetch own merchant first
+        const { data: ownMerchant } = await supabase
             .from('merchants')
             .select('*')
-            .order('created_at', { ascending: false })
-            .limit(1)
+            .eq('user_id', user.id)
             .single();
-        merchant = data;
+
+        if (ownMerchant) {
+            merchant = ownMerchant;
+        } else {
+            // 2. Fallback: Fetch most recent merchant
+            const { data } = await supabase
+                .from('merchants')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+            merchant = data;
+        }
     } else {
         // Merchant: Fetch own record
         const { data } = await supabase
@@ -58,13 +71,15 @@ export default async function MerchantDashboardPage() {
     }
 
     // 3. Fetch Data in Parallel
+    console.log('[Dashboard] Fetching data for merchant:', merchant.id);
+
     const [couponsRes, soldCouponsRes] = await Promise.all([
         // Fetch recent coupons for table (limit 10)
         supabase
             .from('coupons')
             .select('*')
             .eq('merchant_id', merchant.id)
-            .eq('is_merchant_owned', true)
+            // Removed is_merchant_owned check to debug visibility
             .order('created_at', { ascending: false })
             .limit(10),
 
@@ -75,6 +90,9 @@ export default async function MerchantDashboardPage() {
             .eq('merchant_id', merchant.id)
             .eq('status', 'sold')
     ]);
+
+    if (couponsRes.error) console.error('[Dashboard] Coupons Fetch Error:', couponsRes.error);
+    if (soldCouponsRes.error) console.error('[Dashboard] Sold Coupons Fetch Error:', soldCouponsRes.error);
 
     // Also get counts
     const [activeCountRes, listedCountRes, soldCountRes] = await Promise.all([
