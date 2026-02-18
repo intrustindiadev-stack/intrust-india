@@ -15,7 +15,7 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   reactStrictMode: true,
-  swcMinify: true,
+
 
   // Remove development features in production
   productionBrowserSourceMaps: false,
