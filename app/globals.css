@@ -1,6 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
+<<<<<<< HEAD
+=======
+@variant dark (.dark &);
+
+>>>>>>> origin/yogesh-final
 /* Premium Color Palette */
 :root {
   --color-dark-navy: #171A21;
@@ -9,6 +14,38 @@
   --color-sky-blue: #92BCEA;
   --color-lavender: #AFB3F7;
   --color-white: #FFFFFF;
+<<<<<<< HEAD
+=======
+
+  /* Light mode colors */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F8F9FA;
+  --text-primary: #171A21;
+  --text-secondary: #617073;
+  --border-color: #E5E7EB;
+  --card-bg: rgba(255, 255, 255, 0.95);
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.3);
+}
+
+/* Dark mode colors - using both selectors for compatibility */
+.dark,
+:root[data-theme="dark"] {
+  --bg-primary: #0F1419;
+  --bg-secondary: #1A1F2E;
+  --text-primary: #E8EAED;
+  --text-secondary: #9CA3AF;
+  --border-color: #2D3748;
+  --card-bg: rgba(26, 31, 46, 0.95);
+  --glass-bg: rgba(15, 20, 25, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Smooth theme transition - Applied selectively to avoid conflicts */
+body,
+.theme-transition {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+>>>>>>> origin/yogesh-final
 }
 
 
@@ -17,7 +54,17 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+<<<<<<< HEAD
   background: var(--color-white);
+=======
+  background-color: #FFFFFF;
+  color: #171A21;
+}
+
+.dark body {
+  background-color: #111827;
+  color: #F3F4F6;
+>>>>>>> origin/yogesh-final
 }
 
 /* Smooth Scrolling */
@@ -270,6 +317,7 @@ html {
 
 /* Glassmorphism */
 .glass {
+<<<<<<< HEAD
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -281,6 +329,19 @@ html {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+=======
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-dark {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+>>>>>>> origin/yogesh-final
 }
 
 /* Glow Effects */

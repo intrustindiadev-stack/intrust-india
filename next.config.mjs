@@ -21,7 +21,7 @@ const nextConfig = {
 
   // Optimize imports
   modularizeImports: {
-    'lucide-react/dist/esm/icons': {
+    'lucide-react': {
       transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}',
     },
   },

@@ -57,11 +57,15 @@ export default async function MyCouponsPage() {
                 face_value_paise,
                 status,
                 purchased_at,
+<<<<<<< HEAD
                 valid_until,
                 merchant_id,
                 merchant:merchants(
                     business_name
                 )
+=======
+                valid_until
+>>>>>>> origin/yogesh-final
             )
         `)
         .eq('user_id', user.id)
@@ -92,9 +96,12 @@ export default async function MyCouponsPage() {
         if (coupon.status === 'used') uiStatus = 'used';
         if (coupon.status === 'sold' && !isExpired) uiStatus = 'active';
 
+<<<<<<< HEAD
         // Resolve Merchant Name
         const merchantName = coupon.merchant?.business_name || 'INTRUST Marketplace';
 
+=======
+>>>>>>> origin/yogesh-final
         return {
             orderId: order.id,
             ...coupon,
@@ -104,7 +111,11 @@ export default async function MyCouponsPage() {
             sellingPrice: coupon.selling_price_paise / 100,
             gradient: getBrandGradient(coupon.brand),
             logo: getBrandLogo(coupon.brand),
+<<<<<<< HEAD
             merchant: merchantName,
+=======
+            merchant: 'INTRUST Marketplace',
+>>>>>>> origin/yogesh-final
             formattedDate: new Date(coupon.purchased_at).toLocaleDateString(),
             formattedExpiry: new Date(coupon.valid_until).toLocaleDateString()
         };
@@ -118,59 +129,103 @@ export default async function MyCouponsPage() {
     const totalSavings = totalValue - totalPaid;
 
     return (
+<<<<<<< HEAD
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+=======
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+>>>>>>> origin/yogesh-final
             <Navbar />
 
             <div style={{ paddingTop: '15vh' }} className="pb-24 px-4 sm:px-6">
                 <div className="max-w-7xl mx-auto">
                     {/* Header */}
                     <div className="mb-8">
+<<<<<<< HEAD
                         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-3">
                             My Gift Cards
                         </h1>
                         <p className="text-gray-600 text-base sm:text-lg">View and manage your purchased gift cards</p>
+=======
+                        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+                            My Gift Cards
+                        </h1>
+                        <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg">View and manage your purchased gift cards</p>
+>>>>>>> origin/yogesh-final
                     </div>
 
                     {/* Stats Cards */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+<<<<<<< HEAD
                         <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-100 shadow-lg">
+=======
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-lg">
+>>>>>>> origin/yogesh-final
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
                                     <ShoppingBag size={20} className="text-white" />
                                 </div>
                             </div>
+<<<<<<< HEAD
                             <div className="text-2xl sm:text-3xl font-bold text-gray-900">{totalCards}</div>
                             <div className="text-xs sm:text-sm text-gray-600">Total Cards</div>
                         </div>
 
                         <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-100 shadow-lg">
+=======
+                            <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">{totalCards}</div>
+                            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Cards</div>
+                        </div>
+
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-lg">
+>>>>>>> origin/yogesh-final
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
                                     <Award size={20} className="text-white" />
                                 </div>
                             </div>
+<<<<<<< HEAD
                             <div className="text-2xl sm:text-3xl font-bold text-gray-900">{activeCount}</div>
                             <div className="text-xs sm:text-sm text-gray-600">Active</div>
                         </div>
 
                         <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-100 shadow-lg">
+=======
+                            <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">{activeCount}</div>
+                            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Active</div>
+                        </div>
+
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-lg">
+>>>>>>> origin/yogesh-final
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                                     <Wallet size={20} className="text-white" />
                                 </div>
                             </div>
+<<<<<<< HEAD
                             <div className="text-xl sm:text-2xl font-bold text-gray-900">₹{totalValue.toFixed(0)}</div>
                             <div className="text-xs sm:text-sm text-gray-600">Total Value</div>
                         </div>
 
                         <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-100 shadow-lg">
+=======
+                            <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">₹{totalValue.toFixed(0)}</div>
+                            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Value</div>
+                        </div>
+
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-lg">
+>>>>>>> origin/yogesh-final
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
                                     <TrendingUp size={20} className="text-white" />
                                 </div>
                             </div>
+<<<<<<< HEAD
                             <div className="text-xl sm:text-2xl font-bold text-green-600">₹{totalSavings.toFixed(0)}</div>
                             <div className="text-xs sm:text-sm text-gray-600">Total Saved</div>
+=======
+                            <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">₹{totalSavings.toFixed(0)}</div>
+                            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Saved</div>
+>>>>>>> origin/yogesh-final
                         </div>
                     </div>
 
@@ -180,7 +235,11 @@ export default async function MyCouponsPage() {
                             {processedCoupons.map((coupon) => (
                                 <div
                                     key={coupon.id}
+<<<<<<< HEAD
                                     className={`bg-white rounded-3xl shadow-lg border overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 ${coupon.uiStatus === 'active' ? 'border-gray-100' : 'border-gray-200 opacity-75'
+=======
+                                    className={`bg-white dark:bg-gray-800 rounded-3xl shadow-lg border overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 ${coupon.uiStatus === 'active' ? 'border-gray-100 dark:border-gray-700' : 'border-gray-200 dark:border-gray-600 opacity-75'
+>>>>>>> origin/yogesh-final
                                         }`}
                                 >
                                     {/* Card Header */}
@@ -224,8 +283,13 @@ export default async function MyCouponsPage() {
                                                 </div>
                                             </div>
                                             <div className="text-right">
+<<<<<<< HEAD
                                                 <div className="text-xs text-gray-500 mb-1">You Paid</div>
                                                 <div className="text-xl sm:text-2xl font-bold text-gray-900">₹{coupon.paidAmount}</div>
+=======
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">You Paid</div>
+                                                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">₹{coupon.paidAmount}</div>
+>>>>>>> origin/yogesh-final
                                                 <div className="text-xs text-green-600 font-semibold">
                                                     Saved ₹{(coupon.faceValue - coupon.paidAmount).toFixed(0)}
                                                 </div>
@@ -238,6 +302,7 @@ export default async function MyCouponsPage() {
                                         {/* Details */}
                                         <div className="space-y-2 mb-4">
                                             <div className="flex items-center justify-between text-sm">
+<<<<<<< HEAD
                                                 <span className="text-gray-600">Merchant</span>
                                                 <span className="font-semibold text-gray-900">{coupon.merchant}</span>
                                             </div>
@@ -248,6 +313,18 @@ export default async function MyCouponsPage() {
                                             <div className="flex items-center justify-between text-sm">
                                                 <span className="text-gray-600">Expires</span>
                                                 <span className="text-gray-900">{coupon.formattedExpiry}</span>
+=======
+                                                <span className="text-gray-600 dark:text-gray-400">Merchant</span>
+                                                <span className="font-semibold text-gray-900 dark:text-gray-100">{coupon.merchant}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-gray-600 dark:text-gray-400">Purchased</span>
+                                                <span className="text-gray-900 dark:text-gray-100">{coupon.formattedDate}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-gray-600 dark:text-gray-400">Expires</span>
+                                                <span className="text-gray-900 dark:text-gray-100">{coupon.formattedExpiry}</span>
+>>>>>>> origin/yogesh-final
                                             </div>
                                         </div>
 
@@ -270,10 +347,17 @@ export default async function MyCouponsPage() {
                             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <ShoppingBag className="w-10 h-10 text-gray-400" />
                             </div>
+<<<<<<< HEAD
                             <h3 className="text-xl font-semibold text-gray-900 mb-2">
                                 No coupons yet
                             </h3>
                             <p className="text-gray-600 mb-6">
+=======
+                            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                No coupons yet
+                            </h3>
+                            <p className="text-gray-600 dark:text-gray-400 mb-6">
+>>>>>>> origin/yogesh-final
                                 Start browsing and purchase your first gift card
                             </p>
                             <a

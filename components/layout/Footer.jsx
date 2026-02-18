@@ -1,12 +1,18 @@
 'use client';
 
 import { motion } from 'framer-motion';
+<<<<<<< HEAD
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+=======
+>>>>>>> origin/yogesh-final
 import Image from 'next/image';
 import { ArrowUp, Twitter, Linkedin, Instagram, Facebook } from 'lucide-react';
 
 export default function Footer() {
+<<<<<<< HEAD
     const { t } = useLanguage();
+=======
+>>>>>>> origin/yogesh-final
 
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -43,7 +49,11 @@ export default function Footer() {
     ];
 
     return (
+<<<<<<< HEAD
         <footer className="relative bg-white text-[#171A21] pt-16 md:pt-20 pb-10 overflow-hidden border-t border-slate-100 font-[family-name:var(--font-outfit)]">
+=======
+        <footer className="relative bg-white dark:bg-gray-900 text-[#171A21] dark:text-gray-200 pt-16 md:pt-20 pb-10 overflow-hidden border-t border-slate-100 dark:border-gray-800 font-[family-name:var(--font-outfit)]">
+>>>>>>> origin/yogesh-final
             <div className="max-w-7xl mx-auto px-6 lg:px-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8 mb-12 md:mb-16">
                     {/* Brand Section - Spans 4 columns */}
@@ -57,7 +67,11 @@ export default function Footer() {
                                     className="object-contain"
                                 />
                             </div>
+<<<<<<< HEAD
                             <span className="text-xl font-bold text-[#171A21] tracking-tight">
+=======
+                            <span className="text-xl font-bold text-[#171A21] dark:text-gray-100 tracking-tight">
+>>>>>>> origin/yogesh-final
                                 INTRUST
                             </span>
                         </div>
@@ -99,7 +113,11 @@ export default function Footer() {
 
                     <button
                         onClick={scrollToTop}
+<<<<<<< HEAD
                         className="group flex items-center gap-2 text-[#171A21] font-medium hover:text-gray-600 transition-colors"
+=======
+                        className="group flex items-center gap-2 text-[#171A21] dark:text-gray-100 font-medium hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+>>>>>>> origin/yogesh-final
                     >
                         Back to Top
                         <span className="p-2 rounded-full bg-gray-50 group-hover:bg-gray-100 transition-colors">
@@ -115,7 +133,11 @@ export default function Footer() {
 function FooterColumn({ title, links }) {
     return (
         <div className="flex flex-col gap-6">
+<<<<<<< HEAD
             <h4 className="text-[#171A21] font-semibold text-sm uppercase tracking-wider">
+=======
+            <h4 className="text-[#171A21] dark:text-gray-100 font-semibold text-sm uppercase tracking-wider">
+>>>>>>> origin/yogesh-final
                 {title}
             </h4>
             <ul className="space-y-4">

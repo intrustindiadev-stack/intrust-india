@@ -2,10 +2,15 @@
 
 import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
+<<<<<<< HEAD
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export default function FeaturesSection({ features }) {
     const { t } = useLanguage();
+=======
+
+export default function FeaturesSection({ features }) {
+>>>>>>> origin/yogesh-final
 
     return (
         <section className="py-16 md:py-24 bg-gradient-to-b from-white via-gray-50/30 to-white relative overflow-hidden">
@@ -30,10 +35,17 @@ export default function FeaturesSection({ features }) {
                         viewport={{ once: true }}
                         transition={{ delay: 0.2, duration: 0.6 }}
                     >
+<<<<<<< HEAD
                         <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#171A21] mb-6 font-[family-name:var(--font-outfit)] leading-tight">
                             {t('features.title')}
                         </h2>
                         <p className="text-lg md:text-xl text-[#617073] max-w-2xl mx-auto leading-relaxed">
+=======
+                        <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#171A21] dark:text-gray-100 mb-6 font-[family-name:var(--font-outfit)] leading-tight">
+                            Why Choose InTrust?
+                        </h2>
+                        <p className="text-lg md:text-xl text-[#617073] dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
+>>>>>>> origin/yogesh-final
                             Everything you need to manage your financial life
                         </p>
                     </motion.div>
@@ -64,7 +76,11 @@ function FeatureCard({ feature, index, Icon }) {
             animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
             transition={{ delay: index * 0.15, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             whileHover={{ y: -10, scale: 1.02 }}
+<<<<<<< HEAD
             className="group relative p-8 md:p-10 bg-white rounded-3xl border-2 border-gray-100 hover:border-[#92BCEA]/30 hover:shadow-2xl hover:shadow-[#92BCEA]/10 transition-all duration-500 cursor-pointer overflow-hidden"
+=======
+            className="group relative p-8 md:p-10 bg-white dark:bg-gray-800 rounded-3xl border-2 border-gray-100 dark:border-gray-700 hover:border-[#92BCEA]/30 hover:shadow-2xl hover:shadow-[#92BCEA]/10 transition-all duration-500 cursor-pointer overflow-hidden"
+>>>>>>> origin/yogesh-final
         >
             {/* Gradient background on hover */}
             <motion.div
@@ -83,12 +99,20 @@ function FeatureCard({ feature, index, Icon }) {
                 </motion.div>
 
                 {/* Title */}
+<<<<<<< HEAD
                 <h3 className="text-xl md:text-2xl font-bold text-[#171A21] mb-4 group-hover:text-[#92BCEA] transition-colors duration-300">
+=======
+                <h3 className="text-xl md:text-2xl font-bold text-[#171A21] dark:text-gray-100 mb-4 group-hover:text-[#92BCEA] transition-colors duration-300">
+>>>>>>> origin/yogesh-final
                     {feature.title}
                 </h3>
 
                 {/* Description */}
+<<<<<<< HEAD
                 <p className="text-[#617073] leading-relaxed text-base md:text-lg">
+=======
+                <p className="text-[#617073] dark:text-gray-300 leading-relaxed text-base md:text-lg">
+>>>>>>> origin/yogesh-final
                     {feature.description}
                 </p>
 

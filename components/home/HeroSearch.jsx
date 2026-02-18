@@ -3,13 +3,19 @@
 import { useState } from 'react';
 import { Search, Mic, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+<<<<<<< HEAD
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+=======
+>>>>>>> origin/yogesh-final
 import { useRouter } from 'next/navigation';
 
 export default function HeroSearch() {
     const [query, setQuery] = useState('');
     const [isFocused, setIsFocused] = useState(false);
+<<<<<<< HEAD
     const { t } = useLanguage();
+=======
+>>>>>>> origin/yogesh-final
     const router = useRouter();
 
     const handleSearch = (e) => {

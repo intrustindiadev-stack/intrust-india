@@ -45,7 +45,11 @@ export default function InTrustProgressLoader({
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             {/* Glassmorphism Backdrop */}
+<<<<<<< HEAD
             <div className="absolute inset-0 bg-white/80 backdrop-blur-md transition-all duration-500 animate-fadeIn"></div>
+=======
+            <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md transition-all duration-500 animate-fadeIn"></div>
+>>>>>>> origin/yogesh-final
 
             <div className="relative z-10 flex flex-col items-center gap-6 md:gap-8 animate-scaleIn max-w-[90vw]">
                 {/* Logo & Spinner Container - Grid for Perfect Centering */}
@@ -74,7 +78,11 @@ export default function InTrustProgressLoader({
                     <h3 className="text-xl md:text-2xl font-bold gradient-text tracking-tight">
                         InTrust
                     </h3>
+<<<<<<< HEAD
                     <p className="text-gray-500 text-xs md:text-sm font-medium tracking-wide uppercase animate-pulse">
+=======
+                    <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm font-medium tracking-wide uppercase animate-pulse">
+>>>>>>> origin/yogesh-final
                         {message}
                     </p>
 

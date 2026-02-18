@@ -1,0 +1,22 @@
+--- CHECKING RECENT USERS ---
+User ID: d4e0c788-1679-48c0-9291-b9cf3730477f
+Phone: 916232809817
+Created: 2026-02-13T20:36:32.943245Z (612s ago)
+Last Sign In: 2026-02-13T20:38:13.269442Z
+Profile Name: New User
+Profile Role: user
+------------------------------
+User ID: 39c96ad3-2205-4832-8d87-d9d62dde9f24
+Phone: 919876543210
+Created: 2026-02-13T20:19:54.62099Z (1610s ago)
+Last Sign In: 2026-02-13T20:19:54.999643Z
+Profile Name: Test Verify User
+Profile Role: user
+------------------------------
+User ID: 9ff243df-7a49-49d6-8e63-afa3880f4efc
+Phone: 
+Created: 2026-02-12T15:34:40.689319Z (105124s ago)
+Last Sign In: 2026-02-12T15:34:40.956001Z
+Profile Name: Kapil Dubey
+Profile Role: user
+------------------------------

@@ -17,8 +17,11 @@ export default async function MerchantDashboardPage() {
         redirect('/login');
     }
 
+<<<<<<< HEAD
     console.log('[Dashboard] Authenticated User ID:', user.id);
 
+=======
+>>>>>>> origin/yogesh-final
     // 2. Get Merchant Profile & Role
     const { data: profile } = await supabase
         .from('user_profiles')
@@ -29,6 +32,7 @@ export default async function MerchantDashboardPage() {
     let merchant = null;
 
     if (profile?.role === 'admin') {
+<<<<<<< HEAD
         // 1. Try to fetch own merchant first
         const { data: ownMerchant } = await supabase
             .from('merchants')
@@ -48,6 +52,16 @@ export default async function MerchantDashboardPage() {
                 .single();
             merchant = data;
         }
+=======
+        // Admin: Fetch most recent merchant (consistent with useMerchant)
+        const { data } = await supabase
+            .from('merchants')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+        merchant = data;
+>>>>>>> origin/yogesh-final
     } else {
         // Merchant: Fetch own record
         const { data } = await supabase
@@ -71,15 +85,22 @@ export default async function MerchantDashboardPage() {
     }
 
     // 3. Fetch Data in Parallel
+<<<<<<< HEAD
     console.log('[Dashboard] Fetching data for merchant:', merchant.id);
 
+=======
+>>>>>>> origin/yogesh-final
     const [couponsRes, soldCouponsRes] = await Promise.all([
         // Fetch recent coupons for table (limit 10)
         supabase
             .from('coupons')
             .select('*')
             .eq('merchant_id', merchant.id)
+<<<<<<< HEAD
             // Removed is_merchant_owned check to debug visibility
+=======
+            .eq('is_merchant_owned', true)
+>>>>>>> origin/yogesh-final
             .order('created_at', { ascending: false })
             .limit(10),
 
@@ -91,9 +112,12 @@ export default async function MerchantDashboardPage() {
             .eq('status', 'sold')
     ]);
 
+<<<<<<< HEAD
     if (couponsRes.error) console.error('[Dashboard] Coupons Fetch Error:', couponsRes.error);
     if (soldCouponsRes.error) console.error('[Dashboard] Sold Coupons Fetch Error:', soldCouponsRes.error);
 
+=======
+>>>>>>> origin/yogesh-final
     // Also get counts
     const [activeCountRes, listedCountRes, soldCountRes] = await Promise.all([
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'available'),

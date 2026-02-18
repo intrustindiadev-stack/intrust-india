@@ -64,6 +64,7 @@ export default function SignupPage() {
             // Successfully verified & logged in
             console.log('[SIGNUP] Session established. Redirecting...');
 
+<<<<<<< HEAD
             // Show success state
             setLoading(false); // Reset loading to allow UI update if needed, or use a separate success state
             // But better: keep loading or show generic "Success" message
@@ -79,6 +80,12 @@ export default function SignupPage() {
             // Let's use router.replace to avoid history stack issues
             router.refresh();
             router.push('/dashboard');
+=======
+            // Force hard redirect to ensure fresh state and middleware check
+            // Skip profile check for now to speed up - new users are always 'user' role
+            // If they are merchant, they can switch or be redirected later
+            window.location.href = '/dashboard';
+>>>>>>> origin/yogesh-final
 
         } catch (err) {
             console.error('Signup error:', err);

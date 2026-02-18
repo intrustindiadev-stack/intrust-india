@@ -34,17 +34,17 @@ export default function ContactForm() {
         }, 1500);
     };
 
-    const inputClasses = "w-full px-4 py-4 rounded-xl bg-gray-50/50 border border-gray-200 outline-hidden transition-all duration-300 focus:bg-white focus:ring-2 focus:ring-blue-100 placeholder-transparent peer";
-    const labelClasses = "absolute left-4 top-4 text-gray-500 text-sm transition-all duration-200 peer-placeholder-shown:text-base peer-placeholder-shown:top-4 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-2 pointer-events-none rounded-md";
+    const inputClasses = "w-full px-4 py-4 rounded-xl bg-gray-50/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 outline-hidden transition-all duration-300 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 placeholder-transparent peer text-gray-900 dark:text-gray-100";
+    const labelClasses = "absolute left-4 top-4 text-gray-500 dark:text-gray-400 text-sm transition-all duration-200 peer-placeholder-shown:text-base peer-placeholder-shown:top-4 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-blue-500 dark:peer-focus:text-blue-400 peer-focus:bg-white dark:peer-focus:bg-gray-800 peer-focus:px-2 pointer-events-none rounded-md";
 
     return (
-        <div className="bg-white/80 backdrop-blur-xl p-8 md:p-10 rounded-3xl shadow-2xl border border-white/50 relative overflow-hidden">
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl p-8 md:p-10 rounded-3xl shadow-2xl border border-white/50 dark:border-gray-700 relative overflow-hidden">
             {/* Decorative elements */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-100/50 to-transparent rounded-bl-full pointer-events-none -z-10" />
 
             <div className="mb-8">
-                <h3 className="text-3xl font-bold font-outfit text-gray-900 mb-2">Send us a Message</h3>
-                <p className="text-gray-500">We usually respond within 24 hours.</p>
+                <h3 className="text-3xl font-bold font-outfit text-gray-900 dark:text-gray-100 mb-2">Send us a Message</h3>
+                <p className="text-gray-500 dark:text-gray-400">We usually respond within 24 hours.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">

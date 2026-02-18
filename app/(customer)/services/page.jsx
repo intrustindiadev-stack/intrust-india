@@ -57,37 +57,60 @@ export default function ServicesPage() {
     });
 
     return (
+<<<<<<< HEAD
         <div className="min-h-screen bg-gray-50/50 font-[family-name:var(--font-outfit)] pb-28">
+=======
+        <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900 font-[family-name:var(--font-outfit)] pb-28">
+>>>>>>> origin/yogesh-final
             <Navbar theme="light" />
 
             <div className="pt-28 px-4 md:px-8 max-w-7xl mx-auto">
 
                 {/* Header Section */}
                 <div className="mb-8">
+<<<<<<< HEAD
                     <h1 className="text-3xl md:text-4xl font-bold text-[#171A21] mb-3 tracking-tight">
                         Services
                     </h1>
                     <p className="text-slate-500 text-sm md:text-base mb-8 max-w-2xl">
+=======
+                    <h1 className="text-3xl md:text-4xl font-bold text-[#171A21] dark:text-gray-100 mb-3 tracking-tight">
+                        Services
+                    </h1>
+                    <p className="text-slate-500 dark:text-gray-400 text-sm md:text-base mb-8 max-w-2xl">
+>>>>>>> origin/yogesh-final
                         Everything you need to manage your payments and finances.
                     </p>
 
                     {/* Premium Search Bar */}
                     <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<<<<<<< HEAD
                             <Search className="h-5 w-5 text-gray-400 group-focus-within:text-[#171A21] transition-colors" />
+=======
+                            <Search className="h-5 w-5 text-gray-400 dark:text-gray-500 group-focus-within:text-[#171A21] dark:group-focus-within:text-gray-100 transition-colors" />
+>>>>>>> origin/yogesh-final
                         </div>
                         <input
                             type="text"
                             placeholder="Find a service (e.g., Mobile, Loan)..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+<<<<<<< HEAD
                             className="block w-full pl-11 pr-4 py-4 bg-white border-0 ring-1 ring-gray-200 rounded-2xl text-[#171A21] placeholder-gray-400 focus:ring-2 focus:ring-[#171A21]/10 focus:outline-none shadow-sm transition-all"
+=======
+                            className="block w-full pl-11 pr-4 py-4 bg-white dark:bg-gray-800 border-0 ring-1 ring-gray-200 dark:ring-gray-700 rounded-2xl text-[#171A21] dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-[#171A21]/10 dark:focus:ring-gray-600 focus:outline-none shadow-sm transition-all"
+>>>>>>> origin/yogesh-final
                         />
                     </div>
                 </div>
 
                 {/* Categories - Premium Horizontal Scroll */}
+<<<<<<< HEAD
                 <div className="sticky top-[4.5rem] z-20 bg-gray-50/50 backdrop-blur-xl py-4 -mx-4 px-4 md:mx-0 md:px-0 mb-6 border-b border-gray-100/50 md:border-none">
+=======
+                <div className="sticky top-[4.5rem] z-20 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-xl py-4 -mx-4 px-4 md:mx-0 md:px-0 mb-6 border-b border-gray-100/50 dark:border-gray-800/50 md:border-none">
+>>>>>>> origin/yogesh-final
                     <div
                         ref={tabsContainerRef}
                         className="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth md:flex-wrap pb-1"
@@ -99,8 +122,13 @@ export default function ServicesPage() {
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap border ${isActive
+<<<<<<< HEAD
                                         ? 'bg-[#171A21] text-white border-[#171A21] shadow-lg shadow-[#171A21]/10 scale-100'
                                         : 'bg-white text-slate-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50 scale-95 hover:scale-100'
+=======
+                                        ? 'bg-[#171A21] dark:bg-gray-700 text-white border-[#171A21] dark:border-gray-700 shadow-lg shadow-[#171A21]/10 scale-100'
+                                        : 'bg-white dark:bg-gray-800 text-slate-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 scale-95 hover:scale-100'
+>>>>>>> origin/yogesh-final
                                         }`}
                                 >
                                     <tab.icon size={16} strokeWidth={isActive ? 2.5 : 2} />
@@ -127,7 +155,11 @@ export default function ServicesPage() {
                                 transition={{ duration: 0.2 }}
                             >
                                 <Link href={service.href} className="block h-full">
+<<<<<<< HEAD
                                     <div className={`group h-full bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:border-gray-200 transition-all duration-300 relative overflow-hidden flex items-center gap-4`}>
+=======
+                                    <div className={`group h-full bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-300 relative overflow-hidden flex items-center gap-4`}>
+>>>>>>> origin/yogesh-final
 
                                         {/* Icon Container */}
                                         <div className={`p-4 rounded-xl ${service.category === 'bills' ? 'bg-blue-50 text-blue-600' : service.category === 'finance' ? 'bg-emerald-50 text-emerald-600' : service.category === 'shopping' ? 'bg-pink-50 text-pink-600' : 'bg-gray-100 text-gray-600'} group-hover:scale-110 transition-transform duration-300`}>
@@ -137,7 +169,11 @@ export default function ServicesPage() {
                                         {/* Text Content */}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-0.5">
+<<<<<<< HEAD
                                                 <h3 className="text-base font-semibold text-[#171A21] truncate">
+=======
+                                                <h3 className="text-base font-semibold text-[#171A21] dark:text-gray-100 truncate">
+>>>>>>> origin/yogesh-final
                                                     {service.title}
                                                 </h3>
                                                 {service.badge && (
@@ -146,7 +182,11 @@ export default function ServicesPage() {
                                                     </span>
                                                 )}
                                             </div>
+<<<<<<< HEAD
                                             <p className="text-xs text-slate-500 truncate group-hover:text-slate-700 transition-colors">
+=======
+                                            <p className="text-xs text-slate-500 dark:text-gray-400 truncate group-hover:text-slate-700 dark:group-hover:text-gray-300 transition-colors">
+>>>>>>> origin/yogesh-final
                                                 {service.subtitle}
                                             </p>
                                         </div>
@@ -169,8 +209,13 @@ export default function ServicesPage() {
                         <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Search size={24} className="text-gray-400" />
                         </div>
+<<<<<<< HEAD
                         <h3 className="text-lg font-bold text-[#171A21]">No services found</h3>
                         <p className="text-slate-500">We couldn't find anything matching "{searchQuery}"</p>
+=======
+                        <h3 className="text-lg font-bold text-[#171A21] dark:text-gray-100">No services found</h3>
+                        <p className="text-slate-500 dark:text-gray-400">We couldn't find anything matching "{searchQuery}"</p>
+>>>>>>> origin/yogesh-final
                         <button
                             onClick={() => { setSearchQuery(''); setActiveTab('all'); }}
                             className="mt-4 text-sm font-semibold text-[#171A21] hover:underline"

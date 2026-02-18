@@ -1,22 +1,32 @@
 'use client';
 
 import { motion } from 'framer-motion';
+<<<<<<< HEAD
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+=======
+>>>>>>> origin/yogesh-final
 import {
     Building2, CreditCard, Landmark, Shield, Zap, TrendingUp, Sparkles, Users,
     Smartphone, ShoppingBag, Globe, Wifi, Store
 } from 'lucide-react';
 
 export default function PartnerLoop({ className = "", showBorder = true }) {
+<<<<<<< HEAD
     const { t } = useLanguage();
+=======
+>>>>>>> origin/yogesh-final
 
     // Partners with specific "Trust" focus
     const partners = [
         { name: 'HDFC Bank', icon: Building2 },
         { name: 'ICICI Bank', icon: Landmark },
         { name: 'SBI', icon: CreditCard },
+<<<<<<< HEAD
         // { name: 'Razorpay', icon: Shield }, // Removed
 
+=======
+        { name: 'Razorpay', icon: Shield },
+>>>>>>> origin/yogesh-final
         { name: 'BBPS', icon: Zap },
         { name: 'NPCI', icon: Smartphone },
         { name: 'Visa', icon: Globe },
@@ -26,7 +36,11 @@ export default function PartnerLoop({ className = "", showBorder = true }) {
     const marqueePartners = [...partners, ...partners, ...partners]; // Triple for smoothness
 
     return (
+<<<<<<< HEAD
         <section className={`relative py-10 w-full overflow-hidden flex flex-col items-center justify-center ${showBorder ? 'bg-white border-y border-slate-50' : ''} ${className}`}>
+=======
+        <section className={`relative py-10 w-full overflow-hidden flex flex-col items-center justify-center ${showBorder ? 'bg-white dark:bg-gray-900 border-y border-slate-100 dark:border-gray-800' : ''} ${className}`}>
+>>>>>>> origin/yogesh-final
 
             {/* Main Content Container - Centered */}
             <div className="w-full max-w-7xl px-4 md:px-6 flex flex-col items-center relative z-10">

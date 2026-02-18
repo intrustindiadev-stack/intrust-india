@@ -136,7 +136,11 @@ export default function GiftCardsClient({ initialCoupons }) {
     }, [filteredCoupons, sortBy]);
 
     return (
+<<<<<<< HEAD
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+=======
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+>>>>>>> origin/yogesh-final
             <Navbar />
 
             <div style={{ paddingTop: '15vh' }} className="pb-24 px-4 sm:px-6">
@@ -199,17 +203,28 @@ export default function GiftCardsClient({ initialCoupons }) {
                     </motion.div>
 
                     {/* NEW: Merchant Filter */}
+<<<<<<< HEAD
                     <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
                         <div className="flex items-center gap-3 mb-4">
                             <Store className="text-[#92BCEA]" size={24} />
                             <h3 className="text-lg font-bold text-gray-900">Filter by Merchant</h3>
+=======
+                    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
+                        <div className="flex items-center gap-3 mb-4">
+                            <Store className="text-[#92BCEA]" size={24} />
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Filter by Merchant</h3>
+>>>>>>> origin/yogesh-final
                         </div>
                         <div className="flex flex-wrap gap-3">
                             <button
                                 onClick={() => setMerchantFilter('all')}
                                 className={`px-5 py-2.5 rounded-xl font-semibold transition-all transform hover:scale-105 ${merchantFilter === 'all'
                                     ? 'bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] text-white shadow-lg'
+<<<<<<< HEAD
                                     : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-[#92BCEA]'
+=======
+                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-2 border-gray-200 dark:border-gray-600 hover:border-[#92BCEA]'
+>>>>>>> origin/yogesh-final
                                     }`}
                             >
                                 All Merchants
@@ -266,8 +281,13 @@ export default function GiftCardsClient({ initialCoupons }) {
                             <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
                                 <Search size={32} className="text-gray-400" />
                             </div>
+<<<<<<< HEAD
                             <h3 className="text-2xl font-bold text-gray-900 mb-3">No cards found</h3>
                             <p className="text-gray-600 mb-6 max-w-md mx-auto">
+=======
+                            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">No cards found</h3>
+                            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+>>>>>>> origin/yogesh-final
                                 Try adjusting your search or filters to find what you're looking for
                             </p>
                             <button

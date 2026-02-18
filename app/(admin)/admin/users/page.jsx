@@ -1,5 +1,11 @@
 import { createAdminClient } from '@/lib/supabaseServer';
+<<<<<<< HEAD
 import UsersTable from './UsersTable';
+=======
+import Link from 'next/link';
+import { Users } from 'lucide-react';
+import UserCard from '@/components/admin/users/UserCard';
+>>>>>>> origin/yogesh-final
 
 export const dynamic = 'force-dynamic';
 
@@ -54,12 +60,60 @@ export default async function AdminUsersPage({ searchParams }) {
                 <p className="text-gray-500 mt-1">Manage user profiles and KYC verification</p>
             </div>
 
+<<<<<<< HEAD
             <UsersTable
                 initialUsers={users || []}
                 initialTotal={count || 0}
                 currentPage={page}
                 totalPages={totalPages}
             />
+=======
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {(users || []).map((user) => (
+                    <UserCard key={user.id} user={user} />
+                ))}
+            </div>
+
+            {/* Empty State */}
+            {(!users || users.length === 0) && (
+                <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Users size={32} className="text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">No users found</h3>
+                    <p className="text-gray-500 mt-1">Try adjusting your search criteria</p>
+                </div>
+            )}
+
+            {/* Pagination Controls */}
+            <div className="mt-8 flex items-center justify-between border-t border-gray-200 pt-6">
+                <div className="text-sm text-gray-500">
+                    Showing <span className="font-semibold text-gray-900">{users?.length || 0}</span> of <span className="font-semibold text-gray-900">{count || 0}</span> users
+                </div>
+                <div className="flex gap-2">
+                    <Link
+                        href={`/admin/users?page=${page > 1 ? page - 1 : 1}&search=${search}`}
+                        className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors
+                            ${page <= 1
+                                ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
+                                : 'border-gray-300 text-gray-700 hover:bg-gray-50 bg-white'}`}
+                        aria-disabled={page <= 1}
+                    >
+                        Previous
+                    </Link>
+                    <Link
+                        href={`/admin/users?page=${page < totalPages ? page + 1 : totalPages}&search=${search}`}
+                        className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors
+                            ${page >= totalPages
+                                ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
+                                : 'border-gray-300 text-gray-700 hover:bg-gray-50 bg-white'}`}
+                        aria-disabled={page >= totalPages}
+                    >
+                        Next
+                    </Link>
+                </div>
+            </div>
+>>>>>>> origin/yogesh-final
         </div>
     );
 }

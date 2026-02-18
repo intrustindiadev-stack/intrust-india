@@ -70,17 +70,28 @@ export default function OffersCarousel() {
     ];
 
     return (
+<<<<<<< HEAD
         <section className="py-16 md:py-24 bg-white relative overflow-hidden font-[family-name:var(--font-outfit)]">
+=======
+        <section className="py-16 md:py-24 bg-white dark:bg-gray-900 relative overflow-hidden font-[family-name:var(--font-outfit)]">
+>>>>>>> origin/yogesh-final
 
             <div className="container mx-auto px-6 relative z-10">
 
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                     <div className="text-left max-w-xl">
+<<<<<<< HEAD
                         <h2 className="text-3xl md:text-5xl font-bold text-[#171A21] tracking-tight mb-3">
                             Exclusive Offers
                         </h2>
                         <p className="text-[#617073] text-lg font-light leading-relaxed">
+=======
+                        <h2 className="text-3xl md:text-5xl font-bold text-[#171A21] dark:text-gray-100 tracking-tight mb-3">
+                            Exclusive Offers
+                        </h2>
+                        <p className="text-[#617073] dark:text-gray-300 text-lg font-light leading-relaxed">
+>>>>>>> origin/yogesh-final
                             Premium rewards curated for your lifestyle.
                         </p>
                     </div>
@@ -92,14 +103,22 @@ export default function OffersCarousel() {
                             className="p-4 rounded-full border border-gray-100 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 active:scale-95"
                             aria-label="Scroll left"
                         >
+<<<<<<< HEAD
                             <ChevronLeft size={24} className="text-[#171A21]" strokeWidth={1.5} />
+=======
+                            <ChevronLeft size={24} className="text-[#171A21] dark:text-gray-100" strokeWidth={1.5} />
+>>>>>>> origin/yogesh-final
                         </button>
                         <button
                             onClick={() => scroll('right')}
                             className="p-4 rounded-full border border-gray-100 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 active:scale-95"
                             aria-label="Scroll right"
                         >
+<<<<<<< HEAD
                             <ChevronRight size={24} className="text-[#171A21]" strokeWidth={1.5} />
+=======
+                            <ChevronRight size={24} className="text-[#171A21] dark:text-gray-100" strokeWidth={1.5} />
+>>>>>>> origin/yogesh-final
                         </button>
                     </div>
                 </div>

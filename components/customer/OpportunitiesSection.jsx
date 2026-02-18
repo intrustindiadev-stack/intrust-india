@@ -62,7 +62,11 @@ export default function CustomerOpportunitiesSection() {
                     transition={{ duration: 0.5 }}
                     className="text-center mb-8"
                 >
+<<<<<<< HEAD
                     <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
+=======
+                    <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+>>>>>>> origin/yogesh-final
                         Why Choose InTrust?
                     </h2>
                     <p className="text-gray-600 text-lg">
@@ -79,13 +83,22 @@ export default function CustomerOpportunitiesSection() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: index * 0.1 }}
+<<<<<<< HEAD
                                 className="bg-white rounded-2xl border-2 border-gray-200 p-6 hover:shadow-xl transition-all hover:-translate-y-1"
+=======
+                                className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-all hover:-translate-y-1"
+>>>>>>> origin/yogesh-final
                             >
                                 <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 shadow-lg`}>
                                     <Icon size={24} className="text-white" />
                                 </div>
+<<<<<<< HEAD
                                 <h3 className="text-lg font-bold text-gray-900 mb-2">{feature.title}</h3>
                                 <p className="text-sm text-gray-600">{feature.description}</p>
+=======
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">{feature.title}</h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{feature.description}</p>
+>>>>>>> origin/yogesh-final
                             </motion.div>
                         );
                     })}
@@ -100,7 +113,11 @@ export default function CustomerOpportunitiesSection() {
                     transition={{ duration: 0.5, delay: 0.4 }}
                     className="text-center mb-8"
                 >
+<<<<<<< HEAD
                     <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
+=======
+                    <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+>>>>>>> origin/yogesh-final
                         Explore Opportunities
                     </h2>
                     <p className="text-gray-600 text-lg">
@@ -117,7 +134,11 @@ export default function CustomerOpportunitiesSection() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+<<<<<<< HEAD
                                 className="group relative overflow-hidden rounded-2xl bg-white border-2 border-gray-200 hover:border-transparent hover:shadow-2xl transition-all"
+=======
+                                className="group relative overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-transparent hover:shadow-2xl transition-all"
+>>>>>>> origin/yogesh-final
                             >
                                 {/* Gradient overlay on hover */}
                                 <div className={`absolute inset-0 bg-gradient-to-br ${opportunity.color} opacity-0 group-hover:opacity-5 transition-opacity`} />
@@ -134,8 +155,13 @@ export default function CustomerOpportunitiesSection() {
                                         )}
                                     </div>
 
+<<<<<<< HEAD
                                     <h3 className="text-2xl font-bold text-gray-900 mb-2">{opportunity.title}</h3>
                                     <p className="text-gray-600 mb-6">{opportunity.description}</p>
+=======
+                                    <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{opportunity.title}</h3>
+                                    <p className="text-gray-600 dark:text-gray-400 mb-6">{opportunity.description}</p>
+>>>>>>> origin/yogesh-final
 
                                     <Link
                                         href={opportunity.link}

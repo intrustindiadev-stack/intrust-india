@@ -17,10 +17,13 @@
     "gsap": "^3.14.2",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
+    "razorpay": "^2.9.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hot-toast": "^2.6.0",
+    "recharts": "^3.7.0",
     "sabpaisa-pg-dev": "^0.0.13",
+    "tailwindcss-animate": "^1.0.7",
     "vercel-mcp-server": "^1.0.0"
   },
   "devDependencies": {

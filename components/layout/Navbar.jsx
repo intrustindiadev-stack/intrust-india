@@ -2,12 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+<<<<<<< HEAD
 import { Menu, X, ChevronRight, Globe, User } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
+=======
+import { Menu, X, ChevronRight, Moon, Sun } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { useTheme } from '@/lib/contexts/ThemeContext';
+>>>>>>> origin/yogesh-final
 import { useRouter } from 'next/navigation';
 import MobileNav from './MobileNav';
 
@@ -15,7 +23,11 @@ export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const { isAuthenticated, user, profile } = useAuth();
+<<<<<<< HEAD
     const { language, changeLanguage, t } = useLanguage();
+=======
+    const { theme, toggleTheme } = useTheme();
+>>>>>>> origin/yogesh-final
     const router = useRouter();
 
     useEffect(() => {
@@ -54,9 +66,15 @@ export default function Navbar() {
     };
 
     const menuItems = [
+<<<<<<< HEAD
         { label: t('nav.services'), href: 'services' },
         { label: t('nav.about'), href: 'about' },
         { label: t('nav.contact'), href: 'contact' },
+=======
+        { label: 'Services', href: 'services' },
+        { label: 'About', href: 'about' },
+        { label: 'Contact', href: 'contact' },
+>>>>>>> origin/yogesh-final
     ];
 
     // Get user display info
@@ -83,11 +101,19 @@ export default function Navbar() {
             >
                 <div
                     className={`
+<<<<<<< HEAD
             bg-white/95 backdrop-blur-2xl rounded-2xl md:rounded-full 
             px-4 md:px-8 py-2 md:py-2.5
             shadow-lg border border-gray-200/60
             transition-all duration-500 ease-out
             ${scrolled ? 'shadow-2xl bg-white border-gray-300/80' : ''}
+=======
+            bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl rounded-2xl md:rounded-full 
+            px-4 md:px-8 py-2 md:py-2.5
+            shadow-lg border border-gray-200/60 dark:border-gray-700/60
+            transition-all duration-500 ease-out
+            ${scrolled ? 'shadow-2xl bg-white dark:bg-gray-900 border-gray-300/80 dark:border-gray-600/80' : ''}
+>>>>>>> origin/yogesh-final
           `}
                 >
                     <div className="flex items-center justify-between">
@@ -131,7 +157,11 @@ export default function Navbar() {
                                     whileTap={{ scale: 0.95 }}
                                     className="
                     relative px-5 py-2 text-[15px] font-medium 
+<<<<<<< HEAD
                     text-[#617073] hover:text-[#171A21] 
+=======
+                    text-[#617073] dark:text-gray-300 hover:text-[#171A21] dark:hover:text-white 
+>>>>>>> origin/yogesh-final
                     transition-colors duration-300 rounded-full
                     group
                   "
@@ -153,19 +183,32 @@ export default function Navbar() {
 
                         {/* Actions - Right */}
                         <div className="flex items-center gap-2 md:gap-3 z-10">
+<<<<<<< HEAD
                             {/* Language Switcher - Premium iOS Style */}
+=======
+                            {/* Theme Toggle - Premium iOS Style */}
+>>>>>>> origin/yogesh-final
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 0.5, duration: 0.4 }}
                                 className="hidden lg:block relative"
                             >
+<<<<<<< HEAD
                                 <div className="relative bg-gray-100/80 backdrop-blur-sm rounded-full p-1 flex items-center">
                                     <motion.div
                                         className="absolute top-1 bottom-1 bg-white rounded-full shadow-md"
                                         animate={{
                                             left: language === 'en' ? '4px' : '50%',
                                             width: language === 'en' ? 'calc(50% - 4px)' : 'calc(50% - 4px)'
+=======
+                                <div className="relative bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-1 flex items-center">
+                                    <motion.div
+                                        className="absolute top-1 bottom-1 bg-white dark:bg-gray-700 rounded-full shadow-md"
+                                        animate={{
+                                            left: theme === 'light' ? '4px' : '50%',
+                                            width: 'calc(50% - 4px)'
+>>>>>>> origin/yogesh-final
                                         }}
                                         transition={{
                                             type: 'spring',
@@ -174,6 +217,7 @@ export default function Navbar() {
                                         }}
                                     />
                                     <button
+<<<<<<< HEAD
                                         onClick={() => changeLanguage('en')}
                                         className={`relative z-10 px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-200 min-w-[50px] text-center ${language === 'en' ? 'text-[#171A21]' : 'text-[#617073]'}`}
                                     >
@@ -184,6 +228,20 @@ export default function Navbar() {
                                         className={`relative z-10 px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-200 min-w-[50px] text-center ${language === 'hi' ? 'text-[#171A21]' : 'text-[#617073]'}`}
                                     >
                                         हिं
+=======
+                                        onClick={toggleTheme}
+                                        className={`relative z-10 px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-200 min-w-[50px] text-center flex items-center justify-center gap-1.5 ${theme === 'light' ? 'text-[#171A21]' : 'text-[#617073] dark:text-gray-400'}`}
+                                        aria-label="Light mode"
+                                    >
+                                        <Sun size={16} />
+                                    </button>
+                                    <button
+                                        onClick={toggleTheme}
+                                        className={`relative z-10 px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-200 min-w-[50px] text-center flex items-center justify-center gap-1.5 ${theme === 'dark' ? 'text-white' : 'text-[#617073]'}`}
+                                        aria-label="Dark mode"
+                                    >
+                                        <Moon size={16} />
+>>>>>>> origin/yogesh-final
                                     </button>
                                 </div>
                             </motion.div>
@@ -225,7 +283,11 @@ export default function Navbar() {
                       transition-all duration-300
                     "
                                     >
+<<<<<<< HEAD
                                         {t('nav.signout')}
+=======
+                                        Sign Out
+>>>>>>> origin/yogesh-final
                                     </motion.button>
                                     {/* Mobile/Tablet Profile Icon */}
                                     <Link href="/profile" className="lg:hidden">
@@ -260,12 +322,20 @@ export default function Navbar() {
                                         onClick={() => router.push('/login')}
                                         className="
                       px-5 py-2 text-[15px] font-medium 
+<<<<<<< HEAD
                       text-[#617073] hover:text-[#171A21] 
+=======
+                      text-[#617073] dark:text-gray-300 hover:text-[#171A21] dark:hover:text-white 
+>>>>>>> origin/yogesh-final
                       transition-colors duration-300 rounded-full
                       hover:bg-gradient-to-r hover:from-[#92BCEA]/10 hover:to-[#AFB3F7]/10
                     "
                                     >
+<<<<<<< HEAD
                                         {t('nav.login')}
+=======
+                                        Login
+>>>>>>> origin/yogesh-final
                                     </motion.button>
                                     <motion.button
                                         whileHover={{ scale: 1.05, y: -1 }}
@@ -279,7 +349,11 @@ export default function Navbar() {
                       transition-all duration-300
                     "
                                     >
+<<<<<<< HEAD
                                         {t('nav.signup')}
+=======
+                                        Sign Up
+>>>>>>> origin/yogesh-final
                                     </motion.button>
                                 </div>
                             )}
@@ -327,9 +401,15 @@ export default function Navbar() {
                                     transition={{ duration: 0.2 }}
                                 >
                                     {menuOpen ? (
+<<<<<<< HEAD
                                         <X size={22} className="text-[#171A21]" strokeWidth={2.5} />
                                     ) : (
                                         <Menu size={22} className="text-[#171A21]" strokeWidth={2.5} />
+=======
+                                        <X size={22} className="text-[#171A21] dark:text-gray-100" strokeWidth={2.5} />
+                                    ) : (
+                                        <Menu size={22} className="text-[#171A21] dark:text-gray-100" strokeWidth={2.5} />
+>>>>>>> origin/yogesh-final
                                     )}
                                 </motion.div>
                             </motion.button>
@@ -343,9 +423,14 @@ export default function Navbar() {
                 isOpen={menuOpen}
                 onClose={() => setMenuOpen(false)}
                 isAuthenticated={isAuthenticated}
+<<<<<<< HEAD
                 t={t}
                 language={language}
                 changeLanguage={changeLanguage}
+=======
+                theme={theme}
+                toggleTheme={toggleTheme}
+>>>>>>> origin/yogesh-final
                 handleSignOut={handleLogout}
                 menuItems={menuItems}
             />
