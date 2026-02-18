@@ -23,15 +23,9 @@ const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Merchants', href: '/admin/merchants', icon: Store },
-<<<<<<< HEAD
-    { name: 'Vendors', href: '/admin/vendors', icon: Package },
-    { name: 'Gift Cards', href: '/admin/giftcards', icon: Gift },
-    { name: 'Coupons', href: '/admin/coupons', icon: Sparkles },
-=======
     // { name: 'Vendors', href: '/admin/vendors', icon: Package },
     { name: 'Gift Cards', href: '/admin/giftcards', icon: Gift },
     // { name: 'Coupons', href: '/admin/coupons', icon: Sparkles },
->>>>>>> origin/yogesh-final
     { name: 'Transactions', href: '/admin/transactions', icon: Receipt },
     { name: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
