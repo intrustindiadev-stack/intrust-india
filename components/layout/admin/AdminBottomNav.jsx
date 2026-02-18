@@ -51,8 +51,8 @@ export default function AdminBottomNav() {
                                 {/* Icon container */}
                                 <div
                                     className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all ${isActive
-                                            ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white scale-110'
-                                            : 'text-gray-500 group-hover:text-purple-600 group-hover:bg-gray-100'
+                                        ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white scale-110'
+                                        : 'text-gray-500 group-hover:text-purple-600 group-hover:bg-gray-100'
                                         }`}
                                 >
                                     <Icon size={20} strokeWidth={2.5} />
