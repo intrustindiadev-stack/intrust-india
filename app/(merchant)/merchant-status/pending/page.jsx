@@ -2,28 +2,22 @@
 
 import { useRouter } from 'next/navigation';
 import { Clock, Mail, Home, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 export default function MerchantPendingPage() {
     const router = useRouter();
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+            <div
                 className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden"
             >
                 {/* Header */}
                 <div className="bg-gradient-to-br from-yellow-500 to-orange-500 p-8 sm:p-12 text-white text-center">
-                    <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-                        className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-6 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center"
+                    <div
+                        className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-6 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transform scale-100"
                     >
                         <Clock className="w-10 h-10 sm:w-12 sm:h-12" />
-                    </motion.div>
+                    </div>
                     <h1 className="text-3xl sm:text-4xl font-bold mb-3">Application Under Review</h1>
                     <p className="text-white/90 text-lg">We're reviewing your merchant application</p>
                 </div>
@@ -94,7 +88,7 @@ export default function MerchantPendingPage() {
                         </button>
                     </div>
                 </div>
-            </motion.div>
+            </div>
         </div>
     );
 }

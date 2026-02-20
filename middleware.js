@@ -25,15 +25,20 @@ export async function middleware(request) {
         timestamp: new Date().toISOString()
     });
 
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-current-path', request.nextUrl.pathname);
+
     if (isPublicPath || !hasAuthCookie) {
         // Fast path: no auth needed or no auth cookie
         console.log('[MIDDLEWARE:FAST_PATH]', { requestId, reason: isPublicPath ? 'public' : 'no-auth' });
-        return NextResponse.next();
+        return NextResponse.next({
+            request: { headers: requestHeaders }
+        });
     }
 
     let response = NextResponse.next({
         request: {
-            headers: request.headers,
+            headers: requestHeaders,
         },
     })
 
@@ -49,7 +54,7 @@ export async function middleware(request) {
                     cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
                     response = NextResponse.next({
                         request: {
-                            headers: request.headers,
+                            headers: requestHeaders,
                         },
                     })
                     cookiesToSet.forEach(({ name, value, options }) =>

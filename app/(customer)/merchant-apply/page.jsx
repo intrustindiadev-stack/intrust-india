@@ -7,7 +7,6 @@ import {
     Loader2, ChevronLeft, Store, TrendingUp, Users, Check, Sparkles, CreditCard, Banknote, X, Home
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import KYCForm from '@/components/forms/KYCForm';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -47,10 +46,39 @@ const Confetti = () => {
 
 export default function MerchantApplyPage() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, profile, loading: authLoading, refreshProfile } = useAuth();
     const supabase = createClient();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [checkingStatus, setCheckingStatus] = useState(true);
+
+    // Check if user already applied
+    useEffect(() => {
+        const checkMerchantStatus = async () => {
+            if (user) {
+                const { data } = await supabase
+                    .from('merchants')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (data) {
+                    // Already applied, redirect to dashboard (layout will route to pending if needed)
+                    router.replace('/merchant/dashboard');
+                    return;
+                }
+            }
+            setCheckingStatus(false);
+        };
+
+        if (!authLoading) {
+            if (!user) {
+                setCheckingStatus(false);
+            } else {
+                checkMerchantStatus();
+            }
+        }
+    }, [user, authLoading, router, supabase]);
 
 
     // Form State
@@ -85,8 +113,9 @@ export default function MerchantApplyPage() {
 
             // Success! Merchant account created and auto-approved
             console.log('✅ Merchant account created:', data);
+            if (refreshProfile) await refreshProfile();
             setLoading(false);
-            setStep(4); // Move to Success Step
+            setStep(3); // Move to Success Step
         } catch (err) {
             console.error('❌ Error submitting merchant application:', err);
             setError(err.message || 'Failed to submit application. Please try again.');
@@ -145,7 +174,16 @@ export default function MerchantApplyPage() {
     const prevStep = () => setStep(step - 1);
 
     // Calculate progress for the progress bar
-    const progress = (step / 3) * 100;
+    const progress = (step / 2) * 100;
+
+    // Show blank page while auth is loading or checking merchant status to avoid flashing
+    if (authLoading || checkingStatus) {
+        return (
+            <div className="h-screen w-full flex items-center justify-center bg-[#FAFAFA]">
+                <Loader2 className="animate-spin text-blue-600" size={32} />
+            </div>
+        );
+    }
 
     return (
         <div className="h-screen w-full bg-[#FAFAFA] font-[family-name:var(--font-outfit)] overflow-hidden relative flex flex-col md:flex-row">
@@ -191,10 +229,10 @@ export default function MerchantApplyPage() {
 
             {/* Mobile/Right: App-Like Form Container */}
             <div className="flex-1 h-full relative flex flex-col bg-white">
-                {step === 4 && <Confetti />}
+                {step === 3 && <Confetti />}
 
                 {/* Mobile Header / Navbar Replacement (Hide on Success) */}
-                {step < 4 && (
+                {step < 3 && (
                     <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white/80 backdrop-blur-md z-20 sticky top-0 transition-opacity">
                         <div className="flex items-center gap-3">
                             <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors">
@@ -203,7 +241,7 @@ export default function MerchantApplyPage() {
                             <span className="font-bold text-slate-800 text-lg">Become a Partner</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-400">Step {step} of 3</span>
+                            <span className="text-xs font-bold text-slate-400">Step {step} of 2</span>
                             <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                                 <motion.div
                                     initial={{ width: 0 }}
@@ -284,46 +322,6 @@ export default function MerchantApplyPage() {
 
                         {step === 3 && (
                             <motion.div
-                                key="step3"
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.3 }}
-                                className="py-2 h-full flex flex-col"
-                            >
-                                {error && (
-                                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex gap-3 items-start">
-                                        <div className="bg-red-100 p-2 rounded-full text-red-600 shrink-0">
-                                            <X size={18} />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="font-bold text-red-900 text-sm">Submission Failed</p>
-                                            <p className="text-red-700 text-sm mt-1">{error}</p>
-                                        </div>
-                                    </div>
-                                )}
-                                <KYCForm
-                                    userType="merchant"
-                                    initialData={{
-                                        fullName: formData.ownerName,
-                                        panNumber: formData.panCard,
-                                        fullAddress: formData.address,
-                                        phone: formData.phone
-                                    }}
-                                    onSuccess={async (kycData) => {
-                                        // KYC submitted successfully, now submit merchant application
-                                        console.log('✅ KYC submitted:', kycData);
-                                        await handleFormSubmit();
-                                    }}
-                                    onError={(errorMsg) => {
-                                        setError(errorMsg);
-                                    }}
-                                />
-                            </motion.div>
-                        )}
-
-                        {step === 4 && (
-                            <motion.div
                                 key="success"
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
@@ -370,17 +368,19 @@ export default function MerchantApplyPage() {
                     <div className="p-6 bg-white border-t border-gray-100 flex items-center justify-between gap-4 z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
                         <button
                             onClick={prevStep}
-                            disabled={step === 1}
+                            disabled={step === 1 || loading}
                             className={`px-8 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-colors ${step === 1 ? 'opacity-0 pointer-events-none' : ''}`}
                         >
                             Back
                         </button>
                         <button
-                            onClick={nextStep}
-                            className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-lg"
+                            onClick={step === 2 ? handleFormSubmit : nextStep}
+                            disabled={loading}
+                            className={`flex-1 flex gap-2 justify-center items-center py-4 rounded-2xl text-white font-bold shadow-lg transition-all text-lg ${loading ? 'bg-slate-300 shadow-none text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/30 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}
                         >
-                            Continue
-                            <ArrowRight size={20} />
+                            {loading && <Loader2 className="animate-spin" size={20} />}
+                            {loading ? 'Submitting...' : step === 2 ? 'Submit Application' : 'Continue'}
+                            {!loading && step === 1 && <ArrowRight size={20} />}
                         </button>
                     </div>
                 )}

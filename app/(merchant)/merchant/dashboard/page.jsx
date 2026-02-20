@@ -58,21 +58,15 @@ export default async function MerchantDashboardPage() {
     }
 
     if (!merchant) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900">Merchant Account Not Found</h3>
-                    <p className="text-gray-500 mt-2">Please contact support or complete your application.</p>
-                </div>
-            </div>
-        );
+        redirect('/merchant-apply');
     }
 
-    // 3. Fetch Data in Parallel
+    if (merchant.status === 'pending') redirect('/merchant-status/pending');
+    if (merchant.status === 'rejected') redirect('/merchant-status/rejected');
+    if (merchant.status === 'suspended') redirect('/merchant-status/suspended');
 
+    // 3. Fetch Data in Parallel
     const [couponsRes, soldCouponsRes] = await Promise.all([
-        // Fetch recent coupons for table (limit 10)
         supabase
             .from('coupons')
             .select('*')

@@ -71,9 +71,14 @@ export async function POST(request) {
                     user_id: user.id,
                     business_name: businessName,
                     gst_number: gstNumber || null,
+                    owner_name: ownerName,
+                    business_phone: phone,
+                    business_email: email,
+                    business_address: address,
+                    bank_account_number: bankAccount,
+                    bank_ifsc_code: ifscCode,
+                    pan_number: panCard,
                     status: 'pending', // Default to pending for admin approval
-                    commission_rate: 3.00, // Default commission rate
-                    wholesale_balance: 0.00,
                 }
             ])
             .select()
@@ -85,6 +90,17 @@ export async function POST(request) {
                 { error: 'Failed to create merchant account. Please try again.' },
                 { status: 500 }
             );
+        }
+
+        // Update user profile role to merchant
+        const { error: roleError } = await supabase
+            .from('user_profiles')
+            .update({ role: 'merchant' })
+            .eq('id', user.id);
+
+        if (roleError) {
+            console.error('Error updating user role:', roleError);
+            // We don't fail the whole request, but we log it
         }
 
         // TODO: Store KYC documents securely
@@ -102,20 +118,8 @@ export async function POST(request) {
             }
         });
 
-        // Log the merchant creation in audit logs
-        await supabase.from('audit_logs').insert([
-            {
-                user_id: user.id,
-                action: 'merchant_application_submitted',
-                entity_type: 'merchant',
-                entity_id: merchant.id,
-                changes: {
-                    business_name: businessName,
-                    status: 'approved', // TODO: Update when KYC is implemented
-                    auto_approved: true, // Flag to indicate this was auto-approved
-                }
-            }
-        ]);
+        // Log the merchant creation
+        console.log('✅ Merchant account created and verified.');
 
         return NextResponse.json(
             {

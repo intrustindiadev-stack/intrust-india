@@ -1,7 +1,7 @@
 import { Inter, Outfit, Poppins } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
-import { LanguageProvider } from '@/lib/i18n/LanguageContext';
+
 import { ThemeProvider } from '@/lib/contexts/ThemeContext';
 
 const inter = Inter({
@@ -31,11 +31,9 @@ export default function RootLayout({ children }) {
     <html lang="en" className={`${inter.variable} ${outfit.variable} ${poppins.variable}`}>
       <body className="antialiased">
         <ThemeProvider>
-          <LanguageProvider>
-            <AuthProvider>
-              {children}
-            </AuthProvider>
-          </LanguageProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

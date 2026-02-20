@@ -69,14 +69,6 @@ export default async function InventoryPage({ searchParams }) {
         redirect('/merchant-apply');
     }
 
-    // 3. Build base query
-    let baseFilter = supabase.from('coupons');
-
-    if (!isAdmin && merchant) {
-        // Apply merchant filter for non-admins
-        baseFilter = baseFilter.eq('merchant_id', merchant.id);
-    }
-
     // 4. Fetch stats in parallel (using COUNT)
     const [totalRes, listedRes, unlistedRes, totalValueRes] = await Promise.all([
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id),
@@ -217,28 +209,28 @@ export default async function InventoryPage({ searchParams }) {
                     <div className="flex gap-2 mb-6">
                         <Link
                             href="/merchant/inventory?filter=all"
-                            className={`px-4 py - 2 rounded - lg font - semibold transition - all ${filter === 'all'
+                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${filter === 'all'
                                 ? 'bg-[#92BCEA] text-white'
                                 : 'bg-white text-gray-600 hover:bg-gray-50'
-                                } `}
+                                }`}
                         >
                             All ({stats.total})
                         </Link>
                         <Link
                             href="/merchant/inventory?filter=listed"
-                            className={`px - 4 py - 2 rounded - lg font - semibold transition - all ${filter === 'listed'
+                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${filter === 'listed'
                                 ? 'bg-[#92BCEA] text-white'
                                 : 'bg-white text-gray-600 hover:bg-gray-50'
-                                } `}
+                                }`}
                         >
                             Listed ({stats.listed})
                         </Link>
                         <Link
                             href="/merchant/inventory?filter=unlisted"
-                            className={`px - 4 py - 2 rounded - lg font - semibold transition - all ${filter === 'unlisted'
+                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${filter === 'unlisted'
                                 ? 'bg-[#92BCEA] text-white'
                                 : 'bg-white text-gray-600 hover:bg-gray-50'
-                                } `}
+                                }`}
                         >
                             Unlisted ({stats.unlisted})
                         </Link>

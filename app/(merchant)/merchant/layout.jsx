@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import MerchantLayout from '@/components/layout/merchant/MerchantLayout';
 import MerchantBottomNav from '@/components/layout/merchant/MerchantBottomNav';
 
@@ -54,10 +55,18 @@ export default async function MerchantRootLayout({ children }) {
             redirect('/merchant-apply');
         }
 
-        if (merchant.status === 'pending') redirect('/merchant/pending');
-        if (merchant.status === 'rejected') redirect('/merchant/rejected');
-        if (merchant.status === 'suspended') redirect('/merchant/suspended');
-        if (merchant.status !== 'approved') redirect('/merchant-apply');
+        if (merchant.status === 'pending') {
+            redirect('/merchant-status/pending');
+        }
+        if (merchant.status === 'rejected') {
+            redirect('/merchant-status/rejected');
+        }
+        if (merchant.status === 'suspended') {
+            redirect('/merchant-status/suspended');
+        }
+        if (merchant.status !== 'approved' && !['pending', 'rejected', 'suspended'].includes(merchant.status)) {
+            redirect('/merchant-apply');
+        }
     }
 
     // 4. Render Layout (Authorized)

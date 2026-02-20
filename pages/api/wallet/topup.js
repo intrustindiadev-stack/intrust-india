@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 
 // This endpoint just forwards to the generic payment initiation but with specific parameters
 // It's a convenience endpoint
@@ -7,17 +7,18 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const supabase = createServerClient(
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseAnon = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        {
-            setAll(cookiesToSet) {
-                // setAll is not strictly required
-            },
-        }
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     );
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
 
     if (authError || !user) {
         return res.status(401).json({ error: 'Unauthorized' });
