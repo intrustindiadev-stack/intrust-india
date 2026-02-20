@@ -62,9 +62,16 @@ export function AuthProvider({ children }) {
                 // 1. Get initial session
                 const { data: { session }, error } = await supabase.auth.getSession();
 
-                if (error) throw error;
-
-                if (session?.user && mounted) {
+                if (error) {
+                    // Handle expired/invalid refresh tokens gracefully
+                    if (error.message?.includes('Refresh Token') || error.status === 401) {
+                        console.warn('Session expired, signing out');
+                        await supabase.auth.signOut();
+                        if (mounted) { setUser(null); setProfile(null); }
+                    } else {
+                        throw error;
+                    }
+                } else if (session?.user && mounted) {
                     setUser(session.user);
                     profileCache = await fetchProfile(session.user.id);
                     if (mounted) setProfile(profileCache);
@@ -81,6 +88,7 @@ export function AuthProvider({ children }) {
         // 2. Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
+                console.log('[AUTH-CONTEXT] Auth event fired:', event);
                 if (!mounted) return;
 
                 // Show loader on sign in
@@ -117,6 +125,20 @@ export function AuthProvider({ children }) {
         };
     }, []);
 
+    const refreshProfile = async () => {
+        if (user) {
+            const updated = await fetchProfile(user.id);
+            if (updated) setProfile(updated);
+        }
+    };
+
+    // Force-refresh the auth user object (e.g. after phone linking)
+    const refreshUser = async () => {
+        const { data: { user: freshUser } } = await supabase.auth.getUser();
+        if (freshUser) setUser(freshUser);
+        return freshUser;
+    };
+
     const value = {
         user,
         profile,
@@ -125,6 +147,8 @@ export function AuthProvider({ children }) {
         isAdmin: profile?.role === 'admin',
         isCustomer: profile?.role === 'customer',
         isMerchant: profile?.role === 'merchant',
+        refreshProfile,
+        refreshUser,
     };
 
     return (

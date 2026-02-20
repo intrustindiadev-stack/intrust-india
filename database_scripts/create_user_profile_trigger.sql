@@ -5,9 +5,22 @@
 -- 1. Create the function
 create or replace function public.handle_new_user()
 returns trigger as $$
+declare
+  name_val text;
+  avatar_val text;
 begin
-  insert into public.user_profiles (id, phone, role)
-  values (new.id, new.phone, 'customer');
+  -- Extract name and avatar from raw_user_meta_data (used by OAuth providers like Google)
+  name_val := coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', 'New User');
+  avatar_val := new.raw_user_meta_data->>'avatar_url';
+
+  insert into public.user_profiles (id, phone, full_name, avatar_url, role)
+  values (
+    new.id, 
+    new.phone, 
+    name_val,
+    avatar_val,
+    'user' -- CHANGED from 'customer' to 'user' to match DB constraints
+  );
   return new;
 end;
 $$ language plpgsql security definer;

@@ -1,11 +1,11 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronRight, Globe, Moon, Sun } from 'lucide-react';
+import { X, ChevronRight, Moon, Sun } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
-export default function MobileNav({ isOpen, onClose, isAuthenticated, t, language, changeLanguage, theme, toggleTheme, handleSignOut, menuItems }) {
+export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, user, theme, toggleTheme, handleSignOut, menuItems }) {
     const router = useRouter();
 
     // Menu Item Variants for Staggered Animation
@@ -111,6 +111,34 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, t, languag
                             <div className="space-y-3">
                                 {isAuthenticated ? (
                                     <>
+                                        {/* Profile Card */}
+                                        <motion.button
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.15 }}
+                                            onClick={() => { router.push('/profile'); onClose(); }}
+                                            className="w-full flex items-center gap-3 px-4 py-4 bg-gradient-to-r from-[#92BCEA]/10 to-[#AFB3F7]/10 rounded-2xl"
+                                        >
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] flex-shrink-0">
+                                                <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                                    {profile?.avatar_url ? (
+                                                        <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span className="font-bold text-[#7A93AC] text-sm">
+                                                            {profile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 text-left min-w-0">
+                                                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                                    {profile?.full_name || 'Your Profile'}
+                                                </p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
+                                            </div>
+                                            <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
+                                        </motion.button>
+
                                         <motion.button
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
@@ -118,7 +146,7 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, t, languag
                                             onClick={() => { router.push('/dashboard'); onClose(); }}
                                             className="w-full flex items-center justify-between px-4 py-4 text-[#171A21] dark:text-gray-100 bg-gray-50 dark:bg-gray-800 rounded-2xl font-medium"
                                         >
-                                            <span>{t?.('nav.dashboard') || 'Dashboard'}</span>
+                                            <span>Dashboard</span>
                                             <ChevronRight size={18} className="text-gray-400" />
                                         </motion.button>
                                         <motion.button
@@ -128,7 +156,7 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, t, languag
                                             onClick={handleSignOut}
                                             className="w-full px-4 py-4 bg-[#171A21] text-white rounded-2xl font-semibold shadow-lg shadow-[#171A21]/20 active:scale-95 transition-all"
                                         >
-                                            {t?.('nav.signout') || 'Sign Out'}
+                                            Sign Out
                                         </motion.button>
                                     </>
                                 ) : (
@@ -140,7 +168,7 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, t, languag
                                             onClick={() => { router.push('/login'); onClose(); }}
                                             className="w-full flex items-center justify-between px-4 py-4 text-[#171A21] dark:text-gray-100 bg-gray-50 dark:bg-gray-800 rounded-2xl font-medium"
                                         >
-                                            <span>{t?.('nav.login') || 'Login'}</span>
+                                            <span>Login</span>
                                             <ChevronRight size={18} className="text-gray-400" />
                                         </motion.button>
                                         <motion.button
@@ -150,7 +178,7 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, t, languag
                                             onClick={() => { router.push('/login'); onClose(); }}
                                             className="w-full px-4 py-4 bg-[#171A21] text-white rounded-2xl font-semibold shadow-lg shadow-[#171A21]/20 active:scale-95 transition-all"
                                         >
-                                            {t?.('nav.signup') || 'Sign Up'}
+                                            Sign Up
                                         </motion.button>
                                     </>
                                 )}
@@ -163,30 +191,6 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, t, languag
                                 transition={{ delay: 0.3 }}
                                 className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 space-y-6"
                             >
-                                {/* Language Toggle */}
-                                <div>
-                                    <div className="flex items-center gap-2 text-gray-500 mb-4">
-                                        <Globe size={16} />
-                                        <span className="text-xs font-bold uppercase tracking-wider">{t?.('nav.language') || 'Language'}</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2 bg-gray-50 dark:bg-gray-800 p-1 rounded-xl">
-                                        {['en', 'hi'].map((lang) => (
-                                            <button
-                                                key={lang}
-                                                onClick={() => changeLanguage(lang)}
-                                                className={`
-                                                    py-2.5 rounded-lg text-sm font-bold transition-all
-                                                    ${language === lang
-                                                        ? 'bg-white dark:bg-gray-700 text-[#171A21] dark:text-white shadow-sm'
-                                                        : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-                                                    }
-                                                `}
-                                            >
-                                                {lang === 'en' ? 'English' : 'हिन्दी'}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
 
                                 {/* Theme Toggle */}
                                 <div>

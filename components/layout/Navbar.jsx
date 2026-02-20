@@ -177,11 +177,9 @@ export default function Navbar() {
                                         >
                                             <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                                                 {hasImage ? (
-                                                    <Image
+                                                    <img
                                                         src={profile.avatar_url}
                                                         alt="Profile"
-                                                        width={40}
-                                                        height={40}
                                                         className="w-full h-full object-cover"
                                                     />
                                                 ) : (
@@ -215,11 +213,9 @@ export default function Navbar() {
                                         >
                                             <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                                                 {hasImage ? (
-                                                    <Image
+                                                    <img
                                                         src={profile.avatar_url}
                                                         alt="Profile"
-                                                        width={32}
-                                                        height={32}
                                                         className="w-full h-full object-cover"
                                                     />
                                                 ) : (
@@ -273,11 +269,9 @@ export default function Navbar() {
                                     >
                                         <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                                             {hasImage ? (
-                                                <Image
+                                                <img
                                                     src={profile.avatar_url}
                                                     alt="Profile"
-                                                    width={36}
-                                                    height={36}
                                                     className="w-full h-full object-cover"
                                                 />
                                             ) : (
@@ -323,6 +317,8 @@ export default function Navbar() {
                 isOpen={menuOpen}
                 onClose={() => setMenuOpen(false)}
                 isAuthenticated={isAuthenticated}
+                profile={profile}
+                user={user}
                 theme={theme}
                 toggleTheme={toggleTheme}
                 handleSignOut={handleLogout}

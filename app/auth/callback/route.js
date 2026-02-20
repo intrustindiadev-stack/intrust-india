@@ -44,6 +44,12 @@ export async function GET(request) {
         return NextResponse.redirect(new URL('/', origin))
     }
 
+    // Check for a custom redirect (e.g. from identity linking on profile page)
+    const next = requestUrl.searchParams.get('next')
+    if (next && next.startsWith('/')) {
+        return NextResponse.redirect(new URL(next, origin))
+    }
+
     const { data: profile } = await supabase
         .from('user_profiles')
         .select('role')
