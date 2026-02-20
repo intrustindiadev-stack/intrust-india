@@ -1,0 +1,82 @@
+{
+    "nav": {
+        "services": "Services",
+        "about": "About",
+        "contact": "Contact",
+        "login": "Login",
+        "signup": "Sign Up",
+        "dashboard": "Dashboard",
+        "signout": "Sign Out",
+        "language": "Language"
+    },
+    "hero": {
+        "title": "Your Financial Life,",
+        "subtitle": "Simplified",
+        "description": "Loans, payments, shopping, and more—all in one secure platform",
+        "searchPlaceholder": "Search for loans, gift cards, recharges..."
+    },
+    "prelinks": {
+        "giftCards": "Gift Cards",
+        "loans": "Loans",
+        "solar": "Solar",
+        "recharge": "Recharge",
+        "shopping": "Shopping",
+        "travel": "Travel",
+        "bills": "Bills",
+        "wallet": "Wallet"
+    },
+    "features": {
+        "title": "Why Choose INTRUST?",
+        "fast": {
+            "title": "Lightning Fast",
+            "description": "Instant approvals and processing. Get what you need in seconds, not days."
+        },
+        "secure": {
+            "title": "Bank-Grade Security",
+            "description": "Your data is encrypted and protected with industry-leading security standards."
+        },
+        "rewards": {
+            "title": "Rewards on Everything",
+            "description": "Earn points and cashback on every transaction. The more you use, the more you save."
+        }
+    },
+    "stats": {
+        "users": "Active Users",
+        "transactions": "Transactions",
+        "rating": "User Rating"
+    },
+    "cta": {
+        "title": "Ready to Get Started?",
+        "description": "Join thousands of users who trust INTRUST for their financial needs",
+        "button": "Sign Up for Free"
+    },
+    "partners": {
+        "title": "Powering Your Financial Journey",
+        "subtitle": "Trusted Partnerships",
+        "description": "Partnered with industry leaders to bring you the best services",
+        "stats": {
+            "partners": "Partners",
+            "transactions": "Transactions",
+            "uptime": "Uptime",
+            "support": "Support"
+        }
+    },
+    "footer": {
+        "brand": "INTRUST",
+        "tagline": "Your trusted financial partner",
+        "services": "Services",
+        "company": "Company",
+        "legal": "Legal",
+        "rights": "All rights reserved"
+    },
+    "voice": {
+        "listening": "Listening...",
+        "notSupported": "Voice search is not supported in your browser. Please use Chrome, Edge, or Safari."
+    },
+    "suggestions": {
+        "loans": "Loans",
+        "giftCards": "Gift Cards",
+        "recharge": "Mobile Recharge",
+        "solar": "Solar Panels"
+    }
+}
