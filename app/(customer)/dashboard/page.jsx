@@ -44,8 +44,8 @@ export default function CustomerDashboardPage() {
 
                 // Race the fetch bundle against timeout
                 const mainFetch = Promise.allSettled([
-                    supabase.from('user_profiles').select('full_name, role').eq('id', user.id).single(),
-                    supabase.from('kyc_records').select('status').eq('user_id', user.id).single(),
+                    supabase.from('user_profiles').select('full_name, role').eq('id', user.id).maybeSingle(),
+                    supabase.from('kyc_records').select('status').eq('user_id', user.id).maybeSingle(),
                     supabase.from('coupons').select('face_value_paise, selling_price_paise, valid_until, status').eq('purchased_by', user.id).eq('status', 'sold')
                 ]);
 

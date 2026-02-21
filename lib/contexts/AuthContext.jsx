@@ -99,10 +99,11 @@ export function AuthProvider({ children }) {
                 if (session?.user) {
                     setUser(session.user);
 
-                    // Only fetch profile if user changed or no cache
                     if (!profileCache || profileCache.id !== session.user.id) {
-                        profileCache = await fetchProfile(session.user.id);
-                        if (mounted) setProfile(profileCache);
+                        fetchProfile(session.user.id).then((profile) => {
+                            profileCache = profile;
+                            if (mounted) setProfile(profile);
+                        });
                     }
 
                     if (event === 'SIGNED_IN') {
