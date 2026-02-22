@@ -1,6 +1,8 @@
 import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '../../../lib/supabase/queries';
 import { WalletService } from '../../../lib/wallet/walletService';
+import { CustomerWalletService } from '../../../lib/wallet/customerWalletService';
 import { webcrypto } from 'crypto';
+import { createClient } from '@supabase/supabase-js';
 
 // Server-side decrypt function compatible with sabpaisa-pg-dev encryption
 async function decryptSabpaisaResponse(authKey, authIV, hexCipherText) {
@@ -191,16 +193,94 @@ export default async function handler(req, res) {
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'WALLET_TOPUP') {
             if (existingTxn.status !== 'SUCCESS') {
                 try {
-                    await WalletService.creditWallet(
+                    // Use CustomerWalletService for customer wallet top-ups
+                    await CustomerWalletService.creditWallet(
                         existingTxn.user_id,
                         amount,
-                        clientTxnId,
                         'TOPUP',
-                        `Wallet Topup via Sabpaisa (${paymentMode || 'Gateway'})`
+                        `Wallet Topup via Sabpaisa (${paymentMode || 'Gateway'})`,
+                        { id: clientTxnId, type: 'TOPUP' }
                     );
-                    console.log(`Wallet credited for txn ${clientTxnId}`);
+                    console.log(`Customer Wallet credited for txn ${clientTxnId}`);
                 } catch (walletError) {
-                    console.error('Failed to credit wallet:', walletError);
+                    console.error('Failed to credit customer wallet:', walletError);
+                }
+            }
+        }
+
+        // 6. Handle Gold Subscription Success
+        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GOLD_SUBSCRIPTION') {
+            // Only reward if this is the first time success for this txn
+            if (existingTxn.status !== 'SUCCESS') {
+                try {
+                    console.log(`Processing Gold Subscription for user ${existingTxn.user_id}`);
+
+                    const supabaseAdmin = createClient(
+                        process.env.NEXT_PUBLIC_SUPABASE_URL,
+                        process.env.SUPABASE_SERVICE_ROLE_KEY
+                    );
+
+                    // A. Fetch current profile to check existing expiry
+                    const { data: profile } = await supabaseAdmin
+                        .from('user_profiles')
+                        .select('is_gold_verified, subscription_expiry')
+                        .eq('id', existingTxn.user_id)
+                        .single();
+
+                    // B. Determine Package Details
+                    const packageId = existingTxn.udf2 || 'GOLD_1Y';
+                    let monthsToAdd = 12;
+                    let cashbackAmount = 1499.00;
+
+                    if (packageId === 'GOLD_1M') {
+                        monthsToAdd = 1;
+                        cashbackAmount = 199.00;
+                    } else if (packageId === 'GOLD_3M') {
+                        monthsToAdd = 3;
+                        cashbackAmount = 499.00;
+                    } else if (packageId === 'GOLD_1Y') {
+                        monthsToAdd = 12;
+                        cashbackAmount = 1499.00;
+                    }
+
+                    // C. Calculate New Expiry Date
+                    // If already gold and expiry is in future, EXTEND it.
+                    // Otherwise, start from now.
+                    let baseDate = new Date();
+                    if (profile?.is_gold_verified && profile?.subscription_expiry) {
+                        const currentExpiry = new Date(profile.subscription_expiry);
+                        if (currentExpiry > baseDate) {
+                            baseDate = currentExpiry;
+                        }
+                    }
+
+                    const newExpiryDate = new Date(baseDate);
+                    newExpiryDate.setMonth(newExpiryDate.getMonth() + monthsToAdd);
+
+                    // D. Update User Profile
+                    const { error: profileError } = await supabaseAdmin
+                        .from('user_profiles')
+                        .update({
+                            is_gold_verified: true,
+                            subscription_expiry: newExpiryDate.toISOString(),
+                            updated_at: new Date()
+                        })
+                        .eq('id', existingTxn.user_id);
+
+                    if (profileError) throw profileError;
+
+                    // E. Credit Cashback to Customer Wallet
+                    await CustomerWalletService.creditWallet(
+                        existingTxn.user_id,
+                        cashbackAmount,
+                        'CASHBACK',
+                        `Gold ${monthsToAdd}M Subscription Cashback Reward`,
+                        { id: clientTxnId, type: 'SUBSCRIPTION', package: packageId }
+                    );
+
+                    console.log(`Gold Subscription (${packageId}) granted for txn ${clientTxnId}. New Expiry: ${newExpiryDate.toISOString()}`);
+                } catch (goldError) {
+                    console.error('Failed to process gold subscription rewards:', goldError);
                 }
             }
         }

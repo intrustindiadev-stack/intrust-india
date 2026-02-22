@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
 import MobileNav from './MobileNav';
+import GoldBadge from '@/components/ui/GoldBadge';
 
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
@@ -171,11 +172,15 @@ export default function Navbar() {
                                 <div className="hidden lg:flex items-center gap-4">
                                     <Link href="/profile">
                                         <motion.div
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            className="w-10 h-10 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] cursor-pointer"
+                                            className={`
+                                                relative w-10 h-10 rounded-full p-[2px] cursor-pointer
+                                                ${profile?.is_gold_verified
+                                                    ? 'bg-gradient-to-tr from-amber-200 via-yellow-500 to-amber-200 shadow-[0_0_15px_rgba(212,175,55,0.6)]'
+                                                    : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
+                                                }
+                                            `}
                                         >
-                                            <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                            <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden ring-1 ring-yellow-500/20">
                                                 {hasImage ? (
                                                     <img
                                                         src={profile.avatar_url}
@@ -183,11 +188,16 @@ export default function Navbar() {
                                                         className="w-full h-full object-cover"
                                                     />
                                                 ) : (
-                                                    <span className="font-bold text-[#7A93AC] text-lg">
+                                                    <span className={`font-bold text-lg ${profile?.is_gold_verified ? 'text-amber-600' : 'text-[#7A93AC]'}`}>
                                                         {getInitials()}
                                                     </span>
                                                 )}
                                             </div>
+                                            {profile?.is_gold_verified && (
+                                                <div className="absolute -bottom-0.5 -right-0.5 z-20">
+                                                    <GoldBadge size="sm" noAnim />
+                                                </div>
+                                            )}
                                         </motion.div>
                                     </Link>
 
@@ -205,27 +215,6 @@ export default function Navbar() {
                                     >
                                         Sign Out
                                     </motion.button>
-                                    {/* Mobile/Tablet Profile Icon */}
-                                    <Link href="/profile" className="lg:hidden">
-                                        <motion.div
-                                            whileTap={{ scale: 0.95 }}
-                                            className="w-8 h-8 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] cursor-pointer"
-                                        >
-                                            <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                                                {hasImage ? (
-                                                    <img
-                                                        src={profile.avatar_url}
-                                                        alt="Profile"
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <span className="font-bold text-[#7A93AC] text-sm">
-                                                        {getInitials()}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    </Link>
                                 </div>
                             ) : (
                                 <div className="hidden lg:flex items-center gap-2">
@@ -263,11 +252,16 @@ export default function Navbar() {
                             {/* Mobile/Tablet Profile Icon - Visible only when authenticated */}
                             {isAuthenticated && (
                                 <Link href="/profile" className="lg:hidden mr-2">
-                                    <motion.div
-                                        whileTap={{ scale: 0.95 }}
-                                        className="w-9 h-9 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] cursor-pointer"
+                                    <div
+                                        className={`
+                                            relative w-9 h-9 rounded-full p-[1.8px] cursor-pointer
+                                            ${profile?.is_gold_verified
+                                                ? 'bg-gradient-to-tr from-amber-200 via-yellow-500 to-amber-200 shadow-[0_0_12px_rgba(212,175,55,0.5)]'
+                                                : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
+                                            }
+                                        `}
                                     >
-                                        <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                        <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden ring-[0.5px] ring-yellow-500/10">
                                             {hasImage ? (
                                                 <img
                                                     src={profile.avatar_url}
@@ -275,12 +269,17 @@ export default function Navbar() {
                                                     className="w-full h-full object-cover"
                                                 />
                                             ) : (
-                                                <span className="font-bold text-[#7A93AC] text-sm">
+                                                <span className={`font-bold ${profile?.is_gold_verified ? 'text-amber-600' : 'text-[#7A93AC]'} text-sm`}>
                                                     {getInitials()}
                                                 </span>
                                             )}
                                         </div>
-                                    </motion.div>
+                                        {profile?.is_gold_verified && (
+                                            <div className="absolute -bottom-0.5 -right-0.5 z-20">
+                                                <GoldBadge size="sm" className="scale-75" noAnim />
+                                            </div>
+                                        )}
+                                    </div>
                                 </Link>
                             )}
 

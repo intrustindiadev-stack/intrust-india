@@ -4,8 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import {
     User, Mail, Phone, MapPin, Calendar, Edit2, Check, X,
-    ShieldCheck, Package, LayoutDashboard, Camera, Loader2, Lock, Link2, AlertCircle
+    ShieldCheck, Package, LayoutDashboard, Camera, Loader2, Lock, Link2, AlertCircle, Star,
+    Wallet, ChevronRight
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import GoldBadge from '@/components/ui/GoldBadge';
 import KYCStatus from '@/components/kyc/KYCStatus';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
@@ -177,10 +180,10 @@ function EditableRow({ label, value, icon: Icon, onSave, type = 'text', placehol
             {!readOnly && !editing && (
                 <button
                     onClick={() => setEditing(true)}
-                    className="opacity-0 group-hover:opacity-100 mt-0.5 w-7 h-7 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-gray-300 hover:text-[#92BCEA] transition-all flex-shrink-0"
+                    className="mt-0.5 w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-[#92BCEA] transition-all flex-shrink-0 border border-gray-100 dark:border-gray-600 shadow-sm active:scale-95"
                     title={`Edit ${label}`}
                 >
-                    <Edit2 size={12} />
+                    <Edit2 size={14} />
                 </button>
             )}
         </div>
@@ -296,22 +299,22 @@ function PhoneVerification({ currentPhone, authPhone, userId, onVerified, showTo
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-800 dark:text-gray-100">{displayPhone}</span>
-                        {!isFullyLinked && !justVerified && (
+                        {!isVerified && !justVerified && (
                             <button
                                 onClick={() => { setStep('input'); setPhone(displayPhone.replace('+91', '')); }}
-                                className="text-[10px] text-[#92BCEA] hover:underline ml-1"
+                                className="text-[11px] bg-[#92BCEA]/10 text-[#92BCEA] px-2 py-0.5 rounded-md font-bold hover:bg-[#92BCEA]/20 transition-all border border-[#92BCEA]/20"
                             >
-                                Link for login?
+                                Link Account
                             </button>
                         )}
                     </div>
                 </div>
                 <button
                     onClick={() => { setStep('input'); setPhone(displayPhone.replace('+91', '')); }}
-                    className="opacity-0 group-hover:opacity-100 mt-0.5 w-7 h-7 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-gray-300 hover:text-[#92BCEA] transition-all flex-shrink-0"
+                    className="mt-0.5 w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-[#92BCEA] transition-all flex-shrink-0 border border-gray-100 dark:border-gray-600 shadow-sm active:scale-95"
                     title="Change phone"
                 >
-                    <Edit2 size={12} />
+                    <Edit2 size={14} />
                 </button>
             </div>
         );
@@ -337,10 +340,10 @@ function PhoneVerification({ currentPhone, authPhone, userId, onVerified, showTo
                 </div>
                 <button
                     onClick={() => { setStep('input'); setPhone(displayPhone.replace('+91', '')); }}
-                    className="mt-0.5 flex items-center gap-1 text-xs text-[#92BCEA] font-semibold hover:text-[#7aaad6] transition-colors flex-shrink-0"
+                    className="mt-0.5 px-3 py-1.5 bg-[#92BCEA] text-white text-xs font-bold rounded-lg hover:bg-[#7aaad6] transition-all shadow-sm shadow-blue-200 dark:shadow-none flex items-center gap-1.5 active:scale-95"
                 >
-                    <ShieldCheck size={12} />
-                    {displayPhone ? 'Verify' : 'Add & Verify'}
+                    <ShieldCheck size={14} />
+                    {displayPhone ? 'Verify Now' : 'Add & Verify'}
                 </button>
             </div>
         );
@@ -437,25 +440,7 @@ function LinkGoogleCard({ authUser, showToast }) {
     const googleEmail = googleIdentity?.identity_data?.email;
 
     if (hasGoogle) {
-        return (
-            <div className="flex items-start gap-3.5 py-3.5 border-b border-gray-50 dark:border-gray-700/60">
-                <div className="mt-0.5 flex-shrink-0">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                    </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                        <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Google Account</p>
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 uppercase tracking-wide">✓ Linked</span>
-                    </div>
-                    <span className="text-sm text-gray-800 dark:text-gray-100 truncate block">{googleEmail || authUser.email}</span>
-                </div>
-            </div>
-        );
+        return null;
     }
 
     const handleLink = async () => {
@@ -504,11 +489,49 @@ function LinkGoogleCard({ authUser, showToast }) {
             <button
                 onClick={handleLink}
                 disabled={linking}
-                className="mt-0.5 flex items-center gap-1 text-xs text-[#92BCEA] font-semibold hover:text-[#7aaad6] transition-colors flex-shrink-0 disabled:opacity-50"
+                className="mt-0.5 px-3 py-1.5 bg-white dark:bg-gray-700/50 text-[#92BCEA] text-xs font-bold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all border border-gray-100 dark:border-gray-600 shadow-sm flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
             >
                 {linking ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}
                 Link Google
             </button>
+        </div>
+    );
+}
+
+// ─── Wallet Section ──────────────────────────────────────────────────────────
+function WalletCard({ balancePaise, onManage }) {
+    const balance = (balancePaise || 0) / 100;
+
+    return (
+        <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-2xl p-5 text-white shadow-xl shadow-gray-900/40 relative overflow-hidden group">
+            {/* Background Accent */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -mr-8 -mt-8" />
+
+            <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                            <Wallet size={16} className="text-[#92BCEA]" />
+                        </div>
+                        <h3 className="text-xs font-bold text-gray-300 uppercase tracking-widest">Your Wallet</h3>
+                    </div>
+                </div>
+
+                <div className="mb-6">
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-[0.2em] mb-1">Available Balance</p>
+                    <p className="text-3xl font-black tabular-nums">
+                        ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </p>
+                </div>
+
+                <button
+                    onClick={onManage}
+                    className="w-full py-2.5 bg-white text-black text-xs font-black rounded-xl hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
+                >
+                    Manage Wallet
+                    <ChevronRight size={14} />
+                </button>
+            </div>
         </div>
     );
 }
@@ -552,9 +575,9 @@ function AddressCard({ address, onSave }) {
                 </div>
                 {!editing && (
                     <button onClick={() => setEditing(true)}
-                        className="flex items-center gap-1 text-xs text-[#92BCEA] font-semibold hover:text-[#7aaad6] transition-colors">
-                        <Edit2 size={12} />
-                        {address ? 'Edit' : 'Add'}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#92BCEA]/10 text-[#92BCEA] text-xs font-bold rounded-lg hover:bg-[#92BCEA]/20 transition-all border border-[#92BCEA]/20 active:scale-95">
+                        <Edit2 size={13} />
+                        {address ? 'Edit Address' : 'Add Address'}
                     </button>
                 )}
             </div>
@@ -614,6 +637,7 @@ export default function CustomerProfilePage() {
     const { user: authUser, loading: authLoading, refreshProfile, refreshUser } = useAuth();
 
     const [profile, setProfile] = useState(null);
+    const [wallet, setWallet] = useState(null);
     const [profileLoading, setProfileLoading] = useState(true);
     const [toast, setToast] = useState({ msg: '', type: 'success' });
 
@@ -630,13 +654,16 @@ export default function CustomerProfilePage() {
         let cancelled = false;
         (async () => {
             setProfileLoading(true);
-            const { data } = await supabase
-                .from('user_profiles')
-                .select('*')
-                .eq('id', authUser.id)
-                .single();
+
+            // Fetch Profile & Wallet in parallel
+            const [profileResult, walletResult] = await Promise.all([
+                supabase.from('user_profiles').select('*').eq('id', authUser.id).single(),
+                supabase.from('customer_wallets').select('*').eq('user_id', authUser.id).single()
+            ]);
+
             if (!cancelled) {
-                if (data) setProfile(data);
+                if (profileResult.data) setProfile(profileResult.data);
+                if (walletResult.data) setWallet(walletResult.data);
                 setProfileLoading(false);
             }
         })();
@@ -678,12 +705,13 @@ export default function CustomerProfilePage() {
     if (authLoading || profileLoading) return <ProfileSkeleton />;
     if (!authUser) { router.push('/login'); return null; }
 
-    const kycStatus = profile?.kyc_status || 'not_started';
     const displayName = profile?.full_name || authUser.email?.split('@')[0] || 'User';
     const joinYear = new Date(profile?.created_at || authUser.created_at).getFullYear();
+    const isGold = !!profile?.is_gold_verified;
+    const kycStatus = profile?.kyc_status || 'not_started';
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 transition-colors duration-500">
             <Navbar />
             <Toast msg={toast.msg} type={toast.type} />
 
@@ -692,13 +720,22 @@ export default function CustomerProfilePage() {
                     <Breadcrumbs items={[{ label: 'Profile' }]} />
 
                     {/* Page Title */}
-                    <div className="mb-7">
-                        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1.5 font-[family-name:var(--font-outfit)]">
-                            My Profile
-                        </h1>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Manage your account, linked identities, and personal info
-                        </p>
+                    <div className="mb-7 flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1.5 font-[family-name:var(--font-outfit)] flex items-center gap-3">
+                                My Profile
+                                {isGold && <GoldBadge size="md" />}
+                            </h1>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Manage your account, linked identities, and personal info
+                            </p>
+                        </div>
+                        {isGold && (
+                            <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full">
+                                <Star size={14} className="text-amber-500 fill-amber-500" />
+                                <span className="text-xs font-bold text-amber-500 uppercase tracking-wider">Premium Member</span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -707,7 +744,26 @@ export default function CustomerProfilePage() {
                         <div className="lg:col-span-1 space-y-5">
 
                             {/* Identity Card */}
-                            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm">
+                            <motion.div
+                                initial={isGold ? { boxShadow: "0 0 0px rgba(212, 175, 55, 0)" } : {}}
+                                animate={isGold ? { boxShadow: "0 0 30px rgba(212, 175, 55, 0.3)" } : {}}
+                                className={`
+                                    relative overflow-hidden rounded-3xl border p-6 transition-all duration-500 
+                                    ${isGold
+                                        ? 'bg-gradient-to-br from-[#1a1600] to-[#000000] border-amber-500/40 text-white'
+                                        : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700'
+                                    }
+                                `}
+                            >
+                                {isGold && (
+                                    <>
+                                        {/* Premium Texture Overlay */}
+                                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+                                        {/* Golden Glows */}
+                                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/20 blur-3xl rounded-full" />
+                                        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-yellow-500/10 blur-3xl rounded-full" />
+                                    </>
+                                )}
                                 <AvatarUpload
                                     userId={authUser.id}
                                     avatarUrl={profile?.avatar_url}
@@ -715,34 +771,60 @@ export default function CustomerProfilePage() {
                                     onUpload={handleAvatarUpload}
                                 />
 
-                                <div className="text-center mb-5 pb-5 border-b border-gray-50 dark:border-gray-700">
-                                    <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate px-2">{displayName}</h2>
-                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Member since {joinYear}</p>
-                                    <span className={`inline-block mt-2 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${kycStatus === 'verified'
-                                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600'
-                                        : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600'
-                                        }`}>
-                                        {kycStatus === 'verified' ? '✓ KYC Verified' : 'KYC Pending'}
-                                    </span>
+                                <div className={`text-center mb-5 pb-5 border-b ${isGold ? 'border-amber-500/20' : 'border-gray-50 dark:border-gray-700'}`}>
+                                    <h2 className={`text-xl font-black truncate px-2 flex items-center justify-center gap-2 ${isGold ? 'text-amber-100' : 'text-gray-900 dark:text-gray-100'}`}>
+                                        {displayName}
+                                        {isGold && <GoldBadge size="md" />}
+                                    </h2>
+                                    <p className={`text-xs mt-1 font-medium ${isGold ? 'text-amber-500/60' : 'text-gray-400 dark:text-gray-500'}`}>Member since {joinYear}</p>
+                                    <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+                                        <span className={`inline-block text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${kycStatus === 'verified'
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600'
+                                            : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600'
+                                            }`}>
+                                            {kycStatus === 'verified' ? '✓ KYC Verified' : 'KYC Pending'}
+                                        </span>
+                                        {isGold && (
+                                            <span className="inline-block text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest bg-gradient-to-r from-[#FFD700] to-[#FDB931] text-black shadow-lg shadow-amber-500/20">
+                                                Elite Gold
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-2.5 text-sm">
-                                        <Mail size={15} className="text-[#92BCEA] flex-shrink-0" />
-                                        <span className="text-gray-600 dark:text-gray-400 truncate text-xs">{authUser.email || 'No email'}</span>
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isGold ? 'bg-amber-500/10' : 'bg-[#92BCEA]/10'}`}>
+                                            <Mail size={14} className={isGold ? 'text-amber-400' : 'text-[#92BCEA]'} />
+                                        </div>
+                                        <span className={`text-xs font-medium ${isGold ? 'text-amber-100/80' : 'text-gray-600 dark:text-gray-400'} truncate`}>{authUser.email || 'No email'}</span>
                                     </div>
-                                    <div className="flex items-center gap-2.5 text-sm">
-                                        <Phone size={15} className="text-[#92BCEA] flex-shrink-0" />
-                                        <span className="text-gray-600 dark:text-gray-400 text-xs">
-                                            {profile?.phone || authUser.phone || <span className="italic text-gray-300">No phone</span>}
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isGold ? 'bg-amber-500/10' : 'bg-[#92BCEA]/10'}`}>
+                                            <Phone size={14} className={isGold ? 'text-amber-400' : 'text-[#92BCEA]'} />
+                                        </div>
+                                        <span className={`text-xs font-medium ${isGold ? 'text-amber-100/80' : 'text-gray-600 dark:text-gray-400'}`}>
+                                            {profile?.phone || authUser.phone || <span className="italic text-gray-500">No phone</span>}
                                         </span>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
+
+                            {/* Wallet Card */}
+                            <WalletCard
+                                balancePaise={wallet?.balance_paise || 0}
+                                onManage={() => router.push('/wallet')}
+                            />
 
                             {/* Gradient Stats Card */}
-                            <div className="bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] rounded-2xl p-5 text-white shadow-md">
-                                <h3 className="text-sm font-bold mb-4 opacity-90">Your Activity</h3>
+                            <div className={`${isGold
+                                ? 'bg-gradient-to-br from-amber-600 via-yellow-500 to-amber-700'
+                                : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
+                                } rounded-2xl p-5 text-white shadow-lg shadow-amber-900/20`}>
+                                <h3 className="text-sm font-bold mb-4 opacity-90 flex items-center gap-2">
+                                    {isGold && <Star size={16} className="fill-white" />}
+                                    Your Premium Activity
+                                </h3>
                                 <div className="space-y-3.5">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-sm opacity-90">

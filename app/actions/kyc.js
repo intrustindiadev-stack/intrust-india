@@ -202,12 +202,18 @@ export async function submitKYC(formData) {
             result = inserted;
         }
 
+        // B. SYNC: Update user_profiles.kyc_status
+        await supabase
+            .from('user_profiles')
+            .update({ kyc_status: isVerified ? 'verified' : 'rejected' })
+            .eq('id', user.id);
+
         revalidatePath('/profile/kyc');
-        
-        const message = isVerified 
-            ? 'KYC Verified Successfully via SprintVerify' 
+
+        const message = isVerified
+            ? 'KYC Verified Successfully via SprintVerify'
             : `KYC Verification Failed: ${rejectionReason}`;
-            
+
         return { success: true, data: result, message };
 
     } catch (error) {

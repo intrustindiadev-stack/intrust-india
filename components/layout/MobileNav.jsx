@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, Globe, Moon, Sun } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import GoldBadge from '@/components/ui/GoldBadge';
 
 export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, user, t, language, changeLanguage, theme, toggleTheme, handleSignOut, menuItems }) {
     const router = useRouter();
@@ -119,20 +120,32 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                             onClick={() => { router.push('/profile'); onClose(); }}
                                             className="w-full flex items-center gap-3 px-4 py-4 bg-gradient-to-r from-[#92BCEA]/10 to-[#AFB3F7]/10 rounded-2xl"
                                         >
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] flex-shrink-0">
-                                                <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                            <div className={`
+                                                relative w-10 h-10 rounded-full p-[2px] flex-shrink-0
+                                                ${profile?.is_gold_verified
+                                                    ? 'bg-gradient-to-tr from-amber-200 via-yellow-500 to-amber-200 shadow-[0_0_15px_rgba(212,175,55,0.6)]'
+                                                    : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
+                                                }
+                                            `}>
+                                                <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden ring-1 ring-yellow-500/20">
                                                     {profile?.avatar_url ? (
                                                         <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <span className="font-bold text-[#7A93AC] text-sm">
+                                                        <span className={`font-bold text-sm ${profile?.is_gold_verified ? 'text-amber-600' : 'text-[#7A93AC]'}`}>
                                                             {profile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
                                                         </span>
                                                     )}
                                                 </div>
+                                                {profile?.is_gold_verified && (
+                                                    <div className="absolute -bottom-0.5 -right-0.5 z-20">
+                                                        <GoldBadge size="sm" className="scale-[0.85]" noAnim />
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="flex-1 text-left min-w-0">
-                                                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate flex items-center gap-1.5">
                                                     {profile?.full_name || 'Your Profile'}
+                                                    {profile?.is_gold_verified && <GoldBadge size="sm" className="scale-[0.9]" noAnim />}
                                                 </p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
                                             </div>
