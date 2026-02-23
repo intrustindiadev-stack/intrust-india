@@ -4,7 +4,7 @@ import { useState } from 'react';
 import ListToMarketplace from '@/components/merchant/ListToMarketplace';
 import { supabase } from '@/lib/supabaseClient';
 
-export default function InventoryTable({ initialCoupons, isAdmin }) {
+export default function InventoryTable({ initialCoupons }) {
     const [inventory] = useState(initialCoupons);
     const [selectedCoupon, setSelectedCoupon] = useState(null);
     const [showListModal, setShowListModal] = useState(false);
@@ -145,7 +145,6 @@ export default function InventoryTable({ initialCoupons, isAdmin }) {
             {showListModal && selectedCoupon && (
                 <ListToMarketplace
                     coupon={selectedCoupon}
-                    isAdmin={isAdmin}
                     onClose={() => {
                         setShowListModal(false);
                         setSelectedCoupon(null);

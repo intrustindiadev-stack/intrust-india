@@ -24,36 +24,34 @@ export default async function MerchantRootLayout({ children }) {
         .single();
 
     const role = profile?.role;
-    const allowedRoles = ['merchant', 'admin'];
+    const allowedRoles = ['merchant'];
 
     if (!allowedRoles.includes(role)) {
         redirect('/'); // Unauthorized
     }
 
-    // 3. Check Merchant Status (if not admin)
-    if (role === 'merchant') {
-        const { data: merchant } = await supabase
-            .from('merchants')
-            .select('status')
-            .eq('user_id', user.id)
-            .single();
+    // 3. Check Merchant Status
+    const { data: merchant } = await supabase
+        .from('merchants')
+        .select('status')
+        .eq('user_id', user.id)
+        .single();
 
-        if (!merchant) {
-            redirect('/merchant-apply');
-        }
+    if (!merchant) {
+        redirect('/merchant-apply');
+    }
 
-        if (merchant.status === 'pending') {
-            redirect('/merchant-status/pending');
-        }
-        if (merchant.status === 'rejected') {
-            redirect('/merchant-status/rejected');
-        }
-        if (merchant.status === 'suspended') {
-            redirect('/merchant-status/suspended');
-        }
-        if (merchant.status !== 'approved' && !['pending', 'rejected', 'suspended'].includes(merchant.status)) {
-            redirect('/merchant-apply');
-        }
+    if (merchant.status === 'pending') {
+        redirect('/merchant-status/pending');
+    }
+    if (merchant.status === 'rejected') {
+        redirect('/merchant-status/rejected');
+    }
+    if (merchant.status === 'suspended') {
+        redirect('/merchant-status/suspended');
+    }
+    if (merchant.status !== 'approved' && !['pending', 'rejected', 'suspended'].includes(merchant.status)) {
+        redirect('/merchant-apply');
     }
 
     // 4. Render Layout (Authorized)

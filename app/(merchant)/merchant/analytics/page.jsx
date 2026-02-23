@@ -24,36 +24,12 @@ export default async function AnalyticsPage() {
         .eq('id', user.id)
         .single();
 
-    let merchant = null;
-
-    if (profile?.role === 'admin') {
-        // 1. Try to fetch own merchant first
-        const { data: ownMerchant } = await supabase
-            .from('merchants')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
-
-        if (ownMerchant) {
-            merchant = ownMerchant;
-        } else {
-            // 2. Fallback: Fetch the most recent merchant
-            const { data } = await supabase
-                .from('merchants')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .single();
-            merchant = data;
-        }
-    } else {
-        const { data } = await supabase
-            .from('merchants')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
-        merchant = data;
-    }
+    const { data } = await supabase
+        .from('merchants')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+    const merchant = data;
 
     if (!merchant) {
         redirect('/merchant-apply');

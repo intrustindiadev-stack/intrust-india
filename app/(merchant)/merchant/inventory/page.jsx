@@ -32,40 +32,17 @@ export default async function InventoryPage({ searchParams }) {
         .single();
 
     let merchant = null;
-    const isAdmin = profile?.role === 'admin';
+    const isAdmin = false;
 
-    if (isAdmin) {
-        // Admin: 
-        // 1. Try to fetch own merchant first (like in useMerchant)
-        const { data: ownMerchant } = await supabase
-            .from('merchants')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
+    // Merchant: Fetch own record
+    const { data } = await supabase
+        .from('merchants')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+    merchant = data;
 
-        if (ownMerchant) {
-            merchant = ownMerchant;
-        } else {
-            // 2. Fallback: Fetch the most recent merchant
-            const { data } = await supabase
-                .from('merchants')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .single();
-            merchant = data;
-        }
-    } else {
-        // Merchant: Fetch own record
-        const { data } = await supabase
-            .from('merchants')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
-        merchant = data;
-    }
-
-    if (!isAdmin && !merchant) {
+    if (!merchant) {
         redirect('/merchant-apply');
     }
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
-export default function ListToMarketplace({ coupon, onClose, onSuccess, isAdmin }) {
+export default function ListToMarketplace({ coupon, onClose, onSuccess }) {
     const [sellingPrice, setSellingPrice] = useState(
         coupon.merchant_selling_price_paise ? (coupon.merchant_selling_price_paise / 100).toString() : ''
     );

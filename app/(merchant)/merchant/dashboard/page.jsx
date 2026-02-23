@@ -27,32 +27,13 @@ export default async function MerchantDashboardPage() {
 
     let merchant = null;
 
-    if (profile?.role === 'admin') {
-        const { data: ownMerchant } = await supabase
-            .from('merchants')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
+    const { data: merchantData } = await supabase
+        .from('merchants')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-        if (ownMerchant) {
-            merchant = ownMerchant;
-        } else {
-            const { data } = await supabase
-                .from('merchants')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .single();
-            merchant = data;
-        }
-    } else {
-        const { data } = await supabase
-            .from('merchants')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
-        merchant = data;
-    }
+    merchant = merchantData;
 
     if (!merchant) {
         redirect('/merchant-apply');
