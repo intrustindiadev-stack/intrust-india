@@ -169,7 +169,10 @@ export default async function handler(req, res) {
         // 3. Get Existing Transaction to Check Type
         const existingTxn = await getTransactionByClientTxnId(clientTxnId);
 
-        // 4. Update Transaction Status
+        // 4. Update Transaction Status (if it wasn't already SUCCESS)
+        // We only want to process rewards/topups ONE TIME.
+        const wasAlreadySuccess = existingTxn && existingTxn.status === 'SUCCESS';
+
         if (clientTxnId) {
             try {
                 await updateTransaction(clientTxnId, {
@@ -185,15 +188,14 @@ export default async function handler(req, res) {
             } catch (updateErr) {
                 console.error('Failed to update transaction status:', updateErr.message);
                 console.error('Status attempted:', internalStatus);
-                // Don't throw — still redirect user correctly
             }
         }
 
-        // 5. Handle Wallet Credit for WALLET_TOPUP
+        // 5. Handle Wallet Credit for WALLET_TOPUP safely
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'WALLET_TOPUP') {
-            if (existingTxn.status !== 'SUCCESS') {
+            if (!wasAlreadySuccess) {
                 try {
-                    // Use CustomerWalletService for customer wallet top-ups
+                    console.log(`[WALLET_TOPUP] Triggering creditWallet for ${existingTxn.user_id} amount: ${amount}`);
                     await CustomerWalletService.creditWallet(
                         existingTxn.user_id,
                         amount,
@@ -201,17 +203,19 @@ export default async function handler(req, res) {
                         `Wallet Topup via Sabpaisa (${paymentMode || 'Gateway'})`,
                         { id: clientTxnId, type: 'TOPUP' }
                     );
-                    console.log(`Customer Wallet credited for txn ${clientTxnId}`);
+                    console.log(`Customer Wallet credited successfully for txn ${clientTxnId}`);
                 } catch (walletError) {
                     console.error('Failed to credit customer wallet:', walletError);
                 }
+            } else {
+                console.log(`[WALLET_TOPUP] Transaction ${clientTxnId} was already SUCCESS. Skipping duplicate credit.`);
             }
         }
 
         // 6. Handle Gold Subscription Success
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GOLD_SUBSCRIPTION') {
             // Only reward if this is the first time success for this txn
-            if (existingTxn.status !== 'SUCCESS') {
+            if (!wasAlreadySuccess) {
                 try {
                     console.log(`Processing Gold Subscription for user ${existingTxn.user_id}`);
 
@@ -277,8 +281,6 @@ export default async function handler(req, res) {
                         `Gold ${monthsToAdd}M Subscription Cashback Reward`,
                         { id: clientTxnId, type: 'SUBSCRIPTION', package: packageId }
                     );
-
-                    console.log(`Gold Subscription (${packageId}) granted for txn ${clientTxnId}. New Expiry: ${newExpiryDate.toISOString()}`);
                 } catch (goldError) {
                     console.error('Failed to process gold subscription rewards:', goldError);
                 }

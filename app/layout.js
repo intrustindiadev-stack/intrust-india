@@ -21,7 +21,7 @@ const poppins = Poppins({
 });
 
 export const metadata = {
-  title: "INTRUST - Your Financial Life, Simplified",
+  title: "INTRUST",
   description: "Loans, payments, shopping, and more—all in one secure platform",
 
 };

@@ -112,7 +112,7 @@ export default function SabpaisaPaymentModal({ isOpen, onClose, amount, user, pr
                     clientTxnId: data.transactionId,
                     payerName: user.user_metadata?.full_name || 'User',
                     payerEmail: user.email || 'test@example.com',
-                    payerMobile: user.phone || '9999999999',
+                    payerMobile: user.phone ? user.phone.replace(/\D/g, '').replace(/^91/, '').slice(-10) : '9999999999',
                     amount: Number(paymentAmount).toFixed(2),
                     channelId: 'W',
                     url: process.env.NEXT_PUBLIC_SABPAISA_INIT_URL
@@ -178,7 +178,7 @@ export default function SabpaisaPaymentModal({ isOpen, onClose, amount, user, pr
                     clientTxnId: data.transactionId,
                     payerName: user.user_metadata?.full_name || 'User',
                     payerEmail: user.email || 'test@example.com',
-                    payerMobile: user.phone || '9999999999',
+                    payerMobile: user.phone ? user.phone.replace(/\D/g, '').replace(/^91/, '').slice(-10) : '9999999999',
                     amount: Number(paymentAmount).toFixed(2),
                     channelId: 'W',
                     url: process.env.NEXT_PUBLIC_SABPAISA_INIT_URL

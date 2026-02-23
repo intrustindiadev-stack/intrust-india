@@ -655,16 +655,40 @@ export default function CustomerProfilePage() {
         (async () => {
             setProfileLoading(true);
 
-            // Fetch Profile & Wallet in parallel
-            const [profileResult, walletResult] = await Promise.all([
-                supabase.from('user_profiles').select('*').eq('id', authUser.id).single(),
-                supabase.from('customer_wallets').select('*').eq('user_id', authUser.id).single()
-            ]);
+            try {
+                // Fetch Profile & Wallet defensively using allSettled to prevent single() errors from crashing the page load
+                const results = await Promise.allSettled([
+                    supabase.from('user_profiles').select('*').eq('id', authUser.id).single(),
+                    supabase.from('customer_wallets').select('*').eq('user_id', authUser.id).single()
+                ]);
 
-            if (!cancelled) {
-                if (profileResult.data) setProfile(profileResult.data);
-                if (walletResult.data) setWallet(walletResult.data);
-                setProfileLoading(false);
+                if (!cancelled) {
+                    const profileResult = results[0];
+                    const walletResult = results[1];
+
+                    if (profileResult.status === 'fulfilled' && profileResult.value.data) {
+                        setProfile(profileResult.value.data);
+                    }
+                    if (walletResult.status === 'fulfilled' && walletResult.value.data) {
+                        setWallet(walletResult.value.data);
+                    } else if (walletResult.status === 'rejected' || walletResult.value?.error) {
+                        // Auto-create wallet if missing (PGRST116) or throwing 403 due to RLS + no row
+                        console.log('[PROFILE] Wallet not found. Attempting auto-creation...');
+                        const { data: newWallet } = await supabase.from('customer_wallets')
+                            .insert([{ user_id: authUser.id }])
+                            .select('*')
+                            .single();
+                        if (newWallet) {
+                            setWallet(newWallet);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching profile data:', error);
+            } finally {
+                if (!cancelled) {
+                    setProfileLoading(false);
+                }
             }
         })();
 

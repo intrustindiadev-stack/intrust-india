@@ -44,7 +44,7 @@ export const usePayment = () => {
                 clientTxnId: data.transactionId,
                 payerName: paymentDetails.payerName || 'User',
                 payerEmail: paymentDetails.payerEmail || '',
-                payerMobile: paymentDetails.payerMobile || '9999999999',
+                payerMobile: paymentDetails.payerMobile ? paymentDetails.payerMobile.replace(/\D/g, '').replace(/^91/, '').slice(-10) : '9999999999',
                 amount: Number(paymentDetails.amount).toFixed(2),
                 channelId: 'W',
                 env: process.env.NEXT_PUBLIC_SABPAISA_ENV || 'stag',

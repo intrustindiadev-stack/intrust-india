@@ -32,14 +32,48 @@ export default function CustomerWalletPage() {
     const [isAddingMoney, setIsAddingMoney] = useState(false);
 
     useEffect(() => {
+        let subscription;
+
         if (user) {
             fetchWalletData();
+
+            subscription = supabase
+                .channel('wallet_realtime')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'customer_wallets', filter: `user_id=eq.${user.id}` },
+                    (payload) => {
+                        console.log('[WALLET] Realtime balance update:', payload);
+                        if (payload.new && payload.new.balance_paise !== undefined) {
+                            setBalance(payload.new.balance_paise / 100);
+                        }
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'customer_wallet_transactions', filter: `user_id=eq.${user.id}` },
+                    (payload) => {
+                        console.log('[WALLET] Realtime transaction:', payload);
+                        if (payload.new) {
+                            setTransactions(prev => [payload.new, ...prev]);
+                        }
+                    }
+                )
+                .subscribe();
         }
+
+        return () => {
+            if (subscription) {
+                supabase.removeChannel(subscription);
+            }
+        };
     }, [user]);
 
     const fetchWalletData = async () => {
         setLoading(true);
         try {
+            let hasWallet = false;
+
             // Fetch Balance
             const { data: wallet, error: walletError } = await supabase
                 .from('customer_wallets')
@@ -49,18 +83,32 @@ export default function CustomerWalletPage() {
 
             if (!walletError && wallet) {
                 setBalance(wallet.balance_paise / 100);
+                hasWallet = true;
+            } else {
+                console.log('[WALLET] Wallet not found. Attempting auto-creation...');
+                // Fallback: expressly insert if missing
+                const { data: newWallet } = await supabase.from('customer_wallets')
+                    .insert([{ user_id: user.id }])
+                    .select('balance_paise')
+                    .single();
+                if (newWallet) {
+                    setBalance((newWallet.balance_paise || 0) / 100);
+                    hasWallet = true;
+                }
             }
 
-            // Fetch Transactions
-            const { data: txs, error: txError } = await supabase
-                .from('customer_wallet_transactions')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false })
-                .limit(20);
+            // Fetch Transactions only if wallet actually exists/created to prevent 403 on foreign key
+            if (hasWallet) {
+                const { data: txs, error: txError } = await supabase
+                    .from('customer_wallet_transactions')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(20);
 
-            if (!txError && txs) {
-                setTransactions(txs);
+                if (!txError && txs) {
+                    setTransactions(txs);
+                }
             }
         } catch (error) {
             console.error('Error fetching wallet data:', error);
@@ -126,16 +174,7 @@ export default function CustomerWalletPage() {
 
                     {/* Quick Info / Rewards */}
                     <div className="md:col-span-1 space-y-4">
-                        <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-500">
-                                    <IndianRupee size={20} />
-                                </div>
-                                <span className="text-xs font-bold text-amber-500 uppercase">Cashbacks</span>
-                            </div>
-                            <h3 className="text-sm text-gray-500 dark:text-gray-400 font-medium">Earned this month</h3>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">₹0.00</p>
-                        </div>
+
 
                         <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
                             <div className="flex items-center justify-between mb-4">
