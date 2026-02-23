@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { sprintVerify } from '@/lib/sprintVerify';
 
 export async function POST(request) {
     try {
@@ -30,7 +31,7 @@ export async function POST(request) {
         } = formData;
 
         // Validate required fields
-        if (!businessName || !ownerName || !phone || !email) {
+        if (!businessName || !ownerName || !phone || !email || !bankAccount || !ifscCode || !panCard) {
             return NextResponse.json(
                 { error: 'Missing required fields. Please fill in all required information.' },
                 { status: 400 }
@@ -55,15 +56,41 @@ export async function POST(request) {
             );
         }
 
-        // TODO: Integrate KYC verification API here
-        // Before setting status to 'approved', we should:
-        // 1. Verify PAN card via KYC API
-        // 2. Verify GST number
-        // 3. Verify bank account details
-        // 4. Verify business documents
-        // For now, we're auto-approving all applications
+        // --- KYC Verification using SprintVerify ---
+        // 1. Verify PAN
+        const panResult = await sprintVerify.verifyPAN(panCard);
+        if (!panResult.valid) {
+            return NextResponse.json(
+                { error: `PAN Verification Failed: ${panResult.message}` },
+                { status: 400 }
+            );
+        }
 
-        // Create merchant record with auto-approved status
+        // 2. Verify Bank Account
+        const bankResult = await sprintVerify.verifyBank(bankAccount, ifscCode);
+        if (!bankResult.valid) {
+            return NextResponse.json(
+                { error: `Bank Verification Failed: ${bankResult.message}` },
+                { status: 400 }
+            );
+        }
+
+        // 3. Verify GSTIN (if provided)
+        let gstResult = null;
+        if (gstNumber) {
+            gstResult = await sprintVerify.verifyGSTIN(gstNumber);
+            if (!gstResult.valid) {
+                return NextResponse.json(
+                    { error: `GSTIN Verification Failed: ${gstResult.message}` },
+                    { status: 400 }
+                );
+            }
+        }
+
+        // If all validations pass, the status is approved
+        const finalStatus = 'approved';
+
+        // Create merchant record with approved status since API checks passed
         const { data: merchant, error: merchantError } = await supabase
             .from('merchants')
             .insert([
@@ -78,7 +105,7 @@ export async function POST(request) {
                     bank_account_number: bankAccount,
                     bank_ifsc_code: ifscCode,
                     pan_number: panCard,
-                    status: 'pending', // Default to pending for admin approval
+                    status: finalStatus,
                 }
             ])
             .select()
@@ -103,28 +130,13 @@ export async function POST(request) {
             // We don't fail the whole request, but we log it
         }
 
-        // TODO: Store KYC documents securely
-        // For now, we're just logging that we received them
-        console.log('Merchant application received:', {
-            merchantId: merchant.id,
-            businessName,
-            ownerName,
-            // Note: In production, store these securely and encrypted
-            kycData: {
-                panCard,
-                bankAccount,
-                ifscCode,
-                address,
-            }
-        });
-
         // Log the merchant creation
-        console.log('✅ Merchant account created and verified.');
+        console.log('✅ Merchant account created and verified via SprintVerify.');
 
         return NextResponse.json(
             {
                 success: true,
-                message: 'Merchant account created successfully!',
+                message: 'Merchant account created and verified successfully!',
                 merchantId: merchant.id,
                 status: merchant.status,
             },

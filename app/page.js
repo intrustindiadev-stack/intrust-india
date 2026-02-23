@@ -19,7 +19,7 @@ export default async function Home() {
     }
 
     if (profile?.role === 'admin') {
-      redirect('/admin/dashboard');
+      redirect('/admin');
     }
   }
 

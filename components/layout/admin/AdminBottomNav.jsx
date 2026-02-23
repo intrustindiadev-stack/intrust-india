@@ -2,11 +2,12 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Store, DollarSign, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Store, DollarSign, Settings, Package } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', href: '/admin/dashboard' },
+    { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
+    { icon: Package, label: 'Cards', href: '/admin/giftcards' },
     { icon: Users, label: 'Users', href: '/admin/users' },
     { icon: Store, label: 'Merchants', href: '/admin/merchants' },
     { icon: DollarSign, label: 'Revenue', href: '/admin/transactions' },

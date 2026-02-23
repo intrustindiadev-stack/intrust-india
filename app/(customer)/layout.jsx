@@ -22,7 +22,7 @@ export default async function CustomerLayout({ children }) {
         // Admins can also be redirected if we don't want them here, 
         // but typically admins need access everywhere or are redirected to /admin.
         if (profile?.role === 'admin') {
-            redirect('/admin/dashboard');
+            redirect('/admin');
         }
     }
 
