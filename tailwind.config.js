@@ -53,6 +53,9 @@ module.exports = {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        gold: "#D4AF37",
+        "merchant-light": "#FDFCFB",
+        "merchant-dark": "#020617",
       },
       borderRadius: {
         xl: "calc(var(--radius) + 4px)",

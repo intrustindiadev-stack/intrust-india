@@ -49,20 +49,20 @@ export default function ApplicationSuccessPage() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center relative overflow-hidden font-[family-name:var(--font-outfit)]">
+        <div className="min-h-screen bg-slate-50 dark:bg-[#020617] flex flex-col items-center justify-center relative overflow-hidden font-[family-name:var(--font-outfit)] transition-colors">
             {showConfetti && <Confetti />}
 
             {/* Dynamic Background */}
             <div className="fixed inset-0 pointer-events-none -z-10">
-                <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-b from-blue-50 to-indigo-50 rounded-full blur-3xl opacity-60 translate-x-1/3 -translate-y-1/4" />
-                <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-t from-emerald-50 to-teal-50 rounded-full blur-3xl opacity-60 -translate-x-1/3 translate-y-1/4" />
+                <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-b from-blue-500/5 to-indigo-500/5 rounded-full blur-[120px] opacity-60 translate-x-1/3 -translate-y-1/4 dark:opacity-20" />
+                <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-t from-[#D4AF37]/5 to-yellow-500/5 rounded-full blur-[120px] opacity-60 -translate-x-1/3 translate-y-1/4" />
             </div>
 
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
-                className="w-full max-w-lg bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-8 md:p-12 text-center relative border border-white/50"
+                className="w-full max-w-lg merchant-glass rounded-[2.5rem] shadow-2xl p-8 md:p-12 text-center relative border border-black/5 dark:border-white/10"
             >
                 {/* Checkmark Animation */}
                 <div className="relative w-28 h-28 mx-auto mb-8 flex items-center justify-center">
@@ -70,9 +70,9 @@ export default function ApplicationSuccessPage() {
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
-                        className="w-full h-full bg-gradient-to-tr from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30"
+                        className="w-full h-full bg-gradient-to-tr from-[#D4AF37] to-[#B8860B] rounded-full flex items-center justify-center shadow-2xl shadow-[#D4AF37]/30"
                     >
-                        <svg className="w-16 h-16 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="w-16 h-16 text-[#020617]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <motion.path
                                 initial={{ pathLength: 0 }}
                                 animate={{ pathLength: 1 }}
@@ -84,14 +84,9 @@ export default function ApplicationSuccessPage() {
 
                     {/* Ripple Effects */}
                     <motion.div
-                        animate={{ scale: [1, 1.5, 1.5], opacity: [0.5, 0, 0] }}
+                        animate={{ scale: [1, 1.5, 1.5], opacity: [0.3, 0, 0] }}
                         transition={{ duration: 2, repeat: Infinity }}
-                        className="absolute inset-0 bg-green-400 rounded-full -z-10"
-                    />
-                    <motion.div
-                        animate={{ scale: [1, 1.8, 1.8], opacity: [0.3, 0, 0] }}
-                        transition={{ duration: 2, repeat: Infinity, delay: 0.2 }}
-                        className="absolute inset-0 bg-green-400 rounded-full -z-20"
+                        className="absolute inset-0 bg-[#D4AF37] rounded-full -z-10"
                     />
                 </div>
 
@@ -100,32 +95,32 @@ export default function ApplicationSuccessPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6 }}
                 >
-                    <h1 className="text-3xl font-extrabold text-slate-900 mb-4 tracking-tight">Application Submitted!</h1>
-                    <p className="text-slate-500 text-lg mb-8 leading-relaxed">
-                        We've received your application. Our team will verify your documents and activate your account within <span className="text-slate-900 font-bold">24 hours</span>.
+                    <h1 className="text-3xl font-display font-extrabold text-slate-800 dark:text-white mb-4 tracking-tight">Application Submitted!</h1>
+                    <p className="text-slate-500 dark:text-slate-400 text-lg mb-8 leading-relaxed font-medium">
+                        We've received your application. Our team will verify your documents and activate your account within <span className="text-slate-800 dark:text-white font-bold">24 hours</span>.
                     </p>
 
-                    <div className="bg-blue-50/50 rounded-2xl p-5 mb-8 border border-blue-100 text-left flex gap-4">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0 text-blue-600 font-bold text-lg">
+                    <div className="bg-blue-500/5 dark:bg-white/5 rounded-2xl p-5 mb-8 border border-blue-500/10 dark:border-white/10 text-left flex gap-4">
+                        <div className="w-10 h-10 rounded-full bg-blue-500/10 dark:bg-white/10 flex items-center justify-center shrink-0 text-blue-600 dark:text-blue-400 font-bold text-lg">
                             1
                         </div>
                         <div>
-                            <h3 className="font-bold text-slate-900 text-sm">Under Review</h3>
-                            <p className="text-xs text-slate-500 mt-1">Our verification team is currently reviewing your GST and Bank details.</p>
+                            <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Under Review</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Our verification team is currently reviewing your business details.</p>
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-4">
                         <button
                             onClick={() => router.push('/')}
-                            className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 group"
+                            className="w-full py-4 bg-[#D4AF37] text-white dark:text-[#020617] font-bold rounded-2xl shadow-xl shadow-[#D4AF37]/20 hover:bg-opacity-90 transition-all flex items-center justify-center gap-2 gold-glow"
                         >
                             <Home size={18} />
                             Return to Homepage
                         </button>
                         <button
                             onClick={() => router.push('/contact')}
-                            className="w-full py-4 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-2xl border border-gray-200 transition-all flex items-center justify-center gap-2 group"
+                            className="w-full py-4 bg-black/5 dark:bg-white/5 text-slate-700 dark:text-slate-300 font-bold rounded-2xl border border-black/5 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-2"
                         >
                             <MessageSquare size={18} />
                             Contact Support

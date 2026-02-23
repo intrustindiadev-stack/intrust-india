@@ -1,22 +1,9 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import GiftCardsClient from './GiftCardsClient';
 
 // Server Component - handles data fetching
 export default async function GiftCardsPage() {
-    const cookieStore = await cookies();
-
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        {
-            cookies: {
-                get(name) {
-                    return cookieStore.get(name)?.value;
-                },
-            },
-        }
-    );
+    const supabase = await createServerSupabaseClient();
 
     // Server-side data fetch
     // NEW: Only fetch cards that merchants have listed on the marketplace

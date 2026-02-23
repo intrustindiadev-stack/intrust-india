@@ -1,7 +1,8 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
-import { TrendingUp, Package, DollarSign, ShoppingBag, AlertCircle, Loader2 } from 'lucide-react';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import StatsCards from '@/components/merchant/StatsCards';
+import TransactionsTable from '@/components/merchant/TransactionsTable';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,6 @@ export default async function MerchantDashboardPage() {
         redirect('/login');
     }
 
-
     // 2. Get Merchant Profile & Role
     const { data: profile } = await supabase
         .from('user_profiles')
@@ -28,7 +28,6 @@ export default async function MerchantDashboardPage() {
     let merchant = null;
 
     if (profile?.role === 'admin') {
-        // 1. Try to fetch own merchant first
         const { data: ownMerchant } = await supabase
             .from('merchants')
             .select('*')
@@ -38,7 +37,6 @@ export default async function MerchantDashboardPage() {
         if (ownMerchant) {
             merchant = ownMerchant;
         } else {
-            // 2. Fallback: Fetch most recent merchant
             const { data } = await supabase
                 .from('merchants')
                 .select('*')
@@ -48,7 +46,6 @@ export default async function MerchantDashboardPage() {
             merchant = data;
         }
     } else {
-        // Merchant: Fetch own record
         const { data } = await supabase
             .from('merchants')
             .select('*')
@@ -75,7 +72,6 @@ export default async function MerchantDashboardPage() {
             .order('created_at', { ascending: false })
             .limit(10),
 
-        // Fetch ALL sold coupons for revenue calculation (only necessary columns)
         supabase
             .from('coupons')
             .select('merchant_selling_price_paise, merchant_purchase_price_paise, merchant_commission_paise')
@@ -85,7 +81,7 @@ export default async function MerchantDashboardPage() {
 
     if (couponsRes.error) console.error('[Dashboard] Coupons Fetch Error:', couponsRes.error);
     if (soldCouponsRes.error) console.error('[Dashboard] Sold Coupons Fetch Error:', soldCouponsRes.error);
-    // Also get counts
+
     const [activeCountRes, listedCountRes, soldCountRes] = await Promise.all([
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'available'),
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
@@ -126,162 +122,36 @@ export default async function MerchantDashboardPage() {
         listed: c.listed_on_marketplace,
     }));
 
-    const statsDisplay = [
-        { label: 'Total Sales', value: stats.totalSales.toString(), change: '', icon: ShoppingBag, color: 'from-green-500 to-emerald-500' },
-        { label: 'Active Coupons', value: stats.activeCoupons.toString(), change: `${stats.listedCoupons} listed`, icon: Package, color: 'from-blue-500 to-cyan-500' },
-        { label: 'Total Revenue', value: `₹${stats.totalRevenue.toFixed(2)}`, change: '', icon: TrendingUp, color: 'from-purple-500 to-pink-500' },
-        { label: 'Commission Paid', value: `₹${stats.totalCommission.toFixed(2)}`, change: '', icon: DollarSign, color: 'from-orange-500 to-red-500' },
-    ];
-
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            <div className="pt-24 pb-12">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                    {/* Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-                        <div>
-                            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 font-[family-name:var(--font-outfit)]">
-                                Merchant Dashboard
-                            </h1>
-                            <p className="text-gray-600">Manage your inventory and track performance</p>
-                        </div>
-                        <div className="flex flex-wrap gap-3">
-                            <Link
-                                href="/merchant/purchase"
-                                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-white border-2 border-[#92BCEA] text-[#92BCEA] font-bold rounded-xl hover:bg-[#92BCEA] hover:text-white transition-all flex items-center justify-center gap-2"
-                            >
-                                <ShoppingBag size={20} />
-                                <span className="hidden sm:inline">Purchase Coupons</span>
-                                <span className="sm:hidden">Purchase</span>
-                            </Link>
-                            <Link
-                                href="/merchant/inventory"
-                                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] hover:from-[#7A93AC] hover:to-[#92BCEA] text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
-                            >
-                                <Package size={20} />
-                                <span className="hidden sm:inline">View Inventory</span>
-                                <span className="sm:hidden">Inventory</span>
-                            </Link>
-                        </div>
-                    </div>
+        <div className="relative">
+            {/* Background embellishments */}
+            <div className="fixed top-[-10%] left-[-5%] w-[40%] h-[40%] bg-[#D4AF37]/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+            <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
 
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
-                        {statsDisplay.map((stat) => {
-                            const Icon = stat.icon;
-                            return (
-                                <div key={stat.label} className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-6 hover:shadow-xl transition-all">
-                                    <div className="flex items-start justify-between mb-3 sm:mb-4">
-                                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-sm`}>
-                                            <Icon className="text-white" size={20} />
-                                        </div>
-                                        {stat.change && <span className="text-xs sm:text-sm font-semibold text-gray-600">{stat.change}</span>}
-                                    </div>
-                                    <div className="text-xl sm:text-3xl font-bold text-gray-900 mb-1 truncate">{stat.value}</div>
-                                    <div className="text-xs sm:text-sm text-gray-600">{stat.label}</div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Coupons Table */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-                        <div className="p-6 border-b border-gray-200">
-                            <h2 className="text-2xl font-bold text-gray-900">Recent Coupons</h2>
-                        </div>
-
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Face Value</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Purchase Price</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Selling Price</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Profit</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200">
-                                    {transformedCoupons.length > 0 ? (
-                                        transformedCoupons.map((coupon) => {
-                                            const profit = coupon.sellingPrice - coupon.purchasePrice - coupon.commission;
-
-                                            return (
-                                                <tr key={coupon.id} className="hover:bg-gray-50 transition-colors">
-                                                    <td className="px-6 py-4">
-                                                        <div className="font-semibold text-gray-900">{coupon.brand}</div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="text-gray-900">₹{coupon.faceValue.toLocaleString()}</div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="text-gray-900">₹{coupon.purchasePrice.toLocaleString()}</div>
-                                                        <div className="text-xs text-gray-500">+ ₹{coupon.commission.toFixed(2)} fee</div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        {coupon.listed ? (
-                                                            <div className="text-[#92BCEA] font-semibold">₹{coupon.sellingPrice.toLocaleString()}</div>
-                                                        ) : (
-                                                            <div className="text-gray-400">Not listed</div>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        {coupon.listed ? (
-                                                            <div className={`font-semibold ${profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                                ₹{profit.toFixed(2)}
-                                                            </div>
-                                                        ) : (
-                                                            <div className="text-gray-400">-</div>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${coupon.status === 'sold' ? 'bg-green-100 text-green-700' :
-                                                            coupon.listed ? 'bg-blue-100 text-blue-700' :
-                                                                'bg-gray-100 text-gray-700'
-                                                            }`}>
-                                                            {coupon.status === 'sold' ? 'Sold' : coupon.listed ? 'Listed' : 'Unlisted'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <Link
-                                                            href="/merchant/inventory"
-                                                            className="text-[#92BCEA] hover:text-[#7A93AC] font-semibold text-sm"
-                                                        >
-                                                            Manage
-                                                        </Link>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
-                                                No recent coupons found.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Empty State Link */}
-                        {transformedCoupons.length === 0 && (
-                            <div className="text-center pb-12">
-                                <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                <p className="text-gray-600 mb-4">No coupons in your inventory yet</p>
-                                <Link
-                                    href="/merchant/wholesale"
-                                    className="inline-block px-6 py-3 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] text-white font-bold rounded-xl hover:shadow-lg transition-all"
-                                >
-                                    Purchase Coupons
-                                </Link>
-                            </div>
-                        )}
-                    </div>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 mt-6">
+                <div>
+                    <h2 className="font-display text-4xl font-bold mb-2 text-slate-800 dark:text-slate-100">Merchant Dashboard</h2>
+                    <p className="text-slate-500 dark:text-slate-400 flex flex-wrap items-center">
+                        Manage your inventory and track performance
+                        <span className="hidden sm:inline mx-2 text-slate-300 dark:text-slate-700">•</span>
+                        <span className="text-[#D4AF37] text-xs font-semibold tracking-wider uppercase mt-2 sm:mt-0">V.2.0 PREMIUM</span>
+                    </p>
+                </div>
+                <div className="flex flex-wrap space-x-0 sm:space-x-4 gap-y-3">
+                    <Link href="/merchant/purchase" className="w-full sm:w-auto px-6 py-3 rounded-xl merchant-glass hover:bg-black/5 dark:hover:bg-white/10 transition-all flex items-center justify-center space-x-2 border border-black/5 dark:border-white/10">
+                        <span className="material-icons-round text-[#D4AF37] text-sm">add_shopping_cart</span>
+                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Purchase Coupons</span>
+                    </Link>
+                    <Link href="/merchant/inventory" className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#D4AF37] text-[#020617] font-bold hover:bg-opacity-90 transition-all flex items-center justify-center space-x-2 gold-glow">
+                        <span className="material-icons-round text-sm">inventory_2</span>
+                        <span>View Inventory</span>
+                    </Link>
                 </div>
             </div>
+
+            <StatsCards stats={stats} />
+
+            <TransactionsTable coupons={transformedCoupons} />
         </div>
     );
 }

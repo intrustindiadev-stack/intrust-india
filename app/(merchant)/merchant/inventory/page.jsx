@@ -85,7 +85,7 @@ export default async function InventoryPage({ searchParams }) {
         total: totalRes.count || 0,
         listed: listedRes.count || 0,
         unlisted: unlistedRes.count || 0,
-        totalValue: (totalValueRes.data || []).reduce((sum, c) => sum + (c.merchant_purchase_price_paise || 0), 0) / 100,
+        totalValue: (totalValueRes.data || []).reduce((sum, c) => sum + Math.abs(c.merchant_purchase_price_paise || 0), 0) / 100,
     };
 
     // 5. Fetch paginated inventory based on filter
@@ -134,14 +134,14 @@ export default async function InventoryPage({ searchParams }) {
         // Find the purchase transaction
         const purchaseTx = transactions.find(t => t.coupon_id === item.id);
 
-        // Calculate values in Rupees
+        // Calculate values in Rupees and ensure they are positive
         const purchasePrice = purchaseTx
-            ? purchaseTx.amount_paise / 100
-            : (item.merchant_purchase_price_paise ? item.merchant_purchase_price_paise / 100 : null);
+            ? Math.abs(purchaseTx.amount_paise / 100)
+            : (item.merchant_purchase_price_paise ? Math.abs(item.merchant_purchase_price_paise / 100) : null);
 
         const commission = purchaseTx
-            ? purchaseTx.commission_paise / 100
-            : (item.merchant_commission_paise ? item.merchant_commission_paise / 100 : null);
+            ? Math.abs(purchaseTx.commission_paise / 100)
+            : (item.merchant_commission_paise ? Math.abs(item.merchant_commission_paise / 100) : null);
 
         return {
             ...item,
@@ -151,114 +151,126 @@ export default async function InventoryPage({ searchParams }) {
     });
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            <div className="pt-24 pb-12">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                    {/* Header */}
-                    <div className="mb-6 sm:mb-8">
-                        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 font-[family-name:var(--font-outfit)]">
-                            My Inventory
-                        </h1>
-                        <p className="text-sm sm:text-base text-gray-600">Manage your purchased coupons and marketplace listings</p>
-                    </div>
+        <div className="relative">
+            {/* Background embellishments */}
+            <div className="fixed top-[10%] left-[-10%] w-[50%] h-[50%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+            <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-[#D4AF37]/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
 
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                                    <Package className="text-white" size={24} />
-                                </div>
-                            </div>
-                            <div className="text-3xl font-bold text-gray-900 mb-1">{stats.total}</div>
-                            <div className="text-sm text-gray-600">Total Coupons</div>
-                        </div>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 mt-6 gap-4">
+                <div>
+                    <h1 className="font-display text-4xl font-bold text-slate-800 dark:text-slate-100 mb-2">My Inventory</h1>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">Manage your purchased coupons and marketplace listings</p>
+                </div>
+            </div>
 
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                                    <TrendingUp className="text-white" size={24} />
-                                </div>
-                            </div>
-                            <div className="text-3xl font-bold text-gray-900 mb-1">{stats.listed}</div>
-                            <div className="text-sm text-gray-600">Listed on Marketplace</div>
-                        </div>
-
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
-                                    <Package className="text-white" size={24} />
-                                </div>
-                            </div>
-                            <div className="text-3xl font-bold text-gray-900 mb-1">{stats.unlisted}</div>
-                            <div className="text-sm text-gray-600">Unlisted</div>
-                        </div>
-
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                                    <DollarSign className="text-white" size={24} />
-                                </div>
-                            </div>
-                            <div className="text-3xl font-bold text-gray-900 mb-1">₹{stats.totalValue.toLocaleString()}</div>
-                            <div className="text-sm text-gray-600">Total Investment</div>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+                <div className="merchant-glass rounded-3xl p-6 border border-black/5 dark:border-white/5 hover:border-[#D4AF37]/30 transition-all group overflow-hidden relative shadow-sm">
+                    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition-all"></div>
+                    <div className="flex items-start mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                            <span className="material-icons-round text-blue-500 dark:text-blue-400">inventory_2</span>
                         </div>
                     </div>
+                    <div className="text-3xl font-bold font-display text-slate-800 dark:text-slate-100 mb-1">{stats.total}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">Total Coupons</div>
+                </div>
 
-                    {/* Filter Tabs */}
-                    <div className="flex gap-2 mb-6">
-                        <Link
-                            href="/merchant/inventory?filter=all"
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${filter === 'all'
-                                ? 'bg-[#92BCEA] text-white'
-                                : 'bg-white text-gray-600 hover:bg-gray-50'
-                                }`}
-                        >
-                            All ({stats.total})
-                        </Link>
-                        <Link
-                            href="/merchant/inventory?filter=listed"
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${filter === 'listed'
-                                ? 'bg-[#92BCEA] text-white'
-                                : 'bg-white text-gray-600 hover:bg-gray-50'
-                                }`}
-                        >
-                            Listed ({stats.listed})
-                        </Link>
-                        <Link
-                            href="/merchant/inventory?filter=unlisted"
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${filter === 'unlisted'
-                                ? 'bg-[#92BCEA] text-white'
-                                : 'bg-white text-gray-600 hover:bg-gray-50'
-                                }`}
-                        >
-                            Unlisted ({stats.unlisted})
-                        </Link>
+                <div className="merchant-glass rounded-3xl p-6 border border-black/5 dark:border-white/5 hover:border-[#D4AF37]/30 transition-all group overflow-hidden relative shadow-sm">
+                    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-all"></div>
+                    <div className="flex items-start mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                            <span className="material-icons-round text-emerald-500 dark:text-emerald-400">storefront</span>
+                        </div>
                     </div>
+                    <div className="text-3xl font-bold font-display text-slate-800 dark:text-slate-100 mb-1">{stats.listed}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">Listed on Market</div>
+                </div>
 
-                    {/* Inventory Table */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-                        <InventoryTable initialCoupons={inventory || []} isAdmin={isAdmin} />
+                <div className="merchant-glass rounded-3xl p-6 border border-black/5 dark:border-white/5 hover:border-[#D4AF37]/30 transition-all group overflow-hidden relative shadow-sm">
+                    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-slate-500/10 rounded-full blur-xl group-hover:bg-slate-500/20 transition-all"></div>
+                    <div className="flex items-start mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-slate-500/10 border border-slate-500/20 flex items-center justify-center">
+                            <span className="material-icons-round text-slate-500 dark:text-slate-400">inventory</span>
+                        </div>
+                    </div>
+                    <div className="text-3xl font-bold font-display text-slate-800 dark:text-slate-100 mb-1">{stats.unlisted}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">Unlisted</div>
+                </div>
 
-                        {/* Empty State */}
-                        {(!inventory || inventory.length === 0) && (
-                            <div className="text-center py-16">
-                                <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                <p className="text-gray-600 mb-4">
-                                    {filter === 'all' ? 'No coupons in inventory' : `No ${filter} coupons`}
-                                </p>
-                                {filter === 'all' && (
-                                    <Link
-                                        href="/merchant/purchase"
-                                        className="inline-block px-6 py-3 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] text-white font-bold rounded-xl hover:shadow-lg transition-all"
-                                    >
-                                        Purchase Coupons
-                                    </Link>
-                                )}
-                            </div>
+                <div className="merchant-glass rounded-3xl p-6 border border-[#D4AF37]/20 hover:border-[#D4AF37]/50 transition-all group overflow-hidden relative bg-gradient-to-br from-[#D4AF37]/5 to-transparent dark:from-[#D4AF37]/10 dark:to-transparent shadow-sm">
+                    <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-[#D4AF37]/10 rounded-full blur-2xl group-hover:bg-[#D4AF37]/20 transition-all"></div>
+                    <div className="flex items-start mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/30 flex items-center justify-center">
+                            <span className="material-icons-round text-[#D4AF37]">payments</span>
+                        </div>
+                    </div>
+                    <div className="text-3xl font-bold font-display text-[#D4AF37] mb-1">₹{stats.totalValue.toLocaleString('en-IN')}</div>
+                    <div className="text-xs text-[#D4AF37]/70 font-bold uppercase tracking-wider">Total Investment</div>
+                </div>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex gap-3 mb-6 bg-black/5 dark:bg-white/5 p-1 rounded-2xl w-fit border border-black/5 dark:border-white/5 shadow-sm">
+                <Link
+                    href="/merchant/inventory?filter=all"
+                    className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all focus:outline-none flex items-center space-x-2 ${filter === 'all'
+                        ? 'bg-[#D4AF37] text-[#020617] shadow-lg shadow-[#D4AF37]/20 gold-glow'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                        }`}
+                >
+                    <span className="material-icons-round text-sm">dashboard</span>
+                    <span>All ({stats.total})</span>
+                </Link>
+                <Link
+                    href="/merchant/inventory?filter=listed"
+                    className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all focus:outline-none flex items-center space-x-2 ${filter === 'listed'
+                        ? 'bg-[#D4AF37] text-[#020617] shadow-lg shadow-[#D4AF37]/20 gold-glow'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                        }`}
+                >
+                    <span className="material-icons-round text-sm">storefront</span>
+                    <span>Listed ({stats.listed})</span>
+                </Link>
+                <Link
+                    href="/merchant/inventory?filter=unlisted"
+                    className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all focus:outline-none flex items-center space-x-2 ${filter === 'unlisted'
+                        ? 'bg-[#D4AF37] text-[#020617] shadow-lg shadow-[#D4AF37]/20 gold-glow'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                        }`}
+                >
+                    <span className="material-icons-round text-sm">visibility_off</span>
+                    <span>Unlisted ({stats.unlisted})</span>
+                </Link>
+            </div>
+
+            {/* Inventory Table Container */}
+            <div className="merchant-glass rounded-3xl border border-black/5 dark:border-white/5 overflow-hidden shadow-sm">
+                <InventoryTable initialCoupons={inventory || []} isAdmin={isAdmin} />
+
+                {/* Empty State */}
+                {(!inventory || inventory.length === 0) && (
+                    <div className="text-center py-20 px-4">
+                        <div className="w-20 h-20 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <span className="material-icons-round text-4xl text-slate-400 dark:text-slate-500">inventory_2</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">
+                            {filter === 'all' ? 'Inventory is empty' : `No ${filter} coupons found`}
+                        </h3>
+                        <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm mx-auto">
+                            It looks like you don't have any coupons matching this criteria. Purchase new coupons from the wholesale market or browse other filters.
+                        </p>
+                        {filter === 'all' && (
+                            <Link
+                                href="/merchant/purchase"
+                                className="inline-flex items-center space-x-2 px-8 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:bg-opacity-90 transition-all gold-glow"
+                            >
+                                <span className="material-icons-round text-sm">add_shopping_cart</span>
+                                <span>Purchase Coupons</span>
+                            </Link>
                         )}
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );

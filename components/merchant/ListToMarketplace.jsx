@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { X, TrendingUp, DollarSign, Users, Calculator } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function ListToMarketplace({ coupon, onClose, onSuccess, isAdmin }) {
@@ -62,34 +61,41 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess, isAdmin 
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-[#020617]/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-[#020617] border border-white/10 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative overflow-hidden">
+                {/* Background embellishments */}
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#D4AF37]/10 rounded-full blur-[80px] pointer-events-none"></div>
+
                 {/* Header */}
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-3xl">
-                    <h2 className="text-2xl font-bold text-gray-900">List to Marketplace</h2>
+                <div className="sticky top-0 bg-[#020617]/80 backdrop-blur-md border-b border-white/5 py-5 px-6 flex items-center justify-between rounded-t-3xl z-20">
+                    <h2 className="text-2xl font-display font-bold text-slate-100 flex items-center">
+                        <span className="material-icons-round text-[#D4AF37] mr-3">storefront</span>
+                        List to Marketplace
+                    </h2>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-300 transition-colors"
                     >
-                        <X size={24} className="text-gray-600" />
+                        <span className="material-icons-round text-lg">close</span>
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                <form onSubmit={handleSubmit} className="p-6 space-y-6 relative z-10">
                     {/* Coupon Info */}
-                    <div className="bg-gradient-to-br from-[#92BCEA]/10 to-[#AFB3F7]/10 rounded-2xl p-6 border border-[#92BCEA]/20">
-                        <h3 className="text-lg font-bold text-gray-900 mb-3">{coupon.brand}</h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/20 rounded-2xl p-6 relative overflow-hidden group">
+                        <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-[#D4AF37]/5 to-transparent skew-x-12 -translate-x-4 opacity-50 pointer-events-none"></div>
+                        <h3 className="text-xl font-bold text-[#D4AF37] mb-4 font-display">{coupon.brand}</h3>
+                        <div className="grid grid-cols-2 gap-4 text-sm relative z-10">
                             <div>
-                                <div className="text-gray-600">Face Value</div>
-                                <div className="text-xl font-bold text-gray-900">₹{faceValue.toLocaleString()}</div>
+                                <div className="text-slate-400 text-xs uppercase tracking-widest font-bold mb-1">Face Value</div>
+                                <div className="text-xl font-bold text-slate-100">₹{faceValue.toLocaleString()}</div>
                             </div>
                             <div>
-                                <div className="text-gray-600">Purchase Price</div>
-                                <div className="text-xl font-bold text-gray-900">₹{purchasePrice.toLocaleString()}</div>
-                                <div className="text-xs text-gray-500">
+                                <div className="text-slate-400 text-xs uppercase tracking-widest font-bold mb-1">Purchase Price</div>
+                                <div className="text-xl font-bold text-slate-100">₹{purchasePrice.toLocaleString()}</div>
+                                <div className="text-[10px] text-slate-500 mt-1 uppercase">
                                     {coupon.purchase_price !== null
-                                        ? `+ ₹${commission.toFixed(2)} commission pd.`
+                                        ? `+ ₹${commission.toFixed(2)} Platform Fee`
                                         : '(Estimated)'}
                                 </div>
                             </div>
@@ -97,21 +103,24 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess, isAdmin 
                     </div>
 
                     {/* Selling Price Input */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="group">
+                        <label className="block text-xs font-bold uppercase tracking-widest text-[#D4AF37] mb-2 transition-colors">
                             Your Selling Price (₹) *
                         </label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={sellingPrice}
-                            onChange={(e) => setSellingPrice(e.target.value)}
-                            className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#92BCEA] focus:border-transparent transition-all text-lg font-semibold"
-                            placeholder="Enter selling price"
-                            required
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                            This is the price customers will see excluding fee
+                        <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold material-icons-round select-none">currency_rupee</span>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={sellingPrice}
+                                onChange={(e) => setSellingPrice(e.target.value)}
+                                className="w-full pl-12 pr-5 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-100 font-bold text-xl transition-all"
+                                placeholder="0.00"
+                                required
+                            />
+                        </div>
+                        <p className="text-xs text-slate-500 mt-2 font-medium">
+                            This is the price customers will see, excluding the 3% buyer fee.
                         </p>
                     </div>
 
@@ -119,128 +128,120 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess, isAdmin 
                     {sellingPriceNum > 0 && (
                         <div className="space-y-4">
                             {/* Merchant Profit */}
-                            <div className={`rounded-2xl p-4 border ${merchantProfit >= 0 ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <DollarSign size={20} className={merchantProfit >= 0 ? 'text-green-600' : 'text-red-600'} />
-                                    <h4 className={`font-semibold ${merchantProfit >= 0 ? 'text-green-900' : 'text-red-900'}`}>
-                                        {merchantProfit >= 0 ? 'Your Profit' : 'Loss'}
+                            <div className={`rounded-2xl p-5 border ${merchantProfit >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <span className={`material-icons-round text-lg ${merchantProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {merchantProfit >= 0 ? 'trending_up' : 'trending_down'}
+                                    </span>
+                                    <h4 className={`font-bold uppercase tracking-widest text-[11px] ${merchantProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {merchantProfit >= 0 ? 'Your Profit Margin' : 'Your Loss'}
                                     </h4>
                                 </div>
-                                <div className={`text-3xl font-bold mb-2 ${merchantProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                <div className={`text-4xl font-display font-bold mb-4 ${merchantProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                     ₹{merchantProfit.toFixed(2)}
                                 </div>
-                                <div className={`text-sm space-y-1 ${merchantProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                                    <div className="flex justify-between">
-                                        <span>Selling Price:</span>
-                                        <span>₹{sellingPriceNum.toFixed(2)}</span>
+                                <div className={`text-sm space-y-2 font-medium ${merchantProfit >= 0 ? 'text-emerald-400/80' : 'text-red-400/80'}`}>
+                                    <div className="flex justify-between items-center">
+                                        <span>Selling Price</span>
+                                        <span className="font-bold text-slate-200">₹{sellingPriceNum.toFixed(2)}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span>- Purchase Price:</span>
-                                        <span>₹{purchasePrice.toFixed(2)}</span>
+                                    <div className="flex justify-between items-center">
+                                        <span>Purchase Cost</span>
+                                        <span className="font-bold text-slate-200">- ₹{purchasePrice.toFixed(2)}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span>- Commission:</span>
-                                        <span>₹{commission.toFixed(2)}</span>
+                                    <div className="flex justify-between items-center">
+                                        <span>Commission Paid</span>
+                                        <span className="font-bold text-slate-200">- ₹{commission.toFixed(2)}</span>
                                     </div>
-                                    <div className={`pt-1 border-t font-semibold flex justify-between ${merchantProfit >= 0 ? 'border-green-300' : 'border-red-300'}`}>
-                                        <span>= Net {merchantProfit >= 0 ? 'Profit' : 'Loss'}:</span>
-                                        <span>₹{merchantProfit.toFixed(2)} ({markup.toFixed(2)}%)</span>
+                                    <div className={`pt-3 mt-1 border-t items-center flex justify-between ${merchantProfit >= 0 ? 'border-emerald-500/20 text-emerald-300' : 'border-red-500/20 text-red-300'}`}>
+                                        <span className="font-bold uppercase tracking-wider text-[11px]">= Net {merchantProfit >= 0 ? 'Profit' : 'Loss'}</span>
+                                        <span className="font-bold">₹{merchantProfit.toFixed(2)} ({markup.toFixed(1)}%)</span>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Warning if selling at loss */}
                             {merchantProfit < 0 && (
-                                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-start gap-3">
-                                    <Calculator className="text-orange-500 mt-0.5" size={20} />
+                                <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4 flex items-start gap-3">
+                                    <span className="material-icons-round text-orange-400 mt-0.5">warning</span>
                                     <div>
-                                        <h5 className="font-bold text-orange-800">You are selling at a loss</h5>
-                                        <p className="text-sm text-orange-700 mt-1">
-                                            Your selling price of ₹{sellingPriceNum} is lower than your total cost (₹{(purchasePrice + commission).toFixed(2)}).
+                                        <h5 className="font-bold text-orange-400">Selling at a Loss</h5>
+                                        <p className="text-sm text-orange-400/80 mt-1">
+                                            Your selling price is lower than your total cost of <span className="font-bold">₹{(purchasePrice + commission).toFixed(2)}</span>. You will incur a loss on this sale.
                                         </p>
                                     </div>
                                 </div>
                             )}
 
                             {/* Customer View */}
-                            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 border border-blue-200">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Users size={20} className="text-blue-600" />
-                                    <h4 className="font-semibold text-blue-900">Customer Sees</h4>
+                            <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="material-icons-round text-slate-300 text-lg">face</span>
+                                    <h4 className="font-bold uppercase tracking-widest text-[11px] text-slate-300">Customer View</h4>
                                 </div>
-                                <div className="space-y-2 text-sm text-blue-700">
-                                    <div className="flex justify-between">
-                                        <span>Face Value:</span>
-                                        <span className="font-semibold">₹{faceValue.toFixed(2)}</span>
+                                <div className="space-y-3 text-sm text-slate-400 font-medium">
+                                    <div className="flex justify-between items-center">
+                                        <span>Face Value</span>
+                                        <span className="font-bold text-slate-200">₹{faceValue.toFixed(2)}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span>Your Price:</span>
-                                        <span className="font-semibold">₹{sellingPriceNum.toFixed(2)}</span>
+                                    <div className="flex justify-between items-center">
+                                        <span>Your Listed Price</span>
+                                        <span className="font-bold text-slate-200">₹{sellingPriceNum.toFixed(2)}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span>Platform Fee (3%):</span>
-                                        <span className="font-semibold">₹{customerFee.toFixed(2)}</span>
+                                    <div className="flex justify-between items-center">
+                                        <span>Buyer Platform Fee (3%)</span>
+                                        <span className="font-bold text-slate-200">+ ₹{customerFee.toFixed(2)}</span>
                                     </div>
-                                    <div className="pt-2 border-t border-blue-300 flex justify-between text-base">
-                                        <span className="font-bold">Customer Pays:</span>
-                                        <span className="font-bold text-blue-600">₹{customerTotal.toFixed(2)}</span>
+                                    <div className="pt-3 mt-1 border-t border-white/10 flex justify-between items-center text-base">
+                                        <span className="font-bold uppercase tracking-wider text-[11px] text-slate-300">Total Customer Pays</span>
+                                        <span className="font-bold text-slate-100">₹{customerTotal.toFixed(2)}</span>
                                     </div>
-                                    <div className="bg-blue-100 rounded-lg px-3 py-2 mt-2">
-                                        <div className="text-xs text-blue-600">Customer Discount</div>
-                                        <div className="text-lg font-bold text-blue-700">
-                                            {customerDiscount.toFixed(1)}% OFF
+
+                                    {customerDiscount > 0 && (
+                                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 mt-4 flex justify-between items-center">
+                                            <div className="text-xs font-bold uppercase tracking-wider text-emerald-400">Customer Saves</div>
+                                            <div className="text-xl font-bold text-emerald-400">
+                                                {customerDiscount.toFixed(1)}% OFF
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Warning if low/negative profit */}
-                            {merchantProfit <= 0 && (
-                                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                                    <div className="flex items-center gap-2 text-red-700">
-                                        <Calculator size={20} />
-                                        <span className="font-semibold">
-                                            {merchantProfit < 0 ? 'You will lose money!' : 'No profit!'}
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-red-600 mt-1">
-                                        Your selling price should be higher than ₹{(purchasePrice + commission).toFixed(2)} to make profit
-                                    </p>
-                                </div>
-                            )}
                         </div>
                     )}
 
                     {/* Error Message */}
                     {error && (
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700">
-                            {error}
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm font-bold flex items-center space-x-2">
+                            <span className="material-icons-round text-red-400">error_outline</span>
+                            <span>{error}</span>
                         </div>
                     )}
 
                     {/* Actions */}
-                    <div className="flex gap-3 pt-4">
+                    <div className="flex gap-4 pt-6 border-t border-white/5">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all"
+                            className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-slate-300 font-bold rounded-xl transition-all"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
-                            disabled={loading || sellingPriceNum <= 0 || merchantProfit < 0}
-                            className="flex-1 py-3 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] hover:from-[#7A93AC] hover:to-[#92BCEA] text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            disabled={loading || sellingPriceNum <= 0}
+                            className="flex-1 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl shadow-lg shadow-[#D4AF37]/20 hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 gold-glow"
                         >
                             {loading ? (
                                 <>
-                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Listing...
+                                    <span className="material-icons-round animate-spin text-sm">autorenew</span>
+                                    <span>Listing...</span>
                                 </>
                             ) : (
                                 <>
-                                    <TrendingUp size={20} />
-                                    {coupon.listed_on_marketplace ? 'Update Listing' : 'List to Marketplace'}
+                                    <span className="material-icons-round text-sm">publish</span>
+                                    <span>{coupon.listed_on_marketplace ? 'Update Listing' : 'List Coupon'}</span>
                                 </>
                             )}
                         </button>

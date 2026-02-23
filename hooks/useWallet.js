@@ -1,12 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import { supabase } from '@/lib/supabaseClient';
 
 export function useWallet() {
     const [balance, setBalance] = useState({ balance: 0, currency: 'INR' });
@@ -46,7 +40,7 @@ export function useWallet() {
             const res = await fetch('/api/wallet/balance', { headers });
             if (res.ok) {
                 const data = await res.json();
-                setBalance(data);
+                setBalance(data.wallet || { balance: 0, currency: 'INR' });
             } else {
                 console.error('Failed to fetch balance:', res.status);
                 setBalance({ balance: 0, currency: 'INR' });

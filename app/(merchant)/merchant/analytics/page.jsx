@@ -180,34 +180,75 @@ export default async function AnalyticsPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 pt-24 pb-12">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                <div className="mb-8">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2 font-[family-name:var(--font-outfit)]">
-                        Analytics
-                    </h1>
-                    <p className="text-gray-600">Overview of your business performance</p>
+        <div className="relative">
+            {/* Background embellishments */}
+            <div className="fixed top-[10%] left-[-10%] w-[50%] h-[50%] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none -z-10 dark:opacity-20"></div>
+            <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-[#D4AF37]/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 mt-6 gap-4">
+                <div>
+                    <h1 className="font-display text-4xl font-bold text-slate-800 dark:text-slate-100 mb-2">Analytics</h1>
+                    <p className="text-slate-600 dark:text-slate-400 font-medium">Overview of your business performance and revenue trends</p>
+                </div>
+            </div>
+
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+                <div className="merchant-glass rounded-3xl p-6 border border-[#D4AF37]/20 hover:border-[#D4AF37]/50 transition-all group overflow-hidden relative bg-gradient-to-br from-[#D4AF37]/5 to-transparent shadow-lg shadow-[#D4AF37]/5">
+                    <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-[#D4AF37]/10 rounded-full blur-2xl group-hover:bg-[#D4AF37]/20 transition-all"></div>
+                    <div className="flex flex-col mb-2 relative z-10">
+                        <div className="flex items-center space-x-2 text-[#D4AF37] mb-2">
+                            <span className="material-icons-round text-lg">account_balance_wallet</span>
+                            <span className="font-bold uppercase tracking-widest text-[10px]">Total Revenue</span>
+                        </div>
+                        <h3 className="text-3xl font-display font-bold text-[#D4AF37]">
+                            ₹{totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h3>
+                    </div>
                 </div>
 
-                {/* KPI Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    {statsCards.map((stat, index) => {
-                        const Icon = stat.icon;
-                        return (
-                            <div key={index} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
-                                        <Icon size={24} />
-                                    </div>
-                                    <span className="text-gray-600 font-medium">{stat.label}</span>
-                                </div>
-                                <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
-                            </div>
-                        );
-                    })}
+                <div className="merchant-glass rounded-3xl p-6 border border-black/5 dark:border-white/5 hover:border-[#D4AF37]/30 transition-all group overflow-hidden relative shadow-lg">
+                    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition-all"></div>
+                    <div className="flex flex-col mb-2 relative z-10">
+                        <div className="flex items-center space-x-2 text-blue-500 dark:text-blue-400 mb-2">
+                            <span className="material-icons-round text-lg">trending_up</span>
+                            <span className="font-bold uppercase tracking-widest text-[10px]">Total Sales Volume</span>
+                        </div>
+                        <h3 className="text-3xl font-display font-bold text-slate-800 dark:text-slate-100">
+                            ₹{totalSalesValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h3>
+                    </div>
                 </div>
 
-                {/* Charts Section */}
+                <div className="merchant-glass rounded-3xl p-6 border border-black/5 dark:border-white/5 hover:border-[#D4AF37]/30 transition-all group overflow-hidden relative shadow-lg">
+                    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-all"></div>
+                    <div className="flex flex-col mb-2 relative z-10">
+                        <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 mb-2">
+                            <span className="material-icons-round text-lg">shopping_bag</span>
+                            <span className="font-bold uppercase tracking-widest text-[10px]">Coupons Sold</span>
+                        </div>
+                        <h3 className="text-3xl font-display font-bold text-slate-800 dark:text-slate-100">
+                            {soldCount.toLocaleString('en-IN')}
+                        </h3>
+                    </div>
+                </div>
+
+                <div className="merchant-glass rounded-3xl p-6 border border-black/5 dark:border-white/5 hover:border-[#D4AF37]/30 transition-all group overflow-hidden relative shadow-lg">
+                    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-purple-500/10 rounded-full blur-xl group-hover:bg-purple-500/20 transition-all"></div>
+                    <div className="flex flex-col mb-2 relative z-10">
+                        <div className="flex items-center space-x-2 text-purple-600 dark:text-purple-400 mb-2">
+                            <span className="material-icons-round text-lg">inventory_2</span>
+                            <span className="font-bold uppercase tracking-widest text-[10px]">Active Inventory</span>
+                        </div>
+                        <h3 className="text-3xl font-display font-bold text-slate-800 dark:text-slate-100">
+                            {availableCount.toLocaleString('en-IN')}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            {/* Charts Section */}
+            <div className="mb-12">
                 <AnalyticsCharts
                     revenueData={revenueData}
                     inventoryData={inventoryData}

@@ -1,7 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
-@variant dark (.dark &);
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-gold: #D4AF37;
+  --color-merchant-light: #FDFCFB;
+  --color-merchant-dark: #020617;
+  --font-display: "Playfair Display", serif;
+}
+
 /* Premium Color Palette */
 :root {
   --color-dark-navy: #171A21;
@@ -299,8 +306,8 @@ html {
 .gradient-text {
   background: linear-gradient(135deg, var(--color-steel-blue) 0%, var(--color-sky-blue) 50%, var(--color-lavender) 100%);
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 /* Glassmorphism */
@@ -312,11 +319,63 @@ html {
 }
 
 .glass-dark {
-  background: var(--glass-bg);
+  background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
 }
+
+.merchant-glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 20px 25px -5px rgba(226, 232, 240, 0.4);
+}
+
+.dark .merchant-glass {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+}
+
+.merchant-glass-dark {
+  background: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+}
+
+.light .merchant-glass-dark {
+  background: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #1e293b;
+}
+
+.gold-glow {
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+}
+
+.gold-border {
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.merchant-gradient-bg {
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #fdf2f8 100%);
+  min-height: 100vh;
+}
+
+.dark .merchant-gradient-bg {
+  background: radial-gradient(circle at top left, #0f172a, #020617);
+}
+
+.icon-gradient {
+  background: linear-gradient(135deg, #D4AF37, #F9E79F);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 
 /* Glow Effects */
 .glow-blue {

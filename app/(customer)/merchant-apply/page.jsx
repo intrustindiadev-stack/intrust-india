@@ -179,26 +179,26 @@ export default function MerchantApplyPage() {
     // Show blank page while auth is loading or checking merchant status to avoid flashing
     if (authLoading || checkingStatus) {
         return (
-            <div className="h-screen w-full flex items-center justify-center bg-[#FAFAFA]">
-                <Loader2 className="animate-spin text-blue-600" size={32} />
+            <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-[#020617] transition-colors">
+                <Loader2 className="animate-spin text-[#D4AF37]" size={32} />
             </div>
         );
     }
 
     return (
-        <div className="h-screen w-full bg-[#FAFAFA] font-[family-name:var(--font-outfit)] overflow-hidden relative flex flex-col md:flex-row">
+        <div className="h-screen w-full bg-white dark:bg-[#020617] font-[family-name:var(--font-outfit)] overflow-hidden relative flex flex-col md:flex-row transition-colors">
 
             {/* Desktop: Left Side Brand Panel (Hidden on Mobile) */}
-            <div className="hidden md:flex w-1/2 lg:w-[45%] bg-slate-900 h-full relative overflow-hidden flex-col justify-between p-12 text-white">
+            <div className="hidden md:flex w-1/2 lg:w-[45%] bg-slate-900 dark:bg-[#0F1419] h-full relative overflow-hidden flex-col justify-between p-12 text-white transition-colors">
                 <div className="absolute inset-0 opacity-20">
                     <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500 rounded-full blur-[100px] animate-pulse-slow" />
-                    <div className="absolute top-1/2 -left-24 w-72 h-72 bg-purple-500 rounded-full blur-[100px] animate-pulse-slow delay-700" />
+                    <div className="absolute top-1/2 -left-24 w-72 h-72 bg-[#D4AF37] rounded-full blur-[100px] animate-pulse-slow delay-700" />
                     <div className="absolute -bottom-24 right-24 w-80 h-80 bg-emerald-500 rounded-full blur-[100px]" />
                 </div>
 
                 <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-8">
-                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-900 font-bold text-xl">I</div>
+                        <div className="w-10 h-10 bg-[#D4AF37] rounded-xl flex items-center justify-center text-slate-900 font-bold text-xl">I</div>
                         <span className="text-2xl font-bold tracking-tight">INTRUST</span>
                     </div>
                     <motion.div
@@ -208,7 +208,7 @@ export default function MerchantApplyPage() {
                     >
                         <h1 className="text-5xl font-extrabold leading-tight mb-6">
                             Grow your business <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">exponentially.</span>
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-[#D4AF37]">exponentially.</span>
                         </h1>
                         <p className="text-slate-400 text-lg max-w-md">
                             Join 2,400+ merchants who are already selling gift cards to millions of customers.
@@ -222,32 +222,32 @@ export default function MerchantApplyPage() {
                     <TrustItem icon={Banknote} title="Instant Settlements" text="Get paid directly to your bank account." delay={0.6} />
                 </div>
 
-                <div className="relative z-10 text-xs text-slate-500 font-medium tracking-widest uppercase">
+                <div className="relative z-10 text-[10px] text-slate-500 font-bold tracking-widest uppercase">
                     © 2024 Intrust Platform
                 </div>
             </div>
 
             {/* Mobile/Right: App-Like Form Container */}
-            <div className="flex-1 h-full relative flex flex-col bg-white">
+            <div className="flex-1 h-full relative flex flex-col bg-white dark:bg-[#020617] transition-colors">
                 {step === 3 && <Confetti />}
 
                 {/* Mobile Header / Navbar Replacement (Hide on Success) */}
                 {step < 3 && (
-                    <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white/80 backdrop-blur-md z-20 sticky top-0 transition-opacity">
+                    <div className="px-6 py-5 border-b border-black/5 dark:border-white/10 flex items-center justify-between bg-white/80 dark:bg-[#020617]/80 backdrop-blur-md z-20 sticky top-0 transition-colors">
                         <div className="flex items-center gap-3">
-                            <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors">
+                            <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
                                 <X size={18} />
                             </button>
-                            <span className="font-bold text-slate-800 text-lg">Become a Partner</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-100 text-lg">Become a Partner</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-400">Step {step} of 2</span>
-                            <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Step {step} of 2</span>
+                            <div className="w-16 h-1.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
                                 <motion.div
                                     initial={{ width: 0 }}
                                     animate={{ width: `${progress}%` }}
                                     transition={{ duration: 0.5 }}
-                                    className="h-full bg-blue-600 rounded-full"
+                                    className="h-full bg-[#D4AF37] rounded-full"
                                 />
                             </div>
                         </div>
@@ -267,8 +267,8 @@ export default function MerchantApplyPage() {
                                 className="py-2"
                             >
                                 <div className="mb-8">
-                                    <h2 className="text-3xl font-extrabold text-slate-900 mb-3 tracking-tight">Business Details</h2>
-                                    <p className="text-lg text-slate-500">Tell us about your business to get started.</p>
+                                    <h2 className="text-3xl font-display font-extrabold text-slate-900 dark:text-white mb-3 tracking-tight">Business Details</h2>
+                                    <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">Tell us about your business to get started.</p>
                                 </div>
 
                                 <div className="space-y-6">
@@ -296,18 +296,18 @@ export default function MerchantApplyPage() {
                                 className="py-2"
                             >
                                 <div className="mb-8">
-                                    <h2 className="text-3xl font-extrabold text-slate-900 mb-3 tracking-tight">Banking Details</h2>
-                                    <p className="text-lg text-slate-500">Connect your bank account for settlements.</p>
+                                    <h2 className="text-3xl font-display font-extrabold text-slate-900 dark:text-white mb-3 tracking-tight">Banking Details</h2>
+                                    <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">Connect your bank account for settlements.</p>
                                 </div>
 
                                 <div className="space-y-6">
-                                    <div className="p-5 bg-blue-50/60 rounded-2xl border border-blue-100 flex gap-4 items-start">
-                                        <div className="bg-blue-100 p-2 rounded-full text-blue-600 shrink-0">
+                                    <div className="p-6 bg-blue-500/5 rounded-2xl border border-blue-500/10 dark:border-blue-500/20 flex gap-4 items-start">
+                                        <div className="bg-blue-500/10 p-2 rounded-full text-blue-600 dark:text-blue-400 shrink-0">
                                             <Shield size={20} />
                                         </div>
                                         <div>
-                                            <p className="font-bold text-blue-900 text-sm">Secure Verification</p>
-                                            <p className="text-blue-700/80 text-sm mt-1 leading-relaxed">We will deposit ₹1 to verify this account automatically. Your banking details are encrypted with 256-bit SSL.</p>
+                                            <p className="font-bold text-blue-900 dark:text-blue-100 text-sm">Secure Verification</p>
+                                            <p className="text-blue-700/80 dark:text-blue-300/60 text-sm mt-1 leading-relaxed font-medium">We will deposit ₹1 to verify this account automatically. Your banking details are encrypted with 256-bit SSL.</p>
                                         </div>
                                     </div>
 
@@ -333,26 +333,26 @@ export default function MerchantApplyPage() {
                                         initial={{ scale: 0 }}
                                         animate={{ scale: 1 }}
                                         transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                                        className="w-full h-full bg-gradient-to-tr from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/40"
+                                        className="w-full h-full bg-gradient-to-tr from-[#D4AF37] to-[#B8860B] rounded-full flex items-center justify-center shadow-2xl shadow-[#D4AF37]/40"
                                     >
                                         <Check className="w-16 h-16 text-white stroke-[3px]" />
                                     </motion.div>
                                     <motion.div
                                         animate={{ scale: [1, 1.4, 1.4], opacity: [0.3, 0, 0] }}
                                         transition={{ duration: 2, repeat: Infinity }}
-                                        className="absolute inset-0 bg-green-400 rounded-full -z-10"
+                                        className="absolute inset-0 bg-[#D4AF37] rounded-full -z-10"
                                     />
                                 </div>
 
-                                <h2 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Welcome to InTrust!</h2>
-                                <p className="text-slate-500 text-lg max-w-md mx-auto mb-10 leading-relaxed">
-                                    Your merchant account is <span className="font-bold text-green-600">ready to use</span>! Start selling gift cards and grow your business today.
+                                <h2 className="text-4xl font-display font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">Welcome to InTrust!</h2>
+                                <p className="text-slate-500 dark:text-slate-400 text-lg max-w-md mx-auto mb-10 leading-relaxed font-medium">
+                                    Your merchant account is <span className="font-bold text-[#D4AF37]">ready to use</span>! Start selling gift cards and grow your business today.
                                 </p>
 
                                 <div className="w-full max-w-xs space-y-3">
                                     <button
                                         onClick={() => router.push('/merchant/dashboard')}
-                                        className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl shadow-xl shadow-slate-900/10 transition-all flex items-center justify-center gap-2"
+                                        className="w-full py-4 bg-[#D4AF37] hover:bg-opacity-90 text-[#020617] font-bold rounded-2xl shadow-xl shadow-[#D4AF37]/20 transition-all flex items-center justify-center gap-2 gold-glow"
                                     >
                                         <Home size={18} />
                                         Go to Dashboard
@@ -365,18 +365,18 @@ export default function MerchantApplyPage() {
 
                 {/* Fixed Bottom Action Bar (App Style - Hide on Success) */}
                 {step < 3 && (
-                    <div className="p-6 bg-white border-t border-gray-100 flex items-center justify-between gap-4 z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+                    <div className="p-6 bg-white dark:bg-[#020617] border-t border-black/5 dark:border-white/10 flex items-center justify-between gap-4 z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] dark:shadow-none transition-colors">
                         <button
                             onClick={prevStep}
                             disabled={step === 1 || loading}
-                            className={`px-8 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-colors ${step === 1 ? 'opacity-0 pointer-events-none' : ''}`}
+                            className={`px-8 py-4 rounded-2xl font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all ${step === 1 ? 'opacity-0 pointer-events-none' : ''}`}
                         >
                             Back
                         </button>
                         <button
                             onClick={step === 2 ? handleFormSubmit : nextStep}
                             disabled={loading}
-                            className={`flex-1 flex gap-2 justify-center items-center py-4 rounded-2xl text-white font-bold shadow-lg transition-all text-lg ${loading ? 'bg-slate-300 shadow-none text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/30 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}
+                            className={`flex-1 flex gap-2 justify-center items-center py-4 rounded-2xl text-white dark:text-[#020617] font-bold shadow-lg transition-all text-lg ${loading ? 'bg-slate-200 dark:bg-white/5 shadow-none text-slate-400 cursor-not-allowed' : 'bg-[#D4AF37] shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/30 hover:scale-[1.02] active:scale-[0.98] gold-glow'}`}
                         >
                             {loading && <Loader2 className="animate-spin" size={20} />}
                             {loading ? 'Submitting...' : step === 2 ? 'Submit Application' : 'Continue'}
@@ -402,7 +402,7 @@ export default function MerchantApplyPage() {
                             toast.success("Debug: KYC Status set to Approved");
                         }
                     }}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg opacity-50 hover:opacity-100 transition-opacity"
+                    className="bg-purple-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg opacity-40 hover:opacity-100 transition-opacity"
                 >
                     Debug: Complete KYC
                 </button>
@@ -411,21 +411,20 @@ export default function MerchantApplyPage() {
     );
 }
 
-
 function TrustItem({ icon: Icon, title, text, delay }) {
     return (
         <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay, duration: 0.5 }}
-            className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors"
+            className="flex items-start gap-4 p-5 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors"
         >
             <div className="shrink-0 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-                <Icon size={20} className="text-blue-300" />
+                <Icon size={20} className="text-[#D4AF37]" />
             </div>
             <div>
                 <h3 className="font-bold text-white mb-0.5">{title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{text}</p>
+                <p className="text-slate-400 text-sm leading-relaxed font-medium">{text}</p>
             </div>
         </motion.div>
     );
@@ -435,16 +434,16 @@ function TrustItem({ icon: Icon, title, text, delay }) {
 function SmoothInput({ label, className = "", icon: Icon, ...props }) {
     return (
         <div className="group">
-            <label className="block text-sm font-bold text-slate-700 mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 group-focus-within:text-[#D4AF37] transition-colors">
                 {label}
             </label>
             <div className="relative transform transition-all duration-200 group-focus-within:scale-[1.01]">
                 <input
-                    className={`w-full px-5 py-4 pl-12 bg-white border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-semibold text-slate-800 placeholder:text-slate-300 shadow-sm group-hover:border-slate-200 ${className}`}
+                    className={`w-full px-5 py-4 pl-12 bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl focus:border-[#D4AF37]/50 focus:ring-4 focus:ring-[#D4AF37]/10 transition-all outline-none font-semibold text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 shadow-sm ${className}`}
                     placeholder={`Enter ${label}`}
                     {...props}
                 />
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-[#D4AF37] transition-colors">
                     {Icon && <Icon size={20} />}
                 </div>
             </div>
@@ -455,11 +454,11 @@ function SmoothInput({ label, className = "", icon: Icon, ...props }) {
 function SmoothTextArea({ label, className = "", ...props }) {
     return (
         <div className="group">
-            <label className="block text-sm font-bold text-slate-700 mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 group-focus-within:text-[#D4AF37] transition-colors">
                 {label}
             </label>
             <textarea
-                className={`w-full px-5 py-4 bg-white border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-semibold text-slate-800 placeholder:text-slate-300 shadow-sm group-hover:border-slate-200 resize-none ${className}`}
+                className={`w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl focus:border-[#D4AF37]/50 focus:ring-4 focus:ring-[#D4AF37]/10 transition-all outline-none font-semibold text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 shadow-sm resize-none ${className}`}
                 placeholder={`Enter ${label}`}
                 rows={3}
                 {...props}

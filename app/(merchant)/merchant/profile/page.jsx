@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Building, Loader2, Save } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useMerchant } from '@/hooks/useMerchant';
 
@@ -32,7 +31,7 @@ export default function ProfilePage() {
                 .eq('id', merchant.id);
 
             if (error) throw error;
-            alert('Profile updated successfully!');
+            // Optionally, show a success toast here
         } catch (err) {
             console.error('Error updating profile:', err);
             alert('Failed to update profile');
@@ -43,86 +42,115 @@ export default function ProfilePage() {
 
     if (merchantLoading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-[#92BCEA]" />
+            <div className="relative min-h-[60vh] flex items-center justify-center">
+                <span className="material-icons-round animate-spin text-[#D4AF37] text-4xl">autorenew</span>
             </div>
         );
     }
 
     if (merchantError || !merchant) {
-        return <div className="p-8 text-center text-red-500">Error: {merchantError || 'Merchant not found'}</div>;
+        return (
+            <div className="relative min-h-[60vh] flex items-center justify-center">
+                <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-3xl text-center shadow-sm">
+                    <span className="material-icons-round text-red-500 text-6xl mb-4">error</span>
+                    <h2 className="text-xl font-bold text-red-600 dark:text-red-400">Merchant Profile Error</h2>
+                    <p className="text-red-500 dark:text-red-400/80 mt-2 font-medium">{merchantError || 'Merchant not found'}</p>
+                </div>
+            </div>
+        );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pt-24 pb-12">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                <div className="mb-8">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2 font-[family-name:var(--font-outfit)]">
-                        Merchant Profile
-                    </h1>
-                    <p className="text-gray-600">Manage your business profile</p>
+        <div className="relative">
+            {/* Background embellishments */}
+            <div className="fixed top-[-10%] left-[-5%] w-[40%] h-[40%] bg-[#D4AF37]/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+            <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none -z-10 dark:opacity-20"></div>
+
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 mt-6 gap-4">
+                <div>
+                    <h1 className="font-display text-4xl font-bold text-slate-800 dark:text-slate-100 mb-2">Merchant Profile</h1>
+                    <p className="text-slate-600 dark:text-slate-400 font-medium">Manage your business profile and information</p>
                 </div>
+            </div>
 
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden max-w-2xl">
-                    <div className="p-8">
-                        <form onSubmit={handleSave} className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Building className="h-5 w-5 text-gray-400" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        value={formData.business_name}
-                                        onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                                        className="pl-10 block w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-[#92BCEA] focus:ring-[#92BCEA]"
-                                        placeholder="Your Business Name"
-                                    />
-                                </div>
+            <div className="merchant-glass rounded-3xl border border-black/5 dark:border-white/5 overflow-hidden max-w-2xl relative shadow-xl">
+                <div className="absolute -left-10 w-20 h-[200%] bg-gradient-to-b from-white/0 via-black/5 dark:via-white/5 to-white/0 transform -rotate-45 pointer-events-none"></div>
+
+                <div className="p-8 relative z-10">
+                    <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-8 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
+                        <span className="material-icons-round text-[#D4AF37] mr-3">storefront</span>
+                        Business Details
+                    </h2>
+
+                    <form onSubmit={handleSave} className="space-y-6">
+                        <div className="group">
+                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
+                                Business Name
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#D4AF37] material-icons-round text-lg select-none transition-colors">business</span>
+                                <input
+                                    type="text"
+                                    value={formData.business_name}
+                                    onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                                    className="w-full pl-12 pr-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                                    placeholder="Your Business Name"
+                                />
                             </div>
+                        </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Building className="h-5 w-5 text-gray-400" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        value={formData.gst_number}
-                                        onChange={(e) => setFormData({ ...formData, gst_number: e.target.value })}
-                                        className="pl-10 block w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-[#92BCEA] focus:ring-[#92BCEA]"
-                                        placeholder="GSTIN"
-                                    />
-                                </div>
+                        <div className="group">
+                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
+                                GST Number
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#D4AF37] material-icons-round text-lg select-none transition-colors">receipt</span>
+                                <input
+                                    type="text"
+                                    value={formData.gst_number}
+                                    onChange={(e) => setFormData({ ...formData, gst_number: e.target.value })}
+                                    className="w-full pl-12 pr-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                                    placeholder="GSTIN"
+                                />
                             </div>
+                        </div>
 
-                            {/* Contact Info (Read Only for now as it's likely in user_profiles) */}
-                            <div>
-                                <h3 className="text-lg font-medium text-gray-700 mb-4 pt-4 border-t">Contact Information</h3>
-                                <p className="text-sm text-gray-500 italic">To update contact details, please contact support.</p>
+                        {/* Contact Info (Read Only) */}
+                        <div className="pt-8 mt-8 border-t border-black/5 dark:border-white/5">
+                            <div className="flex items-center space-x-2 text-slate-700 dark:text-slate-300 mb-2">
+                                <span className="material-icons-round text-lg text-slate-500">contact_mail</span>
+                                <h3 className="text-lg font-bold font-display">Contact Information</h3>
                             </div>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                                To update contact details such as your phone or email, please contact support.
+                            </p>
 
+                            <div className="mt-4 p-4 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 flex items-center space-x-3 opacity-80">
+                                <span className="material-icons-round text-[#D4AF37]">info</span>
+                                <span className="text-sm text-slate-600 dark:text-slate-200">Contact information is tied to your primary account.</span>
+                            </div>
+                        </div>
+
+                        <div className="pt-6">
                             <button
                                 type="submit"
                                 disabled={saving}
-                                className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-[#92BCEA] hover:bg-[#7A93AC] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#92BCEA]"
+                                className="w-full sm:w-auto px-10 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl shadow-lg shadow-[#D4AF37]/20 hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 gold-glow"
                             >
                                 {saving ? (
                                     <>
-                                        <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
-                                        Saving...
+                                        <span className="material-icons-round animate-spin text-sm">autorenew</span>
+                                        <span>Saving Profile...</span>
                                     </>
                                 ) : (
                                     <>
-                                        <Save className="-ml-1 mr-2 h-5 w-5" />
-                                        Save Changes
+                                        <span className="material-icons-round text-sm">save</span>
+                                        <span>Save Changes</span>
                                     </>
                                 )}
                             </button>
-                        </form>
-                    </div>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

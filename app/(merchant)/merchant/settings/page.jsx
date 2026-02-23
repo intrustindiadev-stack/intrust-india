@@ -2,17 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import {
-    Building2,
-    CreditCard,
-    Bell,
-    Shield,
-    Save,
-    Loader2,
-    CheckCircle2,
-    AlertCircle,
-    FileText
-} from 'lucide-react';
 
 export default function MerchantSettingsPage() {
     const [loading, setLoading] = useState(true);
@@ -44,7 +33,6 @@ export default function MerchantSettingsPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            // Get user profile
             const { data: profile } = await supabase
                 .from('user_profiles')
                 .select('*')
@@ -53,7 +41,6 @@ export default function MerchantSettingsPage() {
 
             setUserProfile(profile);
 
-            // Get merchant profile
             const { data: merchant } = await supabase
                 .from('merchants')
                 .select('*')
@@ -62,7 +49,6 @@ export default function MerchantSettingsPage() {
 
             setMerchantProfile(merchant);
 
-            // Get KYC status
             const { data: kyc } = await supabase
                 .from('kyc_records')
                 .select('status')
@@ -71,7 +57,6 @@ export default function MerchantSettingsPage() {
 
             setKycStatus(kyc?.status);
 
-            // Set form data
             setFormData({
                 business_name: merchant?.business_name || '',
                 gst_number: merchant?.gst_number || '',
@@ -96,7 +81,6 @@ export default function MerchantSettingsPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            // Update merchant profile
             const { error: updateError } = await supabase
                 .from('merchants')
                 .update({
@@ -121,265 +105,274 @@ export default function MerchantSettingsPage() {
     };
 
     const tabs = [
-        { id: 'business', label: 'Business Info', icon: Building2 },
-        { id: 'account', label: 'Account', icon: Shield },
-        { id: 'notifications', label: 'Notifications', icon: Bell },
+        { id: 'business', label: 'Business Info', icon: 'business' },
+        { id: 'account', label: 'Account', icon: 'shield' },
+        { id: 'notifications', label: 'Notifications', icon: 'notifications' },
     ];
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-[#92BCEA]" />
+            <div className="relative min-h-[60vh] flex items-center justify-center">
+                <span className="material-icons-round animate-spin text-[#D4AF37] text-4xl">autorenew</span>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6">
-            <div className="max-w-5xl mx-auto">
-                {/* Header */}
-                <div className="mb-6 sm:mb-8">
-                    <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 font-[family-name:var(--font-outfit)]">
-                        Settings
-                    </h1>
-                    <p className="text-sm sm:text-base text-gray-600">Manage your account and business preferences</p>
+        <div className="relative">
+            {/* Background embellishments */}
+            <div className="fixed top-[-10%] left-[-5%] w-[40%] h-[40%] bg-[#D4AF37]/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+            <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none -z-10 dark:opacity-20"></div>
+
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 mt-6 gap-4">
+                <div>
+                    <h1 className="font-display text-4xl font-bold text-slate-800 dark:text-slate-100 mb-2">Settings</h1>
+                    <p className="text-slate-600 dark:text-slate-400 font-medium">Manage your account and business preferences</p>
                 </div>
+            </div>
 
-                {/* Alerts */}
-                {error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-                        <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
-                        <div>
-                            <h3 className="font-semibold text-red-900">Error</h3>
-                            <p className="text-sm text-red-700">{error}</p>
-                        </div>
+            {/* Alerts */}
+            {error && (
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 shadow-sm">
+                    <span className="material-icons-round text-red-600 dark:text-red-400 mt-0.5">error_outline</span>
+                    <div>
+                        <h3 className="font-bold text-red-600 dark:text-red-400">Error</h3>
+                        <p className="text-sm text-red-500 dark:text-red-400/80 font-medium">{error}</p>
                     </div>
-                )}
-
-                {success && (
-                    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
-                        <CheckCircle2 className="text-green-600 flex-shrink-0 mt-0.5" size={20} />
-                        <div>
-                            <h3 className="font-semibold text-green-900">Success</h3>
-                            <p className="text-sm text-green-700">{success}</p>
-                        </div>
-                    </div>
-                )}
-
-                {/* Tabs */}
-                <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-                    {tabs.map((tab) => {
-                        const Icon = tab.icon;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${activeTab === tab.id
-                                        ? 'bg-white text-[#92BCEA] shadow-lg border-2 border-[#92BCEA]'
-                                        : 'bg-white text-gray-600 hover:bg-gray-50 border-2 border-transparent'
-                                    }`}
-                            >
-                                <Icon size={20} />
-                                <span className="hidden sm:inline">{tab.label}</span>
-                            </button>
-                        );
-                    })}
                 </div>
+            )}
 
-                {/* Content */}
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-                    {activeTab === 'business' && (
-                        <div className="p-6">
-                            <h2 className="text-xl font-bold text-gray-900 mb-6">Business Information</h2>
+            {success && (
+                <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-start gap-3 shadow-sm">
+                    <span className="material-icons-round text-emerald-600 dark:text-emerald-400 mt-0.5">check_circle</span>
+                    <div>
+                        <h3 className="font-bold text-emerald-600 dark:text-emerald-400">Success</h3>
+                        <p className="text-sm text-emerald-600 dark:text-emerald-400/80 font-medium">{success}</p>
+                    </div>
+                </div>
+            )}
 
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Business Name
+            {/* Tabs */}
+            <div className="flex gap-2 mb-8 bg-black/5 dark:bg-white/5 p-1.5 rounded-2xl w-fit border border-black/5 dark:border-white/5 overflow-x-auto shadow-sm">
+                {tabs.map((tab) => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all focus:outline-none whitespace-nowrap ${activeTab === tab.id
+                            ? 'bg-[#D4AF37] text-[#020617] shadow-lg shadow-[#D4AF37]/20 gold-glow'
+                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                            }`}
+                    >
+                        <span className="material-icons-round text-sm">{tab.icon}</span>
+                        <span className="hidden sm:inline">{tab.label}</span>
+                    </button>
+                ))}
+            </div>
+
+            {/* Content Container */}
+            <div className="merchant-glass rounded-3xl border border-black/5 dark:border-white/5 overflow-hidden shadow-xl mb-12">
+                {activeTab === 'business' && (
+                    <div className="p-8">
+                        <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-8 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
+                            <span className="material-icons-round text-[#D4AF37] mr-3">storefront</span>
+                            Business Information
+                        </h2>
+
+                        <div className="space-y-6 max-w-2xl">
+                            <div className="group">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
+                                    Business Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.business_name}
+                                    onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                                    className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="group">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
+                                        GST Number
                                     </label>
                                     <input
                                         type="text"
-                                        value={formData.business_name}
-                                        onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#92BCEA] focus:ring-2 focus:ring-[#92BCEA]/20"
+                                        value={formData.gst_number}
+                                        onChange={(e) => setFormData({ ...formData, gst_number: e.target.value })}
+                                        placeholder="22AAAAA0000A1Z5"
+                                        className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                            GST Number
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.gst_number}
-                                            onChange={(e) => setFormData({ ...formData, gst_number: e.target.value })}
-                                            placeholder="22AAAAA0000A1Z5"
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#92BCEA] focus:ring-2 focus:ring-[#92BCEA]/20"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                            PAN Number
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.pan_number}
-                                            onChange={(e) => setFormData({ ...formData, pan_number: e.target.value.toUpperCase() })}
-                                            placeholder="ABCDE1234F"
-                                            maxLength={10}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#92BCEA] focus:ring-2 focus:ring-[#92BCEA]/20"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                            Business Phone
-                                        </label>
-                                        <input
-                                            type="tel"
-                                            value={formData.business_phone}
-                                            onChange={(e) => setFormData({ ...formData, business_phone: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#92BCEA] focus:ring-2 focus:ring-[#92BCEA]/20"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                            Business Email
-                                        </label>
-                                        <input
-                                            type="email"
-                                            value={formData.business_email}
-                                            onChange={(e) => setFormData({ ...formData, business_email: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#92BCEA] focus:ring-2 focus:ring-[#92BCEA]/20"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="pt-4">
-                                    <button
-                                        onClick={handleSave}
-                                        disabled={saving}
-                                        className="px-6 py-3 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] text-white font-bold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
-                                    >
-                                        {saving ? (
-                                            <>
-                                                <Loader2 size={20} className="animate-spin" />
-                                                Saving...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Save size={20} />
-                                                Save Changes
-                                            </>
-                                        )}
-                                    </button>
+                                <div className="group">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
+                                        PAN Number
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.pan_number}
+                                        onChange={(e) => setFormData({ ...formData, pan_number: e.target.value.toUpperCase() })}
+                                        placeholder="ABCDE1234F"
+                                        maxLength={10}
+                                        className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                                    />
                                 </div>
                             </div>
-                        </div>
-                    )}
 
-                    {activeTab === 'account' && (
-                        <div className="p-6">
-                            <h2 className="text-xl font-bold text-gray-900 mb-6">Account Information</h2>
-
-                            <div className="space-y-6">
-                                {/* Account Status */}
-                                <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-semibold text-gray-700">Merchant Status</span>
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${merchantProfile?.status === 'approved'
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-yellow-100 text-yellow-700'
-                                            }`}>
-                                            {merchantProfile?.status?.toUpperCase()}
-                                        </span>
-                                    </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="group">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
+                                        Business Phone
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={formData.business_phone}
+                                        onChange={(e) => setFormData({ ...formData, business_phone: e.target.value })}
+                                        className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                                    />
                                 </div>
 
-                                {/* KYC Status */}
-                                <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-semibold text-gray-700">KYC Status</span>
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${kycStatus === 'approved'
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-yellow-100 text-yellow-700'
-                                            }`}>
-                                            {kycStatus?.toUpperCase() || 'PENDING'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Wallet Balance */}
-                                <div className="p-4 bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] rounded-xl text-white">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-white/80 text-sm mb-1">Wallet Balance</p>
-                                            <p className="text-3xl font-bold">
-                                                ₹{((merchantProfile?.wallet_balance_paise || 0) / 100).toLocaleString()}
-                                            </p>
-                                        </div>
-                                        <CreditCard size={32} className="text-white/50" />
-                                    </div>
-                                </div>
-
-                                {/* Commission Paid */}
-                                <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm font-semibold text-gray-700">Total Commission Paid</span>
-                                        <span className="text-lg font-bold text-gray-900">
-                                            ₹{((merchantProfile?.total_commission_paid_paise || 0) / 100).toLocaleString()}
-                                        </span>
-                                    </div>
+                                <div className="group">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
+                                        Business Email
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={formData.business_email}
+                                        onChange={(e) => setFormData({ ...formData, business_email: e.target.value })}
+                                        className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                                    />
                                 </div>
                             </div>
-                        </div>
-                    )}
 
-                    {activeTab === 'notifications' && (
-                        <div className="p-6">
-                            <h2 className="text-xl font-bold text-gray-900 mb-6">Notification Preferences</h2>
-
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                                    <div>
-                                        <p className="font-semibold text-gray-900">Email Notifications</p>
-                                        <p className="text-sm text-gray-600">Receive updates via email</p>
-                                    </div>
-                                    <input type="checkbox" className="w-5 h-5 text-[#92BCEA]" defaultChecked />
-                                </div>
-
-                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                                    <div>
-                                        <p className="font-semibold text-gray-900">Purchase Notifications</p>
-                                        <p className="text-sm text-gray-600">Get notified when you purchase coupons</p>
-                                    </div>
-                                    <input type="checkbox" className="w-5 h-5 text-[#92BCEA]" defaultChecked />
-                                </div>
-
-                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                                    <div>
-                                        <p className="font-semibold text-gray-900">Sale Notifications</p>
-                                        <p className="text-sm text-gray-600">Get notified when your coupons are sold</p>
-                                    </div>
-                                    <input type="checkbox" className="w-5 h-5 text-[#92BCEA]" defaultChecked />
-                                </div>
-
-                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                                    <div>
-                                        <p className="font-semibold text-gray-900">Marketing Updates</p>
-                                        <p className="text-sm text-gray-600">Receive promotional offers and updates</p>
-                                    </div>
-                                    <input type="checkbox" className="w-5 h-5 text-[#92BCEA]" />
-                                </div>
+                            <div className="pt-8 border-t border-black/5 dark:border-white/5">
+                                <button
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    className="px-10 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:bg-opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2 gold-glow shadow-lg shadow-[#D4AF37]/20"
+                                >
+                                    {saving ? (
+                                        <>
+                                            <span className="material-icons-round animate-spin text-sm">autorenew</span>
+                                            <span>Saving...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="material-icons-round text-sm">save</span>
+                                            <span>Save Changes</span>
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
+
+                {activeTab === 'account' && (
+                    <div className="p-8">
+                        <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-8 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
+                            <span className="material-icons-round text-[#D4AF37] mr-3">manage_accounts</span>
+                            Account Information
+                        </h2>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Account Status */}
+                            <div className="p-6 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 group hover:border-[#D4AF37]/30 transition-colors shadow-sm">
+                                <div className="flex justify-between mb-4">
+                                    <div className="w-12 h-12 bg-black/5 dark:bg-white/10 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10">
+                                        <span className="material-icons-round text-slate-500 dark:text-slate-300">verified_user</span>
+                                    </div>
+                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center h-fit ${merchantProfile?.status === 'approved'
+                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                        : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border-yellow-500/20'
+                                        }`}>
+                                        {merchantProfile?.status?.toUpperCase() || 'PENDING'}
+                                    </span>
+                                </div>
+                                <h3 className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Merchant Status</h3>
+                                <p className="text-slate-800 dark:text-slate-100 font-medium">Your account status allows you to purchase and manage inventory.</p>
+                            </div>
+
+                            {/* KYC Status */}
+                            <div className="p-6 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 group hover:border-[#D4AF37]/30 transition-colors shadow-sm">
+                                <div className="flex justify-between mb-4">
+                                    <div className="w-12 h-12 bg-black/5 dark:bg-white/10 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10">
+                                        <span className="material-icons-round text-slate-500 dark:text-slate-300">fact_check</span>
+                                    </div>
+                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center h-fit ${kycStatus === 'approved'
+                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                        : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border-yellow-500/20'
+                                        }`}>
+                                        {kycStatus?.toUpperCase() || 'PENDING'}
+                                    </span>
+                                </div>
+                                <h3 className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">KYC Verification</h3>
+                                <p className="text-slate-800 dark:text-slate-100 font-medium">Verified for transactional compliance.</p>
+                            </div>
+
+                            {/* Wallet Balance */}
+                            <div className="p-6 bg-gradient-to-br from-[#D4AF37]/10 to-transparent dark:from-[#D4AF37]/20 dark:to-transparent rounded-2xl border border-[#D4AF37]/20 relative overflow-hidden group shadow-sm transition-all hover:bg-[#D4AF37]/10">
+                                <div className="absolute -right-4 -top-4 w-24 h-24 bg-[#D4AF37]/20 rounded-full blur-2xl group-hover:bg-[#D4AF37]/30 transition-colors pointer-events-none"></div>
+                                <div className="flex justify-between mb-2 relative z-10">
+                                    <div className="w-12 h-12 bg-[#D4AF37]/10 rounded-xl flex items-center justify-center border border-[#D4AF37]/20">
+                                        <span className="material-icons-round text-[#D4AF37]">account_balance_wallet</span>
+                                    </div>
+                                </div>
+                                <h3 className="text-[#D4AF37]/80 text-xs font-bold uppercase tracking-widest mb-1 relative z-10">Wallet Balance</h3>
+                                <p className="text-3xl font-display font-bold text-[#D4AF37] relative z-10">
+                                    ₹{((merchantProfile?.wallet_balance_paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                </p>
+                            </div>
+
+                            {/* Commission Paid */}
+                            <div className="p-6 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 group hover:border-[#D4AF37]/30 transition-colors shadow-sm">
+                                <div className="flex justify-between mb-2">
+                                    <div className="w-12 h-12 bg-black/5 dark:bg-white/10 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10">
+                                        <span className="material-icons-round text-slate-500 dark:text-slate-300">receipt_long</span>
+                                    </div>
+                                </div>
+                                <h3 className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Total Commission Paid</h3>
+                                <p className="text-3xl font-display font-bold text-slate-800 dark:text-slate-100">
+                                    ₹{((merchantProfile?.total_commission_paid_paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'notifications' && (
+                    <div className="p-8">
+                        <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-8 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
+                            <span className="material-icons-round text-[#D4AF37] mr-3">notifications_active</span>
+                            Notification Preferences
+                        </h2>
+
+                        <div className="space-y-4 max-w-2xl">
+                            {/* Notification Row Component would be better but keeping it for inline style */}
+                            {[
+                                { id: 'email', label: 'Email Notifications', desc: 'Receive account updates and alerts via email', icon: 'email', checked: true },
+                                { id: 'purchase', label: 'Purchase Notifications', desc: 'Get notified when you purchase new coupons for inventory', icon: 'shopping_cart_test', checked: true },
+                                { id: 'sale', label: 'Sale Notifications', desc: 'Get real-time alerts when your coupons are sold', icon: 'sell', checked: true },
+                                { id: 'marketing', label: 'Marketing Updates', desc: 'Receive promotional offers, platform updates, and news', icon: 'campaign', checked: false }
+                            ].map((item) => (
+                                <div key={item.id} className="flex items-center justify-between p-6 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 group hover:bg-black/[0.08] dark:hover:bg-white/10 transition-colors shadow-sm">
+                                    <div>
+                                        <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center">
+                                            <span className="material-icons-round text-slate-500 dark:text-slate-400 mr-2 text-sm">{item.icon}</span>
+                                            {item.label}
+                                        </p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">{item.desc}</p>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" className="sr-only peer" defaultChecked={item.checked} />
+                                        <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#D4AF37]"></div>
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

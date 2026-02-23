@@ -101,7 +101,13 @@ export async function middleware(request) {
             const redirectUrl = new URL('/login', request.url)
             redirectUrl.searchParams.set('redirect', pathname)
             console.log('[MIDDLEWARE:REDIRECT]', { requestId, to: '/login', from: pathname });
-            return NextResponse.redirect(redirectUrl)
+
+            const redirectResponse = NextResponse.redirect(redirectUrl)
+            // Copy cookies from response to redirectResponse
+            response.cookies.getAll().forEach(cookie => {
+                redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+            })
+            return redirectResponse
         }
 
         // Simplified redirect - let layouts handle role-based routing
@@ -115,7 +121,12 @@ export async function middleware(request) {
                 path: pathname,
                 action: 'redirect_to_dashboard'
             });
-            return NextResponse.redirect(new URL('/dashboard', request.url))
+            const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url))
+            // Copy cookies from response to redirectResponse
+            response.cookies.getAll().forEach(cookie => {
+                redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+            })
+            return redirectResponse
         }
 
         const elapsed = Date.now() - startTime;

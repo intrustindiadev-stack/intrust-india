@@ -1,151 +1,85 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Minus, Trash2, CreditCard, Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
-import { useMerchant } from '@/hooks/useMerchant';
+import Link from 'next/link';
 
 export default function PurchasePage() {
-    const { merchant, loading: merchantLoading, error: merchantError, isAdmin } = useMerchant();
     const [cart, setCart] = useState({});
     const [inventory, setInventory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [purchasing, setPurchasing] = useState(false);
     const [merchantBalance, setMerchantBalance] = useState(0);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [hasMore, setHasMore] = useState(true);
 
-    const PAGE_SIZE = 50;
-
-    // Fetch platform inventory with pagination
-    const fetchInventory = async (append = false) => {
+    const fetchData = async () => {
         try {
-            if (!append) {
-                setLoading(true);
-            } else {
-                setLoadingMore(true);
-            }
+            setLoading(true);
             setError(null);
 
-            const startIndex = append ? inventory.length : 0;
-            const endIndex = startIndex + PAGE_SIZE - 1;
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Not authenticated');
 
-            // Build query
-            let query = supabase
+            const { data: merchantData, error: merchantError } = await supabase
+                .from('merchants')
+                .select('id, wallet_balance_paise, status')
+                .eq('user_id', user.id)
+                .single();
+
+            if (merchantError) throw merchantError;
+            if (merchantData.status !== 'approved') {
+                throw new Error('Your merchant account is not approved yet');
+            }
+
+            setMerchantBalance(merchantData.wallet_balance_paise / 100);
+
+            const { data: coupons, error: couponsError } = await supabase
                 .from('coupons')
                 .select('*')
                 .eq('status', 'available')
-                .is('merchant_id', null)
+                .eq('is_merchant_owned', false)
                 .gte('valid_until', new Date().toISOString())
-                .order('brand', { ascending: true })
-                .range(startIndex, endIndex);
-
-            // Add search filter if searchQuery exists
-            if (searchQuery) {
-                query = query.ilike('brand', `%${searchQuery}%`);
-            }
-
-            const { data: coupons, error: couponsError } = await query;
+                .order('brand', { ascending: true });
 
             if (couponsError) throw couponsError;
 
-            // Check if there are more items
-            setHasMore(coupons && coupons.length === PAGE_SIZE);
+            const transformedCoupons = (coupons || []).map(c => ({
+                id: c.id,
+                brand: c.brand,
+                faceValue: c.face_value_paise / 100,
+                price: c.selling_price_paise / 100,
+                stock: 50,
+            }));
 
-            // Group coupons by brand+price
-            const grouped = {};
-            (coupons || []).forEach(c => {
-                const key = `${c.brand}-${c.face_value_paise}-${c.selling_price_paise}`;
-                if (!grouped[key]) {
-                    grouped[key] = {
-                        id: c.id,
-                        ids: [c.id],
-                        brand: c.brand,
-                        faceValue: c.face_value_paise / 100,
-                        price: c.selling_price_paise / 100,
-                        stock: 0
-                    };
-                } else {
-                    grouped[key].ids.push(c.id);
-                }
-                grouped[key].stock++;
-            });
-
-            const newItems = Object.values(grouped);
-            setInventory(append ? [...inventory, ...newItems] : newItems);
+            setInventory(transformedCoupons);
         } catch (err) {
-            console.error('Error fetching inventory:', err);
+            console.error('Error fetching data:', err);
             setError(err.message);
         } finally {
             setLoading(false);
-            setLoadingMore(false);
         }
     };
 
     useEffect(() => {
-        if (merchantLoading) return;
+        fetchData();
+    }, []);
 
-        if (merchantError && !isAdmin) {
-            setError(merchantError.message || 'Error loading merchant profile');
-            setLoading(false);
-            return;
-        }
-
-        if (!merchant && !isAdmin) {
-            // Should be handled by layout, but safe fallback
-            setLoading(false);
-            return;
-        }
-
-        if (merchant && merchant.status !== 'approved' && !isAdmin) {
-            setError('Your merchant account is not approved yet.');
-            setLoading(false);
-            return;
-        }
-
-        setMerchantBalance(merchant ? (merchant.wallet_balance_paise || 0) / 100 : 0);
-        fetchInventory();
-    }, [merchant, merchantLoading, merchantError, isAdmin]);
-
-    // Handle search query changes
-    useEffect(() => {
-        if (!merchant && !isAdmin) return;
-        const debounceTimer = setTimeout(() => {
-            fetchInventory(false); // Reset to first page on search
-        }, 500);
-        return () => clearTimeout(debounceTimer);
-    }, [searchQuery]);
-
-    const addToCart = (item) => {
-        setCart(prev => ({
-            ...prev,
-            [item.id]: (prev[item.id] || 0) + 1
-        }));
-    };
-
-    const removeFromCart = (itemId) => {
-        setCart(prev => {
-            const newCart = { ...prev };
-            if (newCart[itemId] > 1) {
-                newCart[itemId]--;
-            } else {
-                delete newCart[itemId];
-            }
-            return newCart;
-        });
-    };
-
-    const deleteFromCart = (itemId) => {
-        setCart(prev => {
-            const newCart = { ...prev };
+    const addToCart = (item) => setCart(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
+    const removeFromCart = (itemId) => setCart(prev => {
+        const newCart = { ...prev };
+        if (newCart[itemId] > 1) {
+            newCart[itemId]--;
+        } else {
             delete newCart[itemId];
-            return newCart;
-        });
-    };
+        }
+        return newCart;
+    });
+    const deleteFromCart = (itemId) => setCart(prev => {
+        const newCart = { ...prev };
+        delete newCart[itemId];
+        return newCart;
+    });
 
-    // Calculate totals
     const cartSubtotal = Object.entries(cart).reduce((total, [id, qty]) => {
         const item = inventory.find(i => i.id === id);
         return total + (item?.price || 0) * qty;
@@ -153,80 +87,31 @@ export default function PurchasePage() {
 
     const merchantCommission = cartSubtotal * 0.03;
     const cartTotal = cartSubtotal + merchantCommission;
-    const cartItems = Object.entries(cart).reduce((a, b) => a + b, 0);
+    const cartItems = Object.entries(cart).length;
 
     const handlePurchase = async () => {
         if (cartItems === 0) return;
-
-        // Validation for merchants (admins bypass balance check)
-        if (!isAdmin && merchantBalance < cartTotal) {
+        if (merchantBalance < cartTotal) {
             alert(`Insufficient balance! You need ₹${cartTotal.toFixed(2)} but have ₹${merchantBalance.toFixed(2)}`);
             return;
         }
 
         try {
             setPurchasing(true);
-
-            if (isAdmin && !merchant) {
-                // Mock purchase for admin without merchant record
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                alert('Admin Simulation: Purchase successful! (No real transaction created)');
-                setCart({});
-                return;
-            }
-
-            console.log('Starting purchase with merchant:', merchant?.id);
-            // Purchase each coupon in cart
-            const purchasePromises = [];
-            Object.entries(cart).forEach(([inventoryId, qty]) => {
-                const item = inventory.find(i => i.id === inventoryId);
-                // We need to buy 'qty' number of coupons from this group
-                // item.ids contains all available coupon IDs for this group
-
-                if (!item || !item.ids || item.ids.length < qty) {
-                    console.error(`Not enough stock for ${item?.brand}`);
-                    return;
+            const purchases = Object.entries(cart).map(async ([couponId, qty]) => {
+                for (let i = 0; i < qty; i++) {
+                    const { error } = await supabase.rpc('merchant_purchase_coupon', {
+                        p_coupon_id: couponId,
+                        p_quantity: 1
+                    });
+                    if (error) throw error;
                 }
-
-                // Take the first 'qty' IDs
-                const couponsToBuy = item.ids.slice(0, qty);
-                console.log('Buying coupons:', couponsToBuy);
-
-                couponsToBuy.forEach(couponId => {
-                    purchasePromises.push(
-                        supabase.rpc('merchant_purchase_coupon', {
-                            p_coupon_id: couponId,
-                            p_quantity: 1,
-                            p_merchant_id: merchant.id
-                        })
-                    );
-                });
             });
 
-            console.log('Promises created:', purchasePromises.length);
-            if (purchasePromises.length === 0) {
-                alert('Debug: No purchase promises created. Check console logs.');
-                setPurchasing(false);
-                return;
-            }
-
-            const results = await Promise.all(purchasePromises);
-            const errors = results.filter(r => r.error);
-
-            if (errors.length > 0) {
-                console.error('Purchase errors:', errors);
-                // Show the first specific error message
-                throw new Error(errors[0].error.message || `Failed to purchase ${errors.length} items.`);
-            }
-
-            const firstSuccess = results.find(r => r.data && r.data.success);
-            const txId = firstSuccess ? firstSuccess.data.transaction_id : 'N/A';
-
-            alert(`Purchase successful! Transaction ID: ${txId}. Check your inventory.`);
+            await Promise.all(purchases);
+            alert('Purchase successful! Check your inventory.');
             setCart({});
-            // Update balance locally and refresher
-            setMerchantBalance(prev => prev - cartTotal);
-            fetchInventory();
+            fetchData();
         } catch (err) {
             console.error('Purchase error:', err);
             alert('Purchase failed: ' + err.message);
@@ -235,237 +120,200 @@ export default function PurchasePage() {
         }
     };
 
-    if (loading || merchantLoading) {
+    if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-[#92BCEA]" />
+            <div className="relative min-h-[60vh] flex items-center justify-center">
+                <span className="material-icons-round animate-spin text-[#D4AF37] text-4xl">autorenew</span>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-                <div className="text-center">
-                    <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Error</h3>
-                    <p className="text-gray-600 mb-4">{error}</p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="px-4 py-2 bg-[#92BCEA] text-white rounded-lg hover:bg-[#7A93AC] transition-colors"
-                    >
-                        Try Again
-                    </button>
-                </div>
+            <div className="relative min-h-[60vh] flex flex-col items-center justify-center">
+                <span className="material-icons-round text-red-500 dark:text-red-400 text-6xl mb-4">error_outline</span>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Failed to load</h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-6 text-center max-w-sm">{error}</p>
+                <button onClick={fetchData} className="px-6 py-3 rounded-xl bg-[#D4AF37] text-[#020617] font-bold hover:bg-opacity-90 transition-all gold-glow">
+                    Try Again
+                </button>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            <div className="pt-24 pb-12">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                    {/* Header */}
-                    <div className="mb-8">
-                        <h1 className="text-4xl font-bold text-gray-900 mb-2 font-[family-name:var(--font-outfit)]">
-                            Purchase Gift Cards
-                        </h1>
-                        <p className="text-gray-600 text-lg">
-                            Buy gift cards in bulk from platform inventory.
-                            List them on the marketplace at your own prices to earn profits.
-                        </p>
-                        <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-xl">
-                            <span className="text-sm font-semibold text-green-900">Wallet Balance:</span>
-                            <span className="text-lg font-bold text-green-600">₹{merchantBalance.toLocaleString()}</span>
-                        </div>
+        <div className="relative">
+            {/* Background embellishments */}
+            <div className="fixed top-[-10%] left-[-5%] w-[40%] h-[40%] bg-[#D4AF37]/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+            <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none -z-10 dark:opacity-20"></div>
+
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 mt-6">
+                <div>
+                    <h2 className="font-display text-4xl font-bold mb-2 text-slate-800 dark:text-slate-100">Purchase Coupons</h2>
+                    <p className="text-slate-500 dark:text-slate-400 flex flex-wrap items-center">
+                        Acquire premium gift cards for your inventory
+                        <span className="hidden sm:inline mx-2 text-slate-300 dark:text-slate-700">•</span>
+                        <span className="text-[#D4AF37] text-xs font-semibold tracking-wider uppercase mt-2 sm:mt-0">WHOLESALE MARKET</span>
+                    </p>
+                </div>
+                <div className="flex bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-full py-2 px-6 items-center space-x-3 shadow-sm">
+                    <span className="material-icons-round text-[#D4AF37] text-lg">account_balance_wallet</span>
+                    <div>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-bold">Wallet Balance</p>
+                        <p className="text-lg font-bold text-[#D4AF37]">₹{merchantBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
                     </div>
+                </div>
+            </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Inventory Grid */}
-                        <div className="lg:col-span-2">
-                            {/* Search Bar */}
-                            <div className="mb-6">
-                                <input
-                                    type="text"
-                                    placeholder="Search by brand name..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#92BCEA] focus:ring-2 focus:ring-[#92BCEA]/20 transition-all"
-                                />
-                            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {inventory.map((item) => {
+                        const commission = item.price * 0.03;
+                        const totalCost = item.price + commission;
+                        const discount = ((item.faceValue - item.price) / item.faceValue * 100).toFixed(0);
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                {inventory.map((item) => {
-                                    const commission = item.price * 0.03;
-                                    const totalCost = item.price + commission;
-
-                                    return (
-                                        <div key={item.id} className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all">
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div>
-                                                    <h3 className="text-xl font-bold text-gray-900 mb-1">{item.brand}</h3>
-                                                    <p className="text-sm text-gray-600">Face Value: ₹{item.faceValue}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-2xl font-bold text-[#92BCEA]">₹{item.price}</div>
-                                                    <div className="text-xs text-gray-500">+ ₹{commission.toFixed(2)} fee</div>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center justify-between mb-4">
-                                                <span className="text-sm text-gray-600">Total Cost: ₹{totalCost.toFixed(2)}</span>
-                                                <span className="text-sm font-semibold text-green-600">
-                                                    {((item.faceValue - item.price) / item.faceValue * 100).toFixed(0)}% discount
-                                                </span>
-                                            </div>
-
-                                            {cart[item.id] ? (
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => removeFromCart(item.id)}
-                                                        className="flex-1 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-all flex items-center justify-center"
-                                                    >
-                                                        <Minus size={18} />
-                                                    </button>
-                                                    <div className="px-4 py-2 bg-gray-100 rounded-lg font-bold text-gray-900">
-                                                        {cart[item.id]}
-                                                    </div>
-                                                    <button
-                                                        onClick={() => addToCart(item)}
-                                                        className="flex-1 py-2 bg-[#92BCEA] hover:bg-[#7A93AC] text-white rounded-lg transition-all flex items-center justify-center"
-                                                    >
-                                                        <Plus size={18} />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <button
-                                                    onClick={() => addToCart(item)}
-                                                    className="w-full py-3 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] hover:from-[#7A93AC] hover:to-[#92BCEA] text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
-                                                >
-                                                    <ShoppingCart size={18} />
-                                                    Add to Cart
-                                                </button>
-                                            )}
+                        return (
+                            <div key={item.id} className="merchant-glass rounded-3xl p-6 border border-black/5 dark:border-white/5 hover:border-[#D4AF37]/30 transition-all group overflow-hidden relative shadow-sm">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/5 rounded-bl-full -z-10 group-hover:bg-[#D4AF37]/10 transition-colors"></div>
+                                <div className="flex justify-between items-start mb-6">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-black/5 dark:border-white/10">
+                                            <span className="font-bold text-[#D4AF37] text-xl">{item.brand.charAt(0)}</span>
                                         </div>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Load More Button */}
-                            {hasMore && inventory.length > 0 && (
-                                <div className="mt-8 text-center">
-                                    <button
-                                        onClick={() => fetchInventory(true)}
-                                        disabled={loadingMore}
-                                        className="px-8 py-3 bg-white border-2 border-[#92BCEA] text-[#92BCEA] font-bold rounded-xl hover:bg-[#92BCEA] hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {loadingMore ? (
-                                            <>
-                                                <Loader2 className="inline-block animate-spin mr-2" size={18} />
-                                                Loading...
-                                            </>
-                                        ) : (
-                                            'Load More'
-                                        )}
-                                    </button>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{item.brand}</h3>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Face Value: ₹{item.faceValue.toLocaleString('en-IN')}</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                                        {discount}% OFF
+                                    </div>
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Cart Sidebar */}
-                        <div className="lg:col-span-1">
-                            <div className="sticky top-24 bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Cart Summary</h2>
+                                <div className="mb-6 pb-6 border-b border-black/5 dark:border-white/5 space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-500 dark:text-slate-400">Customer Price</span>
+                                        <span className="text-slate-700 dark:text-slate-200">₹{item.price.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-500 dark:text-slate-400">Platform Fee (3%)</span>
+                                        <span className="text-slate-700 dark:text-slate-200">+ ₹{commission.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-[15px] font-bold mt-2 pt-2 border-t border-black/5 dark:border-white/5">
+                                        <span className="text-slate-600 dark:text-slate-300">Your Cost</span>
+                                        <span className="text-[#D4AF37]">₹{totalCost.toFixed(2)}</span>
+                                    </div>
+                                </div>
 
-                                {cartItems === 0 ? (
-                                    <div className="text-center py-8">
-                                        <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                        <p className="text-gray-600">Your cart is empty</p>
+                                {cart[item.id] ? (
+                                    <div className="flex items-center justify-between bg-black/5 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10 p-1">
+                                        <button onClick={() => removeFromCart(item.id)} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-300 transition-colors">
+                                            <span className="material-icons-round text-sm">remove</span>
+                                        </button>
+                                        <span className="font-bold text-slate-800 dark:text-slate-100 w-10 text-center">{cart[item.id]}</span>
+                                        <button onClick={() => addToCart(item)} className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#D4AF37]/20 hover:bg-[#D4AF37]/30 text-[#D4AF37] transition-colors">
+                                            <span className="material-icons-round text-sm">add</span>
+                                        </button>
                                     </div>
                                 ) : (
-                                    <>
-                                        {/* Cart Items */}
-                                        <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
-                                            {Object.entries(cart).map(([id, qty]) => {
-                                                const item = inventory.find(i => i.id === id);
-                                                if (!item) return null;
-
-                                                const commission = item.price * 0.03;
-                                                const totalCost = (item.price + commission) * qty;
-
-                                                return (
-                                                    <div key={id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                                                        <div className="flex-1">
-                                                            <div className="font-semibold text-gray-900">{item.brand}</div>
-                                                            <div className="text-sm text-gray-600">₹{item.price} × {qty}</div>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="font-bold text-gray-900">₹{totalCost.toFixed(2)}</div>
-                                                            <button
-                                                                onClick={() => deleteFromCart(id)}
-                                                                className="p-1 hover:bg-red-50 rounded transition-all"
-                                                            >
-                                                                <Trash2 size={16} className="text-red-600" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-
-                                        {/* Total */}
-                                        <div className="border-t border-gray-200 pt-4 mb-6 space-y-2">
-                                            <div className="flex items-center justify-between text-gray-600">
-                                                <span>Subtotal</span>
-                                                <span className="font-semibold">₹{cartSubtotal.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between text-gray-600">
-                                                <span>Commission (3%)</span>
-                                                <span className="font-semibold">₹{merchantCommission.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between text-lg font-bold text-gray-900 pt-2 border-t border-gray-200">
-                                                <span>Total Amount</span>
-                                                <span className="text-2xl text-[#92BCEA]">₹{cartTotal.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between text-sm">
-                                                <span className="text-gray-600">Total Items</span>
-                                                <span className="font-semibold text-gray-900">
-                                                    {Object.values(cart).reduce((a, b) => a + b, 0)}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Balance Check */}
-                                        {merchantBalance < cartTotal && (
-                                            <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
-                                                <p className="text-sm text-red-700 font-semibold">
-                                                    Insufficient balance! Need ₹{(cartTotal - merchantBalance).toFixed(2)} more.
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {/* Checkout Button */}
-                                        <button
-                                            onClick={handlePurchase}
-                                            disabled={purchasing || merchantBalance < cartTotal}
-                                            className="w-full py-4 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] hover:from-[#7A93AC] hover:to-[#92BCEA] text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {purchasing ? (
-                                                <>
-                                                    <Loader2 className="animate-spin" size={20} />
-                                                    Processing...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <CreditCard size={20} />
-                                                    Complete Purchase
-                                                </>
-                                            )}
-                                        </button>
-                                    </>
+                                    <button onClick={() => addToCart(item)} className="w-full py-3 merchant-glass bg-white/40 dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-xl transition-all border border-black/5 dark:border-white/10 flex items-center justify-center space-x-2 shadow-sm">
+                                        <span className="material-icons-round text-[#D4AF37] text-sm">add_shopping_cart</span>
+                                        <span>Add to Cart</span>
+                                    </button>
                                 )}
                             </div>
-                        </div>
+                        );
+                    })}
+                </div>
+
+                <div className="lg:col-span-1">
+                    <div className="sticky top-24 merchant-glass rounded-3xl border border-black/5 dark:border-white/5 p-6 shadow-xl">
+                        <h3 className="font-display text-xl font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center">
+                            <span className="material-icons-round text-[#D4AF37] mr-2">shopping_basket</span>
+                            Order Summary
+                        </h3>
+
+                        {cartItems === 0 ? (
+                            <div className="text-center py-10">
+                                <div className="w-16 h-16 mx-auto bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center mb-4 border border-black/10 dark:border-white/10">
+                                    <span className="material-icons-round text-slate-400 dark:text-slate-500 text-3xl">remove_shopping_cart</span>
+                                </div>
+                                <p className="text-slate-500 dark:text-slate-400 font-medium">Your cart is empty.</p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 italic">Select coupons from the market to purchase.</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="space-y-4 mb-6 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                                    {Object.entries(cart).map(([id, qty]) => {
+                                        const item = inventory.find(i => i.id === id);
+                                        if (!item) return null;
+                                        const cost = (item.price * 1.03) * qty;
+
+                                        return (
+                                            <div key={id} className="group flex justify-between items-center p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10 transition-colors">
+                                                <div className="flex-1">
+                                                    <p className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate">{item.brand}</p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">₹{item.price} × {qty}</p>
+                                                </div>
+                                                <div className="flex flex-col items-end pl-3">
+                                                    <span className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-1">₹{cost.toFixed(2)}</span>
+                                                    <button onClick={() => deleteFromCart(id)} className="text-[10px] text-red-500 dark:text-red-400 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity hover:underline font-bold uppercase tracking-wider">
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="border-t border-black/5 dark:border-white/10 pt-6 space-y-3 mb-8">
+                                    <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
+                                        <span>Subtotal ({Object.values(cart).reduce((a, b) => a + b, 0)} items)</span>
+                                        <span className="text-slate-700 dark:text-slate-200">₹{cartSubtotal.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
+                                        <span>Platform Commission (3%)</span>
+                                        <span className="text-slate-700 dark:text-slate-200">₹{merchantCommission.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-end border-t border-black/10 dark:border-white/10 pt-4 mt-4">
+                                        <span className="font-bold text-slate-600 dark:text-slate-300">Total</span>
+                                        <div className="text-right">
+                                            <span className="text-[10px] text-[#D4AF37] block mb-1 uppercase tracking-wider font-bold">Payable Amount</span>
+                                            <span className="text-3xl font-display font-bold text-[#D4AF37]">₹{cartTotal.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {merchantBalance < cartTotal && (
+                                    <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex flex-col items-center text-center">
+                                        <span className="material-icons-round text-red-500 dark:text-red-400 mb-2">account_balance_wallet</span>
+                                        <p className="text-sm text-red-500 dark:text-red-400 font-semibold mb-1">Insufficient Balance</p>
+                                        <p className="text-xs text-red-500/80">Add ₹{(cartTotal - merchantBalance).toFixed(2)} to proceed.</p>
+                                        <Link href="/merchant/wallet" className="text-xs font-bold text-red-600 dark:text-red-300 mt-3 underline hover:opacity-80">
+                                            Go to Wallet
+                                        </Link>
+                                    </div>
+                                )}
+
+                                <button
+                                    onClick={handlePurchase}
+                                    disabled={purchasing || merchantBalance < cartTotal}
+                                    className="w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed bg-[#D4AF37] text-[#020617] hover:bg-opacity-90 gold-glow shadow-lg shadow-[#D4AF37]/20"
+                                >
+                                    {purchasing ? (
+                                        <>
+                                            <span className="material-icons-round animate-spin text-sm">autorenew</span>
+                                            <span>Processing...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="material-icons-round text-sm">payment</span>
+                                            <span>Complete Purchase</span>
+                                        </>
+                                    )}
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
