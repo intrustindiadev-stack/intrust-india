@@ -335,15 +335,15 @@ export default function CustomerDashboardPage() {
     ];
 
     const stats = [
-        { label: 'Wallet Balance', value: `Γé╣${userData.walletBalance.toFixed(2)}`, icon: Wallet, color: 'from-blue-600 to-indigo-600' },
-        { label: 'Total Savings', value: `Γé╣${userData.totalSavings.toFixed(2)}`, icon: TrendingUp, color: 'from-emerald-500 to-teal-500' },
+        { label: 'Wallet Balance', value: `₹${userData.walletBalance.toFixed(2)}`, icon: Wallet, color: 'from-blue-600 to-indigo-600' },
+        { label: 'Total Savings', value: `₹${userData.totalSavings.toFixed(2)}`, icon: TrendingUp, color: 'from-emerald-500 to-teal-500' },
         { label: 'Active Cards', value: userData.activeCards.toString(), icon: Gift, color: 'from-purple-500 to-pink-500' }
     ];
 
     const recentOrders = [
-        { id: 1, brand: 'Flipkart', value: 500, status: 'delivered', date: '2 days ago', logo: '≡ƒ¢Æ' },
-        { id: 2, brand: 'Bill Payment', value: 840, status: 'success', date: 'Yesterday', logo: 'ΓÜí' },
-        { id: 3, brand: 'Swiggy', value: 300, status: 'processing', date: '1 hour ago', logo: '≡ƒìö' },
+        { id: 1, brand: 'Flipkart', value: 500, status: 'delivered', date: '2 days ago', logo: '🛒' },
+        { id: 2, brand: 'Bill Payment', value: 840, status: 'success', date: 'Yesterday', logo: '⚡' },
+        { id: 3, brand: 'Swiggy', value: 300, status: 'processing', date: '1 hour ago', logo: '🍔' },
     ];
 
     if (authLoading || loading) {
@@ -367,7 +367,7 @@ export default function CustomerDashboardPage() {
                         className="mb-6 sm:mb-10"
                     >
                         <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-gray-100 mb-1 tracking-tight">
-                            Welcome back, {userData.name.split(' ')[0]}! ≡ƒæï
+                            Welcome back, {userData.name.split(' ')[0]}! 👋
                             {userData.isGoldVerified && (
                                 <span className="inline-flex items-center align-middle ml-2.5">
                                     <GoldBadge size="md" />
@@ -387,15 +387,15 @@ export default function CustomerDashboardPage() {
 
                             <QuickServices services={quickServices} />
                             <RecentActivity orders={recentOrders} />
-                        </div>
 
-                        {/* Sidebar */}
-                        <div className="lg:col-span-1 space-y-8">
                             {/* KYC Banner */}
                             {userData.kycStatus === 'verified' && (
                                 <MerchantOpportunityBanner />
                             )}
+                        </div>
 
+                        {/* Sidebar */}
+                        <div className="lg:col-span-1 space-y-8">
                             <GoldSubscription
                                 userData={userData}
                                 timeLeft={timeLeft}
@@ -441,7 +441,7 @@ export default function CustomerDashboardPage() {
                             </div>
                             <h3 className="text-2xl font-black text-white mb-2 italic tracking-tight">Confirm Wallet Pay</h3>
                             <p className="text-[13px] font-medium text-gray-400 mb-8 leading-relaxed">
-                                Deduct <span className="font-bold text-white relative whitespace-nowrap"><span className="absolute -inset-1 bg-white/10 rounded-lg blur-sm"></span><span className="relative">Γé╣{walletConfirmPkg.price}</span></span> from your wallet balance to activate the <span className="text-amber-500 font-bold">{walletConfirmPkg.label}</span> package?
+                                Deduct <span className="font-bold text-white relative whitespace-nowrap"><span className="absolute -inset-1 bg-white/10 rounded-lg blur-sm"></span><span className="relative">₹{walletConfirmPkg.price}</span></span> from your wallet balance to activate the <span className="text-amber-500 font-bold">{walletConfirmPkg.label}</span> package?
                             </p>
                             <div className="flex flex-col gap-3 relative z-10">
                                 <button

@@ -156,7 +156,7 @@ export default function CustomerWalletPage() {
                                     Total Balance
                                 </span>
                                 <div className="mt-2 flex items-baseline gap-2">
-                                    <span className="text-5xl font-black tabular-nums">Γé╣{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    <span className="text-5xl font-black tabular-nums">₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 </div>
 
                                 <div className="mt-10 flex gap-4">
@@ -235,7 +235,7 @@ export default function CustomerWalletPage() {
                                         </div>
                                         <div className="text-right">
                                             <p className={`font-black text-sm ${tx.type === 'DEBIT' ? 'text-gray-900 dark:text-white' : 'text-green-500'}`}>
-                                                {tx.type === 'DEBIT' ? '-' : '+'} Γé╣{(tx.amount_paise / 100).toFixed(2)}
+                                                {tx.type === 'DEBIT' ? '-' : '+'} ₹{(tx.amount_paise / 100).toFixed(2)}
                                             </p>
                                             <p className="text-[10px] text-gray-400 mt-0.5 uppercase font-bold tracking-widest">{tx.status || 'COMPLETED'}</p>
                                         </div>
@@ -270,7 +270,7 @@ export default function CustomerWalletPage() {
                             </h3>
 
                             <div className="relative mb-6">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-gray-400">Γé╣</span>
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-gray-400">₹</span>
                                 <input
                                     type="number"
                                     value={addAmount}
@@ -287,7 +287,7 @@ export default function CustomerWalletPage() {
                                         onClick={() => setAddAmount(amt.toString())}
                                         className="py-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl text-xs font-bold hover:bg-blue-500 hover:text-white transition-all"
                                     >
-                                        +Γé╣{amt}
+                                        +₹{amt}
                                     </button>
                                 ))}
                             </div>

@@ -19,7 +19,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 
 const supabase = createClient();
 
-// ΓöÇΓöÇΓöÇ Skeleton ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
 function ProfileSkeleton() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
@@ -45,7 +45,7 @@ function ProfileSkeleton() {
     );
 }
 
-// ΓöÇΓöÇΓöÇ Toast ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Toast ────────────────────────────────────────────────────────────────────
 function Toast({ msg, type }) {
     if (!msg) return null;
     return (
@@ -57,7 +57,7 @@ function Toast({ msg, type }) {
     );
 }
 
-// ΓöÇΓöÇΓöÇ Avatar Upload ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Avatar Upload ────────────────────────────────────────────────────────────
 function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
     const [uploading, setUploading] = useState(false);
     const fileRef = useRef(null);
@@ -118,7 +118,7 @@ function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
     );
 }
 
-// ΓöÇΓöÇΓöÇ Inline Editable Row ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Inline Editable Row ──────────────────────────────────────────────────────
 function EditableRow({ label, value, icon: Icon, onSave, type = 'text', placeholder, readOnly = false, badge }) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(value || '');
@@ -190,7 +190,7 @@ function EditableRow({ label, value, icon: Icon, onSave, type = 'text', placehol
     );
 }
 
-// ΓöÇΓöÇΓöÇ Phone Verification Component ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Phone Verification Component ─────────────────────────────────────────────
 function PhoneVerification({ currentPhone, authPhone, userId, onVerified, showToast }) {
     const [step, setStep] = useState('idle'); // idle | input | otp_sent | verifying
     const [phone, setPhone] = useState('');
@@ -292,7 +292,7 @@ function PhoneVerification({ currentPhone, authPhone, userId, onVerified, showTo
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                         <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Phone Number</p>
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 uppercase tracking-wide">Γ£ô Verified</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 uppercase tracking-wide">✓ Verified</span>
                         {isFullyLinked && (
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 uppercase tracking-wide">Identity Linked</span>
                         )}
@@ -430,7 +430,7 @@ function PhoneVerification({ currentPhone, authPhone, userId, onVerified, showTo
     );
 }
 
-// ΓöÇΓöÇΓöÇ Link Google Account ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Link Google Account ──────────────────────────────────────────────────────
 function LinkGoogleCard({ authUser, showToast }) {
     const [linking, setLinking] = useState(false);
 
@@ -498,7 +498,7 @@ function LinkGoogleCard({ authUser, showToast }) {
     );
 }
 
-// ΓöÇΓöÇΓöÇ Wallet Section ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Wallet Section ──────────────────────────────────────────────────────────
 function WalletCard({ balancePaise, onManage }) {
     const balance = (balancePaise || 0) / 100;
 
@@ -520,7 +520,7 @@ function WalletCard({ balancePaise, onManage }) {
                 <div className="mb-6">
                     <p className="text-[10px] text-gray-400 uppercase font-bold tracking-[0.2em] mb-1">Available Balance</p>
                     <p className="text-3xl font-black tabular-nums">
-                        Γé╣{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </p>
                 </div>
 
@@ -536,7 +536,7 @@ function WalletCard({ balancePaise, onManage }) {
     );
 }
 
-// ΓöÇΓöÇΓöÇ Address Section ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Address Section ──────────────────────────────────────────────────────────
 function AddressCard({ address, onSave }) {
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -631,7 +631,7 @@ function AddressCard({ address, onSave }) {
     );
 }
 
-// ΓöÇΓöÇΓöÇ Main Page ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function CustomerProfilePage() {
     const router = useRouter();
     const { user: authUser, loading: authLoading, refreshProfile, refreshUser } = useAuth();
@@ -646,7 +646,7 @@ export default function CustomerProfilePage() {
         setTimeout(() => setToast({ msg: '', type: 'success' }), 3500);
     }, []);
 
-    // ΓöÇΓöÇ Direct fetch (fixes the "needs refresh on first load" bug) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── Direct fetch (fixes the "needs refresh on first load" bug) ─────────────
     useEffect(() => {
         if (authLoading) return;
         if (!authUser) { setProfileLoading(false); return; }
@@ -725,7 +725,7 @@ export default function CustomerProfilePage() {
         await refreshUser();
     }, [refreshProfile, refreshUser]);
 
-    // ΓöÇΓöÇ Guards ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── Guards ─────────────────────────────────────────────────────────────────
     if (authLoading || profileLoading) return <ProfileSkeleton />;
     if (!authUser) { router.push('/login'); return null; }
 
@@ -764,7 +764,7 @@ export default function CustomerProfilePage() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-                        {/* ΓòÉΓòÉ LEFT SIDEBAR ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
+                        {/* ══ LEFT SIDEBAR ══════════════════════════════════════ */}
                         <div className="lg:col-span-1 space-y-5">
 
                             {/* Identity Card */}
@@ -806,7 +806,7 @@ export default function CustomerProfilePage() {
                                             ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600'
                                             : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600'
                                             }`}>
-                                            {kycStatus === 'verified' ? 'Γ£ô KYC Verified' : 'KYC Pending'}
+                                            {kycStatus === 'verified' ? '✓ KYC Verified' : 'KYC Pending'}
                                         </span>
                                         {isGold && (
                                             <span className="inline-block text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest bg-gradient-to-r from-[#FFD700] to-[#FDB931] text-black shadow-lg shadow-amber-500/20">
@@ -862,7 +862,7 @@ export default function CustomerProfilePage() {
                                             <ShieldCheck size={16} />
                                             <span>Total Saved</span>
                                         </div>
-                                        <span className="font-bold text-lg">Γé╣0</span>
+                                        <span className="font-bold text-lg">₹0</span>
                                     </div>
                                 </div>
                                 <button
@@ -875,7 +875,7 @@ export default function CustomerProfilePage() {
                             </div>
                         </div>
 
-                        {/* ΓòÉΓòÉ RIGHT MAIN ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
+                        {/* ══ RIGHT MAIN ════════════════════════════════════════ */}
                         <div className="lg:col-span-2 space-y-5">
 
                             {/* Personal Info Card */}
@@ -890,7 +890,7 @@ export default function CustomerProfilePage() {
 
                                 <EditableRow label="Full Name" icon={User} value={profile?.full_name} placeholder="Add your full name" onSave={v => saveField('full_name', v)} />
                                 <EditableRow label="Email Address" icon={Mail} value={authUser.email} readOnly
-                                    badge={authUser.email && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 uppercase tracking-wide">Γ£ô Verified</span>}
+                                    badge={authUser.email && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 uppercase tracking-wide">✓ Verified</span>}
                                 />
 
                                 {/* Phone Verification (replaces plain EditableRow) */}

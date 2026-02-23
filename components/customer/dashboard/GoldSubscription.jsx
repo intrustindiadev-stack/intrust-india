@@ -37,7 +37,6 @@ export default function GoldSubscription({ userData, timeLeft, setShowPackages, 
                     Get the <span className="text-amber-400 font-bold">Elite Shield</span> tick + ₹199 Instant Cashback &
                     <span className="text-white font-bold ml-1 text-base block mt-1">Unlock Many Premium Offers! 🎁</span>
                 </p>
-
                 <div className="flex flex-col gap-3 mb-8">
                     {[
                         'Elite Blue Tick Identity',

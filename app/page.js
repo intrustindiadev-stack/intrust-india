@@ -27,10 +27,6 @@ export default async function Home() {
     if (profile?.role === 'merchant') {
       redirect('/merchant/dashboard');
     }
-
-    if (profile?.role === 'admin') {
-      redirect('/admin');
-    }
   }
 
   return <HomeClient />;

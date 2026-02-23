@@ -1,5 +1,0 @@
-app/(customer)/dashboard/page.jsx
-app/(customer)/profile/page.jsx
-app/(customer)/wallet/page.jsx
-lib/wallet/customerWalletService.js
-pages/api/payment/callback.js
