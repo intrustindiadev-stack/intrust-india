@@ -72,12 +72,20 @@ export async function GET(request) {
             .order('created_at', { ascending: false })
             .limit(50);
 
-        // 4. Normalize and Merge
+        // 4. Fetch Payout / Withdrawal requests
+        const { data: payoutTxs } = await supabase
+            .from('payout_requests')
+            .select('id, amount, status, requested_at')
+            .eq('user_id', user.id)
+            .order('requested_at', { ascending: false })
+            .limit(50);
+
+        // 5. Normalize and Merge
         const normalizedWalletTxs = (walletTxs || []).map(tx => ({
             id: tx.id,
             transaction_type: tx.transaction_type || 'CREDIT',
             description: tx.description || tx.reference_type || 'Wallet Topup',
-            amount: JSON.stringify(tx.amount || 0), // Already in Rupees from SabPaisa
+            amount: Number(tx.amount || 0).toFixed(2),
             created_at: tx.created_at,
         }));
 
@@ -85,12 +93,27 @@ export async function GET(request) {
             id: tx.id,
             transaction_type: (tx.amount_paise || 0) < 0 ? 'DEBIT' : 'CREDIT',
             description: tx.description || tx.transaction_type || 'Transaction',
-            amount: (Math.abs(tx.amount_paise || 0) / 100).toFixed(2), // Convert from Paise
+            amount: (Math.abs(tx.amount_paise || 0) / 100).toFixed(2),
             created_at: tx.created_at,
         }));
 
+        const statusLabel = { pending: 'Pending', approved: 'Approved', rejected: 'Rejected (Refunded)', released: 'Released' };
+        const normalizedPayoutTxs = (payoutTxs || []).map(tx => ({
+            id: `payout-${tx.id}`,
+            transaction_type: 'DEBIT',
+            description: `Withdrawal Request — ${statusLabel[tx.status] || tx.status}`,
+            amount: Number(tx.amount || 0).toFixed(2),
+            created_at: tx.requested_at,
+        }));
+
+        // Deduplicate: wallet_transactions may already have a payout debit entry; prefer payout_requests as source of truth
+        // Remove wallet_transactions that are payout_request type to avoid doubles
+        const filteredWalletTxs = normalizedWalletTxs.filter(
+            tx => !tx.description.toLowerCase().includes('payout request')
+        );
+
         // Sort by date descending
-        const allTransactions = [...normalizedWalletTxs, ...normalizedMerchantTxs]
+        const allTransactions = [...filteredWalletTxs, ...normalizedMerchantTxs, ...normalizedPayoutTxs]
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
             .slice(0, 50);
 

@@ -10,51 +10,46 @@ export default function AdminMerchantsPage() {
     const [merchants, setMerchants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [approving, setApproving] = useState(null);
+    const [verifyingBank, setVerifyingBank] = useState(null);
 
     const fetchMerchants = async () => {
         setLoading(true);
         try {
-            // Fetch merchants with user profile data
-            // We optimize by selecting specific fields
-            const { data, error } = await supabase
-                .from('merchants')
-                .select(`
-                    *,
-                    user_profiles:user_id (
-                        full_name,
-                        phone_number,
-                        email
-                    )
-                `)
-                .order('created_at', { ascending: false });
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('Not authenticated');
 
-            if (error) throw error;
+            const res = await fetch('/api/admin/merchants', {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || 'Failed to load merchants');
 
-            console.log('Fetched merchants:', data);
+            const data = result.merchants || [];
 
-            // Transform data to match UI expectations
             const transformed = data.map(m => ({
                 id: m.id,
                 userId: m.user_id,
                 businessName: m.business_name || 'N/A',
-                // Use profile data if available, fallback to merchant data if it exists (it might not)
                 ownerName: m.user_profiles?.full_name || 'Unknown',
                 phone: m.user_profiles?.phone_number || 'N/A',
                 email: m.user_profiles?.email || 'N/A',
                 gstNumber: m.gst_number || 'N/A',
                 status: m.status || 'pending',
+                bankVerified: m.bank_verified || false,
+                hasBankData: !!(m.bank_account_number || m.bank_data?.account_number),
+                bankAccountName: m.bank_account_name || m.bank_data?.account_holder_name || null,
                 appliedDate: new Date(m.created_at).toLocaleDateString('en-IN', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric'
                 }),
-                documents: 0 // Placeholder
+                documents: 0
             }));
 
             setMerchants(transformed);
         } catch (error) {
             console.error('Error fetching merchants:', error);
-            toast.error('Failed to load merchant applications');
+            toast.error('Failed to load merchants: ' + error.message);
         } finally {
             setLoading(false);
         }
@@ -99,10 +94,32 @@ export default function AdminMerchantsPage() {
 
     const handleReject = async (id) => {
         if (!confirm('Reject this application? (This feature is currently mock-only)')) return;
-        // Placeholder for reject logic
         console.log('Reject merchant:', id);
         toast.success('Merchant rejected (Mock)');
-        // In real impl, call API to update status to 'rejected'
+    };
+
+    const handleVerifyBank = async (id) => {
+        if (!confirm('Confirm bank account as verified for this merchant?')) return;
+        setVerifyingBank(id);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/admin/verify-bank', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ merchantId: id }),
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || 'Failed');
+            toast.success('Bank account verified!');
+            fetchMerchants();
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setVerifyingBank(null);
+        }
     };
 
     return (
@@ -235,10 +252,10 @@ export default function AdminMerchantsPage() {
                                                                 <button
                                                                     onClick={() => handleApprove(merchant.id, merchant.userId)}
                                                                     className={`p-2 rounded-lg transition-all ${approving === merchant.id
-                                                                            ? 'bg-emerald-50 text-emerald-600 cursor-wait'
-                                                                            : 'text-emerald-400 hover:text-emerald-600 hover:bg-emerald-50'
+                                                                        ? 'bg-emerald-50 text-emerald-600 cursor-wait'
+                                                                        : 'text-emerald-400 hover:text-emerald-600 hover:bg-emerald-50'
                                                                         }`}
-                                                                    title="Approve"
+                                                                    title="Approve Merchant"
                                                                     disabled={approving === merchant.id}
                                                                 >
                                                                     {approving === merchant.id ? (
@@ -248,6 +265,24 @@ export default function AdminMerchantsPage() {
                                                                     )}
                                                                 </button>
                                                             </>
+                                                        )}
+                                                        {merchant.status === 'approved' && merchant.hasBankData && !merchant.bankVerified && (
+                                                            <button
+                                                                onClick={() => handleVerifyBank(merchant.id)}
+                                                                disabled={verifyingBank === merchant.id}
+                                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-amber-700 hover:bg-[#D4AF37]/20 rounded-lg transition-all"
+                                                                title={`Verify bank for ${merchant.bankAccountName || 'merchant'}`}
+                                                            >
+                                                                {verifyingBank === merchant.id
+                                                                    ? <div className="w-3 h-3 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
+                                                                    : <CheckCircle size={14} />}
+                                                                Verify Bank
+                                                            </button>
+                                                        )}
+                                                        {merchant.status === 'approved' && merchant.bankVerified && (
+                                                            <span className="flex items-center gap-1 text-xs font-bold text-emerald-600 px-2">
+                                                                <CheckCircle size={13} /> Bank Verified
+                                                            </span>
                                                         )}
                                                     </div>
                                                 </td>

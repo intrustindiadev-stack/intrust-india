@@ -2,6 +2,7 @@
 
 import { useWallet } from "@/hooks/useWallet";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 export default function Header({ setSidebarOpen }) {
     const { balance, loading } = useWallet();
@@ -32,10 +33,7 @@ export default function Header({ setSidebarOpen }) {
             <div className="flex items-center space-x-4 sm:space-x-6">
                 <ThemeToggle />
 
-                <button className="relative w-10 h-10 rounded-xl bg-white/5 border border-black/10 dark:border-white/10 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-all group">
-                    <span className="material-icons-round text-slate-400 group-hover:text-slate-600 dark:group-hover:text-white text-sm sm:text-base">notifications</span>
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-[#D4AF37] rounded-full border-2 border-white dark:border-[#020617]"></span>
-                </button>
+                <NotificationBell apiPath="/api/merchant/notifications" />
 
                 <div className="hidden sm:flex items-center space-x-3 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-full py-1 pl-1 pr-4">
                     <div className="w-8 h-8 rounded-full bg-[#D4AF37] flex items-center justify-center">

@@ -52,7 +52,7 @@ export default function ProfileKYCPage() {
                         setShowForm(false);
                         setIsPolling(false);
                         clearInterval(pollInterval);
-                        
+
                         if (result.data.verification_status === 'verified') {
                             toast.success('🎉 KYC Verified Instantly!', {
                                 duration: 5000,
@@ -269,7 +269,7 @@ export default function ProfileKYCPage() {
                         <ul className="space-y-2 text-sm text-slate-600">
                             <li className="flex items-start gap-2">
                                 <CheckCircle size={16} className="text-green-600 mt-0.5 shrink-0" />
-                                <span>Your KYC is being verified automatically via SprintVerify API</span>
+                                <span>Your KYC is being verified automatically via SprintVerify</span>
                             </li>
                             <li className="flex items-start gap-2">
                                 <CheckCircle size={16} className="text-green-600 mt-0.5 shrink-0" />
@@ -299,7 +299,7 @@ function StatusBanner({ status, rejectionReason }) {
             iconBg: 'bg-yellow-100',
             title: 'KYC Verification in Progress',
             titleColor: 'text-yellow-900',
-            description: 'Your KYC is being processed automatically via SprintVerify API. This usually takes just a few seconds.',
+            description: 'Your KYC is being processed automatically via SprintVerify. This usually takes just a few seconds.',
             descColor: 'text-yellow-700'
         },
         verified: {
@@ -309,7 +309,7 @@ function StatusBanner({ status, rejectionReason }) {
             iconBg: 'bg-green-100',
             title: 'KYC Verified Instantly ✓',
             titleColor: 'text-green-900',
-            description: 'Your identity has been verified automatically via SprintVerify API. You have full access to all platform features.',
+            description: 'Your identity has been verified automatically via SprintVerify. You have full access to all platform features.',
             descColor: 'text-green-700'
         },
         rejected: {

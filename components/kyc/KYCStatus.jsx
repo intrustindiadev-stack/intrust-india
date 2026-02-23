@@ -15,7 +15,7 @@ export default function KYCStatus({ status, onStartKYC }) {
             borderColor: 'border-gray-200',
             icon: AlertCircle,
             title: 'KYC Not Completed',
-            description: 'Complete your KYC to unlock full access. Verification is instant via SprintVerify API.',
+            description: 'Complete your KYC to unlock full access. Verification is instant via SprintVerify.',
             action: 'Start KYC',
             actionColor: 'from-[#92BCEA] to-[#AFB3F7]'
         },
@@ -25,7 +25,7 @@ export default function KYCStatus({ status, onStartKYC }) {
             borderColor: 'border-blue-200',
             icon: null, // No icon on the left needed
             title: 'Verified Instantly',
-            description: 'Your account has been verified automatically via SprintVerify API. You have full access.',
+            description: 'Your account has been verified automatically via SprintVerify. You have full access.',
             action: null,
             actionColor: null
         },
@@ -35,7 +35,7 @@ export default function KYCStatus({ status, onStartKYC }) {
             borderColor: 'border-red-200',
             icon: AlertCircle,
             title: 'KYC Verification Failed',
-            description: 'Your verification failed via SprintVerify API. Please resubmit with correct information.',
+            description: 'Your verification failed via SprintVerify. Please resubmit with correct information.',
             action: 'Resubmit KYC',
             actionColor: 'from-red-500 to-rose-500'
         }
@@ -74,7 +74,7 @@ export default function KYCStatus({ status, onStartKYC }) {
                     {currentStatus === 'verified' && (
                         <div className="flex items-center gap-2 text-sm text-blue-700 font-semibold mt-2">
                             <Shield size={16} />
-                            <span>Verified instantly via SprintVerify API</span>
+                            <span>Verified instantly via SprintVerify</span>
                         </div>
                     )}
                 </div>

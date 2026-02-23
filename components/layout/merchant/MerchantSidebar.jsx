@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import {
     LayoutDashboard,
     Package,
@@ -22,6 +23,7 @@ const navigation = [
     { name: 'Inventory', href: '/merchant/inventory', icon: Package },
     { name: 'Purchase Coupons', href: '/merchant/purchase', icon: ShoppingCart },
     { name: 'Wallet', href: '/merchant/wallet', icon: Wallet },
+    { name: 'Withdrawals', href: '/merchant/wallet/withdrawals', icon: Wallet },
     { name: 'Analytics', href: '/merchant/analytics', icon: TrendingUp },
     { name: 'Profile', href: '/merchant/profile', icon: User },
     { name: 'Settings', href: '/merchant/settings', icon: Settings },
@@ -122,13 +124,16 @@ export default function MerchantSidebar({ isOpen, setIsOpen }) {
                             </div>
                         </Link>
 
-                        {/* Close button for mobile */}
-                        <button
-                            onClick={() => setIsOpen(false)}
-                            className="lg:hidden text-gray-400 hover:text-white transition-colors"
-                        >
-                            <ChevronLeft size={24} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <NotificationBell apiPath="/api/merchant/notifications" />
+                            {/* Close button for mobile */}
+                            <button
+                                onClick={() => setIsOpen(false)}
+                                className="lg:hidden text-gray-400 hover:text-white transition-colors"
+                            >
+                                <ChevronLeft size={24} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Merchant Status Badge */}

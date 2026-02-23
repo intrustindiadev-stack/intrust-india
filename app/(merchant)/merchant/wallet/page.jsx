@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import WalletTopup from '@/components/wallet/WalletTopup';
+import WithdrawalForm from '@/components/wallet/WithdrawalForm'; // Assuming this component exists
 import { useSearchParams } from 'next/navigation';
 
 export default function WalletPage() {
@@ -11,7 +12,9 @@ export default function WalletPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showTopup, setShowTopup] = useState(false);
+    const [showWithdrawal, setShowWithdrawal] = useState(false); // New state for withdrawal
     const [user, setUser] = useState(null);
+    const [merchantData, setMerchantData] = useState(null); // New state for merchant data
     const searchParams = useSearchParams();
 
     const fetchWalletData = useCallback(async () => {
@@ -24,14 +27,28 @@ export default function WalletPage() {
                 return;
             }
 
-            const res = await fetch('/api/wallet/balance', {
+            // Fetch wallet data
+            const walletRes = await fetch('/api/wallet/balance', {
                 headers: { Authorization: `Bearer ${session.access_token}` }
             });
 
-            if (!res.ok) throw new Error('Failed to fetch wallet data');
-            const data = await res.json();
-            setWallet(data.wallet);
-            setTransactions(data.transactions || []);
+            if (!walletRes.ok) throw new Error('Failed to fetch wallet data');
+            const walletData = await walletRes.json();
+            setWallet(walletData.wallet);
+            setTransactions(walletData.transactions || []);
+
+            // Fetch merchant data (bank_verified, bank_data for withdrawal)
+            const { data: merchant, error: merchantError } = await supabase
+                .from('merchants')
+                .select('id, bank_verified, bank_data, wallet_balance_paise, business_name, status')
+                .eq('user_id', session.user.id)
+                .single();
+
+            if (merchantError && merchantError.code !== 'PGRST116') {
+                console.error('Error fetching merchant data:', merchantError);
+            }
+            setMerchantData(merchant);
+
         } catch (err) {
             setError(err.message);
         } finally {
@@ -105,13 +122,22 @@ export default function WalletPage() {
                             </h2>
                         )}
                     </div>
-                    <button
-                        onClick={() => setShowTopup(true)}
-                        className="w-full sm:w-auto px-8 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl shadow-lg shadow-[#D4AF37]/20 hover:bg-opacity-90 transition-all flex items-center justify-center gap-2 gold-glow"
-                    >
-                        <span className="material-icons-round text-lg">add_circle</span>
-                        Add Money
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                        <button
+                            onClick={() => { setShowTopup(true); setShowWithdrawal(false); }}
+                            className="w-full sm:w-auto px-8 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl shadow-lg shadow-[#D4AF37]/20 hover:bg-opacity-90 transition-all flex items-center justify-center gap-2 gold-glow"
+                        >
+                            <span className="material-icons-round text-lg">add_circle</span>
+                            Add Money
+                        </button>
+                        <button
+                            onClick={() => { setShowWithdrawal(true); setShowTopup(false); }}
+                            className="w-full sm:w-auto px-8 py-4 bg-white/30 dark:bg-white/5 backdrop-blur-sm border border-[#D4AF37]/40 hover:border-[#D4AF37]/80 hover:bg-[#D4AF37]/10 text-slate-800 dark:text-slate-100 font-bold rounded-xl shadow-lg shadow-[#D4AF37]/10 transition-all flex items-center justify-center gap-2 group"
+                        >
+                            <span className="material-icons-round text-lg text-[#D4AF37] group-hover:scale-110 transition-transform">savings</span>
+                            Withdraw
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -132,6 +158,44 @@ export default function WalletPage() {
                             }}
                             onCancel={() => setShowTopup(false)}
                         />
+                    </div>
+                </div>
+            )}
+
+            {/* Withdrawal Panel */}
+            {showWithdrawal && user && (
+                <div className="mb-8 merchant-glass p-6 rounded-3xl border border-black/5 dark:border-white/10 shadow-2xl relative overflow-hidden bg-white/40 dark:bg-black/5">
+                    <div className="absolute top-4 right-4 z-10">
+                        <button onClick={() => setShowWithdrawal(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-500 dark:text-slate-300 transition-colors">
+                            <span className="material-icons-round text-sm">close</span>
+                        </button>
+                    </div>
+                    <div className="w-full">
+                        {merchantData?.bank_verified ? (
+                            <WithdrawalForm
+                                merchant={merchantData}
+                                onSuccess={() => {
+                                    setShowWithdrawal(false);
+                                    fetchWalletData();
+                                }}
+                                onCancel={() => setShowWithdrawal(false)}
+                            />
+                        ) : (
+                            <div className="py-8 text-center">
+                                <span className="material-icons-round text-6xl text-amber-500 mb-4 block">account_balance</span>
+                                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Bank Account Not Verified</h3>
+                                <p className="text-slate-600 dark:text-slate-400 text-sm max-w-sm mx-auto">
+                                    To withdraw funds, verify your bank account in KYC settings first.
+                                </p>
+                                <a
+                                    href="/merchant/settings?tab=bank"
+                                    className="inline-flex items-center gap-2 mt-4 px-6 py-3 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:opacity-90 transition-all"
+                                >
+                                    <span className="material-icons-round text-base">verified</span>
+                                    Verify Bank Account
+                                </a>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

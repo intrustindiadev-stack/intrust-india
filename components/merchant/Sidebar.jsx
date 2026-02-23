@@ -34,13 +34,13 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             {/* Mobile overlay */}
             {isOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
+                    className="fixed inset-0 bg-black/50 z-[60] lg:hidden backdrop-blur-sm"
                     onClick={() => setIsOpen(false)}
                 />
             )}
 
             <aside
-                className={`fixed top-0 left-0 bottom-0 w-64 merchant-glass border-r border-black/5 dark:border-[#D4AF37]/20 flex flex-col z-50 transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+                className={`fixed top-0 left-0 bottom-0 w-64 merchant-glass border-r border-black/5 dark:border-[#D4AF37]/20 flex flex-col z-[70] transition-transform duration-300 pb-24 lg:pb-0 ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
                     }`}
             >
                 <div className="p-6 flex items-center justify-between space-x-3">

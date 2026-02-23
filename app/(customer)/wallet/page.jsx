@@ -229,7 +229,7 @@ export default function CustomerWalletPage() {
                                                     {tx.description || tx.type}
                                                 </p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                                    {new Date(tx.created_at).toLocaleDateString()} ΓÇó {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {new Date(tx.created_at).toLocaleDateString()} • {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </p>
                                             </div>
                                         </div>

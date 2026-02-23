@@ -19,7 +19,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 
 const supabase = createClient();
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Skeleton ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function ProfileSkeleton() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
@@ -45,7 +45,7 @@ function ProfileSkeleton() {
     );
 }
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Toast ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function Toast({ msg, type }) {
     if (!msg) return null;
     return (
@@ -57,7 +57,7 @@ function Toast({ msg, type }) {
     );
 }
 
-// ─── Avatar Upload ────────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Avatar Upload ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
     const [uploading, setUploading] = useState(false);
     const fileRef = useRef(null);
@@ -118,7 +118,7 @@ function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
     );
 }
 
-// ─── Inline Editable Row ──────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Inline Editable Row ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function EditableRow({ label, value, icon: Icon, onSave, type = 'text', placeholder, readOnly = false, badge }) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(value || '');
@@ -190,7 +190,7 @@ function EditableRow({ label, value, icon: Icon, onSave, type = 'text', placehol
     );
 }
 
-// ─── Phone Verification Component ─────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Phone Verification Component ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function PhoneVerification({ currentPhone, authPhone, userId, onVerified, showToast }) {
     const [step, setStep] = useState('idle'); // idle | input | otp_sent | verifying
     const [phone, setPhone] = useState('');
@@ -292,7 +292,7 @@ function PhoneVerification({ currentPhone, authPhone, userId, onVerified, showTo
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                         <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Phone Number</p>
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 uppercase tracking-wide">✓ Verified</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 uppercase tracking-wide">Γ£ô Verified</span>
                         {isFullyLinked && (
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 uppercase tracking-wide">Identity Linked</span>
                         )}
@@ -430,7 +430,7 @@ function PhoneVerification({ currentPhone, authPhone, userId, onVerified, showTo
     );
 }
 
-// ─── Link Google Account ──────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Link Google Account ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function LinkGoogleCard({ authUser, showToast }) {
     const [linking, setLinking] = useState(false);
 
@@ -498,7 +498,7 @@ function LinkGoogleCard({ authUser, showToast }) {
     );
 }
 
-// ─── Wallet Section ──────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Wallet Section ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function WalletCard({ balancePaise, onManage }) {
     const balance = (balancePaise || 0) / 100;
 
@@ -520,7 +520,7 @@ function WalletCard({ balancePaise, onManage }) {
                 <div className="mb-6">
                     <p className="text-[10px] text-gray-400 uppercase font-bold tracking-[0.2em] mb-1">Available Balance</p>
                     <p className="text-3xl font-black tabular-nums">
-                        ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        Γé╣{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </p>
                 </div>
 
@@ -536,7 +536,7 @@ function WalletCard({ balancePaise, onManage }) {
     );
 }
 
-// ─── Address Section ──────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Address Section ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function AddressCard({ address, onSave }) {
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -631,7 +631,7 @@ function AddressCard({ address, onSave }) {
     );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Main Page ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 export default function CustomerProfilePage() {
     const router = useRouter();
     const { user: authUser, loading: authLoading, refreshProfile, refreshUser } = useAuth();
@@ -646,7 +646,7 @@ export default function CustomerProfilePage() {
         setTimeout(() => setToast({ msg: '', type: 'success' }), 3500);
     }, []);
 
-    // ── Direct fetch (fixes the "needs refresh on first load" bug) ─────────────
+    // ΓöÇΓöÇ Direct fetch (fixes the "needs refresh on first load" bug) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     useEffect(() => {
         if (authLoading) return;
         if (!authUser) { setProfileLoading(false); return; }
@@ -725,7 +725,7 @@ export default function CustomerProfilePage() {
         await refreshUser();
     }, [refreshProfile, refreshUser]);
 
-    // ── Guards ─────────────────────────────────────────────────────────────────
+    // ΓöÇΓöÇ Guards ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     if (authLoading || profileLoading) return <ProfileSkeleton />;
     if (!authUser) { router.push('/login'); return null; }
 
@@ -764,7 +764,7 @@ export default function CustomerProfilePage() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-                        {/* ══ LEFT SIDEBAR ══════════════════════════════════════ */}
+                        {/* ΓòÉΓòÉ LEFT SIDEBAR ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
                         <div className="lg:col-span-1 space-y-5">
 
                             {/* Identity Card */}
@@ -806,7 +806,7 @@ export default function CustomerProfilePage() {
                                             ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600'
                                             : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600'
                                             }`}>
-                                            {kycStatus === 'verified' ? '✓ KYC Verified' : 'KYC Pending'}
+                                            {kycStatus === 'verified' ? 'Γ£ô KYC Verified' : 'KYC Pending'}
                                         </span>
                                         {isGold && (
                                             <span className="inline-block text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest bg-gradient-to-r from-[#FFD700] to-[#FDB931] text-black shadow-lg shadow-amber-500/20">
@@ -834,51 +834,48 @@ export default function CustomerProfilePage() {
                                 </div>
                             </motion.div>
 
-                            {/* Wallet and Stats Container */}
-                            <div className="space-y-5">
-                                {/* Wallet Card */}
-                                <WalletCard
-                                    balancePaise={wallet?.balance_paise || 0}
-                                    onManage={() => router.push('/wallet')}
-                                />
+                            {/* Wallet Card */}
+                            <WalletCard
+                                balancePaise={wallet?.balance_paise || 0}
+                                onManage={() => router.push('/wallet')}
+                            />
 
-                                {/* Gradient Stats Card */}
-                                <div className={`${isGold
-                                    ? 'bg-gradient-to-br from-amber-600 via-yellow-500 to-amber-700'
-                                    : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
-                                    } rounded-2xl p-5 text-white shadow-lg shadow-amber-900/20`}>
-                                    <h3 className="text-sm font-bold mb-4 opacity-90 flex items-center gap-2">
-                                        {isGold && <Star size={16} className="fill-white" />}
-                                        Your Premium Activity
-                                    </h3>
-                                    <div className="space-y-3.5">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-sm opacity-90">
-                                                <Package size={16} />
-                                                <span>Total Purchases</span>
-                                            </div>
-                                            <span className="font-bold text-lg">0</span>
+                            {/* Gradient Stats Card */}
+                            <div className={`${isGold
+                                ? 'bg-gradient-to-br from-amber-600 via-yellow-500 to-amber-700'
+                                : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
+                                } rounded-2xl p-5 text-white shadow-lg shadow-amber-900/20`}>
+                                <h3 className="text-sm font-bold mb-4 opacity-90 flex items-center gap-2">
+                                    {isGold && <Star size={16} className="fill-white" />}
+                                    Your Premium Activity
+                                </h3>
+                                <div className="space-y-3.5">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-sm opacity-90">
+                                            <Package size={16} />
+                                            <span>Total Purchases</span>
                                         </div>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-sm opacity-90">
-                                                <ShieldCheck size={16} />
-                                                <span>Total Saved</span>
-                                            </div>
-                                            <span className="font-bold text-lg">₹0</span>
-                                        </div>
+                                        <span className="font-bold text-lg">0</span>
                                     </div>
-                                    <button
-                                        onClick={() => router.push('/dashboard')}
-                                        className="w-full mt-5 py-2.5 bg-white/20 hover:bg-white/30 border border-white/30 text-white font-semibold rounded-xl transition-all text-sm flex items-center justify-center gap-2"
-                                    >
-                                        <LayoutDashboard size={15} />
-                                        Dashboard
-                                    </button>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-sm opacity-90">
+                                            <ShieldCheck size={16} />
+                                            <span>Total Saved</span>
+                                        </div>
+                                        <span className="font-bold text-lg">Γé╣0</span>
+                                    </div>
                                 </div>
+                                <button
+                                    onClick={() => router.push('/dashboard')}
+                                    className="w-full mt-5 py-2.5 bg-white/20 hover:bg-white/30 border border-white/30 text-white font-semibold rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+                                >
+                                    <LayoutDashboard size={15} />
+                                    Dashboard
+                                </button>
                             </div>
                         </div>
 
-                        {/* ══ RIGHT MAIN ════════════════════════════════════════ */}
+                        {/* ΓòÉΓòÉ RIGHT MAIN ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
                         <div className="lg:col-span-2 space-y-5">
 
                             {/* Personal Info Card */}
@@ -893,7 +890,7 @@ export default function CustomerProfilePage() {
 
                                 <EditableRow label="Full Name" icon={User} value={profile?.full_name} placeholder="Add your full name" onSave={v => saveField('full_name', v)} />
                                 <EditableRow label="Email Address" icon={Mail} value={authUser.email} readOnly
-                                    badge={authUser.email && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 uppercase tracking-wide">✓ Verified</span>}
+                                    badge={authUser.email && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 uppercase tracking-wide">Γ£ô Verified</span>}
                                 />
 
                                 {/* Phone Verification (replaces plain EditableRow) */}

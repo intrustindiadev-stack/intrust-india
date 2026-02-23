@@ -12,6 +12,11 @@ export default function ProfilePage() {
     });
     const [saving, setSaving] = useState(false);
 
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        window.location.href = "/login";
+    };
+
     useEffect(() => {
         if (merchant) {
             setFormData({
@@ -131,7 +136,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        <div className="pt-6">
+                        <div className="pt-6 flex flex-col sm:flex-row gap-4">
                             <button
                                 type="submit"
                                 disabled={saving}
@@ -148,6 +153,15 @@ export default function ProfilePage() {
                                         <span>Save Changes</span>
                                     </>
                                 )}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleLogout}
+                                className="w-full sm:w-auto px-10 py-4 border border-red-500/20 text-red-500 font-bold rounded-xl hover:bg-red-500/10 transition-all flex items-center justify-center gap-2"
+                            >
+                                <span className="material-icons-round text-sm">logout</span>
+                                <span>Logout</span>
                             </button>
                         </div>
                     </form>

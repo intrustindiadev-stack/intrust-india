@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import AdminSidebar from './AdminSidebar';
-import { Menu, Bell, Search } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 export default function AdminLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -42,10 +43,7 @@ export default function AdminLayout({ children }) {
                         {/* Right: Notifications + Profile */}
                         <div className="flex items-center gap-3">
                             {/* Notifications */}
-                            <button className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors">
-                                <Bell size={22} className="text-gray-700" />
-                                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                            </button>
+                            <NotificationBell apiPath="/api/admin/notifications" />
 
                             {/* Profile Badge */}
                             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 border border-purple-200">

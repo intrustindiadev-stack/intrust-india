@@ -59,3 +59,41 @@ export async function verifyPAN(panNumber) {
         };
     }
 }
+
+/**
+ * Server Action for OCR Document Verification
+ */
+export async function verifyOCRDOC(file, type) {
+    if (!file) return { valid: false, message: 'File data is required' };
+
+    try {
+        console.log('[ServerAction] Verifying OCR for type:', type);
+        return await sprintVerify.ocrDoc(file, type);
+    } catch (error) {
+        console.error('[ServerAction] OCR Verification Error:', error);
+        return {
+            valid: 'manual_review',
+            message: 'OCR Verification failed, manual review required',
+            error: error.message
+        };
+    }
+}
+
+/**
+ * Server Action for Face Match
+ */
+export async function matchFaces(image1, image2, threshold = "0.5") {
+    if (!image1 || !image2) return { valid: false, message: 'Both images are required' };
+
+    try {
+        console.log('[ServerAction] Matching Faces...');
+        return await sprintVerify.faceMatch(image1, image2, threshold);
+    } catch (error) {
+        console.error('[ServerAction] Face Match Error:', error);
+        return {
+            valid: 'manual_review',
+            message: 'Face Match failed, manual review required',
+            error: error.message
+        };
+    }
+}

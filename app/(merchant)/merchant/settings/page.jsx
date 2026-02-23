@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useSearchParams } from 'next/navigation';
 
 export default function MerchantSettingsPage() {
     const [loading, setLoading] = useState(true);
@@ -21,6 +22,23 @@ export default function MerchantSettingsPage() {
         business_phone: '',
         business_email: '',
     });
+
+    const [bankData, setBankData] = useState({
+        account_holder_name: '',
+        account_number: '',
+        confirm_account_number: '',
+        ifsc: '',
+        bank_name: '',
+    });
+    const [savingBank, setSavingBank] = useState(false);
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab && ['business', 'bank', 'account', 'notifications'].includes(tab)) {
+            setActiveTab(tab);
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         fetchSettings();
@@ -56,6 +74,14 @@ export default function MerchantSettingsPage() {
                 .single();
 
             setKycStatus(kyc?.status);
+
+            setBankData({
+                account_holder_name: merchant?.bank_account_name || merchant?.bank_data?.account_holder_name || '',
+                account_number: merchant?.bank_account_number || merchant?.bank_data?.account_number || '',
+                confirm_account_number: merchant?.bank_account_number || merchant?.bank_data?.account_number || '',
+                ifsc: merchant?.bank_ifsc_code || merchant?.bank_data?.ifsc || '',
+                bank_name: merchant?.bank_name || merchant?.bank_data?.bank_name || '',
+            });
 
             setFormData({
                 business_name: merchant?.business_name || '',
@@ -104,8 +130,52 @@ export default function MerchantSettingsPage() {
         }
     };
 
+    const handleSaveBank = async () => {
+        if (!bankData.account_holder_name || !bankData.account_number || !bankData.ifsc) {
+            setError('Account holder name, account number, and IFSC are required.');
+            return;
+        }
+        if (bankData.account_number !== bankData.confirm_account_number) {
+            setError('Account numbers do not match.');
+            return;
+        }
+        setSavingBank(true);
+        setError(null);
+        setSuccess(null);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Not authenticated');
+            const payload = {
+                bank_account_name: bankData.account_holder_name,
+                bank_account_number: bankData.account_number,
+                bank_ifsc_code: bankData.ifsc,
+                bank_name: bankData.bank_name,
+                bank_data: {
+                    account_holder_name: bankData.account_holder_name,
+                    account_number: bankData.account_number,
+                    ifsc: bankData.ifsc,
+                    bank_name: bankData.bank_name,
+                },
+                // Reset verification — admin must re-verify after any change
+                bank_verified: false,
+            };
+            const { error: updateError } = await supabase
+                .from('merchants')
+                .update(payload)
+                .eq('user_id', user.id);
+            if (updateError) throw updateError;
+            setSuccess('Bank details saved! Pending admin verification.');
+            await fetchSettings();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setSavingBank(false);
+        }
+    };
+
     const tabs = [
         { id: 'business', label: 'Business Info', icon: 'business' },
+        { id: 'bank', label: 'Bank Account', icon: 'account_balance' },
         { id: 'account', label: 'Account', icon: 'shield' },
         { id: 'notifications', label: 'Notifications', icon: 'notifications' },
     ];
@@ -261,6 +331,146 @@ export default function MerchantSettingsPage() {
                                         <>
                                             <span className="material-icons-round text-sm">save</span>
                                             <span>Save Changes</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'bank' && (
+                    <div className="p-8">
+                        <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
+                            <span className="material-icons-round text-[#D4AF37] mr-3">account_balance</span>
+                            Bank Account Details
+                        </h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
+                            Enter your bank details to enable withdrawals. An admin will verify your account before payouts are allowed.
+                        </p>
+
+                        {/* Verification status banner */}
+                        <div className={`flex items-center gap-3 p-4 rounded-2xl mb-8 border ${merchantProfile?.bank_verified
+                            ? 'bg-emerald-500/10 border-emerald-500/20'
+                            : 'bg-amber-500/10 border-amber-500/20'
+                            }`}>
+                            <span className={`material-icons-round text-2xl ${merchantProfile?.bank_verified ? 'text-emerald-500' : 'text-amber-500'
+                                }`}>
+                                {merchantProfile?.bank_verified ? 'verified' : 'pending'}
+                            </span>
+                            <div>
+                                <p className={`font-bold text-sm ${merchantProfile?.bank_verified ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'
+                                    }`}>
+                                    {merchantProfile?.bank_verified ? 'Bank Account Verified' : 'Pending Verification'}
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    {merchantProfile?.bank_verified
+                                        ? 'Your bank account is verified. You can request withdrawals.'
+                                        : 'Save your bank details below. Our team will verify them within 24 hours.'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-5 max-w-2xl">
+                            <div className="group">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
+                                    Account Holder Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={bankData.account_holder_name}
+                                    onChange={(e) => setBankData({ ...bankData, account_holder_name: e.target.value.toUpperCase() })}
+                                    placeholder="As per bank records"
+                                    className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="group">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
+                                        Account Number
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={bankData.account_number}
+                                        onChange={(e) => setBankData({ ...bankData, account_number: e.target.value.replace(/\D/g, '') })}
+                                        placeholder="Enter account number"
+                                        className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium font-mono transition-all"
+                                    />
+                                </div>
+                                <div className="group">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
+                                        Confirm Account Number
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={bankData.confirm_account_number}
+                                        onChange={(e) => setBankData({ ...bankData, confirm_account_number: e.target.value.replace(/\D/g, '') })}
+                                        placeholder="Re-enter account number"
+                                        className={`w-full px-5 py-4 bg-black/5 dark:bg-white/5 border rounded-xl focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 font-medium font-mono transition-all ${bankData.confirm_account_number && bankData.account_number !== bankData.confirm_account_number
+                                            ? 'border-red-400 focus:border-red-400 focus:ring-red-400'
+                                            : 'border-black/5 dark:border-white/10 focus:border-[#D4AF37] focus:ring-[#D4AF37]'
+                                            }`}
+                                    />
+                                    {bankData.confirm_account_number && bankData.account_number !== bankData.confirm_account_number && (
+                                        <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                                            <span className="material-icons-round text-xs">error</span>
+                                            Account numbers do not match
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="group">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
+                                        IFSC Code
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={bankData.ifsc}
+                                        onChange={(e) => setBankData({ ...bankData, ifsc: e.target.value.toUpperCase() })}
+                                        placeholder="e.g. SBIN0001234"
+                                        maxLength={11}
+                                        className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium font-mono transition-all"
+                                    />
+                                </div>
+                                <div className="group">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
+                                        Bank Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={bankData.bank_name}
+                                        onChange={(e) => setBankData({ ...bankData, bank_name: e.target.value })}
+                                        placeholder="e.g. State Bank of India"
+                                        className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl flex items-start gap-3 text-sm">
+                                <span className="material-icons-round text-amber-500 text-base mt-0.5">info</span>
+                                <p className="text-slate-600 dark:text-slate-400">
+                                    After saving, please allow up to <strong>24 hours</strong> for admin verification. Changing your bank details will reset verification status.
+                                </p>
+                            </div>
+
+                            <div className="pt-4 border-t border-black/5 dark:border-white/5">
+                                <button
+                                    onClick={handleSaveBank}
+                                    disabled={savingBank || (bankData.confirm_account_number && bankData.account_number !== bankData.confirm_account_number)}
+                                    className="px-10 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2 gold-glow shadow-lg shadow-[#D4AF37]/20"
+                                >
+                                    {savingBank ? (
+                                        <>
+                                            <span className="material-icons-round animate-spin text-sm">autorenew</span>
+                                            <span>Saving...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="material-icons-round text-sm">save</span>
+                                            <span>Save Bank Details</span>
                                         </>
                                     )}
                                 </button>

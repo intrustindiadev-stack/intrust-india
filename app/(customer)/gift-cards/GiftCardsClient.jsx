@@ -49,8 +49,8 @@ const transformCouponData = (coupon) => {
         discount: parseFloat(discount.toFixed(1)),
         rating: 4.5 + (Math.random() * 0.4),
         sold: Math.floor(Math.random() * 1000) + 100,
-        // NEW: Display merchant name from database
-        merchant: coupon.merchant_name || coupon.merchant?.business_name || 'INTRUST Verified',
+        // NEW: Prefer business_name from joined merchant table, fallback to merchant_name field
+        merchant: coupon.merchant?.business_name || coupon.merchant_name || 'INTRUST Verified',
         merchantId: coupon.merchant_id,
         verified: true,
         category: coupon.category,

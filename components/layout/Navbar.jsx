@@ -10,11 +10,13 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
 import MobileNav from './MobileNav';
+import GoldBadge from '@/components/ui/GoldBadge';
 
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const { isAuthenticated, user, profile } = useAuth();
+    const isGold = !!profile?.is_gold_verified;
 
     const { theme, toggleTheme } = useTheme();
     const router = useRouter();
@@ -170,25 +172,35 @@ export default function Navbar() {
                             {isAuthenticated ? (
                                 <div className="hidden lg:flex items-center gap-4">
                                     <Link href="/profile">
-                                        <motion.div
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            className="w-10 h-10 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] cursor-pointer"
-                                        >
-                                            <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                                                {hasImage ? (
-                                                    <img
-                                                        src={profile.avatar_url}
-                                                        alt="Profile"
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <span className="font-bold text-[#7A93AC] text-lg">
-                                                        {getInitials()}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </motion.div>
+                                        <div className="relative">
+                                            <motion.div
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                                className={`w-10 h-10 rounded-full p-[2px] cursor-pointer transition-all duration-300 ${isGold
+                                                    ? 'bg-gradient-to-br from-[#FFD700] via-[#FDB931] to-[#D4AF37] shadow-[0_0_10px_rgba(212,175,55,0.4)]'
+                                                    : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
+                                                    }`}
+                                            >
+                                                <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                                    {hasImage ? (
+                                                        <img
+                                                            src={profile.avatar_url}
+                                                            alt="Profile"
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <span className="font-bold text-[#7A93AC] text-lg">
+                                                            {getInitials()}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                            {isGold && (
+                                                <div className="absolute -bottom-1 -right-1 z-10">
+                                                    <GoldBadge size="sm" />
+                                                </div>
+                                            )}
+                                        </div>
                                     </Link>
 
                                     <motion.button
@@ -263,24 +275,34 @@ export default function Navbar() {
                             {/* Mobile/Tablet Profile Icon - Visible only when authenticated */}
                             {isAuthenticated && (
                                 <Link href="/profile" className="lg:hidden mr-2">
-                                    <motion.div
-                                        whileTap={{ scale: 0.95 }}
-                                        className="w-9 h-9 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] cursor-pointer"
-                                    >
-                                        <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                                            {hasImage ? (
-                                                <img
-                                                    src={profile.avatar_url}
-                                                    alt="Profile"
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <span className="font-bold text-[#7A93AC] text-sm">
-                                                    {getInitials()}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </motion.div>
+                                    <div className="relative">
+                                        <motion.div
+                                            whileTap={{ scale: 0.95 }}
+                                            className={`w-9 h-9 rounded-full p-[2px] cursor-pointer transition-all duration-300 ${isGold
+                                                ? 'bg-gradient-to-br from-[#FFD700] via-[#FDB931] to-[#D4AF37] shadow-[0_0_10px_rgba(212,175,55,0.4)]'
+                                                : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
+                                                }`}
+                                        >
+                                            <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                                {hasImage ? (
+                                                    <img
+                                                        src={profile.avatar_url}
+                                                        alt="Profile"
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <span className="font-bold text-[#7A93AC] text-sm">
+                                                        {getInitials()}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                        {isGold && (
+                                            <div className="absolute -bottom-1 -right-1 z-10">
+                                                <GoldBadge size="sm" />
+                                            </div>
+                                        )}
+                                    </div>
                                 </Link>
                             )}
 
