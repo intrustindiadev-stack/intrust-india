@@ -6,7 +6,7 @@ const PaymentForm = ({ amount, productDescription, userProfile }) => {
     const [details, setDetails] = useState({
         payerName: userProfile?.full_name || '',
         payerEmail: userProfile?.email || '',
-        payerMobile: userProfile?.phone || '',
+        payerMobile: userProfile?.phone ? userProfile.phone.replace(/\D/g, '').replace(/^91/, '').slice(-10) : '',
         payerAddress: '', // Optional
     });
 
@@ -20,6 +20,7 @@ const PaymentForm = ({ amount, productDescription, userProfile }) => {
         initiatePayment({
             amount,
             ...details,
+            payerMobile: details.payerMobile ? details.payerMobile.replace(/\D/g, '').replace(/^91/, '').slice(-10) : '9999999999',
             udf1: productDescription // Example UDF usage
         });
     };

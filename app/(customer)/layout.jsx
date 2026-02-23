@@ -4,8 +4,17 @@ import { redirect } from 'next/navigation';
 export default async function CustomerLayout({ children }) {
     const supabase = await createServerSupabaseClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
-
+    let user = null;
+    try {
+        const getUserPromise = supabase.auth.getUser();
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Auth timeout')), 3000)
+        );
+        const { data } = await Promise.race([getUserPromise, timeoutPromise]);
+        user = data?.user;
+    } catch (error) {
+        console.error('Customer layout auth timeout:', error.message);
+    }
     // If logged in, check role
     if (user) {
         const { data: profile } = await supabase

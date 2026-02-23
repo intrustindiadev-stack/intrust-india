@@ -5,7 +5,17 @@ import { redirect } from 'next/navigation';
 export default async function Home() {
   const supabase = await createServerSupabaseClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const getUserPromise = supabase.auth.getUser();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Auth timeout')), 3000)
+    );
+    const { data } = await Promise.race([getUserPromise, timeoutPromise]);
+    user = data?.user;
+  } catch (error) {
+    // Auth timed out, user remains null. We skip logging to console to avoid Next.js dev overlay.
+  }
 
   if (user) {
     const { data: profile } = await supabase

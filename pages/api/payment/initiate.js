@@ -56,12 +56,20 @@ export default async function handler(req, res) {
         // 2. Generate Client Transaction ID
         const clientTxnId = `TXN_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
+        // Sanitize Mobile Number for Sabpaisa (remove +91 and any non-digits)
+        let cleanMobile = (payerMobile || user.phone || '').replace(/\D/g, '');
+        if (cleanMobile.startsWith('91') && cleanMobile.length > 10) {
+            cleanMobile = cleanMobile.substring(2);
+        }
+        if (cleanMobile.length === 0) {
+            cleanMobile = "9999999999"; // Fallback required by Sabpaisa
+        }
+
         console.log('[Payment Initiate] === PAYMENT INITIATE START ===');
         console.log('[Payment Initiate] User:', user.id);
         console.log('[Payment Initiate] Amount:', amount);
         console.log('[Payment Initiate] Client Txn ID:', clientTxnId);
-        console.log('[Payment Initiate] UDF1:', udf1 || '(none)');
-        console.log('[Payment Initiate] UDF2:', udf2 || '(none)');
+        console.log('[Payment Initiate] Clean Mobile:', cleanMobile);
         console.log('[Payment Initiate] Callback URL:', process.env.NEXT_PUBLIC_APP_URL + '/api/payment/callback');
 
         // 3. Insert into Database
@@ -75,7 +83,7 @@ export default async function handler(req, res) {
                     status: 'INITIATED',
                     payer_name: payerName || user.user_metadata?.full_name || 'User',
                     payer_email: payerEmail || user.email,
-                    payer_mobile: payerMobile || user.phone || '',
+                    payer_mobile: cleanMobile,
                     udf1: udf1 || '',
                     udf2: udf2 || '',
                     created_at: new Date()
