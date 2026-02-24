@@ -31,7 +31,107 @@ export default function InventoryTable({ initialCoupons }) {
 
     return (
         <>
-            <div className="overflow-x-auto">
+            {/* Mobile View (Cards) */}
+            <div className="md:hidden flex flex-col divide-y divide-black/5 dark:divide-white/5">
+                {inventory.map((coupon) => {
+                    const rawPurchasePrice = coupon.purchase_price ?? ((coupon.merchant_purchase_price_paise || 0) / 100);
+                    const purchasePrice = Math.abs(rawPurchasePrice);
+                    const sellingPrice = (coupon.merchant_selling_price_paise || 0) / 100;
+                    const profit = sellingPrice - purchasePrice;
+
+                    return (
+                        <div key={coupon.id} className="p-4 flex flex-col gap-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
+                            {/* Header: Brand & Status */}
+                            <div className="flex justify-between items-start">
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-500/10 flex items-center justify-center border border-black/5 dark:border-slate-500/20 shadow-sm">
+                                        <span className="font-bold text-[#D4AF37] text-lg">{coupon.brand.charAt(0)}</span>
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-slate-800 dark:text-slate-200">{coupon.brand}</div>
+                                        <div className="text-[10px] text-slate-500 font-semibold">{coupon.category || "Gift Card"}</div>
+                                    </div>
+                                </div>
+                                <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${coupon.listed_on_marketplace
+                                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                                    : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-black/5 dark:border-white/5'
+                                    }`}>
+                                    {coupon.listed_on_marketplace ? 'Listed' : 'Unlisted'}
+                                </span>
+                            </div>
+
+                            {/* Pricing Grid */}
+                            <div className="grid grid-cols-2 gap-2 bg-black/5 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5">
+                                <div>
+                                    <p className="text-[9px] text-slate-500 uppercase tracking-tight font-bold">Face Value</p>
+                                    <p className="text-sm text-slate-700 dark:text-slate-300 font-bold">₹{(coupon.face_value_paise / 100).toLocaleString('en-IN')}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[9px] text-slate-500 uppercase tracking-tight font-bold">Investment</p>
+                                    <p className="text-sm text-slate-800 dark:text-slate-100 font-bold">₹{purchasePrice.toLocaleString('en-IN')}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[9px] text-slate-500 uppercase tracking-tight font-bold">Selling Price</p>
+                                    {coupon.listed_on_marketplace ? (
+                                        <p className="text-sm text-blue-600 dark:text-blue-400 font-bold">₹{sellingPrice.toLocaleString('en-IN')}</p>
+                                    ) : (
+                                        <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold italic">Not listed</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <p className="text-[9px] text-slate-500 uppercase tracking-tight font-bold">Profit</p>
+                                    {coupon.listed_on_marketplace ? (
+                                        <p className={`text-sm font-bold ${profit > 0 ? 'text-emerald-600 dark:text-emerald-400' : profit < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                                            ₹{profit.toFixed(2)}
+                                        </p>
+                                    ) : (
+                                        <p className="text-sm text-slate-400 dark:text-slate-500">-</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center justify-end space-x-2 mt-1">
+                                {!coupon.listed_on_marketplace ? (
+                                    <button
+                                        onClick={() => {
+                                            setSelectedCoupon(coupon);
+                                            setShowListModal(true);
+                                        }}
+                                        className="flex-1 h-10 flex items-center justify-center bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30 rounded-xl transition-all shadow-sm"
+                                    >
+                                        <span className="material-icons-round text-sm mr-1.5">storefront</span>
+                                        <span className="text-xs font-bold uppercase tracking-wider">List on Market</span>
+                                    </button>
+                                ) : (
+                                    <div className="flex gap-2 w-full">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedCoupon(coupon);
+                                                setShowListModal(true);
+                                            }}
+                                            className="flex-1 h-10 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded-xl transition-all shadow-sm"
+                                        >
+                                            <span className="material-icons-round text-sm mr-1.5">edit</span>
+                                            <span className="text-xs font-bold uppercase tracking-wider">Edit</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleUnlist(coupon.id)}
+                                            className="flex-1 h-10 flex items-center justify-center bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 rounded-xl transition-all shadow-sm"
+                                        >
+                                            <span className="material-icons-round text-sm mr-1.5">visibility_off</span>
+                                            <span className="text-xs font-bold uppercase tracking-wider">Unlist</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Desktop View (Table) */}
+            <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left min-w-[800px]">
                     <thead>
                         <tr className="text-[11px] uppercase tracking-widest text-slate-500 font-bold border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">

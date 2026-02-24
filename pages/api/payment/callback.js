@@ -326,6 +326,39 @@ export default async function handler(req, res) {
             }
         }
 
+        // 7. Handle Gift Card Purchase Success
+        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GIFT_CARD') {
+            if (!wasAlreadySuccess) {
+                try {
+                    const couponId = existingTxn.udf2;
+                    console.log(`[GIFT_CARD] Processing Gift Card Purchase for ${existingTxn.user_id}, Coupon: ${couponId}`);
+
+                    const supabaseAdmin = createClient(
+                        process.env.NEXT_PUBLIC_SUPABASE_URL,
+                        process.env.SUPABASE_SERVICE_ROLE_KEY
+                    );
+
+                    const { error: updateCouponError } = await supabaseAdmin
+                        .from('coupons')
+                        .update({
+                            status: 'sold',
+                            purchased_by: existingTxn.user_id,
+                            purchased_at: new Date().toISOString()
+                        })
+                        .eq('id', couponId)
+                        .eq('status', 'available'); // Only update if still available
+
+                    if (updateCouponError) {
+                        console.error('Failed to mark coupon as sold:', updateCouponError);
+                    } else {
+                        console.log(`[GIFT_CARD] Successfully marked coupon ${couponId} as sold to ${existingTxn.user_id}`);
+                    }
+                } catch (gcError) {
+                    console.error('Failed to process gift card purchase completion:', gcError);
+                }
+            }
+        }
+
         // 6. Redirect User based on Status
         if (internalStatus === 'SUCCESS') {
             res.redirect(`/payment/success?txnId=${clientTxnId}`);

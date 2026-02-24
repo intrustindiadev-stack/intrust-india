@@ -46,16 +46,16 @@ export default async function InventoryPage({ searchParams }) {
         redirect('/merchant-apply');
     }
 
-    // 4. Fetch stats in parallel (using COUNT)
+    // 4. Fetch stats in parallel (using COUNT), filter out sold coupons
     const [totalRes, listedRes, unlistedRes, totalValueRes] = await Promise.all([
-        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id),
+        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'available'),
 
-        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
+        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true).eq('status', 'available'),
 
-        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', false),
+        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', false).eq('status', 'available'),
 
         // For total value, we need to actually fetch the prices
-        supabase.from('coupons').select('merchant_purchase_price_paise').eq('merchant_id', merchant.id)
+        supabase.from('coupons').select('merchant_purchase_price_paise').eq('merchant_id', merchant.id).eq('status', 'available')
     ]);
 
     const stats = {
@@ -65,10 +65,11 @@ export default async function InventoryPage({ searchParams }) {
         totalValue: (totalValueRes.data || []).reduce((sum, c) => sum + Math.abs(c.merchant_purchase_price_paise || 0), 0) / 100,
     };
 
-    // 5. Fetch paginated inventory based on filter
+    // 5. Fetch paginated inventory based on filter (only available coupons)
     let inventoryQuery = supabase
         .from('coupons')
         .select('*')
+        .eq('status', 'available')
         .order('created_at', { ascending: false })
         .range((page - 1) * limit, page * limit - 1);
 

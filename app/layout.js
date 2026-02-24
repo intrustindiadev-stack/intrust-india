@@ -1,8 +1,8 @@
 import { Inter, Outfit, Poppins } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
-
 import { ThemeProvider } from '@/lib/contexts/ThemeContext';
+import PWAInstallPrompt from '@/components/ui/PWAInstallPrompt';
 
 const inter = Inter({
   variable: "--font-inter",
@@ -23,7 +23,19 @@ const poppins = Poppins({
 export const metadata = {
   title: "INTRUST",
   description: "Loans, payments, shopping, and more—all in one secure platform",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "INTRUST",
+  },
+  icons: {
+    apple: "/apple-icon.png",
+  },
+};
 
+export const viewport = {
+  themeColor: "#171A21",
 };
 
 export default function RootLayout({ children }) {
@@ -36,6 +48,7 @@ export default function RootLayout({ children }) {
         <ThemeProvider>
           <AuthProvider>
             {children}
+            <PWAInstallPrompt />
           </AuthProvider>
         </ThemeProvider>
       </body>

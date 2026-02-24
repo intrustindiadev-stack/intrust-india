@@ -109,6 +109,31 @@ export default function GiftCardDetailPage({ params }) {
         setShowPaymentModal(true);
     }
 
+    const handleShare = async () => {
+        if (!card) return;
+
+        const shareData = {
+            title: card.title,
+            text: `Check out this ${card.title} gift card on Intrust!`,
+            url: window.location.href
+        };
+
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                await navigator.clipboard.writeText(window.location.href);
+                toast.success('Link copied to clipboard!');
+            }
+        } catch (err) {
+            // Ignore AbortError (user cancelled share)
+            if (err.name !== 'AbortError') {
+                console.error('Error sharing:', err);
+                toast.error('Failed to share');
+            }
+        }
+    };
+
     // Calculation Helper - Handling Paise vs Rupees
     // Database stores prices in paise to avoid float issues.
     const sellingPrice = card ? card.selling_price_paise / 100 : 0;
@@ -359,7 +384,10 @@ export default function GiftCardDetailPage({ params }) {
                                     )}
                                 </button>
 
-                                <button className="w-full py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
+                                <button
+                                    onClick={handleShare}
+                                    className="w-full py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                                >
                                     <Share2 size={18} />
                                     Share with friends
                                 </button>

@@ -14,24 +14,24 @@ export default function Footer() {
 
     const footerLinks = {
         services: [
-            { label: 'Mobile Recharge', href: '/services/recharge' },
-            { label: 'Electricity Bill', href: '/services/electricity' },
+            { label: 'Mobile Recharge', href: '/coming-soon' },
+            { label: 'Electricity Bill', href: '/coming-soon' },
             { label: 'Brand Gift Cards', href: '/gift-cards' },
-            { label: 'DTH Connection', href: '/services/dth' },
-            { label: 'Credit Card Payment', href: '/services/credit-card' },
+            { label: 'DTH Connection', href: '/coming-soon' },
+            { label: 'Credit Card Payment', href: '/coming-soon' },
         ],
         company: [
-            { label: 'About Us', href: '#about' },
+            { label: 'About Us', href: '/about' },
             { label: 'Partner with Us', href: '/merchant-apply' },
             { label: 'Careers', href: '#careers' },
             { label: 'Press & Media', href: '#press' },
             { label: 'Contact Support', href: '/support' },
         ],
         legal: [
-            { label: 'Privacy Policy', href: '#privacy' },
-            { label: 'Terms of Service', href: '#terms' },
-            { label: 'Refund Policy', href: '#refunds' },
-            { label: 'Grievance Officer', href: '#grievance' },
+            { label: 'Privacy Policy', href: '/legal' },
+            { label: 'Terms of Service', href: '/legal' },
+            { label: 'Refund Policy', href: '/legal' },
+            { label: 'Grievance Officer', href: '/contact' },
         ],
     };
 

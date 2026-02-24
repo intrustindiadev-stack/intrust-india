@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 
 export default function PurchasePage() {
     const [cart, setCart] = useState({});
@@ -48,7 +49,6 @@ export default function PurchasePage() {
                 brand: c.brand,
                 faceValue: c.face_value_paise / 100,
                 price: c.selling_price_paise / 100,
-                stock: 50,
             }));
 
             setInventory(transformedCoupons);
@@ -64,16 +64,7 @@ export default function PurchasePage() {
         fetchData();
     }, []);
 
-    const addToCart = (item) => setCart(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
-    const removeFromCart = (itemId) => setCart(prev => {
-        const newCart = { ...prev };
-        if (newCart[itemId] > 1) {
-            newCart[itemId]--;
-        } else {
-            delete newCart[itemId];
-        }
-        return newCart;
-    });
+    const addToCart = (item) => setCart(prev => ({ ...prev, [item.id]: 1 }));
     const deleteFromCart = (itemId) => setCart(prev => {
         const newCart = { ...prev };
         delete newCart[itemId];
@@ -92,29 +83,28 @@ export default function PurchasePage() {
     const handlePurchase = async () => {
         if (cartItems === 0) return;
         if (merchantBalance < cartTotal) {
-            alert(`Insufficient balance! You need ₹${cartTotal.toFixed(2)} but have ₹${merchantBalance.toFixed(2)}`);
+            toast.error(`Insufficient balance! You need ₹${cartTotal.toFixed(2)} but have ₹${merchantBalance.toFixed(2)}`);
             return;
         }
 
         try {
             setPurchasing(true);
-            const purchases = Object.entries(cart).map(async ([couponId, qty]) => {
-                for (let i = 0; i < qty; i++) {
-                    const { error } = await supabase.rpc('merchant_purchase_coupon', {
-                        p_coupon_id: couponId,
-                        p_quantity: 1
-                    });
-                    if (error) throw error;
-                }
+            const purchases = Object.keys(cart).map(async (couponId) => {
+                const { error } = await supabase.rpc('merchant_purchase_coupon', {
+                    p_coupon_id: couponId,
+                    p_quantity: 1,
+                    p_merchant_id: null
+                });
+                if (error) throw error;
             });
 
             await Promise.all(purchases);
-            alert('Purchase successful! Check your inventory.');
+            toast.success('Purchase successful! Check your inventory.');
             setCart({});
             fetchData();
         } catch (err) {
             console.error('Purchase error:', err);
-            alert('Purchase failed: ' + err.message);
+            toast.error('Purchase failed: ' + err.message);
         } finally {
             setPurchasing(false);
         }
@@ -206,15 +196,10 @@ export default function PurchasePage() {
                                 </div>
 
                                 {cart[item.id] ? (
-                                    <div className="flex items-center justify-between bg-black/5 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10 p-1">
-                                        <button onClick={() => removeFromCart(item.id)} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-300 transition-colors">
-                                            <span className="material-icons-round text-sm">remove</span>
-                                        </button>
-                                        <span className="font-bold text-slate-800 dark:text-slate-100 w-10 text-center">{cart[item.id]}</span>
-                                        <button onClick={() => addToCart(item)} className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#D4AF37]/20 hover:bg-[#D4AF37]/30 text-[#D4AF37] transition-colors">
-                                            <span className="material-icons-round text-sm">add</span>
-                                        </button>
-                                    </div>
+                                    <button onClick={() => deleteFromCart(item.id)} className="w-full py-3 merchant-glass bg-white/40 dark:bg-white/5 hover:bg-red-500/10 text-red-500 dark:text-red-400 text-sm font-bold rounded-xl transition-all border border-red-500/20 flex items-center justify-center space-x-2 shadow-sm">
+                                        <span className="material-icons-round text-sm">remove_shopping_cart</span>
+                                        <span>Remove from Cart</span>
+                                    </button>
                                 ) : (
                                     <button onClick={() => addToCart(item)} className="w-full py-3 merchant-glass bg-white/40 dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-xl transition-all border border-black/5 dark:border-white/10 flex items-center justify-center space-x-2 shadow-sm">
                                         <span className="material-icons-round text-[#D4AF37] text-sm">add_shopping_cart</span>
@@ -253,7 +238,7 @@ export default function PurchasePage() {
                                             <div key={id} className="group flex justify-between items-center p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10 transition-colors">
                                                 <div className="flex-1">
                                                     <p className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate">{item.brand}</p>
-                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">₹{item.price} × {qty}</p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">₹{item.price}</p>
                                                 </div>
                                                 <div className="flex flex-col items-end pl-3">
                                                     <span className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-1">₹{cost.toFixed(2)}</span>
@@ -268,7 +253,7 @@ export default function PurchasePage() {
 
                                 <div className="border-t border-black/5 dark:border-white/10 pt-6 space-y-3 mb-8">
                                     <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
-                                        <span>Subtotal ({Object.values(cart).reduce((a, b) => a + b, 0)} items)</span>
+                                        <span>Subtotal ({cartItems} items)</span>
                                         <span className="text-slate-700 dark:text-slate-200">₹{cartSubtotal.toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">

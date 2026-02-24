@@ -36,8 +36,10 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess }) {
             return;
         }
 
-        // Removed the hard block "Selling price must be higher than purchase price"
-        // to allow selling at loss (liquidation), but kept the warning in UI.
+        if (markup > 20) {
+            setError('Selling price cannot exceed a 20% profit markup.');
+            return;
+        }
 
         try {
             setLoading(true);
@@ -173,6 +175,19 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess }) {
                                 </div>
                             )}
 
+                            {/* Warning if markup > 20% */}
+                            {markup > 20 && (
+                                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-start gap-3">
+                                    <span className="material-icons-round text-red-500 mt-0.5">gavel</span>
+                                    <div>
+                                        <h5 className="font-bold text-red-500">Markup Limit Exceeded</h5>
+                                        <p className="text-sm text-red-400/80 mt-1">
+                                            Platform policy restricts profit markup to a maximum of <span className="font-bold text-red-400">20%</span>. Your current markup is <span className="font-bold">{markup.toFixed(1)}%</span>. Please lower your selling price.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Customer View */}
                             <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
                                 <div className="flex items-center gap-2 mb-4">
@@ -230,7 +245,7 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess }) {
                         </button>
                         <button
                             type="submit"
-                            disabled={loading || sellingPriceNum <= 0}
+                            disabled={loading || sellingPriceNum <= 0 || markup > 20}
                             className="flex-1 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl shadow-lg shadow-[#D4AF37]/20 hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 gold-glow"
                         >
                             {loading ? (

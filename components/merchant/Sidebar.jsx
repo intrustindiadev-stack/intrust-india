@@ -73,6 +73,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                             <Link
                                 key={item.href}
                                 href={item.href}
+                                onClick={() => setIsOpen(false)}
                                 className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${isActive
                                     ? "bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20"
                                     : "text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
@@ -94,6 +95,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                             <Link
                                 key={item.href}
                                 href={item.href}
+                                onClick={() => setIsOpen(false)}
                                 className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${isActive
                                     ? "bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20"
                                     : "text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"

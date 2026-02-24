@@ -76,6 +76,8 @@ export default function CustomerDashboardPage() {
         activeCards: 0
     });
 
+    const [recentActivity, setRecentActivity] = useState([]);
+
     const [showPackages, setShowPackages] = useState(false);
     const [timeLeft, setTimeLeft] = useState(null);
     const [walletConfirmPkg, setWalletConfirmPkg] = useState(null);
@@ -179,6 +181,7 @@ export default function CustomerDashboardPage() {
                 walletBalance: prev.walletBalance - pkg.price
             }));
 
+            // Make sure real-time kicks in for transaction logging or manually add to quick activity
             setShowPackages(false);
         } catch (err) {
             console.error('Wallet payment error:', err);
@@ -186,6 +189,62 @@ export default function CustomerDashboardPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const processActivityFeed = (coupons, walletTxs) => {
+        const normalizedCoupons = (coupons || []).map(c => ({
+            id: `coupon-${c.id}`,
+            rawDate: new Date(c.purchased_at).getTime(),
+            brand: 'Gift Card',
+            description: c.title || c.brand || 'Gift Card Purchase',
+            value: ((c.selling_price_paise || 0) / 100).toFixed(2),
+            status: 'success',
+            type: 'GIFT_CARD',
+            logo: '🎁'
+        }));
+
+        const normalizedWallet = (walletTxs || []).map(w => {
+            let logo = '💳';
+            if (w.type === 'TOPUP') logo = '💰';
+            if (w.type === 'CASHBACK') logo = '✨';
+            if (w.type === 'DEBIT') logo = '🛍️';
+
+            return {
+                id: `wallet-${w.id}`,
+                rawDate: new Date(w.created_at).getTime(),
+                brand: w.type === 'TOPUP' ? 'Wallet Added' : (w.type === 'CASHBACK' ? 'Cashback Earned' : 'Wallet Paid'),
+                description: w.description || w.type,
+                value: ((w.amount_paise || 0) / 100).toFixed(2),
+                status: 'success',
+                type: 'WALLET',
+                logo
+            };
+        });
+
+        const combined = [...normalizedCoupons, ...normalizedWallet]
+            .sort((a, b) => b.rawDate - a.rawDate)
+            .slice(0, 5)
+            .map(item => {
+                const now = new Date();
+                const diffTime = Math.abs(now - new Date(item.rawDate));
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
+                let dateStr = 'Just now';
+                if (diffHours < 24) {
+                    dateStr = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                } else if (diffDays === 1) {
+                    dateStr = 'Yesterday';
+                } else {
+                    dateStr = `${diffDays} days ago`;
+                }
+
+                return {
+                    ...item,
+                    date: dateStr
+                };
+            });
+
+        setRecentActivity(combined);
     };
 
     useEffect(() => {
@@ -205,7 +264,8 @@ export default function CustomerDashboardPage() {
                     supabase.from('user_profiles').select('full_name, role, is_gold_verified, subscription_expiry, kyc_status').eq('id', user.id).single(),
                     supabase.from('kyc_records').select('status, verification_status').eq('user_id', user.id).maybeSingle(),
                     supabase.from('customer_wallets').select('balance_paise').eq('user_id', user.id).maybeSingle(),
-                    supabase.from('coupons').select('face_value_paise, selling_price_paise, valid_until, status').eq('purchased_by', user.id).eq('status', 'sold')
+                    supabase.from('coupons').select('id, title, brand, face_value_paise, selling_price_paise, valid_until, status, purchased_at').eq('purchased_by', user.id).eq('status', 'sold').order('purchased_at', { ascending: false }),
+                    supabase.from('customer_wallet_transactions').select('id, type, amount_paise, description, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5)
                 ]);
 
                 const results = await Promise.race([mainFetch, timeoutTx]);
@@ -215,6 +275,7 @@ export default function CustomerDashboardPage() {
                 const kycResult = results[1];
                 const walletResult = results[2];
                 const couponsResult = results[3];
+                const walletTxResult = results[4];
 
                 // 1. Process Profile
                 let profile = null;
@@ -233,6 +294,7 @@ export default function CustomerDashboardPage() {
                 if (couponsResult.status === 'fulfilled' && couponsResult.value.data) {
                     coupons = couponsResult.value.data;
                 }
+
                 let totalSavings = 0;
                 let activeCards = 0;
                 let totalPurchases = 0;
@@ -255,7 +317,7 @@ export default function CustomerDashboardPage() {
                 // Convert savings from paise to Rupee
                 totalSavings = totalSavings / 100;
 
-                // 3. Wallet Balance
+                // 4. Wallet Balance
                 let walletBalance = 0.00;
                 if (walletResult.status === 'fulfilled' && walletResult.value.data) {
                     walletBalance = (walletResult.value.data.balance_paise || 0) / 100;
@@ -270,6 +332,14 @@ export default function CustomerDashboardPage() {
                         walletBalance = (newWallet.balance_paise || 0) / 100;
                     }
                 }
+
+                // 5. Build Recent Activity
+                let walletTxs = [];
+                if (walletTxResult.status === 'fulfilled' && walletTxResult.value.data) {
+                    walletTxs = walletTxResult.value.data;
+                }
+                // Send top 5 coupons and wallet txs to be formatted
+                processActivityFeed(coupons.slice(0, 5), walletTxs);
 
                 setUserData({
                     name: profile?.full_name || user.email?.split('@')[0] || 'User',
@@ -289,13 +359,14 @@ export default function CustomerDashboardPage() {
             }
         };
 
-        let subscription;
+        let walletSub;
+        let activitySub;
         if (!authLoading) {
             console.log('[DASHBOARD] Auth finished. User:', user?.id);
             if (user) {
                 fetchDashboardData();
 
-                subscription = supabase
+                walletSub = supabase
                     .channel('dashboard_wallet')
                     .on(
                         'postgres_changes',
@@ -310,6 +381,20 @@ export default function CustomerDashboardPage() {
                         }
                     )
                     .subscribe();
+
+                activitySub = supabase
+                    .channel('dashboard_activity')
+                    .on(
+                        'postgres_changes',
+                        { event: 'INSERT', schema: 'public', table: 'customer_wallet_transactions', filter: `user_id=eq.${user.id}` },
+                        () => fetchDashboardData()
+                    )
+                    .on(
+                        'postgres_changes',
+                        { event: 'UPDATE', schema: 'public', table: 'coupons', filter: `purchased_by=eq.${user.id}` },
+                        () => fetchDashboardData()
+                    )
+                    .subscribe();
             } else {
                 console.log('[DASHBOARD] No user, stopping loading.');
                 setLoading(false);
@@ -319,31 +404,24 @@ export default function CustomerDashboardPage() {
         }
 
         return () => {
-            if (subscription) {
-                supabase.removeChannel(subscription);
-            }
+            if (walletSub) supabase.removeChannel(walletSub);
+            if (activitySub) supabase.removeChannel(activitySub);
         };
     }, [user, authLoading]);
 
     const quickServices = [
-        { id: 1, label: 'Recharge', icon: Smartphone, color: 'text-blue-600 bg-blue-50', href: '/services/recharge' },
-        { id: 2, label: 'Electricity', icon: Zap, color: 'text-amber-600 bg-amber-50', href: '/services/electricity' },
-        { id: 3, label: 'Fastag', icon: CreditCard, color: 'text-emerald-600 bg-emerald-50', href: '/services/fastag' },
-        { id: 4, label: 'Rent Pay', icon: Store, color: 'text-indigo-600 bg-indigo-50', href: '/services/rent' },
-        { id: 5, label: 'Scan & Pay', icon: ScanLine, color: 'text-rose-600 bg-rose-50', href: '/scan' },
-        { id: 6, label: 'More', icon: Grid, color: 'text-slate-600 bg-slate-50', href: '/services' },
+        { id: 1, label: 'Gift Cards', icon: Gift, color: 'text-purple-600 bg-purple-50', href: '/gift-cards' },
+        { id: 2, label: 'Electricity', icon: Zap, color: 'text-amber-600 bg-amber-50', href: '/coming-soon' },
+        { id: 3, label: 'Fastag', icon: CreditCard, color: 'text-emerald-600 bg-emerald-50', href: '/coming-soon' },
+        { id: 4, label: 'Rent Pay', icon: Store, color: 'text-indigo-600 bg-indigo-50', href: '/coming-soon' },
+        { id: 5, label: 'Scan & Pay', icon: ScanLine, color: 'text-rose-600 bg-rose-50', href: '/coming-soon' },
+        { id: 6, label: 'More', icon: Grid, color: 'text-slate-600 bg-slate-50', href: '/coming-soon' },
     ];
 
     const stats = [
         { label: 'Wallet Balance', value: `₹${userData.walletBalance.toFixed(2)}`, icon: Wallet, color: 'from-blue-600 to-indigo-600' },
         { label: 'Total Savings', value: `₹${userData.totalSavings.toFixed(2)}`, icon: TrendingUp, color: 'from-emerald-500 to-teal-500' },
         { label: 'Active Cards', value: userData.activeCards.toString(), icon: Gift, color: 'from-purple-500 to-pink-500' }
-    ];
-
-    const recentOrders = [
-        { id: 1, brand: 'Flipkart', value: 500, status: 'delivered', date: '2 days ago', logo: '🛒' },
-        { id: 2, brand: 'Bill Payment', value: 840, status: 'success', date: 'Yesterday', logo: '⚡' },
-        { id: 3, brand: 'Swiggy', value: 300, status: 'processing', date: '1 hour ago', logo: '🍔' },
     ];
 
     if (authLoading || loading) {
@@ -386,7 +464,7 @@ export default function CustomerDashboardPage() {
                         <div className="lg:col-span-2 space-y-8">
 
                             <QuickServices services={quickServices} />
-                            <RecentActivity orders={recentOrders} />
+                            <RecentActivity orders={recentActivity} />
 
                             {/* KYC Banner */}
                             {userData.kycStatus === 'verified' && (
