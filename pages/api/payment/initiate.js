@@ -53,6 +53,25 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Invalid amount' });
         }
 
+        // 2. KYC Verification for Gift Cards
+        if (udf1 === 'GIFT_CARD') {
+            const { data: userProfile, error: profileError } = await supabaseAdmin
+                .from('user_profiles')
+                .select('kyc_status')
+                .eq('id', user.id)
+                .single();
+
+            if (profileError || !userProfile) {
+                console.error('[Payment Initiate] User profile not found for KYC check:', profileError);
+                return res.status(404).json({ error: 'User profile not found' });
+            }
+
+            if (userProfile.kyc_status !== 'approved' && userProfile.kyc_status !== 'verified') {
+                console.warn(`[Payment Initiate] Blocked unverified KYC user ${user.id} from buying Gift Card`);
+                return res.status(403).json({ error: 'KYC Verification is required to purchase gift cards' });
+            }
+        }
+
         // 2. Generate Client Transaction ID
         const clientTxnId = `TXN_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 

@@ -20,6 +20,21 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Invalid token or user not found' }, { status: 401 });
         }
 
+        // 1. Fetch User Profile to check KYC Status
+        const { data: userProfile, error: profileError } = await supabaseAdmin
+            .from('user_profiles')
+            .select('kyc_status')
+            .eq('id', user.id)
+            .single();
+
+        if (profileError || !userProfile) {
+            return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
+        }
+
+        if (userProfile.kyc_status !== 'approved' && userProfile.kyc_status !== 'verified') {
+            return NextResponse.json({ error: 'KYC Verification is required to purchase gift cards. Please complete KYC from your profile.' }, { status: 403 });
+        }
+
         const { couponId } = await request.json();
 
         if (!couponId) {

@@ -106,6 +106,13 @@ export default function GiftCardDetailPage({ params }) {
             router.push('/login');
             return;
         }
+
+        if (kycStatus !== 'approved' && kycStatus !== 'verified') {
+            toast.error('Please complete KYC verification to purchase gift cards.');
+            router.push('/profile?section=kyc');
+            return;
+        }
+
         setShowPaymentModal(true);
     }
 
