@@ -209,7 +209,7 @@ export default function GiftCardsClient({ initialCoupons }) {
                                 onClick={() => setMerchantFilter('all')}
                                 className={`px-5 py-2.5 rounded-xl font-semibold transition-all transform hover:scale-105 ${merchantFilter === 'all'
                                     ? 'bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] text-white shadow-lg'
-                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-2 border-gray-200 dark:border-gray-600 hover:border-[#92BCEA]'
+                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-2 border-gray-200 dark:border-gray-600 hover:border-[#92BCEA] dark:hover:border-[#92BCEA]'
                                     }`}
                             >
                                 All Merchants
@@ -220,7 +220,7 @@ export default function GiftCardsClient({ initialCoupons }) {
                                     onClick={() => setMerchantFilter(merchant)}
                                     className={`px-5 py-2.5 rounded-xl font-semibold transition-all transform hover:scale-105 ${merchantFilter === merchant
                                         ? 'bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] text-white shadow-lg'
-                                        : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-[#92BCEA]'
+                                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-2 border-gray-200 dark:border-gray-600 hover:border-[#92BCEA] dark:hover:border-[#92BCEA]'
                                         }`}
                                 >
                                     {merchant}
@@ -234,9 +234,9 @@ export default function GiftCardsClient({ initialCoupons }) {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.4, delay: 0.5 }}
-                            className="text-gray-600"
+                            className="text-gray-600 dark:text-gray-400"
                         >
-                            Showing <span className="font-bold text-gray-900">{sortedCoupons.length}</span> gift cards
+                            Showing <span className="font-bold text-gray-900 dark:text-white">{sortedCoupons.length}</span> gift cards
                             {merchantFilter !== 'all' && (
                                 <span className="ml-1">from <span className="font-bold text-[#92BCEA]">{merchantFilter}</span></span>
                             )}

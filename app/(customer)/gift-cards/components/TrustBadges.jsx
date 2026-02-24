@@ -39,13 +39,13 @@ export default function TrustBadges() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className="bg-white rounded-2xl p-4 border border-gray-100 hover:border-gray-200 transition-all hover:shadow-lg group"
+                    className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 transition-all hover:shadow-lg group"
                 >
                     <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${badge.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
                         <badge.icon size={20} className="text-white" />
                     </div>
-                    <h3 className="font-bold text-gray-900 text-sm mb-0.5">{badge.title}</h3>
-                    <p className="text-xs text-gray-500">{badge.subtitle}</p>
+                    <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-0.5">{badge.title}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{badge.subtitle}</p>
                 </motion.div>
             ))}
         </div>

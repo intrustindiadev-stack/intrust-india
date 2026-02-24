@@ -14,7 +14,7 @@ const SearchBar = memo(function SearchBar({ searchQuery, setSearchQuery, sortBy,
                     placeholder="Search brands..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#92BCEA] focus:ring-4 focus:ring-[#92BCEA]/10 transition-all"
+                    className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-[#92BCEA] focus:ring-4 focus:ring-[#92BCEA]/10 transition-all"
                 />
             </div>
 
@@ -23,7 +23,7 @@ const SearchBar = memo(function SearchBar({ searchQuery, setSearchQuery, sortBy,
                 <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="w-full appearance-none px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-[#92BCEA] focus:ring-4 focus:ring-[#92BCEA]/10 transition-all cursor-pointer"
+                    className="w-full appearance-none px-4 py-3.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:border-[#92BCEA] focus:ring-4 focus:ring-[#92BCEA]/10 transition-all cursor-pointer"
                 >
                     <option value="popular">Most Popular</option>
                     <option value="discount">Best Discount</option>

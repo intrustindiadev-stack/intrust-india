@@ -9,6 +9,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**', // Allow all external images
       },
+      {
+        protocol: 'https',
+        hostname: 'bhgbylyzlwmmabegxlfc.supabase.co',
+      },
     ],
   },
   // Performance optimizations

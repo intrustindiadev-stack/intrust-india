@@ -9,7 +9,7 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="relative overflow-hidden bg-gradient-to-br from-[#92BCEA]/10 via-white to-[#AFB3F7]/10 rounded-3xl border border-gray-100 p-6 sm:p-8 mb-8"
+            className="relative overflow-hidden bg-gradient-to-br from-[#92BCEA]/10 via-white dark:via-gray-800 to-[#AFB3F7]/10 rounded-3xl border border-gray-100 dark:border-gray-700 p-6 sm:p-8 mb-8"
         >
             {/* Animated Background */}
             <div className="absolute inset-0 overflow-hidden">
@@ -24,14 +24,14 @@ export default function HeroSection() {
                     <span>India's Most Trusted Gift Card Marketplace</span>
                 </div>
 
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
                     Buy Gift Cards at{' '}
                     <span className="bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] bg-clip-text text-transparent">
                         Unbeatable Prices
                     </span>
                 </h1>
 
-                <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto mb-6">
+                <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-6">
                     Get verified gift cards from trusted merchants with instant delivery and save up to 20% on every purchase
                 </p>
 
@@ -45,7 +45,7 @@ export default function HeroSection() {
                                 </div>
                             ))}
                         </div>
-                        <span className="text-gray-700 font-semibold">50,000+ Happy Customers</span>
+                        <span className="text-gray-700 dark:text-gray-300 font-semibold">50,000+ Happy Customers</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                         <div className="flex">
@@ -53,7 +53,7 @@ export default function HeroSection() {
                                 <Star key={i} size={16} className="fill-yellow-400 text-yellow-400" />
                             ))}
                         </div>
-                        <span className="text-gray-700 font-semibold">4.9/5 Rating</span>
+                        <span className="text-gray-700 dark:text-gray-300 font-semibold">4.9/5 Rating</span>
                     </div>
                 </div>
             </div>

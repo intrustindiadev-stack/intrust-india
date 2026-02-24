@@ -19,7 +19,7 @@ const GiftCardItem = memo(function GiftCardItem({ coupon, index = 0 }) {
         >
             <Link
                 href={`/gift-cards/${coupon.id}`}
-                className="group relative bg-white rounded-3xl overflow-hidden border border-gray-100 hover:border-[#92BCEA]/50 transition-all duration-300 hover:shadow-2xl hover:shadow-[#92BCEA]/20 hover:-translate-y-1 h-full flex flex-col cursor-pointer"
+                className="group relative bg-white dark:bg-gray-800 rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-700 hover:border-[#92BCEA]/50 dark:hover:border-[#92BCEA]/50 transition-all duration-300 hover:shadow-2xl hover:shadow-[#92BCEA]/20 dark:hover:shadow-[#92BCEA]/10 hover:-translate-y-1 h-full flex flex-col cursor-pointer"
             >
                 {/* Card Header - Image or Premium Gradient */}
                 <div className={`relative h-36 sm:h-48 bg-gray-50 overflow-hidden ${!coupon.image_url ? `bg-gradient-to-br ${coupon.gradient}` : ''}`}>
@@ -95,28 +95,28 @@ const GiftCardItem = memo(function GiftCardItem({ coupon, index = 0 }) {
                 </div>
 
                 {/* Card Body - Premium */}
-                <div className="p-3 sm:p-5 flex-1 flex flex-col bg-gradient-to-b from-white to-gray-50/50">
+                <div className="p-3 sm:p-5 flex-1 flex flex-col bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900">
                     {/* Price Section */}
                     <div className="flex items-baseline justify-between mb-4">
                         <div>
-                            <div className="text-xs text-gray-400 font-medium mb-1 line-through">₹{coupon.value}</div>
+                            <div className="text-xs text-gray-400 dark:text-gray-500 font-medium mb-1 line-through">₹{coupon.value}</div>
                             <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] bg-clip-text text-transparent">
                                 ₹{coupon.sellingPrice}
                             </div>
                         </div>
                         <div className="text-right">
-                            <div className="text-sm font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg">
+                            <div className="text-sm font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-lg">
                                 Save ₹{(coupon.value - coupon.sellingPrice).toFixed(0)}
                             </div>
                         </div>
                     </div>
 
                     {/* NEW: Merchant Badge - Prominent */}
-                    <div className="mb-3 bg-gradient-to-r from-[#92BCEA]/10 to-[#AFB3F7]/10 rounded-xl px-3 py-2 border border-[#92BCEA]/20">
+                    <div className="mb-3 bg-gradient-to-r from-[#92BCEA]/10 to-[#AFB3F7]/10 dark:from-[#92BCEA]/20 dark:to-[#AFB3F7]/20 rounded-xl px-3 py-2 border border-[#92BCEA]/20 dark:border-[#92BCEA]/30">
                         <div className="flex items-center gap-2">
                             <Store size={14} className="text-[#92BCEA] flex-shrink-0" />
-                            <span className="text-xs text-gray-600">Sold by</span>
-                            <span className="text-sm font-bold text-[#92BCEA] truncate">
+                            <span className="text-xs text-gray-600 dark:text-gray-400">Sold by</span>
+                            <span className="text-sm font-bold text-[#92BCEA] dark:text-white truncate">
                                 {coupon.merchant}
                             </span>
                             {coupon.verified && (
@@ -126,17 +126,17 @@ const GiftCardItem = memo(function GiftCardItem({ coupon, index = 0 }) {
                     </div>
 
                     {/* Rating and Sales Info */}
-                    <div className="flex items-center gap-2 pb-4 border-b border-gray-100 mb-4">
-                        <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-full">
-                            <Star size={12} className="fill-yellow-400 text-yellow-400" />
-                            <span className="text-xs font-bold text-gray-900">{coupon.rating.toFixed(1)}</span>
+                    <div className="flex items-center gap-2 pb-4 border-b border-gray-100 dark:border-gray-700 mb-4">
+                        <div className="flex items-center gap-1 bg-yellow-50 dark:bg-yellow-500/10 px-2 py-1 rounded-full">
+                            <Star size={12} className="fill-yellow-400 text-yellow-500 dark:text-yellow-400" />
+                            <span className="text-xs font-bold text-gray-900 dark:text-gray-100">{coupon.rating.toFixed(1)}</span>
                         </div>
-                        <span className="text-gray-400 text-xs">•</span>
-                        <span className="text-xs text-gray-600 font-medium">{coupon.sold} sold</span>
+                        <span className="text-gray-400 dark:text-gray-600 text-xs">•</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">{coupon.sold} sold</span>
                     </div>
 
                     {/* CTA Button - Visual Only (Parent Link handles navigation) */}
-                    <div className="w-full py-2 sm:py-3.5 bg-gradient-to-r from-gray-900 to-gray-800 group-hover:from-[#92BCEA] group-hover:to-[#AFB3F7] text-white font-bold text-sm rounded-2xl transition-all duration-300 group-hover:shadow-xl group-hover:shadow-[#92BCEA]/30 flex items-center justify-center gap-2 mt-auto relative z-20">
+                    <div className="w-full py-2 sm:py-3.5 bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-700 dark:to-gray-600 group-hover:from-[#92BCEA] group-hover:to-[#AFB3F7] dark:group-hover:from-[#92BCEA] dark:group-hover:to-[#AFB3F7] text-white font-bold text-sm rounded-2xl transition-all duration-300 group-hover:shadow-xl group-hover:shadow-[#92BCEA]/30 flex items-center justify-center gap-2 mt-auto relative z-20">
                         <span>Buy Now</span>
                         <span className="group-hover:translate-x-1 transition-transform">→</span>
                     </div>

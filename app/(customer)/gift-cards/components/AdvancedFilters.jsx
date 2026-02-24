@@ -46,7 +46,7 @@ export default function AdvancedFilters({ filters, setFilters, onApply }) {
             {/* Filter Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 hover:border-[#92BCEA] rounded-xl font-semibold text-gray-700 hover:text-[#92BCEA] transition-all hover:shadow-md relative"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-[#92BCEA] dark:hover:border-[#92BCEA] rounded-xl font-semibold text-gray-700 dark:text-gray-200 hover:text-[#92BCEA] dark:hover:text-[#92BCEA] transition-all hover:shadow-md relative"
             >
                 <SlidersHorizontal size={18} />
                 <span className="hidden sm:inline">Filters</span>
@@ -76,17 +76,17 @@ export default function AdvancedFilters({ filters, setFilters, onApply }) {
                             animate={{ x: 0 }}
                             exit={{ x: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed right-0 top-0 bottom-0 w-full sm:w-96 bg-white shadow-2xl z-50 overflow-y-auto"
+                            className="fixed right-0 top-0 bottom-0 w-full sm:w-96 bg-white dark:bg-gray-900 shadow-2xl z-50 overflow-y-auto"
                         >
                             {/* Header */}
-                            <div className="sticky top-0 bg-white border-b-2 border-gray-100 p-4 flex items-center justify-between z-10">
+                            <div className="sticky top-0 bg-white dark:bg-gray-900 border-b-2 border-gray-100 dark:border-gray-800 p-4 flex items-center justify-between z-10">
                                 <div className="flex items-center gap-2">
                                     <SlidersHorizontal size={20} className="text-[#92BCEA]" />
-                                    <h3 className="text-lg font-bold text-gray-900">Filters</h3>
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Filters</h3>
                                 </div>
                                 <button
                                     onClick={() => setIsOpen(false)}
-                                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+                                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
                                 >
                                     <X size={20} />
                                 </button>
@@ -98,7 +98,7 @@ export default function AdvancedFilters({ filters, setFilters, onApply }) {
                                 <div>
                                     <div className="flex items-center gap-2 mb-3">
                                         <DollarSign size={18} className="text-[#92BCEA]" />
-                                        <h4 className="font-bold text-gray-900">Price Range</h4>
+                                        <h4 className="font-bold text-gray-900 dark:text-white">Price Range</h4>
                                     </div>
                                     <div className="space-y-2">
                                         {priceRanges.map((range) => (
@@ -106,8 +106,8 @@ export default function AdvancedFilters({ filters, setFilters, onApply }) {
                                                 key={range.label}
                                                 onClick={() => handlePriceChange(range.value)}
                                                 className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${filters.priceRange && filters.priceRange[0] === range.value[0] && filters.priceRange[1] === range.value[1]
-                                                        ? 'border-[#92BCEA] bg-[#92BCEA]/10 text-[#92BCEA] font-semibold'
-                                                        : 'border-gray-200 hover:border-[#92BCEA]/50 text-gray-700'
+                                                    ? 'border-[#92BCEA] bg-[#92BCEA]/10 text-[#92BCEA] font-semibold'
+                                                    : 'border-gray-200 dark:border-gray-700 hover:border-[#92BCEA]/50 dark:hover:border-[#92BCEA]/50 text-gray-700 dark:text-gray-300'
                                                     }`}
                                             >
                                                 {range.label}
@@ -120,7 +120,7 @@ export default function AdvancedFilters({ filters, setFilters, onApply }) {
                                 <div>
                                     <div className="flex items-center gap-2 mb-3">
                                         <Percent size={18} className="text-green-600" />
-                                        <h4 className="font-bold text-gray-900">Minimum Discount</h4>
+                                        <h4 className="font-bold text-gray-900 dark:text-white">Minimum Discount</h4>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         {discountRanges.map((discount) => (
@@ -128,8 +128,8 @@ export default function AdvancedFilters({ filters, setFilters, onApply }) {
                                                 key={discount.value}
                                                 onClick={() => handleDiscountChange(discount.value)}
                                                 className={`px-4 py-3 rounded-xl border-2 transition-all font-semibold ${filters.minDiscount === discount.value
-                                                        ? 'border-green-500 bg-green-50 text-green-700'
-                                                        : 'border-gray-200 hover:border-green-300 text-gray-700'
+                                                    ? 'border-green-500 bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400'
+                                                    : 'border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-600 text-gray-700 dark:text-gray-300'
                                                     }`}
                                             >
                                                 {discount.label}
@@ -142,19 +142,19 @@ export default function AdvancedFilters({ filters, setFilters, onApply }) {
                                 <div>
                                     <div className="flex items-center gap-2 mb-3">
                                         <Package size={18} className="text-orange-600" />
-                                        <h4 className="font-bold text-gray-900">Availability</h4>
+                                        <h4 className="font-bold text-gray-900 dark:text-white">Availability</h4>
                                     </div>
                                     <button
                                         onClick={() => setFilters({ ...filters, inStockOnly: !filters.inStockOnly })}
                                         className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all ${filters.inStockOnly
-                                                ? 'border-orange-500 bg-orange-50'
-                                                : 'border-gray-200 hover:border-orange-300'
+                                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-500/10'
+                                            : 'border-gray-200 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-600'
                                             }`}
                                     >
-                                        <span className={`font-semibold ${filters.inStockOnly ? 'text-orange-700' : 'text-gray-700'}`}>
+                                        <span className={`font-semibold ${filters.inStockOnly ? 'text-orange-700 dark:text-orange-400' : 'text-gray-700 dark:text-gray-300'}`}>
                                             In Stock Only
                                         </span>
-                                        <div className={`w-12 h-6 rounded-full transition-colors ${filters.inStockOnly ? 'bg-orange-500' : 'bg-gray-300'
+                                        <div className={`w-12 h-6 rounded-full transition-colors ${filters.inStockOnly ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
                                             } relative`}>
                                             <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${filters.inStockOnly ? 'translate-x-6' : 'translate-x-0.5'
                                                 }`} />
@@ -166,19 +166,19 @@ export default function AdvancedFilters({ filters, setFilters, onApply }) {
                                 <div>
                                     <div className="flex items-center gap-2 mb-3">
                                         <ShieldCheck size={18} className="text-blue-600" />
-                                        <h4 className="font-bold text-gray-900">Merchant Trust</h4>
+                                        <h4 className="font-bold text-gray-900 dark:text-white">Merchant Trust</h4>
                                     </div>
                                     <button
                                         onClick={() => setFilters({ ...filters, verifiedOnly: !filters.verifiedOnly })}
                                         className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all ${filters.verifiedOnly
-                                                ? 'border-blue-500 bg-blue-50'
-                                                : 'border-gray-200 hover:border-blue-300'
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10'
+                                            : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
                                             }`}
                                     >
-                                        <span className={`font-semibold ${filters.verifiedOnly ? 'text-blue-700' : 'text-gray-700'}`}>
+                                        <span className={`font-semibold ${filters.verifiedOnly ? 'text-blue-700 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
                                             Verified Only
                                         </span>
-                                        <div className={`w-12 h-6 rounded-full transition-colors ${filters.verifiedOnly ? 'bg-blue-500' : 'bg-gray-300'
+                                        <div className={`w-12 h-6 rounded-full transition-colors ${filters.verifiedOnly ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
                                             } relative`}>
                                             <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${filters.verifiedOnly ? 'translate-x-6' : 'translate-x-0.5'
                                                 }`} />
@@ -190,7 +190,7 @@ export default function AdvancedFilters({ filters, setFilters, onApply }) {
                                 <div>
                                     <div className="flex items-center gap-2 mb-3">
                                         <Star size={18} className="text-yellow-500" />
-                                        <h4 className="font-bold text-gray-900">Minimum Rating</h4>
+                                        <h4 className="font-bold text-gray-900 dark:text-white">Minimum Rating</h4>
                                     </div>
                                     <div className="grid grid-cols-3 gap-2">
                                         {[4.0, 4.5, 4.8].map((rating) => (
@@ -198,8 +198,8 @@ export default function AdvancedFilters({ filters, setFilters, onApply }) {
                                                 key={rating}
                                                 onClick={() => setFilters({ ...filters, minRating: rating })}
                                                 className={`px-3 py-3 rounded-xl border-2 transition-all font-semibold flex items-center justify-center gap-1 ${filters.minRating === rating
-                                                        ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
-                                                        : 'border-gray-200 hover:border-yellow-300 text-gray-700'
+                                                    ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
+                                                    : 'border-gray-200 dark:border-gray-700 hover:border-yellow-300 dark:hover:border-yellow-600 text-gray-700 dark:text-gray-300'
                                                     }`}
                                             >
                                                 <Star size={14} className="fill-yellow-400 text-yellow-400" />
@@ -211,7 +211,7 @@ export default function AdvancedFilters({ filters, setFilters, onApply }) {
                             </div>
 
                             {/* Footer Actions */}
-                            <div className="sticky bottom-0 bg-white border-t-2 border-gray-100 p-4 space-y-2">
+                            <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t-2 border-gray-100 dark:border-gray-800 p-4 space-y-2">
                                 <button
                                     onClick={() => {
                                         onApply();
@@ -224,7 +224,7 @@ export default function AdvancedFilters({ filters, setFilters, onApply }) {
                                 {hasActiveFilters && (
                                     <button
                                         onClick={handleClearAll}
-                                        className="w-full py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all"
+                                        className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
                                     >
                                         Clear All
                                     </button>

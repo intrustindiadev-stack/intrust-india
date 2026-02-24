@@ -53,7 +53,38 @@ export async function GET(request) {
         }
 
         if (!merchant) {
-            return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
+            // Check if there is a customer wallet
+            const { data: customerWallet } = await supabase.from('customer_wallets').select('balance_paise').eq('user_id', user.id).maybeSingle();
+
+            if (!customerWallet) {
+                return NextResponse.json({ error: 'Merchant or wallet not found' }, { status: 404 });
+            }
+
+            // If it's a regular user, return just their wallet balance
+            const { data: walletTxs } = await supabase
+                .from('wallet_transactions')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(50);
+
+            const normalizedWalletTxs = (walletTxs || []).map(tx => ({
+                id: tx.id,
+                transaction_type: tx.transaction_type || 'CREDIT',
+                description: tx.description || tx.reference_type || 'Wallet Topup',
+                amount: Number(tx.amount || 0).toFixed(2),
+                created_at: tx.created_at,
+            }));
+
+            const balanceRupees = customerWallet.balance_paise ? (customerWallet.balance_paise / 100).toFixed(2) : "0.00";
+            return NextResponse.json({
+                wallet: {
+                    balance: balanceRupees,
+                    balance_paise: customerWallet.balance_paise || 0,
+                    merchant_id: null
+                },
+                transactions: normalizedWalletTxs
+            });
         }
 
         // 2. Fetch Sabpaisa Wallet Top-up transactions

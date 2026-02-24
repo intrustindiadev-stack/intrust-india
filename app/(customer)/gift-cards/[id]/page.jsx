@@ -148,7 +148,7 @@ export default function GiftCardDetailPage({ params }) {
     }
 
     return (
-        <div className="min-h-screen bg-white font-sans">
+        <div className="min-h-screen bg-white dark:bg-gray-900 font-[family-name:var(--font-outfit)]">
             <Navbar />
 
             <div className="pt-28 pb-20">
@@ -208,7 +208,7 @@ export default function GiftCardDetailPage({ params }) {
 
                         {/* LEFT COLUMN: Image */}
                         <div className="flex flex-col gap-6">
-                            <div className="relative w-full h-64 md:h-80 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shadow-sm group">
+                            <div className="relative w-full h-64 md:h-80 rounded-2xl overflow-hidden bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm group">
                                 {card.image_url ? (
                                     <Image
                                         src={card.image_url}
@@ -219,8 +219,8 @@ export default function GiftCardDetailPage({ params }) {
                                     />
                                 ) : (
                                     // Fallback Placeholder if no image
-                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50">
-                                        <Sparkles size={48} className="mb-3 text-gray-300" />
+                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800">
+                                        <Sparkles size={48} className="mb-3 text-gray-300 dark:text-gray-600" />
                                         <span className="text-sm font-medium">No Image Available</span>
                                     </div>
                                 )}
@@ -235,18 +235,18 @@ export default function GiftCardDetailPage({ params }) {
 
                             {/* Trust Badges Details */}
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
-                                    <ShieldCheck className="text-blue-600 w-6 h-6" />
+                                <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
+                                    <ShieldCheck className="text-blue-600 dark:text-blue-400 w-6 h-6" />
                                     <div>
-                                        <p className="text-xs text-gray-500 font-semibold uppercase">Security</p>
-                                        <p className="text-sm font-medium text-gray-900">Secure Payments</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase">Security</p>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Secure Payments</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
-                                    <Clock className="text-blue-600 w-6 h-6" />
+                                <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
+                                    <Clock className="text-blue-600 dark:text-blue-400 w-6 h-6" />
                                     <div>
-                                        <p className="text-xs text-gray-500 font-semibold uppercase">Delivery</p>
-                                        <p className="text-sm font-medium text-gray-900">Instant Delivery</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase">Delivery</p>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Instant Delivery</p>
                                     </div>
                                 </div>
                             </div>
@@ -257,33 +257,33 @@ export default function GiftCardDetailPage({ params }) {
 
                             {/* Header Info */}
                             <div>
-                                <div className="text-sm font-bold text-blue-600 mb-2 uppercase tracking-wide">{card.brand}</div>
-                                <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight mb-4">{card.title}</h1>
+                                <div className="text-sm font-bold text-blue-600 dark:text-blue-400 mb-2 uppercase tracking-wide">{card.brand}</div>
+                                <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white leading-tight mb-4">{card.title}</h1>
 
-                                <div className="flex items-center gap-4 text-sm text-gray-600 mb-6">
+                                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-6">
                                     <div className="flex items-center text-yellow-500">
                                         <Star fill="currentColor" size={18} />
-                                        <span className="ml-1 font-bold text-gray-900">4.8</span>
-                                        <span className="mx-1 text-gray-300">•</span>
-                                        <span className="text-gray-500 underline decoration-gray-300 underline-offset-4">856 Reviews</span>
+                                        <span className="ml-1 font-bold text-gray-900 dark:text-gray-100">4.8</span>
+                                        <span className="mx-1 text-gray-300 dark:text-gray-600">•</span>
+                                        <span className="text-gray-500 dark:text-gray-400 underline decoration-gray-300 dark:decoration-gray-600 underline-offset-4">856 Reviews</span>
                                     </div>
-                                    <div className="w-1 h-1 rounded-full bg-gray-300" />
-                                    <span className={card.status === 'available' ? 'text-green-600 font-medium' : 'text-red-500 font-medium'}>
+                                    <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
+                                    <span className={card.status === 'available' ? 'text-green-600 dark:text-green-500 font-medium' : 'text-red-500 dark:text-red-400 font-medium'}>
                                         {card.status === 'available' ? 'In Stock' : 'sold Out'}
                                     </span>
                                 </div>
                             </div>
 
                             {/* Price Section */}
-                            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
                                 <div className="flex items-end gap-3 mb-2">
-                                    <span className="text-4xl font-extrabold text-gray-900">₹{sellingPrice}</span>
+                                    <span className="text-4xl font-extrabold text-gray-900 dark:text-white">₹{sellingPrice}</span>
                                     {faceValue > sellingPrice && (
-                                        <span className="text-lg text-gray-400 line-through mb-1.5">₹{faceValue}</span>
+                                        <span className="text-lg text-gray-400 dark:text-gray-500 line-through mb-1.5">₹{faceValue}</span>
                                     )}
                                 </div>
                                 {discount > 0 && (
-                                    <p className="text-sm text-green-700 font-medium">
+                                    <p className="text-sm text-green-700 dark:text-green-400 font-medium">
                                         You save <span className="font-bold">₹{Number((faceValue - sellingPrice).toFixed(2))}</span> ({discount}%)
                                     </p>
                                 )}
@@ -291,8 +291,8 @@ export default function GiftCardDetailPage({ params }) {
 
                             {/* Description */}
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-3">Description</h3>
-                                <p className="text-gray-600 leading-relaxed text-sm md:text-base">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">Description</h3>
+                                <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm md:text-base">
                                     {card.description || "Get instant access to this premium gift card. Valid on all products. Full value must be redeemed in a single transaction."}
                                 </p>
                             </div>
@@ -300,14 +300,14 @@ export default function GiftCardDetailPage({ params }) {
                             {/* Quantity Selector (Visual Only for now) */}
                             {isAvailable && (
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-900 mb-3">Quantity</label>
+                                    <label className="block text-sm font-bold text-gray-900 dark:text-white mb-3">Quantity</label>
                                     <div className="flex items-center gap-4">
-                                        <div className="flex items-center border border-gray-300 rounded-xl bg-white h-12">
-                                            <button className="px-4 text-gray-500 hover:text-gray-900 transition-colors" disabled>-</button>
-                                            <span className="w-8 text-center font-bold text-gray-900">1</span>
-                                            <button className="px-4 text-gray-500 hover:text-gray-900 transition-colors" disabled>+</button>
+                                        <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 h-12">
+                                            <button className="px-4 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" disabled>-</button>
+                                            <span className="w-8 text-center font-bold text-gray-900 dark:text-white">1</span>
+                                            <button className="px-4 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" disabled>+</button>
                                         </div>
-                                        <span className="text-xs text-gray-500 font-medium">Max 1 per order</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Max 1 per order</span>
                                     </div>
                                 </div>
                             )}
@@ -359,7 +359,7 @@ export default function GiftCardDetailPage({ params }) {
                                     )}
                                 </button>
 
-                                <button className="w-full py-3.5 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+                                <button className="w-full py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
                                     <Share2 size={18} />
                                     Share with friends
                                 </button>
@@ -367,22 +367,22 @@ export default function GiftCardDetailPage({ params }) {
 
                             {/* Login Prompt */}
                             {!user && (
-                                <p className="text-center text-sm text-gray-500 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
-                                    Please <span className="font-bold text-gray-900 cursor-pointer" onClick={() => router.push('/login')}>Log In</span> to complete your purchase.
+                                <p className="text-center text-sm text-gray-500 dark:text-gray-400 bg-yellow-50 dark:bg-yellow-500/10 p-3 rounded-lg border border-yellow-100 dark:border-yellow-500/20">
+                                    Please <span className="font-bold text-gray-900 dark:text-gray-100 cursor-pointer" onClick={() => router.push('/login')}>Log In</span> to complete your purchase.
                                 </p>
                             )}
                         </div>
                     </div>
 
                     {/* Terms Section Below */}
-                    <div className="mt-16 border-t border-gray-200 pt-10">
-                        <h3 className="text-lg font-bold text-gray-900 mb-4">Terms & Conditions</h3>
+                    <div className="mt-16 border-t border-gray-200 dark:border-gray-800 pt-10">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Terms & Conditions</h3>
                         <ul className="grid md:grid-cols-2 gap-4">
                             {(card.terms_and_conditions
                                 ? card.terms_and_conditions.split('\n')
                                 : ['Valid for 1 year from date of issue.', 'Redeemable online and in-store.', 'Non-refundable.', 'Cannot be exchanged for cash.']
                             ).map((term, i) => (
-                                <li key={i} className="flex gap-3 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                                <li key={i} className="flex gap-3 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                                     <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 shrink-0"></div>
                                     {term}
                                 </li>
@@ -402,6 +402,11 @@ export default function GiftCardDetailPage({ params }) {
                     amount={card.selling_price_paise / 100}
                     user={user}
                     productInfo={{ id: card.id, title: card.title }}
+                    metadata={{
+                        type: 'gift_card_purchase',
+                        coupon_id: id,
+                        face_value: card.face_value_paise / 100
+                    }}
                 />
             )}
 

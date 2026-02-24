@@ -8,7 +8,7 @@ import { useWallet } from '@/hooks/useWallet';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 
-export default function SabpaisaPaymentModal({ isOpen, onClose, amount, user, productInfo }) {
+export default function SabpaisaPaymentModal({ isOpen, onClose, amount, user, productInfo, metadata }) {
     const { balance, fetchBalance, debitWallet } = useWallet();
     const router = useRouter();
 
@@ -36,40 +36,41 @@ export default function SabpaisaPaymentModal({ isOpen, onClose, amount, user, pr
 
         try {
             if (method === 'WALLET') {
-                // Wallet Payment
-                const txn = await debitWallet(
-                    amount,
-                    productInfo.id, // reference_id (gift card id)
-                    'GIFT_CARD_PURCHASE',
-                    `Purchase of ${productInfo.title}`
-                );
+                if (metadata?.type === 'gift_card_purchase') {
+                    // Wallet Payment specifically for Gift Cards
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session) throw new Error('Please log in to continue');
 
-                // If successful, we need to finalize the gift card order.
-                // Normally debitWallet just debits money. 
-                // The gift card logic in `handlePurchase` (in parent page) usually creates an order.
-                // We should probably callback to parent to say "Payment Done, Txn ID: ..."
-                // But the parent page currently handles EVERYTHING.
+                    const response = await fetch('/api/gift-cards/buy-wallet', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`
+                        },
+                        body: JSON.stringify({
+                            couponId: metadata.coupon_id
+                        })
+                    });
 
-                // Let's assume we call a parent callback `onPaymentSuccess(txn)` or similar.
-                // Or better: We call an API to issue the gift card now that payment is done.
-                // BUT wait, debitWallet is just money movement. We need to create the actual order.
-                // The `create-order` API was Razorpay specific.
-                // We likely need a `pages/api/orders/create` that takes a payment confirmation?
-                // OR, we can just say "If debit successful, show success".
-                // The original flow was: Create Order -> Razorpay -> Verify.
+                    const result = await response.json();
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Failed to purchase gift card with wallet');
+                    }
 
-                // FOR SABPAISA: We initiate -> Redirect -> Callback -> Update Txn -> Success Page.
-                // The callback updates the transaction status.
+                    // Success - refresh balance and redirect
+                    await fetchBalance();
+                    router.push(`/payment/success?txnId=WALLET_GC_${Date.now()}&wallet=true`);
+                } else {
+                    // Default generic Wallet Payment
+                    const txn = await debitWallet(
+                        amount,
+                        productInfo.id, // reference_id
+                        'GIFT_CARD_PURCHASE', // Or generic purchase
+                        `Purchase of ${productInfo.title}`
+                    );
 
-                // FOR WALLET: We just debited. 
-                // we should create a "transaction" record in `transactions` table too 
-                // so it appears in history consistent with Sabpaisa payments.
-                // OR `wallet_transactions` is enough? 
-                // The dashboard shows `transactions`. We should probably create a `transaction` entry for uniformity.
-                // For now, let's just treat success as success.
-                // We'll redirect to a success handler.
-
-                router.push(`/payment/success?txnId=${txn.transaction.id}&wallet=true`);
+                    router.push(`/payment/success?txnId=${txn?.transaction?.id || 'WALLET_' + Date.now()}&wallet=true`);
+                }
 
             } else if (method === 'ADD_TO_WALLET') {
                 // Wallet Topup - Initiate Sabpaisa payment to credit wallet

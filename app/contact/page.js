@@ -13,22 +13,22 @@ export default function ContactPage() {
             icon: Phone,
             title: "Talk to Sales",
             details: ["Interested in our merchant solutions? Just pick up the phone to chat with a member of our sales team."],
-            linkText: "+91 98765 43210",
-            action: "tel:+919876543210",
+            linkText: "1800-203-0052",
+            action: "tel:18002030052",
             color: "bg-blue-50 text-blue-600"
         },
         {
             icon: Mail,
             title: "Contact Support",
             details: ["Sometimes you need a little help. Don't worry, we're here for you. Shoot us an email anytime."],
-            linkText: "support@intrust.com",
-            action: "mailto:support@intrust.com",
+            linkText: "info@intrustfinancialindia.com",
+            action: "mailto:info@intrustfinancialindia.com",
             color: "bg-purple-50 text-purple-600"
         },
         {
             icon: MapPin,
             title: "Visit Headquarters",
-            details: ["Come say hello at our office HQ. We're located in the heart of Bangalore's tech corridor."],
+            details: ["Come say hello at our HQ. TF-312/MM09, Ashima Mall, Narmadapuram Rd, Danish Nagar, Bhopal, MP 462026."],
             linkText: "View on Google Maps",
             action: "https://maps.google.com",
             color: "bg-amber-50 text-amber-600"
@@ -86,7 +86,7 @@ export default function ContactPage() {
                         >
                             <div className="rounded-xl overflow-hidden h-64 relative group">
                                 <iframe
-                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3888.003713028247!2d77.61665471482205!3d12.971598690855798!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae1670c9b44e6d%3A0xf8dfc3e8517e4fe0!2sMG%20Road%2C%20Bengaluru%2C%20Karnataka!5e0!3m2!1sen!2sin!4v1652865432109!5m2!1sen!2sin"
+                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d117361.64413155707!2d77.30403759021875!3d23.185966524940003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x397c414d7c0733d1%3A0x889c2596ab5901dc!2sINTRUST%20FINANCIAL%20SERVICE(INDIA)%20PRIVATE%20LIMITED!5e0!3m2!1sen!2smy!4v1700000000000!5m2!1sen!2smy"
                                     width="100%"
                                     height="100%"
                                     style={{ border: 0, filter: 'grayscale(0%)' }}
