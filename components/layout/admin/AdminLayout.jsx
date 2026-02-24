@@ -2,62 +2,67 @@
 
 import { useState } from 'react';
 import AdminSidebar from './AdminSidebar';
+import AdminBottomNav from './AdminBottomNav';
 import { Menu, Search } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
-export default function AdminLayout({ children }) {
+export default function AdminLayout({ children, adminProfile }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    // Get initials or fallback
+    const getInitials = (name) => {
+        if (!name) return 'A';
+        return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    };
+
+    const adminName = adminProfile?.full_name || 'Admin System';
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B0F19] transition-colors duration-300">
             {/* Sidebar */}
-            <AdminSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+            <AdminSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} adminProfile={adminProfile} />
+            <AdminBottomNav isSidebarOpen={sidebarOpen} />
 
             {/* Main Content */}
-            <div className="lg:pl-72 min-h-screen">
+            <div className="lg:pl-72 min-h-screen flex flex-col">
                 {/* Top Bar */}
-                <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
+                <header className="sticky top-0 z-30 bg-white/80 dark:bg-[#0B0F19]/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 shadow-sm transition-colors duration-300">
                     <div className="flex items-center justify-between px-4 sm:px-6 py-4">
-                        {/* Left: Menu + Search */}
+                        {/* Left: Menu */}
                         <div className="flex items-center gap-4 flex-1">
                             <button
                                 onClick={() => setSidebarOpen(true)}
-                                className="lg:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors"
+                                className="lg:hidden p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                             >
-                                <Menu size={24} className="text-gray-700" />
+                                <Menu size={24} className="text-gray-700 dark:text-gray-300" />
                             </button>
-
-                            {/* Search Bar */}
-                            <div className="hidden sm:flex items-center flex-1 max-w-md">
-                                <div className="relative w-full">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                                    <input
-                                        type="text"
-                                        placeholder="Search..."
-                                        className="w-full pl-10 pr-4 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all"
-                                    />
-                                </div>
-                            </div>
                         </div>
 
                         {/* Right: Notifications + Profile */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                             {/* Notifications */}
                             <NotificationBell apiPath="/api/admin/notifications" />
 
                             {/* Profile Badge */}
-                            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 border border-purple-200">
-                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
-                                    A
+                            <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200">
+                                <div className="text-right">
+                                    <p className="text-sm font-bold text-gray-900 leading-tight">{adminName}</p>
+                                    <p className="text-xs text-blue-600 font-medium tracking-wide uppercase">Platform Access</p>
                                 </div>
-                                <span className="text-sm font-semibold text-purple-900">Admin</span>
+                                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20 overflow-hidden">
+                                    {adminProfile?.avatar_url ? (
+                                        <img src={adminProfile.avatar_url} alt={adminName} className="w-full h-full object-cover" />
+                                    ) : (
+                                        getInitials(adminName)
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
                 </header>
 
                 {/* Page Content */}
-                <main className="p-4 sm:p-6">
+                <main className="flex-1 bg-slate-50 min-h-full pb-28 md:pb-0">
                     {children}
                 </main>
             </div>

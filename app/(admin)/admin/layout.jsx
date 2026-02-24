@@ -14,7 +14,7 @@ export default async function AdminRootLayout({ children }) {
 
     const { data: profile } = await supabase
         .from('user_profiles')
-        .select('role')
+        .select('role, full_name, email, avatar_url')
         .eq('id', user.id)
         .single();
 
@@ -23,9 +23,6 @@ export default async function AdminRootLayout({ children }) {
     }
 
     return (
-        <>
-            <AdminLayout>{children}</AdminLayout>
-            <AdminBottomNav />
-        </>
+        <AdminLayout adminProfile={profile}>{children}</AdminLayout>
     );
 }

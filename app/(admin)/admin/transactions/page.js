@@ -1,144 +1,148 @@
-"use client";
+import { Download, Filter, Activity, TrendingUp, TrendingDown } from "lucide-react";
+import TransactionCard from "@/components/admin/transactions/TransactionCard";
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
 
-import { useState } from "react";
+export default async function TransactionsPage() {
+    const supabase = await createServerSupabaseClient();
 
-export default function TransactionsPage() {
-    const [transactions] = useState([
-        {
-            id: "TXN-1001",
-            user: "rahul@example.com",
-            amount: "₹2,500",
-            date: "2024-05-15 10:30 AM",
-            status: "Success",
-            type: "Credit",
-        },
-        {
-            id: "TXN-1002",
-            user: "priya@example.com",
-            amount: "₹1,200",
-            date: "2024-05-14 02:15 PM",
-            status: "Failed",
-            type: "Debit",
-        },
-        {
-            id: "TXN-1003",
-            user: "amit.k@example.com",
-            amount: "₹500",
-            date: "2024-05-14 11:00 AM",
-            status: "Processing",
-            type: "Credit",
-        },
-        {
-            id: "TXN-1004",
-            user: "sneha.99@example.com",
-            amount: "₹3,750",
-            date: "2024-05-13 06:45 PM",
-            status: "Success",
-            type: "Debit",
-        },
-        {
-            id: "TXN-1005",
-            user: "vikram@example.com",
-            amount: "₹150",
-            date: "2024-05-13 09:20 AM",
-            status: "Success",
-            type: "Credit",
-        },
-    ]);
+    // Fetch orders
+    let { data: orders, error } = await supabase
+        .from('orders')
+        .select(`
+            id,
+            amount,
+            created_at,
+            payment_status,
+            user_id
+        `)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Failed to fetch orders for transactions:", error);
+        orders = [];
+    }
+
+    // Fetch user profiles for mapping roles
+    let profileMap = {};
+    if (orders && orders.length > 0) {
+        const userIds = [...new Set(orders.map(o => o.user_id))];
+        const { data: profiles } = await supabase
+            .from('user_profiles')
+            .select('id, full_name, email, role')
+            .in('id', userIds);
+
+        profiles?.forEach(p => {
+            profileMap[p.id] = p;
+        });
+    }
+
+    // Map into expected transaction format
+    const transactions = (orders || []).map(order => {
+        const profile = profileMap[order.user_id] || {};
+        const isSuccess = order.payment_status === 'paid';
+        const isFail = order.payment_status === 'failed';
+
+        return {
+            id: order.id,
+            user: profile.full_name || profile.email || 'Unknown User',
+            email: profile.email || order.user_id,
+            role: profile.role || 'user',
+            amount: `₹${((order.amount || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+            date: new Date(order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            status: isSuccess ? 'Success' : isFail ? 'Failed' : 'Processing',
+            type: 'Credit', // Orders are considered inbound (Credit)
+        };
+    });
+
+    const stats = {
+        total: transactions.length,
+        received: transactions.filter(t => t.type === 'Credit').length,
+        sent: transactions.filter(t => t.type === 'Debit').length,
+    };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-8">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto font-[family-name:var(--font-outfit)] space-y-8">
             {/* Header Section */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Transactions</h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                        View and manage recent financial activities.
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div className="space-y-1">
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+                        <Activity className="text-blue-500 w-10 h-10" />
+                        Transactions
+                    </h1>
+                    <p className="text-slate-500 font-medium">
+                        Monitor platform activity, analyze funds flow, and manage settlements.
                     </p>
                 </div>
-                <div className="flex gap-2">
-                    <button className="px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm">
-                        Export CSV
+                <div className="flex gap-3">
+                    <button className="flex items-center gap-2 px-5 py-2.5 bg-white text-slate-700 text-sm font-bold rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
+                        <Download size={18} strokeWidth={2.5} />
+                        Export
                     </button>
-                    <button className="px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors shadow-sm">
+                    <button className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-2xl border border-slate-900 shadow-md hover:shadow-lg hover:shadow-slate-900/20 transition-all">
+                        <Filter size={18} strokeWidth={2.5} />
                         Filter
                     </button>
                 </div>
             </div>
 
-            {/* Table Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider font-semibold">
-                                <th className="px-6 py-4">Transaction ID</th>
-                                <th className="px-6 py-4">User</th>
-                                <th className="px-6 py-4">Amount</th>
-                                <th className="px-6 py-4">Type</th>
-                                <th className="px-6 py-4">Date</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {transactions.map((txn) => (
-                                <tr
-                                    key={txn.id}
-                                    className="hover:bg-gray-50 transition-colors duration-150 group"
-                                >
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="text-sm font-mono text-gray-900">
-                                            {txn.id}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm text-gray-900 font-medium">
-                                            {txn.user.split('@')[0]}
-                                        </div>
-                                        <div className="text-xs text-gray-500">
-                                            {txn.user}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="text-sm font-medium text-gray-900">
-                                            {txn.amount}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${txn.type === 'Credit' ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-600'
-                                            }`}>
-                                            {txn.type}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="text-sm text-gray-600">
-                                            {txn.date}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span
-                                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${txn.status === "Success"
-                                                    ? "bg-green-100 text-green-700"
-                                                    : txn.status === "Failed"
-                                                        ? "bg-red-100 text-red-700"
-                                                        : "bg-yellow-100 text-yellow-700"
-                                                }`}
-                                        >
-                                            {txn.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button className="text-indigo-600 hover:text-indigo-900 transition-colors bg-indigo-50 px-3 py-1 rounded-lg">
-                                            View
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
+                    <div className="relative flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Total Txns</p>
+                            <p className="text-4xl font-extrabold text-slate-900">{stats.total}</p>
+                        </div>
+                        <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shadow-sm text-blue-600">
+                            <Activity size={28} strokeWidth={2.5} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
+                    <div className="relative flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Received (Credit)</p>
+                            <p className="text-4xl font-extrabold text-emerald-600">{stats.received}</p>
+                        </div>
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shadow-sm text-emerald-500">
+                            <TrendingDown size={28} strokeWidth={2.5} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-6 -top-6 w-24 h-24 bg-sky-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
+                    <div className="relative flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Sent (Debit)</p>
+                            <p className="text-4xl font-extrabold text-sky-500">{stats.sent}</p>
+                        </div>
+                        <div className="w-14 h-14 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center shadow-sm text-sky-500">
+                            <TrendingUp size={28} strokeWidth={2.5} />
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            {/* Transactions Grid */}
+            {transactions.length === 0 ? (
+                <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300 shadow-sm">
+                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Activity size={32} className="text-slate-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-1">No transactions found</h3>
+                    <p className="text-slate-500 font-medium">Activities will appear here once users start sending or receiving funds.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {transactions.map((txn) => (
+                        <TransactionCard key={txn.id} txn={txn} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

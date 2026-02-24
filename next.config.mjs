@@ -19,6 +19,8 @@ const nextConfig = {
   // Remove development features in production
   productionBrowserSourceMaps: false,
 
+  serverExternalPackages: ['jsonwebtoken'],
+
   // Optimize imports
   modularizeImports: {
     'lucide-react': {
