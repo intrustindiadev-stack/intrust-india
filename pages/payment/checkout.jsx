@@ -9,10 +9,9 @@ const CheckoutPage = () => {
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    // In a real app, amount/product would come from query params, cart, or context
-    // Hardcoded for demonstration
-    const amount = '100.00';
-    const productDescription = 'Test Product Payment';
+    const { amount: queryAmount, desc, productId } = router.query;
+    const amount = queryAmount || '100.00';
+    const productDescription = desc || 'Test Product Payment';
 
     useEffect(() => {
         const checkUser = async () => {
@@ -54,6 +53,7 @@ const CheckoutPage = () => {
                         <PaymentForm
                             amount={amount}
                             productDescription={productDescription}
+                            productId={productId}
                             userProfile={userProfile}
                         />
                     </div>

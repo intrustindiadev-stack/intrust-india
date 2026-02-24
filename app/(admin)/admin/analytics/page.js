@@ -1,5 +1,6 @@
 import { Users, CreditCard, TrendingUp, Activity, DollarSign, Store } from "lucide-react";
 import AdminAnalyticsCharts from "./AdminAnalyticsCharts";
+import AnalyticsPieCharts from "./AnalyticsPieCharts";
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 
 export default async function AnalyticsPage() {
@@ -57,6 +58,40 @@ export default async function AnalyticsPage() {
         { name: 'Gift Card Sales', value: gcSales || 500 },
         { name: 'Merchant Vouchers', value: voucherSales || 500 },
     ];
+
+    // ── PIE CHART DATA ──────────────────────────────
+
+    // 1. User Role Distribution
+    const allNonAdminUsers = (users || []).filter(u => u.role !== 'admin');
+    const merchantUsers = allNonAdminUsers.filter(u => u.role === 'merchant').length;
+    const customerUsers = allNonAdminUsers.filter(u => u.role !== 'merchant').length;
+    const userRoleData = [
+        { name: 'Customers', value: customerUsers || 1 },
+        { name: 'Merchants', value: merchantUsers || 1 },
+    ];
+
+    // 2. Order Payment Status
+    const paidOrders = (orders || []).filter(o => o.payment_status === 'paid').length;
+    const failedOrders = (orders || []).filter(o => o.payment_status === 'failed').length;
+    const pendingOrders = (orders || []).filter(o => o.payment_status !== 'paid' && o.payment_status !== 'failed').length;
+    const orderStatusData = [
+        { name: 'Paid', value: paidOrders || 1 },
+        { name: 'Failed', value: failedOrders || 1 },
+        { name: 'Pending', value: pendingOrders || 1 },
+    ];
+
+    // 3. Merchant Status Breakdown
+    const approvedM = (merchants || []).filter(m => m.status === 'approved' || m.status === 'verified').length;
+    const pendingM = (merchants || []).filter(m => m.status === 'pending').length;
+    const rejectedM = (merchants || []).filter(m => m.status === 'rejected').length;
+    const suspendedM = (merchants || []).filter(m => m.status === 'suspended').length;
+    const merchantStatusData = [
+        { name: 'Approved', value: approvedM || 1 },
+        { name: 'Pending', value: pendingM || 1 },
+        { name: 'Rejected', value: rejectedM || 1 },
+        { name: 'Suspended', value: suspendedM || 1 },
+    ];
+    // ───────────────────────────────────────────────
 
     // Real-time Activity Feed
     const profileMap = (users || []).reduce((acc, u) => { acc[u.id] = u; return acc; }, {});
@@ -126,12 +161,21 @@ export default async function AnalyticsPage() {
                 ))}
             </div>
 
+            <AnalyticsPieCharts
+                initialUserRoleData={userRoleData}
+                initialOrderStatusData={orderStatusData}
+                initialMerchantStatusData={merchantStatusData}
+            />
+
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
                 {/* Charts Section (Takes up 2 cols on large screens) */}
                 <div className="xl:col-span-2">
                     <AdminAnalyticsCharts
                         userGrowthData={userGrowthData}
                         revenueSourceData={revenueSourceData}
+                        userRoleData={userRoleData}
+                        orderStatusData={orderStatusData}
+                        merchantStatusData={merchantStatusData}
                     />
                 </div>
 

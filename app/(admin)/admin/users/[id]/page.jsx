@@ -11,7 +11,8 @@ import {
     AlertCircle,
     Clock,
     CreditCard,
-    ShoppingBag
+    ShoppingBag,
+    Star
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -174,6 +175,12 @@ export default async function AdminUserDetailPage({ params }) {
                                 {user.role || 'customer'}
                             </span>
                             {user.kyc_status && getStatusBadge(user.kyc_status)}
+                            {user.is_gold_verified && user.subscription_expiry && new Date(user.subscription_expiry) > new Date() && (
+                                <span className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-black uppercase tracking-wide bg-gradient-to-r from-amber-400 to-yellow-500 text-black shadow-md shadow-amber-200">
+                                    <Star size={13} className="fill-black" />
+                                    Gold Member
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -279,6 +286,42 @@ export default async function AdminUserDetailPage({ params }) {
 
                 {/* Right Column: Quick Info & Activity */}
                 <div className="space-y-8">
+
+                    {/* Gold Subscription Status Card */}
+                    {user.is_gold_verified ? (
+                        <div className={`rounded-3xl p-6 border shadow-xl ${user.subscription_expiry && new Date(user.subscription_expiry) > new Date()
+                                ? 'bg-gradient-to-br from-[#1a1600] via-[#2a2200] to-[#000] border-amber-500/40 text-white'
+                                : 'bg-gray-50 border-gray-200 text-gray-700'
+                            }`}>
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className={`p-2 rounded-xl ${user.subscription_expiry && new Date(user.subscription_expiry) > new Date()
+                                        ? 'bg-amber-400/20'
+                                        : 'bg-gray-200'
+                                    }`}>
+                                    <Star size={18} className={user.subscription_expiry && new Date(user.subscription_expiry) > new Date() ? 'text-amber-400 fill-amber-400' : 'text-gray-400 fill-gray-400'} />
+                                </div>
+                                <h2 className="text-base font-extrabold tracking-tight">
+                                    Gold Subscription
+                                </h2>
+                            </div>
+                            {user.subscription_expiry && new Date(user.subscription_expiry) > new Date() ? (
+                                <>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-1">Active</p>
+                                    <p className="text-xs font-semibold text-amber-200/70">
+                                        Expires on {new Date(user.subscription_expiry).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-red-500 mb-1">Expired</p>
+                                    <p className="text-xs font-semibold text-gray-500">
+                                        Expired on {user.subscription_expiry ? new Date(user.subscription_expiry).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
+                                    </p>
+                                </>
+                            )}
+                        </div>
+                    ) : null}
+
                     <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 border border-slate-700 shadow-xl text-white">
                         <h2 className="text-lg font-extrabold text-white mb-6 tracking-tight flex items-center gap-2">
                             <CreditCard size={20} className="text-blue-400" />

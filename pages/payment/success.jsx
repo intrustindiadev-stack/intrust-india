@@ -86,14 +86,14 @@ const SuccessPage = () => {
                             </Link>
                         ) : (
                             <Link
-                                href="/merchant/dashboard"
+                                href="/my-giftcards"
                                 className="w-full py-4 px-6 rounded-2xl text-sm font-bold text-white bg-gradient-to-r from-indigo-500 to-blue-600 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all transform duration-200"
                             >
-                                Back to Dashboard
+                                View My Gift Cards
                             </Link>
                         )}
-                        <Link href="/" className="text-gray-400 hover:text-gray-600 text-xs font-semibold uppercase tracking-widest transition-colors py-2">
-                            Return to Home
+                        <Link href="/gift-cards" className="text-gray-400 hover:text-gray-600 text-xs font-semibold uppercase tracking-widest transition-colors py-2">
+                            Browse More Gift Cards
                         </Link>
                     </div>
                 </div>

@@ -1,9 +1,16 @@
 'use client';
 
-import { Mail, Phone, Calendar, MoreVertical, Shield, User } from 'lucide-react';
+import { Mail, Phone, Calendar, MoreVertical, Shield, User, Star } from 'lucide-react';
 import Link from 'next/link';
 
 export default function UserCard({ user }) {
+
+    const isGoldActive = () => {
+        if (!user.is_gold_verified) return false;
+        if (!user.subscription_expiry) return false;
+        return new Date(user.subscription_expiry) > new Date();
+    };
+
 
     const getInitials = (name) => {
         if (!name) return 'U';
@@ -41,6 +48,17 @@ export default function UserCard({ user }) {
             {/* Top Indicator Line */}
             <div className={`absolute top-0 left-0 w-full h-1.5 ${user.role === 'admin' ? 'bg-slate-800' : user.role === 'merchant' ? 'bg-sky-500' : 'bg-blue-600'
                 }`} />
+
+            {/* Gold Subscription Badge */}
+            {isGoldActive() && (
+                <div
+                    title={`Gold active until ${new Date(user.subscription_expiry).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                    className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 shadow-md shadow-amber-200/60 z-10"
+                >
+                    <Star size={9} className="fill-black text-black" />
+                    <span className="text-[9px] font-black text-black tracking-widest uppercase">Gold</span>
+                </div>
+            )}
 
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-4">

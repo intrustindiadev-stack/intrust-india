@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabaseClient';
 import {
     LayoutDashboard,
     Users,
@@ -17,7 +18,8 @@ import {
     Sparkles,
     Gift,
     Home,
-    Banknote
+    Banknote,
+    Loader2
 } from 'lucide-react';
 
 const navigation = [
@@ -33,6 +35,22 @@ const navigation = [
 
 export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
     const pathname = usePathname();
+    const router = useRouter();
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+        try {
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            router.push('/login');
+        } catch (error) {
+            console.error('Logout error:', error);
+            window.location.href = '/login';
+        } finally {
+            setIsLoggingOut(false);
+        }
+    };
 
     const getInitials = (name) => {
         if (!name) return 'A';
@@ -68,18 +86,6 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                                     <div className="text-white font-bold text-lg tracking-wide">InTrust</div>
                                     <div className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Admin</div>
                                 </div>
-                            </Link>
-
-                            {/* Home Button */}
-                            <Link
-                                href="/"
-                                className="p-2.5 rounded-xl bg-slate-800/50 hover:bg-blue-500/10 text-slate-400 hover:text-blue-400 transition-all group relative border border-transparent hover:border-blue-500/20 ml-2"
-                                title="Go to Platform"
-                            >
-                                <Home size={18} />
-                                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-lg border border-slate-700">
-                                    Exit to App
-                                </span>
                             </Link>
                         </div>
 
@@ -143,9 +149,13 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                                 </div>
                             </div>
 
-                            <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all font-semibold text-sm">
-                                <LogOut size={16} />
-                                Logout
+                            <button
+                                onClick={handleLogout}
+                                disabled={isLoggingOut}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {isLoggingOut ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}
+                                {isLoggingOut ? 'Logging out...' : 'Logout'}
                             </button>
                         </div>
                     </div>

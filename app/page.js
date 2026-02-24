@@ -24,6 +24,9 @@ export default async function Home() {
       .eq('id', user.id)
       .single();
 
+    if (profile?.role === 'admin') {
+      redirect('/admin');
+    }
     if (profile?.role === 'merchant') {
       redirect('/merchant/dashboard');
     }

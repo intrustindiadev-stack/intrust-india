@@ -27,11 +27,11 @@ export default function GiftCardItem({ card, onEdit, onDelete, deleteLoading }) 
                 <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-slate-900 truncate text-lg">{card.brand}</h3>
                     <p className="text-sm font-medium text-slate-500 truncate line-clamp-1">{card.title}</p>
-                    <div className="mt-2 flex items-center gap-2">
-                        <span className="px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 text-[10px] font-extrabold uppercase tracking-wider border border-blue-100">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 text-[10px] font-extrabold uppercase tracking-wider border border-blue-100 whitespace-nowrap">
                             {card.category}
                         </span>
-                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wider border ${isAvailable ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] whitespace-nowrap font-extrabold uppercase tracking-wider border ${isAvailable ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                             isSold ? 'bg-slate-50 text-slate-600 border-slate-200' : 'bg-red-50 text-red-700 border-red-200'
                             }`}>
                             {card.status}

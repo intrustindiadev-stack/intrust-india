@@ -39,14 +39,15 @@ export default async function AdminDashboard() {
     ] = await Promise.all([
         // 1. Total Revenue (Paid Orders)
         supabase.from('orders')
-            .select('amount_paise')
+            .select('amount')
             .eq('payment_status', 'paid')
             .then(({ data, error }) => {
                 if (error) {
-                    console.error('Error fetching revenue:', error);
+                    console.error('Error fetching revenue:', error.message || error);
                     return 0;
                 }
-                return data.reduce((sum, order) => sum + (order.amount_paise || 0), 0);
+                if (!data || !Array.isArray(data)) return 0;
+                return data.reduce((sum, order) => sum + (Number(order.amount) || 0), 0);
             }),
 
         // 2. Active Merchants (User Profiles with role 'merchant')
@@ -81,7 +82,7 @@ export default async function AdminDashboard() {
         supabase.from('orders')
             .select(`
                 id,
-                amount_paise,
+                amount,
                 created_at,
                 payment_status,
                 user_id,
@@ -308,7 +309,7 @@ export default async function AdminDashboard() {
                                                         {new Date(tx.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                     </td>
                                                     <td className="p-4 pr-6 text-right font-bold text-slate-900 dark:text-white">
-                                                        {formatPrice(tx.amount_paise)}
+                                                        {formatPrice(tx.amount)}
                                                     </td>
                                                 </tr>
                                             ))

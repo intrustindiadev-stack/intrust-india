@@ -41,7 +41,8 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Gift card is no longer available' }, { status: 400 });
         }
 
-        const purchaseAmount = parseFloat(coupon.sellingPrice || coupon.value);
+        // Use selling_price_paise (paise) from DB, convert to rupees
+        const purchaseAmount = (coupon.selling_price_paise || coupon.face_value_paise || 0) / 100;
 
         // 2. Fetch User Wallet
         const { data: wallet, error: walletError } = await supabaseAdmin
@@ -90,7 +91,23 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Failed to issue gift card' }, { status: 500 });
         }
 
-        // 5. Create transaction record (Optional but good for history)
+        // 5. Create an order record so it appears on My Gift Cards page
+        const { error: orderError } = await supabaseAdmin
+            .from('orders')
+            .insert({
+                user_id: user.id,
+                giftcard_id: couponId,
+                amount: purchaseAmountPaise,
+                payment_status: 'paid',
+                created_at: new Date().toISOString()
+            });
+
+        if (orderError) {
+            console.error('Failed to create order record:', orderError);
+            // Non-fatal — coupon is already assigned, just log the error
+        }
+
+        // 6. Create transaction record for history
         await supabaseAdmin.from('transactions').insert({
             user_id: user.id,
             amount: purchaseAmount,
@@ -100,7 +117,8 @@ export async function POST(request) {
             reference_id: couponId
         }).catch(err => console.error("Could not insert transaction history:", err));
 
-        return NextResponse.json({ success: true, message: 'Gift card purchased successfully', newBalance });
+        const newBalanceRupees = (newBalancePaise / 100).toFixed(2);
+        return NextResponse.json({ success: true, message: 'Gift card purchased successfully', newBalance: newBalanceRupees });
 
     } catch (error) {
         console.error('Wallet Purchase API Error:', error);

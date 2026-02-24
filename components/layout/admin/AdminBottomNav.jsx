@@ -1,9 +1,11 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Store, DollarSign, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Store, DollarSign, Settings, LogOut, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { createClient } from '@/lib/supabaseClient';
 
 const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
@@ -15,6 +17,22 @@ const navItems = [
 
 export default function AdminBottomNav({ isSidebarOpen }) {
     const pathname = usePathname();
+    const router = useRouter();
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+        try {
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            router.push('/login');
+        } catch (error) {
+            console.error('Logout error:', error);
+            window.location.href = '/login';
+        } finally {
+            setIsLoggingOut(false);
+        }
+    };
 
     return (
         <>
@@ -63,6 +81,21 @@ export default function AdminBottomNav({ isSidebarOpen }) {
                             </Link>
                         );
                     })}
+
+                    {/* Logout Button */}
+                    <button
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        className="relative flex flex-col items-center justify-center h-14 min-w-[3.5rem] group disabled:opacity-60"
+                    >
+                        <div className="relative z-10 flex flex-col items-center justify-center gap-1">
+                            {isLoggingOut
+                                ? <Loader2 size={22} strokeWidth={2} className="text-rose-500 animate-spin" />
+                                : <LogOut size={22} strokeWidth={2} className="text-slate-400 group-hover:text-rose-500 transition-colors duration-300" />
+                            }
+                            <div className="w-1 h-1 rounded-full bg-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                    </button>
                 </div>
             </motion.nav>
         </>

@@ -13,14 +13,19 @@ export default function UserSearch() {
     const debouncedSearch = useDebounce(searchTerm, 500);
 
     useEffect(() => {
-        const params = new URLSearchParams(searchParams.toString());
-        if (debouncedSearch) {
-            params.set('search', debouncedSearch);
-        } else {
-            params.delete('search');
+        const currentSearch = searchParams.get('search') || '';
+
+        // Prevent infinite loop: Only push if the debounced term differs from the URL
+        if (debouncedSearch !== currentSearch) {
+            const params = new URLSearchParams(searchParams.toString());
+            if (debouncedSearch) {
+                params.set('search', debouncedSearch);
+            } else {
+                params.delete('search');
+            }
+            params.set('page', '1'); // Reset to page 1 on search
+            router.push(`/admin/users?${params.toString()}`);
         }
-        params.set('page', '1'); // Reset to page 1 on search
-        router.push(`/admin/users?${params.toString()}`);
     }, [debouncedSearch, router, searchParams]);
 
     return (

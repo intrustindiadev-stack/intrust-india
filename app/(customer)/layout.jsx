@@ -23,6 +23,10 @@ export default async function CustomerLayout({ children }) {
             .eq('id', user.id)
             .single();
 
+        // If admin tries to access customer routes, redirect to admin panel
+        if (profile?.role === 'admin') {
+            redirect('/admin');
+        }
         // If merchant tries to access customer routes, redirect them to their dashboard
         if (profile?.role === 'merchant') {
             redirect('/merchant/dashboard');

@@ -212,6 +212,45 @@ export default async function handler(req, res) {
             }
         }
 
+        // 5b. Handle Gift Card Purchase — Create order record so it appears on "My Gift Cards"
+        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GIFT_CARD' && !wasAlreadySuccess) {
+            try {
+                const couponId = existingTxn.udf2;
+                if (couponId) {
+                    const supabaseAdmin = createClient(
+                        process.env.NEXT_PUBLIC_SUPABASE_URL,
+                        process.env.SUPABASE_SERVICE_ROLE_KEY
+                    );
+
+                    // Mark coupon as sold and assign to user
+                    await supabaseAdmin
+                        .from('coupons')
+                        .update({
+                            status: 'sold',
+                            purchased_by: existingTxn.user_id,
+                            purchased_at: new Date().toISOString()
+                        })
+                        .eq('id', couponId);
+
+                    // Create order record
+                    const amountPaise = Math.round(parseFloat(amount) * 100);
+                    await supabaseAdmin
+                        .from('orders')
+                        .insert({
+                            user_id: existingTxn.user_id,
+                            giftcard_id: couponId,
+                            amount: amountPaise,
+                            payment_status: 'paid',
+                            created_at: new Date().toISOString()
+                        });
+
+                    console.log(`[GIFT_CARD] Order created for coupon ${couponId}, user ${existingTxn.user_id}`);
+                }
+            } catch (gcError) {
+                console.error('Failed to create gift card order:', gcError);
+            }
+        }
+
         // 6. Handle Gold Subscription Success
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GOLD_SUBSCRIPTION') {
             // Only reward if this is the first time success for this txn

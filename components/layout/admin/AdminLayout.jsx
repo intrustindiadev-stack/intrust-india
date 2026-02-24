@@ -39,17 +39,17 @@ export default function AdminLayout({ children, adminProfile }) {
                         </div>
 
                         {/* Right: Notifications + Profile */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3 shrink-0">
                             {/* Notifications */}
                             <NotificationBell apiPath="/api/admin/notifications" />
 
                             {/* Profile Badge */}
-                            <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200">
+                            <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-gray-200">
                                 <div className="text-right">
                                     <p className="text-sm font-bold text-gray-900 leading-tight">{adminName}</p>
                                     <p className="text-xs text-blue-600 font-medium tracking-wide uppercase">Platform Access</p>
                                 </div>
-                                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20 overflow-hidden">
+                                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20 overflow-hidden shrink-0">
                                     {adminProfile?.avatar_url ? (
                                         <img src={adminProfile.avatar_url} alt={adminName} className="w-full h-full object-cover" />
                                     ) : (

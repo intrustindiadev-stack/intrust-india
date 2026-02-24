@@ -4,37 +4,55 @@ import Image from 'next/image';
 export default function PaymentMethodCard({ method, icon, onClick, disabled, selected }) {
     return (
         <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: disabled ? 1 : 1.04, y: disabled ? 0 : -2 }}
+            whileTap={{ scale: disabled ? 1 : 0.97 }}
             onClick={!disabled ? onClick : undefined}
             className={`
-                relative p-4 rounded-xl border cursor-pointer transition-all
+                group relative p-5 rounded-2xl border-2 cursor-pointer
+                transition-all duration-200
                 ${selected
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 hover:border-blue-400 bg-white dark:bg-gray-800 dark:border-gray-700'
+                    ? 'border-indigo-500 bg-gradient-to-br from-indigo-50 to-white shadow-lg shadow-indigo-100 ring-2 ring-indigo-200'
+                    : 'border-gray-100 bg-white hover:border-indigo-300 hover:shadow-md hover:bg-indigo-50/30'
                 }
-                ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                ${disabled ? 'opacity-40 cursor-not-allowed !shadow-none' : ''}
             `}
         >
             <div className="flex flex-col items-center gap-3 text-center">
-                <div className="w-10 h-10 relative">
-                    {/* Placeholder for icon images if not provided */}
+                {/* Icon container */}
+                <div className={`
+                    w-12 h-12 rounded-xl flex items-center justify-center
+                    transition-all duration-200
+                    ${selected
+                        ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-200'
+                        : 'bg-gray-50 text-gray-500 group-hover:bg-indigo-100 group-hover:text-indigo-600'
+                    }
+                `}>
                     {icon ? (
-                        // If icon is a string URL
                         typeof icon === 'string' ?
-                            <Image src={icon} alt={method} fill className="object-contain" />
-                            : icon // If it's a component
+                            <Image src={icon} alt={method} fill className="object-contain p-2" />
+                            : <span className="[&>svg]:!w-5 [&>svg]:!h-5 [&>svg]:!text-current">{icon}</span>
                     ) : (
-                        <div className="w-full h-full bg-gray-200 rounded-full flex items-center justify-center text-xs text-gray-500">
-                            {method[0]}
-                        </div>
+                        <span className="text-base font-bold">{method[0]}</span>
                     )}
                 </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">{method}</span>
+
+                {/* Label */}
+                <span className={`text-sm font-semibold transition-colors ${selected ? 'text-indigo-700' : 'text-gray-700'}`}>
+                    {method}
+                </span>
             </div>
 
+            {/* Selected check badge */}
             {selected && (
-                <div className="absolute top-2 right-2 w-4 h-4 bg-blue-600 rounded-full border-2 border-white"></div>
+                <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center shadow-md"
+                >
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                </motion.div>
             )}
         </motion.div>
     );

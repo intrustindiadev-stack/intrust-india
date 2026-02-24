@@ -110,6 +110,30 @@ export async function middleware(request) {
             return redirectResponse
         }
 
+        // Role-based access: if user is on customer/merchant routes, check if they are admin
+        // Admins should ONLY access /admin – redirect them away from everything else
+        if (user && (isProtectedRoute || isMerchantRoute)) {
+            try {
+                const { data: profile } = await supabase
+                    .from('user_profiles')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile?.role === 'admin') {
+                    console.log('[MIDDLEWARE:ADMIN_REDIRECT]', { requestId, from: pathname, to: '/admin' });
+                    const redirectResponse = NextResponse.redirect(new URL('/admin', request.url));
+                    response.cookies.getAll().forEach(cookie => {
+                        redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+                    });
+                    return redirectResponse;
+                }
+            } catch (profileError) {
+                console.error('[MIDDLEWARE:PROFILE_ERROR]', profileError);
+                // Fail open – let the page/layout handle the role check
+            }
+        }
+
         // Simplified redirect - let layouts handle role-based routing
         // This removes the expensive database query that ran on every auth page visit
         if ((pathname === '/login' || pathname === '/register') && user) {

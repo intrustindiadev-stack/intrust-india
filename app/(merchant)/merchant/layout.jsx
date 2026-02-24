@@ -27,6 +27,10 @@ export default async function MerchantRootLayout({ children }) {
     const allowedRoles = ['merchant'];
 
     if (!allowedRoles.includes(role)) {
+        // Send admins to the admin panel, everyone else to home
+        if (role === 'admin') {
+            redirect('/admin');
+        }
         redirect('/'); // Unauthorized
     }
 
