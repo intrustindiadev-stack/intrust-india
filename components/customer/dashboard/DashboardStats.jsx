@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -11,13 +10,11 @@ export default function DashboardStats({ stats }) {
             {stats.map((stat, index) => {
                 const Icon = stat.icon;
                 return (
-                    <motion.div
+                    <div
                         key={stat.label}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: index * 0.1 }}
+                        style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'both' }}
                         onClick={() => stat.label === 'Wallet Balance' && router.push('/wallet')}
-                        className={`relative overflow-hidden group bg-white/70 dark:bg-gray-800/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-white dark:border-white/5 p-4 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] dark:hover:bg-gray-800/60 transition-all duration-500 ${stat.label === 'Wallet Balance' ? 'cursor-pointer hover:border-blue-200 dark:hover:border-blue-500/30' : ''}`}
+                        className={`animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden group bg-white/70 dark:bg-gray-800/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-white dark:border-white/5 p-4 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] dark:hover:bg-gray-800/60 transition-all ${stat.label === 'Wallet Balance' ? 'cursor-pointer hover:border-blue-200 dark:hover:border-blue-500/30' : ''}`}
                     >
                         {/* Abstract background glow */}
                         <div className={`absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br ${stat.color} opacity-[0.03] dark:opacity-[0.08] blur-3xl rounded-full group-hover:opacity-[0.1] transition-opacity`} />
@@ -37,7 +34,7 @@ export default function DashboardStats({ stats }) {
                             <div className="text-[10px] sm:text-sm font-semibold text-slate-500 dark:text-gray-400 mb-0.5">{stat.label}</div>
                             <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-gray-100 tracking-tight">{stat.value}</div>
                         </div>
-                    </motion.div>
+                    </div>
                 );
             })}
         </div>

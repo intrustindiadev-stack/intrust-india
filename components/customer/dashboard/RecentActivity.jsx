@@ -1,15 +1,12 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Clock, CheckCircle } from 'lucide-react';
 
 export default function RecentActivity({ orders }) {
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-white/70 dark:bg-gray-800/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-white dark:border-white/5 p-4 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+        <div
+            style={{ animationDelay: '400ms', animationFillMode: 'both' }}
+            className="animate-in fade-in slide-in-from-bottom-4 duration-500 bg-white/70 dark:bg-gray-800/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-white dark:border-white/5 p-4 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
         >
             <div className="flex items-center justify-between mb-5 sm:mb-8">
                 <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-gray-100 tracking-tight">Recent Activity</h2>
@@ -45,6 +42,6 @@ export default function RecentActivity({ orders }) {
                     ))}
                 </div>
             )}
-        </motion.div>
+        </div>
     );
 }

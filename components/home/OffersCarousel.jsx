@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+
 import { Gift, Zap, Smartphone, CreditCard, ArrowRight, ChevronRight, ChevronLeft, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useRef } from 'react';
@@ -111,10 +111,9 @@ export default function OffersCarousel() {
                     style={{ scrollPaddingLeft: '0' }}
                 >
                     {offers.map((offer) => (
-                        <motion.div
+                        <div
                             key={offer.id}
-                            whileHover={{ y: -8 }}
-                            className="snap-center shrink-0 w-[85vw] md:w-[400px]"
+                            className="snap-center shrink-0 w-[85vw] md:w-[400px] hover:-translate-y-2 transition-transform duration-300"
                         >
                             <Link href={offer.link} className="block h-full">
                                 <div className={`
@@ -165,7 +164,7 @@ export default function OffersCarousel() {
 
                                 </div>
                             </Link>
-                        </motion.div>
+                        </div>
                     ))}
 
                     {/* View All Card */}

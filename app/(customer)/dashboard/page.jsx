@@ -10,8 +10,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
-import OpportunitiesSection from '@/components/customer/OpportunitiesSection';
-import MerchantOpportunityBanner from '@/components/customer/MerchantOpportunityBanner';
+import dynamic from 'next/dynamic';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -25,7 +24,11 @@ import QuickServices from '@/components/customer/dashboard/QuickServices';
 import RecentActivity from '@/components/customer/dashboard/RecentActivity';
 import QuickActions from '@/components/customer/dashboard/QuickActions';
 import GoldSubscription from '@/components/customer/dashboard/GoldSubscription';
-import PackageSelectionModal from '@/components/customer/dashboard/PackageSelectionModal';
+
+const OpportunitiesSection = dynamic(() => import('@/components/customer/OpportunitiesSection'), { ssr: false });
+const MerchantOpportunityBanner = dynamic(() => import('@/components/customer/MerchantOpportunityBanner'), { ssr: false });
+const PackageSelectionModal = dynamic(() => import('@/components/customer/dashboard/PackageSelectionModal'), { ssr: false });
+
 
 function DashboardSkeleton() {
     return (

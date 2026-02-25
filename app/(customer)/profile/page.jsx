@@ -7,7 +7,6 @@ import {
     ShieldCheck, Package, LayoutDashboard, Camera, Loader2, Lock, Link2, AlertCircle, Star,
     Wallet, ChevronRight
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import GoldBadge from '@/components/ui/GoldBadge';
 import KYCStatus from '@/components/kyc/KYCStatus';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
@@ -726,8 +725,14 @@ export default function CustomerProfilePage() {
     }, [refreshProfile, refreshUser]);
 
     // ── Guards ─────────────────────────────────────────────────────────────────
+    useEffect(() => {
+        if (!authLoading && !authUser) {
+            router.push('/login');
+        }
+    }, [authUser, authLoading, router]);
+
     if (authLoading || profileLoading) return <ProfileSkeleton />;
-    if (!authUser) { router.push('/login'); return null; }
+    if (!authUser) return null;
 
     const displayName = profile?.full_name || authUser.email?.split('@')[0] || 'User';
     const joinYear = new Date(profile?.created_at || authUser.created_at).getFullYear();
@@ -768,13 +773,11 @@ export default function CustomerProfilePage() {
                         <div className="lg:col-span-1 space-y-5">
 
                             {/* Identity Card */}
-                            <motion.div
-                                initial={isGold ? { boxShadow: "0 0 0px rgba(212, 175, 55, 0)" } : {}}
-                                animate={isGold ? { boxShadow: "0 0 30px rgba(212, 175, 55, 0.3)" } : {}}
+                            <div
                                 className={`
                                     relative overflow-hidden rounded-3xl border p-6 transition-all duration-500 
                                     ${isGold
-                                        ? 'bg-gradient-to-br from-[#1a1600] to-[#000000] border-amber-500/40 text-white'
+                                        ? 'bg-gradient-to-br from-[#1a1600] to-[#000000] border-amber-500/40 text-white shadow-[0_0_30px_rgba(212,175,55,0.3)]'
                                         : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700'
                                     }
                                 `}
@@ -832,7 +835,7 @@ export default function CustomerProfilePage() {
                                         </span>
                                     </div>
                                 </div>
-                            </motion.div>
+                            </div>
 
                             {/* Wallet and Stats Container */}
                             <div className="space-y-5">

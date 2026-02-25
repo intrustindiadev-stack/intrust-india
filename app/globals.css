@@ -64,7 +64,8 @@ body {
 
 /* Smooth Scrolling */
 html {
-  scroll-behavior: smooth;
+  /* Next.js recommends avoiding global scroll-behavior: smooth to prevent route transition bugs */
+  scroll-behavior: auto;
 }
 
 /* 3D Perspective for Carousel */
