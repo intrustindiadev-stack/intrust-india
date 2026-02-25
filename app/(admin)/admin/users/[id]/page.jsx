@@ -96,8 +96,7 @@ export default async function AdminUserDetailPage({ params }) {
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case 'approved':
-                return <span className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase"><CheckCircle size={14} /> Approved</span>;
+            case 'verified': return <span className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase"><CheckCircle size={14} /> Verified</span>;
             case 'pending':
                 return <span className="flex items-center gap-1 bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold uppercase"><Clock size={14} /> Pending</span>;
             case 'rejected':
@@ -123,7 +122,7 @@ export default async function AdminUserDetailPage({ params }) {
             title: `KYC ${latestKyc.status}`,
             desc: `Document: ${(latestKyc.document_type || 'Unknown').replace('_', ' ')}`,
             date: latestKyc.updated_at || latestKyc.created_at,
-            color: latestKyc.status === 'approved' ? "bg-green-500" : latestKyc.status === 'rejected' ? "bg-red-500" : "bg-yellow-500"
+            color: latestKyc.status === 'verified' ? "bg-green-500" : latestKyc.status === 'rejected' ? "bg-red-500" : "bg-yellow-500"
         });
     }
 
@@ -290,13 +289,13 @@ export default async function AdminUserDetailPage({ params }) {
                     {/* Gold Subscription Status Card */}
                     {user.is_gold_verified ? (
                         <div className={`rounded-3xl p-6 border shadow-xl ${user.subscription_expiry && new Date(user.subscription_expiry) > new Date()
-                                ? 'bg-gradient-to-br from-[#1a1600] via-[#2a2200] to-[#000] border-amber-500/40 text-white'
-                                : 'bg-gray-50 border-gray-200 text-gray-700'
+                            ? 'bg-gradient-to-br from-[#1a1600] via-[#2a2200] to-[#000] border-amber-500/40 text-white'
+                            : 'bg-gray-50 border-gray-200 text-gray-700'
                             }`}>
                             <div className="flex items-center gap-3 mb-4">
                                 <div className={`p-2 rounded-xl ${user.subscription_expiry && new Date(user.subscription_expiry) > new Date()
-                                        ? 'bg-amber-400/20'
-                                        : 'bg-gray-200'
+                                    ? 'bg-amber-400/20'
+                                    : 'bg-gray-200'
                                     }`}>
                                     <Star size={18} className={user.subscription_expiry && new Date(user.subscription_expiry) > new Date() ? 'text-amber-400 fill-amber-400' : 'text-gray-400 fill-gray-400'} />
                                 </div>

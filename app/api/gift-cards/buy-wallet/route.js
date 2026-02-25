@@ -31,7 +31,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
         }
 
-        if (userProfile.kyc_status !== 'approved' && userProfile.kyc_status !== 'verified') {
+        if (userProfile.kyc_status !== 'verified') {
             return NextResponse.json({ error: 'KYC Verification is required to purchase gift cards. Please complete KYC from your profile.' }, { status: 403 });
         }
 

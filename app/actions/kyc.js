@@ -115,7 +115,7 @@ export async function submitKYC(formData) {
         // 4. Set Final Status based purely on SprintVerify results
         let finalStatus;
         if (verificationStatus === 'verified') {
-            finalStatus = 'approved';
+            finalStatus = 'verified';
         } else if (verificationStatus === 'pending') {
             finalStatus = 'pending';
         } else {

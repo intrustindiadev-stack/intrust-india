@@ -558,7 +558,7 @@ export default function MerchantApplyPage() {
                         if (!user) return toast.error("Login first");
                         const { error } = await supabase
                             .from('user_profiles')
-                            .update({ kyc_status: 'approved' })
+                            .update({ kyc_status: 'verified' })
                             .eq('id', user.id);
                         if (error) {
                             console.error(error);
@@ -627,8 +627,8 @@ function SmoothInput({ label, className = "", icon: Icon, actionLabel, onAction,
                                 onClick={onAction}
                                 disabled={isVerifying || !props.value}
                                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${isVerifying || !props.value
-                                        ? 'bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-slate-500 cursor-not-allowed'
-                                        : 'bg-[#D4AF37] text-[#020617] hover:bg-opacity-90 shadow-sm'
+                                    ? 'bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                                    : 'bg-[#D4AF37] text-[#020617] hover:bg-opacity-90 shadow-sm'
                                     }`}
                             >
                                 {isVerifying && <Loader2 size={12} className="animate-spin" />}

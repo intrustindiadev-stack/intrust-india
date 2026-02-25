@@ -23,7 +23,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export default function ProfileKYCPage() {
     const router = useRouter();
-    const { user, loading: authLoading } = useAuth();
+    const { user, loading: authLoading, refreshProfile } = useAuth();
     const [kycRecord, setKycRecord] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -129,8 +129,10 @@ export default function ProfileKYCPage() {
                 setIsPolling(true);
             }
         });
+        if (refreshProfile) refreshProfile();
         setShowForm(false);
         toast.success('KYC submitted successfully! Your verification will be processed instantly.');
+        router.push('/profile');
     };
 
     if (loading) {

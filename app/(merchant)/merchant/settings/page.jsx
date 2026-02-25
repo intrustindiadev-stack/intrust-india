@@ -510,7 +510,7 @@ export default function MerchantSettingsPage() {
                                     <div className="w-12 h-12 bg-black/5 dark:bg-white/10 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10">
                                         <span className="material-icons-round text-slate-500 dark:text-slate-300">fact_check</span>
                                     </div>
-                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center h-fit ${kycStatus === 'approved'
+                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center h-fit ${kycStatus === 'verified'
                                         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                                         : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border-yellow-500/20'
                                         }`}>

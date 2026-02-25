@@ -33,7 +33,7 @@ export default function UserCard({ user }) {
 
     const getStatusColor = (kycStatus) => {
         switch (kycStatus) {
-            case 'approved': return 'bg-emerald-50 text-emerald-600 border-emerald-200';
+            case 'verified': return 'bg-emerald-50 text-emerald-600 border-emerald-200';
             case 'pending': return 'bg-amber-50 text-amber-600 border-amber-200';
             case 'rejected': return 'bg-red-50 text-red-600 border-red-200';
             default: return 'bg-slate-50 text-slate-600 border-slate-200';
@@ -91,7 +91,7 @@ export default function UserCard({ user }) {
                 </div>
 
                 {/* Status Dot */}
-                <div className={`w-2 h-2 rounded-full shadow-sm mt-2 ${user.kyc_status === 'approved' ? 'bg-emerald-500 shadow-emerald-500/50' : 'bg-slate-300'}`} />
+                <div className={`w-2 h-2 rounded-full shadow-sm mt-2 ${user.kyc_status === 'verified' ? 'bg-emerald-500 shadow-emerald-500/50' : 'bg-slate-300'}`} />
             </div>
 
             <div className="space-y-2 mt-6">

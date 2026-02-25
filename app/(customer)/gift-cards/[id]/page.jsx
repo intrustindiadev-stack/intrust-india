@@ -107,7 +107,7 @@ export default function GiftCardDetailPage({ params }) {
             return;
         }
 
-        if (kycStatus !== 'approved' && kycStatus !== 'verified') {
+        if (kycStatus !== 'verified') {
             toast.error('Please complete KYC verification to purchase gift cards.');
             router.push('/profile?section=kyc');
             return;

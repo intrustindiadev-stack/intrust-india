@@ -52,6 +52,7 @@ export async function approveKYC(kycId) {
             .from('kyc_records')
             .update({
                 verification_status: 'verified',
+                status: 'verified',
                 verified_by: user.id,
                 verified_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
@@ -148,6 +149,7 @@ export async function rejectKYC(kycId, reason) {
             .from('kyc_records')
             .update({
                 verification_status: 'rejected',
+                status: 'rejected',
                 rejection_reason: reason.trim(),
                 verified_by: user.id,
                 verified_at: new Date().toISOString(),
