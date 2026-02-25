@@ -41,43 +41,52 @@ export default function ProfileKYCPage() {
     }, [user, authLoading, router]);
 
     // Poll for status updates when KYC is pending
+    // Poll for status updates when KYC is pending (with proper cleanup)
     useEffect(() => {
-        if (kycRecord?.verification_status === 'pending' && !isPolling) {
-            setIsPolling(true);
-            const pollInterval = setInterval(async () => {
-                try {
-                    const result = await getKYCRecord();
-                    if (result.data && result.data.verification_status !== 'pending') {
-                        setKycRecord(result.data);
-                        setShowForm(false);
-                        setIsPolling(false);
-                        clearInterval(pollInterval);
+        if (kycRecord?.verification_status !== 'pending' || isPolling) return;
 
-                        if (result.data.verification_status === 'verified') {
-                            toast.success('🎉 KYC Verified Instantly!', {
-                                duration: 5000,
-                                icon: '✅'
-                            });
-                        } else if (result.data.verification_status === 'rejected') {
-                            toast.error(`❌ KYC Verification Failed: ${result.data.rejection_reason || 'Please try again'}`, {
-                                duration: 5000,
-                                icon: '❌'
-                            });
-                        }
+        setIsPolling(true);
+        let cancelled = false;
+
+        const pollInterval = setInterval(async () => {
+            if (cancelled) return;
+            try {
+                const result = await getKYCRecord();
+                if (cancelled) return;
+                if (result.data && result.data.verification_status !== 'pending') {
+                    setKycRecord(result.data);
+                    setShowForm(false);
+                    setIsPolling(false);
+                    clearInterval(pollInterval);
+
+                    if (result.data.verification_status === 'verified') {
+                        toast.success('🎉 KYC Verified Instantly!', {
+                            duration: 5000,
+                            icon: '✅'
+                        });
+                    } else if (result.data.verification_status === 'rejected') {
+                        toast.error(`❌ KYC Verification Failed: ${result.data.rejection_reason || 'Please try again'}`, {
+                            duration: 5000,
+                            icon: '❌'
+                        });
                     }
-                } catch (error) {
-                    console.error('Error polling KYC status:', error);
                 }
-            }, 2000); // Poll every 2 seconds
+            } catch (error) {
+                console.error('Error polling KYC status:', error);
+            }
+        }, 2000);
 
-            // Stop polling after 30 seconds max
-            setTimeout(() => {
-                clearInterval(pollInterval);
-                setIsPolling(false);
-            }, 30000);
+        // Stop polling after 30 seconds max
+        const timeout = setTimeout(() => {
+            clearInterval(pollInterval);
+            setIsPolling(false);
+        }, 30000);
 
-            return () => clearInterval(pollInterval);
-        }
+        return () => {
+            cancelled = true;
+            clearInterval(pollInterval);
+            clearTimeout(timeout);
+        };
     }, [kycRecord?.verification_status]);
 
     const fetchKYCRecord = async () => {
@@ -215,8 +224,8 @@ export default function ProfileKYCPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <InfoField label="Full Name" value={kycRecord.full_legal_name} />
                             <InfoField label="Phone Number" value={kycRecord.phone_number} />
-                            <InfoField label="Date of Birth" value={new Date(kycRecord.date_of_birth).toLocaleDateString()} />
-                            <InfoField label="PAN Number" value={kycRecord.pan_number} />
+                            <InfoField label="Date of Birth" value={kycRecord.date_of_birth ? new Date(kycRecord.date_of_birth + 'T00:00:00').toLocaleDateString('en-IN') : 'N/A'} />
+                            <InfoField label="PAN Number" value={kycRecord.pan_number ? `${kycRecord.pan_number.slice(0, 2)}XXXXX${kycRecord.pan_number.slice(-3)}` : 'N/A'} />
                             <InfoField label="Address" value={kycRecord.full_address} fullWidth />
                             <InfoField
                                 label="Bank-Grade Security"

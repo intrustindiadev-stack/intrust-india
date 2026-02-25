@@ -14,11 +14,11 @@ export async function POST(request) {
         }
 
         const requestUrl = new URL(request.url);
-        const origin = requestUrl.origin;
+        const origin = process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin;
 
         // Force redirect to login page with a hard reload by returning a 303 (See Other)
         // preventing any form resubmission and clearing client state
-        return NextResponse.redirect(`${origin}/login`, {
+        return NextResponse.redirect(new URL('/login', origin), {
             status: 303,
         });
 

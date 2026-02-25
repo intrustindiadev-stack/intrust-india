@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 export async function GET(request) {
     const requestUrl = new URL(request.url)
     const code = requestUrl.searchParams.get('code')
-    const origin = requestUrl.origin
+    const origin = process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin
 
     if (!code) {
         return NextResponse.redirect(new URL('/', origin))

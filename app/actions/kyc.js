@@ -31,13 +31,6 @@ async function uploadFile(supabase, userId, file, bucket = 'kyc-documents') {
         throw error;
     }
 
-    // Get public URL (or signed URL if private - assume private for KYC)
-    // For now returning the path, we can construct URL or use createSignedUrl later
-    // But typically for admin viewing we might just store the path or a constrained URL
-
-    // Let's get a public URL for simplicity if bucket is public, else path.
-    // If bucket is private (recommended), we should store the path and generate signed URLs on view.
-    // For this implementation, we'll store the full path to be safe.
     return data.path;
 }
 
@@ -57,20 +50,12 @@ export async function submitKYC(formData) {
             return { success: false, error: 'Unauthorized' };
         }
 
-        // 1. Handle File Uploads
-        const selfieFile = formData.get('selfieImage');
+        // 1. Handle File Uploads (ID Document only — selfie removed)
         const docFrontFile = formData.get('idDocumentFront');
 
-        // We need converting FormData Entry to Buffer/Blob if it's a file
-        // IN Next.js Server Actions, File objects are passed as is.
-
-        let selfiePath = null;
         let docFrontPath = null;
 
         try {
-            if (selfieFile && selfieFile.size > 0) {
-                selfiePath = await uploadFile(supabase, user.id, selfieFile);
-            }
             if (docFrontFile && docFrontFile.size > 0) {
                 docFrontPath = await uploadFile(supabase, user.id, docFrontFile);
             }
@@ -105,9 +90,15 @@ export async function submitKYC(formData) {
             const panResult = await sprintVerify.verifyPAN(sanitizedData.panNumber);
             sprintVerifyData.pan_check = panResult;
 
-            if (panResult.valid) {
+            if (panResult.valid === true) {
+                // Strict equality — 'manual_review' is truthy but not === true
                 verificationStatus = 'verified';
                 console.log('SprintVerify PAN verification successful');
+            } else if (panResult.valid === 'manual_review') {
+                // Network/API failure — queue for manual review, don't reject
+                verificationStatus = 'pending';
+                rejectionReason = null;
+                console.warn('SprintVerify PAN check returned manual_review:', panResult.message);
             } else {
                 verificationStatus = 'rejected';
                 rejectionReason = `PAN verification failed: ${panResult.message}`;
@@ -115,20 +106,24 @@ export async function submitKYC(formData) {
             }
         } catch (svError) {
             console.error('SprintVerify API error:', svError);
-            verificationStatus = 'rejected';
-            // Show the actual error message for better debugging
-            rejectionReason = `Verification failed: ${svError.message}`;
+            // On unexpected errors, queue for manual review instead of hard rejecting
+            verificationStatus = 'pending';
+            rejectionReason = null;
             sprintVerifyData.error = svError.message;
         }
 
         // 4. Set Final Status based purely on SprintVerify results
+        let finalStatus;
+        if (verificationStatus === 'verified') {
+            finalStatus = 'approved';
+        } else if (verificationStatus === 'pending') {
+            finalStatus = 'pending';
+        } else {
+            finalStatus = 'rejected';
+        }
         const isVerified = verificationStatus === 'verified';
-        const finalStatus = isVerified ? 'approved' : 'rejected';
 
-        // 4. Save to Database
-        // NOTE: The schema requires specific address fields and ID details. 
-        // We map 'fullAddress' to 'address_line1' and provide defaults for others 
-        // to satisfy NOT NULL constraints.
+        // 5. Save to Database
         const kycRecord = {
             user_id: user.id,
 
@@ -146,7 +141,7 @@ export async function submitKYC(formData) {
             // Address Details (Schema Requirements)
             address_line1: sanitizedData.fullAddress,
             address_line2: '',
-            city: 'Not Provided', // Placeholder to satisfy NOT NULL
+            city: 'Not Provided',
             state: 'Not Provided',
             postal_code: '000000',
             country: 'IN',
@@ -155,9 +150,9 @@ export async function submitKYC(formData) {
             // Security
             bank_grade_security: sanitizedData.bankGradeSecurity,
 
-            // Files
-            selfie_url: selfiePath,
-            id_document_front_url: docFrontPath,
+            // Files (selfie removed — only ID document kept)
+            selfie_url: null,
+            id_document_front_url: docFrontPath || null,
 
             // Status Logic (Pure API-driven)
             status: finalStatus,
@@ -165,7 +160,7 @@ export async function submitKYC(formData) {
             rejection_reason: rejectionReason,
 
             // Review Details (Auto-reviewed by system)
-            reviewed_by: user.id, // System auto-review
+            reviewed_by: user.id,
             reviewed_at: new Date().toISOString(),
             verified_by: isVerified ? user.id : null,
             verified_at: isVerified ? new Date().toISOString() : null,
@@ -179,40 +174,47 @@ export async function submitKYC(formData) {
             updated_at: new Date().toISOString()
         };
 
-        // ... (Existing Upsert Logic) ...
-        // Check existing
-        const { data: existing } = await supabase.from('kyc_records').select('id').eq('user_id', user.id).single();
+        // Upsert Logic
+        const { data: existing, error: checkError } = await supabase.from('kyc_records').select('id').eq('user_id', user.id).maybeSingle();
 
         let result;
         if (existing) {
             const { data: updated, error: updateError } = await supabase
                 .from('kyc_records')
                 .update(kycRecord)
-                .eq('id', existing.id)
-                .select().single();
+                .eq('user_id', user.id)
+                .select().maybeSingle();
             if (updateError) throw updateError;
-            result = updated;
+            result = updated || kycRecord;
         } else {
             kycRecord.created_at = new Date().toISOString();
             const { data: inserted, error: insertError } = await supabase
                 .from('kyc_records')
                 .insert(kycRecord)
-                .select().single();
+                .select().maybeSingle();
             if (insertError) throw insertError;
-            result = inserted;
+            result = inserted || kycRecord;
         }
 
         revalidatePath('/profile/kyc');
-        
-        const message = isVerified 
-            ? 'KYC Verified Successfully via SprintVerify' 
-            : `KYC Verification Failed: ${rejectionReason}`;
-            
+
+        let message;
+        if (isVerified) {
+            message = 'KYC Verified Successfully via SprintVerify';
+        } else if (verificationStatus === 'pending') {
+            message = 'KYC submitted. Verification is pending manual review.';
+        } else {
+            message = `KYC Verification Failed: ${rejectionReason}`;
+        }
+
         return { success: true, data: result, message };
 
     } catch (error) {
         console.error('submitKYC error:', error);
-        return { success: false, error: 'Internal Server Error' };
+        // Return specific error for known DB errors
+        if (error.code === '23505') return { success: false, error: 'KYC record already exists' };
+        if (error.code === '42501') return { success: false, error: 'Database permission error. Contact support.' };
+        return { success: false, error: `Submission failed: ${error.message}` };
     }
 }
 
@@ -222,7 +224,7 @@ export async function submitKYC(formData) {
 export async function verifyPANAction(panNumber) {
     try {
         const result = await sprintVerify.verifyPAN(panNumber);
-        return { success: result.valid, message: result.message, data: result.data };
+        return { success: result.valid === true, message: result.message, data: result.data };
     } catch (error) {
         return { success: false, error: 'Verification service unavailable' };
     }

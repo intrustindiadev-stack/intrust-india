@@ -23,6 +23,10 @@ const nextConfig = {
   // Remove development features in production
   productionBrowserSourceMaps: false,
 
+  serverActions: {
+    bodySizeLimit: '5mb',
+  },
+
   serverExternalPackages: ['jsonwebtoken'],
 
   // Optimize imports

@@ -10,23 +10,23 @@
  * - Loading states
  * - Toast notifications
  * - Bank-grade security checkbox
+ * - ID Document upload with OCR verification
  * 
  * @component
  */
 
-import { useState, useEffect } from 'react';
-import { CheckCircle, Shield, ChevronRight, AlertCircle, Info } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle, Shield, ChevronRight, AlertCircle, Info, Upload, Check, Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { submitKYC, verifyPANAction } from '@/app/actions/kyc'; // Import verify action
-import { verifyOCRDOC, matchFaces } from '@/app/actions/sprintVerifyActions';
+import { submitKYC, verifyPANAction } from '@/app/actions/kyc';
+import { verifyOCRDOC } from '@/app/actions/sprintVerifyActions';
 import {
     validateKYCForm,
     formatPANInput,
     formatPhoneInput,
     sanitizeKYCData
 } from '@/app/types/kyc';
-import { Camera, Upload, Check, Loader } from 'lucide-react'; // Add icons
 
 /**
  * @typedef {Object} KYCFormProps
@@ -49,20 +49,16 @@ export default function KYCForm({
         panNumber: initialData.panNumber || initialData.panCard || '',
         fullAddress: initialData.address || initialData.fullAddress || '',
         bankGradeSecurity: initialData.bankGradeSecurity || false,
-        // Files (stored as File objects)
-        selfieImage: null,
+        // Files (ID document only — selfie removed)
         idDocumentFront: null
     });
 
     const [panVerified, setPanVerified] = useState(false);
     const [verifyingPan, setVerifyingPan] = useState(false);
 
-    // New verification states
+    // Document verification states
     const [docVerified, setDocVerified] = useState(false);
     const [verifyingDoc, setVerifyingDoc] = useState(false);
-    const [faceMatched, setFaceMatched] = useState(false);
-    const [matchingFace, setMatchingFace] = useState(false);
-    const [matchScore, setMatchScore] = useState(null);
 
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
@@ -150,7 +146,7 @@ export default function KYCForm({
         setVerifyingDoc(true);
         try {
             const base64 = await fileToBase64(formData.idDocumentFront);
-            const result = await verifyOCRDOC(base64, 'PAN'); // Default to PAN for now
+            const result = await verifyOCRDOC(base64, 'PAN');
             if (result.valid === true) {
                 setDocVerified(true);
                 toast.success('Document OCR Verified!');
@@ -175,32 +171,6 @@ export default function KYCForm({
         }
     };
 
-    const handleFaceMatch = async () => {
-        if (!formData.selfieImage || !formData.idDocumentFront) {
-            toast.error('Both Selfie and ID Document are required for Face Match');
-            return;
-        }
-        setMatchingFace(true);
-        try {
-            const selfieB64 = await fileToBase64(formData.selfieImage);
-            const idB64 = await fileToBase64(formData.idDocumentFront);
-            const result = await matchFaces(selfieB64, idB64);
-
-            if (result.valid === true && result.data?.is_match) {
-                setFaceMatched(true);
-                setMatchScore(result.data.score);
-                toast.success(`Face Match Successful! (${Math.round(result.data.score * 100)}%)`);
-            } else {
-                setFaceMatched(false);
-                toast.error(result.message || 'Faces do not match');
-            }
-        } catch (err) {
-            toast.error('Face Match failed');
-        } finally {
-            setMatchingFace(false);
-        }
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -213,18 +183,12 @@ export default function KYCForm({
             fullAddress: true
         });
 
-        // Simple File Validation
-        const newErrors = {};
-        if (!formData.selfieImage) newErrors.selfieImage = 'Selfie is required';
-        if (!formData.idDocumentFront) newErrors.idDocumentFront = 'ID Document is required';
-
         // Validate text fields
         const sanitized = sanitizeKYCData(formData);
         const validation = validateKYCForm(sanitized);
 
-        if (!validation.valid || Object.keys(newErrors).length > 0) {
-            const allErrors = { ...validation.errors, ...newErrors };
-            setErrors(allErrors);
+        if (!validation.valid) {
+            setErrors(validation.errors);
             toast.error('Please complete all required fields');
             return;
         }
@@ -241,7 +205,6 @@ export default function KYCForm({
             submitData.append('fullAddress', formData.fullAddress);
             submitData.append('bankGradeSecurity', formData.bankGradeSecurity);
 
-            if (formData.selfieImage) submitData.append('selfieImage', formData.selfieImage);
             if (formData.idDocumentFront) submitData.append('idDocumentFront', formData.idDocumentFront);
 
             const result = await submitKYC(submitData);
@@ -259,7 +222,8 @@ export default function KYCForm({
                     dateOfBirth: '',
                     panNumber: '',
                     fullAddress: '',
-                    bankGradeSecurity: false
+                    bankGradeSecurity: false,
+                    idDocumentFront: null
                 });
                 setTouched({});
                 setErrors({});
@@ -376,11 +340,13 @@ export default function KYCForm({
                             disabled={verifyingPan || !formData.panNumber || formData.panNumber.length < 10 || panVerified}
                             className={`absolute right-2 top-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${panVerified
                                 ? 'bg-green-100 text-green-700 cursor-default'
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                                : verifyingPan
+                                    ? 'bg-blue-400 text-white opacity-50 cursor-wait'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700'
                                 }`}
                         >
                             {verifyingPan ? <Loader size={12} className="animate-spin" /> : null}
-                            {panVerified ? 'Verified' : 'Verify'}
+                            {panVerified ? 'Verified' : verifyingPan ? 'Verifying...' : 'Verify'}
                             {panVerified ? <Check size={12} /> : null}
                         </button>
                     </div>
@@ -389,67 +355,8 @@ export default function KYCForm({
                     </p>
                 </div>
 
-                {/* File Upload Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                    {/* Selfie Upload */}
-                    <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${formData.selfieImage ? 'border-green-300 bg-green-50' : 'border-slate-200 hover:border-blue-400 hover:bg-slate-50'
-                        }`}>
-                        <div className="flex flex-col items-center gap-3">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.selfieImage ? 'bg-green-100 text-green-600' : 'bg-blue-50 text-blue-600'}`}>
-                                <Camera size={24} />
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-slate-900 text-sm">Upload Selfie</h4>
-                                <p className="text-xs text-slate-500 mb-3">Clear photo of your face</p>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    capture="user"
-                                    onChange={(e) => handleFileChange('selfieImage', e)}
-                                    className="hidden"
-                                    id="selfie-upload"
-                                />
-                                {formData.selfieImage ? (
-                                    <div className="flex flex-col gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={handleFaceMatch}
-                                            disabled={matchingFace || !formData.idDocumentFront || faceMatched}
-                                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 mx-auto ${faceMatched
-                                                ? 'bg-green-100 text-green-700 cursor-default'
-                                                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                                                }`}
-                                        >
-                                            {matchingFace ? <Loader size={12} className="animate-spin" /> : null}
-                                            {faceMatched ? 'Face Matched' : 'Verify Match'}
-                                            {faceMatched ? <Check size={12} /> : null}
-                                        </button>
-                                        <label
-                                            htmlFor="selfie-upload"
-                                            className="text-[10px] text-slate-400 hover:text-blue-600 cursor-pointer font-medium underline"
-                                        >
-                                            Upload Different Photo
-                                        </label>
-                                    </div>
-                                ) : (
-                                    <label
-                                        htmlFor="selfie-upload"
-                                        className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 cursor-pointer hover:bg-slate-50"
-                                    >
-                                        Open Camera / Upload
-                                    </label>
-                                )}
-                                {formData.selfieImage && (
-                                    <p className="text-xs text-green-600 font-medium mt-2">
-                                        Selected: {formData.selfieImage.name}
-                                    </p>
-                                )}
-                                {errors.selfieImage && <p className="text-xs text-red-500 mt-2">{errors.selfieImage}</p>}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* ID Document Upload */}
+                {/* ID Document Upload Section */}
+                <div className="pt-2">
                     <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${formData.idDocumentFront ? 'border-green-300 bg-green-50' : 'border-slate-200 hover:border-blue-400 hover:bg-slate-50'
                         }`}>
                         <div className="flex flex-col items-center gap-3">
@@ -458,7 +365,7 @@ export default function KYCForm({
                             </div>
                             <div>
                                 <h4 className="font-bold text-slate-900 text-sm">ID Document (Front)</h4>
-                                <p className="text-xs text-slate-500 mb-3">PAN Card / Aadhaar / Voter ID</p>
+                                <p className="text-xs text-slate-500 mb-3">PAN Card / Aadhaar / Voter ID (optional)</p>
                                 <input
                                     type="file"
                                     accept="image/*,application/pdf"
@@ -478,7 +385,7 @@ export default function KYCForm({
                                                 }`}
                                         >
                                             {verifyingDoc ? <Loader size={12} className="animate-spin" /> : null}
-                                            {docVerified ? 'OCR Verified' : 'Verify Doc'}
+                                            {docVerified ? 'OCR Verified' : verifyingDoc ? 'Verifying...' : 'Verify Doc'}
                                             {docVerified ? <Check size={12} /> : null}
                                         </button>
                                         <label
@@ -577,8 +484,8 @@ export default function KYCForm({
                 <p className="text-center text-xs text-slate-400">
                     Your information is encrypted and secure. We never share your data with third parties.
                 </p>
-            </form >
-        </div >
+            </form>
+        </div>
     );
 }
 
