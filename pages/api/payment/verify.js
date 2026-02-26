@@ -1,6 +1,30 @@
 import SabpaisaClient from '../../../lib/sabpaisa/client';
 import { getTransactionByClientTxnId, updateTransaction, logTransactionEvent } from '../../../lib/supabase/queries';
-import { getServiceSupabase } from '../../../lib/supabase/client';
+import { mapStatusToInternal } from '../../../lib/sabpaisa/utils';
+import { createClient } from '@supabase/supabase-js';
+
+// Helper to get user from Authorization header
+async function getUserFromRequest(req) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return null;
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    );
+
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+        return null;
+    }
+
+    return user;
+}
 
 export default async function handler(req, res) {
     if (req.method !== 'GET') {
@@ -12,8 +36,11 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing clientTxnId' });
     }
 
-    // Auth check recommended here manually or rely on RLS if user context is passed
-    // For simplicity, we assume this endpoint might be called by client or admin
+    // Authentication — require logged-in user
+    const user = await getUserFromRequest(req);
+    if (!user) {
+        return res.status(401).json({ error: 'Unauthorized — please log in' });
+    }
 
     try {
         const transaction = await getTransactionByClientTxnId(clientTxnId);
@@ -21,24 +48,43 @@ export default async function handler(req, res) {
             return res.status(404).json({ error: 'Transaction not found' });
         }
 
-        // Call Sabpaisa Status API
+        // Authorization — users can only verify their own transactions
+        if (transaction.user_id !== user.id) {
+            return res.status(403).json({ error: 'Forbidden — this transaction does not belong to you' });
+        }
+
+        // Call Sabpaisa Status Inquiry API
         const statusResponse = await SabpaisaClient.verifyTransaction(clientTxnId);
 
         // Log verification attempt
         await logTransactionEvent(clientTxnId, 'VERIFY', statusResponse, 'Manual Verification');
 
-        // Update DB if status changed
-        // Note: In a real scenario, map statusResponse fields to DB fields
-        // This depends on what verifyTransaction actually returns (which was a placeholder)
+        // Update DB if status changed and is more definitive
+        if (statusResponse.internalStatus && statusResponse.internalStatus !== 'ERROR') {
+            const newStatus = statusResponse.internalStatus;
+            if (transaction.status !== newStatus && transaction.status !== 'SUCCESS') {
+                // Only update to a more final state (don't overwrite SUCCESS)
+                await updateTransaction(clientTxnId, {
+                    status: newStatus,
+                    sabpaisa_txn_id: statusResponse.sabpaisaTxnId || transaction.sabpaisa_txn_id,
+                    sabpaisa_message: statusResponse.message || transaction.sabpaisa_message,
+                    status_code: statusResponse.statusCode || transaction.status_code,
+                    paid_amount: statusResponse.paidAmount || transaction.paid_amount,
+                    payment_mode: statusResponse.paymentMode || transaction.payment_mode
+                });
+                console.log(`[Verify] Transaction ${clientTxnId} updated: ${transaction.status} → ${newStatus}`);
+            }
+        }
 
-        // Example:
-        // const newStatus = mapStatusToInternal(statusResponse.statusCode);
-        // if (transaction.status !== newStatus) {
-        //    await updateTransaction(clientTxnId, { status: newStatus, ... });
-        // }
+        // Return the latest known status (prefer gateway, fall back to DB)
+        const latestStatus = (statusResponse.internalStatus && statusResponse.internalStatus !== 'ERROR')
+            ? statusResponse.internalStatus
+            : transaction.status;
 
         res.status(200).json({
-            latestStatus: transaction.status, // or newStatus
+            latestStatus,
+            dbStatus: transaction.status,
+            gatewayStatus: statusResponse.internalStatus || statusResponse.status,
             gatewayResponse: statusResponse
         });
 

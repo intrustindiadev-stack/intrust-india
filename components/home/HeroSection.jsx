@@ -36,13 +36,13 @@ export default function HeroSection() {
     // All services from BRD
     const prelinks = [
         { icon: Gift, label: 'Gift Cards', href: '/gift-cards' },
-        { icon: CreditCard, label: 'Loans', href: '/loans' },
-        { icon: Sun, label: 'Solar', href: '/solar' },
-        { icon: Smartphone, label: 'Recharge', href: '/recharge' },
-        { icon: ShoppingBag, label: 'Shopping', href: '/shopping' },
-        { icon: Plane, label: 'Travel', href: '/travel' },
-        { icon: Zap, label: 'Bills', href: '/bills' },
-        { icon: Wallet, label: 'Wallet', href: '/wallet' },
+        { icon: CreditCard, label: 'Loans', href: '/coming-soon', comingSoon: true },
+        { icon: Sun, label: 'Solar', href: '/coming-soon', comingSoon: true },
+        { icon: Smartphone, label: 'Recharge', href: '/coming-soon', comingSoon: true },
+        { icon: ShoppingBag, label: 'Shopping', href: '/coming-soon', comingSoon: true },
+        { icon: Plane, label: 'Travel', href: '/coming-soon', comingSoon: true },
+        { icon: Zap, label: 'Bills', href: '/coming-soon', comingSoon: true },
+        { icon: Wallet, label: 'Wallet', href: '/coming-soon', comingSoon: true },
     ];
 
     return (

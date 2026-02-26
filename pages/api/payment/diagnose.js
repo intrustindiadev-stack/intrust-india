@@ -40,66 +40,41 @@ export default async function handler(req, res) {
         };
     }
 
-    // Check if AUTH_KEY and AUTH_IV are valid Base64
+    // Check if AUTH_KEY and AUTH_IV are compatible with GCM (16 or 32 chars)
     const authKey = process.env.NEXT_PUBLIC_SABPAISA_AUTH_KEY;
     const authIV = process.env.NEXT_PUBLIC_SABPAISA_AUTH_IV;
 
-    results.base64Validation = {};
+    results.keyValidation = {};
 
     if (authKey) {
-        try {
-            const decoded = Buffer.from(authKey, 'base64');
-            const reEncoded = decoded.toString('base64');
-            const isValidBase64 = reEncoded === authKey || authKey.endsWith('=') || authKey.endsWith('==');
-            results.base64Validation.AUTH_KEY = {
-                isValidBase64,
-                decodedLength: decoded.length,
-                note: decoded.length === 32 ? '✅ 32 bytes (AES-256 compatible)' :
-                    decoded.length === 16 ? '⚠️ 16 bytes (AES-128, may not work)' :
-                        `❌ ${decoded.length} bytes (unexpected length)`
-            };
-        } catch {
-            results.base64Validation.AUTH_KEY = { isValidBase64: false, error: 'Not valid base64' };
-        }
-    } else {
-        results.base64Validation.AUTH_KEY = { isValidBase64: false, error: 'Not set' };
+        results.keyValidation.AUTH_KEY = {
+            length: authKey.length,
+            note: authKey.length === 32 ? '✅ 32 chars (AES-256-GCM)' :
+                authKey.length === 16 ? '✅ 16 chars (AES-128-GCM)' :
+                    `⚠️ ${authKey.length} chars`
+        };
     }
 
     if (authIV) {
-        try {
-            const decoded = Buffer.from(authIV, 'base64');
-            const reEncoded = decoded.toString('base64');
-            const isValidBase64 = reEncoded === authIV || authIV.endsWith('=') || authIV.endsWith('==');
-            results.base64Validation.AUTH_IV = {
-                isValidBase64,
-                decodedLength: decoded.length,
-                note: decoded.length === 32 ? '✅ 32 bytes (HMAC-SHA384 compatible)' :
-                    `⚠️ ${decoded.length} bytes`
-            };
-        } catch {
-            results.base64Validation.AUTH_IV = { isValidBase64: false, error: 'Not valid base64' };
-        }
-    } else {
-        results.base64Validation.AUTH_IV = { isValidBase64: false, error: 'Not set' };
+        results.keyValidation.AUTH_IV = {
+            length: authIV.length,
+            note: '✅ Used as HMAC-SHA384 Key'
+        };
     }
 
     // Overall status
     const allSet = envVars.every(v => results.checks[v]?.set);
-    const keysAreBase64 = results.base64Validation.AUTH_KEY?.isValidBase64 &&
-        results.base64Validation.AUTH_IV?.isValidBase64;
 
     results.summary = {
         allEnvVarsSet: allSet,
-        keysAreBase64,
+        encryptionProtocol: 'Integration Kit 2.0 (GCM + HMAC)',
         callbackUrl: process.env.NEXT_PUBLIC_APP_URL
             ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payment/callback`
             : '❌ NEXT_PUBLIC_APP_URL not set',
-        readyForPayment: allSet && keysAreBase64,
-        verdict: allSet && keysAreBase64
-            ? '✅ Configuration looks correct'
-            : !allSet
-                ? '❌ Some env vars are missing'
-                : '❌ AUTH_KEY/AUTH_IV must be Base64-encoded strings'
+        readyForPayment: allSet,
+        verdict: allSet
+            ? '✅ Configuration looks correct for GCM+HMAC'
+            : '❌ Some env vars are missing'
     };
 
     return res.status(200).json(results);

@@ -2,6 +2,17 @@ import HomeClient from './HomeClient';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
 
+export async function generateMetadata() {
+  return {
+    title: "Instant Loans & Financial Services in India",
+    description: "Get instant personal loans, business loans, and gold loans with InTrust India. Simple, secure, and fast financial solutions for everyone.",
+    alternates: {
+      canonical: "/",
+    },
+  };
+}
+
+
 export default async function Home() {
   const supabase = await createServerSupabaseClient();
 

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, CreditCard, Building, Smartphone, Wallet, ShieldCheck, Loader2, Tag, Gift } from 'lucide-react';
 import PaymentMethodCard from './PaymentMethodCard';
 import WalletPaymentOption from './WalletPaymentOption';
-import { submitPaymentForm } from 'sabpaisa-pg-dev';
+import { submitPaymentForm } from '../../lib/sabpaisa/formSubmit';
 import { useWallet } from '@/hooks/useWallet';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
@@ -128,39 +128,12 @@ export default function SabpaisaPaymentModal({ isOpen, onClose, amount, user, pr
 
                 const data = await response.json();
 
-                // 3. Prepare data for Sabpaisa NPM package
-                const packageFormData = {
-                    clientCode: process.env.NEXT_PUBLIC_SABPAISA_CLIENT_CODE,
-                    transUserName: process.env.NEXT_PUBLIC_SABPAISA_USERNAME,
-                    transUserPassword: process.env.NEXT_PUBLIC_SABPAISA_PASSWORD,
-                    authKey: process.env.NEXT_PUBLIC_SABPAISA_AUTH_KEY ? btoa(process.env.NEXT_PUBLIC_SABPAISA_AUTH_KEY) : undefined,
-                    authIV: process.env.NEXT_PUBLIC_SABPAISA_AUTH_IV ? btoa(process.env.NEXT_PUBLIC_SABPAISA_AUTH_IV) : undefined,
-                    callbackUrl: process.env.NEXT_PUBLIC_APP_URL + '/api/payment/callback',
-                    clientTxnId: data.transactionId,
-                    payerName: user.user_metadata?.full_name || 'User',
-                    payerEmail: user.email || 'test@example.com',
-                    payerMobile: user.phone ? user.phone.replace(/\D/g, '').replace(/^91/, '').slice(-10) : '9999999999',
-                    amount: Number(paymentAmount).toFixed(2),
-                    channelId: 'W',
-                    url: process.env.NEXT_PUBLIC_SABPAISA_INIT_URL
-                };
-
-                // 4. Submit payment form
-                console.log('[Sabpaisa] Submitting wallet topup form with data:', {
-                    ...packageFormData,
-                    authKey: packageFormData.authKey ? '***set***' : '❌ MISSING',
-                    authIV: packageFormData.authIV ? '***set***' : '❌ MISSING',
-                    transUserPassword: '***hidden***'
-                });
-
-                if (!packageFormData.authKey || !packageFormData.authIV) {
-                    throw new Error('Payment gateway credentials are not configured. Please contact support.');
+                if (!data.paymentPayload) {
+                    throw new Error('Payment payload missing from server');
                 }
 
-                await submitPaymentForm({
-                    ...packageFormData,
-                    env: process.env.NEXT_PUBLIC_SABPAISA_ENV || 'stag'
-                });
+                // 4. Submit payment form using manual implementation
+                await submitPaymentForm(data.paymentPayload, data.paymentPayload.url);
 
             } else {
                 // Sabpaisa Gateway Payment - NPM Package Flow (for Gift Card Purchase)
@@ -194,39 +167,12 @@ export default function SabpaisaPaymentModal({ isOpen, onClose, amount, user, pr
                     throw new Error(data.error || 'Failed to initiate transaction');
                 }
 
-                // 3. Prepare Data for the NPM Package Form
-                const formData = {
-                    clientCode: process.env.NEXT_PUBLIC_SABPAISA_CLIENT_CODE,
-                    transUserName: process.env.NEXT_PUBLIC_SABPAISA_USERNAME,
-                    transUserPassword: process.env.NEXT_PUBLIC_SABPAISA_PASSWORD,
-                    authKey: process.env.NEXT_PUBLIC_SABPAISA_AUTH_KEY ? btoa(process.env.NEXT_PUBLIC_SABPAISA_AUTH_KEY) : undefined,
-                    authIV: process.env.NEXT_PUBLIC_SABPAISA_AUTH_IV ? btoa(process.env.NEXT_PUBLIC_SABPAISA_AUTH_IV) : undefined,
-                    callbackUrl: process.env.NEXT_PUBLIC_APP_URL + '/api/payment/callback',
-                    clientTxnId: data.transactionId,
-                    payerName: user.user_metadata?.full_name || 'User',
-                    payerEmail: user.email || 'test@example.com',
-                    payerMobile: user.phone ? user.phone.replace(/\D/g, '').replace(/^91/, '').slice(-10) : '9999999999',
-                    amount: Number(paymentAmount).toFixed(2),
-                    channelId: 'W',
-                    url: process.env.NEXT_PUBLIC_SABPAISA_INIT_URL
-                };
-
-                // 4. Submit payment form using NPM package
-                console.log('[Sabpaisa] Submitting gift card payment form with data:', {
-                    ...formData,
-                    authKey: formData.authKey ? '***set***' : '❌ MISSING',
-                    authIV: formData.authIV ? '***set***' : '❌ MISSING',
-                    transUserPassword: '***hidden***'
-                });
-
-                if (!formData.authKey || !formData.authIV) {
-                    throw new Error('Payment gateway credentials are not configured. Please contact support.');
+                if (!data.paymentPayload) {
+                    throw new Error('Payment payload missing from server');
                 }
 
-                await submitPaymentForm({
-                    ...formData,
-                    env: process.env.NEXT_PUBLIC_SABPAISA_ENV || 'stag'
-                });
+                // 4. Submit payment form using manual implementation
+                await submitPaymentForm(data.paymentPayload, data.paymentPayload.url);
             }
         } catch (err) {
             console.error(err);

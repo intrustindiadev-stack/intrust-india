@@ -1,137 +1,65 @@
 ﻿import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '../../../lib/supabase/queries';
-import { WalletService } from '../../../lib/wallet/walletService';
 import { CustomerWalletService } from '../../../lib/wallet/customerWalletService';
-import { webcrypto } from 'crypto';
+import { decrypt } from '../../../lib/sabpaisa/encryption';
+import { mapStatusToInternal } from '../../../lib/sabpaisa/utils';
 import { createClient } from '@supabase/supabase-js';
 
-// Server-side decrypt function compatible with sabpaisa-pg-dev encryption
-async function decryptSabpaisaResponse(authKey, authIV, hexCipherText) {
-    try {
-        const crypto = webcrypto;
+/**
+ * Validates that the request IP is from a trusted source.
+ * Configure SABPAISA_ALLOWED_IPS in env (comma-separated).
+ * If not configured, allows all (for development).
+ */
+function isAllowedIP(req) {
+    const allowedIPs = process.env.SABPAISA_ALLOWED_IPS;
+    if (!allowedIPs) return true; // No whitelist configured — allow all (dev mode)
 
-        // Base64 to bytes
-        const base64ToBytes = (base64) => {
-            return Uint8Array.from(Buffer.from(base64, 'base64'));
-        };
+    const allowList = allowedIPs.split(',').map(ip => ip.trim()).filter(Boolean);
+    if (allowList.length === 0) return true;
 
-        // Hex to bytes
-        const hexToBytes = (hex) => {
-            const bytes = new Uint8Array(hex.length / 2);
-            for (let i = 0; i < hex.length; i += 2) {
-                bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-            }
-            return bytes;
-        };
+    // Extract client IP from various headers (Vercel, Nginx, direct)
+    const clientIP = (
+        req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+        req.headers['x-real-ip'] ||
+        req.socket?.remoteAddress ||
+        ''
+    ).replace('::ffff:', ''); // Strip IPv6 prefix
 
-        const aesKeyRaw = base64ToBytes(authKey);
-        const hmacKeyRaw = base64ToBytes(authIV);
-        const fullMessage = hexToBytes(hexCipherText);
-
-        const HMAC_LENGTH = 48;
-        const IV_SIZE = 12;
-        const TAG_SIZE = 16;
-
-        if (fullMessage.length < HMAC_LENGTH + IV_SIZE + TAG_SIZE) {
-            throw new Error("Invalid ciphertext length");
-        }
-
-        const hmacReceived = fullMessage.slice(0, HMAC_LENGTH);
-        const encryptedData = fullMessage.slice(HMAC_LENGTH);
-
-        const hmacKey = await crypto.subtle.importKey(
-            "raw",
-            hmacKeyRaw,
-            { name: "HMAC", hash: "SHA-384" },
-            false,
-            ["verify"]
-        );
-
-        const isValid = await crypto.subtle.verify("HMAC", hmacKey, hmacReceived, encryptedData);
-        if (!isValid) {
-            throw new Error("HMAC validation failed");
-        }
-
-        const iv = encryptedData.slice(0, IV_SIZE);
-        const cipherTextWithTag = encryptedData.slice(IV_SIZE);
-
-        const aesKey = await crypto.subtle.importKey(
-            "raw",
-            aesKeyRaw,
-            "AES-GCM",
-            false,
-            ["decrypt"]
-        );
-
-        const decrypted = await crypto.subtle.decrypt(
-            {
-                name: "AES-GCM",
-                iv,
-                tagLength: TAG_SIZE * 8,
-            },
-            aesKey,
-            cipherTextWithTag
-        );
-
-        return new TextDecoder().decode(decrypted);
-    } catch (error) {
-        console.error('Decryption error:', error);
-        throw error;
-    }
+    return allowList.includes(clientIP);
 }
 
 export default async function handler(req, res) {
-    // Accept both GET and POST (Sabpaisa uses GET for redirect with query params)
-    if (req.method !== 'POST' && req.method !== 'GET') {
-        return res.status(405).json({ error: 'Method not allowed' });
+    // POST only — Sabpaisa docs specify POST for callbacks
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+    }
+
+    // IP whitelist check
+    if (!isAllowedIP(req)) {
+        console.warn('[Callback] Blocked request from untrusted IP:', req.headers['x-forwarded-for'] || req.socket?.remoteAddress);
+        return res.status(403).json({ error: 'Forbidden' });
     }
 
     try {
-        console.log('=== SABPAISA CALLBACK RECEIVED ===');
-        console.log('Method:', req.method);
-        console.log('Query keys:', Object.keys(req.query || {}));
-        console.log('Body keys:', Object.keys(req.body || {}));
-        const authKeySet = !!(process.env.SABPAISA_AUTH_KEY || process.env.NEXT_PUBLIC_SABPAISA_AUTH_KEY);
-        const authIVSet = !!(process.env.SABPAISA_AUTH_IV || process.env.NEXT_PUBLIC_SABPAISA_AUTH_IV);
-        console.log('AUTH_KEY set:', authKeySet, '| AUTH_IV set:', authIVSet);
+        console.log('[Callback] Received from IP:', req.headers['x-forwarded-for']?.split(',')[0] || 'direct');
 
         // Sabpaisa sends encrypted response in 'encResponse' parameter
-        // For GET: it's in query params, for POST: it's in body
-        let encResponse = req.method === 'GET' ? req.query.encResponse : req.body.encResponse;
-
-        // URL decode if from GET (handles + as space, % encoding etc.)
-        if (req.method === 'GET' && encResponse) {
-            encResponse = decodeURIComponent(encResponse.replace(/\+/g, ' '));
-        }
+        const encResponse = req.body.encResponse;
 
         if (!encResponse) {
-            console.error('Callback received without encResponse', req.method === 'GET' ? req.query : req.body);
+            console.error('[Callback] Missing encResponse in payload');
             return res.redirect('/payment/failure?reason=invalid_response');
         }
 
-        console.log('encResponse length:', encResponse.length);
-        console.log('encResponse preview:', encResponse.substring(0, 40) + '...');
+        // 1. Decrypt using the unified encryption module
+        const decryptedString = decrypt(encResponse);
 
-        // 1. Decrypt and Parse
-        console.log('Decrypting response...');
-        let decryptedString;
-        try {
-            decryptedString = await decryptSabpaisaResponse(
-                process.env.SABPAISA_AUTH_KEY || process.env.NEXT_PUBLIC_SABPAISA_AUTH_KEY,
-                process.env.SABPAISA_AUTH_IV || process.env.NEXT_PUBLIC_SABPAISA_AUTH_IV,
-                encResponse
-            );
-        } catch (decryptErr) {
-            console.error('=== DECRYPTION FAILED ===');
-            console.error('Error:', decryptErr.message);
-            const keyUsed = process.env.SABPAISA_AUTH_KEY ? 'SABPAISA_AUTH_KEY' : 'NEXT_PUBLIC_SABPAISA_AUTH_KEY';
-            console.error('Key source:', keyUsed);
-            console.error('Hint: AUTH_KEY and AUTH_IV must be Base64-encoded strings.');
-            throw decryptErr;
+        if (!decryptedString) {
+            console.error('[Callback] Decryption failed');
+            return res.redirect('/payment/failure?reason=decryption_failed');
         }
 
         // Strip any stray trailing quote characters from Sabpaisa UAT responses
         const cleanedDecrypted = decryptedString.replace(/"+$/, '').trim();
-        console.log('Decrypted data:', cleanedDecrypted);
 
         // Parse query string response
         const params = new URLSearchParams(cleanedDecrypted);
@@ -149,28 +77,31 @@ export default async function handler(req, res) {
         };
 
         if (!result.clientTxnId) {
-            console.error("Missing clientTxnId in response");
+            console.error('[Callback] Missing clientTxnId in response');
             return res.redirect('/payment/failure?reason=parse_failed');
         }
 
         const { clientTxnId, sabpaisaTxnId, status, amount, transMsg, bankTxnId, paymentMode } = result;
 
-        // Map status to database enum format (INITIATED, SUCCESS, PENDING, FAILED, ABORTED)
-        // Sabpaisa returns: SUCCESS, PENDING, ABORTED, FAILED, etc
-        const internalStatus = status === 'SUCCESS' ? 'SUCCESS' :
-            status === 'PENDING' ? 'PENDING' :
-                status === 'ABORTED' ? 'ABORTED' : 'FAILED';
+        // Map status to internal enum
+        const internalStatus = mapStatusToInternal(result.statusCode || status);
+        console.log(`[Callback] txn=${clientTxnId} status=${internalStatus} amount=${amount}`);
 
-        // 2. Log Raw Callback
+        // 2. Log Callback (log sanitized payload — no raw enc data)
         if (clientTxnId) {
-            await logTransactionEvent(clientTxnId, 'CALLBACK', req.method === 'GET' ? req.query : req.body, transMsg || status);
+            await logTransactionEvent(clientTxnId, 'CALLBACK', {
+                statusCode: result.statusCode,
+                status: result.status,
+                paymentMode,
+                bankTxnId,
+                sabpaisaTxnId
+            }, transMsg || status);
         }
 
         // 3. Get Existing Transaction to Check Type
         const existingTxn = await getTransactionByClientTxnId(clientTxnId);
 
         // 4. Update Transaction Status (if it wasn't already SUCCESS)
-        // We only want to process rewards/topups ONE TIME.
         const wasAlreadySuccess = existingTxn && existingTxn.status === 'SUCCESS';
 
         if (clientTxnId) {
@@ -184,10 +115,8 @@ export default async function handler(req, res) {
                     payment_mode: paymentMode,
                     status_code: result.statusCode || status
                 });
-                console.log(`Transaction ${clientTxnId} updated to ${internalStatus}`);
             } catch (updateErr) {
-                console.error('Failed to update transaction status:', updateErr.message);
-                console.error('Status attempted:', internalStatus);
+                console.error('[Callback] Failed to update transaction:', updateErr.message);
             }
         }
 
@@ -195,7 +124,6 @@ export default async function handler(req, res) {
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'WALLET_TOPUP') {
             if (!wasAlreadySuccess) {
                 try {
-                    console.log(`[WALLET_TOPUP] Triggering creditWallet for ${existingTxn.user_id} amount: ${amount}`);
                     await CustomerWalletService.creditWallet(
                         existingTxn.user_id,
                         amount,
@@ -203,16 +131,14 @@ export default async function handler(req, res) {
                         `Wallet Topup via Sabpaisa (${paymentMode || 'Gateway'})`,
                         { id: clientTxnId, type: 'TOPUP' }
                     );
-                    console.log(`Customer Wallet credited successfully for txn ${clientTxnId}`);
+                    console.log(`[Callback] Wallet credited for txn ${clientTxnId}`);
                 } catch (walletError) {
-                    console.error('Failed to credit customer wallet:', walletError);
+                    console.error('[Callback] Failed to credit wallet:', walletError.message);
                 }
-            } else {
-                console.log(`[WALLET_TOPUP] Transaction ${clientTxnId} was already SUCCESS. Skipping duplicate credit.`);
             }
         }
 
-        // 5b. Handle Gift Card Purchase — Create order record so it appears on "My Gift Cards"
+        // 6. Handle Gift Card Purchase — Atomic coupon+order with rollback safety
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GIFT_CARD' && !wasAlreadySuccess) {
             try {
                 const couponId = existingTxn.udf2;
@@ -222,85 +148,83 @@ export default async function handler(req, res) {
                         process.env.SUPABASE_SERVICE_ROLE_KEY
                     );
 
-                    // Mark coupon as sold and assign to user
-                    await supabaseAdmin
+                    // Step A: Mark coupon as sold (only if still available)
+                    const { data: updatedCoupon, error: updateCouponError } = await supabaseAdmin
                         .from('coupons')
                         .update({
                             status: 'sold',
                             purchased_by: existingTxn.user_id,
                             purchased_at: new Date().toISOString()
                         })
-                        .eq('id', couponId);
+                        .eq('id', couponId)
+                        .eq('status', 'available')
+                        .select('id')
+                        .single();
 
-                    // Create order record
-                    const amountPaise = Math.round(parseFloat(amount) * 100);
-                    await supabaseAdmin
-                        .from('orders')
-                        .insert({
-                            user_id: existingTxn.user_id,
-                            giftcard_id: couponId,
-                            amount: amountPaise,
-                            payment_status: 'paid',
-                            created_at: new Date().toISOString()
-                        });
+                    if (updateCouponError || !updatedCoupon) {
+                        console.error('[Callback] Coupon not available or update failed:', updateCouponError?.message);
+                    } else {
+                        // Step B: Create order record
+                        const amountPaise = Math.round(parseFloat(amount) * 100);
+                        const { error: orderError } = await supabaseAdmin
+                            .from('orders')
+                            .insert({
+                                user_id: existingTxn.user_id,
+                                giftcard_id: couponId,
+                                amount: amountPaise,
+                                payment_status: 'paid',
+                                created_at: new Date().toISOString()
+                            });
 
-                    console.log(`[GIFT_CARD] Order created for coupon ${couponId}, user ${existingTxn.user_id}`);
+                        if (orderError) {
+                            // ROLLBACK: If order insert fails, revert coupon status
+                            console.error('[Callback] Order insert failed, rolling back coupon:', orderError.message);
+                            await supabaseAdmin
+                                .from('coupons')
+                                .update({ status: 'available', purchased_by: null, purchased_at: null })
+                                .eq('id', couponId)
+                                .eq('purchased_by', existingTxn.user_id);
+                        } else {
+                            console.log(`[Callback] Gift card order created for coupon ${couponId}`);
+                        }
+                    }
                 }
             } catch (gcError) {
-                console.error('Failed to create gift card order:', gcError);
+                console.error('[Callback] Gift card processing error:', gcError.message);
             }
         }
 
-        // 6. Handle Gold Subscription Success
+        // 7. Handle Gold Subscription Success
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GOLD_SUBSCRIPTION') {
-            // Only reward if this is the first time success for this txn
             if (!wasAlreadySuccess) {
                 try {
-                    console.log(`Processing Gold Subscription for user ${existingTxn.user_id}`);
-
                     const supabaseAdmin = createClient(
                         process.env.NEXT_PUBLIC_SUPABASE_URL,
                         process.env.SUPABASE_SERVICE_ROLE_KEY
                     );
 
-                    // A. Fetch current profile to check existing expiry
                     const { data: profile } = await supabaseAdmin
                         .from('user_profiles')
                         .select('is_gold_verified, subscription_expiry')
                         .eq('id', existingTxn.user_id)
                         .single();
 
-                    // B. Determine Package Details
                     const packageId = existingTxn.udf2 || 'GOLD_1Y';
                     let monthsToAdd = 12;
                     let cashbackAmount = 1499.00;
 
-                    if (packageId === 'GOLD_1M') {
-                        monthsToAdd = 1;
-                        cashbackAmount = 199.00;
-                    } else if (packageId === 'GOLD_3M') {
-                        monthsToAdd = 3;
-                        cashbackAmount = 499.00;
-                    } else if (packageId === 'GOLD_1Y') {
-                        monthsToAdd = 12;
-                        cashbackAmount = 1499.00;
-                    }
+                    if (packageId === 'GOLD_1M') { monthsToAdd = 1; cashbackAmount = 199.00; }
+                    else if (packageId === 'GOLD_3M') { monthsToAdd = 3; cashbackAmount = 499.00; }
 
-                    // C. Calculate New Expiry Date
-                    // If already gold and expiry is in future, EXTEND it.
-                    // Otherwise, start from now.
                     let baseDate = new Date();
                     if (profile?.is_gold_verified && profile?.subscription_expiry) {
                         const currentExpiry = new Date(profile.subscription_expiry);
-                        if (currentExpiry > baseDate) {
-                            baseDate = currentExpiry;
-                        }
+                        if (currentExpiry > baseDate) baseDate = currentExpiry;
                     }
 
                     const newExpiryDate = new Date(baseDate);
                     newExpiryDate.setMonth(newExpiryDate.getMonth() + monthsToAdd);
 
-                    // D. Update User Profile
                     const { error: profileError } = await supabaseAdmin
                         .from('user_profiles')
                         .update({
@@ -312,7 +236,6 @@ export default async function handler(req, res) {
 
                     if (profileError) throw profileError;
 
-                    // E. Credit Cashback to Customer Wallet
                     await CustomerWalletService.creditWallet(
                         existingTxn.user_id,
                         cashbackAmount,
@@ -320,46 +243,14 @@ export default async function handler(req, res) {
                         `Gold ${monthsToAdd}M Subscription Cashback Reward`,
                         { id: clientTxnId, type: 'SUBSCRIPTION', package: packageId }
                     );
+                    console.log(`[Callback] Gold subscription processed for user ${existingTxn.user_id}`);
                 } catch (goldError) {
-                    console.error('Failed to process gold subscription rewards:', goldError);
+                    console.error('[Callback] Gold subscription error:', goldError.message);
                 }
             }
         }
 
-        // 7. Handle Gift Card Purchase Success
-        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GIFT_CARD') {
-            if (!wasAlreadySuccess) {
-                try {
-                    const couponId = existingTxn.udf2;
-                    console.log(`[GIFT_CARD] Processing Gift Card Purchase for ${existingTxn.user_id}, Coupon: ${couponId}`);
-
-                    const supabaseAdmin = createClient(
-                        process.env.NEXT_PUBLIC_SUPABASE_URL,
-                        process.env.SUPABASE_SERVICE_ROLE_KEY
-                    );
-
-                    const { error: updateCouponError } = await supabaseAdmin
-                        .from('coupons')
-                        .update({
-                            status: 'sold',
-                            purchased_by: existingTxn.user_id,
-                            purchased_at: new Date().toISOString()
-                        })
-                        .eq('id', couponId)
-                        .eq('status', 'available'); // Only update if still available
-
-                    if (updateCouponError) {
-                        console.error('Failed to mark coupon as sold:', updateCouponError);
-                    } else {
-                        console.log(`[GIFT_CARD] Successfully marked coupon ${couponId} as sold to ${existingTxn.user_id}`);
-                    }
-                } catch (gcError) {
-                    console.error('Failed to process gift card purchase completion:', gcError);
-                }
-            }
-        }
-
-        // 6. Redirect User based on Status
+        // 8. Redirect User based on Status
         if (internalStatus === 'SUCCESS') {
             res.redirect(`/payment/success?txnId=${clientTxnId}`);
         } else if (internalStatus === 'PENDING') {
@@ -369,7 +260,7 @@ export default async function handler(req, res) {
         }
 
     } catch (error) {
-        console.error('Payment Callback Error:', error);
+        console.error('[Callback] Unhandled error:', error.message);
         res.redirect('/payment/failure?reason=internal_error');
     }
 }

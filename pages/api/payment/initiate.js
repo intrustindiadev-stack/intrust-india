@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import SabpaisaClient from '../../../lib/sabpaisa/client';
 
 // Initialize Supabase Client (Service Role for DB operations)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -117,12 +118,23 @@ export default async function handler(req, res) {
         }
 
         console.log('[Payment Initiate] Transaction created successfully:', data.id);
+
+        // 4. Generate Sabpaisa Encrypted Payload on Server
+        const paymentPayload = await SabpaisaClient.initiatePayment({
+            amount: amount,
+            payerName: payerName || user.user_metadata?.full_name || 'User',
+            payerEmail: payerEmail || user.email,
+            payerMobile: cleanMobile,
+            clientTxnId: clientTxnId
+        });
+
         console.log('[Payment Initiate] === PAYMENT INITIATE END ===');
 
-        // 4. Return transaction ID (client will use this + env vars to call submitPaymentForm)
+        // 5. Return transaction ID and encrypted payload
         return res.status(200).json({
             transactionId: clientTxnId,
-            dbId: data.id
+            dbId: data.id,
+            paymentPayload: paymentPayload // This contains url, encData, and clientCode
         });
 
     } catch (error) {
