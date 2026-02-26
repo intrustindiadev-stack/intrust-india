@@ -15,7 +15,7 @@ export async function POST(request) {
         }
 
         // Build the encrypted payload string using AES-128-CBC
-        const encData = buildEncryptedPayload(orderData);
+        const encData = await buildEncryptedPayload(orderData);
 
         if (!encData) {
             return NextResponse.json(
