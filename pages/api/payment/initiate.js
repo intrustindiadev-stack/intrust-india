@@ -125,7 +125,9 @@ export default async function handler(req, res) {
             payerName: payerName || user.user_metadata?.full_name || 'User',
             payerEmail: payerEmail || user.email,
             payerMobile: cleanMobile,
-            clientTxnId: clientTxnId
+            clientTxnId: clientTxnId,
+            udf1: udf1 || '',
+            udf2: udf2 || ''
         });
 
         console.log('[Payment Initiate] === PAYMENT INITIATE END ===');
