@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { submitPaymentForm } from 'sabpaisa-pg-dev';
 
 export const usePayment = () => {
     const [paymentData, setPaymentData] = useState(null);
@@ -13,18 +12,33 @@ export const usePayment = () => {
         setPaymentData(null);
 
         try {
-            // 1. Get Auth Token
+            // 1. Get Auth Token (to include user info if needed by backend)
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error('User not authenticated');
 
-            // 2. Call Initiate API to create DB record
-            const response = await fetch('/api/payment/initiate', {
+            // 2. Generate a unique clientTxnId for this transaction
+            const clientTxnId = `WLT_${Date.now()}_${Math.floor(Math.random() * 9999)}`;
+
+            // 3. Call the new AES-128-CBC initiate API (no auth header needed — server-side only keys)
+            const response = await fetch('/api/sabpaisa/initiate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`
                 },
-                body: JSON.stringify(paymentDetails),
+                body: JSON.stringify({
+                    clientTxnId,
+                    amount: Number(paymentDetails.amount).toFixed(2),
+                    payerName: paymentDetails.payerName || 'User',
+                    payerEmail: paymentDetails.payerEmail || '',
+                    payerMobile: paymentDetails.payerMobile
+                        ? paymentDetails.payerMobile.replace(/\D/g, '').replace(/^91/, '').slice(-10)
+                        : '9999999999',
+                    udf1: paymentDetails.udf1 || 'WALLET_TOPUP',
+                    udf2: paymentDetails.udf2 || '',
+                    udf3: paymentDetails.udf3 || '',
+                    udf4: paymentDetails.udf4 || '',
+                    udf5: paymentDetails.udf5 || '',
+                }),
             });
 
             const data = await response.json();
@@ -33,30 +47,36 @@ export const usePayment = () => {
                 throw new Error(data.error || 'Payment initiation failed');
             }
 
-            // 3. Build form data for Sabpaisa NPM package
-            const formData = {
-                clientCode: process.env.NEXT_PUBLIC_SABPAISA_CLIENT_CODE,
-                transUserName: process.env.NEXT_PUBLIC_SABPAISA_USERNAME,
-                transUserPassword: process.env.NEXT_PUBLIC_SABPAISA_PASSWORD,
-                authKey: process.env.NEXT_PUBLIC_SABPAISA_AUTH_KEY ? btoa(process.env.NEXT_PUBLIC_SABPAISA_AUTH_KEY) : undefined,
-                authIV: process.env.NEXT_PUBLIC_SABPAISA_AUTH_IV ? btoa(process.env.NEXT_PUBLIC_SABPAISA_AUTH_IV) : undefined,
-                callbackUrl: process.env.NEXT_PUBLIC_APP_URL + '/api/payment/callback',
-                clientTxnId: data.transactionId,
-                payerName: paymentDetails.payerName || 'User',
-                payerEmail: paymentDetails.payerEmail || '',
-                payerMobile: paymentDetails.payerMobile ? paymentDetails.payerMobile.replace(/\D/g, '').replace(/^91/, '').slice(-10) : '9999999999',
-                amount: Number(paymentDetails.amount).toFixed(2),
-                channelId: 'W',
-                env: process.env.NEXT_PUBLIC_SABPAISA_ENV || 'stag',
-            };
+            if (!data.encData || !data.paymentUrl || !data.clientCode) {
+                throw new Error('Invalid response from payment server');
+            }
 
-            setPaymentData(formData);
+            setPaymentData(data);
 
-            // 4. Submit form via NPM package (encrypts and redirects to Sabpaisa)
-            await submitPaymentForm(formData);
+            // 4. Build and submit the HTML form dynamically — no npm package needed
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = data.paymentUrl;
+
+            const encDataInput = document.createElement('input');
+            encDataInput.type = 'hidden';
+            encDataInput.name = 'encData';
+            encDataInput.value = data.encData;
+
+            const clientCodeInput = document.createElement('input');
+            clientCodeInput.type = 'hidden';
+            clientCodeInput.name = 'clientCode';
+            clientCodeInput.value = data.clientCode;
+
+            form.appendChild(encDataInput);
+            form.appendChild(clientCodeInput);
+            document.body.appendChild(form);
+
+            console.log('[usePayment] Redirecting to SabPaisa Secure Gateway...');
+            form.submit();
 
         } catch (err) {
-            console.error(err);
+            console.error('[usePayment] Error:', err);
             setError(err.message);
             setLoading(false);
             throw err;
