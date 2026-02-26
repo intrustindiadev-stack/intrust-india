@@ -125,22 +125,12 @@ export default function LoginPage() {
         }
     };
 
-    const handleGoogleSignIn = async () => {
+    const handleGoogleSignIn = () => {
         setGoogleLoading(true);
         setError('');
-
-        const { error: googleError } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: `${window.location.origin}/auth/callback`
-            }
-        });
-
-        if (googleError) {
-            console.error('Google sign-in error:', googleError);
-            setError(googleError.message || 'Failed to sign in with Google');
-            setGoogleLoading(false);
-        }
+        // Redirect to our server-side Google OAuth route.
+        // This keeps all supabase.co traffic server-side, bypassing ISP blocking.
+        window.location.href = '/api/auth/google';
     };
 
     return (
