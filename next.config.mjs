@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    // Disable Turbopack build as it's causing issues on the VPS
+    turbo: {
+      // @ts-ignore
+      enabled: false,
+    },
+  },
   images: {
     remotePatterns: [
       {
