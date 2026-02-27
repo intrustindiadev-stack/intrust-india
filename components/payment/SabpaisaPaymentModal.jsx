@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import PaymentMethodCard from "./PaymentMethodCard";
 import WalletPaymentOption from "./WalletPaymentOption";
-import { submitPaymentForm } from "../../lib/sabpaisa/formSubmit";
+import { submitPaymentForm } from "sabpaisa-pg-dev";
 import { useWallet } from "@/hooks/useWallet";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
@@ -122,72 +122,57 @@ export default function SabpaisaPaymentModal({
 
           router.push("/my-giftcards");
         }
-      } else if (method === "ADD_TO_WALLET") {
-        // Wallet Topup - Initiate Sabpaisa payment to credit wallet
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session) throw new Error("Please log in to continue");
-
-        const response = await fetch("/api/sabpaisa/initiate", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            amount: paymentAmount,
-            clientTxnId: `WLT_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-            payerName: user.user_metadata?.full_name || "User",
-            payerEmail: user.email,
-            payerMobile: user.phone || "9999999999",
-            udf1: "WALLET_TOPUP",
-            udf2: "WALLET_TOPUP",
-          }),
-        });
-
-        const data = await response.json();
-        if (!response.ok)
-          throw new Error(data.error || "Failed to initiate wallet topup");
-        if (!data.encData || !data.paymentUrl)
-          throw new Error("Payment payload missing from server");
-
-        // Dynamically submit the new form structure
-        submitNewPaymentForm(data.encData, data.clientCode, data.paymentUrl);
-      } else {
-        // Sabpaisa Gateway Payment - App Router Flow (for Gift Card Purchase)
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session) throw new Error("Please log in to continue");
-
-        // Create a unique clientTxnId
-        const clientTxnId = `GC_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-
-        const res = await fetch("/api/sabpaisa/initiate", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            amount: paymentAmount,
-            clientTxnId: clientTxnId,
-            payerName: user.user_metadata?.full_name || "User",
-            payerEmail: user.email,
-            payerMobile: user.phone || "9999999999",
-            udf1: "GIFT_CARD",
-            udf2: productInfo.id,
-          }),
-        });
-
-        const data = await res.json();
-        if (!res.ok)
-          throw new Error(data.error || "Failed to initiate transaction");
-        if (!data.encData || !data.paymentUrl)
-          throw new Error("Payment payload missing from server");
-
-        // Dynamically submit the new form structure
-        submitNewPaymentForm(data.encData, data.clientCode, data.paymentUrl);
+        return; // Important: Exit after successful wallet payment
       }
+
+      // Sabpaisa Gateway Payment - App Router Flow (for Gift Card/Topup via UPI/Card/etc)
+      const {
+        data: { session, user: sessionUser },
+      } = await supabase.auth.getSession();
+
+      if (!session && process.env.NODE_ENV !== "development") throw new Error("Please log in to continue");
+
+      // Ensure values are strings and formatted properly
+      const formattedAmount = Number(paymentAmount).toString(); // SDK wants string or number
+
+      let clientTxnId, udf1, udf2;
+      if (method === "ADD_TO_WALLET") {
+        clientTxnId = `WLT_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        udf1 = "WALLET_TOPUP";
+        udf2 = "WALLET_TOPUP";
+      } else {
+        clientTxnId = `GC_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        udf1 = "GIFT_CARD";
+        udf2 = productInfo?.id || "mock_product";
+      }
+
+      // Build Payload according to Sabpaisa NextJS Docs
+      const paymentData = {
+        clientCode: process.env.NEXT_PUBLIC_SABPAISA_CLIENT_CODE,
+        transUserName: process.env.NEXT_PUBLIC_SABPAISA_USERNAME,
+        transUserPassword: process.env.NEXT_PUBLIC_SABPAISA_PASSWORD,
+        authKey: process.env.NEXT_PUBLIC_SABPAISA_AUTH_KEY,
+        authIV: process.env.NEXT_PUBLIC_SABPAISA_AUTH_IV,
+        callbackUrl: process.env.NEXT_PUBLIC_APP_URL + "/api/sabpaisa/callback",
+        payerName: user?.user_metadata?.full_name || "Guest User",
+        payerEmail: user?.email || "guest@example.com",
+        payerMobile: user?.phone || "9999999999",
+        clientTxnId: clientTxnId,
+        amount: formattedAmount,
+        channelId: "W",
+        env: process.env.NEXT_PUBLIC_SABPAISA_ENV || "prod",
+        udf1: udf1,
+        udf2: udf2,
+        udf3: "", udf4: "", udf5: "", udf6: "", udf7: "", udf8: "", udf9: "", udf10: "",
+        udf11: "", udf12: "", udf13: "", udf14: "", udf15: "", udf16: "", udf17: "", udf18: "", udf19: "", udf20: "",
+        payerVpa: "", modeTransfer: "", byPassFlag: "", cardHolderName: "", pan: "", cardExpMonth: "", cardExpYear: "", cardType: "", cvv: "", browserDetails: "", bankId: ""
+      };
+
+      console.log("Submitting to Sabpaisa SDK:", { ...paymentData, transUserPassword: "***", authKey: "***", authIV: "***" });
+
+      // This SDK function creates and submits the form dynamically
+      await submitPaymentForm(paymentData);
+
     } catch (err) {
       console.error(err);
       setError(err.message || "Payment processing failed");
@@ -195,29 +180,6 @@ export default function SabpaisaPaymentModal({
     }
   };
 
-  // Helper function to build and trigger the native SabPaisa HTML POST
-  const submitNewPaymentForm = (encData, clientCode, paymentUrl) => {
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = paymentUrl;
-
-    const encDataInput = document.createElement("input");
-    encDataInput.type = "hidden";
-    encDataInput.name = "encData";
-    encDataInput.value = encData;
-
-    const clientCodeInput = document.createElement("input");
-    clientCodeInput.type = "hidden";
-    clientCodeInput.name = "clientCode";
-    clientCodeInput.value = clientCode;
-
-    form.appendChild(encDataInput);
-    form.appendChild(clientCodeInput);
-    document.body.appendChild(form);
-
-    console.log("Redirecting to SabPaisa Secure Gateway...");
-    form.submit();
-  };
   if (!isOpen) return null;
 
   return (
@@ -287,7 +249,7 @@ export default function SabpaisaPaymentModal({
                       ₹{metadata.face_value} value at ₹{amount} —{" "}
                       {Math.round(
                         ((metadata.face_value - amount) / metadata.face_value) *
-                          100,
+                        100,
                       )}
                       % off
                     </span>
@@ -547,67 +509,3 @@ export default function SabpaisaPaymentModal({
   );
 }
 
-// Inner Component for Manual Fallback
-function ManualFallback({ paymentData }) {
-  const [showButton, setShowButton] = useState(false);
-
-  useEffect(() => {
-    // Show button after 5 seconds
-    const timer = setTimeout(() => setShowButton(true), 5000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!showButton) return null;
-
-  const handleManualClick = () => {
-    // Try to find the existing form first
-    let form = document.querySelector("form[data-sabpaisa-form]");
-
-    // If form is missing (e.g. lost in re-renders), re-create it dynamically
-    if (!form) {
-      console.warn("⚠️ Form not found for manual submit - Re-creating...");
-      form = document.createElement("form");
-      form.method = "POST";
-      form.action = paymentData.url;
-      form.setAttribute("data-sabpaisa-form", "true");
-
-      Object.keys(paymentData).forEach((key) => {
-        const value = paymentData[key];
-        if (
-          key === "url" ||
-          key === "transactionId" ||
-          value === undefined ||
-          value === null
-        )
-          return;
-
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = key;
-        input.value = String(value);
-        form.appendChild(input);
-      });
-      document.body.appendChild(form);
-    }
-
-    console.log("👆 User clicked manual pay - forcing POST submit");
-    form.submit();
-  };
-
-  return (
-    <div className="mt-4 flex flex-col items-center">
-      <p className="text-sm text-gray-400 mb-2">Taking too long?</p>
-      <button
-        onClick={handleManualClick}
-        className="
-                    px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-700
-                    hover:from-indigo-600 hover:to-indigo-800
-                    text-white text-sm font-bold rounded-xl
-                    transition-all shadow-lg shadow-indigo-200
-                "
-      >
-        Click here to Pay
-      </button>
-    </div>
-  );
-}
