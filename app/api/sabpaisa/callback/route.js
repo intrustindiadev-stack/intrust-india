@@ -4,7 +4,6 @@ import { createClient } from '@supabase/supabase-js';
 import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '@/lib/supabase/queries';
 import { CustomerWalletService } from '@/lib/wallet/customerWalletService';
 import { mapStatusToInternal } from '@/lib/sabpaisa/utils';
-import { mapStatusToInternal } from '@/lib/sabpaisa/utils';
 
 export async function POST(request) {
     try {
