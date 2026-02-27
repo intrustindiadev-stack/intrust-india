@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { decrypt } from '@/lib/sabpaisa/encrypt';
+import { decrypt } from '@/lib/sabpaisa/encryption';
 import { createClient } from '@supabase/supabase-js';
 import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '@/lib/supabase/queries';
 import { CustomerWalletService } from '@/lib/wallet/customerWalletService';
@@ -18,8 +18,15 @@ export async function POST(request) {
             );
         }
 
-        // Decrypt the AES-128-CBC base64 response
-        const decryptedString = decrypt(encResponse);
+        // Decrypt the response using our internal Sabpaisa Kit 2.0 GCM decryption 
+        // to guarantee server-side compatibility (SDK uses window.location.search)
+        const authKey = process.env.SABPAISA_AUTH_KEY || process.env.NEXT_PUBLIC_SABPAISA_AUTH_KEY;
+        const authIV = process.env.SABPAISA_AUTH_IV || process.env.NEXT_PUBLIC_SABPAISA_AUTH_IV;
+
+        // SDK string replaces space with '+', make sure our input is clean
+        const cleanEncResponse = encResponse.replaceAll(' ', '+');
+
+        const decryptedString = decrypt(cleanEncResponse, authKey, authIV);
 
         if (!decryptedString) {
             return NextResponse.json(
@@ -35,8 +42,8 @@ export async function POST(request) {
         console.log('SabPaisa Callback Decrypted Data:', result);
 
         const clientTxnId = result.clientTxnId;
-        const status = result.status; // SUCCESS, FAILED, ABORTED, etc.
-        const sabpaisaTxnId = result.sabpaisaTxnId;
+        const status = result.status || result.statusCode; // SUCCESS, FAILED, ABORTED, etc.
+        const sabpaisaTxnId = result.sabpaisaTxnId || result.transId;
         const amount = result.amount;
 
         // Map status to internal enum

@@ -41,39 +41,30 @@ export const usePayment = () => {
                 }),
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error(data.error || 'Payment initiation failed');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Payment initiation failed');
             }
 
-            if (!data.encData || !data.paymentUrl || !data.clientCode) {
-                throw new Error('Invalid response from payment server');
+            // The API now returns an auto-submitting HTML form
+            const html = await response.text();
+
+            // Create a temporary container and inject the HTML
+            const div = document.createElement('div');
+            div.style.display = 'none';
+            div.innerHTML = html;
+            document.body.appendChild(div);
+
+            // The script in the HTML's onload won't trigger if we just append innerHTML,
+            // so we manually submit the form if it exists.
+            const form = div.querySelector('form');
+            if (form) {
+                console.log('[usePayment] Redirecting to SabPaisa Secure Gateway via form submission...');
+                form.submit();
+            } else {
+                throw new Error('Payment form not found in response');
             }
 
-            setPaymentData(data);
-
-            // 4. Build and submit the HTML form dynamically — no npm package needed
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = data.paymentUrl;
-
-            const encDataInput = document.createElement('input');
-            encDataInput.type = 'hidden';
-            encDataInput.name = 'encData';
-            encDataInput.value = data.encData;
-
-            const clientCodeInput = document.createElement('input');
-            clientCodeInput.type = 'hidden';
-            clientCodeInput.name = 'clientCode';
-            clientCodeInput.value = data.clientCode;
-
-            form.appendChild(encDataInput);
-            form.appendChild(clientCodeInput);
-            document.body.appendChild(form);
-
-            console.log('[usePayment] Redirecting to SabPaisa Secure Gateway...');
-            form.submit();
 
         } catch (err) {
             console.error('[usePayment] Error:', err);

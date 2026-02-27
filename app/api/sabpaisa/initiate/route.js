@@ -5,14 +5,11 @@ import { sabpaisaConfig } from '@/lib/sabpaisa/config';
 export async function POST(request) {
     try {
         const orderData = await request.json();
-
-        // Basic validation
-        if (!orderData.amount || !orderData.clientTxnId) {
-            return NextResponse.json(
-                { error: 'Missing required fields: amount, clientTxnId' },
-                { status: 400 }
-            );
-        }
+        console.log('[SabPaisa API] Initiating with:', {
+            txnId: orderData.clientTxnId,
+            amount: orderData.amount,
+            callback: sabpaisaConfig.callbackUrl
+        });
 
         // Build the encrypted payload string using AES-128-CBC
         const encData = buildEncryptedPayload(orderData);
@@ -24,11 +21,25 @@ export async function POST(request) {
             );
         }
 
-        // Return the SabPaisa requirements back to the client
-        return NextResponse.json({
-            encData: encData,
-            clientCode: sabpaisaConfig.clientCode,
-            paymentUrl: sabpaisaConfig.initUrl
+        // Returns an auto-submitting HTML form as requested
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Redirecting to Payment Gateway...</title>
+            </head>
+            <body onload="document.forms[0].submit()">
+                <form method="POST" action="${sabpaisaConfig.initUrl}">
+                    <input type="hidden" name="encData" value="${encData}" />
+                    <input type="hidden" name="clientCode" value="${sabpaisaConfig.clientCode}" />
+                </form>
+                <p>Please wait while we redirect you to the secure payment gateway...</p>
+            </body>
+            </html>
+        `;
+
+        return new Response(html, {
+            headers: { 'Content-Type': 'text/html' },
         });
 
     } catch (error) {
@@ -39,3 +50,4 @@ export async function POST(request) {
         );
     }
 }
+
