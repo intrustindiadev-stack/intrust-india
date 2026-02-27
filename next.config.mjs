@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  turbopack: {
-    root: process.cwd(),
-  },
   images: {
     remotePatterns: [
       {
@@ -25,12 +22,6 @@ const nextConfig = {
 
   serverExternalPackages: ['jsonwebtoken'],
 
-  // Optimize imports
-  modularizeImports: {
-    'lucide-react': {
-      transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}',
-    },
-  },
   async headers() {
     return [
       {
