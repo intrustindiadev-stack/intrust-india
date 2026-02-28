@@ -355,7 +355,7 @@ export default function KYCForm({
                     </p>
                 </div>
 
-                {/* ID Document Upload Section */}
+                {/* ID Document Upload Section - HIDDEN AS PER USER REQUEST
                 <div className="pt-2">
                     <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${formData.idDocumentFront ? 'border-green-300 bg-green-50' : 'border-slate-200 hover:border-blue-400 hover:bg-slate-50'
                         }`}>
@@ -413,6 +413,7 @@ export default function KYCForm({
                         </div>
                     </div>
                 </div>
+                */}
 
                 <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-500 ml-1">Full Address</label>
