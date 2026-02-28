@@ -1,53 +1,62 @@
 import { NextResponse } from 'next/server';
 import { buildEncryptedPayload } from '@/lib/sabpaisa/payload';
 import { sabpaisaConfig } from '@/lib/sabpaisa/config';
+import fs from 'fs';
+
+const isDev = process.env.NODE_ENV !== 'production';
 
 export async function POST(request) {
-    try {
-        const orderData = await request.json();
-        console.log('[SabPaisa API] Initiating with:', {
-            txnId: orderData.clientTxnId,
-            amount: orderData.amount,
-            callback: sabpaisaConfig.callbackUrl
-        });
+    const orderData = await request.json().catch(() => null);
 
-        // Build the encrypted payload string using AES-128-CBC
+    if (!orderData) {
+        return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    // Log incoming request immediately
+    const incomingLog = `
+--- SABPAISA INIT FULL DEBUG ---
+Time: ${new Date().toISOString()}
+Incoming Order Data: ${JSON.stringify(orderData, null, 2)}
+Config Used: ${JSON.stringify({
+        clientCode: sabpaisaConfig.clientCode,
+        username: sabpaisaConfig.username,
+        password: sabpaisaConfig.password ? 'LOADED' : 'MISSING',
+        authKeyLength: sabpaisaConfig.authKey?.length || 0,
+        initUrl: sabpaisaConfig.initUrl
+    }, null, 2)}
+--------------------------------\n`;
+
+    if (isDev) {
+        console.log(incomingLog);
+        try { fs.appendFileSync('sabpaisa-debug.log', incomingLog); } catch (_) { }
+    }
+
+    try {
         const encData = buildEncryptedPayload(orderData);
 
         if (!encData) {
-            return NextResponse.json(
-                { error: 'Failed to build encrypted payload' },
-                { status: 500 }
-            );
+            const errMsg = 'buildEncryptedPayload returned null';
+            if (isDev) {
+                try { fs.appendFileSync('sabpaisa-debug.log', `\nERROR: ${errMsg}\n`); } catch (_) { }
+            }
+            return NextResponse.json({ error: errMsg }, { status: 500 });
         }
 
-        // Returns an auto-submitting HTML form as requested
-        const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Redirecting to Payment Gateway...</title>
-            </head>
-            <body onload="document.forms[0].submit()">
-                <form method="POST" action="${sabpaisaConfig.initUrl}">
-                    <input type="hidden" name="encData" value="${encData}" />
-                    <input type="hidden" name="clientCode" value="${sabpaisaConfig.clientCode}" />
-                </form>
-                <p>Please wait while we redirect you to the secure payment gateway...</p>
-            </body>
-            </html>
-        `;
-
-        return new Response(html, {
-            headers: { 'Content-Type': 'text/html' },
+        return NextResponse.json({
+            paymentUrl: sabpaisaConfig.initUrl,
+            encData: encData,
+            clientCode: sabpaisaConfig.clientCode
         });
 
     } catch (error) {
-        console.error('API Initiate Error:', error);
+        const errMsg = `Encryption error: ${error.message}\n${error.stack}`;
+        console.error('[SabPaisa API] Error:', errMsg);
+        if (isDev) {
+            try { fs.appendFileSync('sabpaisa-debug.log', `\nCRASH: ${errMsg}\n`); } catch (_) { }
+        }
         return NextResponse.json(
             { error: 'Internal Server Error', details: error.message },
             { status: 500 }
         );
     }
 }
-

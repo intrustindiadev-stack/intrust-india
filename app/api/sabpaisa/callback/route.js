@@ -4,8 +4,28 @@ import { createClient } from '@supabase/supabase-js';
 import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '@/lib/supabase/queries';
 import { CustomerWalletService } from '@/lib/wallet/customerWalletService';
 import { mapStatusToInternal } from '@/lib/sabpaisa/utils';
+import { sabpaisaConfig } from '@/lib/sabpaisa/config';
+
+const ALLOWED_IPS = (process.env.SABPAISA_ALLOWED_IPS || '').split(',').map(ip => ip.trim()).filter(Boolean);
+
+export async function GET() {
+    console.warn('[SabPaisa] Suspicious GET request to callback URL');
+    return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
+}
 
 export async function POST(request) {
+    // 1. IP Whitelisting (Optional but highly recommended)
+    if (ALLOWED_IPS.length > 0) {
+        let clientIp = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+            request.headers.get('x-real-ip') ||
+            'unknown';
+
+        if (!ALLOWED_IPS.includes(clientIp)) {
+            console.error(`[SabPaisa] Blocked unauthorized callback from IP: ${clientIp}`);
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
+    }
+
     try {
         // SabPaisa sends the response back via a POST form submission
         const formData = await request.formData();
@@ -20,8 +40,7 @@ export async function POST(request) {
 
         // Decrypt the response using our internal Sabpaisa Kit 2.0 GCM decryption 
         // to guarantee server-side compatibility (SDK uses window.location.search)
-        const authKey = process.env.SABPAISA_AUTH_KEY || process.env.NEXT_PUBLIC_SABPAISA_AUTH_KEY;
-        const authIV = process.env.SABPAISA_AUTH_IV || process.env.NEXT_PUBLIC_SABPAISA_AUTH_IV;
+        const { authKey, authIV } = sabpaisaConfig;
 
         // SDK string replaces space with '+', make sure our input is clean
         const cleanEncResponse = encResponse.replaceAll(' ', '+');
@@ -39,7 +58,13 @@ export async function POST(request) {
         const params = new URLSearchParams(decryptedString);
         const result = Object.fromEntries(params.entries());
 
-        console.log('SabPaisa Callback Decrypted Data:', result);
+        // LOGGING: Sanitize output to remove PII (email, mobile, address, etc.)
+        const sanitizedResult = { ...result };
+        ['payerEmail', 'payerMobile', 'payerAddress', 'payerName', 'transUserPassword'].forEach(key => {
+            if (sanitizedResult[key]) sanitizedResult[key] = '***';
+        });
+
+        console.log('SabPaisa Callback Decrypted Data (Sanitized):', sanitizedResult);
 
         const clientTxnId = result.clientTxnId;
         const status = result.status || result.statusCode; // SUCCESS, FAILED, ABORTED, etc.

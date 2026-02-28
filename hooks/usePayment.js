@@ -29,7 +29,7 @@ export const usePayment = () => {
                     clientTxnId,
                     amount: Number(paymentDetails.amount).toFixed(2),
                     payerName: paymentDetails.payerName || 'User',
-                    payerEmail: paymentDetails.payerEmail || '',
+                    payerEmail: paymentDetails.payerEmail || 'guest@sabpaisa.in',
                     payerMobile: paymentDetails.payerMobile
                         ? paymentDetails.payerMobile.replace(/\D/g, '').replace(/^91/, '').slice(-10)
                         : '9999999999',
@@ -46,24 +46,33 @@ export const usePayment = () => {
                 throw new Error(errorData.error || 'Payment initiation failed');
             }
 
-            // The API now returns an auto-submitting HTML form
-            const html = await response.text();
+            // The API now returns JSON data to securely build the form
+            const data = await response.json();
 
-            // Create a temporary container and inject the HTML
-            const div = document.createElement('div');
-            div.style.display = 'none';
-            div.innerHTML = html;
-            document.body.appendChild(div);
-
-            // The script in the HTML's onload won't trigger if we just append innerHTML,
-            // so we manually submit the form if it exists.
-            const form = div.querySelector('form');
-            if (form) {
-                console.log('[usePayment] Redirecting to SabPaisa Secure Gateway via form submission...');
-                form.submit();
-            } else {
-                throw new Error('Payment form not found in response');
+            if (!data.encData || !data.paymentUrl || !data.clientCode) {
+                throw new Error('Invalid response from payment server');
             }
+
+            console.log('[usePayment] Redirecting to SabPaisa Secure Gateway via secure form...');
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = data.paymentUrl;
+
+            const encDataInput = document.createElement('input');
+            encDataInput.type = 'hidden';
+            encDataInput.name = 'encData';
+            encDataInput.value = data.encData;
+            form.appendChild(encDataInput);
+
+            const clientCodeInput = document.createElement('input');
+            clientCodeInput.type = 'hidden';
+            clientCodeInput.name = 'clientCode';
+            clientCodeInput.value = data.clientCode;
+            form.appendChild(clientCodeInput);
+
+            document.body.appendChild(form);
+            form.submit();
 
 
         } catch (err) {

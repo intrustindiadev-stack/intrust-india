@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import PaymentMethodCard from "./PaymentMethodCard";
 import WalletPaymentOption from "./WalletPaymentOption";
-import { submitPaymentForm } from "sabpaisa-pg-dev";
+
 import { useWallet } from "@/hooks/useWallet";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
@@ -125,53 +125,77 @@ export default function SabpaisaPaymentModal({
         return; // Important: Exit after successful wallet payment
       }
 
-      // Sabpaisa Gateway Payment - App Router Flow (for Gift Card/Topup via UPI/Card/etc)
+      // ── Sabpaisa Gateway Payment (Secure Server-Side Flow) ──
       const {
-        data: { session, user: sessionUser },
+        data: { session },
       } = await supabase.auth.getSession();
 
       if (!session && process.env.NODE_ENV !== "development") throw new Error("Please log in to continue");
 
-      // Ensure values are strings and formatted properly
-      const formattedAmount = Number(paymentAmount).toString(); // SDK wants string or number
-
       let clientTxnId, udf1, udf2;
+      const uniqueRandomStr = Math.random().toString(36).substring(2, 8); // Fallback for environments where crypto.randomUUID isn't available
+
       if (method === "ADD_TO_WALLET") {
-        clientTxnId = `WLT_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        clientTxnId = `WLT_${Date.now()}_${uniqueRandomStr}`;
         udf1 = "WALLET_TOPUP";
         udf2 = "WALLET_TOPUP";
       } else {
-        clientTxnId = `GC_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        clientTxnId = `GC_${Date.now()}_${uniqueRandomStr}`;
         udf1 = "GIFT_CARD";
         udf2 = productInfo?.id || "mock_product";
       }
 
-      // Build Payload according to Sabpaisa NextJS Docs
-      const paymentData = {
-        clientCode: process.env.NEXT_PUBLIC_SABPAISA_CLIENT_CODE,
-        transUserName: process.env.NEXT_PUBLIC_SABPAISA_USERNAME,
-        transUserPassword: process.env.NEXT_PUBLIC_SABPAISA_PASSWORD,
-        authKey: process.env.NEXT_PUBLIC_SABPAISA_AUTH_KEY,
-        authIV: process.env.NEXT_PUBLIC_SABPAISA_AUTH_IV,
-        callbackUrl: process.env.NEXT_PUBLIC_APP_URL + "/api/sabpaisa/callback",
-        payerName: user?.user_metadata?.full_name || "Guest User",
-        payerEmail: user?.email || "guest@example.com",
-        payerMobile: user?.phone || "9999999999",
-        clientTxnId: clientTxnId,
-        amount: formattedAmount,
-        channelId: "W",
-        env: process.env.NEXT_PUBLIC_SABPAISA_ENV || "prod",
-        udf1: udf1,
-        udf2: udf2,
-        udf3: "", udf4: "", udf5: "", udf6: "", udf7: "", udf8: "", udf9: "", udf10: "",
-        udf11: "", udf12: "", udf13: "", udf14: "", udf15: "", udf16: "", udf17: "", udf18: "", udf19: "", udf20: "",
-        payerVpa: "", modeTransfer: "", byPassFlag: "", cardHolderName: "", pan: "", cardExpMonth: "", cardExpYear: "", cardType: "", cvv: "", browserDetails: "", bankId: ""
-      };
+      const response = await fetch('/api/sabpaisa/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clientTxnId,
+          amount: Number(paymentAmount).toFixed(2),
+          payerName: user?.user_metadata?.full_name || "Guest User",
+          payerEmail: (user?.email || "").trim() || "guest@sabpaisa.in",
+          payerMobile: (user?.phone || "9999999999").replace(/\D/g, '').replace(/^91/, '').slice(-10),
+          udf1: udf1,
+          udf2: udf2,
+          udf3: metadata?.type || "",
+          udf4: "",
+          udf5: "",
+        }),
+      });
 
-      console.log("Submitting to Sabpaisa SDK:", { ...paymentData, transUserPassword: "***", authKey: "***", authIV: "***" });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Payment initiation failed");
+      }
 
-      // This SDK function creates and submits the form dynamically
-      await submitPaymentForm(paymentData);
+      // The API returns JSON data to safely build the form
+      const data = await response.json();
+
+      if (!data.encData || !data.paymentUrl || !data.clientCode) {
+        throw new Error('Invalid response from payment server');
+      }
+
+      console.log('[SabpaisaModal] Redirecting via secure server-side form...');
+
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = data.paymentUrl;
+
+      const encDataInput = document.createElement('input');
+      encDataInput.type = 'hidden';
+      encDataInput.name = 'encData';
+      encDataInput.value = data.encData;
+      form.appendChild(encDataInput);
+
+      const clientCodeInput = document.createElement('input');
+      clientCodeInput.type = 'hidden';
+      clientCodeInput.name = 'clientCode';
+      clientCodeInput.value = data.clientCode;
+      form.appendChild(clientCodeInput);
+
+      document.body.appendChild(form);
+      form.submit();
 
     } catch (err) {
       console.error(err);
