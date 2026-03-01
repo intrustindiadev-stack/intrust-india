@@ -25,8 +25,8 @@ const poppins = Poppins({
 export const metadata = {
   metadataBase: new URL("https://www.intrustindia.com"),
   title: {
-    default: "InTrust India | Instant Loans, Investments & Financial Services",
-    template: "%s | InTrust India"
+    default: "INTRUST",
+    template: "%s | INTRUST"
   },
   description: "InTrust India offers instant personal loans, business loans, and gold loans with fast approval. Manage your investments, insurance, and payments in one secure platform.",
   keywords: ["personal loan india", "business loan bhopal", "gold loan india", "instant loan approval india", "financial services india", "InTrust India"],
@@ -69,9 +69,7 @@ export const metadata = {
     statusBarStyle: "default",
     title: "InTrust India",
   },
-  icons: {
-    apple: "/apple-icon.png",
-  },
+  category: "finance",
   robots: {
     index: true,
     follow: true,

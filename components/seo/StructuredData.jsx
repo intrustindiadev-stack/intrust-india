@@ -3,17 +3,28 @@ import Script from 'next/script';
 export default function StructuredData() {
     const jsonLd = {
         "@context": "https://schema.org",
-        "@type": "FinancialService",
+        "@type": ["FinancialService", "Organization"],
         "name": "InTrust India",
+        "alternateName": "Intrust Financial Service India Pvt Ltd",
         "url": "https://www.intrustindia.com",
         "logo": "https://www.intrustindia.com/icons/intrustLogo.png",
         "image": "https://www.intrustindia.com/og-image.png",
         "description": "Premium financial service provider in India offering instant personal loans, business loans, and gold loans.",
+        "foundingDate": "2014",
         "address": {
             "@type": "PostalAddress",
+            "streetAddress": "TF-312/MM09, Ashima Mall, Narmadapuram Rd, Danish Nagar",
             "addressLocality": "Bhopal",
             "addressRegion": "Madhya Pradesh",
+            "postalCode": "462026",
             "addressCountry": "IN"
+        },
+        "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+91-1800-203-0052",
+            "contactType": "customer service",
+            "email": "info@intrustfinancialindia.com",
+            "availableLanguage": ["English", "Hindi"]
         },
         "geo": {
             "@type": "GeoCoordinates",

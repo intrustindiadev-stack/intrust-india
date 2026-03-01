@@ -1,6 +1,6 @@
 ﻿import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '../../../lib/supabase/queries';
 import { CustomerWalletService } from '../../../lib/wallet/customerWalletService';
-import { decrypt } from '../../../lib/sabpaisa/encryption';
+import { decrypt } from '../../../lib/sabpaisa/encrypt';
 import { mapStatusToInternal } from '../../../lib/sabpaisa/utils';
 import { createClient } from '@supabase/supabase-js';
 

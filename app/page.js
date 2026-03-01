@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 
 export async function generateMetadata() {
   return {
-    title: "Instant Loans & Financial Services in India",
+    title: "INTRUST",
     description: "Get instant personal loans, business loans, and gold loans with InTrust India. Simple, secure, and fast financial solutions for everyone.",
     alternates: {
       canonical: "/",

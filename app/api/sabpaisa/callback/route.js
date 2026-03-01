@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { decrypt } from '@/lib/sabpaisa/encryption';
+import { decrypt } from '@/lib/sabpaisa/encrypt';
 import { createClient } from '@supabase/supabase-js';
 import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '@/lib/supabase/queries';
 import { CustomerWalletService } from '@/lib/wallet/customerWalletService';
