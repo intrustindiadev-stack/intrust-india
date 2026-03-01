@@ -10,17 +10,15 @@
  * - Loading states
  * - Toast notifications
  * - Bank-grade security checkbox
- * - ID Document upload with OCR verification
  * 
  * @component
  */
 
 import { useState } from 'react';
-import { CheckCircle, Shield, ChevronRight, AlertCircle, Info, Upload, Check, Loader } from 'lucide-react';
+import { CheckCircle, Shield, ChevronRight, AlertCircle, Info, Check, Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { submitKYC, verifyPANAction } from '@/app/actions/kyc';
-import { verifyOCRDOC } from '@/app/actions/sprintVerifyActions';
 import {
     validateKYCForm,
     formatPANInput,
@@ -48,31 +46,15 @@ export default function KYCForm({
         dateOfBirth: initialData.dateOfBirth || '',
         panNumber: initialData.panNumber || initialData.panCard || '',
         fullAddress: initialData.address || initialData.fullAddress || '',
-        bankGradeSecurity: initialData.bankGradeSecurity || false,
-        // Files (ID document only — selfie removed)
-        idDocumentFront: null
+        bankGradeSecurity: initialData.bankGradeSecurity || false
     });
 
     const [panVerified, setPanVerified] = useState(false);
     const [verifyingPan, setVerifyingPan] = useState(false);
 
-    // Document verification states
-    const [docVerified, setDocVerified] = useState(false);
-    const [verifyingDoc, setVerifyingDoc] = useState(false);
-
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // Helper: File to Base64
-    const fileToBase64 = (file) => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result.split(',')[1]);
-            reader.onerror = (error) => reject(error);
-        });
-    };
 
     // Real-time validation on field blur
     const validateField = (fieldName, value) => {
@@ -104,21 +86,6 @@ export default function KYCForm({
         }
     };
 
-    const handleFileChange = (fieldName, e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setFormData(prev => ({ ...prev, [fieldName]: file }));
-            // Clear error if any
-            if (errors[fieldName]) {
-                setErrors(prev => {
-                    const newErrors = { ...prev };
-                    delete newErrors[fieldName];
-                    return newErrors;
-                });
-            }
-        }
-    };
-
     const handleVerifyPAN = async () => {
         if (!formData.panNumber || formData.panNumber.length !== 10) {
             toast.error('Please enter a valid PAN number first');
@@ -141,35 +108,7 @@ export default function KYCForm({
         }
     };
 
-    const handleVerifyDocument = async () => {
-        if (!formData.idDocumentFront) return;
-        setVerifyingDoc(true);
-        try {
-            const base64 = await fileToBase64(formData.idDocumentFront);
-            const result = await verifyOCRDOC(base64, 'PAN');
-            if (result.valid === true) {
-                setDocVerified(true);
-                toast.success('Document OCR Verified!');
 
-                // Auto-fill PAN if found
-                if (result.data?.details?.doc_number) {
-                    const extractedPan = result.data.details.doc_number;
-                    if (extractedPan.length === 10) {
-                        setFormData(prev => ({ ...prev, panNumber: extractedPan }));
-                        setPanVerified(true);
-                        toast.success(`Auto-filled PAN: ${extractedPan}`);
-                    }
-                }
-            } else {
-                setDocVerified(false);
-                toast.error(result.message || 'OCR Verification failed');
-            }
-        } catch (err) {
-            toast.error('OCR Verification failed');
-        } finally {
-            setVerifyingDoc(false);
-        }
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -205,8 +144,6 @@ export default function KYCForm({
             submitData.append('fullAddress', formData.fullAddress);
             submitData.append('bankGradeSecurity', formData.bankGradeSecurity);
 
-            if (formData.idDocumentFront) submitData.append('idDocumentFront', formData.idDocumentFront);
-
             const result = await submitKYC(submitData);
 
             if (result.success) {
@@ -222,8 +159,7 @@ export default function KYCForm({
                     dateOfBirth: '',
                     panNumber: '',
                     fullAddress: '',
-                    bankGradeSecurity: false,
-                    idDocumentFront: null
+                    bankGradeSecurity: false
                 });
                 setTouched({});
                 setErrors({});
@@ -355,65 +291,7 @@ export default function KYCForm({
                     </p>
                 </div>
 
-                {/* ID Document Upload Section - HIDDEN AS PER USER REQUEST
-                <div className="pt-2">
-                    <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${formData.idDocumentFront ? 'border-green-300 bg-green-50' : 'border-slate-200 hover:border-blue-400 hover:bg-slate-50'
-                        }`}>
-                        <div className="flex flex-col items-center gap-3">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.idDocumentFront ? 'bg-green-100 text-green-600' : 'bg-blue-50 text-blue-600'}`}>
-                                <Upload size={24} />
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-slate-900 text-sm">ID Document (Front)</h4>
-                                <p className="text-xs text-slate-500 mb-3">PAN Card / Aadhaar / Voter ID (optional)</p>
-                                <input
-                                    type="file"
-                                    accept="image/*,application/pdf"
-                                    onChange={(e) => handleFileChange('idDocumentFront', e)}
-                                    className="hidden"
-                                    id="doc-upload"
-                                />
-                                {formData.idDocumentFront ? (
-                                    <div className="flex flex-col gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={handleVerifyDocument}
-                                            disabled={verifyingDoc || docVerified}
-                                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 mx-auto ${docVerified
-                                                ? 'bg-green-100 text-green-700 cursor-default'
-                                                : 'bg-blue-600 text-white hover:bg-blue-700'
-                                                }`}
-                                        >
-                                            {verifyingDoc ? <Loader size={12} className="animate-spin" /> : null}
-                                            {docVerified ? 'OCR Verified' : verifyingDoc ? 'Verifying...' : 'Verify Doc'}
-                                            {docVerified ? <Check size={12} /> : null}
-                                        </button>
-                                        <label
-                                            htmlFor="doc-upload"
-                                            className="text-[10px] text-slate-400 hover:text-blue-600 cursor-pointer font-medium underline"
-                                        >
-                                            Select Different File
-                                        </label>
-                                    </div>
-                                ) : (
-                                    <label
-                                        htmlFor="doc-upload"
-                                        className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 cursor-pointer hover:bg-slate-50"
-                                    >
-                                        Select File
-                                    </label>
-                                )}
-                                {formData.idDocumentFront && (
-                                    <p className="text-xs text-green-600 font-medium mt-2">
-                                        Selected: {formData.idDocumentFront.name}
-                                    </p>
-                                )}
-                                {errors.idDocumentFront && <p className="text-xs text-red-500 mt-2">{errors.idDocumentFront}</p>}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                */}
+
 
                 <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-500 ml-1">Full Address</label>

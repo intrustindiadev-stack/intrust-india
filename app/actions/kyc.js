@@ -15,24 +15,6 @@ import { validateKYCForm, sanitizeKYCData } from '@/app/types/kyc';
 import { sprintVerify } from '@/lib/sprintVerify';
 
 
-// Helper to upload file to Supabase Storage
-async function uploadFile(supabase, userId, file, bucket = 'kyc-documents') {
-    if (!file || typeof file === 'string') return null; // Skip if already a string (URL) or empty
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-    const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(fileName, file);
-
-    if (error) {
-        console.error('Storage upload error:', error);
-        throw error;
-    }
-
-    return data.path;
-}
 
 /**
  * Submits or updates a KYC record for the authenticated user
@@ -50,20 +32,7 @@ export async function submitKYC(formData) {
             return { success: false, error: 'Unauthorized' };
         }
 
-        // 1. Handle File Uploads (ID Document only — selfie removed)
-        const docFrontFile = formData.get('idDocumentFront');
-
-        let docFrontPath = null;
-
-        try {
-            if (docFrontFile && docFrontFile.size > 0) {
-                docFrontPath = await uploadFile(supabase, user.id, docFrontFile);
-            }
-        } catch (uploadErr) {
-            return { success: false, error: 'Failed to upload documents. Please try again.' };
-        }
-
-        // 2. Extract Text Data
+        // 1. Extract Text Data
         const rawData = {
             fullName: formData.get('fullName'),
             phoneNumber: formData.get('phoneNumber'),
@@ -150,9 +119,9 @@ export async function submitKYC(formData) {
             // Security
             bank_grade_security: sanitizedData.bankGradeSecurity,
 
-            // Files (selfie removed — only ID document kept)
+            // Files (disabled — no document upload)
             selfie_url: null,
-            id_document_front_url: docFrontPath || null,
+            id_document_front_url: null,
 
             // Status Logic (Pure API-driven)
             status: finalStatus,
