@@ -12,7 +12,9 @@ import {
     Clock,
     CreditCard,
     ShoppingBag,
-    Star
+    Star,
+    Gift,
+    Copy
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +34,6 @@ export default async function AdminUserDetailPage({ params }) {
         notFound();
     }
 
-    // Role-Based Redirection: If merchant, go to merchant detail
     if (user.role === 'merchant') {
         const { data: merchant } = await supabase
             .from('merchants')
@@ -43,6 +44,17 @@ export default async function AdminUserDetailPage({ params }) {
         if (merchant) {
             redirect(`/admin/merchants/${merchant.id}`);
         }
+    }
+
+    // Fetch Referrer Details if applicable
+    let referrer = null;
+    if (user.referred_by) {
+        const { data: refUser } = await supabase
+            .from('user_profiles')
+            .select('id, full_name, email')
+            .eq('id', user.referred_by)
+            .maybeSingle();
+        referrer = refUser;
     }
 
     // Fetch KYC separately
@@ -281,6 +293,42 @@ export default async function AdminUserDetailPage({ params }) {
                             </div>
                         </div>
                     )}
+
+                    {/* Referral Info */}
+                    <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+                        <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2 mb-6 tracking-tight">
+                            <Gift className="text-emerald-500" />
+                            Referral Information
+                        </h2>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* User's Own Code */}
+                            <div className="bg-emerald-50 rounded-2xl p-5 border border-emerald-100">
+                                <p className="text-xs font-bold uppercase tracking-wider text-emerald-600/70 mb-2">User's Referral Code</p>
+                                {user.referral_code ? (
+                                    <div className="flex items-center gap-3">
+                                        <code className="text-xl font-mono font-black text-emerald-700 tracking-widest">{user.referral_code}</code>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm font-medium text-gray-500 italic">No code generated yet</p>
+                                )}
+                            </div>
+
+                            {/* Who Referred Them */}
+                            <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                                <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Referred By</p>
+                                {referrer ? (
+                                    <div>
+                                        <p className="font-bold text-gray-900">{referrer.full_name}</p>
+                                        <p className="text-sm text-gray-500">{referrer.email}</p>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm font-medium text-gray-500 italic">Organic Sign up (No referrer)</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 {/* Right Column: Quick Info & Activity */}

@@ -13,7 +13,9 @@ export async function GET(request) {
     const requestUrl = new URL(request.url);
     const code = requestUrl.searchParams.get('code');
     const state = requestUrl.searchParams.get('state');
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://intrustindia.com';
+    const host = request.headers.get('host');
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const appUrl = `${protocol}://${host}`;
 
     if (!code) {
         console.error('[Google OAuth] No code in callback');

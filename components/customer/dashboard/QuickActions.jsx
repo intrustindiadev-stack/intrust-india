@@ -27,6 +27,13 @@ export default function QuickActions() {
                     <div className="font-bold text-slate-700 dark:text-gray-300 group-hover:text-purple-700 dark:group-hover:text-purple-400">My Orders</div>
                     <ChevronRight size={16} className="ml-auto text-slate-400" />
                 </Link>
+                <Link href="/refer" className="flex items-center gap-3 p-3 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/30 group transition-colors text-emerald-600 dark:text-emerald-400">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                        <Gift size={20} />
+                    </div>
+                    <div className="font-bold">Refer & Earn</div>
+                    <ChevronRight size={16} className="ml-auto opacity-60" />
+                </Link>
             </div>
         </motion.div>
     );

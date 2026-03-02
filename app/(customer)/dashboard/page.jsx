@@ -24,10 +24,12 @@ import QuickServices from '@/components/customer/dashboard/QuickServices';
 import RecentActivity from '@/components/customer/dashboard/RecentActivity';
 import QuickActions from '@/components/customer/dashboard/QuickActions';
 import GoldSubscription from '@/components/customer/dashboard/GoldSubscription';
+import ReferralGenzSection from '@/components/customer/dashboard/ReferralGenzSection';
 
 const OpportunitiesSection = dynamic(() => import('@/components/customer/OpportunitiesSection'), { ssr: false });
 const MerchantOpportunityBanner = dynamic(() => import('@/components/customer/MerchantOpportunityBanner'), { ssr: false });
 const PackageSelectionModal = dynamic(() => import('@/components/customer/dashboard/PackageSelectionModal'), { ssr: false });
+const OnboardingModal = dynamic(() => import('@/components/customer/dashboard/OnboardingModal'), { ssr: false });
 
 
 function DashboardSkeleton() {
@@ -76,7 +78,9 @@ export default function CustomerDashboardPage() {
         isGoldVerified: false,
         subscriptionExpiry: null,
         walletBalance: 0.00,
-        activeCards: 0
+        activeCards: 0,
+        completedOnboarding: true, // Optimistically true until fetched
+        referralCode: null
     });
 
     const [recentActivity, setRecentActivity] = useState([]);
@@ -264,7 +268,7 @@ export default function CustomerDashboardPage() {
 
                 // Race the fetch bundle against timeout
                 const mainFetch = Promise.allSettled([
-                    supabase.from('user_profiles').select('full_name, role, is_gold_verified, subscription_expiry, kyc_status').eq('id', user.id).single(),
+                    supabase.from('user_profiles').select('full_name, role, is_gold_verified, subscription_expiry, kyc_status, completed_onboarding, referral_code').eq('id', user.id).single(),
                     supabase.from('kyc_records').select('status, verification_status').eq('user_id', user.id).maybeSingle(),
                     supabase.from('customer_wallets').select('balance_paise').eq('user_id', user.id).maybeSingle(),
                     supabase.from('coupons').select('id, title, brand, face_value_paise, selling_price_paise, valid_until, status, purchased_at').eq('purchased_by', user.id).eq('status', 'sold').order('purchased_at', { ascending: false }),
@@ -352,7 +356,9 @@ export default function CustomerDashboardPage() {
                     isGoldVerified: profile?.is_gold_verified || false,
                     subscriptionExpiry: profile?.subscription_expiry || null,
                     walletBalance,
-                    activeCards
+                    activeCards,
+                    completedOnboarding: profile?.completed_onboarding ?? true,
+                    referralCode: profile?.referral_code || null
                 });
 
             } catch (error) {
@@ -435,6 +441,13 @@ export default function CustomerDashboardPage() {
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)]">
             <Navbar />
 
+            {!userData.completedOnboarding && user && (
+                <OnboardingModal
+                    userId={user.id}
+                    onComplete={() => setUserData(prev => ({ ...prev, completedOnboarding: true }))}
+                />
+            )}
+
             <div className="pt-[12vh] sm:pt-[15vh] pb-24 px-4 sm:px-6">
                 <div className="max-w-7xl mx-auto">
                     <div className="mb-4 sm:mb-8">
@@ -465,6 +478,10 @@ export default function CustomerDashboardPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
                         {/* Main Content Area */}
                         <div className="lg:col-span-2 space-y-8">
+                            {/* Referral Genz Section - High Prominence */}
+                            {userData.referralCode && (
+                                <ReferralGenzSection referralCode={userData.referralCode} />
+                            )}
 
                             <QuickServices services={quickServices} />
                             <RecentActivity orders={recentActivity} />
@@ -490,7 +507,7 @@ export default function CustomerDashboardPage() {
                     <OpportunitiesSection />
                 </div>
             </div>
-            <CustomerBottomNav />
+            {userData.completedOnboarding && <CustomerBottomNav />}
 
             <PackageSelectionModal
                 showPackages={showPackages}

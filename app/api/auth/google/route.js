@@ -7,7 +7,9 @@ import { NextResponse } from 'next/server';
  */
 export async function GET(request) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://intrustindia.com';
+    const host = request.headers.get('host');
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const appUrl = `${protocol}://${host}`;
     const redirectUri = `${appUrl}/api/auth/google/callback`;
 
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');

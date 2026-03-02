@@ -82,6 +82,7 @@ export async function middleware(request) {
             '/dashboard',
             '/my-giftcards',
             '/profile',
+            '/refer',
             // '/gift-cards' removed - browsing should be public, only purchase requires auth
         ]
 

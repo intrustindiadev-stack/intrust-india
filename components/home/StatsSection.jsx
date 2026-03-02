@@ -8,7 +8,7 @@ import { useRef, useEffect, useState } from 'react';
 const VolumeGraph = () => (
     <div className="relative w-full h-28 md:h-40 flex items-end justify-center perspective-[1000px] overflow-visible">
         {/* Floor Reflection */}
-        <div className="absolute bottom-0 w-[80%] h-4 bg-blue-500/20 blur-xl rounded-[100%] rotate-x-[60deg]" />
+        <div className="absolute bottom-0 w-[80%] h-4 bg-blue-500/10 md:bg-blue-500/20 blur-lg md:blur-xl rounded-[100%] rotate-x-[60deg] pointer-events-none" />
 
         <svg viewBox="0 0 200 100" className="w-full h-full relative z-10 overflow-visible drop-shadow-[0_10px_20px_rgba(59,130,246,0.3)]">
             <defs>
@@ -69,8 +69,8 @@ const UserNetwork = () => (
                 key={i}
                 className="absolute border border-indigo-500/20 rounded-full animate-[spin_10s_linear_infinite]"
                 style={{
-                    width: `${ring * 35}px md:width: ${ring * 50}px`,
-                    height: `${ring * 35}px md:height: ${ring * 50}px`,
+                    width: `${ring * 70}px`,
+                    height: `${ring * 70}px`,
                     animationDuration: `${10 + i * 5}s`
                 }}
             >
@@ -88,7 +88,7 @@ const UserNetwork = () => (
 const UptimeRing = () => (
     <div className="relative w-full h-28 md:h-40 flex items-center justify-center">
         {/* Outer Glow */}
-        <div className="absolute w-20 h-20 md:w-24 md:h-24 bg-emerald-500/20 rounded-full blur-xl animate-pulse" />
+        <div className="absolute w-20 h-20 md:w-24 md:h-24 bg-emerald-500/10 md:bg-emerald-500/20 rounded-full blur-lg md:blur-xl animate-pulse pointer-events-none" />
 
         <svg viewBox="0 0 100 100" className="w-20 h-20 md:w-24 md:h-24 -rotate-90 relative z-10">
             {/* Track */}
@@ -128,8 +128,8 @@ const UptimeRing = () => (
 
 const MerchantBars = () => (
     <div className="relative w-full h-28 md:h-40 flex items-end justify-center gap-1.5 md:gap-2 overflow-hidden px-4">
-        {/* Bar Chart */}
-        {[30, 50, 40, 70, 60, 90, 80].map((height, i) => (
+        {/* Bar Chart - Fewer bars on mobile for performance */}
+        {[30, 50, 40, 70, 60, 90, 80].slice(typeof window !== 'undefined' && window.innerWidth < 768 ? 2 : 0).map((height, i) => (
             <motion.div
                 key={i}
                 initial={{ height: 0 }}
@@ -144,35 +144,42 @@ const MerchantBars = () => (
 );
 
 // --- Animated Counter ---
+import { useSpring, useTransform } from "framer-motion";
+
 const Counter = ({ from, to, duration = 2, suffix = "" }) => {
     const nodeRef = useRef();
-    const inView = useInView(nodeRef, { once: true });
-    const [displayValue, setDisplayValue] = useState(from);
+    const inView = useInView(nodeRef, { once: true, margin: "-50px" });
+
+    const springValue = useSpring(from, {
+        stiffness: 40,
+        damping: 20,
+        restDelta: 0.001
+    });
+
+    const displayValue = useTransform(springValue, (latest) =>
+        Math.floor(latest).toLocaleString() + suffix
+    );
 
     useEffect(() => {
         if (inView) {
-            let startTimestamp;
-            const step = (timestamp) => {
-                if (!startTimestamp) startTimestamp = timestamp;
-                const progress = Math.min((timestamp - startTimestamp) / (duration * 1000), 1);
-                const easeProgress = 1 - Math.pow(1 - progress, 4);
-                const current = Math.floor(from + (to - from) * easeProgress);
-                setDisplayValue(current);
-                if (progress < 1) window.requestAnimationFrame(step);
-            };
-            window.requestAnimationFrame(step);
+            springValue.set(to);
         }
-    }, [inView, from, to, duration]);
-    return <span ref={nodeRef}>{displayValue.toLocaleString()}{suffix}</span>;
+    }, [inView, to, springValue]);
+
+    return (
+        <motion.span ref={nodeRef} style={{ willChange: "contents" }}>
+            {displayValue}
+        </motion.span>
+    );
 };
 
 export default function StatsSection() {
     return (
         <section className="py-12 md:py-20 bg-[#0F1115] font-[family-name:var(--font-outfit)] relative z-20 overflow-hidden text-white perspective-[2000px]">
 
-            {/* Realistic Ambient Lighting */}
-            <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-[#3B82F6]/10 blur-[150px] rounded-full pointer-events-none mix-blend-screen" />
-            <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-[#6366F1]/5 blur-[120px] rounded-full pointer-events-none" />
+            {/* Realistic Ambient Lighting - Optimization: Reduce blur radius and opacity on mobile */}
+            <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-[#3B82F6]/5 md:bg-[#3B82F6]/10 blur-[80px] md:blur-[150px] rounded-full pointer-events-none mix-blend-screen" />
+            <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-[#6366F1]/5 blur-[60px] md:blur-[120px] rounded-full pointer-events-none opacity-50 md:opacity-100" />
 
             <div className="container mx-auto px-4 md:px-6 relative z-10">
 
@@ -252,10 +259,11 @@ const Card = ({ children, delay }) => (
         className="
             group w-full max-w-full sm:max-w-[320px] 
             rounded-2xl md:rounded-[2rem]
-            bg-white/[0.02]
-            border-t border-l border-white/[0.08] border-b border-r border-black/20
-            backdrop-blur-xl relative overflow-hidden
-            shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)]
+            bg-white/[0.03]
+            border-t border-l border-white/[0.1] border-b border-r border-black/40
+            backdrop-blur-md md:backdrop-blur-xl relative overflow-hidden
+            shadow-[0_15px_30px_-10px_rgba(0,0,0,0.6)]
+            will-change-transform
         "
     >
         {/* Glossy Reflection */}

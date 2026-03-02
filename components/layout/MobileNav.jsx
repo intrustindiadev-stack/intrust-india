@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronRight, Moon, Sun } from 'lucide-react';
+import { X, ChevronRight, Moon, Sun, Gift, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -102,6 +102,29 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                         />
                                     </motion.a>
                                 ))}
+
+                                {/* Genz Sidebar CTA */}
+                                {isAuthenticated && (
+                                    <motion.button
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: 0.3 }}
+                                        onClick={() => { router.push('/refer'); onClose(); }}
+                                        className="mt-4 w-full p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white relative overflow-hidden group shadow-lg shadow-indigo-500/20"
+                                    >
+                                        <div className="absolute top-0 right-0 -mr-4 -mt-4 w-16 h-16 bg-white/20 blur-xl rounded-full" />
+                                        <div className="relative flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                                                <Gift size={20} className="text-white" />
+                                            </div>
+                                            <div className="text-left">
+                                                <p className="text-sm font-black uppercase tracking-tighter">Refer & Earn</p>
+                                                <p className="text-[10px] font-medium opacity-80">Earn ₹100 for every successful referral</p>
+                                            </div>
+                                            <ChevronRight size={16} className="ml-auto opacity-60" />
+                                        </div>
+                                    </motion.button>
+                                )}
                             </div>
 
                             {/* Divider */}
