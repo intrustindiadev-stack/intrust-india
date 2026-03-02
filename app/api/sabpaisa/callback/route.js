@@ -27,31 +27,28 @@ export async function POST(request) {
     }
 
     try {
+        const buildRedirectUrl = (path) => {
+            const url = new URL(path, request.url);
+            if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') url.protocol = 'http:';
+            return url;
+        };
+
         // SabPaisa sends the response back via a POST form submission
         const formData = await request.formData();
         const encResponse = formData.get('encResponse');
 
         if (!encResponse) {
-            return NextResponse.json(
-                { error: 'No encrypted response received from SabPaisa' },
-                { status: 400 }
-            );
+            console.error('[SabPaisa Callback] No encrypted response received');
+            return NextResponse.redirect(buildRedirectUrl('/payment/failure?reason=missing_payload'), 303);
         }
 
         // Decrypt the response using our internal Sabpaisa Kit 2.0 GCM decryption 
-        // to guarantee server-side compatibility (SDK uses window.location.search)
-        const { authKey, authIV } = sabpaisaConfig;
-
-        // SDK string replaces space with '+', make sure our input is clean
-        const cleanEncResponse = encResponse.replaceAll(' ', '+');
-
-        const decryptedString = decrypt(cleanEncResponse, authKey, authIV);
+        // to guarantee server-side compatibility (SDK uses HEX encoding)
+        const decryptedString = decrypt(encResponse);
 
         if (!decryptedString) {
-            return NextResponse.json(
-                { error: 'Failed to decrypt the SabPaisa response' },
-                { status: 400 }
-            );
+            console.error('[SabPaisa Callback] Failed to decrypt response. Raw received length:', encResponse?.length);
+            return NextResponse.redirect(buildRedirectUrl('/payment/failure?reason=decryption_failed'), 303);
         }
 
         // The decrypted string is URL-encoded query parameters
@@ -188,14 +185,18 @@ export async function POST(request) {
             redirectQuery = `?txnId=${clientTxnId}`;
         }
 
-        const redirectUrl = new URL(redirectPath + redirectQuery, request.url);
-        return NextResponse.redirect(redirectUrl, 303);
+        return NextResponse.redirect(buildRedirectUrl(redirectPath + redirectQuery), 303);
 
     } catch (error) {
         console.error('API Callback Error:', error);
 
         // Final fallback redirect in case of fatal error
-        const fatalUrl = new URL('/payment/failure?reason=internal_error', request.url);
-        return NextResponse.redirect(fatalUrl, 303);
+        try {
+            const fallbackUrl = new URL('/payment/failure?reason=internal_error', request.url);
+            if (fallbackUrl.hostname === 'localhost' || fallbackUrl.hostname === '127.0.0.1') fallbackUrl.protocol = 'http:';
+            return NextResponse.redirect(fallbackUrl, 303);
+        } catch (_) {
+            return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        }
     }
 }
