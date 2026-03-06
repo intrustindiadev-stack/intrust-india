@@ -1,12 +1,12 @@
 import { Download, Activity, TrendingUp, TrendingDown, IndianRupee, Search } from "lucide-react";
 import TransactionCard from "@/components/admin/transactions/TransactionCard";
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createAdminClient } from '@/lib/supabaseServer';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
 export default async function TransactionsPage({ searchParams }) {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const params = await searchParams;
 
     // Pagination

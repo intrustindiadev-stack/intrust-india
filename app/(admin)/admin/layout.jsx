@@ -1,18 +1,20 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
 import AdminLayout from '@/components/layout/admin/AdminLayout';
 import AdminBottomNav from '@/components/layout/admin/AdminBottomNav';
 
 export default async function AdminRootLayout({ children }) {
-    const supabase = await createServerSupabaseClient();
-
-    const { data: { user } } = await supabase.auth.getUser();
+    // Use session-aware client to identify the user (reads cookies)
+    const authSupabase = await createServerSupabaseClient();
+    const { data: { user } } = await authSupabase.auth.getUser();
 
     if (!user) {
         redirect('/login');
     }
 
-    const { data: profile } = await supabase
+    // Use admin client to bypass RLS for profile fetch
+    const adminSupabase = createAdminClient();
+    const { data: profile } = await adminSupabase
         .from('user_profiles')
         .select('role, full_name, email, avatar_url')
         .eq('id', user.id)

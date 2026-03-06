@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createAdminClient } from '@/lib/supabaseServer';
 import { notFound, redirect } from 'next/navigation';
 import {
     User,
@@ -14,13 +14,15 @@ import {
     ShoppingBag,
     Star,
     Gift,
-    Copy
+    Copy,
+    Sparkles,
+    Briefcase
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminUserDetailPage({ params }) {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const { id } = await params;
 
     // Fetch User Profile
@@ -158,7 +160,7 @@ export default async function AdminUserDetailPage({ params }) {
                 <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
                     <div className="w-32 h-32 rounded-full border-4 border-white shadow-xl bg-gray-100 flex items-center justify-center overflow-hidden">
                         {user.avatar_url ? (
-                            <img src={user.avatar_url} alt={user.full_name} className="w-full h-full object-cover" />
+                            <img src={user.avatar_url} alt={user.full_name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         ) : (
                             <User size={64} className="text-gray-300" />
                         )}
@@ -249,6 +251,59 @@ export default async function AdminUserDetailPage({ params }) {
                             </div>
                         )}
                     </div>
+
+                    {/* Onboarding Interests */}
+                    {(user.services?.length > 0 || user.occupation) && (
+                        <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+                            <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2 mb-6 tracking-tight">
+                                <Sparkles className="text-purple-500" />
+                                Onboarding Interests
+                            </h2>
+
+                            <div className="space-y-5">
+                                {user.occupation && (
+                                    <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                                            <Briefcase size={16} className="text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Occupation</p>
+                                            <p className="font-bold text-slate-900">{user.occupation}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {user.services?.length > 0 && (
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Selected Services</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {user.services.map((svc) => (
+                                                <span
+                                                    key={svc}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-xl text-xs font-bold uppercase tracking-wide"
+                                                >
+                                                    <Sparkles size={11} />
+                                                    {svc.replace(/_/g, ' ')}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {user.referral_source && (
+                                    <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                                            <Gift size={16} className="text-emerald-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">How They Found Us</p>
+                                            <p className="font-bold text-slate-900 capitalize">{user.referral_source.replace(/_/g, ' ')}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Order History (if user has orders) */}
                     {orders.length > 0 && (

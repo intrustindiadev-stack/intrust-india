@@ -1,10 +1,10 @@
 import { Users, CreditCard, TrendingUp, Activity, DollarSign, Store } from "lucide-react";
 import AdminAnalyticsCharts from "./AdminAnalyticsCharts";
 import AnalyticsPieCharts from "./AnalyticsPieCharts";
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createAdminClient } from '@/lib/supabaseServer';
 
 export default async function AnalyticsPage() {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     const { data: orders } = await supabase.from('orders').select('id, amount, created_at, payment_status, giftcard_id, user_id').order('created_at', { ascending: false });
     const { data: users } = await supabase.from('user_profiles').select('id, created_at, role, full_name, email').order('created_at', { ascending: false });

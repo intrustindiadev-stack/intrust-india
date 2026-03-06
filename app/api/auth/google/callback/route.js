@@ -1,13 +1,24 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
+
+// Service role client to upsert user_profiles bypassing RLS
+const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+);
 
 /**
  * GET /api/auth/google/callback
  * Handles the Google OAuth callback entirely server-side.
  * Google redirects here (not to supabase.co), then we:
  * 1. Exchange the code for Google tokens server-side
- * 2. Use the ID token to sign in with Supabase (server-side, bypasses ISP block)
- * 3. Set the session cookie and redirect the user
+ * 2. Use the ID token to sign in with Supabase via signInWithIdToken
+ * 3. Call setSession() on a response-bound Supabase client so cookies are
+ *    written directly onto the redirect response (not into Next.js headers store,
+ *    which doesn't propagate to a NextResponse.redirect())
+ * 4. Redirect the user to the correct page
  */
 export async function GET(request) {
     const requestUrl = new URL(request.url);
@@ -50,44 +61,119 @@ export async function GET(request) {
             return NextResponse.redirect(new URL('/login?error=no_id_token', appUrl));
         }
 
-        // Step 2: Sign in with Supabase using the Google ID token (server-to-server)
-        const supabase = await createServerSupabaseClient();
+        // Step 2: Sign in with Supabase using the Google ID token
+        // We use a temporary anon client here (not cookie-bound) just to get the session object
+        const tempSupabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            {
+                cookies: {
+                    getAll: () => [],
+                    setAll: () => { },
+                },
+            }
+        );
 
-        const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
+        const { data: authData, error: authError } = await tempSupabase.auth.signInWithIdToken({
             provider: 'google',
             token: idToken,
         });
 
         if (authError) {
             console.error('[Google OAuth] Supabase signInWithIdToken error:', authError.message);
-            return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(authError.message)}`, appUrl));
+            return NextResponse.redirect(
+                new URL(`/login?error=${encodeURIComponent(authError.message)}`, appUrl)
+            );
         }
 
+        const session = authData?.session;
         const user = authData?.user;
-        if (!user) {
-            return NextResponse.redirect(new URL('/login?error=no_user', appUrl));
+
+        if (!session || !user) {
+            console.error('[Google OAuth] No session or user returned from signInWithIdToken');
+            return NextResponse.redirect(new URL('/login?error=no_session', appUrl));
         }
 
-        // Step 3: Determine redirect based on role
+        // Upsert Google profile data (avatar, name, email) into user_profiles
+        // This runs every login to keep the picture in sync with Google
+        const googlePicture =
+            user.user_metadata?.avatar_url ||
+            user.user_metadata?.picture ||
+            null;
+        const googleName = user.user_metadata?.full_name || user.user_metadata?.name || null;
+
+        if (googlePicture || googleName) {
+            const profileUpdate = {};
+            if (googlePicture) profileUpdate.avatar_url = googlePicture;
+            if (googleName) profileUpdate.full_name = googleName;
+
+            const { error: upsertErr } = await supabaseAdmin
+                .from('user_profiles')
+                .update(profileUpdate)
+                .eq('id', user.id);
+
+            if (upsertErr) {
+                // Non-fatal — log and continue
+                console.warn('[Google OAuth] Could not update profile picture:', upsertErr.message);
+            }
+        }
+
+        // Step 3: Determine the redirect destination BEFORE building the response
         const next = state ? decodeURIComponent(state) : null;
+        let redirectPath = '/dashboard';
+
         if (next && next.startsWith('/')) {
-            return NextResponse.redirect(new URL(next, appUrl));
+            redirectPath = next;
+        } else {
+            // Fetch role to decide where to redirect
+            const { data: profile } = await tempSupabase
+                .from('user_profiles')
+                .select('role')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            if (profile?.role === 'admin') {
+                redirectPath = '/admin';
+            } else if (profile?.role === 'merchant') {
+                redirectPath = '/merchant/dashboard';
+            }
         }
 
-        const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('role')
-            .eq('id', user.id)
-            .maybeSingle();
+        // Step 4: Build the redirect response, then bind a Supabase client TO it.
+        // This ensures setSession() writes cookies directly onto the response the browser receives.
+        const redirectResponse = NextResponse.redirect(new URL(redirectPath, appUrl));
 
-        if (profile?.role === 'admin') {
-            return NextResponse.redirect(new URL('/admin', appUrl));
-        }
-        if (profile?.role === 'merchant') {
-            return NextResponse.redirect(new URL('/merchant/dashboard', appUrl));
+        const responseBoundSupabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            {
+                cookies: {
+                    getAll: () => [],
+                    setAll: (cookiesToSet) => {
+                        cookiesToSet.forEach(({ name, value, options }) => {
+                            redirectResponse.cookies.set(name, value, options);
+                        });
+                    },
+                },
+            }
+        );
+
+        // setSession() triggers the SSR client to write access_token + refresh_token cookies
+        // onto the redirectResponse via the setAll handler above
+        const { error: setSessionError } = await responseBoundSupabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+        });
+
+        if (setSessionError) {
+            console.error('[Google OAuth] setSession error:', setSessionError.message);
+            return NextResponse.redirect(
+                new URL(`/login?error=${encodeURIComponent(setSessionError.message)}`, appUrl)
+            );
         }
 
-        return NextResponse.redirect(new URL('/dashboard', appUrl));
+        console.log('[Google OAuth] Success. User:', user.id, '→', redirectPath);
+        return redirectResponse;
 
     } catch (err) {
         console.error('[Google OAuth] Unexpected error:', err);

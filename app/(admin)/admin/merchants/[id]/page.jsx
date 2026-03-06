@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createAdminClient } from '@/lib/supabaseServer';
 import { notFound, redirect } from 'next/navigation';
 import { Building2, Phone, Mail, FileText, CheckCircle, XCircle, Clock, MapPin, CreditCard, User, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -6,7 +6,7 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminMerchantDetailPage({ params }) {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const { id } = await params;
 
     // Fetch the merchant and associated user profile

@@ -65,7 +65,7 @@ export default function UserCard({ user }) {
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl shadow-sm
                         ${user.role === 'admin' ? 'bg-slate-800 text-white' : user.role === 'merchant' ? 'bg-sky-50 text-sky-600' : 'bg-blue-50 text-blue-600'}`}>
                         {user.avatar_url ? (
-                            <img src={user.avatar_url} alt={user.full_name} className="w-full h-full rounded-2xl object-cover" />
+                            <img src={user.avatar_url} alt={user.full_name} className="w-full h-full rounded-2xl object-cover" referrerPolicy="no-referrer" />
                         ) : (
                             getInitials(user.full_name)
                         )}

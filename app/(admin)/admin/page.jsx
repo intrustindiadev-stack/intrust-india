@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
@@ -9,14 +9,16 @@ function formatPrice(paise) {
 }
 
 export default async function AdminDashboard() {
-    const supabase = await createServerSupabaseClient();
-
-    // 1. Check Auth & Role
-    const { data: { user } } = await supabase.auth.getUser();
+    // Use session-aware client to identify the user (reads cookies)
+    const authSupabase = await createServerSupabaseClient();
+    const { data: { user } } = await authSupabase.auth.getUser();
 
     if (!user) {
         redirect('/login');
     }
+
+    // Use admin client to bypass RLS for all data queries
+    const supabase = createAdminClient();
 
     const { data: profile } = await supabase
         .from('user_profiles')
