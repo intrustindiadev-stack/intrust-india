@@ -47,7 +47,7 @@ export default function KYCModal({ kyc, onClose }) {
                     duration: 4000,
                     icon: '✅'
                 });
-                onClose(); // Close modal and refresh data
+                onClose(true); // Close modal and refresh data
             } else {
                 toast.error(result.error || 'Failed to approve KYC', {
                     duration: 5000,
@@ -82,7 +82,7 @@ export default function KYCModal({ kyc, onClose }) {
                     duration: 4000,
                     icon: '❌'
                 });
-                onClose(); // Close modal and refresh data
+                onClose(true); // Close modal and refresh data
             } else {
                 toast.error(result.error || 'Failed to reject KYC', {
                     duration: 5000,
@@ -99,7 +99,7 @@ export default function KYCModal({ kyc, onClose }) {
 
     const handleOverlayClick = (e) => {
         if (e.target === e.currentTarget) {
-            onClose();
+            onClose(false);
         }
     };
 
@@ -119,7 +119,7 @@ export default function KYCModal({ kyc, onClose }) {
                         <p className="text-sm text-gray-500 mt-1">Review and approve customer information</p>
                     </div>
                     <button
-                        onClick={onClose}
+                        onClick={() => onClose(false)}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                         disabled={isProcessing}
                     >
@@ -155,8 +155,8 @@ export default function KYCModal({ kyc, onClose }) {
                         />
                         <DetailField
                             icon={<CreditCard size={18} className="text-gray-400" />}
-                            label="PAN Number"
-                            value={kyc.pan_number || '-'}
+                            label={(kyc.id_type || kyc.document_type || 'Document').toUpperCase() + ' NUMBER'}
+                            value={kyc.pan_number || kyc.document_number || kyc.id_number_encrypted || '-'}
                             monospace
                         />
                     </div>

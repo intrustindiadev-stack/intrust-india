@@ -149,6 +149,7 @@ export default function SabpaisaPaymentModal({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           clientTxnId,
@@ -176,35 +177,6 @@ export default function SabpaisaPaymentModal({
         throw new Error('Invalid response from payment server');
       }
 
-      // Create transaction record before redirecting
-      try {
-        const txResponse = await fetch('/api/sabpaisa/create-transaction', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            clientTxnId,
-            amount: Number(paymentAmount).toFixed(2),
-            payerName: user?.user_metadata?.full_name || "Guest User",
-            payerEmail: (user?.email || "").trim() || "guest@sabpaisa.in",
-            payerMobile: (user?.phone || "9999999999").replace(/\D/g, '').replace(/^91/, '').slice(-10),
-            udf1,
-            udf2,
-            udf3: metadata?.type || ""
-          }),
-        });
-
-        if (!txResponse.ok) {
-          throw new Error("Failed to create transaction record");
-        }
-      } catch (txErr) {
-        console.error('[SabpaisaModal] Failed to pre-create transaction record:', txErr);
-        setError("Failed to initialize payment transaction. Please try again.");
-        setProcessing(false);
-        return;
-      }
 
       console.log('[SabpaisaModal] Redirecting via secure server-side form...');
 

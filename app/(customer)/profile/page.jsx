@@ -805,11 +805,14 @@ export default function CustomerProfilePage() {
                                     </h2>
                                     <p className={`text-xs mt-1 font-medium ${isGold ? 'text-amber-500/60' : 'text-gray-400 dark:text-gray-500'}`}>Member since {joinYear}</p>
                                     <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-                                        <span className={`inline-block text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${kycStatus === 'verified'
-                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600'
-                                            : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600'
+                                        <span className={`inline-block text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${kycStatus === 'verified' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600' :
+                                                kycStatus === 'pending' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600' :
+                                                    kycStatus === 'rejected' ? 'bg-red-50 dark:bg-red-900/20 text-red-600' :
+                                                        'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                                             }`}>
-                                            {kycStatus === 'verified' ? '✓ KYC Verified' : 'KYC Pending'}
+                                            {kycStatus === 'verified' ? '✓ KYC Verified' :
+                                                kycStatus === 'pending' ? 'KYC Under Review' :
+                                                    kycStatus === 'rejected' ? 'KYC Failed' : 'KYC Not Started'}
                                         </span>
                                         {isGold && (
                                             <span className="inline-block text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest bg-gradient-to-r from-[#FFD700] to-[#FDB931] text-black shadow-lg shadow-amber-500/20">

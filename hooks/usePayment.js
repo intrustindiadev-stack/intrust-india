@@ -19,11 +19,12 @@ export const usePayment = () => {
             // 2. Generate a unique clientTxnId for this transaction
             const clientTxnId = `WLT_${Date.now()}_${Math.floor(Math.random() * 9999)}`;
 
-            // 3. Call the new AES-128-CBC initiate API (no auth header needed — server-side only keys)
+            // 3. Call the new AES-128-CBC initiate API and persist transaction
             const response = await fetch('/api/sabpaisa/initiate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
                 },
                 body: JSON.stringify({
                     clientTxnId,

@@ -5,8 +5,8 @@ import { CheckCircle, AlertCircle, Clock, Shield } from 'lucide-react';
 import VerifiedBadge from '@/components/ui/VerifiedBadge';
 
 export default function KYCStatus({ status, onStartKYC }) {
-    // Normalize status: pending is now just a temporary state during API call
-    const currentStatus = (status === 'verified' || status === 'rejected') ? status : 'not_started';
+    // Normalize status: pending means it's under manual review or API call
+    const currentStatus = (status === 'verified' || status === 'rejected' || status === 'pending') ? status : 'not_started';
 
     const statusConfig = {
         not_started: {
@@ -18,6 +18,16 @@ export default function KYCStatus({ status, onStartKYC }) {
             description: 'Complete your KYC to unlock full access. Verification is instant via SprintVerify.',
             action: 'Start KYC',
             actionColor: 'from-[#92BCEA] to-[#AFB3F7]'
+        },
+        pending: {
+            color: 'from-amber-500 to-amber-600',
+            bgColor: 'bg-amber-50',
+            borderColor: 'border-amber-200',
+            icon: Clock,
+            title: 'Under Review',
+            description: 'Your KYC application is currently under manual review by our team. This usually takes 24-48 hours.',
+            action: null,
+            actionColor: null
         },
         verified: {
             color: 'from-blue-500 to-blue-600',

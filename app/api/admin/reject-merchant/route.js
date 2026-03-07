@@ -32,7 +32,7 @@ export async function POST(request) {
 
         // 3. Get Request Data
         const body = await request.json();
-        const { applicationId, userId } = body;
+        const { applicationId, userId, reason } = body;
 
         if (!applicationId && !userId) {
             return NextResponse.json(
@@ -68,18 +68,21 @@ export async function POST(request) {
 
         const targetUserId = userId || existingMerchant.user_id;
 
-        // Fetch current role to allow rollback
+        // Check current role before reverting just in case they are admin etc.
         const { data: targetProfile } = await adminSupabase
             .from('user_profiles')
             .select('role')
             .eq('id', targetUserId)
             .single();
-        const prevRole = targetProfile?.role || 'customer';
+        const prevRole = targetProfile?.role;
 
-        // 5. Update Merchant Status to 'approved'
+        // 5. Update Merchant Status to 'rejected'
         const { data: merchantData, error: merchantError } = await adminSupabase
             .from('merchants')
-            .update({ status: 'approved' })
+            .update({
+                status: 'rejected',
+                ...(reason ? { rejection_reason: reason } : {})
+            })
             .eq('id', existingMerchant.id)
             .select()
             .single();
@@ -92,37 +95,43 @@ export async function POST(request) {
             );
         }
 
-        // 6. Update User Role to 'merchant'
-        const { error: roleError } = await adminSupabase
-            .from('user_profiles')
-            .update({ role: 'merchant' })
-            .eq('id', targetUserId);
+        // 6. Revert User Role to 'customer' if they were a merchant
+        if (prevRole === 'merchant') {
+            const { error: roleError } = await adminSupabase
+                .from('user_profiles')
+                .update({ role: 'customer' })
+                .eq('id', targetUserId);
 
-        if (roleError) {
-            console.error('Error updating user role:', roleError);
-            // Rollback merchant status
-            await adminSupabase
-                .from('merchants')
-                .update({ status: existingMerchant.status })
-                .eq('id', existingMerchant.id);
+            if (roleError) {
+                console.error('Error reverting user role:', roleError);
+                // Rollback merchant status
+                await adminSupabase
+                    .from('merchants')
+                    .update({
+                        status: existingMerchant.status,
+                        rejection_reason: existingMerchant.rejection_reason || null
+                    })
+                    .eq('id', existingMerchant.id);
 
-            return NextResponse.json(
-                { error: 'Failed to update user role. Merchant approval reverted.' },
-                { status: 500 }
-            );
+                return NextResponse.json(
+                    { error: 'Failed to revert user role. Merchant rejection reverted.' },
+                    { status: 500 }
+                );
+            }
         }
 
-        // 7. Log Action (Optional but good practice)
+        // 7. Log Action
         const { error: auditError } = await adminSupabase.from('audit_logs').insert([
             {
                 user_id: user.id, // Admin ID
-                action: 'approved_merchant',
+                action: 'rejected_merchant',
                 entity_type: 'merchant',
                 entity_id: merchantData.id,
                 changes: {
                     previous_status: existingMerchant.status,
-                    new_status: 'approved',
-                    target_user_id: targetUserId
+                    new_status: 'rejected',
+                    target_user_id: targetUserId,
+                    reason: reason || null
                 }
             }
         ]);
@@ -130,29 +139,34 @@ export async function POST(request) {
         if (auditError) {
             console.error('Error logging audit:', auditError);
             // Rollback user role and merchant status
-            await adminSupabase
-                .from('user_profiles')
-                .update({ role: prevRole })
-                .eq('id', targetUserId);
+            if (prevRole === 'merchant') {
+                await adminSupabase
+                    .from('user_profiles')
+                    .update({ role: 'merchant' })
+                    .eq('id', targetUserId);
+            }
 
             await adminSupabase
                 .from('merchants')
-                .update({ status: existingMerchant.status })
+                .update({
+                    status: existingMerchant.status,
+                    rejection_reason: existingMerchant.rejection_reason || null
+                })
                 .eq('id', existingMerchant.id);
 
             return NextResponse.json(
-                { error: 'Failed to log action. Merchant approval reverted.' },
+                { error: 'Failed to log action. Merchant rejection reverted.' },
                 { status: 500 }
             );
         }
 
         return NextResponse.json({
             success: true,
-            message: 'Merchant approved and role updated successfully.'
+            message: 'Merchant application rejected successfully.'
         });
 
     } catch (error) {
-        console.error('Unexpected error in approve-merchant:', error);
+        console.error('Unexpected error in reject-merchant:', error);
         return NextResponse.json(
             { error: 'An unexpected error occurred.' },
             { status: 500 }

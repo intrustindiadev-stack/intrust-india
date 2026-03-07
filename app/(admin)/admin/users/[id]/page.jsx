@@ -18,6 +18,7 @@ import {
     Sparkles,
     Briefcase
 } from 'lucide-react';
+import KYCReviewSection from './KYCReviewSection';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,7 +135,7 @@ export default async function AdminUserDetailPage({ params }) {
         const latestKyc = kyc_records[0];
         activities.push({
             title: `KYC ${latestKyc.status}`,
-            desc: `Document: ${(latestKyc.document_type || 'Unknown').replace('_', ' ')}`,
+            desc: `Document: ${(latestKyc.id_type || latestKyc.document_type || 'Unknown').replace('_', ' ')}`,
             date: latestKyc.updated_at || latestKyc.created_at,
             color: latestKyc.status === 'verified' ? "bg-green-500" : latestKyc.status === 'rejected' ? "bg-red-500" : "bg-yellow-500"
         });
@@ -204,53 +205,7 @@ export default async function AdminUserDetailPage({ params }) {
                 <div className="space-y-8 lg:col-span-2">
 
                     {/* KYC Section */}
-                    <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2 tracking-tight">
-                                <Shield className="text-indigo-600" />
-                                KYC Verification
-                            </h2>
-                            {user.kyc_status === 'pending' && (
-                                <button className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors">
-                                    Review Application
-                                </button>
-                            )}
-                        </div>
-
-                        {kyc_records && kyc_records.length > 0 ? (
-                            <div className="space-y-4">
-                                {kyc_records.map((record) => (
-                                    <div key={record.id} className="bg-gray-50 rounded-2xl p-5 border border-gray-100 hover:border-indigo-100 transition-colors">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <span className="font-bold text-gray-900 capitalize text-lg tracking-tight">
-                                                {(record.document_type || 'Unknown').replace('_', ' ')}
-                                            </span>
-                                            {getStatusBadge(record.status)}
-                                        </div>
-                                        <p className="text-sm font-medium text-gray-600 mb-3">
-                                            Document Number: <span className="font-mono bg-white px-2 py-1 rounded border border-gray-200 ml-2">{record.document_number}</span>
-                                        </p>
-                                        {record.front_image_url && (
-                                            <div className="mt-4">
-                                                <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Document Image</p>
-                                                <a href={record.front_image_url} target="_blank" rel="noopener noreferrer" className="block w-full h-40 bg-gray-200 rounded-xl overflow-hidden relative group">
-                                                    <img src={record.front_image_url} alt="Document" className="w-full h-full object-cover" />
-                                                    <div className="absolute inset-0 bg-indigo-900/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white font-bold text-sm backdrop-blur-sm">
-                                                        Open Full Size Details
-                                                    </div>
-                                                </a>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
-                                <Shield className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                <p className="text-gray-500 font-medium">No KYC records found for this user.</p>
-                            </div>
-                        )}
-                    </div>
+                    <KYCReviewSection kyc_records={kyc_records} userKycStatus={user.kyc_status} />
 
                     {/* Onboarding Interests */}
                     {(user.services?.length > 0 || user.occupation) && (

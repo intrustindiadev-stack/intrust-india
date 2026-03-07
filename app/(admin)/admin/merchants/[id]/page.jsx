@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabaseServer';
 import { notFound, redirect } from 'next/navigation';
 import { Building2, Phone, Mail, FileText, CheckCircle, XCircle, Clock, MapPin, CreditCard, User, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import MerchantActions from './MerchantActions';
 
 export const dynamic = 'force-dynamic';
 
@@ -124,16 +125,7 @@ export default async function AdminMerchantDetailPage({ params }) {
                     </div>
 
                     {/* Quick Access Actions / Stats */}
-                    {isPending && (
-                        <div className="flex flex-row gap-3 w-full lg:w-auto mt-4 lg:mt-0">
-                            <button className="flex-1 lg:flex-none px-4 sm:px-6 py-3.5 bg-white text-red-600 text-sm font-bold rounded-2xl border border-red-100 hover:bg-red-50 transition-all flex items-center justify-center gap-2 shadow-sm group">
-                                <XCircle size={18} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform" /> Reject
-                            </button>
-                            <button className="flex-1 lg:flex-none px-6 sm:px-8 py-3.5 bg-blue-600 text-white text-sm font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0">
-                                <CheckCircle size={18} strokeWidth={2.5} /> Approve
-                            </button>
-                        </div>
-                    )}
+                    {isPending && <MerchantActions merchantId={merchant.id} userId={merchant.user_id} status={merchant.status} />}
 
                     {isApproved && (
                         <div className="hidden lg:flex items-center gap-6 bg-slate-50/50 p-4 rounded-3xl border border-slate-100">

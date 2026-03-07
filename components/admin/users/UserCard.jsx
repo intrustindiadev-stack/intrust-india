@@ -87,6 +87,11 @@ export default function UserCard({ user }) {
                                 </span>
                             )}
                         </div>
+                        {user.kyc_status === 'pending' && user.kyc_records?.[0]?.rejection_reason && (
+                            <div className="mt-2 text-[10px] text-amber-700 bg-amber-50 px-2 py-1 rounded-md border border-amber-200 truncate max-w-[150px] sm:max-w-[180px]" title={user.kyc_records[0].rejection_reason}>
+                                <span className="font-bold">Reason:</span> {user.kyc_records[0].rejection_reason.replace('PAN verification failed:', '').trim()}
+                            </div>
+                        )}
                     </div>
                 </div>
 

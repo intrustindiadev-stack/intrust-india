@@ -49,7 +49,7 @@ export default function GiftCardDetailPage({ params }) {
                         .from('coupons')
                         .select("*")
                         .eq("id", id)
-                        .single()
+                        .maybeSingle()
                 ];
 
                 // Only fetch KYC if user is logged in
@@ -69,14 +69,22 @@ export default function GiftCardDetailPage({ params }) {
 
                 if (!isMounted) return; // Don't update state if unmounted
 
-                if (cardError) throw cardError;
-                if (!cardData) throw new Error('Gift card not found');
+                if (cardError) {
+                    console.error('Detailed backend error fetching gift card:', cardError);
+                    throw new Error('We are currently unable to load this gift card. Please try again later.');
+                }
+                if (!cardData) {
+                    throw new Error('This gift card is sold out or unavailable.');
+                }
 
                 setCard(cardData);
 
                 if (user && kycResult) {
-                    const { data: profileData } = kycResult;
-                    if (profileData) {
+                    const { data: profileData, error: kycError } = kycResult;
+                    if (kycError) {
+                        console.error('Detailed backend error fetching KYC status:', kycError);
+                        setKycStatus(null);
+                    } else if (profileData) {
                         console.log("KYC Status fetched:", profileData.kyc_status);
                         setKycStatus(profileData.kyc_status);
                     }

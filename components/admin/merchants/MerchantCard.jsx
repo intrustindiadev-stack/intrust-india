@@ -3,7 +3,7 @@
 import { CheckCircle, XCircle, Clock, Building2, Phone, Mail, FileText, AlertCircle, Eye } from 'lucide-react';
 import Link from 'next/link';
 
-export default function MerchantCard({ merchant, onApprove, onReject, onVerifyBank, isApproving, isVerifyingBank }) {
+export default function MerchantCard({ merchant, onApprove, onReject, onVerifyBank, isApproving, isVerifyingBank, isRejecting }) {
     const isPending = merchant.status === 'pending';
     const isApproved = merchant.status === 'approved';
 
@@ -75,15 +75,19 @@ export default function MerchantCard({ merchant, onApprove, onReject, onVerifyBa
                     {isPending && (
                         <div className="flex items-center gap-1.5 ml-2">
                             <button
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReject(merchant.id); }}
-                                disabled={isApproving === merchant.id}
-                                className="p-1.5 text-red-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReject(merchant.id, merchant.userId); }}
+                                disabled={isRejecting === merchant.id || isApproving === merchant.id}
+                                className={`p-1.5 rounded-lg transition-all ${isRejecting === merchant.id ? 'bg-red-50 text-red-600' : 'text-red-400 hover:text-red-700 hover:bg-red-50'}`}
                             >
-                                <XCircle size={18} strokeWidth={2.5} />
+                                {isRejecting === merchant.id ? (
+                                    <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    <XCircle size={18} strokeWidth={2.5} />
+                                )}
                             </button>
                             <button
                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onApprove(merchant.id, merchant.userId); }}
-                                disabled={isApproving === merchant.id}
+                                disabled={isApproving === merchant.id || isRejecting === merchant.id}
                                 className={`p-1.5 rounded-lg transition-all ${isApproving === merchant.id ? 'bg-emerald-50 text-emerald-600' : 'text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50'}`}
                             >
                                 {isApproving === merchant.id ? (

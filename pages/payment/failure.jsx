@@ -24,9 +24,16 @@ const FailurePage = () => {
         }
     }, [txnId]);
 
+    const isFallbackWallet = !transaction && txnId && txnId.startsWith('WLT_');
+    const isFallbackGiftCard = !transaction && txnId && txnId.startsWith('GC_');
+
     const handleTryAgain = () => {
         if (transaction?.udf1 === 'GIFT_CARD' && transaction?.udf2) {
             router.push(`/gift-cards/${transaction.udf2}`);
+        } else if (isFallbackWallet || transaction?.udf1 === 'WALLET_TOPUP') {
+            router.push('/wallet'); // fallback to wallet page for wallet topups
+        } else if (isFallbackGiftCard) {
+            router.push('/gift-cards'); // generic fallback for gift cards
         } else {
             router.push('/payment/checkout');
         }
@@ -60,7 +67,7 @@ const FailurePage = () => {
                     >
                         Try Again
                     </button>
-                    <Link href="/dashboard/transactions" className="text-gray-600 hover:text-gray-500 text-sm font-medium">
+                    <Link href="/transactions" className="text-gray-600 hover:text-gray-500 text-sm font-medium">
                         Go to Dashboard
                     </Link>
                 </div>

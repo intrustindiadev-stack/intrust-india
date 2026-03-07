@@ -12,6 +12,7 @@ export default function AdminMerchantsPage() {
     const [merchants, setMerchants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [approving, setApproving] = useState(null);
+    const [rejecting, setRejecting] = useState(null);
     const [verifyingBank, setVerifyingBank] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -102,10 +103,36 @@ export default function AdminMerchantsPage() {
         }
     };
 
-    const handleReject = async (id) => {
-        if (!confirm('Reject this application? (This feature is currently mock-only)')) return;
-        console.log('Reject merchant:', id);
-        toast.success('Merchant rejected (Mock)');
+    const handleReject = async (id, userId) => {
+        const reason = prompt('Please provide a reason for rejecting this merchant application (optional):');
+        if (reason === null) return;
+
+        setRejecting(id);
+        const toastId = toast.loading('Rejecting merchant...');
+
+        try {
+            const response = await fetch('/api/admin/reject-merchant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ applicationId: id, userId, reason: reason.trim() }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to reject merchant');
+            }
+
+            toast.success('Merchant rejected successfully!', { id: toastId });
+
+            // Refresh list
+            fetchMerchants();
+        } catch (error) {
+            console.error('Rejection error:', error);
+            toast.error(error.message, { id: toastId });
+        } finally {
+            setRejecting(null);
+        }
     };
 
     const handleVerifyBank = async (id) => {
@@ -209,6 +236,7 @@ export default function AdminMerchantsPage() {
                                     onReject={handleReject}
                                     onVerifyBank={handleVerifyBank}
                                     isApproving={approving}
+                                    isRejecting={rejecting}
                                     isVerifyingBank={verifyingBank}
                                 />
                             ))}

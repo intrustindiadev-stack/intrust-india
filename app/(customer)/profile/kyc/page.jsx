@@ -302,16 +302,20 @@ export default function ProfileKYCPage() {
  * Status Banner Component
  */
 function StatusBanner({ status, rejectionReason }) {
+    const isManualReview = status === 'pending' && !!rejectionReason;
+
     const statusConfig = {
         pending: {
-            bg: 'bg-yellow-50',
-            border: 'border-yellow-200',
-            icon: <Clock size={24} className="text-yellow-600" />,
-            iconBg: 'bg-yellow-100',
-            title: 'KYC Verification in Progress',
-            titleColor: 'text-yellow-900',
-            description: 'Your KYC is being processed automatically via SprintVerify. This usually takes just a few seconds.',
-            descColor: 'text-yellow-700'
+            bg: isManualReview ? 'bg-amber-50' : 'bg-yellow-50',
+            border: isManualReview ? 'border-amber-200' : 'border-yellow-200',
+            icon: <Clock size={24} className={isManualReview ? "text-amber-600" : "text-yellow-600"} />,
+            iconBg: isManualReview ? 'bg-amber-100' : 'bg-yellow-100',
+            title: isManualReview ? 'KYC Under Review' : 'KYC Verification in Progress',
+            titleColor: isManualReview ? 'text-amber-900' : 'text-yellow-900',
+            description: isManualReview
+                ? 'Your KYC application is currently under manual review by our team. This usually takes 24-48 hours.'
+                : 'Your KYC is being processed automatically via SprintVerify. This usually takes just a few seconds.',
+            descColor: isManualReview ? 'text-amber-700' : 'text-yellow-700'
         },
         verified: {
             bg: 'bg-green-50',

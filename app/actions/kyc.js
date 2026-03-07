@@ -9,7 +9,7 @@
  * @module app/actions/kyc
  */
 
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
 import { validateKYCForm, sanitizeKYCData } from '@/app/types/kyc';
 import { sprintVerify } from '@/lib/sprintVerify';
@@ -69,9 +69,9 @@ export async function submitKYC(formData) {
                 rejectionReason = null;
                 console.warn('SprintVerify PAN check returned manual_review:', panResult.message);
             } else {
-                verificationStatus = 'rejected';
+                verificationStatus = 'pending';
                 rejectionReason = `PAN verification failed: ${panResult.message}`;
-                console.warn('SprintVerify PAN check failed:', panResult.message);
+                console.warn('SprintVerify PAN check failed, queued for manual review:', panResult.message);
             }
         } catch (svError) {
             console.error('SprintVerify API error:', svError);
@@ -143,12 +143,15 @@ export async function submitKYC(formData) {
             updated_at: new Date().toISOString()
         };
 
+        // Use admin client to bypass User RLS (users can only INSERT, not UPDATE kyc_records)
+        const adminSupabase = createAdminClient();
+
         // Upsert Logic
-        const { data: existing, error: checkError } = await supabase.from('kyc_records').select('id').eq('user_id', user.id).maybeSingle();
+        const { data: existing, error: checkError } = await adminSupabase.from('kyc_records').select('id').eq('user_id', user.id).maybeSingle();
 
         let result;
         if (existing) {
-            const { data: updated, error: updateError } = await supabase
+            const { data: updated, error: updateError } = await adminSupabase
                 .from('kyc_records')
                 .update(kycRecord)
                 .eq('user_id', user.id)
@@ -157,12 +160,22 @@ export async function submitKYC(formData) {
             result = updated || kycRecord;
         } else {
             kycRecord.created_at = new Date().toISOString();
-            const { data: inserted, error: insertError } = await supabase
+            const { data: inserted, error: insertError } = await adminSupabase
                 .from('kyc_records')
                 .insert(kycRecord)
                 .select().maybeSingle();
             if (insertError) throw insertError;
             result = inserted || kycRecord;
+        }
+
+        // Keep user_profiles in sync with the new KYC status
+        const { error: profileError } = await adminSupabase
+            .from('user_profiles')
+            .update({ kyc_status: finalStatus })
+            .eq('id', user.id);
+
+        if (profileError) {
+            console.warn('Failed to sync user_profiles.kyc_status:', profileError);
         }
 
         revalidatePath('/profile/kyc');

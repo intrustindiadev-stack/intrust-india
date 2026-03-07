@@ -62,7 +62,9 @@ const SuccessPage = () => {
         }
     }, [txnId]);
 
-    const isWalletTopup = transaction?.udf1 === 'WALLET_TOPUP';
+    const isFallbackWallet = !transaction && txnId && String(txnId).startsWith('WLT_');
+    const isFallbackGiftCard = !transaction && txnId && String(txnId).startsWith('GC_');
+    const isWalletTopup = transaction?.udf1 === 'WALLET_TOPUP' || isFallbackWallet;
 
     // Compute link destinations based on role
     const walletLink = userRole === 'merchant' ? '/merchant/wallet' : '/wallet';
@@ -125,7 +127,7 @@ const SuccessPage = () => {
                     <p className="text-gray-600 mb-6 px-4">
                         {isWalletTopup
                             ? 'Your wallet balance has been updated instantly. You can now use these funds for purchases.'
-                            : transaction?.udf1 === 'GIFT_CARD'
+                            : transaction?.udf1 === 'GIFT_CARD' || isFallbackGiftCard
                                 ? 'Your gift card has been added to your account.'
                                 : 'Your transaction was completed successfully and recorded in your history.'}
                     </p>
