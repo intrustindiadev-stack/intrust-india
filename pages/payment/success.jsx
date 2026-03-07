@@ -125,7 +125,9 @@ const SuccessPage = () => {
                     <p className="text-gray-600 mb-6 px-4">
                         {isWalletTopup
                             ? 'Your wallet balance has been updated instantly. You can now use these funds for purchases.'
-                            : 'Your transaction was completed successfully and recorded in your history.'}
+                            : transaction?.udf1 === 'GIFT_CARD'
+                                ? 'Your gift card has been added to your account.'
+                                : 'Your transaction was completed successfully and recorded in your history.'}
                     </p>
 
                     {/* Transaction Details Card */}
@@ -153,6 +155,24 @@ const SuccessPage = () => {
                                     <span className="font-mono text-[10px] text-gray-400 select-all max-w-[150px] truncate" title={txnId}>{txnId}</span>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {transaction?.udf1 === 'GIFT_CARD' && transaction?.gift_card && (
+                        <div className="mb-8 text-left bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl p-6 border border-indigo-100 shadow-sm relative overflow-hidden">
+                            <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-200 rounded-full blur-2xl opacity-40"></div>
+                            <div className="relative z-10 flex items-center gap-4">
+                                <div className="w-14 h-14 bg-white rounded-xl shadow border border-indigo-50 flex items-center justify-center text-2xl shrink-0">
+                                    🎁
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-900 mb-0.5">{transaction.gift_card.brand}</h3>
+                                    <p className="text-xs text-gray-500 mb-1">{transaction.gift_card.title}</p>
+                                    <div className="text-lg font-black text-indigo-600">
+                                        ₹{Number(transaction.gift_card.face_value_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
 

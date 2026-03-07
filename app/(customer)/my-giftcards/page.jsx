@@ -56,7 +56,7 @@ export default async function MyCouponsPage() {
             id,
             amount,
             created_at,
-            coupons (
+            coupons:coupons!orders_giftcard_id_fkey (
                 id,
                 brand,
                 title,

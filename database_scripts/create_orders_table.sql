@@ -2,8 +2,8 @@
 CREATE TABLE IF NOT EXISTS public.orders (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id),
-  coupon_id UUID REFERENCES public.coupons(id),
-  amount_paise BIGINT NOT NULL,
+  giftcard_id UUID REFERENCES public.coupons(id),
+  amount BIGINT NOT NULL,
   payment_status VARCHAR(50) DEFAULT 'created', -- 'created', 'paid', 'failed'
   razorpay_order_id TEXT,
   razorpay_payment_id TEXT,

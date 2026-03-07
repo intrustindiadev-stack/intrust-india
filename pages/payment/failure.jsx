@@ -1,10 +1,36 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
 
 const FailurePage = () => {
     const router = useRouter();
     const { txnId, msg } = router.query;
+    const [transaction, setTransaction] = useState(null);
+
+    useEffect(() => {
+        if (txnId) {
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (!session) return;
+                fetch(`/api/transaction/details?id=${txnId}`, {
+                    headers: { Authorization: `Bearer ${session.access_token}` }
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.transaction) setTransaction(data.transaction);
+                    })
+                    .catch(err => console.error(err));
+            });
+        }
+    }, [txnId]);
+
+    const handleTryAgain = () => {
+        if (transaction?.udf1 === 'GIFT_CARD' && transaction?.udf2) {
+            router.push(`/gift-cards/${transaction.udf2}`);
+        } else {
+            router.push('/payment/checkout');
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -29,7 +55,7 @@ const FailurePage = () => {
 
                 <div className="flex flex-col space-y-3">
                     <button
-                        onClick={() => router.push('/payment/checkout')}
+                        onClick={handleTryAgain}
                         className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
                     >
                         Try Again

@@ -78,32 +78,36 @@ export async function POST(request) {
 
         // 3. Deduct Balance
         const newBalancePaise = wallet.balance_paise - purchaseAmountPaise;
-        const { error: deductError } = await supabaseAdmin
+        const { data: updatedWallet, error: deductError } = await supabaseAdmin
             .from('customer_wallets')
             .update({ balance_paise: newBalancePaise })
             .eq('id', wallet.id)
-            .eq('balance_paise', wallet.balance_paise); // Optimistic locking
+            .eq('balance_paise', wallet.balance_paise) // Optimistic locking
+            .select()
+            .single();
 
-        if (deductError) {
-            return NextResponse.json({ error: 'Failed to deduct wallet balance. Please try again.' }, { status: 500 });
+        if (deductError || !updatedWallet) {
+            return NextResponse.json({ error: 'Failed to deduct wallet balance. Balance may have changed concurrently. Please try again.' }, { status: 409 });
         }
 
         // 4. Mark Coupon as Sold & Assign to User
-        const { error: updateCouponError } = await supabaseAdmin
+        const { data: updateData, error: updateCouponError } = await supabaseAdmin
             .from('coupons')
             .update({
                 status: 'sold',
                 purchased_by: user.id,
                 purchased_at: new Date().toISOString()
             })
-            .eq('id', couponId);
+            .eq('id', couponId)
+            .eq('status', 'available')
+            .select('id')
+            .single();
 
-        if (updateCouponError) {
-            // Rollback wallet deduction conceptually, but for simplicity here we assume it succeeds.
-            console.error('Failed to update coupon status:', updateCouponError);
-            // Ideally we'd refund the wallet here if this fails.
+        if (updateCouponError || !updateData) {
+            console.error('Coupon conflict or update failure:', updateCouponError);
+            // Rollback wallet deduction conceptually
             await supabaseAdmin.from('customer_wallets').update({ balance_paise: wallet.balance_paise }).eq('id', wallet.id);
-            return NextResponse.json({ error: 'Failed to issue gift card' }, { status: 500 });
+            return NextResponse.json({ error: 'This gift card is no longer available' }, { status: 409 });
         }
 
         // 5. Create an order record so it appears on My Gift Cards page
@@ -119,7 +123,15 @@ export async function POST(request) {
 
         if (orderError) {
             console.error('Failed to create order record:', orderError);
-            // Non-fatal — coupon is already assigned, just log the error
+            // Rollback the coupon status back to 'available'
+            await supabaseAdmin.from('coupons').update({
+                status: 'available',
+                purchased_by: null,
+                purchased_at: null
+            }).eq('id', couponId);
+            // Refund the wallet
+            await supabaseAdmin.from('customer_wallets').update({ balance_paise: wallet.balance_paise }).eq('id', wallet.id);
+            return NextResponse.json({ error: 'Failed to process order' }, { status: 500 });
         }
 
         // 6. Create transaction record for history

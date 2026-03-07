@@ -61,6 +61,21 @@ export default async function handler(req, res) {
             return res.status(404).json({ error: 'Transaction not found' });
         }
 
+        if (transaction.udf1 === 'GIFT_CARD' && transaction.udf2) {
+            const supabaseAdmin = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL,
+                process.env.SUPABASE_SERVICE_ROLE_KEY
+            );
+            const { data: couponData } = await supabaseAdmin
+                .from('coupons')
+                .select('id, brand, title, face_value_paise')
+                .eq('id', transaction.udf2)
+                .single();
+            if (couponData) {
+                transaction.gift_card = couponData;
+            }
+        }
+
         res.status(200).json({ transaction });
     } catch (error) {
         console.error('Fetch Details Error:', error);
