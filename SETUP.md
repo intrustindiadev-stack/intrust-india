@@ -72,6 +72,14 @@ RAZORPAY_KEY_SECRET=your-razorpay-key-secret
 # 4. Add your callback URL: http://localhost:3000/auth/callback
 ```
 
+### 4b. Enable Identity Linking
+```bash
+# Important for Google linking from Profile:
+# 1. Go to Authentication → Providers → Advanced
+# 2. Ensure "Allow linking identities" is toggled ON
+# Otherwise linkIdentity() in the profile page will fail.
+```
+
 ### 5. Configure SprintVerify API (Automated KYC)
 ```bash
 # 1. Contact SprintVerify to get API credentials

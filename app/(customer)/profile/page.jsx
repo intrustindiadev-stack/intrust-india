@@ -13,7 +13,7 @@ import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import { createClient } from '@/lib/supabaseClient';
 import { signInWithOTP, linkGoogleAccount } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 const supabase = createClient();
@@ -399,6 +399,7 @@ function PhoneVerification({ currentPhone, authPhone, userId, onVerified, showTo
                         placeholder="000000"
                         className="w-full text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 focus:border-[#92BCEA] focus:ring-2 focus:ring-[#92BCEA]/20 rounded-xl px-3 py-2.5 text-gray-900 dark:text-gray-100 outline-none text-center text-lg tracking-widest transition-all"
                         maxLength={6}
+                        autoComplete="one-time-code"
                     />
                     <div className="flex gap-2">
                         <button
@@ -633,6 +634,7 @@ function AddressCard({ address, onSave }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function CustomerProfilePage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user: authUser, loading: authLoading, refreshProfile, refreshUser } = useAuth();
 
     const [profile, setProfile] = useState(null);
@@ -644,6 +646,25 @@ export default function CustomerProfilePage() {
         setToast({ msg, type });
         setTimeout(() => setToast({ msg: '', type: 'success' }), 3500);
     }, []);
+
+    // ── Handle URL parameters for Identity Linking ──────────────────────────────
+    useEffect(() => {
+        if (!searchParams) return;
+        const linked = searchParams.get('linked');
+        const error = searchParams.get('error');
+
+        if (linked === 'google') {
+            showToast('Google account linked successfully! 🎉');
+            refreshUser();
+            router.replace('/profile', { scroll: false });
+        } else if (error === 'already_linked') {
+            showToast('This Google account is already linked to another user. Please choose a different Google account.', 'error');
+            router.replace('/profile', { scroll: false });
+        } else if (error === 'link_failed') {
+            showToast('Failed to link Google account. Please try again.', 'error');
+            router.replace('/profile', { scroll: false });
+        }
+    }, [searchParams, router, showToast, refreshUser]);
 
     // ── Direct fetch (fixes the "needs refresh on first load" bug) ─────────────
     useEffect(() => {
@@ -806,9 +827,9 @@ export default function CustomerProfilePage() {
                                     <p className={`text-xs mt-1 font-medium ${isGold ? 'text-amber-500/60' : 'text-gray-400 dark:text-gray-500'}`}>Member since {joinYear}</p>
                                     <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
                                         <span className={`inline-block text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${kycStatus === 'verified' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600' :
-                                                kycStatus === 'pending' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600' :
-                                                    kycStatus === 'rejected' ? 'bg-red-50 dark:bg-red-900/20 text-red-600' :
-                                                        'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                                            kycStatus === 'pending' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600' :
+                                                kycStatus === 'rejected' ? 'bg-red-50 dark:bg-red-900/20 text-red-600' :
+                                                    'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                                             }`}>
                                             {kycStatus === 'verified' ? '✓ KYC Verified' :
                                                 kycStatus === 'pending' ? 'KYC Under Review' :

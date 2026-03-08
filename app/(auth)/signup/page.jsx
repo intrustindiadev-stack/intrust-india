@@ -282,6 +282,7 @@ export default function SignupPage() {
                                             required
                                             pattern="[0-9]{6}"
                                             maxLength={6}
+                                            autoComplete="one-time-code"
                                             autoFocus
                                         />
                                     </div>

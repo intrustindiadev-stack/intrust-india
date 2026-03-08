@@ -30,9 +30,23 @@ export async function GET(request) {
     )
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const next = requestUrl.searchParams.get('next')
 
     if (error) {
         console.error('Exchange error:', error.message)
+
+        // Handle identity linking errors
+        if (error.code === 'identity_already_exists' || error.message?.includes('identity_already_exists') || error.message?.includes('already linked')) {
+            return NextResponse.redirect(new URL('/profile?error=already_linked', origin))
+        }
+
+        // Generic linking error if 'next' is present
+        if (next && next.startsWith('/')) {
+            const errorUrl = new URL(next, origin)
+            errorUrl.searchParams.set('error', 'link_failed')
+            return NextResponse.redirect(errorUrl)
+        }
+
         return NextResponse.redirect(new URL('/', origin))
     }
 
@@ -45,9 +59,13 @@ export async function GET(request) {
     }
 
     // Check for a custom redirect (e.g. from identity linking on profile page)
-    const next = requestUrl.searchParams.get('next')
     if (next && next.startsWith('/')) {
-        return NextResponse.redirect(new URL(next, origin))
+        const nextUrl = new URL(next, origin)
+        // If coming from profile explicitly, append success flag
+        if (next === '/profile' || next.startsWith('/profile?')) {
+            nextUrl.searchParams.set('linked', 'google')
+        }
+        return NextResponse.redirect(nextUrl)
     }
 
     const { data: profile } = await supabase
