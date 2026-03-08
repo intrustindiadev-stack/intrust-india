@@ -79,6 +79,8 @@ export async function POST(request) {
                 image_url,
                 tags,
                 created_by: session.user.id,
+                is_merchant_owned: false,
+                listed_on_marketplace: false,
             })
             .select()
             .single()
@@ -140,6 +142,8 @@ export async function PUT(request) {
                 encrypted_code: coupon.coupon_code, // TODO: Encrypt in production
                 masked_code,
                 coupon_code: undefined, // Remove plain code from object
+                is_merchant_owned: false,
+                listed_on_marketplace: false,
             }
         })
 

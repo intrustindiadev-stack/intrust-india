@@ -1,6 +1,6 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabaseServer';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -10,9 +10,25 @@ import { revalidatePath } from 'next/cache';
 
 // Helper to verify admin access
 async function verifyAdmin() {
-    // TODO: Add proper admin verification via session
-    // For now, we trust that these server actions are protected by route guards
-    return true;
+    try {
+        const supabase = await createServerSupabaseClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            return false;
+        }
+
+        const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        return profile?.role === 'admin';
+    } catch (error) {
+        console.error('Admin verification failed:', error);
+        return false;
+    }
 }
 
 /**
@@ -137,7 +153,9 @@ export async function createGiftCard(formData) {
                 usage_instructions: usageInstructions || '',
                 image_url: imageUrl || null,
                 tags,
-                created_by: createdBy
+                created_by: createdBy,
+                is_merchant_owned: false,
+                listed_on_marketplace: false
             })
             .select()
             .single();
@@ -154,6 +172,53 @@ export async function createGiftCard(formData) {
     } catch (error) {
         console.error('Server error:', error);
         return { success: false, error: 'Failed to create gift card' };
+    }
+}
+
+/**
+ * Create multiple gift cards (bulk)
+ */
+export async function createMultipleGiftCards(sharedData, codeEntries) {
+    try {
+        const isAdmin = await verifyAdmin();
+        if (!isAdmin) {
+            return { success: false, error: 'Unauthorized' };
+        }
+
+        if (!sharedData || !codeEntries || codeEntries.length === 0) {
+            return { success: false, error: 'Missing required data' };
+        }
+
+        // Get admin user ID (for created_by field)
+        const createdBy = '032ffa52-25e5-4849-85a0-00d27e043fbc';
+
+        const rowsToInsert = codeEntries.map(entry => ({
+            ...sharedData,
+            encrypted_code: entry.encryptedCode,
+            masked_code: entry.maskedCode,
+            created_by: createdBy,
+            is_merchant_owned: false,
+            listed_on_marketplace: false
+        }));
+
+        const supabase = createAdminClient();
+
+        const { data, error } = await supabase
+            .from('coupons')
+            .insert(rowsToInsert)
+            .select();
+
+        if (error) {
+            console.error('Error creating multiple gift cards:', error);
+            return { success: false, error: error.message };
+        }
+
+        revalidatePath('/admin/giftcards');
+
+        return { success: true, count: data.length, data };
+    } catch (error) {
+        console.error('Server error:', error);
+        return { success: false, error: 'Failed to create gift cards' };
     }
 }
 

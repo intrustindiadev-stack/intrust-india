@@ -38,7 +38,7 @@ export default function PurchasePage() {
                 .from('coupons')
                 .select('*')
                 .eq('status', 'available')
-                .eq('is_merchant_owned', false)
+                .is('merchant_id', null)
                 .gte('valid_until', new Date().toISOString())
                 .order('brand', { ascending: true });
 
@@ -89,17 +89,21 @@ export default function PurchasePage() {
 
         try {
             setPurchasing(true);
-            const purchases = Object.keys(cart).map(async (couponId) => {
-                const { error } = await supabase.rpc('merchant_purchase_coupon', {
-                    p_coupon_id: couponId,
-                    p_quantity: 1,
-                    p_merchant_id: null
-                });
-                if (error) throw error;
+            const couponIds = Object.keys(cart);
+
+            const response = await fetch('/api/merchant/purchase', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ couponIds })
             });
 
-            await Promise.all(purchases);
-            toast.success('Purchase successful! Check your inventory.');
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Purchase failed');
+            }
+
+            toast.success(`Purchase successful! Check your inventory.`);
             setCart({});
             fetchData();
         } catch (err) {
@@ -182,7 +186,7 @@ export default function PurchasePage() {
 
                                 <div className="mb-6 pb-6 border-b border-black/5 dark:border-white/5 space-y-2">
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-slate-500 dark:text-slate-400">Customer Price</span>
+                                        <span className="text-slate-500 dark:text-slate-400">Platform/Wholesale Price</span>
                                         <span className="text-slate-700 dark:text-slate-200">₹{item.price.toLocaleString('en-IN')}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">

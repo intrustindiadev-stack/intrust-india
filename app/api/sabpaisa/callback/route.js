@@ -120,6 +120,56 @@ export async function POST(request) {
             }
         }
 
+        // 5b. Handle Merchant Wallet Credit for MERCHANT_TOPUP safely
+        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'MERCHANT_TOPUP' && !wasAlreadySuccess) {
+            try {
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
+
+                // Get merchant ID for user
+                const { data: merchant } = await supabaseAdmin
+                    .from('merchants')
+                    .select('id, wallet_balance_paise')
+                    .eq('user_id', existingTxn.user_id)
+                    .single();
+
+                if (merchant) {
+                    const amountPaise = Math.round(parseFloat(amount) * 100);
+                    const newBalance = merchant.wallet_balance_paise + amountPaise;
+
+                    // Update balance
+                    await supabaseAdmin
+                        .from('merchants')
+                        .update({
+                            wallet_balance_paise: newBalance,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', merchant.id);
+
+                    // Insert transaction
+                    await supabaseAdmin
+                        .from('merchant_transactions')
+                        .insert({
+                            merchant_id: merchant.id,
+                            transaction_type: 'topup',
+                            amount_paise: amountPaise,
+                            commission_paise: 0,
+                            balance_after_paise: newBalance,
+                            description: `Wallet Topup via Sabpaisa (${result.paymentMode || 'Gateway'})`,
+                            metadata: { id: clientTxnId, type: 'MERCHANT_TOPUP' }
+                        });
+
+                    console.log(`[Callback] Merchant Wallet credited for txn ${clientTxnId}`);
+                } else {
+                    console.error('[Callback] Merchant not found for topup:', existingTxn.user_id);
+                }
+            } catch (walletError) {
+                console.error('[Callback] Failed to credit merchant wallet:', walletError.message);
+            }
+        }
+
         // 6. Handle Gift Card Purchase — Atomic coupon+order with rollback safety
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GIFT_CARD' && !wasAlreadySuccess) {
             try {

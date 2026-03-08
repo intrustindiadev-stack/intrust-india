@@ -7,6 +7,7 @@ import { Plus, Search, Package, TrendingUp, Gift } from 'lucide-react';
 import Link from 'next/link';
 import EditGiftCardModal from './EditGiftCardModal';
 import GiftCardItem from '@/components/admin/giftcards/GiftCardItem';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function GiftCardsListPage() {
     const router = useRouter();
@@ -67,17 +68,14 @@ export default function GiftCardsListPage() {
     }
 
     async function handleDelete(id) {
-        if (!confirm('Are you sure you want to delete this gift card? This will set its status to expired.')) {
-            return;
-        }
-
         setDeleteLoading(id);
         const result = await deleteGiftCard(id);
 
         if (result.success) {
+            toast.success('Gift card deleted (expired)!');
             await loadGiftCards();
         } else {
-            alert('Failed to delete gift card: ' + result.error);
+            toast.error('Failed to delete gift card: ' + result.error);
         }
 
         setDeleteLoading(null);
@@ -91,7 +89,7 @@ export default function GiftCardsListPage() {
     function handleUpdateSuccess(updatedCard) {
         setGiftCards(prev => prev.map(c => c.id === updatedCard.id ? updatedCard : c));
         setFilteredCards(prev => prev.map(c => c.id === updatedCard.id ? updatedCard : c));
-        alert('Gift card updated successfully!');
+        toast.success('Gift card updated successfully!');
     }
 
     const categories = [...new Set(giftCards.map(card => card.category))];
@@ -104,16 +102,24 @@ export default function GiftCardsListPage() {
 
     if (loading) {
         return (
-            <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 animate-pulse">
-                <div className="h-10 bg-slate-200 rounded-lg w-1/3"></div>
-                <div className="h-32 bg-slate-200 rounded-3xl w-full"></div>
-                <div className="h-96 bg-slate-200 rounded-3xl w-full"></div>
+            <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+                <div className="animate-pulse space-y-8">
+                    <div className="h-10 bg-slate-200 rounded-lg w-1/3"></div>
+                    <div className="h-32 bg-slate-200 rounded-3xl w-full"></div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {[...Array(6)].map((_, i) => (
+                            <div key={i} className="h-48 bg-slate-200 rounded-3xl w-full"></div>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto font-[family-name:var(--font-outfit)] space-y-8">
+            <Toaster position="top-right" />
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div className="space-y-1">

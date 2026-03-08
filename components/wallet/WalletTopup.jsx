@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast';
 
 const PRESET_AMOUNTS = [500, 1000, 2000, 5000];
 
-export default function WalletTopup({ user, onSuccess, onCancel }) {
+export default function WalletTopup({ user, isMerchant, onSuccess, onCancel }) {
     const [amount, setAmount] = useState('');
     const { initiatePayment, loading } = usePayment();
 
@@ -24,7 +24,7 @@ export default function WalletTopup({ user, onSuccess, onCancel }) {
                 payerName: user?.user_metadata?.full_name || user?.email || 'User',
                 payerEmail: user?.email || '',
                 payerMobile: user?.phone || '9999999999',
-                udf1: 'WALLET_TOPUP',
+                udf1: isMerchant ? 'MERCHANT_TOPUP' : 'WALLET_TOPUP',
                 udf2: user?.id || ''
             });
             // initiatePayment redirects to Sabpaisa — if it returns, it failed
@@ -75,8 +75,8 @@ export default function WalletTopup({ user, onSuccess, onCancel }) {
                             key={amt}
                             onClick={() => setAmount(amt.toString())}
                             className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${amount === amt.toString()
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                                 }`}
                         >
                             + ₹{amt.toLocaleString('en-IN')}

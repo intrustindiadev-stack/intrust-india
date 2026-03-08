@@ -4,6 +4,7 @@ import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { ThemeProvider } from '@/lib/contexts/ThemeContext';
 import PWAInstallPrompt from '@/components/ui/PWAInstallPrompt';
 import StructuredData from "@/components/seo/StructuredData";
+import { Toaster } from 'react-hot-toast';
 
 
 const inter = Inter({
@@ -101,6 +102,7 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <StructuredData />
             {children}
+            <Toaster position="top-center" reverseOrder={false} />
             <PWAInstallPrompt />
           </AuthProvider>
         </ThemeProvider>

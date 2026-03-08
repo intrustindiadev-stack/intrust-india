@@ -1,11 +1,21 @@
 'use client';
 
-import { Pencil, Trash2, Tag, Percent } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Pencil, Trash2, Tag, Percent, Check, X } from 'lucide-react';
 import Image from 'next/image';
 
 export default function GiftCardItem({ card, onEdit, onDelete, deleteLoading }) {
+    const [confirmDelete, setConfirmDelete] = useState(false);
     const isAvailable = card.status === 'available';
     const isSold = card.status === 'sold';
+
+    useEffect(() => {
+        let timer;
+        if (confirmDelete) {
+            timer = setTimeout(() => setConfirmDelete(false), 4000);
+        }
+        return () => clearTimeout(timer);
+    }, [confirmDelete]);
 
     const formatPrice = (paise) => `₹${(paise / 100).toFixed(2)}`;
     const discount = (((card.face_value_paise - card.selling_price_paise) / card.face_value_paise) * 100).toFixed(1);
@@ -68,25 +78,49 @@ export default function GiftCardItem({ card, onEdit, onDelete, deleteLoading }) 
                     </span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <button
-                        onClick={() => onEdit(card)}
-                        className="p-2 bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-xl transition-all border border-slate-100 hover:border-blue-100 shadow-sm"
-                        title="Edit Details"
-                    >
-                        <Pencil size={16} strokeWidth={2.5} />
-                    </button>
-                    <button
-                        onClick={() => onDelete(card.id)}
-                        disabled={deleteLoading === card.id}
-                        className="p-2 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-all border border-slate-100 hover:border-red-100 shadow-sm disabled:opacity-50"
-                        title="Delete Card"
-                    >
-                        {deleteLoading === card.id ? (
-                            <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                            <Trash2 size={16} strokeWidth={2.5} />
-                        )}
-                    </button>
+                    {confirmDelete ? (
+                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4">
+                            <button
+                                onClick={() => {
+                                    setConfirmDelete(false);
+                                    onDelete(card.id);
+                                }}
+                                disabled={deleteLoading === card.id}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+                            >
+                                {deleteLoading === card.id ? (
+                                    <div className="w-3.5 h-3.5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <Check size={14} strokeWidth={3} />
+                                )}
+                                Confirm
+                            </button>
+                            <button
+                                onClick={() => setConfirmDelete(false)}
+                                disabled={deleteLoading === card.id}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+                            >
+                                <X size={14} strokeWidth={3} /> Cancel
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => onEdit(card)}
+                                className="p-2 bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-xl transition-all border border-slate-100 hover:border-blue-100 shadow-sm"
+                                title="Edit Details"
+                            >
+                                <Pencil size={16} strokeWidth={2.5} />
+                            </button>
+                            <button
+                                onClick={() => setConfirmDelete(true)}
+                                className="p-2 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-all border border-slate-100 hover:border-red-100 shadow-sm"
+                                title="Delete Card"
+                            >
+                                <Trash2 size={16} strokeWidth={2.5} />
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

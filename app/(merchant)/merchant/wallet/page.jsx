@@ -152,6 +152,7 @@ export default function WalletPage() {
                     <div className="w-full">
                         <WalletTopup
                             user={user}
+                            isMerchant={true}
                             onSuccess={() => {
                                 setShowTopup(false);
                                 fetchWalletData();

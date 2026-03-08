@@ -98,11 +98,13 @@ npm run test:sprint-verify
 ### 6. Set Up Database Schema
 ```bash
 # 1. Go to Supabase Dashboard → SQL Editor
-# 2. Run database scripts in order:
+# 2. Run core database scripts in order:
 #    - kyc_schema_migration.sql
 #    - kyc_rls_policies.sql
 #    - sprint_verify_final.sql
-# 3. Verify tables are created in Table Editor
+# 3. Run merchant feature scripts:
+#    - update_merchant_purchase_rpc.sql (CRITICAL: Required for merchant checkout)
+# 4. Verify tables and functions are created in Dashboard.
 ```
 
 ### 7. Start Development Server

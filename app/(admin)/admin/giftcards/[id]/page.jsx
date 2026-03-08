@@ -23,9 +23,26 @@ export default function EditGiftCardPage({ params }) {
     const [error, setError] = useState(null);
     const [giftCard, setGiftCard] = useState(null);
 
+    // Live Discount State
+    const [faceValue, setFaceValue] = useState('');
+    const [sellingPrice, setSellingPrice] = useState('');
+
     useEffect(() => {
         loadGiftCard();
     }, []);
+
+    useEffect(() => {
+        if (giftCard) {
+            setFaceValue(giftCard.face_value_paise ? (giftCard.face_value_paise / 100).toFixed(2) : '');
+            setSellingPrice(giftCard.selling_price_paise ? (giftCard.selling_price_paise / 100).toFixed(2) : '');
+        }
+    }, [giftCard]);
+
+    // Live calculations
+    const faceValNum = parseFloat(faceValue) || 0;
+    const sellPriceNum = parseFloat(sellingPrice) || 0;
+    const discount = faceValNum > 0 ? (((faceValNum - sellPriceNum) / faceValNum) * 100).toFixed(1) : 0;
+    const isLoss = sellPriceNum > faceValNum;
 
     async function loadGiftCard() {
         const result = await getGiftCardById(params.id);
@@ -80,11 +97,17 @@ export default function EditGiftCardPage({ params }) {
         );
     }
 
-    // Convert paise to rupees for display
-    const faceValue = (giftCard.face_value_paise / 100).toFixed(2);
-    const sellingPrice = (giftCard.selling_price_paise / 100).toFixed(2);
-    const validFrom = giftCard.valid_from ? new Date(giftCard.valid_from).toISOString().split('T')[0] : '';
-    const validUntil = giftCard.valid_until ? new Date(giftCard.valid_until).toISOString().split('T')[0] : '';
+    // Convert dates for display
+    const formatDateForInput = (dateValue) => {
+        if (!dateValue) return '';
+        const date = new Date(dateValue);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    const validFrom = formatDateForInput(giftCard.valid_from);
+    const validUntil = formatDateForInput(giftCard.valid_until);
 
     return (
         <div className="max-w-4xl space-y-6">
@@ -190,7 +213,8 @@ export default function EditGiftCardPage({ params }) {
                                 required
                                 min="0"
                                 step="0.01"
-                                defaultValue={faceValue}
+                                value={faceValue}
+                                onChange={(e) => setFaceValue(e.target.value)}
                                 placeholder="500"
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10"
                             />
@@ -207,7 +231,8 @@ export default function EditGiftCardPage({ params }) {
                                 required
                                 min="0"
                                 step="0.01"
-                                defaultValue={sellingPrice}
+                                value={sellingPrice}
+                                onChange={(e) => setSellingPrice(e.target.value)}
                                 placeholder="450"
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10"
                             />
@@ -215,6 +240,20 @@ export default function EditGiftCardPage({ params }) {
                         </div>
                     </div>
                 </div>
+
+                {/* Live Discount Calculator Strip */}
+                {faceValNum > 0 && sellPriceNum > 0 && (
+                    <div className={`p-4 rounded-xl flex items-center justify-between border sticky top-4 z-10 shadow-sm ${isLoss ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                        <div className="flex items-center gap-4">
+                            <span className="font-medium text-slate-700">💲 Face Value: <span className="font-bold">₹{faceValNum}</span></span>
+                            <span className="text-slate-400">→</span>
+                            <span className="font-medium text-slate-700">Sell at: <span className="font-bold text-blue-600">₹{sellPriceNum}</span></span>
+                        </div>
+                        <div className={`px-3 py-1 rounded-lg font-bold text-sm ${isLoss ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            {isLoss ? '⚠️ Selling Above Face Value' : `💚 Discount: ${discount}% OFF`}
+                        </div>
+                    </div>
+                )}
 
                 {/* Coupon Code */}
                 <div>
