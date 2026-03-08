@@ -1,4 +1,7 @@
-import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, XCircle, Layers } from 'lucide-react';
+"use client";
+
+import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, XCircle, Layers, Download } from 'lucide-react';
+import { generateInvoice } from '@/lib/invoiceGenerator';
 
 export default function TransactionCard({ txn }) {
     const isCredit = txn.type === 'Credit';
@@ -10,6 +13,12 @@ export default function TransactionCard({ txn }) {
         'Payment Gateway': 'bg-violet-50 text-violet-600 border-violet-200',
         'Gift Card Order': 'bg-sky-50 text-sky-600 border-sky-200',
         'Wallet': 'bg-amber-50 text-amber-600 border-amber-200',
+    };
+
+    const handleDownload = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        generateInvoice(txn);
     };
 
     return (
@@ -80,13 +89,21 @@ export default function TransactionCard({ txn }) {
             </div>
 
             {/* Footer */}
-            {txn.id && (
-                <div className="flex justify-between items-center border-t border-slate-100 pt-3">
+            <div className="flex justify-between items-center border-t border-slate-100 pt-3">
+                {txn.id && (
                     <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 truncate max-w-[120px]">
                         {txn.id}
                     </span>
-                </div>
-            )}
+                )}
+
+                <button
+                    onClick={handleDownload}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all text-[10px] font-bold border border-blue-100 shadow-sm cursor-pointer"
+                >
+                    <Download size={14} />
+                    Download
+                </button>
+            </div>
         </div>
     );
 }
