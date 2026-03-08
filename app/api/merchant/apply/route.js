@@ -56,10 +56,19 @@ export async function POST(request) {
             );
         }
 
-        // --- KYC Verification using SprintVerify ---
+        // --- KYC Verification Logic ---
+        let panVerified = false;
+        let bankVerified = false;
+        let gstVerified = false;
+        let finalStatus = 'approved';
+
         // 1. Verify PAN
         const panResult = await sprintVerify.verifyPAN(panCard);
-        if (!panResult.valid) {
+        if (panResult.valid === true) {
+            panVerified = true;
+        } else if (panResult.valid === 'manual_review') {
+            finalStatus = 'pending';
+        } else {
             return NextResponse.json(
                 { error: `PAN Verification Failed: ${panResult.message}` },
                 { status: 400 }
@@ -68,7 +77,11 @@ export async function POST(request) {
 
         // 2. Verify Bank Account
         const bankResult = await sprintVerify.verifyBank(bankAccount, ifscCode);
-        if (!bankResult.valid) {
+        if (bankResult.valid === true) {
+            bankVerified = true;
+        } else if (bankResult.valid === 'manual_review') {
+            finalStatus = 'pending';
+        } else {
             return NextResponse.json(
                 { error: `Bank Verification Failed: ${bankResult.message}` },
                 { status: 400 }
@@ -79,16 +92,17 @@ export async function POST(request) {
         let gstResult = null;
         if (gstNumber) {
             gstResult = await sprintVerify.verifyGSTIN(gstNumber);
-            if (!gstResult.valid) {
+            if (gstResult.valid === true) {
+                gstVerified = true;
+            } else if (gstResult.valid === 'manual_review') {
+                finalStatus = 'pending';
+            } else {
                 return NextResponse.json(
                     { error: `GSTIN Verification Failed: ${gstResult.message}` },
                     { status: 400 }
                 );
             }
         }
-
-        // If all validations pass, the status is approved
-        const finalStatus = 'approved';
 
         // Create merchant record with approved status since API checks passed
         const { data: merchant, error: merchantError } = await supabase
@@ -106,6 +120,12 @@ export async function POST(request) {
                     bank_ifsc_code: ifscCode,
                     pan_number: panCard,
                     status: finalStatus,
+                    pan_verified: panVerified,
+                    bank_verified: bankVerified,
+                    gstin_verified: gstVerified,
+                    pan_data: panResult.data || null,
+                    bank_data: bankResult.data || null,
+                    gstin_data: gstResult?.data || null,
                 }
             ])
             .select()
@@ -119,24 +139,31 @@ export async function POST(request) {
             );
         }
 
-        // Update user profile role to merchant
-        const { error: roleError } = await supabase
-            .from('user_profiles')
-            .update({ role: 'merchant' })
-            .eq('id', user.id);
+        // Update user profile role to merchant only if approved
+        if (finalStatus === 'approved') {
+            const { error: roleError } = await supabase
+                .from('user_profiles')
+                .update({ role: 'merchant' })
+                .eq('id', user.id);
 
-        if (roleError) {
-            console.error('Error updating user role:', roleError);
-            // We don't fail the whole request, but we log it
+            if (roleError) {
+                console.error('Error updating user role:', roleError);
+                // We don't fail the whole request, but we log it
+            }
         }
 
         // Log the merchant creation
         console.log('✅ Merchant account created and verified via SprintVerify.');
 
+        // Create descriptive response
+        const message = finalStatus === 'approved'
+            ? 'Merchant account created and verified successfully!'
+            : 'Merchant application submitted. Some details are under manual review.';
+
         return NextResponse.json(
             {
                 success: true,
-                message: 'Merchant account created and verified successfully!',
+                message: message,
                 merchantId: merchant.id,
                 status: merchant.status,
             },

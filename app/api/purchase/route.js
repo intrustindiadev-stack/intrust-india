@@ -7,11 +7,11 @@ export async function POST(request) {
 
         // Verify user is authenticated
         const {
-            data: { session },
-            error: sessionError,
-        } = await supabase.auth.getSession()
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser()
 
-        if (sessionError || !session) {
+        if (authError || !user) {
             return NextResponse.json(
                 { error: 'Unauthorized. Please log in.' },
                 { status: 401 }

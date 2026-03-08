@@ -77,11 +77,10 @@ export async function POST(request) {
             if (createError) {
                 // Check if user already exists
                 if (createError.message?.toLowerCase().includes('already registered') || createError.status === 422) {
-                    const { data: searchData } = await supabaseAdmin.auth.admin.listUsers();
-                    const foundUser = searchData?.users?.find(u => u.phone === authPhone || u.phone === cleanPhone);
+                    const { data: fallbackUserId, error: fallbackError } = await supabaseAdmin.rpc('get_user_id_by_phone', { phone_number: cleanPhone });
 
-                    if (foundUser) {
-                        userId = foundUser.id;
+                    if (!fallbackError && fallbackUserId) {
+                        userId = fallbackUserId;
                     } else {
                         return NextResponse.json({ success: false, error: `User creation failed: ${createError.message}` }, { status: 500 });
                     }

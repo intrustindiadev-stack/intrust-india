@@ -24,7 +24,7 @@ export default function CouponCodeReveal({ couponId }) {
                 throw new Error(data.error || 'Failed to decrypt code');
             }
 
-            setRevealedCode(data.encrypted_code);
+            setRevealedCode(data.code);
         } catch (err) {
             console.error('Error decrypting code:', err);
             alert(err instanceof Error ? err.message : 'Failed to decrypt code');

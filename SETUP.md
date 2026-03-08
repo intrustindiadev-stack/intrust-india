@@ -48,8 +48,10 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 SPRINT_VERIFY_BASE_URL=https://uat.paysprint.in/sprintverify-uat/api/v1
 SPRINT_VERIFY_JWT_KEY=your-jwt-token-from-sprintverify
 SPRINT_VERIFY_AUTHORIZED_KEY=your-authorized-key-from-sprintverify
+SPRINT_VERIFY_PARTNER_ID=your-partner-id-from-sprintverify
 
-# Razorpay Payment Gateway (optional)
+# NOTE: For PRODUCTION, ensure SPRINT_VERIFY_BASE_URL is set to https://api.paysprint.in/api/v1
+# and all keys are production-level credentials.
 RAZORPAY_KEY_ID=your-razorpay-key-id
 RAZORPAY_KEY_SECRET=your-razorpay-key-secret
 ```

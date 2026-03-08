@@ -29,16 +29,23 @@ export async function verifyBank(account, ifsc) {
     if (!account || !ifsc) return { valid: false, message: 'Account and IFSC required' };
 
     try {
-        console.log('[ServerAction] Bypassing Bank Verification:', account, ifsc);
-        // Mock success response since the API is throwing 406 Not Acceptable
-        return {
-            valid: true,
-            message: 'Bank Verified (Mocked)',
-            data: {
-                clientName: 'Merchant User',
-                account_name: 'Merchant User'
-            }
-        };
+        // Gates bypass behind an explicit flag for non-production environments
+        const isBypassEnabled = process.env.NODE_ENV !== 'production' && process.env.ENABLE_VERIFICATION_BYPASS === 'true';
+
+        if (isBypassEnabled) {
+            console.log('[ServerAction] BYPASSING Bank Verification (Manual Flags):', account, ifsc);
+            return {
+                valid: true,
+                message: 'Bank Verified (Local Bypass Enabled)',
+                data: {
+                    clientName: 'Mock Merchant User',
+                    account_name: 'Mock Merchant User'
+                }
+            };
+        }
+
+        console.log('[ServerAction] Verifying Bank Account:', account, ifsc);
+        return await sprintVerify.verifyBank(account, ifsc);
     } catch (error) {
         console.error('[ServerAction] Bank Verification Error:', error);
         return {

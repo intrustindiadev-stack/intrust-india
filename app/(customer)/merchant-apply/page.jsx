@@ -55,7 +55,8 @@ export default function MerchantApplyPage() {
 
     // Verification States
     const [verifying, setVerifying] = useState({ pan: false, bank: false, gstin: false });
-    const [verified, setVerified] = useState({ pan: false, bank: false, gstin: false });
+    const [verified, setVerified] = useState({ pan: null, bank: null, gstin: null }); // null, 'verified', 'pending', 'failed'
+    const [successStatus, setSuccessStatus] = useState('approved');
 
 
     // Check if user already applied
@@ -66,7 +67,7 @@ export default function MerchantApplyPage() {
                     .from('merchants')
                     .select('id')
                     .eq('user_id', user.id)
-                    .single();
+                    .maybeSingle();
 
                 if (data) {
                     // Already applied, redirect to dashboard (layout will route to pending if needed)
@@ -116,7 +117,7 @@ export default function MerchantApplyPage() {
                 const address = `${result.data?.prb?.addr?.bno || ''} ${result.data?.prb?.addr?.st || ''} ${result.data?.prb?.addr?.loc || ''} ${result.data?.prb?.addr?.pncd || ''}`.trim();
 
                 toast.success('GSTIN Verified Successfully!');
-                setVerified(prev => ({ ...prev, gstin: true }));
+                setVerified(prev => ({ ...prev, gstin: 'verified' }));
 
                 // Auto-fill form if empty
                 setFormData(prev => ({
@@ -124,9 +125,12 @@ export default function MerchantApplyPage() {
                     businessName: prev.businessName || businessName,
                     address: prev.address || address
                 }));
+            } else if (result.valid === 'manual_review') {
+                toast(result.message || 'GSTIN service degraded, manual review will be performed', { icon: '⚠️' });
+                setVerified(prev => ({ ...prev, gstin: 'pending' }));
             } else {
                 toast.error(result.message || 'GSTIN verification failed');
-                setVerified(prev => ({ ...prev, gstin: false }));
+                setVerified(prev => ({ ...prev, gstin: 'failed' }));
             }
         } catch (err) {
             console.error(err);
@@ -149,14 +153,17 @@ export default function MerchantApplyPage() {
                 const accountName = result.data?.clientName || result.data?.fullName || '';
 
                 toast.success(`Bank Verified: ${accountName}`);
-                setVerified(prev => ({ ...prev, bank: true }));
+                setVerified(prev => ({ ...prev, bank: 'verified' }));
 
                 if (accountName && !formData.ownerName) {
                     setFormData(prev => ({ ...prev, ownerName: accountName }));
                 }
+            } else if (result.valid === 'manual_review') {
+                toast(result.message || 'Bank service degraded, manual review will be performed', { icon: '⚠️' });
+                setVerified(prev => ({ ...prev, bank: 'pending' }));
             } else {
                 toast.error(result.message || 'Bank verification failed');
-                setVerified(prev => ({ ...prev, bank: false }));
+                setVerified(prev => ({ ...prev, bank: 'failed' }));
             }
         } catch (err) {
             console.error(err);
@@ -185,14 +192,17 @@ export default function MerchantApplyPage() {
                 const fullName = result.data?.full_name || '';
 
                 toast.success(`PAN Verified: ${fullName}`);
-                setVerified(prev => ({ ...prev, pan: true }));
+                setVerified(prev => ({ ...prev, pan: 'verified' }));
 
                 if (fullName && !formData.ownerName) {
                     setFormData(prev => ({ ...prev, ownerName: fullName }));
                 }
+            } else if (result.valid === 'manual_review') {
+                toast(result.message || 'PAN service degraded, manual review will be performed', { icon: '⚠️' });
+                setVerified(prev => ({ ...prev, pan: 'pending' }));
             } else {
                 toast.error(result.message || 'PAN verification failed');
-                setVerified(prev => ({ ...prev, pan: false }));
+                setVerified(prev => ({ ...prev, pan: 'failed' }));
             }
         } catch (err) {
             console.error(err);
@@ -223,8 +233,12 @@ export default function MerchantApplyPage() {
                 throw new Error(data.error || 'Failed to submit application');
             }
 
-            // Success! Merchant account created and auto-approved
+            // Success! Merchant account created
             console.log('✅ Merchant account created:', data);
+
+            // Success step will handle status-specific message
+            setSuccessStatus(data.status || 'approved');
+
             if (refreshProfile) await refreshProfile();
             setLoading(false);
             setStep(3); // Move to Success Step
@@ -259,12 +273,12 @@ export default function MerchantApplyPage() {
     };
 
     const validateStep2 = () => {
-        if (!verified.bank) {
+        if (verified.bank !== 'verified' && verified.bank !== 'pending') {
             toast.error("Please verify your Bank Account details first.");
             return "Please verify your Bank Account details first.";
         }
 
-        if (!verified.pan) {
+        if (verified.pan !== 'verified' && verified.pan !== 'pending') {
             toast.error("Please verify your PAN details first.");
             return "Please verify your PAN details first.";
         }
@@ -392,13 +406,13 @@ export default function MerchantApplyPage() {
                                             value={formData.gstNumber}
                                             onChange={e => {
                                                 setFormData({ ...formData, gstNumber: e.target.value });
-                                                if (verified.gstin) setVerified(prev => ({ ...prev, gstin: false }));
+                                                if (verified.gstin) setVerified(prev => ({ ...prev, gstin: null }));
                                             }}
                                             icon={FileText}
                                             actionLabel="Verify"
                                             onAction={handleVerifyGSTIN}
                                             isVerifying={verifying.gstin}
-                                            isVerified={verified.gstin}
+                                            verificationState={verified.gstin}
                                         />
                                         <SmoothInput label="Owner Name" value={formData.ownerName} onChange={e => setFormData({ ...formData, ownerName: e.target.value })} icon={Users} />
                                     </div>
@@ -438,11 +452,13 @@ export default function MerchantApplyPage() {
 
                                     <SmoothInput
                                         label="Account Number"
-                                        type="number"
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
                                         value={formData.bankAccount}
                                         onChange={e => {
                                             setFormData({ ...formData, bankAccount: e.target.value });
-                                            if (verified.bank) setVerified(prev => ({ ...prev, bank: false }));
+                                            if (verified.bank) setVerified(prev => ({ ...prev, bank: null }));
                                         }}
                                         autoFocus
                                         icon={CreditCard}
@@ -453,26 +469,26 @@ export default function MerchantApplyPage() {
                                             value={formData.ifscCode}
                                             onChange={e => {
                                                 setFormData({ ...formData, ifscCode: e.target.value });
-                                                if (verified.bank) setVerified(prev => ({ ...prev, bank: false }));
+                                                if (verified.bank) setVerified(prev => ({ ...prev, bank: null }));
                                             }}
                                             icon={Banknote}
-                                            actionLabel={!verified.bank ? "Verify Bank" : "Verified"}
+                                            actionLabel={verified.bank === 'verified' ? 'Verified' : 'Verify Bank'}
                                             onAction={handleVerifyBank}
                                             isVerifying={verifying.bank}
-                                            isVerified={verified.bank}
+                                            verificationState={verified.bank}
                                         />
                                         <SmoothInput
                                             label="PAN Number"
                                             value={formData.panCard}
                                             onChange={e => {
                                                 setFormData({ ...formData, panCard: e.target.value.toUpperCase() });
-                                                if (verified.pan) setVerified(prev => ({ ...prev, pan: false }));
+                                                if (verified.pan) setVerified(prev => ({ ...prev, pan: null }));
                                             }}
                                             icon={FileText}
                                             actionLabel="Verify"
                                             onAction={handleVerifyPAN}
                                             isVerifying={verifying.pan}
-                                            isVerified={verified.pan}
+                                            verificationState={verified.pan}
                                         />
                                     </div>
 
@@ -509,9 +525,14 @@ export default function MerchantApplyPage() {
                                     />
                                 </div>
 
-                                <h2 className="text-4xl font-display font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">Welcome to InTrust!</h2>
+                                <h2 className="text-4xl font-display font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">
+                                    {successStatus === 'approved' ? 'Welcome to InTrust!' : 'Application Submitted'}
+                                </h2>
                                 <p className="text-slate-500 dark:text-slate-400 text-lg max-w-md mx-auto mb-10 leading-relaxed font-medium">
-                                    Your merchant account is <span className="font-bold text-[#D4AF37]">ready to use</span>! Start selling gift cards and grow your business today.
+                                    {successStatus === 'approved'
+                                        ? <>Your merchant account is <span className="font-bold text-[#D4AF37]">ready to use</span>! Start selling gift cards and grow your business today.</>
+                                        : <>Your application is <span className="font-bold text-amber-500">under review</span>. We will notify you once your account is verified.</>
+                                    }
                                 </p>
 
                                 <div className="w-full max-w-xs space-y-3">
@@ -540,8 +561,8 @@ export default function MerchantApplyPage() {
                         </button>
                         <button
                             onClick={step === 2 ? handleFormSubmit : nextStep}
-                            disabled={loading || (step === 2 && (!verified.pan || !verified.bank))}
-                            className={`flex-1 flex gap-2 justify-center items-center py-4 rounded-2xl text-white dark:text-[#020617] font-bold shadow-lg transition-all text-lg ${(loading || (step === 2 && (!verified.pan || !verified.bank))) ? 'bg-slate-200 dark:bg-white/5 shadow-none text-slate-400 cursor-not-allowed' : 'bg-[#D4AF37] shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/30 hover:scale-[1.02] active:scale-[0.98] gold-glow'}`}
+                            disabled={loading || (step === 2 && ((verified.pan !== 'verified' && verified.pan !== 'pending') || (verified.bank !== 'verified' && verified.bank !== 'pending')))}
+                            className={`flex-1 flex gap-2 justify-center items-center py-4 rounded-2xl text-white dark:text-[#020617] font-bold shadow-lg transition-all text-lg ${(loading || (step === 2 && ((verified.pan !== 'verified' && verified.pan !== 'pending') || (verified.bank !== 'verified' && verified.bank !== 'pending')))) ? 'bg-slate-200 dark:bg-white/5 shadow-none text-slate-400 cursor-not-allowed' : 'bg-[#D4AF37] shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/30 hover:scale-[1.02] active:scale-[0.98] gold-glow'}`}
                         >
                             {loading && <Loader2 className="animate-spin" size={20} />}
                             {loading ? 'Submitting...' : step === 2 ? 'Submit Application' : 'Continue'}
@@ -596,7 +617,25 @@ function TrustItem({ icon: Icon, title, text, delay }) {
 }
 
 // Ultra Smooth Inputs with verification action
-function SmoothInput({ label, className = "", icon: Icon, actionLabel, onAction, isVerifying, isVerified, ...props }) {
+// verificationState: null | 'verified' | 'pending' | 'failed'
+function SmoothInput({ label, className = "", icon: Icon, actionLabel, onAction, isVerifying, verificationState, ...props }) {
+    const isVerified = verificationState === 'verified';
+    const isPending = verificationState === 'pending';
+
+    // Border/ring colour
+    const borderClass = isVerified
+        ? 'border-green-500/50 focus:border-green-500/50 focus:ring-green-500/10'
+        : isPending
+            ? 'border-amber-400/50 focus:border-amber-400/50 focus:ring-amber-400/10'
+            : 'border-black/5 dark:border-white/10 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/10';
+
+    // Icon colour
+    const iconClass = isVerified
+        ? 'text-green-500'
+        : isPending
+            ? 'text-amber-400'
+            : 'text-slate-400 dark:text-slate-500 group-focus-within:text-[#D4AF37]';
+
     return (
         <div className="group">
             <div className="flex justify-between items-end mb-2">
@@ -606,12 +645,12 @@ function SmoothInput({ label, className = "", icon: Icon, actionLabel, onAction,
             </div>
             <div className="relative transform transition-all duration-200 group-focus-within:scale-[1.01]">
                 <input
-                    className={`w-full px-5 py-4 pl-12 ${actionLabel ? 'pr-24' : ''} bg-slate-50 dark:bg-white/5 border ${isVerified ? 'border-green-500/50 focus:border-green-500/50 focus:ring-green-500/10' : 'border-black/5 dark:border-white/10 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/10'} rounded-2xl focus:ring-4 transition-all outline-none font-semibold text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 shadow-sm ${className}`}
+                    className={`w-full px-5 py-4 pl-12 ${actionLabel ? 'pr-24' : ''} bg-slate-50 dark:bg-white/5 border ${borderClass} rounded-2xl focus:ring-4 transition-all outline-none font-semibold text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 shadow-sm ${className}`}
                     placeholder={`Enter ${label}`}
                     readOnly={isVerifying || isVerified}
                     {...props}
                 />
-                <div className={`absolute left-4 top-1/2 -translate-y-1/2 ${isVerified ? 'text-green-500' : 'text-slate-400 dark:text-slate-500 group-focus-within:text-[#D4AF37]'} transition-colors`}>
+                <div className={`absolute left-4 top-1/2 -translate-y-1/2 ${iconClass} transition-colors`}>
                     {isVerified ? <CheckCircle size={20} /> : (Icon && <Icon size={20} />)}
                 </div>
 
@@ -620,6 +659,10 @@ function SmoothInput({ label, className = "", icon: Icon, actionLabel, onAction,
                         {isVerified ? (
                             <div className="px-3 py-1.5 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 rounded-xl text-xs font-bold flex items-center gap-1">
                                 <Check size={14} /> Verified
+                            </div>
+                        ) : isPending ? (
+                            <div className="px-3 py-1.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-xl text-xs font-bold flex items-center gap-1">
+                                <Loader2 size={14} /> Pending
                             </div>
                         ) : (
                             <button

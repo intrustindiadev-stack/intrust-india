@@ -1,27 +1,32 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
+import { decryptCouponCode } from '@/lib/encryption'
 
 export async function GET(request, { params }) {
     try {
         const supabase = await createServerSupabaseClient()
         const { id } = await params
 
-        // Verify user is authenticated
+        // Use getUser() instead of getSession() for a cryptographically verified
+        // server-side identity check (getSession() only reads the local cookie and
+        // can be spoofed).
         const {
-            data: { session },
-            error: sessionError,
-        } = await supabase.auth.getSession()
+            data: { user },
+            error: userError,
+        } = await supabase.auth.getUser()
 
-        if (sessionError || !session) {
+        if (userError || !user) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
             )
         }
 
-        // Call the get_my_coupon_code function
-        // This function verifies ownership before returning encrypted code
-        const { data: encryptedCode, error } = await supabase.rpc('get_my_coupon_code', {
+        // Call the get_my_coupon_code RPC.
+        // The function enforces ownership by checking auth.uid() internally via
+        // RLS on the coupons table (purchased_by = auth.uid()), so the session-
+        // scoped client is the correct one to use here.
+        const { data: couponCode, error } = await supabase.rpc('get_my_coupon_code', {
             p_coupon_id: id,
         })
 
@@ -33,20 +38,20 @@ export async function GET(request, { params }) {
             )
         }
 
-        // For now, return the encrypted code
-        // In production, you would decrypt it here using service role
-        // Example with Supabase Vault:
-        // const { data: decryptedCode } = await supabaseAdmin.rpc('vault_decrypt', {
-        //   secret: encryptedCode,
-        //   key_id: 'coupon_encryption_key'
-        // })
+        if (couponCode === null || couponCode === undefined) {
+            return NextResponse.json(
+                { error: 'Coupon not found or access denied' },
+                { status: 404 }
+            )
+        }
 
+        const decryptedCode = decryptCouponCode(couponCode)
+
+        // Return the coupon code under the key `code` (not `encrypted_code`).
+        // The column is named `encrypted_code` in the DB and we decrypt it here.
+        // The client must never see the raw DB column name to avoid leaking implementation details.
         return NextResponse.json(
-            {
-                encrypted_code: encryptedCode,
-                // In production, return decrypted code:
-                // code: decryptedCode
-            },
+            { code: decryptedCode },
             { status: 200 }
         )
     } catch (error) {

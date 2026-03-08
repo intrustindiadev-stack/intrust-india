@@ -7,11 +7,11 @@ export async function GET(request) {
 
         // Verify user is authenticated
         const {
-            data: { session },
-            error: sessionError,
-        } = await supabase.auth.getSession()
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser()
 
-        if (sessionError || !session) {
+        if (authError || !user) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
@@ -22,7 +22,7 @@ export async function GET(request) {
         const { data: coupons, error: couponsError } = await supabase
             .from('coupons')
             .select('id, brand, title, description, category, face_value_paise, selling_price_paise, masked_code, status, valid_from, valid_until, image_url, purchased_at')
-            .eq('purchased_by', session.user.id)
+            .eq('purchased_by', user.id)
             .eq('status', 'sold')
             .order('purchased_at', { ascending: false })
 
@@ -38,7 +38,7 @@ export async function GET(request) {
         const { data: transactions, error: transactionsError } = await supabase
             .from('transactions')
             .select('*')
-            .eq('user_id', session.user.id)
+            .eq('user_id', user.id)
             .order('created_at', { ascending: false })
 
         if (transactionsError) {

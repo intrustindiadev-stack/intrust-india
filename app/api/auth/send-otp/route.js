@@ -102,11 +102,18 @@ export async function POST(request) {
 
         if (!smsResult.success) {
             console.error('SMS sending failed:', smsResult.error);
-            // Optional: Delete the OTP record we just created so user isn't penalized?
-            // For security (user enumeration), we might still want to return success, 
-            // but if the system is broken, the user needs to know.
-            // The prompt says "SMS failures are logged but return success".
-            // I will follow the prompt but I'll add a specific log.
+
+            // Delete the OTP record we just created so it doesn't count against rate limits
+            await supabase
+                .from('otp_codes')
+                .delete()
+                .eq('phone', phone)
+                .eq('otp_hash', otpHash);
+
+            return NextResponse.json(
+                { success: false, error: 'Failed to send OTP. Please try again.' },
+                { status: 500 }
+            );
         }
 
         return NextResponse.json({ success: true });

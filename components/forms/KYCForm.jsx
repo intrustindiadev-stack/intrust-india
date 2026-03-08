@@ -286,9 +286,11 @@ export default function KYCForm({
                             {panVerified ? <Check size={12} /> : null}
                         </button>
                     </div>
-                    <p className="text-xs text-slate-400 mt-1 ml-1">
-                        Format: 5 letters + 4 digits + 1 letter
-                    </p>
+                    {touched.panNumber && errors.panNumber && (
+                        <p className="text-red-500 text-xs mt-1 ml-1 flex items-center gap-1">
+                            <AlertCircle size={10} /> {errors.panNumber}
+                        </p>
+                    )}
                 </div>
 
 

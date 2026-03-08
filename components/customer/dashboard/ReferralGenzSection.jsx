@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Gift, Share2, Copy, CheckCircle, Sparkles, Zap, Coins } from 'lucide-react';
+import { Gift, Share2, Copy, CheckCircle, Sparkles, Zap, Award, ShieldCheck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function ReferralGenzSection({ referralCode }) {
@@ -12,7 +12,7 @@ export default function ReferralGenzSection({ referralCode }) {
         if (referralCode) {
             navigator.clipboard.writeText(referralCode);
             setCopied(true);
-            toast.success('Code copied! Go secure that bag! 🚀');
+            toast.success('Code copied');
             setTimeout(() => setCopied(false), 2000);
         }
     };
@@ -21,86 +21,98 @@ export default function ReferralGenzSection({ referralCode }) {
 
     return (
         <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ y: -4 }}
-            className="relative overflow-hidden group rounded-[2.5rem] p-1 bg-gradient-to-br from-[#FF3D77] via-[#A016FC] to-[#3D5CFF] shadow-2xl shadow-purple-500/20"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ y: -3 }}
+            className="relative overflow-hidden group rounded-[2.5rem] p-[1px] bg-gradient-to-br from-gold/30 via-gold/5 to-transparent shadow-xl transition-all duration-500"
         >
-            {/* Animated Background Elements */}
-            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/20 blur-[80px] rounded-full animate-pulse" />
-            <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-cyan-400/20 blur-[60px] rounded-full animate-bounce duration-[5000ms]" />
+            {/* Premium Background Elements */}
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-gold/5 blur-[80px] rounded-full pointer-events-none" />
+            <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-blue-500/5 blur-[60px] rounded-full pointer-events-none" />
 
-            <div className="relative bg-[#0F172A] dark:bg-gray-900/90 backdrop-blur-3xl rounded-[2.4rem] p-6 sm:p-8 h-full">
-                {/* Floating "Badge" */}
-                <div className="absolute top-4 right-6 flex gap-2">
-                    <div className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-1.5">
-                        <Zap size={12} className="text-yellow-400 fill-yellow-400" />
-                        <span className="text-[10px] font-black text-white uppercase tracking-tighter">Instant Credit</span>
+            <div className="relative bg-[#0F172A] dark:bg-[#020617] backdrop-blur-3xl rounded-[2.4rem] p-5 sm:p-7 h-full border border-white/5 overflow-hidden">
+                {/* Subtle Shimmer */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#1e293b] to-[#0f172a] rounded-xl border border-gold/20 flex items-center justify-center shadow-lg relative shrink-0">
+                            <Gift size={20} className="text-gold" />
+                        </div>
+                        <div className="flex flex-col">
+                            <h2 className="text-lg sm:text-xl font-display font-medium text-white tracking-tight">
+                                Elevate <span className="text-gold">Rewards</span>
+                            </h2>
+                            <div className="flex items-center gap-1.5 opacity-60">
+                                <ShieldCheck size={10} className="text-gold" />
+                                <span className="text-[10px] font-bold text-gold uppercase tracking-wider">Premium Program</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-start sm:self-center">
+                        <div className="bg-gold/5 backdrop-blur-md px-3 py-1 rounded-full border border-gold/10 flex items-center gap-1.5">
+                            <Award size={10} className="text-gold" />
+                            <span className="text-[9px] font-bold text-gold uppercase tracking-wider">Verified</span>
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-6 items-center">
-                    {/* Visual Side */}
-                    <div className="relative shrink-0">
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl rotate-12 flex items-center justify-center shadow-xl shadow-indigo-500/40 relative z-10">
-                            <Gift size={40} className="text-white -rotate-12" />
-                        </div>
-                        <div className="absolute -top-2 -right-2 w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center shadow-lg animate-bounce z-20">
-                            <Sparkles size={16} className="text-white" />
-                        </div>
-                    </div>
-
-                    {/* Content Side */}
-                    <div className="flex-1 text-center sm:text-left">
-                        <h3 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight">
-                            Manifest <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-cyan-400 underline decoration-cyan-400/30">₹100 Cash</span> 💸
-                        </h3>
-                        <p className="text-slate-400 font-medium text-sm sm:text-base mb-6 leading-tight">
-                            Share your code. When a friend joins, you <span className="text-white font-bold">BOTH</span> get paid. No cap. 🧢
+                <div className="flex flex-col lg:flex-row gap-6 lg:items-center">
+                    <div className="flex-1">
+                        <p className="text-slate-400 font-normal text-sm sm:text-base leading-relaxed mb-5 max-w-lg">
+                            Earn <span className="text-white font-semibold">₹100 premium credit</span> for every successful invitation to your network.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-3">
-                            <div className="flex-1 flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 group/code transition-all hover:bg-white/10">
-                                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mr-2">CODE:</span>
-                                <code className="text-lg font-mono font-black text-white tracking-[0.2em] flex-1">
-                                    {referralCode}
-                                </code>
+                            <div className="flex-1 flex items-center gap-3 bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 group/code transition-all hover:border-gold/30">
+                                <div className="flex flex-col">
+                                    <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Invitation Code</span>
+                                    <code className="text-base font-mono font-bold text-white tracking-widest">
+                                        {referralCode}
+                                    </code>
+                                </div>
                                 <button
                                     onClick={handleCopy}
-                                    className="p-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-all active:scale-90 shadow-lg shadow-indigo-500/30"
+                                    className="ml-auto p-2 bg-gold/10 hover:bg-gold/20 text-gold rounded-lg transition-all active:scale-90 border border-gold/10"
                                 >
-                                    {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
+                                    {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
                                 </button>
                             </div>
 
-                            <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
+                            <button
                                 onClick={() => window.location.href = '/refer'}
-                                className="px-6 py-4 bg-white text-slate-900 font-black rounded-2xl flex items-center justify-center gap-2 shadow-xl hover:shadow-white/10 transition-all border-b-4 border-slate-200 active:border-b-0 active:translate-y-1"
+                                className="px-6 py-3 bg-gold text-[#020617] text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all hover:bg-[#c5a028] shadow-md shadow-gold/5 shrink-0"
                             >
-                                <Share2 size={18} />
-                                View Stats
-                            </motion.button>
+                                <Share2 size={16} />
+                                <span>Network Portfolio</span>
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Bottom Decor */}
-                <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
-                    <div className="flex -space-x-3 overflow-hidden">
-                        {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="inline-block h-8 w-8 rounded-full ring-2 ring-[#0F172A] bg-gray-700 overflow-hidden">
-                                <img src={`https://i.pravatar.cc/100?u=${i + referralCode}`} alt="" className="w-full h-full object-cover grayscale opacity-60" />
+                {/* Compact Footer */}
+                <div className="mt-8 pt-5 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="flex -space-x-2">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="inline-block h-7 w-7 rounded-full ring-2 ring-[#020617] bg-slate-800 overflow-hidden grayscale">
+                                    <img src={`https://i.pravatar.cc/100?u=${i + referralCode}`} alt="" className="w-full h-full object-cover opacity-70" />
+                                </div>
+                            ))}
+                            <div className="flex items-center justify-center h-7 w-7 rounded-full ring-2 ring-[#020617] bg-gold/10 text-gold text-[8px] font-bold border border-gold/10">
+                                +12k
                             </div>
-                        ))}
-                        <div className="flex items-center justify-center h-8 w-8 rounded-full ring-2 ring-[#0F172A] bg-indigo-500/20 text-indigo-400 text-[10px] font-black">
-                            +10k
                         </div>
+                        <p className="text-[10px] font-medium text-slate-600 uppercase tracking-tight">
+                            <span className="text-slate-400">2.4k+ Ambassadors</span>
+                        </p>
                     </div>
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        Join 2,400+ Referrers 🚀
-                    </p>
+
+                    <div className="flex items-center gap-1.5 text-gold/40">
+                        <Zap size={12} className="shrink-0" />
+                        <span className="text-[9px] font-bold uppercase tracking-wider">Instant Settlement</span>
+                    </div>
                 </div>
             </div>
         </motion.div>

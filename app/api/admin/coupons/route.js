@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabaseServer'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
+import { encryptCouponCode } from '@/lib/encryption'
 
 // POST /api/admin/coupons - Create single coupon
 export async function POST(request) {
@@ -9,11 +10,11 @@ export async function POST(request) {
 
         // Verify user is authenticated and is admin
         const {
-            data: { session },
-            error: sessionError,
-        } = await supabase.auth.getSession()
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser()
 
-        if (sessionError || !session) {
+        if (authError || !user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
@@ -21,7 +22,7 @@ export async function POST(request) {
         const { data: profile } = await supabase
             .from('user_profiles')
             .select('role')
-            .eq('id', session.user.id)
+            .eq('id', user.id)
             .single()
 
         if (profile?.role !== 'admin') {
@@ -55,9 +56,8 @@ export async function POST(request) {
             ? `${coupon_code.slice(0, 4)}****${coupon_code.slice(-4)}`
             : `****${coupon_code.slice(-4)}`
 
-        // TODO: Encrypt the coupon code before storing
-        // For now, we'll store it as-is (in production, use Supabase Vault or crypto)
-        const encrypted_code = coupon_code // TEMPORARY: Replace with actual encryption
+        // Encrypt the coupon code before storing
+        const encrypted_code = encryptCouponCode(coupon_code)
 
         // Use admin client to insert (bypasses RLS)
         const adminClient = createAdminClient()
@@ -78,7 +78,7 @@ export async function POST(request) {
                 usage_instructions,
                 image_url,
                 tags,
-                created_by: session.user.id,
+                created_by: user.id,
                 is_merchant_owned: false,
                 listed_on_marketplace: false,
             })
@@ -104,11 +104,11 @@ export async function PUT(request) {
 
         // Verify user is authenticated and is admin
         const {
-            data: { session },
-            error: sessionError,
-        } = await supabase.auth.getSession()
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser()
 
-        if (sessionError || !session) {
+        if (authError || !user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
@@ -116,7 +116,7 @@ export async function PUT(request) {
         const { data: profile } = await supabase
             .from('user_profiles')
             .select('role')
-            .eq('id', session.user.id)
+            .eq('id', user.id)
             .single()
 
         if (profile?.role !== 'admin') {
@@ -139,7 +139,7 @@ export async function PUT(request) {
 
             return {
                 ...coupon,
-                encrypted_code: coupon.coupon_code, // TODO: Encrypt in production
+                encrypted_code: encryptCouponCode(coupon.coupon_code),
                 masked_code,
                 coupon_code: undefined, // Remove plain code from object
                 is_merchant_owned: false,
