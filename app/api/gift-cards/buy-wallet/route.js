@@ -157,14 +157,17 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Failed to process order. Purchase reversed successfully.', correlationId }, { status: 500 });
         }
 
-        // 6. Create transaction record for history
-        const { error: transactionError } = await supabaseAdmin.from('transactions').insert({
+        // 6. Create transaction record for history (using correct wallet transaction table)
+        const { error: transactionError } = await supabaseAdmin.from('customer_wallet_transactions').insert({
+            wallet_id: wallet.id,
             user_id: user.id,
-            amount: purchaseAmount,
-            type: 'debit',
-            status: 'success',
+            type: 'DEBIT',
+            amount_paise: purchaseAmountPaise,
+            balance_before_paise: wallet.balance_paise,
+            balance_after_paise: newBalancePaise,
             description: `Purchased Gift Card: ${coupon.title || 'Gift Card'}`,
-            reference_id: couponId
+            reference_id: couponId,
+            reference_type: 'GIFT_CARD_PURCHASE'
         });
 
         if (transactionError) {

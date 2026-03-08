@@ -173,7 +173,47 @@ export async function POST(request) {
             }
         }
 
-        // 7. Redirect User based on Status
+        // 7. Handle Gold Subscription Activation
+        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GOLD_SUBSCRIPTION' && !wasAlreadySuccess) {
+            try {
+                const packageId = existingTxn.udf2;
+                const monthsToAdd = packageId === 'GOLD_1M' ? 1 : packageId === 'GOLD_3M' ? 3 : 12;
+
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
+
+                const { data: profile } = await supabaseAdmin
+                    .from('user_profiles')
+                    .select('is_gold_verified, subscription_expiry')
+                    .eq('id', existingTxn.user_id)
+                    .single();
+
+                let baseDate = new Date();
+                if (profile?.is_gold_verified && profile?.subscription_expiry) {
+                    const currentExpiry = new Date(profile.subscription_expiry);
+                    if (currentExpiry > baseDate) baseDate = currentExpiry;
+                }
+
+                const newExpiryDate = new Date(baseDate);
+                newExpiryDate.setMonth(newExpiryDate.getMonth() + monthsToAdd);
+
+                await supabaseAdmin
+                    .from('user_profiles')
+                    .update({
+                        is_gold_verified: true,
+                        subscription_expiry: newExpiryDate.toISOString()
+                    })
+                    .eq('id', existingTxn.user_id);
+
+                console.log(`[Callback] Gold subscription activated for user ${existingTxn.user_id}`);
+            } catch (goldError) {
+                console.error('[Callback] Gold subscription activation error:', goldError.message);
+            }
+        }
+
+        // 8. Redirect User based on Status
         let redirectPath = '/payment/failure';
         let redirectQuery = `?txnId=${clientTxnId}&msg=${encodeURIComponent(result.transMsg || 'Payment Failed')}`;
 

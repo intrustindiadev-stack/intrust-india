@@ -110,7 +110,7 @@ export default function SabpaisaPaymentModal({
 
           // Success - refresh balance and redirect
           await fetchBalance();
-          router.push("/my-giftcards");
+          router.push(`/payment/success?txnId=WALLET_${Date.now()}&amount=${amount}&type=GIFT_CARD`);
         } else {
           // Default generic Wallet Payment
           const txn = await debitWallet(

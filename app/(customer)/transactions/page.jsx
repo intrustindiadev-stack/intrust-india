@@ -348,8 +348,8 @@ export default function TransactionsPage() {
                                     >
                                         <div className="flex items-center gap-4 sm:gap-5 w-full sm:w-auto">
                                             <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-500 ${tx.type === 'CASHBACK' || tx.type === 'TOPUP'
-                                                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                                    : 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                : 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
                                                 }`}>
                                                 {tx.logo}
                                             </div>
@@ -375,8 +375,8 @@ export default function TransactionsPage() {
                                                 </div>
                                             </div>
                                             <div className={`text-xl font-black ${tx.type === 'CASHBACK' || tx.type === 'TOPUP'
-                                                    ? 'text-emerald-600 dark:text-emerald-400'
-                                                    : 'text-slate-900 dark:text-white'
+                                                ? 'text-emerald-600 dark:text-emerald-400'
+                                                : 'text-slate-900 dark:text-white'
                                                 }`}>
                                                 {tx.type === 'CASHBACK' || tx.type === 'TOPUP' ? '+' : '-'}₹{tx.amount.toFixed(2)}
                                             </div>

@@ -4,18 +4,22 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function ListToMarketplace({ coupon, onClose, onSuccess }) {
-    const [sellingPrice, setSellingPrice] = useState(
-        coupon.merchant_selling_price_paise ? (coupon.merchant_selling_price_paise / 100).toString() : ''
-    );
+    // Calculate baseline values first
+    const faceValue = (coupon.face_value_paise || 0) / 100;
+    const purchasePrice = coupon.purchase_price ?? faceValue;
+    const commission = coupon.commission ?? (purchasePrice * 0.03);
+
+    // Calculate default 20% markup selling price
+    const maxProfit = purchasePrice * 0.20;
+    const maxSellingPrice = purchasePrice + commission + maxProfit;
+
+    const defaultSellingPrice = coupon.merchant_selling_price_paise
+        ? (coupon.merchant_selling_price_paise / 100).toFixed(2)
+        : maxSellingPrice.toFixed(2);
+
+    const [sellingPrice, setSellingPrice] = useState(defaultSellingPrice);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-
-    // Calculate values
-    const faceValue = (coupon.face_value_paise || 0) / 100;
-
-    // Use the mapped purchase_price from backend, or fallback to face_value
-    const purchasePrice = coupon.purchase_price ?? faceValue;
-    const commission = coupon.commission ?? (purchasePrice * 0.03); // Fallback estimate if no commission record
 
     const sellingPriceNum = parseFloat(sellingPrice) || 0;
     const customerFee = sellingPriceNum * 0.03;
@@ -121,9 +125,30 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess }) {
                                 required
                             />
                         </div>
-                        <p className="text-xs text-slate-500 mt-2 font-medium">
-                            This is the price customers will see, excluding the 3% buyer fee.
-                        </p>
+                        <div className="flex items-center justify-between mt-3">
+                            <p className="text-xs text-slate-500 font-medium">
+                                Customers pay this + 3% buyer fee.
+                            </p>
+                            <div className="flex gap-2">
+                                {[5, 10, 20].map(percent => (
+                                    <button
+                                        key={percent}
+                                        type="button"
+                                        onClick={() => {
+                                            const profit = purchasePrice * (percent / 100);
+                                            setSellingPrice((purchasePrice + commission + profit).toFixed(2));
+                                            setError(null);
+                                        }}
+                                        className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border transition-colors ${Math.abs(parseFloat(sellingPrice) - (purchasePrice + commission + purchasePrice * (percent / 100))) < 0.1
+                                                ? 'bg-[#D4AF37]/20 border-[#D4AF37]/50 text-[#D4AF37]'
+                                                : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
+                                            }`}
+                                    >
+                                        {percent}% Margin
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
 
                     {/* Calculations */}

@@ -169,26 +169,9 @@ export default function CustomerDashboardPage() {
 
             toast.success('Elite Gold activated successfully via wallet!');
 
-            // Calculate new expiry manually to update UI instantly without reload
-            const monthsToAdd = pkg.id === 'GOLD_1M' ? 1 : pkg.id === 'GOLD_3M' ? 3 : 12;
-            let baseDate = new Date();
-            if (userData.isGoldVerified && userData.subscriptionExpiry) {
-                const currentExpiry = new Date(userData.subscriptionExpiry);
-                if (currentExpiry > baseDate) {
-                    baseDate = currentExpiry;
-                }
-            }
-            const newExpiryDate = new Date(baseDate);
-            newExpiryDate.setMonth(newExpiryDate.getMonth() + monthsToAdd);
+            // Redirect to premium success page with animation
+            router.push(`/payment/success?txnId=GOLD_${pkg.id}&amount=${pkg.price}`);
 
-            setUserData(prev => ({
-                ...prev,
-                isGoldVerified: true,
-                subscriptionExpiry: newExpiryDate.toISOString(),
-                walletBalance: prev.walletBalance - pkg.price
-            }));
-
-            // Make sure real-time kicks in for transaction logging or manually add to quick activity
             setShowPackages(false);
         } catch (err) {
             console.error('Wallet payment error:', err);

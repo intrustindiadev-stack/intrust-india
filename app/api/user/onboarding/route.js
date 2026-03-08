@@ -8,13 +8,18 @@ const supabaseAdmin = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+export const config = {
+    runtime: 'nodejs'
+};
+
 export async function POST(req) {
     try {
         const body = await req.json();
         const { userId, services, occupation, referral_source, referral_code_entered } = body;
 
-        if (!userId) {
-            return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+        const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/i;
+        if (!userId || !uuidRegex.test(userId)) {
+            return NextResponse.json({ error: 'Valid User ID (UUID) is required' }, { status: 400 });
         }
 
         // 1. Process Referral Logic BEFORE marking onboarding as complete

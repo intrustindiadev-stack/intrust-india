@@ -62,7 +62,7 @@ export async function GET(request) {
 
             // If it's a regular user, return just their wallet balance
             const { data: walletTxs } = await supabase
-                .from('wallet_transactions')
+                .from('customer_wallet_transactions')
                 .select('*')
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false })
@@ -70,9 +70,9 @@ export async function GET(request) {
 
             const normalizedWalletTxs = (walletTxs || []).map(tx => ({
                 id: tx.id,
-                transaction_type: tx.transaction_type || 'CREDIT',
-                description: tx.description || tx.reference_type || 'Wallet Topup',
-                amount: Number(tx.amount || 0).toFixed(2),
+                transaction_type: tx.type || 'DEBIT',
+                description: tx.description || 'Wallet Transaction',
+                amount: (Number(tx.amount_paise || 0) / 100).toFixed(2),
                 created_at: tx.created_at,
             }));
 

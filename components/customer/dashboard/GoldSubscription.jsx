@@ -1,125 +1,146 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, Check, Shield, Sparkles, Lock } from 'lucide-react';
+import { Star, Check, Shield, Sparkles, Lock, Zap } from 'lucide-react';
 
 export default function GoldSubscription({ userData, timeLeft, setShowPackages, paymentLoading }) {
     return (
         <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="group relative overflow-hidden bg-gradient-to-br from-[#1a1600] via-[#2a2200] to-[#000000] rounded-[2.5rem] p-8 text-white shadow-2xl border border-amber-500/30"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="group relative overflow-hidden bg-gradient-to-b from-[#111111] via-[#0a0a0a] to-black rounded-[2.5rem] p-8 sm:p-10 text-white shadow-2xl border border-amber-500/20"
         >
-            {/* Premium Texture Overlay */}
-            <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+            {/* Premium Texture & Grain Overlay */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]" />
 
-            {/* Holographic Glowing Orbs */}
-            <div className="absolute -top-20 -right-20 w-64 h-64 bg-amber-500/10 blur-[100px] rounded-full group-hover:bg-amber-500/20 transition-all duration-700" />
-            <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-yellow-500/5 blur-[80px] rounded-full" />
+            {/* Glowing Orbs & Beams */}
+            <div className="absolute -top-[30%] -right-[20%] w-[150%] h-[150%] bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.15),transparent_50%)] pointer-events-none" />
+            <div className="absolute -bottom-[20%] -left-[10%] w-[100%] h-[100%] bg-[radial-gradient(circle_at_bottom_left,rgba(252,211,77,0.05),transparent_40%)] pointer-events-none" />
 
-            <div className="relative z-10">
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl shadow-lg shadow-amber-900/40">
-                            <Star className="text-white fill-white" size={28} />
-                        </div>
-                        <div>
-                            <span className="block font-black text-2xl tracking-tight text-amber-100 italic">InTrust GOLD</span>
-                            <span className="text-[10px] font-bold text-amber-500/60 uppercase tracking-[0.2em]">Elite Membership</span>
+            <div className="relative z-10 flex flex-col items-center text-center">
+                {/* Header Icon */}
+                <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.1, type: "spring", stiffness: 200, damping: 20 }}
+                    className="relative mb-6"
+                >
+                    <div className="absolute inset-0 bg-amber-400 blur-2xl opacity-20 rounded-full animate-pulse" />
+                    <div className="relative w-20 h-20 bg-gradient-to-br from-[#FFDF00] via-[#D4AF37] to-[#B8860B] rounded-[2rem] p-[2px] shadow-2xl shadow-amber-900/40 rotate-12 group-hover:rotate-6 transition-transform duration-500 ease-out">
+                        <div className="w-full h-full bg-[#111] rounded-[1.85rem] flex items-center justify-center p-4">
+                            <Star className="w-full h-full text-amber-400 fill-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.6)]" />
                         </div>
                     </div>
-                    <div className="w-12 h-8 bg-gradient-to-br from-amber-200 to-amber-500 rounded-md opacity-40" /> {/* Chip sim */}
-                </div>
+                    {/* Floating Sparkles */}
+                    <Sparkles className="absolute -top-4 -right-4 text-amber-200 w-6 h-6 animate-bounce" />
+                    <Sparkles className="absolute -bottom-2 -left-6 text-yellow-500 w-4 h-4 animate-pulse delay-150" />
+                </motion.div>
 
-                <h3 className="text-3xl font-black mb-3 leading-tight bg-gradient-to-r from-amber-100 via-white to-amber-200 bg-clip-text text-transparent">
-                    Buy Gold Verified ✨
+                {/* Title & Badge */}
+                <div className="mb-2 flex items-center gap-3">
+                    <span className="px-3 py-1 bg-gradient-to-r from-amber-500/10 to-transparent border border-amber-500/20 rounded-full text-[10px] font-black tracking-[0.2em] text-amber-500/80 uppercase">Elite Tier</span>
+                </div>
+                <h3 className="text-4xl sm:text-5xl font-black mb-4 tracking-[-0.02em] leading-tight">
+                    <span className="bg-gradient-to-r from-[#FFF] via-[#FDE68A] to-[#D97706] bg-clip-text text-transparent">
+                        InTrust GOLD
+                    </span>
+                    <span className="text-amber-500 ml-1">✧</span>
                 </h3>
-                <p className="text-amber-100/70 text-sm mb-6 font-medium max-w-[280px] leading-relaxed">
-                    Get the <span className="text-amber-400 font-bold">Elite Shield</span> tick + ₹199 Instant Cashback &
-                    <span className="text-white font-bold ml-1 text-base block mt-1">Unlock Many Premium Offers! 🎁</span>
+
+                <p className="text-gray-400 text-sm sm:text-base mb-8 max-w-sm leading-relaxed font-medium">
+                    Upgrade to get the <span className="text-amber-300 font-semibold">Elite Shield Verification</span>, instant ₹199 cashback, and VIP platform perks.
                 </p>
-                <div className="flex flex-col gap-3 mb-8">
+
+                {/* Features List (Glassmorphic Cards) */}
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 mb-10 text-left">
                     {[
-                        'Elite Blue Tick Identity',
-                        '₹199 Instant Wallet Cashback',
-                        'Priority Support Access',
-                        'Exclusive Merchant Offers'
+                        { icon: Shield, text: 'Elite Verification Shield' },
+                        { icon: Zap, text: '₹199 Instant Cashback' },
+                        { icon: Star, text: 'Priority VIP Support' },
+                        { icon: Sparkles, text: 'Exclusive Merchant Deals' }
                     ].map((feature, i) => (
-                        <div key={i} className="flex items-center gap-2.5">
-                            <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                                <Check size={12} className="text-amber-400" />
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.2 + (i * 0.1) }}
+                            className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.05] hover:border-amber-500/30 p-4 rounded-2xl flex items-center gap-4 transition-all duration-300"
+                        >
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-transparent flex items-center justify-center flex-shrink-0 shadow-inner">
+                                <feature.icon size={18} className="text-amber-400" />
                             </div>
-                            <span className="text-[13px] font-semibold text-amber-50/80">{feature}</span>
-                        </div>
+                            <span className="text-sm font-semibold text-gray-200 tracking-tight">{feature.text}</span>
+                        </motion.div>
                     ))}
                 </div>
 
-                <div className="space-y-4">
+                {/* CTA Section */}
+                <div className="w-full space-y-4">
                     {userData.kycStatus === 'verified' ? (
                         <>
                             {userData.isGoldVerified ? (
-                                <div className="space-y-3">
-                                    <div className="w-full py-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex flex-col items-center justify-center gap-1">
-                                        <div className="flex items-center gap-2 text-amber-500 font-bold">
-                                            <Shield size={18} />
-                                            <span>ELITE GOLD ACTIVE</span>
+                                <div className="space-y-4 w-full">
+                                    <div className="relative overflow-hidden w-full py-5 bg-gradient-to-r from-amber-900/40 via-amber-800/20 to-amber-900/40 border border-amber-500/30 rounded-[1.5rem] flex flex-col items-center justify-center gap-2">
+                                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
+                                        <div className="relative flex items-center gap-2 text-amber-400 font-black text-lg tracking-tight">
+                                            <Shield size={20} className="fill-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.8)] animate-pulse" />
+                                            <span>ACTIVE MEMBERSHIP</span>
                                         </div>
-                                        <p className="text-[10px] text-amber-500/60 font-black tracking-widest uppercase">
-                                            {timeLeft ? timeLeft : 'UPDATING...'}
+                                        <p className="relative text-xs text-amber-200/60 font-black tracking-[0.2em] uppercase">
+                                            {timeLeft ? `EXPIRES IN ${timeLeft}` : 'UPDATING...'}
                                         </p>
                                     </div>
                                     <button
                                         onClick={() => setShowPackages(true)}
-                                        className="w-full py-3 bg-white/5 hover:bg-white/10 text-amber-400 text-xs font-bold rounded-xl border border-amber-500/20 transition-all flex items-center justify-center gap-2"
+                                        className="w-full py-4 bg-transparent hover:bg-amber-500/5 text-amber-500 text-sm font-bold rounded-[1.25rem] border-2 border-amber-500/20 transition-all uppercase tracking-widest"
                                     >
-                                        Extend Subscription
+                                        Manage Subscription
                                     </button>
                                 </div>
                             ) : (
                                 <button
                                     disabled={paymentLoading}
                                     onClick={() => setShowPackages(true)}
-                                    className="w-full py-4 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 text-black font-black rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-amber-900/40 flex items-center justify-center gap-2 group/btn"
+                                    className="relative w-full group/btn overflow-hidden"
                                 >
-                                    {paymentLoading ? 'PROCCESSING...' : (
-                                        <>
-                                            UNLEASH ELITE GOLD
-                                            <Sparkles size={18} className="group-hover:rotate-12 transition-transform" />
-                                        </>
-                                    )}
+                                    {/* Animated Border Gradient */}
+                                    <div className="absolute -inset-1 bg-gradient-to-r from-amber-400 via-[#FFF] to-[#D97706] rounded-[2rem] blur opacity-30 group-hover/btn:opacity-60 transition duration-500"></div>
+
+                                    <div className="relative w-full py-5 bg-gradient-to-br from-[#1A1100] to-[#0A0700] rounded-[1.75rem] border border-amber-500/50 flex items-center justify-center gap-3 transition-transform group-active/btn:scale-[0.98]">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/10 to-transparent -translate-x-[100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
+
+                                        {paymentLoading ? (
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-5 h-5 border-2 border-amber-500/30 border-t-amber-400 rounded-full animate-spin" />
+                                                <span className="text-amber-500 font-black tracking-widest text-sm">PROCESSING...</span>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <span className="text-amber-400 font-black tracking-widest text-sm group-hover/btn:text-amber-300 transition-colors">UNLEASH GOLD NOW</span>
+                                                <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                                    <Sparkles size={14} className="text-amber-400 group-hover/btn:rotate-12 transition-transform" />
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                 </button>
                             )}
                         </>
                     ) : (
-                        <div className="space-y-3">
+                        <div className="w-full space-y-4">
                             <button
                                 disabled
-                                className="w-full py-4 bg-white/10 text-white/40 font-bold text-lg rounded-2xl border border-white/10 cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full py-5 bg-[#111] text-gray-500 font-bold text-sm tracking-widest uppercase rounded-[1.75rem] border-2 border-white/5 cursor-not-allowed flex items-center justify-center gap-3"
                             >
                                 <Lock size={18} />
-                                Complete KYC to Unlock
+                                Unlock via KYC
                             </button>
-                            <p className="text-[11px] text-center text-amber-500/60 font-medium">
-                                Elite Gold features require a verified identity.
+                            <p className="text-xs text-center text-gray-500 font-medium">
+                                Elite Gold features require verified identity confirmation.
                             </p>
                         </div>
                     )}
-                    <p className="text-[10px] text-center font-bold text-amber-500/40 tracking-widest uppercase italic">✨ Premium Membership ✨</p>
                 </div>
             </div>
-
-            {/* High-End Shine effect */}
-            <motion.div
-                animate={{
-                    left: ['-100%', '200%'],
-                }}
-                transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    repeatDelay: 5,
-                    ease: "easeInOut"
-                }}
-                className="absolute inset-0 w-3/4 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 pointer-events-none"
-            />
         </motion.div>
     );
 }
