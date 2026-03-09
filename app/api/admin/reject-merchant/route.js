@@ -123,11 +123,14 @@ export async function POST(request) {
         // 7. Log Action
         const { error: auditError } = await adminSupabase.from('audit_logs').insert([
             {
-                user_id: user.id, // Admin ID
-                action: 'rejected_merchant',
+                actor_id: user.id,
+                actor_role: 'admin',
+                action: 'admin_action',
                 entity_type: 'merchant',
                 entity_id: merchantData.id,
-                changes: {
+                description: `Rejected merchant application for user ${targetUserId}${reason ? `: ${reason}` : ''}`,
+                metadata: {
+                    sub_action: 'rejected_merchant',
                     previous_status: existingMerchant.status,
                     new_status: 'rejected',
                     target_user_id: targetUserId,

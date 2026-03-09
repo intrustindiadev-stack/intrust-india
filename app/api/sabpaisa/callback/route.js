@@ -87,22 +87,7 @@ export async function POST(request) {
         const existingTxn = await getTransactionByClientTxnId(clientTxnId);
         const wasAlreadySuccess = existingTxn && existingTxn.status === 'SUCCESS';
 
-        // 4. Update Transaction Status (if it wasn't already SUCCESS)
-        if (clientTxnId) {
-            try {
-                await updateTransaction(clientTxnId, {
-                    status: internalStatus,
-                    sabpaisa_txn_id: sabpaisaTxnId,
-                    paid_amount: amount,
-                    sabpaisa_message: result.transMsg || status,
-                    bank_txn_id: result.bankTxnId,
-                    payment_mode: result.paymentMode,
-                    status_code: result.statusCode || status
-                });
-            } catch (updateErr) {
-                console.error('[Callback] Failed to update transaction:', updateErr.message);
-            }
-        }
+        let fulfillmentFailed = false;
 
         // 5. Handle Wallet Credit for WALLET_TOPUP safely
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'WALLET_TOPUP' && !wasAlreadySuccess) {
@@ -117,6 +102,7 @@ export async function POST(request) {
                 console.log(`[Callback] Wallet credited for txn ${clientTxnId}`);
             } catch (walletError) {
                 console.error('[Callback] Failed to credit wallet:', walletError.message);
+                fulfillmentFailed = true;
             }
         }
 
@@ -128,45 +114,76 @@ export async function POST(request) {
                     process.env.SUPABASE_SERVICE_ROLE_KEY
                 );
 
-                // Get merchant ID for user
-                const { data: merchant } = await supabaseAdmin
-                    .from('merchants')
-                    .select('id, wallet_balance_paise')
-                    .eq('user_id', existingTxn.user_id)
-                    .single();
+                // Check for idempotency
+                const { data: existingCredit } = await supabaseAdmin
+                    .from('merchant_transactions')
+                    .select('id')
+                    .eq('metadata->>id', clientTxnId)
+                    .eq('metadata->>type', 'MERCHANT_TOPUP')
+                    .maybeSingle();
 
-                if (merchant) {
-                    const amountPaise = Math.round(parseFloat(amount) * 100);
-                    const newBalance = merchant.wallet_balance_paise + amountPaise;
-
-                    // Update balance
-                    await supabaseAdmin
-                        .from('merchants')
-                        .update({
-                            wallet_balance_paise: newBalance,
-                            updated_at: new Date().toISOString()
-                        })
-                        .eq('id', merchant.id);
-
-                    // Insert transaction
-                    await supabaseAdmin
-                        .from('merchant_transactions')
-                        .insert({
-                            merchant_id: merchant.id,
-                            transaction_type: 'topup',
-                            amount_paise: amountPaise,
-                            commission_paise: 0,
-                            balance_after_paise: newBalance,
-                            description: `Wallet Topup via Sabpaisa (${result.paymentMode || 'Gateway'})`,
-                            metadata: { id: clientTxnId, type: 'MERCHANT_TOPUP' }
-                        });
-
-                    console.log(`[Callback] Merchant Wallet credited for txn ${clientTxnId}`);
+                if (existingCredit) {
+                    console.log(`[Callback] Merchant Wallet credit already applied for txn ${clientTxnId}`);
                 } else {
-                    console.error('[Callback] Merchant not found for topup:', existingTxn.user_id);
+                    // Get merchant ID for user
+                    const { data: merchant, error: merchantErr } = await supabaseAdmin
+                        .from('merchants')
+                        .select('id, wallet_balance_paise')
+                        .eq('user_id', existingTxn.user_id)
+                        .single();
+
+                    if (merchantErr) throw merchantErr;
+
+                    if (merchant) {
+                        const amountPaise = Math.round(parseFloat(amount) * 100);
+                        const newBalance = merchant.wallet_balance_paise + amountPaise;
+
+                        // Update balance
+                        const { error: balanceUpdateErr } = await supabaseAdmin
+                            .from('merchants')
+                            .update({
+                                wallet_balance_paise: newBalance,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', merchant.id);
+
+                        if (balanceUpdateErr) throw balanceUpdateErr;
+
+                        // Insert transaction
+                        const { error: txInsertErr } = await supabaseAdmin
+                            .from('merchant_transactions')
+                            .insert({
+                                merchant_id: merchant.id,
+                                transaction_type: 'wallet_topup',
+                                amount_paise: amountPaise,
+                                commission_paise: 0,
+                                balance_after_paise: newBalance,
+                                description: `Wallet Topup via Sabpaisa (${result.paymentMode || 'Gateway'})`,
+                                metadata: { id: clientTxnId, type: 'MERCHANT_TOPUP' }
+                            });
+
+                        if (txInsertErr) {
+                            console.error('[Callback] History insert failed, rolling back merchant balance:', txInsertErr.message);
+                            // Rollback
+                            await supabaseAdmin
+                                .from('merchants')
+                                .update({
+                                    wallet_balance_paise: merchant.wallet_balance_paise,
+                                    updated_at: new Date().toISOString()
+                                })
+                                .eq('id', merchant.id);
+                            throw txInsertErr;
+                        }
+
+                        console.log(`[Callback] Merchant Wallet credited for txn ${clientTxnId}`);
+                    } else {
+                        console.error('[Callback] Merchant not found for topup:', existingTxn.user_id);
+                        fulfillmentFailed = true;
+                    }
                 }
             } catch (walletError) {
                 console.error('[Callback] Failed to credit merchant wallet:', walletError.message);
+                fulfillmentFailed = true;
             }
         }
 
@@ -213,6 +230,7 @@ export async function POST(request) {
                                 .update({ status: 'available', purchased_by: null, purchased_at: null })
                                 .eq('id', couponId)
                                 .eq('purchased_by', existingTxn.user_id);
+                            fulfillmentFailed = true;
                         } else {
                             console.log(`[Callback] Gift card order created for coupon ${couponId}`);
                         }
@@ -220,6 +238,7 @@ export async function POST(request) {
                 }
             } catch (gcError) {
                 console.error('[Callback] Gift card processing error:', gcError.message);
+                fulfillmentFailed = true;
             }
         }
 
@@ -260,6 +279,24 @@ export async function POST(request) {
                 console.log(`[Callback] Gold subscription activated for user ${existingTxn.user_id}`);
             } catch (goldError) {
                 console.error('[Callback] Gold subscription activation error:', goldError.message);
+                fulfillmentFailed = true;
+            }
+        }
+
+        // 4. Update Transaction Status (if it wasn't already SUCCESS and fulfillment succeeded)
+        if (clientTxnId && (!fulfillmentFailed || internalStatus !== 'SUCCESS')) {
+            try {
+                await updateTransaction(clientTxnId, {
+                    status: internalStatus,
+                    sabpaisa_txn_id: sabpaisaTxnId,
+                    paid_amount: amount,
+                    sabpaisa_message: result.transMsg || status,
+                    bank_txn_id: result.bankTxnId,
+                    payment_mode: result.paymentMode,
+                    status_code: result.statusCode || status
+                });
+            } catch (updateErr) {
+                console.error('[Callback] Failed to update transaction:', updateErr.message);
             }
         }
 

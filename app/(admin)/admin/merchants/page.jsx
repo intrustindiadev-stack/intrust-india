@@ -14,6 +14,7 @@ export default function AdminMerchantsPage() {
     const [approving, setApproving] = useState(null);
     const [rejecting, setRejecting] = useState(null);
     const [verifyingBank, setVerifyingBank] = useState(null);
+    const [togglingSupend, setTogglingSupend] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     const fetchMerchants = async () => {
@@ -135,6 +136,67 @@ export default function AdminMerchantsPage() {
         }
     };
 
+    const handleToggleSuspend = async (id, userId, currentStatus) => {
+        const willSuspend = currentStatus !== 'suspended';
+
+        if (willSuspend) {
+            const reason = prompt('Please provide a reason for suspending this merchant:');
+            if (reason === null) return;
+
+            setTogglingSupend(id);
+            const toastId = toast.loading('Suspending merchant...');
+
+            try {
+                const response = await fetch(`/api/admin/merchants/${id}/toggle-suspend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ suspend: true, reason: reason.trim() }),
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to suspend merchant');
+                }
+
+                toast.success('Merchant suspended successfully!', { id: toastId });
+                fetchMerchants();
+            } catch (error) {
+                console.error('Suspend error:', error);
+                toast.error(error.message, { id: toastId });
+            } finally {
+                setTogglingSupend(null);
+            }
+        } else {
+            if (!confirm('Are you sure you want to unsuspend this merchant?')) return;
+
+            setTogglingSupend(id);
+            const toastId = toast.loading('Unsuspending merchant...');
+
+            try {
+                const response = await fetch(`/api/admin/merchants/${id}/toggle-suspend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ suspend: false }),
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to unsuspend merchant');
+                }
+
+                toast.success('Merchant unsuspended successfully!', { id: toastId });
+                fetchMerchants();
+            } catch (error) {
+                console.error('Unsuspend error:', error);
+                toast.error(error.message, { id: toastId });
+            } finally {
+                setTogglingSupend(null);
+            }
+        }
+    };
+
     const handleVerifyBank = async (id) => {
         if (!confirm('Confirm bank account as verified for this merchant?')) return;
         setVerifyingBank(id);
@@ -197,7 +259,7 @@ export default function AdminMerchantsPage() {
 
             {/* Filter Tabs */}
             <div className="flex overflow-x-auto hide-scrollbar gap-3 mb-8 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
-                {['pending', 'approved', 'rejected'].map((status) => (
+                {['pending', 'approved', 'rejected', 'suspended'].map((status) => (
                     <button
                         key={status}
                         onClick={() => setFilter(status)}
@@ -235,9 +297,11 @@ export default function AdminMerchantsPage() {
                                     onApprove={handleApprove}
                                     onReject={handleReject}
                                     onVerifyBank={handleVerifyBank}
+                                    onToggleSuspend={handleToggleSuspend}
                                     isApproving={approving}
                                     isRejecting={rejecting}
                                     isVerifyingBank={verifyingBank}
+                                    isTogglingSuspend={togglingSupend}
                                 />
                             ))}
                         </div>

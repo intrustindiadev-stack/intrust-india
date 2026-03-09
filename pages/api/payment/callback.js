@@ -27,7 +27,15 @@ function isAllowedIP(req) {
     return allowList.includes(clientIP);
 }
 
+/**
+ * @deprecated Use /api/sabpaisa/callback instead.
+ * This legacy callback handler is kept functional for in-flight transactions
+ * but all new payment initiation should use the App Router SabPaisa flow.
+ */
 export default async function handler(req, res) {
+    // Deprecation tracking — log every invocation
+    console.warn('[DEPRECATED] /api/payment/callback received a request — migrate to /api/sabpaisa/callback');
+
     // POST only — Sabpaisa docs specify POST for callbacks
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed. Use POST.' });

@@ -1,7 +1,7 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 
-export async function POST(request) {
+export async function POST(request, { params }) {
     try {
         const supabase = await createServerSupabaseClient();
         const adminSupabase = createAdminClient();
@@ -31,26 +31,23 @@ export async function POST(request) {
         }
 
         // 3. Get Request Data
+        const { id } = await params;
         const body = await request.json();
-        const { applicationId, userId } = body;
+        const { suspend, reason } = body;
 
-        if (!applicationId && !userId) {
+        if (typeof suspend !== 'boolean') {
             return NextResponse.json(
-                { error: 'Missing applicationId or userId.' },
+                { error: 'Missing or invalid "suspend" field. Must be a boolean.' },
                 { status: 400 }
             );
         }
 
-        // 4. Fetch existing Merchant to verify its status
-        let fetchQuery = adminSupabase.from('merchants').select('*');
-
-        if (applicationId) {
-            fetchQuery = fetchQuery.eq('id', applicationId);
-        } else {
-            fetchQuery = fetchQuery.eq('user_id', userId);
-        }
-
-        const { data: existingMerchant, error: fetchError } = await fetchQuery.single();
+        // 4. Fetch existing Merchant
+        const { data: existingMerchant, error: fetchError } = await adminSupabase
+            .from('merchants')
+            .select('*')
+            .eq('id', id)
+            .single();
 
         if (fetchError || !existingMerchant) {
             return NextResponse.json(
@@ -59,27 +56,29 @@ export async function POST(request) {
             );
         }
 
-        if (existingMerchant.status !== 'pending') {
+        // 5. Validate current status for the requested action
+        if (suspend && existingMerchant.status !== 'approved') {
             return NextResponse.json(
-                { error: 'Merchant is not in pending status.' },
+                { error: 'Only approved merchants can be suspended.' },
                 { status: 409 }
             );
         }
 
-        const targetUserId = userId || existingMerchant.user_id;
+        if (!suspend && existingMerchant.status !== 'suspended') {
+            return NextResponse.json(
+                { error: 'Only suspended merchants can be unsuspended.' },
+                { status: 409 }
+            );
+        }
 
-        // Fetch current role to allow rollback
-        const { data: targetProfile } = await adminSupabase
-            .from('user_profiles')
-            .select('role')
-            .eq('id', targetUserId)
-            .single();
-        const prevRole = targetProfile?.role || 'customer';
+        // 6. Perform the update
+        const updateData = suspend
+            ? { status: 'suspended', suspension_reason: reason || null }
+            : { status: 'approved', suspension_reason: null };
 
-        // 5. Update Merchant Status to 'approved'
         const { data: merchantData, error: merchantError } = await adminSupabase
             .from('merchants')
-            .update({ status: 'approved' })
+            .update(updateData)
             .eq('id', existingMerchant.id)
             .select()
             .single();
@@ -92,27 +91,10 @@ export async function POST(request) {
             );
         }
 
-        // 6. Update User Role to 'merchant'
-        const { error: roleError } = await adminSupabase
-            .from('user_profiles')
-            .update({ role: 'merchant' })
-            .eq('id', targetUserId);
-
-        if (roleError) {
-            console.error('Error updating user role:', roleError);
-            // Rollback merchant status
-            await adminSupabase
-                .from('merchants')
-                .update({ status: existingMerchant.status })
-                .eq('id', existingMerchant.id);
-
-            return NextResponse.json(
-                { error: 'Failed to update user role. Merchant approval reverted.' },
-                { status: 500 }
-            );
-        }
-
-        // 7. Log Action (Optional but good practice)
+        // 7. Log Action to audit_logs
+        const description = suspend
+            ? `Suspended merchant "${existingMerchant.business_name || existingMerchant.id}"${reason ? `: ${reason}` : ''}`
+            : `Unsuspended merchant "${existingMerchant.business_name || existingMerchant.id}"`;
         const { error: auditError } = await adminSupabase.from('audit_logs').insert([
             {
                 actor_id: user.id,
@@ -120,42 +102,42 @@ export async function POST(request) {
                 action: 'admin_action',
                 entity_type: 'merchant',
                 entity_id: merchantData.id,
-                description: `Approved merchant application for user ${targetUserId}`,
+                description,
                 metadata: {
-                    sub_action: 'approved_merchant',
+                    sub_action: suspend ? 'suspended_merchant' : 'unsuspended_merchant',
                     previous_status: existingMerchant.status,
-                    new_status: 'approved',
-                    target_user_id: targetUserId
+                    new_status: updateData.status,
+                    reason: reason || null,
+                    target_user_id: existingMerchant.user_id
                 }
             }
         ]);
 
         if (auditError) {
             console.error('Error logging audit:', auditError);
-            // Rollback user role and merchant status
-            await adminSupabase
-                .from('user_profiles')
-                .update({ role: prevRole })
-                .eq('id', targetUserId);
-
+            // Rollback merchant status
             await adminSupabase
                 .from('merchants')
-                .update({ status: existingMerchant.status })
+                .update({
+                    status: existingMerchant.status,
+                    suspension_reason: existingMerchant.suspension_reason || null
+                })
                 .eq('id', existingMerchant.id);
 
             return NextResponse.json(
-                { error: 'Failed to log action. Merchant approval reverted.' },
+                { error: 'Failed to log action. Status change reverted.' },
                 { status: 500 }
             );
         }
 
-        return NextResponse.json({
-            success: true,
-            message: 'Merchant approved and role updated successfully.'
-        });
+        const message = suspend
+            ? 'Merchant suspended successfully.'
+            : 'Merchant unsuspended successfully.';
+
+        return NextResponse.json({ success: true, message });
 
     } catch (error) {
-        console.error('Unexpected error in approve-merchant:', error);
+        console.error('Unexpected error in toggle-suspend:', error);
         return NextResponse.json(
             { error: 'An unexpected error occurred.' },
             { status: 500 }

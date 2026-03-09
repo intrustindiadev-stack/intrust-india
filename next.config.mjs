@@ -35,6 +35,24 @@ const nextConfig = {
       },
     ];
   },
+
+  // Migration-safe redirects: forward legacy payment routes to modern equivalents.
+  // NOTE: /api/payment/callback is intentionally excluded — POST redirects lose
+  // the request body, so that handler stays functional with deprecation logging.
+  async redirects() {
+    return [
+      {
+        source: '/payment/checkout',
+        destination: '/dashboard',
+        permanent: true,
+      },
+      {
+        source: '/api/payment/initiate',
+        destination: '/api/sabpaisa/initiate',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

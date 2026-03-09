@@ -1,64 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
-import PaymentForm from '../../components/payment/PaymentForm';
-import PaymentSummary from '../../components/payment/PaymentSummary';
+/**
+ * @deprecated This checkout page is part of the legacy payment stack.
+ * All payment flows should use the App Router SabPaisa integration instead.
+ * This page now redirects to /dashboard to prevent users from reaching the
+ * test-style checkout interface.
+ */
+import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 
 const CheckoutPage = () => {
-    const [userProfile, setUserProfile] = useState(null);
-    const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    const { amount: queryAmount, desc, productId } = router.query;
-    const amount = queryAmount || '100.00';
-    const productDescription = desc || 'Test Product Payment';
-
     useEffect(() => {
-        const checkUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                // Redirect to login if not authenticated
-                router.push('/login?redirect=/payment/checkout'); // Adjust login route as needed
-                return;
-            }
-
-            // Ideally fetch full profile from DB if metadata not enough
-            setUserProfile({
-                email: user.email,
-                full_name: user.user_metadata?.full_name,
-                phone: user.user_metadata?.phone
-            });
-            setLoading(false);
-        };
-        checkUser();
+        console.warn('[DEPRECATED] /payment/checkout accessed — redirecting to /dashboard');
+        router.replace('/dashboard?from=legacy_checkout');
     }, [router]);
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center">Loading Checkout...</div>;
-
     return (
-        <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto">
-                <h1 className="text-3xl font-bold text-center text-gray-900 mb-8">Secure Checkout</h1>
-
-                <div className="md:grid md:grid-cols-2 md:gap-6">
-                    <div className="md:col-span-1 mb-6 md:mb-0">
-                        <PaymentSummary
-                            amount={amount}
-                            description={productDescription}
-                            items={[{ name: 'Test Item', price: amount }]}
-                        />
-                    </div>
-
-                    <div className="md:col-span-1">
-                        <PaymentForm
-                            amount={amount}
-                            productDescription={productDescription}
-                            productId={productId}
-                            userProfile={userProfile}
-                        />
-                    </div>
-                </div>
-            </div>
+        <div className="min-h-screen flex items-center justify-center text-gray-500">
+            Redirecting…
         </div>
     );
 };

@@ -118,6 +118,7 @@ export async function GET(request) {
             description: tx.description || tx.reference_type || 'Wallet Topup',
             amount: Number(tx.amount || 0).toFixed(2),
             created_at: tx.created_at,
+            reference_type: tx.reference_type,
         }));
 
         const normalizedMerchantTxs = (merchantTxs || []).map(tx => ({
@@ -129,18 +130,21 @@ export async function GET(request) {
         }));
 
         const statusLabel = { pending: 'Pending', approved: 'Approved', rejected: 'Rejected (Refunded)', released: 'Released' };
-        const normalizedPayoutTxs = (payoutTxs || []).map(tx => ({
-            id: `payout-${tx.id}`,
-            transaction_type: 'DEBIT',
-            description: `Withdrawal Request — ${statusLabel[tx.status] || tx.status}`,
-            amount: Number(tx.amount || 0).toFixed(2),
-            created_at: tx.requested_at,
-        }));
+        const normalizedPayoutTxs = (payoutTxs || []).map(tx => {
+            const isCredit = tx.status === 'rejected' || tx.status === 'refunded';
+            return {
+                id: `payout-${tx.id}`,
+                transaction_type: isCredit ? 'CREDIT' : 'DEBIT',
+                description: `Withdrawal Request — ${statusLabel[tx.status] || tx.status}`,
+                amount: Number(tx.amount || 0).toFixed(2),
+                created_at: tx.requested_at,
+            };
+        });
 
         // Deduplicate: wallet_transactions may already have a payout debit entry; prefer payout_requests as source of truth
         // Remove wallet_transactions that are payout_request type to avoid doubles
         const filteredWalletTxs = normalizedWalletTxs.filter(
-            tx => !tx.description.toLowerCase().includes('payout request')
+            tx => tx.reference_type !== 'payout_request'
         );
 
         // Sort by date descending

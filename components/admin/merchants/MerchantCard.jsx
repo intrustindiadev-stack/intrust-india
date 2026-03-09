@@ -1,22 +1,23 @@
 'use client';
 
-import { CheckCircle, XCircle, Clock, Building2, Phone, Mail, FileText, AlertCircle, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Building2, Phone, Mail, FileText, AlertCircle, Eye, ShieldOff, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
-export default function MerchantCard({ merchant, onApprove, onReject, onVerifyBank, isApproving, isVerifyingBank, isRejecting }) {
+export default function MerchantCard({ merchant, onApprove, onReject, onVerifyBank, onToggleSuspend, isApproving, isVerifyingBank, isRejecting, isTogglingSuspend }) {
     const isPending = merchant.status === 'pending';
     const isApproved = merchant.status === 'approved';
+    const isSuspended = merchant.status === 'suspended';
 
     return (
-        <div className={`group bg-white rounded-3xl border shadow-sm transition-all hover:-translate-y-1 relative overflow-hidden flex flex-col h-full ${isPending ? 'border-amber-200 hover:shadow-xl hover:shadow-amber-200/50' : 'border-slate-200 hover:shadow-xl hover:shadow-slate-200/50'}`}>
+        <div className={`group bg-white rounded-3xl border shadow-sm transition-all hover:-translate-y-1 relative overflow-hidden flex flex-col h-full ${isPending ? 'border-amber-200 hover:shadow-xl hover:shadow-amber-200/50' : isSuspended ? 'border-orange-200 hover:shadow-xl hover:shadow-orange-200/50' : isApproved ? 'border-slate-200 hover:shadow-xl hover:shadow-slate-200/50' : 'border-slate-200 hover:shadow-xl hover:shadow-slate-200/50'}`}>
             {/* Top Indicator Line */}
-            <div className={`absolute top-0 left-0 w-full h-1.5 ${isPending ? 'bg-amber-500' : isApproved ? 'bg-emerald-500' : 'bg-red-500'}`} />
+            <div className={`absolute top-0 left-0 w-full h-1.5 ${isPending ? 'bg-amber-500' : isApproved ? 'bg-emerald-500' : isSuspended ? 'bg-orange-500' : 'bg-red-500'}`} />
 
             {/* Link wrapper for the clickable body */}
             <Link href={`/admin/merchants/${merchant.id}`} className="p-6 flex-1 flex flex-col cursor-pointer">
                 <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-4">
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-extrabold text-xl shadow-sm ${isPending ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-extrabold text-xl shadow-sm ${isPending ? 'bg-amber-50 text-amber-600 border border-amber-100' : isSuspended ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
                             {merchant.businessName.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -55,9 +56,9 @@ export default function MerchantCard({ merchant, onApprove, onReject, onVerifyBa
             </Link>
 
             {/* Actions Footer */}
-            <div className={`px-6 py-4 flex items-center justify-between border-t ${isPending ? 'border-amber-100 bg-amber-50/20' : 'border-slate-100 bg-slate-50/50'}`}>
+            <div className={`px-6 py-4 flex items-center justify-between border-t ${isPending ? 'border-amber-100 bg-amber-50/20' : isSuspended ? 'border-orange-100 bg-orange-50/20' : 'border-slate-100 bg-slate-50/50'}`}>
                 <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                    <Clock size={12} className={isPending ? "text-amber-500" : "text-slate-400"} />
+                    <Clock size={12} className={isPending ? "text-amber-500" : isSuspended ? "text-orange-500" : "text-slate-400"} />
                     <span>{merchant.appliedDate}</span>
                 </div>
 
@@ -66,7 +67,9 @@ export default function MerchantCard({ merchant, onApprove, onReject, onVerifyBa
                         ? 'bg-white text-amber-700 border-amber-200'
                         : isApproved
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-red-50 text-red-700 border-red-200'
+                            : isSuspended
+                                ? 'bg-orange-50 text-orange-700 border-orange-200'
+                                : 'bg-red-50 text-red-700 border-red-200'
                         }`}>
                         {merchant.status}
                     </span>
@@ -97,6 +100,25 @@ export default function MerchantCard({ merchant, onApprove, onReject, onVerifyBa
                                 )}
                             </button>
                         </div>
+                    )}
+
+                    {/* Suspend/Unsuspend Action */}
+                    {(isApproved || isSuspended) && (
+                        <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSuspend(merchant.id, merchant.userId, merchant.status); }}
+                            disabled={isTogglingSuspend === merchant.id}
+                            className={`flex items-center gap-1.5 px-2.5 py-1.5 ml-2 text-[10px] font-extrabold rounded-xl transition-all shadow-sm ${isSuspended
+                                ? 'bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                                : 'bg-orange-50 border border-orange-200 text-orange-700 hover:bg-orange-100'
+                                }`}
+                        >
+                            {isTogglingSuspend === merchant.id
+                                ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                : isSuspended
+                                    ? <ShieldCheck size={12} strokeWidth={3} />
+                                    : <ShieldOff size={12} strokeWidth={3} />}
+                            {isSuspended ? 'Unsuspend' : 'Suspend'}
+                        </button>
                     )}
 
                     {/* Bank Verification */}

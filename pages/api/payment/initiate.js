@@ -31,7 +31,20 @@ async function getUserFromRequest(req) {
     return user;
 }
 
+/**
+ * @deprecated Use /api/sabpaisa/initiate instead.
+ * This legacy endpoint is no longer in use and returns 410 Gone.
+ */
 export default async function handler(req, res) {
+    // Deprecation guard — all active code uses /api/sabpaisa/initiate
+    console.warn('[DEPRECATED] /api/payment/initiate called — this endpoint is deprecated');
+    return res.status(410).json({
+        error: 'This endpoint is deprecated. Use /api/sabpaisa/initiate instead.',
+        redirect: '/api/sabpaisa/initiate'
+    });
+
+    // --- Legacy code below kept for reference during migration ---
+    /* eslint-disable no-unreachable */
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
