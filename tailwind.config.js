@@ -56,6 +56,15 @@ module.exports = {
         gold: "#D4AF37",
         "merchant-light": "#FDFCFB",
         "merchant-dark": "#020617",
+        navy: {
+          DEFAULT: "#0A0F1E",
+          800: "#0D1526",
+          700: "#111D35",
+        },
+        electric: {
+          DEFAULT: "#2563EB",
+          hover: "#1D4ED8",
+        },
       },
       borderRadius: {
         xl: "calc(var(--radius) + 4px)",
@@ -80,11 +89,27 @@ module.exports = {
           "0%,70%,100%": { opacity: "1" },
           "20%,50%": { opacity: "0" },
         },
+        shake: {
+          "0%, 100%": { transform: "translateX(0)" },
+          "10%, 30%, 50%, 70%, 90%": { transform: "translateX(-4px)" },
+          "20%, 40%, 60%, 80%": { transform: "translateX(4px)" },
+        },
+        ripple: {
+          "0%": { transform: "scale(0)", opacity: "0.6" },
+          "100%": { transform: "scale(4)", opacity: "0" },
+        },
+        "connecting-line": {
+          "0%": { width: "0%" },
+          "100%": { width: "100%" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "caret-blink": "caret-blink 1.25s ease-out infinite",
+        shake: "shake 0.5s ease-in-out",
+        ripple: "ripple 0.6s ease-out forwards",
+        "connecting-line": "connecting-line 0.5s ease-out forwards",
       },
     },
   },

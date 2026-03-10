@@ -1,4 +1,4 @@
-import { Inter, Outfit, Poppins } from "next/font/google";
+import { Inter, Outfit, Poppins, Sora, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { ThemeProvider } from '@/lib/contexts/ThemeContext';
@@ -21,6 +21,18 @@ const poppins = Poppins({
   variable: "--font-poppins",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
+});
+
+const sora = Sora({
+  variable: "--font-sora",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata = {
@@ -93,7 +105,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${inter.variable} ${outfit.variable} ${poppins.variable}`}>
+    <html lang="en" className={`${inter.variable} ${outfit.variable} ${poppins.variable} ${sora.variable} ${dmSans.variable}`}>
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Material+Icons+Round&display=swap" rel="stylesheet" />
       </head>

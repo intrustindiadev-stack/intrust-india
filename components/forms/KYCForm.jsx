@@ -1,402 +1,479 @@
 'use client';
 
 /**
- * Enhanced KYC Verification Form Component
- * 
- * A production-ready KYC form with:
- * - Real-time validation
- * - Auto-formatting (PAN, phone)
- * - Server Action integration
- * - Loading states
- * - Toast notifications
- * - Bank-grade security checkbox
- * 
+ * KYC Multi-Step Wizard Orchestrator
+ *
+ * 3-step wizard: Identity → PAN Verify → Address
+ * Uses existing server actions and validators from app/types/kyc.js.
+ *
  * @component
  */
 
-import { useState } from 'react';
-import { CheckCircle, Shield, ChevronRight, AlertCircle, Info, Check, Loader } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useState, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, ArrowRight, Lock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { submitKYC, verifyPANAction } from '@/app/actions/kyc';
-import {
-    validateKYCForm,
-    formatPANInput,
-    formatPhoneInput,
-    sanitizeKYCData
-} from '@/app/types/kyc';
+
+import StepProgressBar from '@/components/kyc/steps/StepProgressBar';
+import Step1Identity, { validateStep1 } from '@/components/kyc/steps/Step1Identity';
+import Step2PAN, { validateStep2 } from '@/components/kyc/steps/Step2PAN';
+import Step3Address, { validateStep3 } from '@/components/kyc/steps/Step3Address';
+import SuccessScreen from '@/components/kyc/steps/SuccessScreen';
+
+import { submitKYC } from '@/app/actions/kyc';
+import { formatDateForInput } from '@/app/types/kyc';
+
+/**
+ * Direction for slide animation: +1 = forward, -1 = back.
+ * @typedef {1 | -1} SlideDirection
+ */
+
+const slideVariants = {
+    /** @param {SlideDirection} direction */
+    enter: (/** @type {SlideDirection} */ direction) => ({
+        x: direction > 0 ? 300 : -300,
+        opacity: 0,
+    }),
+    center: { x: 0, opacity: 1 },
+    /** @param {SlideDirection} direction */
+    exit: (/** @type {SlideDirection} */ direction) => ({
+        x: direction > 0 ? -300 : 300,
+        opacity: 0,
+    }),
+};
 
 /**
  * @typedef {Object} KYCFormProps
  * @property {Object} [initialData] - Pre-fill form data
  * @property {Function} [onSuccess] - Callback after successful submission
  * @property {Function} [onError] - Callback on submission error
- * @property {string} [userType] - Type of user (merchant, customer) for customization
+ * @property {string} [userType] - Type of user (merchant, customer)
  */
 
+/** @param {KYCFormProps} props */
 export default function KYCForm({
     initialData = {},
     onSuccess = null,
     onError = null,
-    userType = 'customer'
+    userType = 'customer',
 }) {
-    const [formData, setFormData] = useState({
+    // ─── State ───
+    const initDraft = () => {
+        if (typeof window === 'undefined') return null;
+        try {
+            const val = sessionStorage.getItem('kyc_draft');
+            return val ? JSON.parse(val) : null;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const draft = initDraft() || {};
+
+    const [currentStep, setCurrentStep] = useState(/** @type {1 | 2 | 3} */(draft.currentStep || 1));
+    const [completedSteps, setCompletedSteps] = useState(/** @type {Set<number>} */(new Set(draft.completedSteps || [])));
+    const [slideDirection, setSlideDirection] = useState(/** @type {SlideDirection} */(1));
+
+    const [formData, setFormData] = useState(draft.formData || {
         fullName: initialData.fullName || '',
         phoneNumber: initialData.phone || initialData.phoneNumber || '',
         dateOfBirth: initialData.dateOfBirth || '',
+        gender: initialData.gender || '',
         panNumber: initialData.panNumber || initialData.panCard || '',
+        fatherName: initialData.fatherName || '',
         fullAddress: initialData.address || initialData.fullAddress || '',
-        bankGradeSecurity: initialData.bankGradeSecurity || false
+        city: initialData.city || '',
+        state: initialData.state || '',
+        pinCode: initialData.pinCode || '',
+        bankGradeSecurity: initialData.bankGradeSecurity || false,
+        termsAccepted: false,
     });
 
-    const [panVerified, setPanVerified] = useState(false);
-    const [verifyingPan, setVerifyingPan] = useState(false);
+    const [fieldLocked, setFieldLocked] = useState(draft.fieldLocked || {
+        name: false,
+        dob: false,
+        fatherName: false,
+    });
 
-    const [errors, setErrors] = useState({});
-    const [touched, setTouched] = useState({});
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [panVerified, setPanVerified] = useState(draft.panVerified ?? false);
+    const [showAutoFillBanner, setShowAutoFillBanner] = useState(draft.showAutoFillBanner ?? false);
 
-    // Real-time validation on field blur
-    const validateField = (fieldName, value) => {
-        const fieldData = { ...formData, [fieldName]: value };
-        const validation = validateKYCForm(sanitizeKYCData(fieldData));
-
-        if (validation.errors[fieldName]) {
-            setErrors(prev => ({ ...prev, [fieldName]: validation.errors[fieldName] }));
-        } else {
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                delete newErrors[fieldName];
-                return newErrors;
-            });
-        }
-    };
-
-    const handleBlur = (fieldName) => {
-        setTouched(prev => ({ ...prev, [fieldName]: true }));
-        validateField(fieldName, formData[fieldName]);
-    };
-
-    const handleChange = (fieldName, value) => {
-        setFormData(prev => ({ ...prev, [fieldName]: value }));
-
-        // Clear error when user starts typing
-        if (touched[fieldName] && errors[fieldName]) {
-            validateField(fieldName, value);
-        }
-    };
-
-    const handleVerifyPAN = async () => {
-        if (!formData.panNumber || formData.panNumber.length !== 10) {
-            toast.error('Please enter a valid PAN number first');
-            return;
-        }
-        setVerifyingPan(true);
+    useEffect(() => {
         try {
-            const result = await verifyPANAction(formData.panNumber);
-            if (result.success) {
-                setPanVerified(true);
-                toast.success('PAN Verified Successfully!');
-            } else {
-                setPanVerified(false);
-                toast.error(result.message || 'PAN Verification Failed');
-            }
-        } catch (err) {
-            toast.error('Verification failed');
-        } finally {
-            setVerifyingPan(false);
+            sessionStorage.setItem('kyc_draft', JSON.stringify({
+                currentStep,
+                completedSteps: Array.from(completedSteps),
+                formData,
+                fieldLocked,
+                panVerified,
+                showAutoFillBanner
+            }));
+        } catch (e) {
+            // Ignore private browsing restrictions
         }
-    };
+    }, [formData, currentStep, panVerified, fieldLocked, completedSteps, showAutoFillBanner]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [submissionStatus, setSubmissionStatus] = useState('');
 
+    /** @type {Object<string, string>} */
+    const [errors, setErrors] = useState(/** @type {Record<string, string>} */({}));
 
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        // Mark all fields as touched
-        setTouched({
-            fullName: true,
-            phoneNumber: true,
-            dateOfBirth: true,
-            panNumber: true,
-            fullAddress: true
+    // ─── Field change handler ───
+    const handleChange = useCallback((/** @type {string} */ field, /** @type {string | boolean} */ value) => {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+        // Clear error for this field when user edits
+        setErrors((prev) => {
+            if (prev[field]) {
+                const next = { ...prev };
+                delete next[field];
+                return next;
+            }
+            return prev;
         });
+    }, []);
 
-        // Validate text fields
-        const sanitized = sanitizeKYCData(formData);
-        const validation = validateKYCForm(sanitized);
+    // ─── Unlock a locked field ───
+    const handleUnlock = useCallback((/** @type {string} */ field) => {
+        setFieldLocked((prev) => ({ ...prev, [field]: false }));
+    }, []);
+
+    // ─── PAN verified handler ───
+    const handlePANVerified = useCallback(
+        (panData, mode = 'verified') => {
+            setPanVerified(true);
+
+            if (mode === 'manual_review') {
+                setShowAutoFillBanner(false);
+                setFieldLocked({ name: false, dob: false, fatherName: false });
+                toast.success('PAN recorded. We will manually verify your details.');
+            } else {
+                setShowAutoFillBanner(true);
+
+                if (panData) {
+                    // Auto-fill fields from PAN data
+                    setFormData((prev) => ({
+                        ...prev,
+                        fullName: panData.full_name || prev.fullName,
+                        dateOfBirth: panData.dob ? convertDOB(panData.dob) : prev.dateOfBirth,
+                        fatherName: panData.father_name || prev.fatherName,
+                    }));
+
+                    // Lock auto-filled fields
+                    setFieldLocked({
+                        name: !!panData.full_name,
+                        dob: !!panData.dob,
+                        fatherName: !!panData.father_name,
+                    });
+                }
+                toast.success('PAN verified! Details auto-filled.');
+            }
+        },
+        []
+    );
+
+    // ─── PAN reset handler (when user edits PAN after verification) ───
+    const handlePANReset = useCallback(() => {
+        setPanVerified(false);
+        setShowAutoFillBanner(false);
+        // Unlock and clear PAN-derived fields
+        setFieldLocked({ name: false, dob: false, fatherName: false });
+        setFormData((prev) => ({
+            ...prev,
+            fullName: '',
+            dateOfBirth: '',
+            fatherName: '',
+        }));
+    }, []);
+
+    // ─── Form draft reset handler (when user wants to clear everything and start over) ───
+    const handleFormReset = useCallback(() => {
+        try {
+            sessionStorage.removeItem('kyc_draft');
+        } catch (e) { }
+
+        setCurrentStep(1);
+        setCompletedSteps(new Set());
+        setSlideDirection(-1);
+        setPanVerified(false);
+        setShowAutoFillBanner(false);
+        setFieldLocked({ name: false, dob: false, fatherName: false });
+        setErrors({});
+
+        setFormData({
+            fullName: initialData.fullName || '',
+            phoneNumber: initialData.phone || initialData.phoneNumber || '',
+            dateOfBirth: initialData.dateOfBirth || '',
+            gender: initialData.gender || '',
+            panNumber: initialData.panNumber || initialData.panCard || '',
+            fatherName: initialData.fatherName || '',
+            fullAddress: initialData.address || initialData.fullAddress || '',
+            city: initialData.city || '',
+            state: initialData.state || '',
+            pinCode: initialData.pinCode || '',
+            bankGradeSecurity: initialData.bankGradeSecurity || false,
+            termsAccepted: false,
+        });
+    }, [initialData]);
+
+    // ─── Step navigation ───
+    const goToStep = useCallback(
+        (/** @type {1 | 2 | 3} */ step) => {
+            setSlideDirection(step > currentStep ? 1 : -1);
+            setCurrentStep(step);
+            setErrors({}); // Clear cross-step errors on navigation
+        },
+        [currentStep]
+    );
+
+    const handleNext = useCallback(() => {
+        let validation;
+
+        if (currentStep === 1) {
+            validation = validateStep1(formData);
+        } else if (currentStep === 2) {
+            validation = validateStep2(formData, panVerified);
+        } else {
+            return; // Step 3 has submit, not next
+        }
 
         if (!validation.valid) {
             setErrors(validation.errors);
-            toast.error('Please complete all required fields');
+            toast.error('Please fix the errors before continuing');
             return;
         }
 
-        setIsSubmitting(true);
+        setErrors({});
+        setCompletedSteps((prev) => new Set([...prev, currentStep]));
+        goToStep(/** @type {1 | 2 | 3} */(Math.min(currentStep + 1, 3)));
+    }, [currentStep, formData, panVerified, goToStep]);
 
-        try {
-            // Need to use FormData for file upload support in Server Actions
-            const submitData = new FormData();
-            submitData.append('fullName', formData.fullName);
-            submitData.append('phoneNumber', formData.phoneNumber);
-            submitData.append('dateOfBirth', formData.dateOfBirth);
-            submitData.append('panNumber', formData.panNumber);
-            submitData.append('fullAddress', formData.fullAddress);
-            submitData.append('bankGradeSecurity', formData.bankGradeSecurity);
-
-            const result = await submitKYC(submitData);
-
-            if (result.success) {
-                toast.success(result.message || 'KYC verification submitted successfully!', {
-                    duration: 5000,
-                    icon: '✅'
-                });
-
-                // Reset form
-                setFormData({
-                    fullName: '',
-                    phoneNumber: '',
-                    dateOfBirth: '',
-                    panNumber: '',
-                    fullAddress: '',
-                    bankGradeSecurity: false
-                });
-                setTouched({});
-                setErrors({});
-
-                // Call success callback if provided
-                if (onSuccess) {
-                    onSuccess(result.data);
-                }
-            } else {
-                console.error('KYC submission failed:', JSON.stringify(result, null, 2));
-                toast.error(result.error || 'Failed to submit KYC verification', {
-                    duration: 5000,
-                    icon: '❌'
-                });
-
-                // Set field-specific errors if available
-                if (result.errors) {
-                    setErrors(result.errors);
-                }
-
-                // Call error callback if provided
-                if (onError) {
-                    onError(result.error);
-                }
-            }
-        } catch (error) {
-            console.error('Error submitting KYC:', error);
-            toast.error('An unexpected error occurred. Please try again.');
-
-            if (onError) {
-                onError(error.message);
-            }
-        } finally {
-            setIsSubmitting(false);
+    const handleBack = useCallback(() => {
+        if (currentStep > 1) {
+            goToStep(/** @type {1 | 2 | 3} */(currentStep - 1));
         }
-    };
+    }, [currentStep, goToStep]);
 
+    // ─── Form submit (Step 3) ───
+    const handleSubmit = useCallback(
+        async (/** @type {React.FormEvent<HTMLFormElement>} */ e) => {
+            e.preventDefault();
+
+            const validation = validateStep3(formData);
+            if (!validation.valid) {
+                setErrors(validation.errors);
+                toast.error('Please fix the errors before submitting');
+                return;
+            }
+
+            setIsSubmitting(true);
+            setErrors({});
+
+            try {
+                const submitData = new FormData();
+                submitData.append('fullName', formData.fullName);
+                submitData.append('phoneNumber', formData.phoneNumber);
+                submitData.append('dateOfBirth', formData.dateOfBirth);
+                submitData.append('panNumber', formData.panNumber);
+                submitData.append('gender', formData.gender);
+                submitData.append('fatherName', formData.fatherName);
+                submitData.append('fullAddress', formData.fullAddress);
+                submitData.append('bankGradeSecurity', String(formData.bankGradeSecurity));
+                submitData.append('city', formData.city);
+                submitData.append('state', formData.state);
+                submitData.append('pinCode', formData.pinCode);
+
+                const result = await submitKYC(submitData);
+
+                if (result.success) {
+                    try {
+                        sessionStorage.removeItem('kyc_draft');
+                    } catch (e) { }
+                    setCompletedSteps((prev) => new Set([...prev, 3]));
+                    setSubmissionStatus(result.data.verification_status);
+                    setShowSuccess(true);
+                    if (onSuccess) {
+                        onSuccess(result.data);
+                    }
+                } else {
+                    toast.error(result.error || 'Submission failed');
+                    if (onError) {
+                        onError(result.error);
+                    }
+                }
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+                toast.error(message);
+                if (onError) {
+                    onError(message);
+                }
+            } finally {
+                setIsSubmitting(false);
+            }
+        },
+        [formData, onError]
+    );
+
+    // ─── Render ───
     return (
-        <div className="w-full max-w-2xl mx-auto rounded-3xl bg-white shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 p-6 border-b border-slate-100">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h2 className="text-xl font-bold text-slate-900">KYC Verification</h2>
-                        <p className="text-sm text-slate-500">Complete your profile to unlock full access</p>
-                    </div>
-                    <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-100 flex items-center gap-1">
-                        <Shield size={12} />
-                        Secure
-                    </div>
-                </div>
-            </div>
+        <>
+            <SuccessScreen visible={showSuccess} status={submissionStatus} />
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FloatingInput
-                        label="Full Name"
-                        value={formData.fullName}
-                        onChange={e => handleChange('fullName', e.target.value)}
-                        onBlur={() => handleBlur('fullName')}
-                        error={touched.fullName ? errors.fullName : null}
-                        placeholder="Enter your full name"
-                        autoComplete="name"
-                    />
+            <div className="w-full max-w-xl mx-auto">
+                {/* Progress bar */}
+                <StepProgressBar currentStep={currentStep} completedSteps={completedSteps} />
 
-                    <FloatingInput
-                        label="Phone Number"
-                        value={formData.phoneNumber}
-                        onChange={e => handleChange('phoneNumber', formatPhoneInput(e.target.value))}
-                        onBlur={() => handleBlur('phoneNumber')}
-                        error={touched.phoneNumber ? errors.phoneNumber : null}
-                        type="tel"
-                        maxLength={10}
-                        placeholder="10-digit mobile number"
-                        autoComplete="tel"
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <FloatingInput
-                            label="Date of Birth"
-                            value={formData.dateOfBirth}
-                            onChange={e => handleChange('dateOfBirth', e.target.value)}
-                            onBlur={() => handleBlur('dateOfBirth')}
-                            error={touched.dateOfBirth ? errors.dateOfBirth : null}
-                            type="date"
-                            autoComplete="bday"
-                        />
-                        <p className="text-xs text-slate-400 mt-1 ml-1 flex items-center gap-1">
-                            <Info size={10} /> Must be 18 years or older
-                        </p>
-                    </div>
-
-                </div>
-
-                <div>
-                    <div className="relative">
-                        <FloatingInput
-                            label="PAN Number"
-                            value={formData.panNumber}
-                            onChange={e => {
-                                handleChange('panNumber', formatPANInput(e.target.value));
-                                setPanVerified(false); // Reset verification on change
-                            }}
-                            onBlur={() => handleBlur('panNumber')}
-                            error={touched.panNumber ? errors.panNumber : null}
-                            maxLength={10}
-                            placeholder="ABCDE1234F"
-                            autoComplete="off"
-                        />
-                        <button
-                            type="button"
-                            onClick={handleVerifyPAN}
-                            disabled={verifyingPan || !formData.panNumber || formData.panNumber.length < 10 || panVerified}
-                            className={`absolute right-2 top-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${panVerified
-                                ? 'bg-green-100 text-green-700 cursor-default'
-                                : verifyingPan
-                                    ? 'bg-blue-400 text-white opacity-50 cursor-wait'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                }`}
-                        >
-                            {verifyingPan ? <Loader size={12} className="animate-spin" /> : null}
-                            {panVerified ? 'Verified' : verifyingPan ? 'Verifying...' : 'Verify'}
-                            {panVerified ? <Check size={12} /> : null}
-                        </button>
-                    </div>
-                    {touched.panNumber && errors.panNumber && (
-                        <p className="text-red-500 text-xs mt-1 ml-1 flex items-center gap-1">
-                            <AlertCircle size={10} /> {errors.panNumber}
-                        </p>
-                    )}
-                </div>
-
-
-
-                <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500 ml-1">Full Address</label>
-                    <textarea
-                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none font-medium text-slate-900 resize-none ${touched.fullAddress && errors.fullAddress ? 'border-red-300' : 'border-slate-200'
-                            }`}
-                        rows="3"
-                        placeholder="Enter your complete address"
-                        value={formData.fullAddress}
-                        onChange={e => handleChange('fullAddress', e.target.value)}
-                        onBlur={() => handleBlur('fullAddress')}
-                        autoComplete="street-address"
-                    />
-                    {touched.fullAddress && errors.fullAddress && (
-                        <p className="text-red-500 text-xs mt-1 ml-1 flex items-center gap-1">
-                            <AlertCircle size={10} /> {errors.fullAddress}
-                        </p>
-                    )}
-                </div>
-
-                {/* Bank Grade Security Checkbox */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <label className="flex items-start gap-3 cursor-pointer group">
-                        <input
-                            type="checkbox"
-                            checked={formData.bankGradeSecurity}
-                            onChange={e => handleChange('bankGradeSecurity', e.target.checked)}
-                            className="mt-1 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20"
-                        />
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                                <Shield size={16} className="text-blue-600" />
-                                <span className="font-bold text-slate-900 text-sm">Enable Bank-Grade Security</span>
+                {/* Form card */}
+                <form
+                    onSubmit={handleSubmit}
+                    className="bg-white shadow-[0_2px_16px_rgba(0,0,0,0.08)] rounded-[16px] p-6 sm:p-8 relative"
+                >
+                    {/* Skeleton overlay while submitting */}
+                    {isSubmitting && (
+                        <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-20 flex items-center justify-center">
+                            <div className="w-full max-w-xs space-y-4 p-6">
+                                <div className="h-4 bg-slate-200 rounded animate-pulse" />
+                                <div className="h-4 bg-slate-200 rounded animate-pulse w-3/4" />
+                                <div className="h-4 bg-slate-200 rounded animate-pulse w-1/2" />
                             </div>
-                            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                Add an extra layer of protection with multi-factor authentication and encrypted data storage.
-                                Recommended for high-value transactions.
+                        </div>
+                    )}
+
+                    {/* Step title */}
+                    <div className="mb-8 border-b border-slate-100 pb-5 flex items-start justify-between">
+                        <div>
+                            <h2 className="text-[22px] font-semibold text-slate-900 tracking-tight">
+                                {currentStep === 1 && 'Personal Details'}
+                                {currentStep === 2 && 'PAN Verification'}
+                                {currentStep === 3 && 'Address & Security'}
+                            </h2>
+                            <p className="text-slate-500 text-sm mt-1.5 font-medium leading-relaxed">
+                                {currentStep === 1 && 'Enter your basic identity information'}
+                                {currentStep === 2 && 'Verify your PAN card for instant KYC'}
+                                {currentStep === 3 && 'Complete your address and security preferences'}
                             </p>
                         </div>
-                    </label>
-                </div>
 
-                {/* Submit Button */}
-                <div className="pt-4">
-                    <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
-                    >
-                        {isSubmitting ? (
-                            <>
-                                <motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                                    className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                        {/* Cancel & Start Over Button */}
+                        <button
+                            type="button"
+                            onClick={handleFormReset}
+                            title="Clear all progress and start over"
+                            className="text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md transition-colors whitespace-nowrap"
+                        >
+                            Reset Form
+                        </button>
+                    </div>
+
+                    {/* Animated step content */}
+                    <AnimatePresence mode="wait" custom={slideDirection}>
+                        <motion.div
+                            key={currentStep}
+                            custom={slideDirection}
+                            variants={slideVariants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        >
+                            {currentStep === 1 && (
+                                <Step1Identity
+                                    formData={formData}
+                                    onChange={handleChange}
+                                    errors={errors}
+                                    fieldLocked={fieldLocked}
+                                    onUnlock={handleUnlock}
                                 />
-                                Submitting...
-                            </>
-                        ) : (
-                            <>
-                                Submit Verification
-                                <ChevronRight size={18} />
-                            </>
-                        )}
-                    </button>
-                </div>
+                            )}
 
-                {/* Help Text */}
-                <p className="text-center text-xs text-slate-400">
-                    Your information is encrypted and secure. We never share your data with third parties.
-                </p>
-            </form>
-        </div>
+                            {currentStep === 2 && (
+                                <Step2PAN
+                                    formData={formData}
+                                    onChange={handleChange}
+                                    errors={errors}
+                                    panVerified={panVerified}
+                                    showAutoFillBanner={showAutoFillBanner}
+                                    onPANVerified={handlePANVerified}
+                                    onPANReset={handlePANReset}
+                                    fieldLocked={fieldLocked}
+                                    onUnlock={handleUnlock}
+                                />
+                            )}
+
+                            {currentStep === 3 && (
+                                <Step3Address
+                                    formData={formData}
+                                    onChange={handleChange}
+                                    errors={errors}
+                                    isSubmitting={isSubmitting}
+                                />
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
+
+                    {/* Navigation buttons (Steps 1 & 2) */}
+                    {currentStep < 3 && (
+                        <div className="sticky bottom-0 z-30 bg-white border-t border-slate-100 flex flex-col gap-4 mt-8 -mx-6 -mb-6 px-6 py-4 pb-6 sm:-mx-8 sm:-mb-8 sm:px-8 sm:py-6 sm:pb-6 rounded-b-[16px] shadow-[0_-4px_16px_rgba(0,0,0,0.03)]">
+                            <div className="flex items-center justify-between gap-4 w-full">
+                                {currentStep > 1 ? (
+                                    <button
+                                        type="button"
+                                        onClick={handleBack}
+                                        className="flex items-center justify-center gap-2 px-6 py-3.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl border-1.5 border-slate-200 transition-colors text-[15px] font-semibold flex-1 sm:flex-none sm:w-1/3"
+                                    >
+                                        <ArrowLeft size={18} />
+                                        Back
+                                    </button>
+                                ) : null}
+
+                                <button
+                                    type="button"
+                                    onClick={handleNext}
+                                    className="flex items-center justify-center gap-2 px-6 py-3.5 bg-[#1A56DB] hover:bg-[#1546b5] text-white rounded-xl shadow-[0_4px_12px_rgba(26,86,219,0.25)] transition-all text-[15px] font-semibold flex-1"
+                                >
+                                    Continue
+                                    <ArrowRight size={18} />
+                                </button>
+                            </div>
+
+                            {/* Help text */}
+                            <div className="flex items-center justify-center gap-1.5 pt-2">
+                                <Lock size={12} className="text-slate-400" />
+                                <p className="text-center text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                    Your information is encrypted and secure
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </form>
+            </div>
+        </>
     );
 }
 
+// ─── Helpers ───
+
 /**
- * Floating Label Input Component
+ * Converts DD/MM/YYYY (from SprintVerify) to YYYY-MM-DD (HTML date input).
+ * Falls back to formatDateForInput which handles DD-MM-YYYY.
+ *
+ * @param {string} dob - Date string from PAN API (e.g. "01/01/1990")
+ * @returns {string} YYYY-MM-DD formatted date
  */
-function FloatingInput({ label, error, className = '', ...props }) {
-    return (
-        <div className="w-full">
-            <div className="relative group">
-                <input
-                    className={`w-full px-4 py-3.5 bg-slate-50 border rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none font-medium placeholder:text-transparent peer ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'
-                        } ${className}`}
-                    placeholder={label}
-                    {...props}
-                />
-                <label
-                    className={`absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm transition-all pointer-events-none 
-            peer-focus:-top-2 peer-focus:left-2 peer-focus:text-xs peer-focus:text-blue-600 peer-focus:bg-white peer-focus:px-2 peer-focus:font-bold 
-            peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-2 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-slate-500 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-2
-            ${error ? 'peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-red-500' : ''}`}
-                >
-                    {label}
-                </label>
-            </div>
-            {error && (
-                <p className="text-red-500 text-xs mt-1 ml-1 flex items-center gap-1">
-                    <AlertCircle size={10} /> {error}
-                </p>
-            )}
-        </div>
-    );
+function convertDOB(dob) {
+    if (!dob) return '';
+
+    // Handle DD/MM/YYYY format
+    if (dob.includes('/')) {
+        const [day, month, year] = dob.split('/');
+        if (day && month && year) return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+
+    // Handle DD-MM-YYYY format (via formatDateForInput)
+    if (dob.includes('-') && dob.indexOf('-') === 2) {
+        return formatDateForInput(dob);
+    }
+
+    // Already YYYY-MM-DD
+    return dob;
 }

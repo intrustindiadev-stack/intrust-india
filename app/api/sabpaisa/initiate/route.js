@@ -35,6 +35,18 @@ export async function POST(request) {
         process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
+    if (orderData.udf1 === 'GIFT_CARD') {
+        const { data: profile } = await supabaseAdmin
+            .from('user_profiles')
+            .select('kyc_status')
+            .eq('id', user.id)
+            .single();
+
+        if (!profile || profile.kyc_status !== 'verified') {
+            return NextResponse.json({ error: 'KYC Verification is required to purchase gift cards. Please complete KYC from your profile.' }, { status: 403 });
+        }
+    }
+
     const { error: insertError } = await supabaseAdmin
         .from('transactions')
         .insert({

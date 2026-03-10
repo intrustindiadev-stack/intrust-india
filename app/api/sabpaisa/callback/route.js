@@ -69,7 +69,7 @@ export async function POST(request) {
         const amount = result.amount;
 
         // Map status to internal enum
-        const internalStatus = mapStatusToInternal(result.statusCode || status);
+        let internalStatus = mapStatusToInternal(result.statusCode || status);
         console.log(`[Callback] txn=${clientTxnId} status=${internalStatus} amount=${amount}`);
 
         // 2. Log Callback
@@ -103,6 +103,8 @@ export async function POST(request) {
             } catch (walletError) {
                 console.error('[Callback] Failed to credit wallet:', walletError.message);
                 fulfillmentFailed = true;
+                internalStatus = 'FAILED';
+                result.transMsg = 'Wallet credit failed. Payment will be refunded.';
             }
         }
 
@@ -179,66 +181,97 @@ export async function POST(request) {
                     } else {
                         console.error('[Callback] Merchant not found for topup:', existingTxn.user_id);
                         fulfillmentFailed = true;
+                        internalStatus = 'FAILED';
+                        result.transMsg = 'Merchant account not found. Payment will be refunded.';
                     }
                 }
             } catch (walletError) {
                 console.error('[Callback] Failed to credit merchant wallet:', walletError.message);
                 fulfillmentFailed = true;
+                internalStatus = 'FAILED';
+                result.transMsg = 'Merchant wallet credit error. Payment will be refunded.';
             }
         }
 
         // 6. Handle Gift Card Purchase — Atomic coupon+order with rollback safety
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GIFT_CARD' && !wasAlreadySuccess) {
             try {
-                const couponId = existingTxn.udf2;
-                if (couponId) {
-                    const supabaseAdmin = createClient(
-                        process.env.NEXT_PUBLIC_SUPABASE_URL,
-                        process.env.SUPABASE_SERVICE_ROLE_KEY
-                    );
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
 
-                    // Step A: Mark coupon as sold (only if still available)
-                    const { data: updatedCoupon, error: updateCouponError } = await supabaseAdmin
-                        .from('coupons')
-                        .update({
-                            status: 'sold',
-                            purchased_by: existingTxn.user_id,
-                            purchased_at: new Date().toISOString()
-                        })
-                        .eq('id', couponId)
-                        .eq('status', 'available')
-                        .select('id')
-                        .single();
+                // Add KYC Check Defensive Verification
+                const { data: profile } = await supabaseAdmin
+                    .from('user_profiles')
+                    .select('kyc_status')
+                    .eq('id', existingTxn.user_id)
+                    .single();
 
-                    if (!updateCouponError && updatedCoupon) {
-                        // Step B: Create order record
-                        const amountPaise = Math.round(parseFloat(amount) * 100);
-                        const { error: orderError } = await supabaseAdmin
-                            .from('orders')
-                            .insert({
-                                user_id: existingTxn.user_id,
-                                giftcard_id: couponId,
-                                amount: amountPaise,
-                                payment_status: 'paid',
-                                created_at: new Date().toISOString()
-                            });
+                if (!profile || profile.kyc_status !== 'verified') {
+                    console.error(`[Callback] KYC check failed for GIFT_CARD transaction ${clientTxnId}`);
+                    // Ensure the transaction is marked as failed or policy-blocked
+                    internalStatus = 'FAILED';
+                    result.transMsg = 'KYC Policy Block: Verification required for gift cards';
+                    fulfillmentFailed = true;
+                } else {
+                    const couponId = existingTxn.udf2;
+                    if (couponId) {
+                        // Step A: Mark coupon as sold (only if still available)
+                        const { data: updatedCoupon, error: updateCouponError } = await supabaseAdmin
+                            .from('coupons')
+                            .update({
+                                status: 'sold',
+                                purchased_by: existingTxn.user_id,
+                                purchased_at: new Date().toISOString()
+                            })
+                            .eq('id', couponId)
+                            .eq('status', 'available')
+                            .select('id')
+                            .single();
 
-                        if (orderError) {
-                            console.error('[Callback] Order insert failed, rolling back coupon:', orderError.message);
-                            await supabaseAdmin
-                                .from('coupons')
-                                .update({ status: 'available', purchased_by: null, purchased_at: null })
-                                .eq('id', couponId)
-                                .eq('purchased_by', existingTxn.user_id);
-                            fulfillmentFailed = true;
+                        if (!updateCouponError && updatedCoupon) {
+                            // Step B: Create order record
+                            const amountPaise = Math.round(parseFloat(amount) * 100);
+                            const { error: orderError } = await supabaseAdmin
+                                .from('orders')
+                                .insert({
+                                    user_id: existingTxn.user_id,
+                                    giftcard_id: couponId,
+                                    amount: amountPaise,
+                                    payment_status: 'paid',
+                                    created_at: new Date().toISOString()
+                                });
+
+                            if (orderError) {
+                                console.error('[Callback] Order insert failed, rolling back coupon:', orderError.message);
+                                await supabaseAdmin
+                                    .from('coupons')
+                                    .update({ status: 'available', purchased_by: null, purchased_at: null })
+                                    .eq('id', couponId)
+                                    .eq('purchased_by', existingTxn.user_id);
+                                fulfillmentFailed = true;
+                                internalStatus = 'FAILED';
+                                result.transMsg = 'Order creation failed. Payment will be refunded.';
+                            }
                         } else {
-                            console.log(`[Callback] Gift card order created for coupon ${couponId}`);
+                            console.error('[Callback] Coupon mark-as-sold failed or already sold');
+                            fulfillmentFailed = true;
+                            internalStatus = 'FAILED';
+                            result.transMsg = 'Gift card is no longer available. Payment will be refunded.';
                         }
+                    } else {
+                        console.error('[Callback] Missing couponId in udf2');
+                        fulfillmentFailed = true;
+                        internalStatus = 'FAILED';
+                        result.transMsg = 'Invalid gift card selection. Payment will be refunded.';
                     }
                 }
             } catch (gcError) {
                 console.error('[Callback] Gift card processing error:', gcError.message);
                 fulfillmentFailed = true;
+                internalStatus = 'FAILED';
+                result.transMsg = 'Gift card processing error. Payment will be refunded.';
             }
         }
 
@@ -280,10 +313,20 @@ export async function POST(request) {
             } catch (goldError) {
                 console.error('[Callback] Gold subscription activation error:', goldError.message);
                 fulfillmentFailed = true;
+                internalStatus = 'FAILED';
+                result.transMsg = 'Gold subscription activation failed. Payment will be refunded.';
             }
         }
 
-        // 4. Update Transaction Status (if it wasn't already SUCCESS and fulfillment succeeded)
+        // 7b. Catch-all: Downgrade to failure if fulfillment failed on any path but status wasn't reset
+        if (fulfillmentFailed && internalStatus === 'SUCCESS') {
+            internalStatus = 'FAILED';
+            if (!result.transMsg || result.transMsg === status) {
+                result.transMsg = 'Fulfillment error. Payment will be refunded.';
+            }
+        }
+
+        // 4. Update Transaction Status
         if (clientTxnId && (!fulfillmentFailed || internalStatus !== 'SUCCESS')) {
             try {
                 await updateTransaction(clientTxnId, {

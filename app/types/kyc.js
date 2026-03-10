@@ -14,6 +14,9 @@
  * @property {string} dateOfBirth - Date of birth in YYYY-MM-DD format
  * @property {string} panNumber - Indian PAN card number (format: ABCDE1234F)
  * @property {string} fullAddress - Complete address
+ * @property {string} city - City name
+ * @property {string} state - State name
+ * @property {string} pinCode - 6-digit Indian PIN code
  * @property {boolean} bankGradeSecurity - Opt-in for bank-grade security
  */
 
@@ -45,7 +48,8 @@
  */
 export function validatePAN(pan) {
     if (!pan || typeof pan !== 'string') return false;
-    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    // Allow standard PAN or masked PAN (e.g. ABCDE****F)
+    const panRegex = /^[A-Z]{5}([0-9]{4}|\*\*\*\*)[A-Z]{1}$/;
     return panRegex.test(pan.trim());
 }
 
@@ -141,7 +145,12 @@ export function sanitizeKYCData(data) {
         phoneNumber: data.phoneNumber?.replace(/\D/g, '').substring(0, 10) || '',
         dateOfBirth: data.dateOfBirth?.trim() || '',
         panNumber: data.panNumber?.trim().toUpperCase().substring(0, 10) || '',
+        gender: data.gender || null,
+        fatherName: data.fatherName?.trim().replace(/[<>]/g, '') || null,
         fullAddress: data.fullAddress?.trim().replace(/[<>]/g, '') || '',
+        city: data.city?.trim().replace(/[<>]/g, '') || '',
+        state: data.state?.trim().replace(/[<>]/g, '') || '',
+        pinCode: data.pinCode?.replace(/\D/g, '').substring(0, 6) || '',
         bankGradeSecurity: Boolean(data.bankGradeSecurity)
     };
 }
@@ -179,6 +188,21 @@ export function validateKYCForm(data) {
     // Validate address
     if (!validateAddress(data.fullAddress)) {
         errors.fullAddress = 'Please enter a complete address (minimum 10 characters)';
+    }
+
+    // Validate city
+    if (!data.city || data.city.trim().length < 2) {
+        errors.city = 'Please enter a valid city name';
+    }
+
+    // Validate state
+    if (!data.state || data.state.trim().length < 2) {
+        errors.state = 'Please enter a valid state name';
+    }
+
+    // Validate PIN code (6-digit Indian postal code)
+    if (!data.pinCode || !/^\d{6}$/.test(data.pinCode)) {
+        errors.pinCode = 'Please enter a valid 6-digit PIN code';
     }
 
     return {
@@ -229,4 +253,16 @@ export function formatPANInput(value) {
  */
 export function formatPhoneInput(value) {
     return value.replace(/\D/g, '').substring(0, 10);
+}
+
+/**
+ * Masks a PAN number in the format ABCDE****F
+ * Shows first 5 characters and last character, masks middle 4 with asterisks.
+ *
+ * @param {string} pan - Full PAN number (10 characters)
+ * @returns {string} Masked PAN string
+ */
+export function maskPAN(pan) {
+    if (!pan || pan.length !== 10) return pan || 'N/A';
+    return `${pan.slice(0, 5)}****${pan.slice(9)}`;
 }

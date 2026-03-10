@@ -13,6 +13,7 @@ import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseSer
 import { revalidatePath } from 'next/cache';
 import { validateKYCForm, sanitizeKYCData } from '@/app/types/kyc';
 import { sprintVerify } from '@/lib/sprintVerify';
+import { encryptCouponCode as encryptData } from '@/lib/encryption';
 
 
 
@@ -38,7 +39,12 @@ export async function submitKYC(formData) {
             phoneNumber: formData.get('phoneNumber'),
             dateOfBirth: formData.get('dateOfBirth'),
             panNumber: formData.get('panNumber'),
+            gender: formData.get('gender'),
+            fatherName: formData.get('fatherName'),
             fullAddress: formData.get('fullAddress'),
+            city: formData.get('city'),
+            state: formData.get('state'),
+            pinCode: formData.get('pinCode'),
             bankGradeSecurity: formData.get('bankGradeSecurity') === 'true'
         };
 
@@ -49,36 +55,56 @@ export async function submitKYC(formData) {
             return { success: false, error: Object.values(validation.errors)[0] };
         }
 
+        // Check if there is an existing record
+        const adminSupabase = createAdminClient();
+        const { data: existingList, error: checkError } = await adminSupabase
+            .from('kyc_records')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('updated_at', { ascending: false })
+            .limit(1);
+
+        const existing = existingList && existingList.length > 0 ? existingList[0] : null;
+
         // 3. Perform SprintVerify PAN Verification (API-Only Approach)
         let verificationStatus = 'rejected'; // Default to rejected
         let sprintVerifyData = {};
         let rejectionReason = null;
+        let isMaskedPanReuse = false;
 
-        try {
-            console.log('Starting SprintVerify PAN verification...');
-            const panResult = await sprintVerify.verifyPAN(sanitizedData.panNumber);
-            sprintVerifyData.pan_check = panResult;
-
-            if (panResult.valid === true) {
-                // Strict equality — 'manual_review' is truthy but not === true
+        if (sanitizedData.panNumber.includes('*') && existing) {
+            // Allow masked PAN reuse only when the existing row is already verified and the masked value matches
+            if (existing.verification_status === 'verified' && sanitizedData.panNumber === existing.pan_number) {
                 verificationStatus = 'verified';
-                console.log('SprintVerify PAN verification successful');
-            } else if (panResult.valid === 'manual_review') {
-                // Network/API failure — queue for manual review, don't reject
+                isMaskedPanReuse = true;
+                console.log('Skipping SprintVerify for previously verified masked PAN');
+            } else {
+                return { success: false, error: 'Cannot update pending or rejected KYC with a masked PAN. Please provide full PAN.' };
+            }
+        } else {
+            try {
+                console.log('Starting SprintVerify PAN verification...');
+                const panResult = await sprintVerify.verifyPAN(sanitizedData.panNumber);
+                sprintVerifyData.pan_check = panResult;
+
+                if (panResult.valid === true) {
+                    verificationStatus = 'verified';
+                    console.log('SprintVerify PAN verification successful');
+                } else if (panResult.valid === 'manual_review') {
+                    verificationStatus = 'pending';
+                    rejectionReason = null;
+                    console.warn('SprintVerify PAN check returned manual_review:', panResult.message);
+                } else {
+                    verificationStatus = 'pending';
+                    rejectionReason = `PAN verification failed: ${panResult.message}`;
+                    console.warn('SprintVerify PAN check failed, queued for manual review:', panResult.message);
+                }
+            } catch (svError) {
+                console.error('SprintVerify API error:', svError);
                 verificationStatus = 'pending';
                 rejectionReason = null;
-                console.warn('SprintVerify PAN check returned manual_review:', panResult.message);
-            } else {
-                verificationStatus = 'pending';
-                rejectionReason = `PAN verification failed: ${panResult.message}`;
-                console.warn('SprintVerify PAN check failed, queued for manual review:', panResult.message);
+                sprintVerifyData.error = svError.message;
             }
-        } catch (svError) {
-            console.error('SprintVerify API error:', svError);
-            // On unexpected errors, queue for manual review instead of hard rejecting
-            verificationStatus = 'pending';
-            rejectionReason = null;
-            sprintVerifyData.error = svError.message;
         }
 
         // 4. Set Final Status based purely on SprintVerify results
@@ -92,6 +118,14 @@ export async function submitKYC(formData) {
         }
         const isVerified = verificationStatus === 'verified';
 
+        // Get encrypted PAN value to use
+        let idNumberEncrypted;
+        if (sanitizedData.panNumber.includes('*') && existing) {
+            idNumberEncrypted = existing.id_number_encrypted;
+        } else {
+            idNumberEncrypted = encryptData(sanitizedData.panNumber);
+        }
+
         // 5. Save to Database
         const kycRecord = {
             user_id: user.id,
@@ -100,19 +134,21 @@ export async function submitKYC(formData) {
             full_legal_name: sanitizedData.fullName,
             date_of_birth: sanitizedData.dateOfBirth,
             phone_number: sanitizedData.phoneNumber,
+            gender: sanitizedData.gender,
+            father_name: sanitizedData.fatherName,
 
             // ID Details (Schema Requirements)
             id_type: 'pan',
-            id_number_encrypted: sanitizedData.panNumber, // Storing raw for now (encryption recommended)
+            id_number_encrypted: idNumberEncrypted,
             id_number_last4: sanitizedData.panNumber.slice(-4),
-            pan_number: sanitizedData.panNumber,
+            pan_number: sanitizedData.panNumber.includes('*') ? sanitizedData.panNumber : `${sanitizedData.panNumber.slice(0, 5)}****${sanitizedData.panNumber.slice(9)}`,
 
             // Address Details (Schema Requirements)
             address_line1: sanitizedData.fullAddress,
             address_line2: '',
-            city: 'Not Provided',
-            state: 'Not Provided',
-            postal_code: '000000',
+            city: sanitizedData.city || 'Not Provided',
+            state: sanitizedData.state || 'Not Provided',
+            postal_code: sanitizedData.pinCode || '000000',
             country: 'IN',
             full_address: sanitizedData.fullAddress,
 
@@ -131,11 +167,11 @@ export async function submitKYC(formData) {
             // Review Details (Auto-reviewed by system)
             reviewed_by: user.id,
             reviewed_at: new Date().toISOString(),
-            verified_by: isVerified ? user.id : null,
-            verified_at: isVerified ? new Date().toISOString() : null,
+            verified_by: isMaskedPanReuse ? existing.verified_by : (isVerified ? user.id : null),
+            verified_at: isMaskedPanReuse ? existing.verified_at : (isVerified ? new Date().toISOString() : null),
 
             // SprintVerify Data
-            sprint_verify_ref_id: sprintVerifyData.pan_check?.data?.ref_id || null,
+            sprint_verify_ref_id: sprintVerifyData.pan_check?.data?.ref_id || existing?.sprint_verify_ref_id || null,
             sprint_verify_status: verificationStatus,
             sprint_verify_data: sprintVerifyData,
             sprint_verify_timestamp: new Date().toISOString(),
@@ -143,30 +179,39 @@ export async function submitKYC(formData) {
             updated_at: new Date().toISOString()
         };
 
-        // Use admin client to bypass User RLS (users can only INSERT, not UPDATE kyc_records)
-        const adminSupabase = createAdminClient();
-
-        // Upsert Logic
-        const { data: existing, error: checkError } = await adminSupabase.from('kyc_records').select('id').eq('user_id', user.id).maybeSingle();
-
         let result;
+
+        // Preserve created_at if existing, otherwise set it
+        if (!existing) {
+            kycRecord.created_at = new Date().toISOString();
+        } else {
+            kycRecord.created_at = existing.created_at;
+        }
+
+        let upserted;
+        let upsertError;
+
         if (existing) {
-            const { data: updated, error: updateError } = await adminSupabase
+            const { data, error } = await adminSupabase
                 .from('kyc_records')
                 .update(kycRecord)
-                .eq('user_id', user.id)
-                .select().maybeSingle();
-            if (updateError) throw updateError;
-            result = updated || kycRecord;
+                .eq('id', existing.id)
+                .select()
+                .maybeSingle();
+            upserted = data;
+            upsertError = error;
         } else {
-            kycRecord.created_at = new Date().toISOString();
-            const { data: inserted, error: insertError } = await adminSupabase
+            const { data, error } = await adminSupabase
                 .from('kyc_records')
                 .insert(kycRecord)
-                .select().maybeSingle();
-            if (insertError) throw insertError;
-            result = inserted || kycRecord;
+                .select()
+                .maybeSingle();
+            upserted = data;
+            upsertError = error;
         }
+
+        if (upsertError) throw upsertError;
+        result = upserted || kycRecord;
 
         // Keep user_profiles in sync with the new KYC status
         const { error: profileError } = await adminSupabase
@@ -206,9 +251,18 @@ export async function submitKYC(formData) {
 export async function verifyPANAction(panNumber) {
     try {
         const result = await sprintVerify.verifyPAN(panNumber);
-        return { success: result.valid === true, message: result.message, data: result.data };
+        const mode = result.valid === true ? 'verified' : (result.valid === 'manual_review' ? 'manual_review' : 'failed');
+        return {
+            success: result.valid === true || result.valid === 'manual_review',
+            mode: mode,
+            message: result.message,
+            data: result.data ? {
+                ...result.data,
+                father_name: result.data.father_name || null,
+            } : null
+        };
     } catch (error) {
-        return { success: false, error: 'Verification service unavailable' };
+        return { success: false, mode: 'failed', message: 'Verification service unavailable' };
     }
 }
 
@@ -261,22 +315,20 @@ export async function getKYCRecord(userId = null) {
             .from('kyc_records')
             .select('*')
             .eq('user_id', targetUserId)
-            .single();
+            .order('updated_at', { ascending: false })
+            .limit(1);
 
-        console.log('SERVER ACTION: Fetch result', { dataFound: !!data, error });
+        const record = data && data.length > 0 ? data[0] : null;
+        console.log('SERVER ACTION: Fetch result', { dataFound: !!record, error });
 
         if (error) {
-            if (error.code === 'PGRST116') {
-                // No record found
-                return { data: null };
-            }
             console.error('Error fetching KYC record:', error);
             return {
                 error: 'Failed to fetch KYC record'
             };
         }
 
-        return { data };
+        return { data: record || null };
 
     } catch (error) {
         console.error('Unexpected error in getKYCRecord:', error);
@@ -306,16 +358,20 @@ export async function getKYCStatus() {
             .from('kyc_records')
             .select('verification_status')
             .eq('user_id', user.id)
-            .single();
+            .order('updated_at', { ascending: false })
+            .limit(1);
 
         if (error) {
-            if (error.code === 'PGRST116') {
-                return { status: null }; // No record
-            }
             return { error: 'Failed to fetch status' };
         }
 
-        return { status: data.verification_status };
+        const record = data && data.length > 0 ? data[0] : null;
+
+        if (!record) {
+            return { status: null }; // No record
+        }
+
+        return { status: record.verification_status };
 
     } catch (error) {
         console.error('Error in getKYCStatus:', error);
