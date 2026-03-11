@@ -14,7 +14,8 @@ export default async function GiftCardsPage() {
         *,
         merchant:merchants!merchant_id (
             business_name,
-            id
+            id,
+            merchant_udhari_settings(udhari_enabled)
         )
     `)
         .eq('status', 'available')

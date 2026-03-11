@@ -1,12 +1,13 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import {
     User, Mail, Phone, MapPin, Calendar, Edit2, Check, X,
     ShieldCheck, Package, LayoutDashboard, Camera, Loader2, Lock, Link2, AlertCircle, Star,
-    Wallet, ChevronRight
+    Wallet, ChevronRight, Clock, CreditCard
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import GoldBadge from '@/components/ui/GoldBadge';
 import KYCStatus from '@/components/kyc/KYCStatus';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
@@ -498,6 +499,55 @@ function LinkGoogleCard({ authUser, showToast }) {
     );
 }
 
+// ─── Store Credit Section ───────────────────────────────────────────────────
+function StoreCreditCard({ activeCount, onManage }) {
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-gradient-to-br from-amber-500 via-orange-600 to-amber-700 rounded-2xl p-5 text-white shadow-xl shadow-amber-900/20 relative overflow-hidden group cursor-pointer"
+            onClick={onManage}
+        >
+            {/* Background Accent */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8" />
+            <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-black/10 rounded-full blur-xl" />
+            
+            <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                            <Clock size={16} className="text-white" />
+                        </div>
+                        <h3 className="text-xs font-bold text-amber-100 uppercase tracking-widest">Store Credits</h3>
+                    </div>
+                    {activeCount > 0 && (
+                        <span className="px-2 py-0.5 bg-white/90 text-amber-700 rounded-full text-[10px] font-black shadow-sm">
+                            {activeCount} ACTIVE
+                        </span>
+                    )}
+                </div>
+
+                <div className="mb-6">
+                    <p className="text-[10px] text-amber-100/70 uppercase font-bold tracking-[0.2em] mb-1">Pay Later (Udhari)</p>
+                    <p className="text-2xl font-black tracking-tight">
+                        {activeCount > 0 ? 'Manage Requests' : 'Apply for Credit'}
+                    </p>
+                </div>
+
+                <div className="flex items-center justify-between text-xs font-bold text-amber-100 mt-2 pt-3 border-t border-white/10">
+                    <span className="flex items-center gap-1.5">
+                        <CreditCard size={12} />
+                        View Store Credits
+                    </span>
+                    <ChevronRight size={14} />
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
 // ─── Wallet Section ──────────────────────────────────────────────────────────
 function WalletCard({ balancePaise, onManage }) {
     const balance = (balancePaise || 0) / 100;
@@ -639,6 +689,7 @@ export default function CustomerProfilePage() {
 
     const [profile, setProfile] = useState(null);
     const [wallet, setWallet] = useState(null);
+    const [udhariCount, setUdhariCount] = useState(0);
     const [profileLoading, setProfileLoading] = useState(true);
     const [toast, setToast] = useState({ msg: '', type: 'success' });
 
@@ -701,6 +752,17 @@ export default function CustomerProfilePage() {
                         if (newWallet) {
                             setWallet(newWallet);
                         }
+                    }
+
+                    // Fetch Active Udhari Count
+                    const { count, error: countError } = await supabase
+                        .from('udhari_requests')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('customer_id', authUser.id)
+                        .in('status', ['pending', 'approved']);
+
+                    if (!cancelled && !countError) {
+                        setUdhariCount(count || 0);
                     }
                 }
             } catch (error) {
@@ -863,6 +925,12 @@ export default function CustomerProfilePage() {
 
                             {/* Wallet and Stats Container */}
                             <div className="space-y-5">
+                                {/* Store Credits Card */}
+                                <StoreCreditCard 
+                                    activeCount={udhariCount}
+                                    onManage={() => router.push('/store-credits')}
+                                />
+
                                 {/* Wallet Card */}
                                 <WalletCard
                                     balancePaise={wallet?.balance_paise || 0}

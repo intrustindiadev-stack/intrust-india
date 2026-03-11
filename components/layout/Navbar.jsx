@@ -11,6 +11,7 @@ import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
 import MobileNav from './MobileNav';
 import GoldBadge from '@/components/ui/GoldBadge';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
@@ -156,6 +157,17 @@ export default function Navbar() {
 
                         {/* Actions - Right */}
                         <div className="flex items-center gap-2 md:gap-3 z-10">
+                            {/* Notifications */}
+                            {isAuthenticated && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: 0.45, duration: 0.4 }}
+                                >
+                                    <NotificationBell apiPath="/api/notifications" />
+                                </motion.div>
+                            )}
+
                             {/* Theme Toggle */}
                             <motion.button
                                 initial={{ opacity: 0, scale: 0.9 }}

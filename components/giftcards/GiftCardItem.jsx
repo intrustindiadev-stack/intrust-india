@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Star, ShieldCheck, Heart, Eye, Flame } from 'lucide-react';
+import { Star, ShieldCheck, Heart, Eye, Flame, Clock, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 
@@ -59,6 +59,24 @@ export default function GiftCardItem({ coupon, index = 0 }) {
                             </div>
                         </div>
                     )}
+
+                    {/* Udhari / Pay Later Status Badges */}
+                    {coupon.requestStatus === 'pending' ? (
+                        <div className="absolute top-16 left-4 bg-blue-500 text-white px-2.5 py-1 rounded-lg shadow-md text-[10px] font-black uppercase tracking-wide flex items-center gap-1 animate-pulse">
+                            <Clock size={12} />
+                            Request Sent
+                        </div>
+                    ) : coupon.requestStatus === 'approved' ? (
+                        <div className="absolute top-16 left-4 bg-green-500 text-white px-2.5 py-1 rounded-lg shadow-md text-[10px] font-black uppercase tracking-wide flex items-center gap-1 shadow-green-200">
+                            <CheckCircle2 size={12} />
+                            Active Credit
+                        </div>
+                    ) : coupon.udhariEnabled ? (
+                        <div className="absolute top-16 left-4 bg-amber-500 text-white px-2.5 py-1 rounded-lg shadow-md text-[10px] font-bold uppercase tracking-wide flex items-center gap-1">
+                            <Clock size={12} />
+                            Pay Later
+                        </div>
+                    ) : null}
 
                     {/* Stock Warning - Urgent */}
                     {coupon.stock < 10 && coupon.stock > 0 && (

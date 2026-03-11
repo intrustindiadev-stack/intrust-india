@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Search, AlertCircle, Store } from 'lucide-react';
 import Navbar from '../../../components/layout/Navbar';
@@ -41,6 +41,11 @@ const transformCouponData = (coupon) => {
         'Fashion': '👗',
     };
 
+    const udhariSettings = coupon.merchant?.merchant_udhari_settings;
+    const udhariEnabled = Array.isArray(udhariSettings) 
+        ? udhariSettings[0]?.udhari_enabled 
+        : udhariSettings?.udhari_enabled;
+
     return {
         id: coupon.id,
         brand: coupon.brand,
@@ -52,6 +57,7 @@ const transformCouponData = (coupon) => {
         // NEW: Prefer business_name from joined merchant table, fallback to merchant_name field
         merchant: coupon.merchant?.business_name || coupon.merchant_name || 'INTRUST Verified',
         merchantId: coupon.merchant_id,
+        udhariEnabled: !!udhariEnabled,
         verified: true,
         category: coupon.category,
         stock: 50,
@@ -69,6 +75,23 @@ export default function GiftCardsClient({ initialCoupons }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('popular');
     const [merchantFilter, setMerchantFilter] = useState('all');
+    const [userRequests, setUserRequests] = useState([]);
+
+    // Fetch user's active/pending requests to show status on cards
+    useEffect(() => {
+        async function fetchUserRequests() {
+            try {
+                const res = await fetch('/api/udhari/list?role=customer');
+                const data = await res.json();
+                if (data.success) {
+                    setUserRequests(data.requests || []);
+                }
+            } catch (err) {
+                console.error("Failed to fetch user udhari requests", err);
+            }
+        }
+        fetchUserRequests();
+    }, []);
 
     // Advanced Filter States
     const [filters, setFilters] = useState({
@@ -79,11 +102,17 @@ export default function GiftCardsClient({ initialCoupons }) {
         minRating: null,
     });
 
-    // Transform data
-    const coupons = useMemo(() =>
-        (initialCoupons || []).map(transformCouponData),
-        [initialCoupons]
-    );
+    // Transform data and enrich with user request status
+    const coupons = useMemo(() => {
+        const transformed = (initialCoupons || []).map(transformCouponData);
+        return transformed.map(c => {
+            const activeRequest = userRequests.find(r => r.coupon_id === c.id);
+            return {
+                ...c,
+                requestStatus: activeRequest ? activeRequest.status : null
+            };
+        });
+    }, [initialCoupons, userRequests]);
 
     // Extract unique categories
     const categories = useMemo(() =>

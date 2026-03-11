@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
+import UdhariRequestModal from '../components/UdhariRequestModal';
 
 
 export default function GiftCardDetailPage({ params }) {
@@ -31,6 +32,8 @@ export default function GiftCardDetailPage({ params }) {
     const [kycStatus, setKycStatus] = useState(null);
     const [kycLoading, setKycLoading] = useState(true);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showUdhariModal, setShowUdhariModal] = useState(false);
+    const [merchantUdhariEnabled, setMerchantUdhariEnabled] = useState(false);
     // ✅ COMBINED useEffect - fetch card and KYC in parallel
     useEffect(() => {
         if (!id) return;
@@ -78,6 +81,18 @@ export default function GiftCardDetailPage({ params }) {
                 }
 
                 setCard(cardData);
+
+                // Check if merchant has udhari enabled
+                if (cardData.merchant_id) {
+                    const { data: udhariSettings } = await supabase
+                        .from('merchant_udhari_settings')
+                        .select('udhari_enabled')
+                        .eq('merchant_id', cardData.merchant_id)
+                        .maybeSingle();
+                    if (isMounted && udhariSettings?.udhari_enabled) {
+                        setMerchantUdhariEnabled(true);
+                    }
+                }
 
                 if (user && kycResult) {
                     const { data: profileData, error: kycError } = kycResult;
@@ -399,6 +414,21 @@ export default function GiftCardDetailPage({ params }) {
                                     )}
                                 </button>
 
+                                {/* Pay Later Button — Only if merchant has udhari enabled */}
+                                {isAvailable && merchantUdhariEnabled && (
+                                    <button
+                                        onClick={() => {
+                                            if (!user) { router.push('/login'); return; }
+                                            if (kycStatus !== 'verified') { toast.error('Please complete KYC verification first.'); router.push('/profile?section=kyc'); return; }
+                                            setShowUdhariModal(true);
+                                        }}
+                                        className="w-full py-3.5 rounded-xl border-2 border-amber-400 dark:border-amber-500 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Clock size={18} />
+                                        Request Pay Later
+                                    </button>
+                                )}
+
                                 <button
                                     onClick={handleShare}
                                     className="w-full py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
@@ -450,6 +480,16 @@ export default function GiftCardDetailPage({ params }) {
                         coupon_id: id,
                         face_value: card.face_value_paise / 100
                     }}
+                />
+            )}
+
+            {/* Udhari Request Modal */}
+            {card && user && (
+                <UdhariRequestModal
+                    isOpen={showUdhariModal}
+                    onClose={() => setShowUdhariModal(false)}
+                    card={card}
+                    user={user}
                 />
             )}
 

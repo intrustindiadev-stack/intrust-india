@@ -143,7 +143,7 @@ export default async function TransactionsPage({ searchParams }) {
             dateRaw: w.created_at,
             status: 'Success',
             type: isCredit ? 'Credit' : 'Debit',
-            source: 'Wallet',
+            source: w.reference_type === 'UDHARI_PAYMENT' ? 'Udhari Settlement' : 'Wallet',
             description: w.description || (isCredit ? 'Wallet Credit' : 'Wallet Debit'),
         });
     });

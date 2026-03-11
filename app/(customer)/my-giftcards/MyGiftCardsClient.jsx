@@ -11,7 +11,9 @@ import {
     TrendingUp,
     Calendar,
     Store,
+    Clock,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import CouponCodeReveal from './CouponCodeReveal';
 
 // ─── Animation variants ────────────────────────────────────────────────────────
@@ -31,13 +33,16 @@ const itemVariants = {
 
 // ─── Stat Card ─────────────────────────────────────────────────────────────────
 
-/** @param {{ icon: React.ReactNode, gradient: string, value: string, label: string }} props */
-function StatCard({ icon, gradient, value, label, valueClass }) {
+/** @param {{ icon: React.ReactNode, gradient: string, value: string, label: string, href?: string }} props */
+function StatCard({ icon, gradient, value, label, valueClass, href }) {
+    const router = useRouter();
     return (
         <motion.div
             variants={itemVariants}
-            whileHover={{ y: -4 }}
-            className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm"
+            whileHover={{ y: -4, scale: 1.02 }}
+            whileTap={href ? { scale: 0.98 } : {}}
+            onClick={() => href && router.push(href)}
+            className={`bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm ${href ? 'cursor-pointer' : ''}`}
         >
             <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-3`}>
                 {icon}
@@ -249,9 +254,10 @@ function EmptyState() {
  *   activeCount: number,
  *   totalValue: number,
  *   totalSavings: number,
+ *   udhariCount: number,
  * }} props
  */
-export default function MyGiftCardsClient({ coupons, totalCards, activeCount, totalValue, totalSavings }) {
+export default function MyGiftCardsClient({ coupons, totalCards, activeCount, totalValue, totalSavings, udhariCount }) {
     const [filter, setFilter] = useState('All');
 
     const displayed = filter === 'All'
@@ -289,7 +295,7 @@ export default function MyGiftCardsClient({ coupons, totalCards, activeCount, to
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-10"
+                    className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-10"
                 >
                     <StatCard
                         icon={<ShoppingBag size={22} className="text-white" />}
@@ -315,6 +321,14 @@ export default function MyGiftCardsClient({ coupons, totalCards, activeCount, to
                         value={`₹${totalSavings.toFixed(0)}`}
                         label="Total Saved"
                         valueClass="text-green-500"
+                    />
+                    <StatCard
+                        icon={<Clock size={22} className="text-white" />}
+                        gradient="from-amber-400 to-orange-500"
+                        value={String(udhariCount)}
+                        label="Store Credits"
+                        href="/store-credits"
+                        valueClass="text-amber-500"
                     />
                 </motion.div>
 

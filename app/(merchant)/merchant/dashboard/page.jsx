@@ -63,10 +63,11 @@ export default async function MerchantDashboardPage() {
     if (couponsRes.error) console.error('[Dashboard] Coupons Fetch Error:', couponsRes.error);
     if (soldCouponsRes.error) console.error('[Dashboard] Sold Coupons Fetch Error:', soldCouponsRes.error);
 
-    const [activeCountRes, listedCountRes, soldCountRes] = await Promise.all([
+    const [activeCountRes, listedCountRes, soldCountRes, pendingUdhariRes] = await Promise.all([
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'available'),
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
-        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'sold')
+        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'sold'),
+        supabase.from('udhari_requests').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'pending')
     ]);
 
     const coupons = couponsRes.data || [];
@@ -74,6 +75,8 @@ export default async function MerchantDashboardPage() {
     const activeCount = activeCountRes.count || 0;
     const listedCount = listedCountRes.count || 0;
     const soldCount = soldCountRes.count || 0;
+
+    const pendingUdhariCount = pendingUdhariRes.count || 0;
 
     // Calculate Revenue
     const totalRevenue = soldCouponsData.reduce((sum, c) => {
@@ -89,6 +92,7 @@ export default async function MerchantDashboardPage() {
         listedCoupons: listedCount,
         totalRevenue: totalRevenue,
         totalCommission: (merchant.total_commission_paid_paise || 0) / 100,
+        pendingUdhari: pendingUdhariCount,
     };
 
     // Transform coupons for display
@@ -122,6 +126,15 @@ export default async function MerchantDashboardPage() {
                     <Link href="/merchant/purchase" className="w-full sm:w-auto px-6 py-3 rounded-xl merchant-glass hover:bg-black/5 dark:hover:bg-white/10 transition-all flex items-center justify-center space-x-2 border border-black/5 dark:border-white/10">
                         <span className="material-icons-round text-[#D4AF37] text-sm">add_shopping_cart</span>
                         <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Purchase Coupons</span>
+                    </Link>
+                    <Link href="/merchant/udhari" className="w-full sm:w-auto px-6 py-3 rounded-xl merchant-glass hover:bg-black/5 dark:hover:bg-white/10 transition-all flex items-center justify-center space-x-2 border border-black/5 dark:border-white/10 relative">
+                        <span className="material-icons-round text-amber-500 text-sm">schedule</span>
+                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Store Credits</span>
+                        {pendingUdhariCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-bounce">
+                                {pendingUdhariCount}
+                            </span>
+                        )}
                     </Link>
                     <Link href="/merchant/inventory" className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#D4AF37] text-[#020617] font-bold hover:bg-opacity-90 transition-all flex items-center justify-center space-x-2 gold-glow">
                         <span className="material-icons-round text-sm">inventory_2</span>

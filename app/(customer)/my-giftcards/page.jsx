@@ -122,6 +122,13 @@ export default async function MyCouponsPage() {
     const totalPaid = processedCoupons.reduce((sum, c) => sum + c.paidAmount, 0);
     const totalSavings = totalValue - totalPaid;
 
+    // Fetch Active Udhari Count
+    const { count: udhariCount } = await supabaseAdmin
+        .from('udhari_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('customer_id', user.id)
+        .in('status', ['pending', 'approved']);
+
     return (
         <>
             <Navbar />
@@ -131,6 +138,7 @@ export default async function MyCouponsPage() {
                 activeCount={activeCount}
                 totalValue={totalValue}
                 totalSavings={totalSavings}
+                udhariCount={udhariCount || 0}
             />
             <CustomerBottomNav />
         </>

@@ -78,12 +78,12 @@ export default function TransactionsPage() {
             return {
                 id: `wallet-${w.id}`,
                 rawDate: new Date(w.created_at).getTime(),
-                brand: w.type === 'TOPUP' ? 'Wallet Added' : (w.type === 'CASHBACK' ? 'Cashback Earned' : 'Gift Card Paid'),
+                brand: w.reference_type === 'UDHARI_PAYMENT' ? 'Udhari Settled' : (w.type === 'TOPUP' ? 'Wallet Added' : (w.type === 'CASHBACK' ? 'Cashback Earned' : 'Gift Card Paid')),
                 description: w.description || w.type,
                 amount: (w.amount_paise || 0) / 100,
                 status: 'success',
                 type: isCashback ? 'CASHBACK' : (isSpent ? 'SPENT' : 'TOPUP'),
-                category: 'WALLET',
+                category: w.reference_type === 'UDHARI_PAYMENT' ? 'UDHARI' : 'WALLET',
                 logo
             };
         });
