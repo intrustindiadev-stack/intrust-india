@@ -41,7 +41,7 @@ export default async function AnalyticsPage() {
     // - Available coupons (for inventory)
     // - Listed coupons (for inventory)
 
-    const [soldCouponsRes, availableCountRes, listedCountRes] = await Promise.all([
+    const [soldCouponsRes, availableCountRes, listedCountRes, udhariRevenueRes] = await Promise.all([
         supabase
             .from('coupons')
             .select('*')
@@ -50,13 +50,16 @@ export default async function AnalyticsPage() {
             .order('purchased_at', { ascending: true }), // Oldest first for trend
 
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'available'),
-        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true)
+        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
+        
+        supabase.from('merchant_transactions').select('amount_paise', { count: 'exact' }).eq('merchant_id', merchant.id).eq('transaction_type', 'udhari_payment')
     ]);
 
     const soldCoupons = soldCouponsRes.data || [];
     const availableCount = availableCountRes.count || 0;
     const listedCount = listedCountRes.count || 0;
     const soldCount = soldCoupons.length;
+    const udhariRevenue = (udhariRevenueRes.data || []).reduce((sum, tx) => sum + (tx.amount_paise || 0), 0) / 100;
 
     // 4. Calculate Metrics
     const totalRevenue = soldCoupons.reduce((sum, c) => {
@@ -169,7 +172,7 @@ export default async function AnalyticsPage() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-8">
                 <div className="merchant-glass rounded-3xl p-6 border border-[#D4AF37]/20 hover:border-[#D4AF37]/50 transition-all group overflow-hidden relative bg-gradient-to-br from-[#D4AF37]/5 to-transparent shadow-lg shadow-[#D4AF37]/5">
                     <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-[#D4AF37]/10 rounded-full blur-2xl group-hover:bg-[#D4AF37]/20 transition-all"></div>
                     <div className="flex flex-col mb-2 relative z-10">
@@ -218,6 +221,19 @@ export default async function AnalyticsPage() {
                         </div>
                         <h3 className="text-3xl font-display font-bold text-slate-800 dark:text-slate-100">
                             {availableCount.toLocaleString('en-IN')}
+                        </h3>
+                    </div>
+                </div>
+
+                <div className="merchant-glass rounded-3xl p-6 border border-black/5 dark:border-white/5 hover:border-[#D4AF37]/30 transition-all group overflow-hidden relative shadow-lg">
+                    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-orange-500/10 rounded-full blur-xl group-hover:bg-orange-500/20 transition-all"></div>
+                    <div className="flex flex-col mb-2 relative z-10">
+                        <div className="flex items-center space-x-2 text-orange-600 dark:text-orange-400 mb-2">
+                            <span className="material-icons-round text-lg">credit_score</span>
+                            <span className="font-bold uppercase tracking-widest text-[10px]">Udhari Revenue</span>
+                        </div>
+                        <h3 className="text-3xl font-display font-bold text-slate-800 dark:text-slate-100">
+                            ₹{udhariRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </h3>
                     </div>
                 </div>

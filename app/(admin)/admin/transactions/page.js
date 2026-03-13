@@ -37,15 +37,23 @@ export default async function TransactionsPage({ searchParams }) {
         .select('id, user_id, amount_paise, type, description, reference_id, reference_type, created_at', { count: 'exact' })
         .order('created_at', { ascending: false });
 
-    const [txnResult, ordersResult, walletResult] = await Promise.all([
+    // 4. Merchant transactions
+    let merchantTxnQuery = supabase
+        .from('merchant_transactions')
+        .select('id, merchant_id, transaction_type, amount_paise, description, created_at, metadata', { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+    const [txnResult, ordersResult, walletResult, merchantTxnResult] = await Promise.all([
         txnQuery,
         ordersQuery,
         walletQuery,
+        merchantTxnQuery,
     ]);
 
     const rawTxns = txnResult.data || [];
     const rawOrders = ordersResult.data || [];
     const rawWallet = walletResult.data || [];
+    const rawMerchantTxns = merchantTxnResult.data || [];
 
     // ──────────────── FETCH USER PROFILES ────────────────
     const allUserIds = [
@@ -64,6 +72,20 @@ export default async function TransactionsPage({ searchParams }) {
             .select('id, full_name, email, role')
             .in('id', allUserIds.slice(0, 300));
         profiles?.forEach(p => { profileMap[p.id] = p; });
+    }
+
+    // ──────────────── FETCH MERCHANT PROFILES ────────────────
+    const allMerchantIds = [
+        ...new Set(rawMerchantTxns.map(t => t.merchant_id).filter(Boolean))
+    ];
+
+    let merchantMap = {};
+    if (allMerchantIds.length > 0) {
+        const { data: merchants } = await supabase
+            .from('merchants')
+            .select('id, business_name')
+            .in('id', allMerchantIds.slice(0, 300));
+        merchants?.forEach(m => { merchantMap[m.id] = m; });
     }
 
     // ──────────────── BUILD TXN ID MAP (for wallet reference lookups) ────────────────
@@ -145,6 +167,28 @@ export default async function TransactionsPage({ searchParams }) {
             type: isCredit ? 'Credit' : 'Debit',
             source: w.reference_type === 'UDHARI_PAYMENT' ? 'Udhari Settlement' : 'Wallet',
             description: w.description || (isCredit ? 'Wallet Credit' : 'Wallet Debit'),
+        });
+    });
+
+    // Merchant transactions
+    rawMerchantTxns.forEach(t => {
+        const merchantInfo = merchantMap[t.merchant_id] || {};
+        const isCredit = ['wallet_topup', 'udhari_payment'].includes(t.transaction_type);
+
+        unified.push({
+            id: t.id.slice(0, 12),
+            rawId: t.id,
+            user: merchantInfo.business_name || 'Unknown Merchant',
+            email: '',
+            role: 'merchant',
+            amountRaw: (t.amount_paise || 0) / 100,
+            amount: `₹${((t.amount_paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+            date: new Date(t.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            dateRaw: t.created_at,
+            status: 'Success',
+            type: isCredit ? 'Credit' : 'Debit',
+            source: 'Merchant Wallet',
+            description: t.description || t.transaction_type || 'Merchant Transaction',
         });
     });
 
@@ -278,7 +322,7 @@ export default async function TransactionsPage({ searchParams }) {
                     ))}
                     <span className="text-slate-300 self-center">|</span>
                     {/* Source filter pills */}
-                    {['', 'Payment Gateway', 'Gift Card Order', 'Wallet'].map(s => (
+                    {['', 'Payment Gateway', 'Gift Card Order', 'Wallet', 'Merchant Wallet'].map(s => (
                         <Link
                             key={`source-${s}`}
                             href={buildUrl({ source: s, page: 1 })}

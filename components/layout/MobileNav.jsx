@@ -2,10 +2,11 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, Moon, Sun, Gift, Sparkles } from 'lucide-react';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
-export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, user, theme, toggleTheme, handleSignOut, menuItems }) {
+export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, user, theme, toggleTheme, handleSignOut, menuItems, apiPath }) {
     const router = useRouter();
 
     // Menu Item Variants for Staggered Animation
@@ -63,13 +64,16 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                     INTRUST
                                 </span>
                             </div>
-                            <button
-                                onClick={onClose}
-                                className="p-2 rounded-full hover:bg-gray-100 transition-colors active:scale-90 duration-200"
-                                aria-label="Close menu"
-                            >
-                                <X size={24} className="text-[#171A21] dark:text-gray-100" strokeWidth={2.5} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                                {isAuthenticated && <NotificationBell apiPath={apiPath} variant="navbar" />}
+                                <button
+                                    onClick={onClose}
+                                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-90 duration-200"
+                                    aria-label="Close menu"
+                                >
+                                    <X size={24} className="text-[#171A21] dark:text-gray-100" strokeWidth={2.5} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Menu Content - Scrollable */}
@@ -172,6 +176,9 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                             <span>Dashboard</span>
                                             <ChevronRight size={18} className="text-gray-400" />
                                         </motion.button>
+
+
+
                                         <motion.button
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}

@@ -57,7 +57,7 @@ function StatCard({ icon, gradient, value, label, valueClass, href }) {
 
 // ─── Filter pill ───────────────────────────────────────────────────────────────
 
-const FILTER_OPTIONS = ['All', 'Active', 'Expired', 'Used'];
+const FILTER_OPTIONS = ['All', 'Active', 'Pending Payment', 'Expired', 'Used'];
 
 /** @param {{ active: string, onChange: (v: string) => void }} props */
 function FilterBar({ active, onChange }) {
@@ -117,9 +117,13 @@ function GiftCardTile({ coupon }) {
                 {/* Status pill */}
                 <span className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-md ${coupon.uiStatus === 'active'
                     ? 'bg-white/90 text-green-600'
+                    : coupon.uiStatus === 'pending-payment'
+                    ? 'bg-amber-100/90 text-amber-700'
                     : 'bg-black/20 text-white border border-white/30'
                     }`}>
-                    {coupon.uiStatus === 'active' ? '✓ Active' : coupon.uiStatus.charAt(0).toUpperCase() + coupon.uiStatus.slice(1)}
+                    {coupon.uiStatus === 'active' ? '✓ Active' 
+                        : coupon.uiStatus === 'pending-payment' ? '⏳ Pending Payment'
+                        : coupon.uiStatus.charAt(0).toUpperCase() + coupon.uiStatus.slice(1)}
                 </span>
             </div>
 
@@ -150,7 +154,7 @@ function GiftCardTile({ coupon }) {
                         <div className="text-right">
                             <div className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-1">You Paid</div>
                             <div className="text-2xl font-black text-gray-900 dark:text-white leading-none">₹{coupon.paidAmount}</div>
-                            {Number(savings) > 0 && (
+                            {Number(savings) > 0 && coupon.uiStatus !== 'pending-payment' && (
                                 <div className="text-xs font-bold text-emerald-500 mt-1 flex items-center justify-end gap-1">
                                     <TrendingUp size={11} />
                                     Saved ₹{savings}
@@ -185,11 +189,22 @@ function GiftCardTile({ coupon }) {
                             </span>
                             <span className="text-gray-600 dark:text-gray-400">{coupon.formattedExpiry}</span>
                         </div>
+                        {coupon.uiStatus === 'pending-payment' && coupon.dueDate && (
+                            <div className="flex items-center justify-between text-sm mt-2">
+                                <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold">
+                                    <Clock size={12} />
+                                    Payment Due
+                                </span>
+                                <span className="text-amber-700 dark:text-amber-300 font-semibold">
+                                    {new Date(coupon.dueDate).toLocaleDateString()}
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     {/* How to use */}
-                    {coupon.uiStatus === 'active' && (
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-100 dark:border-blue-800/40 rounded-xl p-3.5">
+                    {(coupon.uiStatus === 'active' || coupon.uiStatus === 'pending-payment') && (
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-100 dark:border-blue-800/40 rounded-xl p-3.5 mt-4">
                             <div className="text-xs text-blue-700 dark:text-blue-300">
                                 <span className="font-bold">💡 How to use: </span>
                                 Decrypt, copy the code, and apply it at {coupon.brand} checkout
@@ -252,17 +267,21 @@ function EmptyState() {
  *   coupons: ProcessedCoupon[],
  *   totalCards: number,
  *   activeCount: number,
+ *   pendingPaymentCount: number,
  *   totalValue: number,
  *   totalSavings: number,
  *   udhariCount: number,
  * }} props
  */
-export default function MyGiftCardsClient({ coupons, totalCards, activeCount, totalValue, totalSavings, udhariCount }) {
+export default function MyGiftCardsClient({ coupons, totalCards, activeCount, pendingPaymentCount, totalValue, totalSavings, udhariCount }) {
     const [filter, setFilter] = useState('All');
 
     const displayed = filter === 'All'
         ? coupons
-        : coupons.filter((c) => c.uiStatus === filter.toLowerCase());
+        : coupons.filter((c) => {
+            if (filter === 'Pending Payment') return c.uiStatus === 'pending-payment';
+            return c.uiStatus === filter.toLowerCase();
+        });
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-950">
@@ -325,8 +344,8 @@ export default function MyGiftCardsClient({ coupons, totalCards, activeCount, to
                     <StatCard
                         icon={<Clock size={22} className="text-white" />}
                         gradient="from-amber-400 to-orange-500"
-                        value={String(udhariCount)}
-                        label="Store Credits"
+                        value={String(Math.max(udhariCount, pendingPaymentCount || 0))}
+                        label="Awaiting Action"
                         href="/store-credits"
                         valueClass="text-amber-500"
                     />

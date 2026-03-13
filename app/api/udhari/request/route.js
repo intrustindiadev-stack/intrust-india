@@ -1,13 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
     const correlationId = crypto.randomUUID();
 
     try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        const supabaseAdmin = createAdminClient();
 
         // 1. Auth check
         const authHeader = request.headers.get('Authorization');
@@ -72,12 +70,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'This merchant does not accept deferred payments' }, { status: 400 });
         }
 
-        // 6. Check minimum customer age
-        const accountAgeDays = Math.floor((Date.now() - new Date(userProfile.created_at).getTime()) / (1000 * 60 * 60 * 24));
-        const accountAgeYears = Math.floor(accountAgeDays / 365.25);
-        if (settings.min_customer_age_years > 0 && accountAgeYears < settings.min_customer_age_years) {
-            return NextResponse.json({ error: `You need an account at least ${settings.min_customer_age_years} year(s) old to use Pay Later with this merchant.` }, { status: 400 });
-        }
+        // 6. (Account age check removed — platform is newly launched)
 
         // 7. Check customer hasn't exceeded credit limit with this merchant
         const { data: activeRequests } = await supabaseAdmin

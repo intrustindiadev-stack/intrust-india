@@ -19,13 +19,15 @@ import {
     Gift,
     Home,
     Banknote,
-    Loader2
+    Loader2,
+    CreditCard
 } from 'lucide-react';
 
 const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Merchants', href: '/admin/merchants', icon: Store },
+    { name: 'Store Credit', href: '/admin/merchants/udhari', icon: CreditCard },
     { name: 'Gift Cards', href: '/admin/giftcards', icon: Gift },
     { name: 'Payouts', href: '/admin/payouts', icon: Banknote },
     { name: 'Transactions', href: '/admin/transactions', icon: Receipt },
@@ -105,10 +107,17 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                         </div>
                         {navigation.map((item) => {
                             const Icon = item.icon;
+                            // Detect nested Store Credit routes: /admin/merchants/:id/udhari or /admin/merchants/:id/udhari-settings
+                            const isNestedUdhariRoute = /^\/admin\/merchants\/[^/]+\/udhari(|-settings)$/.test(pathname || '');
                             // Exact match for root dashboard '/admin', partial for others
+                            // For '/admin/merchants', exclude '/admin/merchants/udhari' and nested udhari routes
                             const isActive = item.href === '/admin'
                                 ? pathname === '/admin'
-                                : pathname === item.href || pathname?.startsWith(item.href + '/');
+                                : item.href === '/admin/merchants'
+                                    ? (pathname === '/admin/merchants' || (pathname?.startsWith('/admin/merchants/') && !pathname?.startsWith('/admin/merchants/udhari'))) && !isNestedUdhariRoute
+                                    : item.href === '/admin/merchants/udhari'
+                                        ? pathname === item.href || pathname?.startsWith(item.href + '/') || isNestedUdhariRoute
+                                        : pathname === item.href || pathname?.startsWith(item.href + '/');
 
                             return (
                                 <Link

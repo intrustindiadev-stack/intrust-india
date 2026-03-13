@@ -2,6 +2,7 @@
 CREATE TABLE IF NOT EXISTS public.orders (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id),
+  merchant_id UUID REFERENCES public.merchants(id),
   giftcard_id UUID REFERENCES public.coupons(id),
   amount BIGINT NOT NULL,
   payment_status VARCHAR(50) DEFAULT 'created', -- 'created', 'paid', 'failed'
@@ -29,4 +30,5 @@ CREATE POLICY "Users can view own orders"
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON public.orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_merchant_id ON public.orders(merchant_id);
 CREATE INDEX IF NOT EXISTS idx_orders_razorpay_order_id ON public.orders(razorpay_order_id);

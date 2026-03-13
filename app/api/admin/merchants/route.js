@@ -42,7 +42,8 @@ export async function GET(request) {
                 bank_account_number,
                 bank_account_name,
                 bank_data,
-                created_at
+                created_at,
+                merchant_udhari_settings(udhari_enabled)
             `)
             .order('created_at', { ascending: false });
 
@@ -57,10 +58,17 @@ export async function GET(request) {
 
         const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
 
-        const enriched = merchants.map(m => ({
-            ...m,
-            user_profiles: profileMap[m.user_id] || null,
-        }));
+        const enriched = merchants.map(m => {
+            const mus = m.merchant_udhari_settings && m.merchant_udhari_settings.length > 0 
+                ? m.merchant_udhari_settings[0] 
+                : (m.merchant_udhari_settings || {});
+            
+            return {
+                ...m,
+                user_profiles: profileMap[m.user_id] || null,
+                udhari_enabled: mus.udhari_enabled || false,
+            };
+        });
 
         return NextResponse.json({ merchants: enriched });
     } catch (err) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import ListToMarketplace from '@/components/merchant/ListToMarketplace';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -44,8 +45,12 @@ export default function InventoryTable({ initialCoupons }) {
                             {/* Header: Brand & Status */}
                             <div className="flex justify-between items-start">
                                 <div className="flex items-center space-x-3">
-                                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-500/10 flex items-center justify-center border border-black/5 dark:border-slate-500/20 shadow-sm">
-                                        <span className="font-bold text-[#D4AF37] text-lg">{coupon.brand.charAt(0)}</span>
+                                    <div className="relative w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-500/10 flex items-center justify-center border border-black/5 dark:border-slate-500/20 shadow-sm overflow-hidden shrink-0">
+                                        {coupon.image_url ? (
+                                            <Image src={coupon.image_url} alt={coupon.brand} fill className="object-cover rounded-xl" />
+                                        ) : (
+                                            <span className="font-bold text-[#D4AF37] text-lg">{coupon.brand.charAt(0)}</span>
+                                        )}
                                     </div>
                                     <div>
                                         <div className="font-bold text-slate-800 dark:text-slate-200">{coupon.brand}</div>
@@ -159,8 +164,12 @@ export default function InventoryTable({ initialCoupons }) {
                                 <tr key={coupon.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors group">
                                     <td className="px-8 py-5">
                                         <div className="flex items-center space-x-3">
-                                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-500/10 flex items-center justify-center border border-black/5 dark:border-slate-500/20">
-                                                <span className="font-bold text-[#D4AF37] text-lg">{coupon.brand.charAt(0)}</span>
+                                            <div className="relative w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-500/10 flex items-center justify-center border border-black/5 dark:border-slate-500/20 overflow-hidden shrink-0">
+                                                {coupon.image_url ? (
+                                                    <Image src={coupon.image_url} alt={coupon.brand} fill className="object-cover rounded-xl" />
+                                                ) : (
+                                                    <span className="font-bold text-[#D4AF37] text-lg">{coupon.brand.charAt(0)}</span>
+                                                )}
                                             </div>
                                             <div>
                                                 <div className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{coupon.brand}</div>

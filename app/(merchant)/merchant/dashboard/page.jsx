@@ -105,6 +105,7 @@ export default async function MerchantDashboardPage() {
         commission: (c.merchant_commission_paise || 0) / 100,
         status: c.status,
         listed: c.listed_on_marketplace,
+        imageUrl: c.image_url,
     }));
 
     return (

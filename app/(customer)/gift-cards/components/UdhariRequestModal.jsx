@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { X, Clock, ShieldCheck, Loader2, Info, ChevronRight, ChevronLeft, CheckCircle2, AlertCircle, Store } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -12,9 +12,33 @@ export default function UdhariRequestModal({ isOpen, onClose, card, user }) {
     const [submitting, setSubmitting] = useState(false);
     const [isAgreed, setIsAgreed] = useState(false);
 
+    const [settings, setSettings] = useState(null);
+    const [loadingSettings, setLoadingSettings] = useState(false);
+
     const sellingPrice = useMemo(() => (card?.selling_price_paise / 100) || 0, [card]);
-    const fee = useMemo(() => sellingPrice * 0.03, [sellingPrice]);
+    const fee = useMemo(() => (settings?.extra_fee_paise || 0) / 100, [settings]);
     const totalPayable = useMemo(() => sellingPrice + fee, [sellingPrice, fee]);
+
+    useEffect(() => {
+        if (!isOpen || !card?.merchant_id) return;
+        async function fetchSettings() {
+            setLoadingSettings(true);
+            try {
+                const res = await fetch(`/api/merchant/udhari-settings?merchantId=${card.merchant_id}`);
+                const data = await res.json();
+                if (data.success && data.settings) {
+                    setSettings(data.settings);
+                    // Also auto-select a valid max duration
+                    setDuration(data.settings.max_duration_days || 15);
+                }
+            } catch (err) {
+                console.error("Failed to fetch settings", err);
+            } finally {
+                setLoadingSettings(false);
+            }
+        }
+        fetchSettings();
+    }, [isOpen, card]);
 
     if (!isOpen || !card) return null;
 
@@ -181,7 +205,7 @@ export default function UdhariRequestModal({ isOpen, onClose, card, user }) {
                                         <div className="space-y-4">
                                             <label className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider block">Select Repayment Duration</label>
                                             <div className="grid grid-cols-3 gap-3">
-                                                {[5, 10, 15].map((d) => (
+                                                {[5, 10, 15].filter(d => d <= (settings?.max_duration_days || 15)).map((d) => (
                                                     <button
                                                         key={d}
                                                         onClick={() => setDuration(d)}
@@ -207,7 +231,7 @@ export default function UdhariRequestModal({ isOpen, onClose, card, user }) {
                                                     <div className="group relative">
                                                         <Info size={14} className="text-gray-300" />
                                                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-900 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center">
-                                                            A small 3% fee to maintain secure merchant-customer escrow.
+                                                            A small service fee set by the merchant to maintain secure escrow.
                                                         </div>
                                                     </div>
                                                 </div>

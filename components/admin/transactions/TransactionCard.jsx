@@ -13,6 +13,7 @@ export default function TransactionCard({ txn }) {
         'Payment Gateway': 'bg-violet-50 text-violet-600 border-violet-200',
         'Gift Card Order': 'bg-sky-50 text-sky-600 border-sky-200',
         'Wallet': 'bg-amber-50 text-amber-600 border-amber-200',
+        'Merchant Wallet': 'bg-teal-50 text-teal-600 border-teal-200',
     };
 
     const handleDownload = (e) => {

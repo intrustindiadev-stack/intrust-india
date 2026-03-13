@@ -91,7 +91,7 @@ export default function Step2PAN({
                         label="PAN Number"
                         value={verifyState === 'verified' ? maskedPAN : formData.panNumber}
                         onChange={(e) => handlePANChange(e.target.value)}
-                        error={errors.panNumber || verifyError}
+                        error={errors.panNumber || (verifyState === 'error' ? 'Invalid PAN. Try again.' : verifyError)}
                         success={false} /* we use button for success now */
                         maxLength={10}
                         autoComplete="off"

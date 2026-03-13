@@ -1,13 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
     const correlationId = crypto.randomUUID();
 
     try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        const supabaseAdmin = createAdminClient();
 
         // 1. Auth check
         const authHeader = request.headers.get('Authorization');
@@ -77,6 +75,22 @@ export async function POST(request) {
             const days = durationDays || udhariRequest.duration_days || 15;
             const dueDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
+            // Ensure customer has no defaulted udhari requests
+            const { count: defaultCount, error: defaultCountError } = await supabaseAdmin
+                .from('udhari_requests')
+                .select('*', { count: 'exact', head: true })
+                .eq('customer_id', udhariRequest.customer_id)
+                .eq('status', 'expired');
+            
+            if (defaultCountError) {
+                console.error(JSON.stringify({ correlationId, stage: 'check_defaults', error: defaultCountError }));
+                return NextResponse.json({ error: 'Failed to check customer history' }, { status: 500 });
+            }
+
+            if (defaultCount > 0) {
+                return NextResponse.json({ error: 'This customer has defaulted on previous deferred payments and cannot be approved.' }, { status: 400 });
+            }
+
             // Reserve the coupon
             const { error: couponUpdateError } = await supabaseAdmin
                 .from('coupons')
@@ -105,7 +119,25 @@ export async function POST(request) {
             if (updateError) {
                 console.error(JSON.stringify({ correlationId, stage: 'udhari_approve', error: updateError }));
                 // Rollback coupon
-                await supabaseAdmin.from('coupons').update({ status: 'available' }).eq('id', udhariRequest.coupon_id);
+                const { data: rollbackData, error: rollbackError } = await supabaseAdmin
+                    .from('coupons')
+                    .update({ status: 'available' })
+                    .eq('id', udhariRequest.coupon_id)
+                    .eq('status', 'reserved')
+                    .select('id');
+                
+                if (rollbackError || !rollbackData || rollbackData.length !== 1) {
+                    console.error(JSON.stringify({ 
+                        correlationId, 
+                        stage: 'coupon_rollback_failed', 
+                        level: 'HIGH_SEVERITY_INTEGRITY_EVENT',
+                        error: rollbackError || 'Rollback row count constraint failed', 
+                        udhari_request_id: requestId, 
+                        coupon_id: udhariRequest.coupon_id,
+                        reverted_count: rollbackData?.length || 0
+                    }));
+                    return NextResponse.json({ error: 'Failed to approve request. Manual intervention required.' }, { status: 500 });
+                }
                 return NextResponse.json({ error: 'Failed to approve request' }, { status: 500 });
             }
 

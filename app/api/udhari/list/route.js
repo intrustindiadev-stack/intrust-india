@@ -1,11 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 
 export async function GET(request) {
     try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        const supabaseAdmin = createAdminClient();
 
         // 1. Auth check
         const authHeader = request.headers.get('Authorization');
@@ -29,7 +27,7 @@ export async function GET(request) {
                 .from('udhari_requests')
                 .select(`
                     *,
-                    coupon:coupons(id, title, brand, category, image_url, selling_price_paise, face_value_paise, encrypted_code, masked_code),
+                    coupon:coupons(id, title, brand, category, image_url, selling_price_paise, face_value_paise, masked_code),
                     merchant:merchants(id, business_name)
                 `)
                 .eq('customer_id', user.id)
@@ -46,15 +44,16 @@ export async function GET(request) {
                 return NextResponse.json({ error: 'Failed to fetch requests' }, { status: 500 });
             }
 
-            // For approved requests, include the coupon code
+            // Prevent encrypted code exposure for any status
             const enriched = (data || []).map(item => {
-                const result = { ...item };
-                // Only show real coupon code for approved/completed requests
-                // Use encrypted_code as the primary code field
-                if (['approved', 'completed'].includes(item.status) && item.coupon) {
-                    result.couponCode = item.coupon.encrypted_code || item.coupon.masked_code;
-                } else if (item.coupon) {
-                    // For pending/denied, mask it or nullify it
+                let safeCoupon = null;
+                if (item.coupon) {
+                    const { encrypted_code, ...rest } = item.coupon;
+                    safeCoupon = rest;
+                }
+                const result = { ...item, coupon: safeCoupon };
+                
+                if (result.coupon) {
                     result.couponCode = null;
                 }
                 return result;
@@ -97,31 +96,50 @@ export async function GET(request) {
                 return NextResponse.json({ error: error.message || 'Failed to fetch requests' }, { status: 500 });
             }
 
-            // Enrich with customer stats (purchase count, default count, account age)
-            const enriched = await Promise.all((data || []).map(async (item) => {
-                const customerId = item.customer_id;
+            // Fetch distinct customer IDs for batch querying
+            const customerIds = [...new Set((data || []).map(item => item.customer_id))];
 
-                // Get customer purchase count
-                const { count: purchaseCount } = await supabaseAdmin
+            // 1. Batched purchase count
+            let purchaseCounts = {};
+            if (customerIds.length > 0) {
+                const { data: ordersData } = await supabaseAdmin
                     .from('orders')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('user_id', customerId)
+                    .select('user_id')
+                    .in('user_id', customerIds)
                     .eq('payment_status', 'paid');
+                ordersData?.forEach(order => {
+                    purchaseCounts[order.user_id] = (purchaseCounts[order.user_id] || 0) + 1;
+                });
+            }
 
-                // Get customer udhari default count
-                const { count: defaultCount } = await supabaseAdmin
+            // 2. Batched expired udhari count
+            let defaultCounts = {};
+            if (customerIds.length > 0) {
+                const { data: expiredData } = await supabaseAdmin
                     .from('udhari_requests')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('customer_id', customerId)
+                    .select('customer_id')
+                    .in('customer_id', customerIds)
                     .eq('status', 'expired');
+                expiredData?.forEach(req => {
+                    defaultCounts[req.customer_id] = (defaultCounts[req.customer_id] || 0) + 1;
+                });
+            }
 
-                // Get customer completed udhari count
-                const { count: completedCount } = await supabaseAdmin
+            // 3. Batched completed udhari count
+            let completedCounts = {};
+            if (customerIds.length > 0) {
+                const { data: completedData } = await supabaseAdmin
                     .from('udhari_requests')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('customer_id', customerId)
+                    .select('customer_id')
+                    .in('customer_id', customerIds)
                     .eq('status', 'completed');
+                completedData?.forEach(req => {
+                    completedCounts[req.customer_id] = (completedCounts[req.customer_id] || 0) + 1;
+                });
+            }
 
+            const enriched = (data || []).map(item => {
+                const customerId = item.customer_id;
                 const accountAge = item.customer?.created_at
                     ? Math.floor((Date.now() - new Date(item.customer.created_at).getTime()) / (1000 * 60 * 60 * 24))
                     : 0;
@@ -129,13 +147,13 @@ export async function GET(request) {
                 return {
                     ...item,
                     customerStats: {
-                        purchaseCount: purchaseCount || 0,
-                        defaultCount: defaultCount || 0,
-                        completedUdhariCount: completedCount || 0,
+                        purchaseCount: purchaseCounts[customerId] || 0,
+                        defaultCount: defaultCounts[customerId] || 0,
+                        completedUdhariCount: completedCounts[customerId] || 0,
                         accountAgeDays: accountAge,
                     },
                 };
-            }));
+            });
 
             return NextResponse.json({ success: true, requests: enriched });
         }

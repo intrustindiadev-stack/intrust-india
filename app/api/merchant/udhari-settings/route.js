@@ -1,49 +1,53 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 
 // GET — Fetch merchant's udhari settings
 export async function GET(request) {
     try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        const supabaseAdmin = createAdminClient();
 
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader) {
-            return NextResponse.json({ error: 'Missing authorization header' }, { status: 401 });
-        }
+        const { searchParams } = new URL(request.url);
+        let merchantId = searchParams.get('merchantId');
 
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
-        if (userError || !user) {
-            return NextResponse.json({ error: 'Invalid token or user not found' }, { status: 401 });
-        }
+        if (!merchantId) {
+            const authHeader = request.headers.get('Authorization');
+            if (!authHeader) {
+                return NextResponse.json({ error: 'Missing authorization header' }, { status: 401 });
+            }
 
-        const { data: merchant } = await supabaseAdmin
-            .from('merchants')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
+            const token = authHeader.replace('Bearer ', '');
+            const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+            if (userError || !user) {
+                return NextResponse.json({ error: 'Invalid token or user not found' }, { status: 401 });
+            }
 
-        if (!merchant) {
-            return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
+            const { data: merchant } = await supabaseAdmin
+                .from('merchants')
+                .select('id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (!merchant) {
+                return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
+            }
+            merchantId = merchant.id;
         }
 
         const { data: settings } = await supabaseAdmin
             .from('merchant_udhari_settings')
             .select('*')
-            .eq('merchant_id', merchant.id)
+            .eq('merchant_id', merchantId)
             .maybeSingle();
 
         // Return settings or defaults
         return NextResponse.json({
             success: true,
             settings: settings || {
-                merchant_id: merchant.id,
+                merchant_id: merchantId,
                 udhari_enabled: false,
                 max_credit_limit_paise: 500000,
                 max_duration_days: 15,
-                min_customer_age_years: 0,
+                extra_fee_paise: 0,
             },
         });
 
@@ -56,9 +60,7 @@ export async function GET(request) {
 // PATCH — Update merchant's udhari settings
 export async function PATCH(request) {
     try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        const supabaseAdmin = createAdminClient();
 
         const authHeader = request.headers.get('Authorization');
         if (!authHeader) {
@@ -86,7 +88,6 @@ export async function PATCH(request) {
             udhari_enabled,
             max_credit_limit_paise,
             max_duration_days,
-            min_customer_age_years,
         } = body;
 
         // Validate
@@ -94,8 +95,13 @@ export async function PATCH(request) {
             return NextResponse.json({ error: 'max_duration_days must be 5, 10, or 15' }, { status: 400 });
         }
 
-        if (max_credit_limit_paise !== undefined && max_credit_limit_paise < 0) {
-            return NextResponse.json({ error: 'max_credit_limit_paise must be positive' }, { status: 400 });
+        if (max_credit_limit_paise !== undefined) {
+            if (max_credit_limit_paise < 0) {
+                return NextResponse.json({ error: 'max_credit_limit_paise must be positive' }, { status: 400 });
+            }
+            if (max_credit_limit_paise > 10000000) { // ₹1,00,000 maximum cap
+                return NextResponse.json({ error: 'Maximum credit limit cannot exceed ₹1,00,000' }, { status: 400 });
+            }
         }
 
         const updates = {
@@ -106,7 +112,6 @@ export async function PATCH(request) {
         if (udhari_enabled !== undefined) updates.udhari_enabled = udhari_enabled;
         if (max_credit_limit_paise !== undefined) updates.max_credit_limit_paise = max_credit_limit_paise;
         if (max_duration_days !== undefined) updates.max_duration_days = max_duration_days;
-        if (min_customer_age_years !== undefined) updates.min_customer_age_years = min_customer_age_years;
 
         // Upsert
         const { data, error } = await supabaseAdmin

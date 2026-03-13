@@ -19,7 +19,6 @@ export default function MerchantUdhariSettingsPage() {
         udhari_enabled: false,
         max_duration_days: 15,
         max_credit_limit_paise: 500000,
-        min_customer_age_years: 0,
     });
 
     useEffect(() => {
@@ -59,7 +58,6 @@ export default function MerchantUdhariSettingsPage() {
                     udhari_enabled: settings.udhari_enabled,
                     max_duration_days: parseInt(settings.max_duration_days),
                     max_credit_limit_paise: parseInt(settings.max_credit_limit_paise),
-                    min_customer_age_years: parseInt(settings.min_customer_age_years),
                 })
             });
             
@@ -140,41 +138,21 @@ export default function MerchantUdhariSettingsPage() {
                         </div>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-6">
-                        {/* Credit Limit */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Max Credit per Customer</label>
-                            <p className="text-xs text-gray-500 mb-2">Total unpaid amount a user can have</p>
-                            <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₹</span>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    required
-                                    value={settings.max_credit_limit_paise / 100}
-                                    onChange={(e) => setSettings({ ...settings, max_credit_limit_paise: parseFloat(e.target.value) * 100 || 0 })}
-                                    className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all font-medium"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Minimum Age */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Minimum Account Age</label>
-                            <p className="text-xs text-gray-500 mb-2">Years since customer joined Intrust</p>
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    required
-                                    value={settings.min_customer_age_years}
-                                    onChange={(e) => setSettings({ ...settings, min_customer_age_years: parseInt(e.target.value) || 0 })}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all font-medium"
-                                />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">Years</span>
-                            </div>
+                    {/* Credit Limit */}
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Max Credit per Customer</label>
+                        <p className="text-xs text-gray-500 mb-2">Total unpaid amount a user can have</p>
+                        <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₹</span>
+                            <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                required
+                                value={settings.max_credit_limit_paise / 100}
+                                onChange={(e) => setSettings({ ...settings, max_credit_limit_paise: parseFloat(e.target.value) * 100 || 0 })}
+                                className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all font-medium"
+                            />
                         </div>
                     </div>
                 </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
+import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 
 export default function PurchasePage() {
@@ -49,6 +50,7 @@ export default function PurchasePage() {
                 brand: c.brand,
                 faceValue: c.face_value_paise / 100,
                 price: c.selling_price_paise / 100,
+                imageUrl: c.image_url,
             }));
 
             setInventory(transformedCoupons);
@@ -171,8 +173,12 @@ export default function PurchasePage() {
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/5 rounded-bl-full -z-10 group-hover:bg-[#D4AF37]/10 transition-colors"></div>
                                 <div className="flex justify-between items-start mb-6">
                                     <div className="flex items-center space-x-3">
-                                        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-black/5 dark:border-white/10">
-                                            <span className="font-bold text-[#D4AF37] text-xl">{item.brand.charAt(0)}</span>
+                                        <div className="relative w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-black/5 dark:border-white/10 overflow-hidden shrink-0">
+                                            {item.imageUrl ? (
+                                                <Image src={item.imageUrl} alt={item.brand} fill className="object-cover" />
+                                            ) : (
+                                                <span className="font-bold text-[#D4AF37] text-xl">{item.brand.charAt(0)}</span>
+                                            )}
                                         </div>
                                         <div>
                                             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{item.brand}</h3>

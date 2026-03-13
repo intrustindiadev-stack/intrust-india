@@ -157,14 +157,15 @@ export default function Navbar() {
 
                         {/* Actions - Right */}
                         <div className="flex items-center gap-2 md:gap-3 z-10">
-                            {/* Notifications */}
+                            {/* Notifications - desktop only, mobile uses sidebar */}
                             {isAuthenticated && (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ delay: 0.45, duration: 0.4 }}
+                                    className="hidden lg:flex"
                                 >
-                                    <NotificationBell apiPath="/api/notifications" />
+                                    <NotificationBell apiPath="/api/notifications" variant="navbar" />
                                 </motion.div>
                             )}
 
@@ -357,6 +358,7 @@ export default function Navbar() {
                 toggleTheme={toggleTheme}
                 handleSignOut={handleLogout}
                 menuItems={menuItems}
+                apiPath="/api/notifications"
             />
         </>
     );

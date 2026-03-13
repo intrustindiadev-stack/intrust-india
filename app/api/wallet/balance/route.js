@@ -121,13 +121,23 @@ export async function GET(request) {
             reference_type: tx.reference_type,
         }));
 
-        const normalizedMerchantTxs = (merchantTxs || []).map(tx => ({
-            id: tx.id,
-            transaction_type: (tx.amount_paise || 0) < 0 ? 'DEBIT' : 'CREDIT',
-            description: tx.description || tx.transaction_type || 'Transaction',
-            amount: (Math.abs(tx.amount_paise || 0) / 100).toFixed(2),
-            created_at: tx.created_at,
-        }));
+        const normalizedMerchantTxs = (merchantTxs || []).map(tx => {
+            let txType = (tx.amount_paise || 0) < 0 ? 'DEBIT' : 'CREDIT';
+            let desc = tx.description || tx.transaction_type || 'Transaction';
+
+            if (tx.transaction_type === 'udhari_payment') {
+                txType = 'CREDIT';
+                desc = 'Store Credit Received';
+            }
+
+            return {
+                id: tx.id,
+                transaction_type: txType,
+                description: desc,
+                amount: (Math.abs(tx.amount_paise || 0) / 100).toFixed(2),
+                created_at: tx.created_at,
+            };
+        });
 
         const statusLabel = { pending: 'Pending', approved: 'Approved', rejected: 'Rejected (Refunded)', released: 'Released' };
         const normalizedPayoutTxs = (payoutTxs || []).map(tx => {

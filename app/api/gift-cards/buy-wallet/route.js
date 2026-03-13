@@ -126,6 +126,7 @@ export async function POST(request) {
             .from('orders')
             .insert({
                 user_id: user.id,
+                merchant_id: coupon.merchant_id,
                 giftcard_id: couponId,
                 amount: purchaseAmountPaise,
                 payment_status: 'paid',

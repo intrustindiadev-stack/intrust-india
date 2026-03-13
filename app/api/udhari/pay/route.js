@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
@@ -6,9 +6,7 @@ export async function POST(request) {
     let userId;
 
     try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        const supabaseAdmin = createAdminClient();
 
         // 1. Auth check
         const authHeader = request.headers.get('Authorization');
@@ -52,7 +50,7 @@ export async function POST(request) {
             .single();
 
         const purchaseAmountPaise = udhariRequest.amount_paise;
-        const extraFeePaise = Math.round(purchaseAmountPaise * 0.03); // Fixed 3% platform convenience fee
+        const extraFeePaise = settings?.extra_fee_paise ?? 0;
         const totalAmountPaise = purchaseAmountPaise + extraFeePaise;
 
         // 4. Fetch wallet
@@ -69,110 +67,43 @@ export async function POST(request) {
         if (wallet.balance_paise < totalAmountPaise) {
             const needed = ((totalAmountPaise - wallet.balance_paise) / 100).toFixed(2);
             return NextResponse.json({
-                error: `Insufficient wallet balance. You need ₹${needed} more.${extraFeePaise > 0 ? ` (includes ₹${(extraFeePaise / 100).toFixed(2)} service fee)` : ''}`
+                error: `Insufficient wallet balance. You need ₹${needed} more.${extraFeePaise > 0 ? ` (includes ₹${(extraFeePaise / 100).toFixed(2)} merchant fee)` : ''}`
             }, { status: 400 });
         }
 
-        // 5. Deduct wallet (optimistic lock)
-        const newBalancePaise = wallet.balance_paise - totalAmountPaise;
-        const { data: updatedWallet, error: deductError } = await supabaseAdmin
-            .from('customer_wallets')
-            .update({ balance_paise: newBalancePaise })
-            .eq('id', wallet.id)
-            .eq('balance_paise', wallet.balance_paise)
-            .select()
-            .single();
-
-        if (deductError || !updatedWallet) {
-            return NextResponse.json({ error: 'Failed to deduct wallet balance. Please try again.' }, { status: 409 });
-        }
-
-        // 6. Mark coupon as sold
-        const { data: updateData, error: couponUpdateError } = await supabaseAdmin
-            .from('coupons')
-            .update({
-                status: 'sold',
-                purchased_by: user.id,
-                purchased_at: new Date().toISOString(),
-            })
-            .eq('id', udhariRequest.coupon_id)
-            .eq('status', 'reserved')
-            .select('id')
-            .single();
-
-        if (couponUpdateError || !updateData) {
-            console.error(JSON.stringify({ correlationId, stage: 'coupon_sold', error: couponUpdateError }));
-            // Rollback wallet
-            await supabaseAdmin.from('customer_wallets').update({ balance_paise: wallet.balance_paise }).eq('id', wallet.id);
-            return NextResponse.json({ error: 'Failed to finalize gift card purchase. Wallet refunded.' }, { status: 500 });
-        }
-
-        // 7. Create order record
-        const { data: orderData, error: orderError } = await supabaseAdmin
-            .from('orders')
-            .insert({
-                user_id: user.id,
-                giftcard_id: udhariRequest.coupon_id,
-                amount: totalAmountPaise,
-                payment_status: 'paid',
-                created_at: new Date().toISOString(),
-            })
-            .select('id')
-            .single();
-
-        if (orderError || !orderData) {
-            console.error(JSON.stringify({ correlationId, stage: 'order_insert', error: orderError }));
-            // Rollback coupon + wallet
-            await supabaseAdmin.from('coupons').update({ status: 'reserved', purchased_by: null, purchased_at: null }).eq('id', udhariRequest.coupon_id);
-            await supabaseAdmin.from('customer_wallets').update({ balance_paise: wallet.balance_paise }).eq('id', wallet.id);
-            return NextResponse.json({ error: 'Failed to create order. Purchase reversed.' }, { status: 500 });
-        }
-
-        // 8. Create wallet transaction (Customer Ledger)
-        const { error: txnError } = await supabaseAdmin.from('customer_wallet_transactions').insert({
-            wallet_id: wallet.id,
-            user_id: user.id,
-            type: 'DEBIT',
-            amount_paise: totalAmountPaise,
-            balance_before_paise: wallet.balance_paise,
-            balance_after_paise: newBalancePaise,
-            description: `Udhari Settlement: ${udhariRequest.coupon?.brand || 'Gift Card'} - ${udhariRequest.coupon?.title || ''}${extraFeePaise > 0 ? ` (incl. ₹${(extraFeePaise / 100).toFixed(2)} fee)` : ''}`,
-            reference_id: udhariRequest.id,
-            reference_type: 'UDHARI_PAYMENT',
-        });
-
-        if (txnError) {
-            console.error(JSON.stringify({ correlationId, stage: 'txn_insert', error: txnError }));
-            // Non-critical at this stage — payment is already done
-        }
-
-        // 9. Mark udhari as completed
-        await supabaseAdmin
-            .from('udhari_requests')
-            .update({
-                status: 'completed',
-                completed_at: new Date().toISOString(),
-            })
-            .eq('id', requestId);
-
-        // 9b. Log transaction for Merchant Ledger
-        // We log the principal amount as the merchant's sale (convenience fee is platform revenue)
-        const { error: merchantTxError } = await supabaseAdmin.from('merchant_transactions').insert({
-            merchant_id: udhariRequest.merchant_id,
-            transaction_type: 'udhari_payment',
-            amount_paise: purchaseAmountPaise,
-            commission_paise: 0, // Commission usually handled at merchant_purchase_price or separately
-            description: `Udhari Paid: ${udhariRequest.coupon?.title || 'Gift Card'} (Cust: ${user.email})`,
-            metadata: { 
-                udhari_request_id: requestId, 
-                customer_id: user.id,
-                coupon_id: udhariRequest.coupon_id 
+        // 5-9. Atomically deduct wallet, mark coupon sold, insert order, ledgers, and udhari complete
+        const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+            'settle_udhari_payment',
+            {
+                p_udhari_request_id: requestId,
+                p_customer_user_id: user.id,
+                p_extra_fee_paise: extraFeePaise,
+                p_customer_email: user.email || null,
             }
-        });
+        );
 
-        if (merchantTxError) {
-            console.error(JSON.stringify({ correlationId, stage: 'merchant_txn_insert', error: merchantTxError }));
+        if (rpcError) {
+            console.error(JSON.stringify({ correlationId, stage: 'settle_rpc_error', error: rpcError, code: rpcError.code, message: rpcError.message }));
+            
+            if (rpcError.message.includes('udhari_not_found') || rpcError.message.includes('wallet_not_found')) {
+                return NextResponse.json({ error: 'Udhari request or wallet not found.' }, { status: 404 });
+            }
+            if (rpcError.message.includes('insufficient_balance')) {
+                const parts = rpcError.message.split(':');
+                const currentBalance = parts.length > 1 ? parseInt(parts[1], 10) : wallet.balance_paise;
+                const needed = ((totalAmountPaise - currentBalance) / 100).toFixed(2);
+                return NextResponse.json({
+                    error: `Insufficient wallet balance. You need ₹${needed} more.${extraFeePaise > 0 ? ` (includes ₹${(extraFeePaise / 100).toFixed(2)} merchant fee)` : ''}`
+                }, { status: 400 });
+            }
+            if (rpcError.message.includes('coupon_not_reserved')) {
+                return NextResponse.json({ error: 'Failed to finalize gift card purchase. It may no longer be available.' }, { status: 409 });
+            }
+
+            return NextResponse.json({ error: 'Failed to process payment. Please try again.', correlationId }, { status: 500 });
         }
+
+        const newBalancePaise = rpcResult.new_balance_paise;
 
         // 10. Notify merchant
         const { data: merchantData } = await supabaseAdmin

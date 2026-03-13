@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Package } from "lucide-react";
 
 export default function TransactionsTable({ coupons }) {
@@ -59,8 +60,10 @@ export default function TransactionsTable({ coupons }) {
                                 <tr key={coupon.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors group">
                                     <td className="px-8 py-5">
                                         <div className="flex items-center space-x-3">
-                                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-500/10 flex items-center justify-center border border-black/5 dark:border-slate-500/20">
-                                                {brandImage ? (
+                                            <div className="relative w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-500/10 flex items-center justify-center border border-black/5 dark:border-slate-500/20 overflow-hidden shrink-0">
+                                                {coupon.imageUrl ? (
+                                                    <Image src={coupon.imageUrl} alt={coupon.brand} fill className="object-cover" />
+                                                ) : brandImage ? (
                                                     <img alt={coupon.brand} className="w-6 opacity-80" src={brandImage} />
                                                 ) : (
                                                     <span className="font-bold text-[#D4AF37] text-lg">{coupon.brand.charAt(0)}</span>

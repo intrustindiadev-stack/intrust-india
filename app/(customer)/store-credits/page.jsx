@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
-import { Clock, ShieldCheck, CreditCard, ChevronRight, AlertCircle, Loader2, Copy, CheckCircle2, Eye, EyeOff, Info, Calendar } from 'lucide-react';
+import { Clock, ShieldCheck, CreditCard, ChevronRight, AlertCircle, Loader2, Copy, CheckCircle2, Eye, EyeOff, Info, Calendar, Lock } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -20,7 +21,6 @@ export default function StoreCreditsPage() {
     const [loading, setLoading] = useState(true);
     const [payingId, setPayingId] = useState(null);
     const [copiedCode, setCopiedCode] = useState(null);
-    const [viewingCodeId, setViewingCodeId] = useState(null);
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -158,8 +158,6 @@ export default function StoreCreditsPage() {
                                     payingId={payingId}
                                     onCopy={handleCopyCode}
                                     copiedCode={copiedCode}
-                                    isViewing={viewingCodeId === req.id}
-                                    onToggleView={() => setViewingCodeId(viewingCodeId === req.id ? null : req.id)}
                                 />
                             ))}
                         </AnimatePresence>
@@ -172,10 +170,38 @@ export default function StoreCreditsPage() {
     );
 }
 
-function UdhariCard({ req, onPay, payingId, onCopy, copiedCode, isViewing, onToggleView }) {
+function UdhariCard({ req, onPay, payingId, onCopy, copiedCode }) {
     const isApproved = req.status === 'approved';
     const isPending = req.status === 'pending';
     
+    // Add local state for completed coupon reveal
+    const [decryptedCode, setDecryptedCode] = useState(null);
+    const [isDecrypting, setIsDecrypting] = useState(false);
+
+    const handleRevealCode = async () => {
+        if (decryptedCode) {
+            setDecryptedCode(null);
+            return;
+        }
+        
+        setIsDecrypting(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`/api/my-coupons/${req.coupon?.id}/decrypt`, {
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token}`
+                }
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            setDecryptedCode(data.code);
+        } catch (error) {
+            toast.error(error.message || 'Failed to decrypt code');
+        } finally {
+            setIsDecrypting(false);
+        }
+    };
+
     // Deadline calculation
     const daysLeft = req.due_date ? Math.ceil((new Date(req.due_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
     const isOverdue = daysLeft !== null && daysLeft < 0;
@@ -240,40 +266,10 @@ function UdhariCard({ req, onPay, payingId, onCopy, copiedCode, isViewing, onTog
                     <div className="md:w-64 flex flex-col gap-3 justify-center pt-4 md:pt-0 md:pl-6 border-t md:border-t-0 md:border-l border-gray-100">
                         {isApproved && (
                             <>
-                                <div className={`relative rounded-2xl p-4 transition-all duration-300 ${isViewing ? 'bg-amber-50 border-2 border-dashed border-amber-300' : 'bg-gray-50 border border-gray-100'}`}>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">Coupon Code</span>
-                                        <button 
-                                            onClick={onToggleView}
-                                            className="text-gray-400 hover:text-amber-600 transition-colors"
-                                        >
-                                            {isViewing ? <EyeOff size={16} /> : <Eye size={16} />}
-                                        </button>
-                                    </div>
-                                    
-                                    {isViewing ? (
-                                        <div className="flex items-center justify-between gap-2 animate-in fade-in slide-in-from-bottom-2">
-                                            <span className="font-mono font-black text-xl text-gray-900 tracking-wider">
-                                                {req.couponCode || '******'}
-                                            </span>
-                                            <button 
-                                                onClick={() => onCopy(req.couponCode)}
-                                                className="p-2 bg-white rounded-xl shadow-sm text-amber-600 hover:scale-110 transition-transform"
-                                            >
-                                                {copiedCode === req.couponCode ? <CheckCircle2 size={16} /> : <Copy size={16} />}
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center justify-center p-2">
-                                            <span className="font-mono font-bold text-gray-300 tracking-[0.3em]">••••••••</span>
-                                        </div>
-                                    )}
-                                </div>
-
                                 <button
                                     onClick={() => onPay(req.id)}
                                     disabled={payingId === req.id}
-                                    className={`w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all duration-300 shadow-xl ${
+                                    className={`w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all duration-300 shadow-xl mb-3 ${
                                         isOverdue 
                                             ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-200' 
                                             : 'bg-gray-900 hover:bg-black text-white shadow-gray-200'
@@ -283,7 +279,15 @@ function UdhariCard({ req, onPay, payingId, onCopy, copiedCode, isViewing, onTog
                                     PAY NOW
                                 </button>
                                 
-                                <div className="flex items-start gap-2 text-[10px] text-gray-400 leading-tight px-1">
+                                <Link
+                                    href="/my-giftcards"
+                                    className="w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors mb-4"
+                                >
+                                    <Eye size={18} />
+                                    REVEAL CODE
+                                </Link>
+                                
+                                <div className="flex items-start gap-2 text-[10px] text-gray-400 leading-tight px-1 mb-2">
                                     <Info size={12} className="shrink-0 mt-0.5" />
                                     <span>Payment must be made by {new Date(req.due_date).toLocaleDateString()} to avoid account restriction.</span>
                                 </div>
@@ -307,10 +311,44 @@ function UdhariCard({ req, onPay, payingId, onCopy, copiedCode, isViewing, onTog
                         )}
 
                         {!isApproved && !isPending && (
-                            <div className="flex flex-col items-center justify-center py-4 bg-gray-50 rounded-2xl">
-                                <span className="text-xs font-black uppercase text-gray-400">{req.status}</span>
-                                {req.status === 'completed' && req.completed_at && (
-                                    <span className="text-[10px] text-green-600 font-bold mt-1 uppercase tracking-tight">Paid on {new Date(req.completed_at).toLocaleDateString()}</span>
+                            <div className="flex flex-col flex-1 pb-4">
+                                <div className="flex flex-col items-center justify-center py-4 bg-gray-50 rounded-2xl mb-3">
+                                    <span className="text-xs font-black uppercase text-gray-400">{req.status}</span>
+                                    {req.status === 'completed' && req.completed_at && (
+                                        <span className="text-[10px] text-green-600 font-bold mt-1 uppercase tracking-tight">Paid on {new Date(req.completed_at).toLocaleDateString()}</span>
+                                    )}
+                                </div>
+                                {req.status === 'completed' && (
+                                    <div className={`relative rounded-2xl p-4 transition-all duration-300 ${decryptedCode ? 'bg-amber-50 border-2 border-dashed border-amber-300' : 'bg-gray-50 border border-gray-100'}`}>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">Coupon Code</span>
+                                            <button 
+                                                onClick={handleRevealCode}
+                                                disabled={isDecrypting}
+                                                className="text-gray-400 hover:text-amber-600 transition-colors"
+                                            >
+                                                {isDecrypting ? <Loader2 size={16} className="animate-spin" /> : (decryptedCode ? <EyeOff size={16} /> : <Eye size={16} />)}
+                                            </button>
+                                        </div>
+                                        
+                                        {decryptedCode ? (
+                                            <div className="flex items-center justify-between gap-2 animate-in fade-in slide-in-from-bottom-2">
+                                                <span className="font-mono font-black text-xl text-gray-900 tracking-wider">
+                                                    {decryptedCode}
+                                                </span>
+                                                <button 
+                                                    onClick={() => onCopy(decryptedCode)}
+                                                    className="p-2 bg-white rounded-xl shadow-sm text-amber-600 hover:scale-110 transition-transform"
+                                                >
+                                                    {copiedCode === decryptedCode ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-center p-2">
+                                                <span className="font-mono font-bold text-gray-300 tracking-[0.3em]">••••••••</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         )}

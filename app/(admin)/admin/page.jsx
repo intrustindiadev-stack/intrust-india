@@ -111,20 +111,30 @@ export default async function AdminDashboard() {
                 if (!orders?.length) return [];
 
                 // Fetch all user profiles in parallel with orders query
-                const userIds = [...new Set(orders.map(o => o.user_id))];
+                const userIds = [...new Set(orders.map(o => o.user_id).filter(Boolean))];
+                const couponIds = [...new Set(orders.map(o => o.giftcard_id).filter(Boolean))];
+
                 const profileQuery = supabase
                     .from('user_profiles')
                     .select('id, full_name, email')
                     .in('id', userIds);
 
-                const { data: profiles } = await profileQuery;
+                const udhariQuery = supabase
+                    .from('udhari_requests')
+                    .select('coupon_id')
+                    .in('coupon_id', couponIds)
+                    .eq('status', 'completed');
+
+                const [{ data: profiles }, { data: udharis }] = await Promise.all([profileQuery, udhariQuery]);
                 const profileMap = (profiles || []).reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+                const udhariSet = new Set((udharis || []).map(u => u.coupon_id));
 
                 return orders.map(order => ({
                     ...order,
                     buyer_name: profileMap[order.user_id]?.full_name || profileMap[order.user_id]?.email || 'Unknown User',
                     brand: order.coupons?.brand || 'Unknown Brand',
-                    merchant_name: order.coupons?.merchants?.business_name || 'Platform'
+                    merchant_name: order.coupons?.merchants?.business_name || 'Platform',
+                    source: udhariSet.has(order.giftcard_id) ? 'Udhari Settlement' : 'Direct Purchase'
                 }));
             }),
 
@@ -305,7 +315,12 @@ export default async function AdminDashboard() {
                                                         </div>
                                                     </td>
                                                     <td className="p-4 text-sm font-medium text-slate-600 dark:text-gray-300">
-                                                        {tx.merchant_name}
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span>{tx.merchant_name}</span>
+                                                            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-gray-500">
+                                                                {tx.source}
+                                                            </span>
+                                                        </div>
                                                     </td>
                                                     <td className="p-4 text-sm text-slate-500 dark:text-gray-400">
                                                         {new Date(tx.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}

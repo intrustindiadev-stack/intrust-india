@@ -227,7 +227,7 @@ export async function POST(request) {
                             })
                             .eq('id', couponId)
                             .eq('status', 'available')
-                            .select('id')
+                            .select('id, merchant_id')
                             .single();
 
                         if (!updateCouponError && updatedCoupon) {
@@ -237,6 +237,7 @@ export async function POST(request) {
                                 .from('orders')
                                 .insert({
                                     user_id: existingTxn.user_id,
+                                    merchant_id: updatedCoupon.merchant_id,
                                     giftcard_id: couponId,
                                     amount: amountPaise,
                                     payment_status: 'paid',

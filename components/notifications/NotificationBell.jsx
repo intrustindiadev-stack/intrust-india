@@ -9,9 +9,9 @@ import { supabase } from '@/lib/supabaseClient';
  */
 
 /**
- * @param {{ apiPath: string }} props
+ * @param {{ apiPath: string; variant?: 'admin' | 'minimal' | 'header' | 'navbar' }} props
  */
-export default function NotificationBell({ apiPath }) {
+export default function NotificationBell({ apiPath, variant = 'admin' }) {
     const [open, setOpen] = useState(false);
     /** @type {[Notification[], React.Dispatch<React.SetStateAction<Notification[]>>]} */
     const [notifications, setNotifications] = useState([]);
@@ -170,12 +170,20 @@ export default function NotificationBell({ apiPath }) {
         document.body
     ) : null;
 
+    const buttonClass = variant === 'navbar'
+        ? 'relative p-2 rounded-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
+        : variant === 'minimal'
+        ? 'relative p-2 rounded-full text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors'
+        : variant === 'header'
+        ? 'relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-90 duration-200'
+        : 'relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors';
+
     return (
         <>
             <button
                 ref={buttonRef}
                 onClick={handleOpen}
-                className="relative p-2.5 rounded-xl bg-white/40 dark:bg-white/5 border border-black/5 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                className={buttonClass}
                 title="Notifications"
             >
                 <span className="material-icons-round text-slate-600 dark:text-slate-300 text-xl">notifications</span>

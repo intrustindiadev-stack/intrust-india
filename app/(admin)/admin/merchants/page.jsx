@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { CheckCircle, XCircle, Eye, Clock, Building2, Phone, Mail, FileText, RefreshCw, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, Clock, Building2, Phone, Mail, FileText, RefreshCw, AlertCircle, CreditCard } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import Link from 'next/link';
 
 import MerchantCard from '@/components/admin/merchants/MerchantCard';
 
@@ -48,7 +49,8 @@ export default function AdminMerchantsPage() {
                     month: 'short',
                     day: 'numeric'
                 }),
-                documents: 0
+                documents: 0,
+                udhariEnabled: m.udhari_enabled
             }));
 
             setMerchants(transformed);
@@ -234,6 +236,10 @@ export default function AdminMerchantsPage() {
                     </p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
+                    <Link href="/admin/merchants/udhari" className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-2xl hover:bg-blue-100 transition-all font-bold text-sm shadow-sm">
+                        <CreditCard size={18} strokeWidth={2.5} />
+                        Store Credit
+                    </Link>
                     <div className="relative">
                         <input
                             type="text"
@@ -294,6 +300,7 @@ export default function AdminMerchantsPage() {
                                 <MerchantCard
                                     key={merchant.id}
                                     merchant={merchant}
+                                    udhariEnabled={merchant.udhariEnabled}
                                     onApprove={handleApprove}
                                     onReject={handleReject}
                                     onVerifyBank={handleVerifyBank}

@@ -1,0 +1,1 @@
+ALTER TABLE merchant_udhari_settings RENAME COLUMN min_customer_age_years TO min_customer_age_days;

@@ -144,7 +144,7 @@ export default function TransactionsPage() {
                         .order('purchased_at', { ascending: false })
                         .limit(50),
                     supabase.from('customer_wallet_transactions')
-                        .select('id, type, amount_paise, description, created_at')
+                        .select('id, type, amount_paise, description, reference_type, created_at')
                         .eq('user_id', user.id)
                         .order('created_at', { ascending: false })
                         .limit(50)
@@ -186,6 +186,7 @@ export default function TransactionsPage() {
         if (filter === 'PURCHASES') matchesFilter = tx.category === 'GIFT_CARD' || tx.type === 'SPENT';
         if (filter === 'CASHBACK') matchesFilter = tx.type === 'CASHBACK';
         if (filter === 'WALLET') matchesFilter = tx.type === 'TOPUP';
+        if (filter === 'UDHARI') matchesFilter = tx.category === 'UDHARI';
 
         return matchesSearch && matchesFilter;
     });
@@ -307,7 +308,7 @@ export default function TransactionsPage() {
                             />
                         </div>
                         <div className="flex overflow-x-auto hide-scrollbar gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-2xl shadow-sm">
-                            {['ALL', 'PURCHASES', 'CASHBACK', 'WALLET'].map(f => (
+                            {['ALL', 'PURCHASES', 'CASHBACK', 'WALLET', 'UDHARI'].map(f => (
                                 <button
                                     key={f}
                                     onClick={() => setFilter(f)}
@@ -316,7 +317,7 @@ export default function TransactionsPage() {
                                         : 'text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-700/50'
                                         }`}
                                 >
-                                    {f === 'ALL' ? 'All Activity' : f === 'PURCHASES' ? 'Purchases' : f === 'CASHBACK' ? 'Cashback' : 'Wallet'}
+                                    {f === 'ALL' ? 'All Activity' : f === 'PURCHASES' ? 'Purchases' : f === 'CASHBACK' ? 'Cashback' : f === 'WALLET' ? 'Wallet' : 'Udhari'}
                                 </button>
                             ))}
                         </div>

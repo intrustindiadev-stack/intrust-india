@@ -258,9 +258,9 @@ export default async function AdminMerchantDetailPage({ params }) {
                                 </div>
                             </div>
 
-                            <button className="w-full py-4 bg-blue-600 text-white text-[10px] font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] uppercase tracking-widest">
+                            <Link href={`/admin/merchants/${merchant.id}/udhari`} className="block w-full py-4 bg-blue-600 text-white text-[10px] font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] uppercase tracking-widest text-center">
                                 Manage Settlements
-                            </button>
+                            </Link>
                         </div>
                     </div>
 

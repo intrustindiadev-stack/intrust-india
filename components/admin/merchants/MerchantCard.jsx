@@ -3,7 +3,7 @@
 import { CheckCircle, XCircle, Clock, Building2, Phone, Mail, FileText, AlertCircle, Eye, ShieldOff, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
-export default function MerchantCard({ merchant, onApprove, onReject, onVerifyBank, onToggleSuspend, isApproving, isVerifyingBank, isRejecting, isTogglingSuspend }) {
+export default function MerchantCard({ merchant, udhariEnabled, onApprove, onReject, onVerifyBank, onToggleSuspend, isApproving, isVerifyingBank, isRejecting, isTogglingSuspend }) {
     const isPending = merchant.status === 'pending';
     const isApproved = merchant.status === 'approved';
     const isSuspended = merchant.status === 'suspended';
@@ -27,8 +27,15 @@ export default function MerchantCard({ merchant, onApprove, onReject, onVerifyBa
                             <p className="text-sm font-bold text-slate-400 mt-0.5">{merchant.ownerName}</p>
                         </div>
                     </div>
-                    <div className="p-2 bg-slate-50 text-slate-400 group-hover:text-blue-600 group-hover:bg-blue-50 rounded-xl transition-all shadow-sm">
-                        <Eye size={18} strokeWidth={2.5} />
+                    <div className="flex flex-col items-end gap-2">
+                        <div className="p-2 bg-slate-50 text-slate-400 group-hover:text-blue-600 group-hover:bg-blue-50 rounded-xl transition-all shadow-sm">
+                            <Eye size={18} strokeWidth={2.5} />
+                        </div>
+                        {udhariEnabled !== undefined && (
+                            <div className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-widest border transition-colors ${udhariEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                                {udhariEnabled ? 'Udhari On' : 'Udhari Off'}
+                            </div>
+                        )}
                     </div>
                 </div>
 
