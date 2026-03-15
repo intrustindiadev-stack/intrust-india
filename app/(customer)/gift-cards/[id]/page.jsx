@@ -7,12 +7,13 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
 import Image from 'next/image';
-import { Star, ShieldCheck, Clock, CheckCircle, Share2, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { Star, ShieldCheck, Clock, CheckCircle, Share2, Loader2, AlertCircle, Sparkles, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
 import UdhariRequestModal from '../components/UdhariRequestModal';
+import PaymentMethodSelector from '@/components/giftcards/PaymentMethodSelector';
 
 
 export default function GiftCardDetailPage({ params }) {
@@ -34,6 +35,8 @@ export default function GiftCardDetailPage({ params }) {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showUdhariModal, setShowUdhariModal] = useState(false);
     const [merchantUdhariEnabled, setMerchantUdhariEnabled] = useState(false);
+
+
     // ✅ COMBINED useEffect - fetch card and KYC in parallel
     useEffect(() => {
         if (!id) return;
@@ -389,11 +392,16 @@ export default function GiftCardDetailPage({ params }) {
                                     </div>
                                 </div>
                             )}
-
                             {/* Action Buttons */}
                             <div className="flex flex-col gap-3 mt-2">
                                 <button
-                                    onClick={handlePurchase}
+                                    onClick={() => {
+                                        if (!user) { router.push('/login'); return; }
+                                        if (kycStatus !== 'verified') { toast.error('Please complete KYC verification first.'); router.push('/profile?section=kyc'); return; }
+                                        
+                                        setShowPaymentModal(true);
+
+                                    }}
                                     disabled={!isAvailable || purchasing}
                                     className={`
                                         w-full py-4 rounded-xl text-white font-semibold text-lg shadow-lg shadow-blue-200
@@ -410,24 +418,9 @@ export default function GiftCardDetailPage({ params }) {
                                     ) : !isAvailable ? (
                                         'Sold Out'
                                     ) : (
-                                        'Buy Now'
+                                        'Proceed to Pay'
                                     )}
                                 </button>
-
-                                {/* Pay Later Button — Only if merchant has udhari enabled */}
-                                {isAvailable && merchantUdhariEnabled && (
-                                    <button
-                                        onClick={() => {
-                                            if (!user) { router.push('/login'); return; }
-                                            if (kycStatus !== 'verified') { toast.error('Please complete KYC verification first.'); router.push('/profile?section=kyc'); return; }
-                                            setShowUdhariModal(true);
-                                        }}
-                                        className="w-full py-3.5 rounded-xl border-2 border-amber-400 dark:border-amber-500 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <Clock size={18} />
-                                        Request Pay Later
-                                    </button>
-                                )}
 
                                 <button
                                     onClick={handleShare}
@@ -480,6 +473,9 @@ export default function GiftCardDetailPage({ params }) {
                         coupon_id: id,
                         face_value: card.face_value_paise / 100
                     }}
+                    initialMethod={null}
+                    udhariEnabled={merchantUdhariEnabled}
+                    onUdhariTrigger={() => setShowUdhariModal(true)}
                 />
             )}
 

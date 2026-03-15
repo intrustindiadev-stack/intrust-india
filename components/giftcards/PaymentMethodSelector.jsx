@@ -1,19 +1,22 @@
 'use client';
 
-import { CreditCard, Smartphone, Wallet } from 'lucide-react';
+import { CreditCard, Smartphone, Wallet, Clock, WalletCards } from 'lucide-react';
 
 const paymentMethodsData = [
-    { id: 'upi', name: 'UPI', icon: Smartphone, desc: 'PhonePe, GPay, Paytm', recommended: true },
+    { id: 'intrust_wallet', name: 'Intrust Wallet', icon: WalletCards, desc: 'Pay from Wallet Balance', recommended: true },
+    { id: 'upi', name: 'UPI', icon: Smartphone, desc: 'PhonePe, GPay, Paytm', recommended: false },
     { id: 'card', name: 'Card', icon: CreditCard, desc: 'Credit/Debit Card', recommended: false },
-    { id: 'wallet', name: 'Wallet', icon: Wallet, desc: 'Paytm, Freecharge', recommended: false },
+    { id: 'wallet', name: 'Other Wallets', icon: Wallet, desc: 'Paytm, Freecharge', recommended: false },
+    { id: 'store_credit', name: 'Store Credit', icon: Clock, desc: 'Store Credit — 0% Interest', recommended: false },
 ];
 
-export default function PaymentMethodSelector({ selectedPayment, setSelectedPayment }) {
+export default function PaymentMethodSelector({ selectedPayment, setSelectedPayment, udhariEnabled }) {
     return (
         <div>
             <label className="text-sm font-semibold text-gray-700 mb-3 block">Payment Method</label>
             <div className="space-y-2.5">
                 {paymentMethodsData.map((method) => {
+                    if (method.id === 'store_credit' && !udhariEnabled) return null;
                     const Icon = method.icon;
                     return (
                         <button

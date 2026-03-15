@@ -530,7 +530,7 @@ function StoreCreditCard({ activeCount, onManage }) {
                 </div>
 
                 <div className="mb-6">
-                    <p className="text-[10px] text-amber-100/70 uppercase font-bold tracking-[0.2em] mb-1">Pay Later (Udhari)</p>
+                    <p className="text-[10px] text-amber-100/70 uppercase font-bold tracking-[0.2em] mb-1">Store Credit</p>
                     <p className="text-2xl font-black tracking-tight">
                         {activeCount > 0 ? 'Manage Requests' : 'Apply for Credit'}
                     </p>
@@ -690,6 +690,8 @@ export default function CustomerProfilePage() {
     const [profile, setProfile] = useState(null);
     const [wallet, setWallet] = useState(null);
     const [udhariCount, setUdhariCount] = useState(0);
+    const [purchaseCount, setPurchaseCount] = useState(0);
+    const [totalSavedPaise, setTotalSavedPaise] = useState(0);
     const [profileLoading, setProfileLoading] = useState(true);
     const [toast, setToast] = useState({ msg: '', type: 'success' });
 
@@ -763,6 +765,21 @@ export default function CustomerProfilePage() {
 
                     if (!cancelled && !countError) {
                         setUdhariCount(count || 0);
+                    }
+
+                    // Fetch Purchased Coupons for Activity Stats
+                    const { data: couponsData, error: couponsError } = await supabase
+                        .from('coupons')
+                        .select('face_value_paise, selling_price_paise')
+                        .eq('purchased_by', authUser.id)
+                        .eq('status', 'sold');
+
+                    if (!cancelled && !couponsError && couponsData) {
+                        setPurchaseCount(couponsData.length);
+                        const saved = couponsData.reduce((sum, coupon) => {
+                            return sum + Math.max(0, coupon.face_value_paise - coupon.selling_price_paise);
+                        }, 0);
+                        setTotalSavedPaise(saved);
                     }
                 }
             } catch (error) {
@@ -952,14 +969,14 @@ export default function CustomerProfilePage() {
                                                 <Package size={16} />
                                                 <span>Total Purchases</span>
                                             </div>
-                                            <span className="font-bold text-lg">0</span>
+                                            <span className="font-bold text-lg">{purchaseCount}</span>
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2 text-sm opacity-90">
                                                 <ShieldCheck size={16} />
                                                 <span>Total Saved</span>
                                             </div>
-                                            <span className="font-bold text-lg">₹0</span>
+                                            <span className="font-bold text-lg">₹{(totalSavedPaise / 100).toFixed(0)}</span>
                                         </div>
                                     </div>
                                     <button

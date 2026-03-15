@@ -25,6 +25,9 @@ export default function SabpaisaPaymentModal({
   user,
   productInfo,
   metadata,
+  initialMethod,
+  udhariEnabled,
+  onUdhariTrigger,
 }) {
   const { balance, fetchBalance, debitWallet } = useWallet();
   const router = useRouter();
@@ -42,6 +45,8 @@ export default function SabpaisaPaymentModal({
       fetchBalance();
     }
   }, [isOpen, user, fetchBalance]);
+
+
 
   // Handle Payment Selection
   const handlePayment = async (method, customAmount = null) => {
@@ -339,7 +344,7 @@ export default function SabpaisaPaymentModal({
             <div className="relative mt-6 pt-4 border-t border-white/5 text-center">
               <p className="text-indigo-400 text-[11px] font-medium tracking-wide">
                 Secured by{" "}
-                <span className="font-bold text-indigo-300">SabPaisa</span>
+                <span className="font-bold text-indigo-300">Intrust</span>
               </p>
             </div>
           </div>
@@ -386,125 +391,144 @@ export default function SabpaisaPaymentModal({
               )}
             </AnimatePresence>
 
-            {/* ── Merchant Wallet Option ── */}
-            <WalletPaymentOption
-              balance={balance?.balance || 0}
-              requiredAmount={amount}
-              onPay={() => handlePayment("WALLET")}
-              onTopup={() => setShowTopupInput(true)}
-            />
+            {(!initialMethod || initialMethod === 'intrust_wallet') && (
+              <>
+                {/* ── Merchant Wallet Option ── */}
+                <WalletPaymentOption
+                  balance={balance?.balance || 0}
+                  requiredAmount={amount}
+                  onPay={() => handlePayment("WALLET")}
+                  onTopup={() => setShowTopupInput(true)}
+                />
 
-            {/* ── Wallet Topup Input ── */}
-            <AnimatePresence>
-              {showTopupInput && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden mb-5"
-                >
-                  <div className="p-5 rounded-2xl border-2 border-indigo-200 bg-indigo-50">
-                    <h4 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
-                      <span className="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 text-xs">
-                        �
-                      </span>
-                      Add Money to Wallet
-                    </h4>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                          Enter Amount (₹)
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={topupAmount}
-                          onChange={(e) => setTopupAmount(e.target.value)}
-                          placeholder="Enter amount to add"
-                          className="
-                                                        w-full px-4 py-3 border-2 border-indigo-200 rounded-xl
-                                                        focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400
-                                                        text-gray-900 text-sm font-medium bg-white
-                                                        placeholder-gray-400 transition-all focus:outline-none
-                                                    "
-                        />
+                {/* ── Wallet Topup Input ── */}
+                <AnimatePresence>
+                  {showTopupInput && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden mb-5"
+                    >
+                      <div className="p-5 rounded-2xl border-2 border-indigo-200 bg-indigo-50">
+                        <h4 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
+                          <span className="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 text-xs">
+                            
+                          </span>
+                          Add Money to Wallet
+                        </h4>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                              Enter Amount (₹)
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={topupAmount}
+                              onChange={(e) => setTopupAmount(e.target.value)}
+                              placeholder="Enter amount to add"
+                              className="
+                                                            w-full px-4 py-3 border-2 border-indigo-200 rounded-xl
+                                                            focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400
+                                                            text-gray-900 text-sm font-medium bg-white
+                                                            placeholder-gray-400 transition-all focus:outline-none
+                                                        "
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                const addAmount = parseFloat(topupAmount);
+                                if (addAmount && addAmount > 0) {
+                                  handlePayment("ADD_TO_WALLET", addAmount);
+                                  setShowTopupInput(false);
+                                } else {
+                                  setError("Please enter a valid amount");
+                                }
+                              }}
+                              disabled={processing || !topupAmount}
+                              className="
+                                                            flex-1 px-5 py-3
+                                                            bg-gradient-to-r from-indigo-500 to-indigo-700
+                                                            hover:from-indigo-600 hover:to-indigo-800
+                                                            text-white rounded-xl font-bold text-sm
+                                                            shadow-lg shadow-indigo-200
+                                                            disabled:opacity-40 disabled:cursor-not-allowed
+                                                            transition-all
+                                                        "
+                            >
+                              {processing ? "Processing..." : "Proceed to Pay"}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowTopupInput(false);
+                                setTopupAmount("");
+                              }}
+                              className="px-5 py-3 bg-white border-2 border-gray-200 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            const addAmount = parseFloat(topupAmount);
-                            if (addAmount && addAmount > 0) {
-                              handlePayment("ADD_TO_WALLET", addAmount);
-                              setShowTopupInput(false);
-                            } else {
-                              setError("Please enter a valid amount");
-                            }
-                          }}
-                          disabled={processing || !topupAmount}
-                          className="
-                                                        flex-1 px-5 py-3
-                                                        bg-gradient-to-r from-indigo-500 to-indigo-700
-                                                        hover:from-indigo-600 hover:to-indigo-800
-                                                        text-white rounded-xl font-bold text-sm
-                                                        shadow-lg shadow-indigo-200
-                                                        disabled:opacity-40 disabled:cursor-not-allowed
-                                                        transition-all
-                                                    "
-                        >
-                          {processing ? "Processing..." : "Proceed to Pay"}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowTopupInput(false);
-                            setTopupAmount("");
-                          }}
-                          className="px-5 py-3 bg-white border-2 border-gray-200 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
+            )}
 
-            {/* ── Other Methods ── */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-px bg-gray-200 flex-1" />
-              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-widest whitespace-nowrap">
-                Other Payment Methods
-              </h4>
-              <div className="h-px bg-gray-200 flex-1" />
-            </div>
+            {!initialMethod && (
+              <>
+                {/* ── Other Methods ── */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-px bg-gray-200 flex-1" />
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-widest whitespace-nowrap">
+                    Other Payment Methods
+                  </h4>
+                  <div className="h-px bg-gray-200 flex-1" />
+                </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <PaymentMethodCard
-                method="UPI"
-                icon={<Smartphone className="w-5 h-5 text-emerald-600" />}
-                onClick={() => handlePayment("UPI")}
-                disabled={processing}
-              />
-              <PaymentMethodCard
-                method="Cards"
-                icon={<CreditCard className="w-5 h-5 text-blue-600" />}
-                onClick={() => handlePayment("CARD")}
-                disabled={processing}
-              />
-              <PaymentMethodCard
-                method="Net Banking"
-                icon={<Building className="w-5 h-5 text-indigo-600" />}
-                onClick={() => handlePayment("NET_BANKING")}
-                disabled={processing}
-              />
-              <PaymentMethodCard
-                method="Wallet"
-                icon={<Wallet className="w-5 h-5 text-purple-600" />}
-                onClick={() => handlePayment("WALLET_PG")}
-                disabled={processing}
-              />
-            </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <PaymentMethodCard
+                    method="UPI"
+                    icon={<Smartphone className="w-5 h-5 text-emerald-600" />}
+                    onClick={() => handlePayment("UPI")}
+                    disabled={processing}
+                  />
+                  <PaymentMethodCard
+                    method="Cards"
+                    icon={<CreditCard className="w-5 h-5 text-blue-600" />}
+                    onClick={() => handlePayment("CARD")}
+                    disabled={processing}
+                  />
+                  <PaymentMethodCard
+                    method="Net Banking"
+                    icon={<Building className="w-5 h-5 text-indigo-600" />}
+                    onClick={() => handlePayment("NET_BANKING")}
+                    disabled={processing}
+                  />
+                  <PaymentMethodCard
+                    method="Wallet"
+                    icon={<Wallet className="w-5 h-5 text-purple-600" />}
+                    onClick={() => handlePayment("WALLET_PG")}
+                    disabled={processing}
+                  />
+                  {udhariEnabled && (
+                    <PaymentMethodCard
+                      method="Store Credit"
+                      icon={<Tag className="w-5 h-5 text-amber-600" />}
+                      onClick={() => {
+                        onClose();
+                        onUdhariTrigger();
+                      }}
+                      disabled={processing}
+                    />
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Processing overlay */}
             <AnimatePresence>

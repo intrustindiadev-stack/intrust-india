@@ -33,7 +33,7 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                         </div>
                         {udhariEnabled !== undefined && (
                             <div className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-widest border transition-colors ${udhariEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
-                                {udhariEnabled ? 'Udhari On' : 'Udhari Off'}
+                                {udhariEnabled ? 'Store Credit: ON' : 'Store Credit: OFF'}
                             </div>
                         )}
                     </div>

@@ -125,9 +125,9 @@ export default function UdhariRequestModal({ isOpen, onClose, card, user }) {
                                         <Clock size={24} strokeWidth={2.5} />
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Pay Later</h2>
+                                        <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Store Credit</h2>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-md">Udhari</span>
+                                            <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-md">Store Credit</span>
                                             <span className="text-xs font-medium text-gray-400">• 0% Interest</span>
                                         </div>
                                     </div>
@@ -176,7 +176,7 @@ export default function UdhariRequestModal({ isOpen, onClose, card, user }) {
                                         <div className="space-y-4">
                                             <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                                                 <div className="w-1.5 h-4 bg-amber-500 rounded-full" />
-                                                Why choose Pay Later?
+                                                Why choose Store Credit?
                                             </h4>
                                             <div className="grid grid-cols-1 gap-3">
                                                 {[

@@ -56,6 +56,15 @@ RAZORPAY_KEY_ID=your-razorpay-key-id
 RAZORPAY_KEY_SECRET=your-razorpay-key-secret
 ```
 
+### 2b. SabPaisa Environment and CSP Mapping
+The Content Security Policy (CSP) uses `form-action` validation to ensure payment interactions only happen with trusted SabPaisa domains. This domain is dynamically derived from `SABPAISA_INIT_URL`.
+
+- **Production/Live**: `https://securepay.sabpaisa.in`
+- **UAT**: `https://uat.sabpaisa.in`
+- **Staging/Dev**: `https://stage-securepay.sabpaisa.in`
+
+Make sure the appropriate `SABPAISA_INIT_URL` is set in your respective `.env` files (`.env.local` for prod, `.env.development.local` for dev/test).
+
 ### 3. Set Up Database Schema
 ```bash
 # 1. Go to Supabase Dashboard → SQL Editor

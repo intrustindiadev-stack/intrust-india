@@ -230,7 +230,7 @@ export default async function AnalyticsPage() {
                     <div className="flex flex-col mb-2 relative z-10">
                         <div className="flex items-center space-x-2 text-orange-600 dark:text-orange-400 mb-2">
                             <span className="material-icons-round text-lg">credit_score</span>
-                            <span className="font-bold uppercase tracking-widest text-[10px]">Udhari Revenue</span>
+                            <span className="font-bold uppercase tracking-widest text-[10px]">Store Credit Revenue</span>
                         </div>
                         <h3 className="text-3xl font-display font-bold text-slate-800 dark:text-slate-100">
                             ₹{udhariRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

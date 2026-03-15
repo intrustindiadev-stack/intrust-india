@@ -64,6 +64,7 @@ export default function TransactionsPage() {
             let logo = <Wallet size={20} />;
             let isSpent = false;
             let isCashback = false;
+            let isAdminAdjustment = w.reference_type === 'ADMIN_ADJUSTMENT' || w.type === 'ADMIN_ADJUSTMENT';
 
             if (w.type === 'TOPUP') logo = <Wallet size={20} />;
             if (w.type === 'CASHBACK') {
@@ -72,18 +73,19 @@ export default function TransactionsPage() {
             }
             if (w.type === 'DEBIT') {
                 logo = <Gift size={20} />; // Treat wallet debits mostly as purchases
+                if (isAdminAdjustment) logo = <Wallet size={20} />;
                 isSpent = true;
             }
 
             return {
                 id: `wallet-${w.id}`,
                 rawDate: new Date(w.created_at).getTime(),
-                brand: w.reference_type === 'UDHARI_PAYMENT' ? 'Udhari Settled' : (w.type === 'TOPUP' ? 'Wallet Added' : (w.type === 'CASHBACK' ? 'Cashback Earned' : 'Gift Card Paid')),
+                brand: isAdminAdjustment ? 'Admin Adjustment' : (w.reference_type === 'UDHARI_PAYMENT' ? 'Store Credit Settled' : (w.type === 'TOPUP' ? 'Wallet Added' : (w.type === 'CASHBACK' ? 'Cashback Earned' : 'Gift Card Paid'))),
                 description: w.description || w.type,
                 amount: (w.amount_paise || 0) / 100,
                 status: 'success',
-                type: isCashback ? 'CASHBACK' : (isSpent ? 'SPENT' : 'TOPUP'),
-                category: w.reference_type === 'UDHARI_PAYMENT' ? 'UDHARI' : 'WALLET',
+                type: isAdminAdjustment && !isSpent ? 'TOPUP' : (isCashback ? 'CASHBACK' : (isSpent ? 'SPENT' : 'TOPUP')),
+                category: isAdminAdjustment ? 'ADMIN' : (w.reference_type === 'UDHARI_PAYMENT' ? 'UDHARI' : 'WALLET'),
                 logo
             };
         });
@@ -187,6 +189,7 @@ export default function TransactionsPage() {
         if (filter === 'CASHBACK') matchesFilter = tx.type === 'CASHBACK';
         if (filter === 'WALLET') matchesFilter = tx.type === 'TOPUP';
         if (filter === 'UDHARI') matchesFilter = tx.category === 'UDHARI';
+        if (filter === 'ADMIN') matchesFilter = tx.reference_type === 'ADMIN_ADJUSTMENT' || tx.category === 'ADMIN';
 
         return matchesSearch && matchesFilter;
     });
@@ -308,7 +311,7 @@ export default function TransactionsPage() {
                             />
                         </div>
                         <div className="flex overflow-x-auto hide-scrollbar gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-2xl shadow-sm">
-                            {['ALL', 'PURCHASES', 'CASHBACK', 'WALLET', 'UDHARI'].map(f => (
+                            {['ALL', 'PURCHASES', 'CASHBACK', 'WALLET', 'UDHARI', 'ADMIN'].map(f => (
                                 <button
                                     key={f}
                                     onClick={() => setFilter(f)}
@@ -317,7 +320,7 @@ export default function TransactionsPage() {
                                         : 'text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-700/50'
                                         }`}
                                 >
-                                    {f === 'ALL' ? 'All Activity' : f === 'PURCHASES' ? 'Purchases' : f === 'CASHBACK' ? 'Cashback' : f === 'WALLET' ? 'Wallet' : 'Udhari'}
+                                    {f === 'ALL' ? 'All Activity' : f === 'PURCHASES' ? 'Purchases' : f === 'CASHBACK' ? 'Cashback' : f === 'WALLET' ? 'Wallet' : f === 'UDHARI' ? 'Store Credit' : 'Admin'}
                                 </button>
                             ))}
                         </div>

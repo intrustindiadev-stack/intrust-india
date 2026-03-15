@@ -38,13 +38,21 @@ const nextConfig = {
         },
     },
     async headers() {
+        const sabpaisaInitUrl = process.env.SABPAISA_INIT_URL || process.env.NEXT_PUBLIC_SABPAISA_INIT_URL || 'https://securepay.sabpaisa.in';
+        let sabpaisaDomain = 'https://securepay.sabpaisa.in';
+        try {
+            sabpaisaDomain = new URL(sabpaisaInitUrl).origin;
+        } catch (e) {
+            console.warn('Invalid SABPAISA_INIT_URL, falling back to default live domain for CSP');
+        }
+
         return [
             {
                 source: '/:path*',
                 headers: [
                     {
                         key: 'Content-Security-Policy',
-                        value: "form-action 'self' https://stage-securepay.sabpaisa.in https://secure.sabpaisa.in https://uat.sabpaisa.in https://securepay.sabpaisa.in;"
+                        value: `form-action 'self' ${sabpaisaDomain};`
                     },
                 ],
             },

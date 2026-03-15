@@ -98,6 +98,18 @@ const SuccessPage = () => {
 
         const verifyTransaction = async () => {
             try {
+                // If this is a synthetic wallet transaction from a direct balance deduction, skip backend fetch
+                if (txnId.startsWith('WALLET_')) {
+                    setTransaction({
+                        status: 'SUCCESS',
+                        amount: router.query.amount || 0,
+                        payment_mode: 'Intrust Wallet',
+                        udf1: router.query.type || 'GIFT_CARD'
+                    });
+                    setVerificationState('verified');
+                    return;
+                }
+
                 const { data: { session } } = await supabase.auth.getSession();
 
                 if (!session) {

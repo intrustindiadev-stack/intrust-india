@@ -60,7 +60,7 @@ export default function AdminUdhariOverviewPage() {
                         Store Credit Overview
                     </h1>
                     <p className="text-slate-500 dark:text-gray-400 font-medium">
-                        Monitor Udhari settings and active requests across all merchants
+                        Monitor Store Credit settings and active requests across all merchants
                     </p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">

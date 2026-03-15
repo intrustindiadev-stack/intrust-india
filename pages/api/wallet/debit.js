@@ -30,7 +30,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Invalid amount' });
         }
 
-        const transaction = await WalletService.debitWallet(
+        const result = await WalletService.debitWallet(
             user.id,
             amount,
             referenceId,
@@ -38,7 +38,11 @@ export default async function handler(req, res) {
             description
         );
 
-        res.status(200).json({ success: true, transaction });
+        res.status(200).json({ 
+            success: true, 
+            transaction: result.data ? result.data : result,
+            ...(result.data ? result : {})
+        });
     } catch (error) {
         console.error('Wallet Debit Error:', error);
         res.status(400).json({ error: error.message }); // 400 for business logic errors like insufficient funds

@@ -3,12 +3,30 @@ import { notFound, redirect } from 'next/navigation';
 import { Building2, Phone, Mail, FileText, CheckCircle, XCircle, Clock, MapPin, CreditCard, User, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import MerchantActions from './MerchantActions';
+import MerchantWalletAdjustSection from './MerchantWalletAdjustSection';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminMerchantDetailPage({ params }) {
     const supabase = createAdminClient();
     const { id } = await params;
+
+    // Fetch current admin's permissions (filtered by their own identity)
+    let adminPermissions = [];
+    try {
+        const { createServerSupabaseClient } = await import('@/lib/supabaseServer');
+        const serverClient = await createServerSupabaseClient();
+        const { data: { user: currentAdmin } } = await serverClient.auth.getUser();
+        if (currentAdmin) {
+            const { data: permData } = await supabase
+                .from('admin_permissions')
+                .select('permission')
+                .eq('admin_user_id', currentAdmin.id);
+            adminPermissions = (permData || []).map(p => p.permission);
+        }
+    } catch (e) {
+        console.log('admin_permissions not available yet:', e);
+    }
 
     // Fetch the merchant and associated user profile
     const { data: merchant, error } = await supabase
@@ -261,6 +279,12 @@ export default async function AdminMerchantDetailPage({ params }) {
                             <Link href={`/admin/merchants/${merchant.id}/udhari`} className="block w-full py-4 bg-blue-600 text-white text-[10px] font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] uppercase tracking-widest text-center">
                                 Manage Settlements
                             </Link>
+                            <MerchantWalletAdjustSection
+                                merchantUserId={merchant.user_id}
+                                merchantId={merchant.id}
+                                initialBalance={(merchant.wallet_balance_paise || 0) / 100}
+                                adminPermissions={adminPermissions}
+                            />
                         </div>
                     </div>
 

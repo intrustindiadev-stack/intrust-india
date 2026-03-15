@@ -11,6 +11,16 @@ const FailurePage = () => {
 
     useEffect(() => {
         if (txnId) {
+            if (txnId.startsWith('WALLET_')) {
+                // Synthetic wallet txn — no DB record exists, skip fetch
+                // Set synthetic transaction to ensure handleTryAgain() routes correctly
+                setTransaction({
+                    udf1: router.query.type || 'GIFT_CARD',
+                    udf2: router.query.itemId || ''
+                });
+                setFetchError(false);
+                return;
+            }
             supabase.auth.getSession().then(({ data: { session } }) => {
                 if (!session) {
                     setFetchError(true);

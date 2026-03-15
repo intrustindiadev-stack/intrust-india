@@ -54,7 +54,7 @@ export default function MerchantUdhariPage() {
             setRequests(filtered);
         } catch (error) {
             console.error('Error fetching udhari:', error);
-            toast.error('Failed to load udhari requests');
+            toast.error('Failed to load store credit requests');
         } finally {
             setLoading(false);
         }
@@ -148,7 +148,7 @@ export default function MerchantUdhariPage() {
                     onClick={() => router.push('/merchant/settings/udhari')}
                     className="px-4 py-2 merchant-glass gold-border text-[#D4AF37] hover:bg-[#D4AF37]/10 rounded-lg text-sm font-semibold transition-colors"
                 >
-                    Udhari Settings
+                    Store Credit Settings
                 </button>
             </div>
 

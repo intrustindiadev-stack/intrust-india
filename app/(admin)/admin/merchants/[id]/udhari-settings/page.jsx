@@ -113,7 +113,7 @@ export default function AdminUdhariSettingsPage({ params }) {
                     Store Credit Settings
                 </h1>
                 <p className="text-slate-500 font-medium">
-                    Manage Udhari configuration for {merchant?.business_name || 'this merchant'}. Admin overrides.
+                    Manage Store Credit configuration for {merchant?.business_name || 'this merchant'}. Admin overrides.
                 </p>
             </div>
 
@@ -126,7 +126,7 @@ export default function AdminUdhariSettingsPage({ params }) {
                                 <ShieldCheck size={28} strokeWidth={2.5} />
                             </div>
                             <div>
-                                <h3 className="text-xl font-extrabold text-slate-900">Enable Udhari Feature</h3>
+                                <h3 className="text-xl font-extrabold text-slate-900">Enable Store Credit Feature</h3>
                                 <p className="text-sm text-slate-500 font-medium mt-1">
                                     Allow this merchant to offer store credit (Buy Now, Pay Later) to customers.
                                 </p>

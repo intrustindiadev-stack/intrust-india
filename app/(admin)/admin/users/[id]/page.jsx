@@ -19,12 +19,31 @@ import {
     Briefcase
 } from 'lucide-react';
 import KYCReviewSection from './KYCReviewSection';
+import WalletAdjustSection from './WalletAdjustSection';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminUserDetailPage({ params }) {
     const supabase = createAdminClient();
     const { id } = await params;
+
+    // Fetch current admin's permissions (filtered by their own identity)
+    let adminPermissions = [];
+    try {
+        const { createServerSupabaseClient } = await import('@/lib/supabaseServer');
+        const serverClient = await createServerSupabaseClient();
+        const { data: { user: currentAdmin } } = await serverClient.auth.getUser();
+        if (currentAdmin) {
+            const { data: permData } = await supabase
+                .from('admin_permissions')
+                .select('permission')
+                .eq('admin_user_id', currentAdmin.id);
+            adminPermissions = (permData || []).map(p => p.permission);
+        }
+    } catch (e) {
+        // Table may not exist yet — graceful fallback
+        console.log('admin_permissions not available yet:', e);
+    }
 
     // Fetch User Profile
     const { data: user, error } = await supabase
@@ -389,6 +408,7 @@ export default async function AdminUserDetailPage({ params }) {
                                 <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block mb-1">Live Wallet Balance</span>
                                 <span className="font-extrabold text-3xl text-white">₹{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                             </div>
+                            <WalletAdjustSection userId={id} initialBalance={walletBalance} adminPermissions={adminPermissions} />
                             <div className="flex justify-between items-center py-3 border-b border-slate-700/50">
                                 <span className="text-slate-400 font-medium text-sm">Total Spent</span>
                                 <span className="font-bold text-white text-lg">

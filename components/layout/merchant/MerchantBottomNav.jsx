@@ -8,7 +8,7 @@ const navItems = [
     { icon: 'inventory_2', label: 'Inventory', href: '/merchant/inventory' },
     { icon: 'add_shopping_cart', label: 'Purchase', href: '/merchant/purchase', special: true },
     { icon: 'account_balance_wallet', label: 'Wallet', href: '/merchant/wallet' },
-    { icon: 'person', label: 'Profile', href: '/merchant/profile' },
+    { icon: 'credit_score', label: 'Credits', href: '/merchant/udhari' },
 ];
 
 export default function MerchantBottomNav() {

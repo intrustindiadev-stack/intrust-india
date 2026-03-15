@@ -37,7 +37,7 @@ export default function MerchantUdhariSettingsPage() {
                 setSettings(data.settings);
             }
         } catch (error) {
-            toast.error('Failed to load udhari settings');
+            toast.error('Failed to load store credit settings');
         } finally {
             setLoading(false);
         }
@@ -82,7 +82,7 @@ export default function MerchantUdhariSettingsPage() {
                     <ArrowLeft size={20} className="text-gray-600" />
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Udhari Configuration</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">Store Credit Configuration</h1>
                     <p className="text-sm text-gray-500">Manage rules for accepting deferred payments</p>
                 </div>
             </div>
@@ -90,7 +90,7 @@ export default function MerchantUdhariSettingsPage() {
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-8 flex gap-3 text-amber-800">
                 <ShieldAlert size={24} className="shrink-0 text-amber-600" />
                 <div className="text-sm">
-                    <strong>Important Compliance Notice:</strong> By enabling Udhari, you act as the credit provider. Intrust India only provides the ledger software. You assume all risk for non-payment. You cannot charge interest or late fees per RBI regulations on Store Credit.
+                    <strong>Important Compliance Notice:</strong> By enabling Store Credit, you act as the credit provider. Intrust India only provides the ledger software. You assume all risk for non-payment. You cannot charge interest or late fees per RBI regulations on Store Credit.
                 </div>
             </div>
 
@@ -99,7 +99,7 @@ export default function MerchantUdhariSettingsPage() {
                 {/* Enable Toggle */}
                 <div className="flex items-center justify-between pb-6 border-b border-gray-100">
                     <div>
-                        <h3 className="font-bold text-lg text-gray-900">Enable Udhari (Pay Later)</h3>
+                        <h3 className="font-bold text-lg text-gray-900">Enable Store Credit (Pay Later)</h3>
                         <p className="text-sm text-gray-500">Allow customers to request deferred payments on your gift cards</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
