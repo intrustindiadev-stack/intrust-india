@@ -1,6 +1,7 @@
 'use client';
 
-import { Shield, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { Shield, Loader2, X } from 'lucide-react';
 import FloatingLabelInput from './FloatingLabelInput';
 import { validateAddress } from '@/app/types/kyc';
 
@@ -14,6 +15,9 @@ import { validateAddress } from '@/app/types/kyc';
 
 /** @param {Step3AddressProps} props */
 export default function Step3Address({ formData, onChange, errors, isSubmitting }) {
+    const [showTerms, setShowTerms] = useState(false);
+    const [showPrivacy, setShowPrivacy] = useState(false);
+
     return (
         <div className="space-y-5">
             {/* Full Address textarea */}
@@ -88,44 +92,36 @@ export default function Step3Address({ formData, onChange, errors, isSubmitting 
             </div>
 
             {/* Terms checkbox */}
-            <label className="flex items-start gap-3 cursor-pointer group">
-                <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={formData.termsAccepted}
-                    onClick={() => onChange('termsAccepted', !formData.termsAccepted)}
-                    className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all shrink-0 bg-white ${formData.termsAccepted
-                        ? 'bg-electric border-electric'
-                        : 'border-slate-300 hover:border-electric/60'
-                        } ${errors.termsAccepted ? 'border-red-500' : ''}`}
-                >
-                    {formData.termsAccepted && (
-                        <svg width="12" height="10" viewBox="0 0 12 10" fill="none" className="text-white">
-                            <path
-                                d="M1 5L4.5 8.5L11 1.5"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
+            <div className="flex flex-col">
+                <label className="flex items-start gap-4 p-4 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100/50 transition-colors cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        checked={formData.termsAccepted || false}
+                        onChange={(e) => onChange('termsAccepted', e.target.checked)}
+                        className={`mt-1 w-5 h-5 rounded border-2 border-slate-300 text-blue-600 focus:ring-blue-600 focus:ring-2 cursor-pointer transition-colors shrink-0 ${errors.termsAccepted ? 'border-red-500' : ''}`}
+                    />
+                    <div className="flex-1 text-sm text-slate-600 leading-relaxed">
+                        I confirm that all information provided is accurate and authentic. By proceeding, I agree to Intrust's{' '}
+                        <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowTerms(true); }} className="text-blue-600 font-semibold hover:underline cursor-pointer focus:outline-none">Terms of Service</button>
+                        {' '}and{' '}
+                        <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowPrivacy(true); }} className="text-blue-600 font-semibold hover:underline cursor-pointer focus:outline-none">Privacy Policy</button>.
+                    </div>
+                </label>
+                {errors.termsAccepted && (
+                    <p className="text-red-500 text-sm mt-2 ml-1 flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
-                    )}
-                </button>
-                <span className="text-xs text-slate-600 leading-relaxed">
-                    I confirm that all information provided is accurate and I agree to the{' '}
-                    <span className="text-electric underline underline-offset-2">Terms of Service</span> and{' '}
-                    <span className="text-electric underline underline-offset-2">Privacy Policy</span>.
-                </span>
-            </label>
-            {errors.termsAccepted && (
-                <p className="text-red-500 text-xs ml-8 -mt-3">{errors.termsAccepted}</p>
-            )}
+                        {errors.termsAccepted}
+                    </p>
+                )}
+            </div>
 
             {/* Submit button */}
             <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none mt-4"
             >
                 {isSubmitting ? (
                     <>
@@ -136,6 +132,47 @@ export default function Step3Address({ formData, onChange, errors, isSubmitting 
                     'Submit Verification'
                 )}
             </button>
+
+            {/* Modals */}
+            {showTerms && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
+                        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0">
+                            <h3 className="font-bold text-lg text-slate-800">Terms of Service</h3>
+                            <button type="button" onClick={() => setShowTerms(false)} className="p-2 hover:bg-slate-100 text-slate-500 rounded-full transition-colors"><X size={20}/></button>
+                        </div>
+                        <div className="p-6 overflow-y-auto flex-1 text-sm text-slate-600 space-y-4 leading-relaxed">
+                            <p><strong className="text-slate-800">1. Introduction</strong><br/>Welcome to Intrust. By submitting this Identity and Address Verification (KYC) application, you agree to be bound by these Terms of Service. Please read them carefully.</p>
+                            <p><strong className="text-slate-800">2. Information Accuracy</strong><br/>You certify and declare that all the information, identification numbers, and details provided during this verification process are strictly true, accurate, and lawfully belong to you.</p>
+                            <p><strong className="text-slate-800">3. Verification Process</strong><br/>Intrust is authorized to utilize reputable third-party verification agencies (such as SprintVerify) to validate the identity details and PAN records provided. Providing false or misleading information may lead to immediate account suspension and potential legal action.</p>
+                            <p><strong className="text-slate-800">4. User Responsibilities</strong><br/>You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.</p>
+                        </div>
+                        <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+                            <button type="button" onClick={() => setShowTerms(false)} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm shadow-blue-600/20">I Understand</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showPrivacy && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
+                        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0">
+                            <h3 className="font-bold text-lg text-slate-800">Privacy Policy</h3>
+                            <button type="button" onClick={() => setShowPrivacy(false)} className="p-2 hover:bg-slate-100 text-slate-500 rounded-full transition-colors"><X size={20}/></button>
+                        </div>
+                        <div className="p-6 overflow-y-auto flex-1 text-sm text-slate-600 space-y-4 leading-relaxed">
+                            <p><strong className="text-slate-800">1. Data Collection</strong><br/>We collect your personal details—including your Full Name, Date of Birth, PAN, and Phone Number—solely for the purposes of identity verification, regulatory compliance, and account security.</p>
+                            <p><strong className="text-slate-800">2. Data Encryption & Storage</strong><br/>Your PAN and sensitive identifiers are encrypted both in transit and at rest using bank-grade security protocols. We follow strict data minimization principles and do not store plaintext identification numbers unnecessarily.</p>
+                            <p><strong className="text-slate-800">3. Data Sharing & Third Parties</strong><br/>Your information is securely transmitted only to recognized internal services and authenticated verification agencies. Intrust will never rent, sell, or unlawfully distribute your personal data to unauthorized third-party marketers.</p>
+                            <p><strong className="text-slate-800">4. Your Rights</strong><br/>You retain the right to request the deletion of your account data, subject to regulatory retention mandates for financial and verification records.</p>
+                        </div>
+                        <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+                            <button type="button" onClick={() => setShowPrivacy(false)} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm shadow-blue-600/20">Close Policy</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

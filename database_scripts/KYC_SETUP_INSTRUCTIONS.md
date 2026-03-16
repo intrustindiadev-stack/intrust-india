@@ -13,6 +13,26 @@ This guide walks you through setting up the KYC (Know Your Customer) verificatio
   - `SUPABASE_SERVICE_ROLE_KEY` (for admin operations)
 - Admin access to Supabase Dashboard
 
+## SprintVerify Environment Configuration
+
+The SprintVerify API integration uses environment variables to dictate whether it connects to the UAT or LIVE endpoints.
+
+- **UAT (Default)**
+  - Requires `SPRINT_VERIFY_ENV=UAT` (or omitted).
+  - Uses endpoint `/verification/pan_verify`.
+
+- **Production (LIVE)**
+  - You **must** set `SPRINT_VERIFY_ENV=LIVE` when deploying to production.
+  - Doing so dynamically switches the endpoint to `/verification/pan_advanced`.
+  - A startup warning will log if `NODE_ENV` is production but `SPRINT_VERIFY_ENV` is not `LIVE`.
+
+## PAN Storage Architecture
+
+The database requires the `pan_number` column to match the format `ABCDE1234F`. Therefore:
+- **Database:** Stores the **full, unmasked** PAN string. 
+- **Application Display:** Masking (e.g., `ABCDE****F`) is applied exclusively at the presentation layer during components execution or prior to sending records to the client.
+- **Resubmission:** If a rejected submission is updated without a new PAN, the application will transparently retrieve and reuse the full PAN from the previous record so as not to write `****` into the database constraint.
+
 ---
 
 ## Step 1: Run Database Migration

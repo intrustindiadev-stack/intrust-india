@@ -5,6 +5,7 @@ import PhoneInput from './PhoneInput';
 import DateOfBirthPicker from './DateOfBirthPicker';
 import {
     validateFullName,
+    validatePhone,
 } from '@/app/types/kyc';
 
 const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
@@ -106,8 +107,8 @@ export function validateStep1(formData) {
 
     // Phone validation
     const phone = formData.phoneNumber?.replace(/\D/g, '') || '';
-    if (phone.length !== 10) {
-        errs.phoneNumber = 'Enter a valid 10-digit mobile number';
+    if (!validatePhone(phone)) {
+        errs.phoneNumber = 'Please enter a valid 10-digit phone number starting with 6-9';
     }
 
     // DOB validation

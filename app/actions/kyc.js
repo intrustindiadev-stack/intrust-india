@@ -24,7 +24,7 @@ import { encryptCouponCode as encryptData } from '@/lib/encryption';
  * @returns {Promise<{success: boolean, error?: string, data?: Object}>} Result object
  */
 export async function submitKYC(formData) {
-    console.log('SERVER ACTION: submitKYC started');
+    if (process.env.NODE_ENV !== 'production') console.log('[KYC] submitKYC called');
     try {
         const supabase = await createServerSupabaseClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -100,7 +100,7 @@ export async function submitKYC(formData) {
                     console.warn('SprintVerify PAN check failed, queued for manual review:', panResult.message);
                 }
             } catch (svError) {
-                console.error('SprintVerify API error:', svError);
+                console.error('SprintVerify API error:', svError.message);
                 verificationStatus = 'pending';
                 rejectionReason = null;
                 sprintVerifyData.error = svError.message;
@@ -140,8 +140,8 @@ export async function submitKYC(formData) {
             // ID Details (Schema Requirements)
             id_type: 'pan',
             id_number_encrypted: idNumberEncrypted,
-            id_number_last4: sanitizedData.panNumber.slice(-4),
-            pan_number: sanitizedData.panNumber.includes('*') ? sanitizedData.panNumber : `${sanitizedData.panNumber.slice(0, 5)}****${sanitizedData.panNumber.slice(9)}`,
+            id_number_last4: isMaskedPanReuse ? existing.pan_number.slice(-4) : sanitizedData.panNumber.slice(-4),
+            pan_number: isMaskedPanReuse ? existing.pan_number : sanitizedData.panNumber,
 
             // Address Details (Schema Requirements)
             address_line1: sanitizedData.fullAddress,
@@ -237,7 +237,7 @@ export async function submitKYC(formData) {
         return { success: true, data: result, message };
 
     } catch (error) {
-        console.error('submitKYC error:', error);
+        console.error('submitKYC error:', error.message);
         // Return specific error for known DB errors
         if (error.code === '23505') return { success: false, error: 'KYC record already exists' };
         if (error.code === '42501') return { success: false, error: 'Database permission error. Contact support.' };
@@ -273,17 +273,14 @@ export async function verifyPANAction(panNumber) {
  * @returns {Promise<{data?: Object, error?: string}>} KYC record or error
  */
 export async function getKYCRecord(userId = null) {
-    console.log('SERVER ACTION: getKYCRecord started', { userId });
+    if (process.env.NODE_ENV !== 'production') console.log('[KYC] getKYCRecord called');
     try {
         const supabase = await createServerSupabaseClient();
-        console.log('SERVER ACTION: supabase client created');
 
         // Get authenticated user
         const { data: { user }, error: authError } = await supabase.auth.getUser();
-        console.log('SERVER ACTION: auth check result', { userId: user?.id, error: authError });
 
         if (authError || !user) {
-            console.error('SERVER ACTION: Auth failed');
             return {
                 error: 'You must be logged in to view KYC records'
             };
@@ -294,7 +291,6 @@ export async function getKYCRecord(userId = null) {
 
         // If requesting another user's record, verify admin status
         if (userId && userId !== user.id) {
-            console.log('SERVER ACTION: Admin check required');
             const { data: adminCheck } = await supabase
                 .from('app_admins')
                 .select('user_id')
@@ -302,14 +298,13 @@ export async function getKYCRecord(userId = null) {
                 .single();
 
             if (!adminCheck) {
-                console.warn('SERVER ACTION: Unauthorized admin access attempt');
+                console.warn('[KYC] Unauthorized admin access attempt');
                 return {
                     error: 'Unauthorized: Admin access required'
                 };
             }
         }
 
-        console.log('SERVER ACTION: Fetching KYC record for user', targetUserId);
         // Fetch KYC record
         const { data, error } = await supabase
             .from('kyc_records')
@@ -319,7 +314,6 @@ export async function getKYCRecord(userId = null) {
             .limit(1);
 
         const record = data && data.length > 0 ? data[0] : null;
-        console.log('SERVER ACTION: Fetch result', { dataFound: !!record, error });
 
         if (error) {
             console.error('Error fetching KYC record:', error);
