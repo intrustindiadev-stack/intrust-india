@@ -129,13 +129,13 @@ const UptimeRing = () => (
 const MerchantBars = () => (
     <div className="relative w-full h-28 md:h-40 flex items-end justify-center gap-1.5 md:gap-2 overflow-hidden px-4">
         {/* Bar Chart - Fewer bars on mobile for performance */}
-        {[30, 50, 40, 70, 60, 90, 80].slice(typeof window !== 'undefined' && window.innerWidth < 768 ? 2 : 0).map((height, i) => (
+        {[30, 50, 40, 70, 60, 90, 80].map((height, i) => (
             <motion.div
                 key={i}
                 initial={{ height: 0 }}
                 whileInView={{ height: `${height}%` }}
                 transition={{ duration: 1, delay: i * 0.1, ease: "backOut" }}
-                className="w-full bg-gradient-to-t from-violet-600 to-fuchsia-400 rounded-t-sm shadow-[0_0_10px_rgba(167,139,250,0.3)] opacity-90 hover:opacity-100 transition-opacity"
+                className={`w-full bg-gradient-to-t from-violet-600 to-fuchsia-400 rounded-t-sm shadow-[0_0_10px_rgba(167,139,250,0.3)] opacity-90 hover:opacity-100 transition-opacity ${i < 2 ? 'hidden md:block' : ''}`}
             />
         ))}
         {/* Reflection */}
