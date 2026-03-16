@@ -82,7 +82,8 @@ export default function CustomerDashboardPage() {
         walletBalance: 0.00,
         activeCards: 0,
         completedOnboarding: true, // Optimistically true until fetched
-        referralCode: null
+        referralCode: null,
+        merchantStatus: null
     });
 
     const [recentActivity, setRecentActivity] = useState([]);
@@ -263,7 +264,8 @@ export default function CustomerDashboardPage() {
                             id, brand, title, face_value_paise, selling_price_paise, status, purchased_at, valid_until
                         )
                     `).eq('user_id', user.id).eq('payment_status', 'paid').order('created_at', { ascending: false }),
-                    supabase.from('customer_wallet_transactions').select('id, type, amount_paise, description, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5)
+                    supabase.from('customer_wallet_transactions').select('id, type, amount_paise, description, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
+                    supabase.from('merchants').select('status').eq('user_id', user.id).maybeSingle()
                 ]);
 
                 const results = await Promise.race([mainFetch, timeoutTx]);
@@ -274,6 +276,7 @@ export default function CustomerDashboardPage() {
                 const walletResult = results[2];
                 const couponsResult = results[3];
                 const walletTxResult = results[4];
+                const merchantResult = results[5];
 
                 // 1. Process Profile
                 let profile = null;
@@ -363,7 +366,8 @@ export default function CustomerDashboardPage() {
                     walletBalance,
                     activeCards,
                     completedOnboarding: profile?.completed_onboarding ?? true,
-                    referralCode: profile?.referral_code || null
+                    referralCode: profile?.referral_code || null,
+                    merchantStatus: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.status : null
                 });
 
             } catch (error) {
@@ -499,8 +503,8 @@ export default function CustomerDashboardPage() {
                             <RecentActivity orders={recentActivity} />
 
                             {/* KYC Banner */}
-                            {userData.kycStatus === 'verified' && (
-                                <MerchantOpportunityBanner />
+                            {(userData.kycStatus === 'verified' || userData.merchantStatus) && (
+                                <MerchantOpportunityBanner merchantStatus={userData.merchantStatus} />
                             )}
                         </div>
 

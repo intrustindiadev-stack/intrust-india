@@ -368,8 +368,8 @@ export default function MerchantApplyPage() {
                             <span className="font-bold text-slate-800 dark:text-slate-100 text-lg">Become a Partner</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Step {step} of 2</span>
-                            <div className="w-16 h-1.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Step {step} of 2</span>
+                            <div className="w-24 h-2.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
                                 <motion.div
                                     initial={{ width: 0 }}
                                     animate={{ width: `${progress}%` }}
@@ -393,14 +393,14 @@ export default function MerchantApplyPage() {
                                 transition={{ duration: 0.3 }}
                                 className="py-2"
                             >
-                                <div className="mb-8">
-                                    <h2 className="text-3xl font-display font-extrabold text-slate-900 dark:text-white mb-3 tracking-tight">Business Details</h2>
-                                    <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">Tell us about your business to get started.</p>
+                                <div className="mb-10">
+                                    <h2 className="text-4xl sm:text-5xl font-display font-black text-slate-900 dark:text-white mb-4 tracking-tight">Business Details</h2>
+                                    <p className="text-xl text-slate-500 dark:text-slate-400 font-semibold">Tell us about your business to get started.</p>
                                 </div>
 
-                                <div className="space-y-6">
+                                <div className="space-y-10">
                                     <SmoothInput label="Business Name" value={formData.businessName} onChange={e => setFormData({ ...formData, businessName: e.target.value })} autoFocus icon={Store} />
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                         <SmoothInput
                                             label="GSTIN (Optional)"
                                             value={formData.gstNumber}
@@ -416,7 +416,7 @@ export default function MerchantApplyPage() {
                                         />
                                         <SmoothInput label="Owner Name" value={formData.ownerName} onChange={e => setFormData({ ...formData, ownerName: e.target.value })} icon={Users} />
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                         <SmoothInput label="Mobile Number" type="tel" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} icon={TrendingUp} />
                                         <SmoothInput label="Email Address" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} icon={Building2} />
                                     </div>
@@ -434,63 +434,63 @@ export default function MerchantApplyPage() {
                                 transition={{ duration: 0.3 }}
                                 className="py-2"
                             >
-                                <div className="mb-8">
-                                    <h2 className="text-3xl font-display font-extrabold text-slate-900 dark:text-white mb-3 tracking-tight">Banking Details</h2>
-                                    <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">Connect your bank account for settlements.</p>
+                                <div className="mb-10">
+                                    <h2 className="text-4xl sm:text-5xl font-display font-black text-slate-900 dark:text-white mb-4 tracking-tight">Banking Details</h2>
+                                    <p className="text-xl text-slate-500 dark:text-slate-400 font-semibold">Connect your bank account for settlements.</p>
                                 </div>
 
-                                <div className="space-y-6">
+                                <div className="space-y-10">
                                     <div className="p-6 bg-blue-500/5 rounded-2xl border border-blue-500/10 dark:border-blue-500/20 flex gap-4 items-start">
                                         <div className="bg-blue-500/10 p-2 rounded-full text-blue-600 dark:text-blue-400 shrink-0">
                                             <Shield size={20} />
                                         </div>
                                         <div>
-                                            <p className="font-bold text-blue-900 dark:text-blue-100 text-sm">Secure Verification</p>
-                                            <p className="text-blue-700/80 dark:text-blue-300/60 text-sm mt-1 leading-relaxed font-medium">We will deposit ₹1 to verify this account automatically. Your banking details are encrypted with 256-bit SSL.</p>
+                                            <p className="font-black text-blue-900 dark:text-blue-100 text-lg">Secure Verification</p>
+                                            <p className="text-blue-700/80 dark:text-blue-300/60 text-base mt-2 leading-relaxed font-semibold">We will deposit ₹1 to verify this account automatically. Your banking details are encrypted with 256-bit SSL.</p>
                                         </div>
                                     </div>
 
-                                    <SmoothInput
-                                        label="Account Number"
-                                        type="text"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        value={formData.bankAccount}
-                                        onChange={e => {
-                                            setFormData({ ...formData, bankAccount: e.target.value });
-                                            if (verified.bank) setVerified(prev => ({ ...prev, bank: null }));
-                                        }}
-                                        autoFocus
-                                        icon={CreditCard}
-                                    />
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <SmoothInput
-                                            label="IFSC Code"
-                                            value={formData.ifscCode}
+                                            label="Account Number"
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            value={formData.bankAccount}
                                             onChange={e => {
-                                                setFormData({ ...formData, ifscCode: e.target.value });
+                                                setFormData({ ...formData, bankAccount: e.target.value });
                                                 if (verified.bank) setVerified(prev => ({ ...prev, bank: null }));
                                             }}
-                                            icon={Banknote}
-                                            actionLabel={verified.bank === 'verified' ? 'Verified' : 'Verify Bank'}
-                                            onAction={handleVerifyBank}
-                                            isVerifying={verifying.bank}
-                                            verificationState={verified.bank}
+                                            autoFocus
+                                            icon={CreditCard}
                                         />
-                                        <SmoothInput
-                                            label="PAN Number"
-                                            value={formData.panCard}
-                                            onChange={e => {
-                                                setFormData({ ...formData, panCard: e.target.value.toUpperCase() });
-                                                if (verified.pan) setVerified(prev => ({ ...prev, pan: null }));
-                                            }}
-                                            icon={FileText}
-                                            actionLabel="Verify"
-                                            onAction={handleVerifyPAN}
-                                            isVerifying={verifying.pan}
-                                            verificationState={verified.pan}
-                                        />
-                                    </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                            <SmoothInput
+                                                label="IFSC Code"
+                                                value={formData.ifscCode}
+                                                onChange={e => {
+                                                    setFormData({ ...formData, ifscCode: e.target.value });
+                                                    if (verified.bank) setVerified(prev => ({ ...prev, bank: null }));
+                                                }}
+                                                icon={Banknote}
+                                                actionLabel={verified.bank === 'verified' ? 'Verified' : 'Verify Bank'}
+                                                onAction={handleVerifyBank}
+                                                isVerifying={verifying.bank}
+                                                verificationState={verified.bank}
+                                            />
+                                            <SmoothInput
+                                                label="PAN Number"
+                                                value={formData.panCard}
+                                                onChange={e => {
+                                                    setFormData({ ...formData, panCard: e.target.value.toUpperCase() });
+                                                    if (verified.pan) setVerified(prev => ({ ...prev, pan: null }));
+                                                }}
+                                                icon={FileText}
+                                                actionLabel="Verify"
+                                                onAction={handleVerifyPAN}
+                                                isVerifying={verifying.pan}
+                                                verificationState={verified.pan}
+                                            />
+                                        </div>
 
                                     {error && (
                                         <div className="p-4 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium border border-red-100 dark:border-red-500/20">
@@ -525,22 +525,22 @@ export default function MerchantApplyPage() {
                                     />
                                 </div>
 
-                                <h2 className="text-4xl font-display font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">
-                                    {successStatus === 'approved' ? 'Welcome to InTrust!' : 'Application Submitted'}
+                                <h2 className="text-5xl font-display font-black text-slate-900 dark:text-white mb-6 tracking-tight">
+                                    {successStatus === 'approved' ? 'All Set!' : 'Submitted'}
                                 </h2>
-                                <p className="text-slate-500 dark:text-slate-400 text-lg max-w-md mx-auto mb-10 leading-relaxed font-medium">
+                                <p className="text-slate-500 dark:text-slate-400 text-2xl max-w-lg mx-auto mb-12 leading-relaxed font-bold">
                                     {successStatus === 'approved'
-                                        ? <>Your merchant account is <span className="font-bold text-[#D4AF37]">ready to use</span>! Start selling gift cards and grow your business today.</>
-                                        : <>Your application is <span className="font-bold text-amber-500">under review</span>. We will notify you once your account is verified.</>
+                                        ? <>Your merchant account is <span className="text-[#D4AF37]">ready to use</span>! Start selling gift cards and grow your business today.</>
+                                        : <>Your application is <span className="text-amber-500">under review</span>. We will notify you once your account is verified.</>
                                     }
                                 </p>
 
-                                <div className="w-full max-w-xs space-y-3">
+                                <div className="w-full max-w-sm space-y-4">
                                     <button
                                         onClick={() => router.push('/merchant/dashboard')}
-                                        className="w-full py-4 bg-[#D4AF37] hover:bg-opacity-90 text-[#020617] font-bold rounded-2xl shadow-xl shadow-[#D4AF37]/20 transition-all flex items-center justify-center gap-2 gold-glow"
+                                        className="w-full py-6 bg-[#D4AF37] hover:bg-opacity-90 text-[#020617] font-black rounded-3xl shadow-2xl shadow-[#D4AF37]/20 transition-all flex items-center justify-center gap-3 text-2xl gold-glow"
                                     >
-                                        <Home size={18} />
+                                        <Home size={28} />
                                         Go to Dashboard
                                     </button>
                                 </div>
@@ -551,48 +551,27 @@ export default function MerchantApplyPage() {
 
                 {/* Fixed Bottom Action Bar (App Style - Hide on Success) */}
                 {step < 3 && (
-                    <div className="p-6 bg-white dark:bg-[#020617] border-t border-black/5 dark:border-white/10 flex items-center justify-between gap-4 z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] dark:shadow-none transition-colors">
+                    <div className="p-8 pb-10 bg-white dark:bg-[#020617] border-t border-black/5 dark:border-white/10 flex items-center justify-between gap-6 z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] dark:shadow-none transition-colors">
                         <button
                             onClick={prevStep}
                             disabled={step === 1 || loading}
-                            className={`px-8 py-4 rounded-2xl font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all ${step === 1 ? 'opacity-0 pointer-events-none' : ''}`}
+                            className={`px-8 py-5 rounded-2xl font-black text-lg text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all ${step === 1 ? 'opacity-0 pointer-events-none' : ''}`}
                         >
                             Back
                         </button>
                         <button
                             onClick={step === 2 ? handleFormSubmit : nextStep}
                             disabled={loading || (step === 2 && ((verified.pan !== 'verified' && verified.pan !== 'pending') || (verified.bank !== 'verified' && verified.bank !== 'pending')))}
-                            className={`flex-1 flex gap-2 justify-center items-center py-4 rounded-2xl text-white dark:text-[#020617] font-bold shadow-lg transition-all text-lg ${(loading || (step === 2 && ((verified.pan !== 'verified' && verified.pan !== 'pending') || (verified.bank !== 'verified' && verified.bank !== 'pending')))) ? 'bg-slate-200 dark:bg-white/5 shadow-none text-slate-400 cursor-not-allowed' : 'bg-[#D4AF37] shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/30 hover:scale-[1.02] active:scale-[0.98] gold-glow'}`}
+                            className={`flex-1 flex gap-3 justify-center items-center py-5 rounded-2xl text-white dark:text-[#020617] font-black shadow-lg transition-all text-xl ${(loading || (step === 2 && ((verified.pan !== 'verified' && verified.pan !== 'pending') || (verified.bank !== 'verified' && verified.bank !== 'pending')))) ? 'bg-slate-200 dark:bg-white/5 shadow-none text-slate-400 cursor-not-allowed' : 'bg-[#D4AF37] shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/30 hover:scale-[1.02] active:scale-[0.98] gold-glow'}`}
                         >
-                            {loading && <Loader2 className="animate-spin" size={20} />}
+                            {loading && <Loader2 className="animate-spin" size={24} />}
                             {loading ? 'Submitting...' : step === 2 ? 'Submit Application' : 'Continue'}
-                            {!loading && step === 1 && <ArrowRight size={20} />}
+                            {!loading && step === 1 && <ArrowRight size={24} />}
                         </button>
                     </div>
                 )}
             </div>
 
-            {/* Debug: KYC Toggle Button */}
-            <div className="fixed bottom-4 right-4 z-50">
-                <button
-                    onClick={async () => {
-                        if (!user) return toast.error("Login first");
-                        const { error } = await supabase
-                            .from('user_profiles')
-                            .update({ kyc_status: 'verified' })
-                            .eq('id', user.id);
-                        if (error) {
-                            console.error(error);
-                            toast.error("Failed to update status");
-                        } else {
-                            toast.success("Debug: KYC Status set to Approved");
-                        }
-                    }}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg opacity-40 hover:opacity-100 transition-opacity"
-                >
-                    Debug: Complete KYC
-                </button>
-            </div>
         </div>
     );
 }
@@ -638,43 +617,43 @@ function SmoothInput({ label, className = "", icon: Icon, actionLabel, onAction,
 
     return (
         <div className="group">
-            <div className="flex justify-between items-end mb-2">
-                <label className="block text-[10px] uppercase tracking-widest font-bold text-slate-500 dark:text-slate-400 ml-1 group-focus-within:text-[#D4AF37] transition-colors">
+            <div className="flex justify-between items-end mb-3">
+                <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 ml-1 group-focus-within:text-[#D4AF37] transition-colors">
                     {label}
                 </label>
             </div>
             <div className="relative transform transition-all duration-200 group-focus-within:scale-[1.01]">
                 <input
-                    className={`w-full px-5 py-4 pl-12 ${actionLabel ? 'pr-24' : ''} bg-slate-50 dark:bg-white/5 border ${borderClass} rounded-2xl focus:ring-4 transition-all outline-none font-semibold text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 shadow-sm ${className}`}
+                    className={`w-full px-6 py-5 pl-14 ${actionLabel ? 'pr-28' : ''} bg-slate-50 dark:bg-white/5 border ${borderClass} rounded-2xl focus:ring-4 transition-all outline-none font-bold text-xl text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 shadow-sm ${className}`}
                     placeholder={`Enter ${label}`}
                     readOnly={isVerifying || isVerified}
                     {...props}
                 />
-                <div className={`absolute left-4 top-1/2 -translate-y-1/2 ${iconClass} transition-colors`}>
-                    {isVerified ? <CheckCircle size={20} /> : (Icon && <Icon size={20} />)}
+                <div className={`absolute left-5 top-1/2 -translate-y-1/2 ${iconClass} transition-colors`}>
+                    {isVerified ? <CheckCircle size={24} /> : (Icon && <Icon size={24} />)}
                 </div>
 
                 {actionLabel && (
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
                         {isVerified ? (
-                            <div className="px-3 py-1.5 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 rounded-xl text-xs font-bold flex items-center gap-1">
-                                <Check size={14} /> Verified
+                            <div className="px-4 py-2 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 rounded-xl text-sm font-black flex items-center gap-1.5">
+                                <Check size={18} /> Verified
                             </div>
                         ) : isPending ? (
-                            <div className="px-3 py-1.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-xl text-xs font-bold flex items-center gap-1">
-                                <Loader2 size={14} /> Pending
+                            <div className="px-4 py-2 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-xl text-sm font-black flex items-center gap-1.5">
+                                <Loader2 size={18} className="animate-spin" /> Pending
                             </div>
                         ) : (
                             <button
                                 type="button"
                                 onClick={onAction}
                                 disabled={isVerifying || !props.value}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${isVerifying || !props.value
+                                className={`px-4 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${isVerifying || !props.value
                                     ? 'bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                                     : 'bg-[#D4AF37] text-[#020617] hover:bg-opacity-90 shadow-sm'
                                     }`}
                             >
-                                {isVerifying && <Loader2 size={12} className="animate-spin" />}
+                                {isVerifying && <Loader2 size={16} className="animate-spin" />}
                                 {isVerifying ? 'Verifying...' : actionLabel}
                             </button>
                         )}
@@ -688,13 +667,13 @@ function SmoothInput({ label, className = "", icon: Icon, actionLabel, onAction,
 function SmoothTextArea({ label, className = "", ...props }) {
     return (
         <div className="group">
-            <label className="block text-[10px] uppercase tracking-widest font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 group-focus-within:text-[#D4AF37] transition-colors">
+            <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-3 ml-1 group-focus-within:text-[#D4AF37] transition-colors">
                 {label}
             </label>
             <textarea
-                className={`w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl focus:border-[#D4AF37]/50 focus:ring-4 focus:ring-[#D4AF37]/10 transition-all outline-none font-semibold text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 shadow-sm resize-none ${className}`}
+                className={`w-full px-6 py-5 bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl focus:border-[#D4AF37]/50 focus:ring-4 focus:ring-[#D4AF37]/10 transition-all outline-none font-bold text-xl text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 shadow-sm resize-none ${className}`}
                 placeholder={`Enter ${label}`}
-                rows={3}
+                rows={4}
                 {...props}
             />
         </div>
