@@ -1,6 +1,7 @@
 import HomeClient from './HomeClient';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
+import DisclaimerNote from '@/components/customer/dashboard/DisclaimerNote';
 
 export async function generateMetadata() {
   return {
@@ -43,5 +44,10 @@ export default async function Home() {
     }
   }
 
-  return <HomeClient />;
+  return (
+    <>
+      <HomeClient />
+      <DisclaimerNote />
+    </>
+  );
 }
