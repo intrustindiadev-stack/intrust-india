@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -25,6 +25,8 @@ import RecentActivity from '@/components/customer/dashboard/RecentActivity';
 import QuickActions from '@/components/customer/dashboard/QuickActions';
 import GoldSubscription from '@/components/customer/dashboard/GoldSubscription';
 import ReferralGenzSection from '@/components/customer/dashboard/ReferralGenzSection';
+import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
+import DisclaimerNote from '@/components/customer/dashboard/DisclaimerNote';
 
 const OpportunitiesSection = dynamic(() => import('@/components/customer/OpportunitiesSection'), { ssr: false });
 const MerchantOpportunityBanner = dynamic(() => import('@/components/customer/MerchantOpportunityBanner'), { ssr: false });
@@ -254,7 +256,13 @@ export default function CustomerDashboardPage() {
                     supabase.from('user_profiles').select('full_name, role, is_gold_verified, subscription_expiry, kyc_status, completed_onboarding, referral_code').eq('id', user.id).single(),
                     supabase.from('kyc_records').select('status, verification_status').eq('user_id', user.id).maybeSingle(),
                     supabase.from('customer_wallets').select('balance_paise').eq('user_id', user.id).maybeSingle(),
-                    supabase.from('coupons').select('id, title, brand, face_value_paise, selling_price_paise, valid_until, status, purchased_at').eq('purchased_by', user.id).eq('status', 'sold').order('purchased_at', { ascending: false }),
+                    // Query through orders table (same as My Gift Cards page) for accurate counts
+                    supabase.from('orders').select(`
+                        id, amount, created_at,
+                        coupons:coupons!orders_giftcard_id_fkey (
+                            id, brand, title, face_value_paise, selling_price_paise, status, purchased_at, valid_until
+                        )
+                    `).eq('user_id', user.id).eq('payment_status', 'paid').order('created_at', { ascending: false }),
                     supabase.from('customer_wallet_transactions').select('id, type, amount_paise, description, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5)
                 ]);
 
@@ -279,26 +287,40 @@ export default function CustomerDashboardPage() {
                     kycStatus = kycResult.value.data.verification_status || kycResult.value.data.status;
                 }
 
-                // 3. Process Coupons
+                // 3. Process Orders → Coupons (matches My Gift Cards logic)
                 let coupons = [];
+                console.log('[DASHBOARD] Orders query result:', {
+                    status: couponsResult.status,
+                    data: couponsResult.status === 'fulfilled' ? couponsResult.value.data : null,
+                    error: couponsResult.status === 'fulfilled' ? couponsResult.value.error : couponsResult.reason,
+                    count: couponsResult.status === 'fulfilled' ? couponsResult.value.data?.length : 0,
+                });
                 if (couponsResult.status === 'fulfilled' && couponsResult.value.data) {
-                    coupons = couponsResult.value.data;
+                    // Flatten: extract coupon from each order, attach order info
+                    coupons = couponsResult.value.data
+                        .filter(order => order.coupons) // Only orders with linked coupons
+                        .map(order => ({
+                            ...order.coupons,
+                            order_amount: order.amount,
+                            purchased_at: order.coupons.purchased_at || order.created_at,
+                        }));
                 }
+                console.log('[DASHBOARD] Processed coupons:', coupons.length, 'Active check results:', coupons.map(c => ({ id: c.id, status: c.status, valid_until: c.valid_until, isActive: c.status === 'sold' && new Date(c.valid_until) > new Date() })));
 
                 let totalSavings = 0;
                 let activeCards = 0;
                 let totalPurchases = 0;
 
-                if (coupons) {
+                if (coupons.length > 0) {
                     totalPurchases = coupons.length;
                     coupons.forEach(coupon => {
-                        // Savings = (Face Value - Selling Price)
                         const faceValue = coupon.face_value_paise || 0;
                         const sellingPrice = coupon.selling_price_paise || 0;
                         totalSavings += (faceValue - sellingPrice);
 
-                        // Active Check
-                        if (coupon.valid_until > now) {
+                        // Active = sold + not expired (same logic as My Gift Cards page)
+                        const isExpired = new Date(coupon.valid_until) < new Date();
+                        if (coupon.status === 'sold' && !isExpired) {
                             activeCards++;
                         }
                     });
@@ -383,7 +405,12 @@ export default function CustomerDashboardPage() {
                     )
                     .on(
                         'postgres_changes',
-                        { event: 'UPDATE', schema: 'public', table: 'coupons', filter: `purchased_by=eq.${user.id}` },
+                        { event: '*', schema: 'public', table: 'orders', filter: `user_id=eq.${user.id}` },
+                        () => fetchDashboardData()
+                    )
+                    .on(
+                        'postgres_changes',
+                        { event: '*', schema: 'public', table: 'coupons', filter: `purchased_by=eq.${user.id}` },
                         () => fetchDashboardData()
                     )
                     .subscribe();
@@ -456,6 +483,8 @@ export default function CustomerDashboardPage() {
                         </p>
                     </motion.div>
 
+                    <AdBannerCarousel />
+
                     <DashboardStats stats={stats} />
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
@@ -491,6 +520,7 @@ export default function CustomerDashboardPage() {
                 </div>
             </div>
             {userData.completedOnboarding && <CustomerBottomNav />}
+            <DisclaimerNote />
 
             <PackageSelectionModal
                 showPackages={showPackages}

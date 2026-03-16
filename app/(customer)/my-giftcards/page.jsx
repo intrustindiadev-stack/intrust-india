@@ -44,14 +44,8 @@ export default async function MyCouponsPage() {
     // Fetch orders with coupons (only paid orders)
     console.log('🔍 [MY-GIFTCARDS] Fetching orders for user:', user.id);
 
-    // Setup admin client to bypass RLS for inner joins (orders -> coupons -> merchants)
-    const { createClient } = require('@supabase/supabase-js');
-    const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-
-    const { data: orders, error } = await supabaseAdmin
+    // Using standard authenticated client since RLS policies now allow users to view their own coupons
+    const { data: orders, error } = await supabase
         .from('orders')
         .select(`
             id,
@@ -88,7 +82,7 @@ export default async function MyCouponsPage() {
     }
 
     // Fetch approved udhari coupons (reserved but not yet paid)
-    const { data: udhariCoupons, error: udhariError } = await supabaseAdmin
+    const { data: udhariCoupons, error: udhariError } = await supabase
         .from('udhari_requests')
         .select(`
             id,
@@ -155,7 +149,7 @@ export default async function MyCouponsPage() {
         .map(req => {
             const coupon = req.coupon;
             const isExpired = new Date(coupon.valid_until) < new Date();
-            
+
             return {
                 orderId: null, // No order yet
                 udhariRequestId: req.id, // Track the udhari request
@@ -186,7 +180,7 @@ export default async function MyCouponsPage() {
     const pendingPaymentCount = allCoupons.filter(c => c.uiStatus === 'pending-payment').length;
 
     // Fetch Active Udhari Count
-    const { count: udhariCount } = await supabaseAdmin
+    const { count: udhariCount } = await supabase
         .from('udhari_requests')
         .select('*', { count: 'exact', head: true })
         .eq('customer_id', user.id)
