@@ -56,6 +56,23 @@ export default function StatsCards({ stats }) {
                 </h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm font-medium text-[#D4AF37]">Commission Paid</p>
             </div>
+
+            {/* Lockin Balance Card */}
+            <div className="merchant-glass p-6 rounded-3xl border border-blue-500/20 hover:border-blue-500 transition-all group relative overflow-hidden bg-gradient-to-br from-blue-500/5 to-transparent shadow-sm cursor-pointer" onClick={() => window.location.href = '/merchant/lockin'}>
+                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>
+                <div className="flex items-center justify-between mb-6">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/30">
+                        <span className="material-icons-round text-blue-600">lock_clock</span>
+                    </div>
+                    <div className="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                        Safe
+                    </div>
+                </div>
+                <h3 className="text-4xl font-display font-bold mb-1 text-slate-800 dark:text-slate-100">
+                    ₹{(stats.lockinBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Lockin Balance</p>
+            </div>
         </div>
     );
 }

@@ -15,7 +15,8 @@ import {
     LogOut,
     ChevronLeft,
     Store,
-    CreditCard
+    CreditCard,
+    Clock
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -24,6 +25,7 @@ const navigation = [
     { name: 'Inventory', href: '/merchant/inventory', icon: Package },
     { name: 'Purchase Coupons', href: '/merchant/purchase', icon: ShoppingCart },
     { name: 'Store Credits', href: '/merchant/udhari', icon: CreditCard },
+    { name: 'Growth Portfolio', href: '/merchant/lockin', icon: Clock },
     { name: 'Wallet', href: '/merchant/wallet', icon: Wallet },
     { name: 'Withdrawals', href: '/merchant/wallet/withdrawals', icon: Wallet },
     { name: 'Analytics', href: '/merchant/analytics', icon: TrendingUp },

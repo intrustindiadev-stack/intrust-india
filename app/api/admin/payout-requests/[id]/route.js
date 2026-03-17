@@ -63,27 +63,43 @@ export async function PATCH(request, { params }) {
 
         const merchant = payoutReq.merchants;
         const amountPaise = Math.round(payoutReq.amount * 100);
+        const isGrowthFund = payoutReq.payout_source === 'growth_fund';
 
-        // ---- HANDLE REJECTED: refund wallet ----
+        // ---- HANDLE REJECTED: refund or reset status ----
         if (action === 'rejected') {
-            const currentBalance = merchant.wallet_balance_paise || 0;
-            const { error: refundErr } = await admin
-                .from('merchants')
-                .update({ wallet_balance_paise: currentBalance + amountPaise })
-                .eq('id', merchant.id);
+            if (isGrowthFund && payoutReq.reference_id) {
+                // Return contract to matured status
+                await admin
+                    .from('merchant_lockin_balances')
+                    .update({ status: 'matured' })
+                    .eq('id', payoutReq.reference_id);
+            } else {
+                // Wallet refund
+                const currentBalance = merchant.wallet_balance_paise || 0;
+                await admin
+                    .from('merchants')
+                    .update({ wallet_balance_paise: currentBalance + amountPaise })
+                    .eq('id', merchant.id);
 
-            if (refundErr) throw refundErr;
+                // Log refund transaction
+                await admin.from('wallet_transactions').insert({
+                    user_id: merchant.user_id,
+                    merchant_id: merchant.id,
+                    transaction_type: 'CREDIT',
+                    amount: payoutReq.amount,
+                    description: `Payout request #${id.slice(0, 8).toUpperCase()} rejected — amount refunded to wallet`,
+                    reference_type: 'payout_request',
+                    reference_id: id,
+                });
+            }
+        }
 
-            // Log refund transaction
-            await admin.from('wallet_transactions').insert({
-                user_id: merchant.user_id,
-                merchant_id: merchant.id,
-                transaction_type: 'CREDIT',
-                amount: payoutReq.amount,
-                description: `Payout request #${id.slice(0, 8).toUpperCase()} rejected — amount refunded`,
-                reference_type: 'payout_request',
-                reference_id: id,
-            });
+        // ---- HANDLE RELEASED: mark contract as paid_out ----
+        if (action === 'released' && isGrowthFund && payoutReq.reference_id) {
+            await admin
+                .from('merchant_lockin_balances')
+                .update({ status: 'paid_out' })
+                .eq('id', payoutReq.reference_id);
         }
 
         // ---- UPDATE PAYOUT REQUEST STATUS ----
@@ -100,21 +116,22 @@ export async function PATCH(request, { params }) {
         if (updateErr) throw updateErr;
 
         // ---- SEND NOTIFICATION TO MERCHANT ----
-        /** @type {{ title: string; body: string; type: 'success' | 'error' | 'info' }} */
+        const baseBody = `Your ${isGrowthFund ? 'Growth Fund release' : 'withdrawal'} of ₹${Number(payoutReq.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        
         const notifMap = {
             approved: {
-                title: '✅ Payout Request Approved',
-                body: `Your withdrawal of ₹${Number(payoutReq.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} has been approved. Payment will be transferred soon.`,
+                title: '✅ Payout Approved',
+                body: `${baseBody} has been approved. Payment will be transferred soon.`,
                 type: 'success',
             },
             rejected: {
-                title: '❌ Payout Request Rejected',
-                body: `Your withdrawal of ₹${Number(payoutReq.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} was rejected${admin_note ? `: ${admin_note}` : '. Please contact support for details.'}. Amount has been refunded to your wallet.`,
+                title: '❌ Payout Rejected',
+                body: `${baseBody} was rejected${admin_note ? `: ${admin_note}` : '. Contact support for details.'}.${isGrowthFund ? ' The fund is available for re-request.' : ' Amount refunded to wallet.'}`,
                 type: 'error',
             },
             released: {
                 title: '💰 Payment Released!',
-                body: `Your payout of ₹${Number(payoutReq.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} has been released to your bank account. Please allow 1–2 business days for the transfer to reflect.`,
+                body: `${baseBody} has been released to your bank account.`,
                 type: 'success',
             },
         };

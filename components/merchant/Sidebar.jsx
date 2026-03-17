@@ -16,6 +16,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { label: "Inventory", href: "/merchant/inventory", icon: "inventory_2" },
         { label: "Purchase Coupons", href: "/merchant/purchase", icon: "add_shopping_cart" },
         { label: "Store Credits", href: "/merchant/udhari", icon: "credit_score" },
+        { label: "Lockin Portfolio", href: "/merchant/lockin", icon: "lock_clock" },
         { label: "Wallet", href: "/merchant/wallet", icon: "account_balance_wallet" },
         { label: "Analytics", href: "/merchant/analytics", icon: "analytics" },
     ];

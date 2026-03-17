@@ -5,7 +5,6 @@ import AdminSidebar from './AdminSidebar';
 import AdminBottomNav from './AdminBottomNav';
 import { Menu, Search } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
-import ThemeToggle from '@/components/ui/ThemeToggle';
 
 export default function AdminLayout({ children, adminProfile }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -41,9 +40,6 @@ export default function AdminLayout({ children, adminProfile }) {
 
                         {/* Right: Notifications + Profile */}
                         <div className="flex items-center gap-3 shrink-0">
-                            {/* Theme Toggle */}
-                            <ThemeToggle />
-
                             {/* Notifications */}
                             <NotificationBell apiPath="/api/admin/notifications" />
 

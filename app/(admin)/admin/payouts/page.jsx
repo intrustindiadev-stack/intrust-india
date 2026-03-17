@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Clock, CheckCircle2, Banknote, XCircle, ChevronDown, RefreshCw, AlertCircle, CheckCircle, FileText } from 'lucide-react';
 
-/** @typedef {{ id: string; amount: number; status: 'pending' | 'approved' | 'rejected' | 'released'; bank_account_number: string; bank_ifsc: string; bank_account_holder: string; bank_name: string | null; admin_note: string | null; requested_at: string; updated_at: string; reviewed_at: string | null; merchants: { id: string; business_name: string; user_id: string } }} AdminPayoutRequest */
+/** @typedef {{ id: string; amount: number; status: 'pending' | 'approved' | 'rejected' | 'released'; payout_source: 'wallet' | 'growth_fund'; bank_account_number: string; bank_ifsc: string; bank_account_holder: string; bank_name: string | null; admin_note: string | null; requested_at: string; updated_at: string; reviewed_at: string | null; merchants: { id: string; business_name: string; user_id: string } }} AdminPayoutRequest */
 
 const STATUS_TABS = ['all', 'pending', 'approved', 'released', 'rejected'];
 
@@ -36,6 +36,8 @@ function ActionRow({ request, onAction, processing }) {
     const canRelease = request.status === 'approved';
     const isDone = request.status === 'released' || request.status === 'rejected';
 
+    const isGrowthFund = request.payout_source === 'growth_fund';
+
     return (
         <div className="bg-white rounded-3xl p-1 shadow-sm border border-slate-200 transition-all hover:shadow-md hover:border-slate-300">
             {/* Main row */}
@@ -49,6 +51,13 @@ function ActionRow({ request, onAction, processing }) {
                             {request.merchants?.business_name || 'Unknown Merchant'}
                         </span>
                         <StatusBadge status={request.status} />
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest border ${
+                            isGrowthFund 
+                                ? 'bg-indigo-50 text-indigo-700 border-indigo-100' 
+                                : 'bg-slate-50 text-slate-600 border-slate-100'
+                        }`}>
+                            {isGrowthFund ? 'Growth Fund' : 'Wallet Withdrawal'}
+                        </span>
                     </div>
                     <div className="flex flex-wrap gap-4 text-sm text-slate-500 font-medium">
                         <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-lg">

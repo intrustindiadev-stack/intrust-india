@@ -63,11 +63,12 @@ export default async function MerchantDashboardPage() {
     if (couponsRes.error) console.error('[Dashboard] Coupons Fetch Error:', couponsRes.error);
     if (soldCouponsRes.error) console.error('[Dashboard] Sold Coupons Fetch Error:', soldCouponsRes.error);
 
-    const [activeCountRes, listedCountRes, soldCountRes, pendingUdhariRes] = await Promise.all([
+    const [activeCountRes, listedCountRes, soldCountRes, pendingUdhariRes, lockinRes] = await Promise.all([
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'available'),
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'sold'),
-        supabase.from('udhari_requests').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'pending')
+        supabase.from('udhari_requests').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'pending'),
+        supabase.from('merchant_lockin_balances').select('amount_paise').eq('merchant_id', merchant.id).eq('status', 'active')
     ]);
 
     const coupons = couponsRes.data || [];
@@ -77,6 +78,8 @@ export default async function MerchantDashboardPage() {
     const soldCount = soldCountRes.count || 0;
 
     const pendingUdhariCount = pendingUdhariRes.count || 0;
+    const lockinData = lockinRes.data || [];
+    const totalLockinPaise = lockinData.reduce((sum, b) => sum + (b.amount_paise || 0), 0);
 
     // Calculate Revenue
     const totalRevenue = soldCouponsData.reduce((sum, c) => {
@@ -93,6 +96,7 @@ export default async function MerchantDashboardPage() {
         totalRevenue: totalRevenue,
         totalCommission: (merchant.total_commission_paid_paise || 0) / 100,
         pendingUdhari: pendingUdhariCount,
+        lockinBalance: totalLockinPaise / 100,
     };
 
     // Transform coupons for display
