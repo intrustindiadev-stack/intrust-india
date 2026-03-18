@@ -114,6 +114,7 @@ export async function GET(request) {
         // 5. Normalize and Merge
         const normalizedWalletTxs = (walletTxs || []).map(tx => ({
             id: tx.id,
+            source: 'wallet',
             transaction_type: tx.transaction_type || 'CREDIT',
             description: tx.description || tx.reference_type || 'Wallet Topup',
             amount: Number(tx.amount || 0).toFixed(2),
@@ -132,6 +133,7 @@ export async function GET(request) {
 
             return {
                 id: tx.id,
+                source: 'merchant',
                 transaction_type: txType,
                 description: desc,
                 amount: (Math.abs(tx.amount_paise || 0) / 100).toFixed(2),
@@ -143,7 +145,8 @@ export async function GET(request) {
         const normalizedPayoutTxs = (payoutTxs || []).map(tx => {
             const isCredit = tx.status === 'rejected' || tx.status === 'refunded';
             return {
-                id: `payout-${tx.id}`,
+                id: `${tx.id}`, // Removing payout- prefix since we have source now
+                source: 'payout',
                 transaction_type: isCredit ? 'CREDIT' : 'DEBIT',
                 description: `Withdrawal Request — ${statusLabel[tx.status] || tx.status}`,
                 amount: Number(tx.amount || 0).toFixed(2),

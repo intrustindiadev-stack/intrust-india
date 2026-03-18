@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import WalletTopup from '@/components/wallet/WalletTopup';
 import WithdrawalForm from '@/components/wallet/WithdrawalForm'; // Assuming this component exists
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function WalletPage() {
+    const router = useRouter();
     const [wallet, setWallet] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -223,7 +224,11 @@ export default function WalletPage() {
                         </thead>
                         <tbody className="divide-y divide-black/5 dark:divide-white/5">
                             {transactions.map((tx) => (
-                                <tr key={tx.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
+                                <tr
+                                    key={tx.id}
+                                    onClick={() => router.push(`/merchant/wallet/transactions/${tx.id}?source=${tx.source}`)}
+                                    className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer group/row"
+                                >
                                     <td className="px-8 py-5">
                                         <div className={`flex items-center space-x-2 font-bold ${tx.transaction_type === 'CREDIT' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                                             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${tx.transaction_type === 'CREDIT' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'} border`}>
@@ -233,7 +238,9 @@ export default function WalletPage() {
                                         </div>
                                     </td>
                                     <td className="px-8 py-5">
-                                        <div className="text-slate-700 dark:text-slate-200 font-semibold">{tx.description || tx.reference_type || 'Wallet Transaction'}</div>
+                                        <div className="text-slate-700 dark:text-slate-200 font-semibold group-hover/row:text-blue-600 dark:group-hover/row:text-blue-400 transition-colors">
+                                            {tx.description || tx.reference_type || 'Wallet Transaction'}
+                                        </div>
                                     </td>
                                     <td className="px-8 py-5">
                                         <div className="text-slate-500 dark:text-slate-400 text-sm font-medium">
@@ -243,8 +250,11 @@ export default function WalletPage() {
                                         </div>
                                     </td>
                                     <td className="px-8 py-5">
-                                        <div className={`text-right font-bold text-lg ${tx.transaction_type === 'CREDIT' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                                            {tx.transaction_type === 'CREDIT' ? '+' : '-'}₹{Number(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                        <div className="flex items-center justify-end space-x-4">
+                                            <div className={`text-right font-bold text-lg ${tx.transaction_type === 'CREDIT' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                {tx.transaction_type === 'CREDIT' ? '+' : '-'}₹{Number(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                            </div>
+                                            <span className="material-icons-round text-slate-300 dark:text-slate-600 group-hover/row:text-blue-500 transition-colors">chevron_right</span>
                                         </div>
                                     </td>
                                 </tr>

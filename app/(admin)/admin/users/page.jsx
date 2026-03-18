@@ -55,10 +55,10 @@ export default async function AdminUsersPage({ searchParams }) {
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
                 <div className="flex flex-col gap-1 flex-1">
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
                         User Management
                     </h1>
-                    <p className="text-slate-500 dark:text-gray-400 font-medium">
+                    <p className="text-slate-500 font-medium">
                         Manage user profiles, roles, and KYC verification statuses.
                     </p>
                 </div>

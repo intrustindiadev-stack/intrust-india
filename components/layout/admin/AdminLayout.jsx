@@ -18,7 +18,7 @@ export default function AdminLayout({ children, adminProfile }) {
     const adminName = adminProfile?.full_name || 'Admin System';
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B0F19] transition-colors duration-300">
+        <div className="min-h-screen bg-[#F8FAFC] transition-colors duration-300">
             {/* Sidebar */}
             <AdminSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} adminProfile={adminProfile} />
             <AdminBottomNav isSidebarOpen={sidebarOpen} />
@@ -26,15 +26,15 @@ export default function AdminLayout({ children, adminProfile }) {
             {/* Main Content */}
             <div className="lg:pl-72 min-h-screen flex flex-col">
                 {/* Top Bar */}
-                <header className="sticky top-0 z-30 bg-white/80 dark:bg-[#0B0F19]/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 shadow-sm transition-colors duration-300">
+                <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-200 shadow-sm transition-colors duration-300">
                     <div className="flex items-center justify-between px-4 sm:px-6 py-4">
                         {/* Left: Menu */}
                         <div className="flex items-center gap-4 flex-1">
                             <button
                                 onClick={() => setSidebarOpen(true)}
-                                className="lg:hidden p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                className="lg:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors"
                             >
-                                <Menu size={24} className="text-gray-700 dark:text-gray-300" />
+                                <Menu size={24} className="text-gray-700" />
                             </button>
                         </div>
 
