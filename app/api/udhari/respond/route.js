@@ -91,16 +91,25 @@ export async function POST(request) {
                 return NextResponse.json({ error: 'This customer has defaulted on previous deferred payments and cannot be approved.' }, { status: 400 });
             }
 
-            // Reserve the coupon
-            const { error: couponUpdateError } = await supabaseAdmin
+            // Reserve the coupon — strict row-count check to handle race conditions.
+            // .select('id') causes Supabase to return the updated rows; if zero rows
+            // come back the coupon was taken by a concurrent request and we must abort.
+            const { data: reservedRows, error: couponUpdateError } = await supabaseAdmin
                 .from('coupons')
                 .update({ status: 'reserved' })
                 .eq('id', udhariRequest.coupon_id)
-                .eq('status', 'available');
+                .eq('status', 'available')
+                .select('id');
 
             if (couponUpdateError) {
                 console.error(JSON.stringify({ correlationId, stage: 'coupon_reserve', error: couponUpdateError }));
                 return NextResponse.json({ error: 'Failed to reserve gift card. It may no longer be available.' }, { status: 409 });
+            }
+
+            if (!reservedRows || reservedRows.length !== 1) {
+                // Zero rows updated — the coupon was already taken concurrently.
+                console.error(JSON.stringify({ correlationId, stage: 'coupon_reserve', error: 'zero_rows_updated', coupon_id: udhariRequest.coupon_id }));
+                return NextResponse.json({ error: 'Gift card was just taken by another request. Please try again.' }, { status: 409 });
             }
 
             // Update udhari request

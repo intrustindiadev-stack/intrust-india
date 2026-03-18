@@ -174,11 +174,22 @@ export async function middleware(request) {
         return response
 
     } catch (error) {
-        console.error('[MIDDLEWARE:ERROR]', {
-            requestId,
-            error: error.message,
-            path: request.nextUrl.pathname
-        });
+        const isRefreshTokenError = error.message?.includes('Refresh Token Not Found') || 
+                                   error.code === 'refresh_token_not_found';
+
+        if (isRefreshTokenError) {
+            console.warn('[MIDDLEWARE:AUTH_RECOVERABLE]', {
+                requestId,
+                message: 'Refresh token not found or expired. User will be treated as unauthenticated.',
+                path: request.nextUrl.pathname
+            });
+        } else {
+            console.error('[MIDDLEWARE:ERROR]', {
+                requestId,
+                error: error.message,
+                path: request.nextUrl.pathname
+            });
+        }
         // On error, allow request to continue (fail open)
         return response;
     }

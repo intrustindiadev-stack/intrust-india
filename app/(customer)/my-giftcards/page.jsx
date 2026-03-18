@@ -126,8 +126,16 @@ export default async function MyCouponsPage() {
         if (coupon.status === 'used') uiStatus = 'used';
         if (coupon.status === 'sold' && !isExpired) uiStatus = 'active';
 
-        // Resolve Merchant Name
-        const merchantName = coupon.merchant?.business_name || 'INTRUST Marketplace';
+        // Resolve Merchant Name safely handling both object and array returns from Supabase joins
+        let merchantName = 'INTRUST Marketplace';
+        if (coupon.merchant) {
+            if (Array.isArray(coupon.merchant) && coupon.merchant.length > 0) {
+                merchantName = coupon.merchant[0].business_name || merchantName;
+            } else if (coupon.merchant.business_name) {
+                merchantName = coupon.merchant.business_name;
+            }
+        }
+
         return {
             orderId: order.id,
             ...coupon,
@@ -150,6 +158,15 @@ export default async function MyCouponsPage() {
             const coupon = req.coupon;
             const isExpired = new Date(coupon.valid_until) < new Date();
 
+            let merchantName = 'INTRUST Marketplace';
+            if (coupon.merchant) {
+                if (Array.isArray(coupon.merchant) && coupon.merchant.length > 0) {
+                    merchantName = coupon.merchant[0].business_name || merchantName;
+                } else if (coupon.merchant.business_name) {
+                    merchantName = coupon.merchant.business_name;
+                }
+            }
+
             return {
                 orderId: null, // No order yet
                 udhariRequestId: req.id, // Track the udhari request
@@ -160,7 +177,7 @@ export default async function MyCouponsPage() {
                 sellingPrice: coupon.selling_price_paise / 100,
                 gradient: getBrandGradient(coupon.brand),
                 logo: getBrandLogo(coupon.brand),
-                merchant: coupon.merchant?.business_name || 'INTRUST Marketplace',
+                merchant: merchantName,
                 formattedDate: new Date(req.responded_at || new Date()).toLocaleDateString(),
                 formattedExpiry: new Date(coupon.valid_until).toLocaleDateString(),
                 dueDate: req.due_date, // For payment deadline display

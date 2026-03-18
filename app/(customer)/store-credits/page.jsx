@@ -4,11 +4,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
-import { Clock, ShieldCheck, CreditCard, ChevronRight, AlertCircle, Loader2, Copy, CheckCircle2, Eye, EyeOff, Info, Calendar, Lock } from 'lucide-react';
+import { Clock, ShieldCheck, CreditCard, ChevronRight, AlertCircle, Loader2, Copy, CheckCircle2, Eye, EyeOff, Info, Calendar, Lock, Smartphone } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -71,27 +70,55 @@ export default function StoreCreditsPage() {
         setTimeout(() => setCopiedCode(null), 2000);
     };
 
-    const handlePay = async (requestId) => {
+    const handlePay = async (requestId, paymentMethod = 'wallet') => {
         setPayingId(requestId);
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch('/api/udhari/pay', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token}`
-                },
-                body: JSON.stringify({ requestId })
-            });
 
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
+            if (paymentMethod === 'wallet') {
+                // Wallet payment — deducted from InTrust wallet balance
+                const res = await fetch('/api/udhari/pay', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session?.access_token}`
+                    },
+                    body: JSON.stringify({ requestId })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                toast.success('Payment successful!');
+                fetchRequests();
 
-            toast.success('Payment successful!');
-            fetchRequests();
+            } else if (paymentMethod === 'sabpaisa') {
+                // SabPaisa gateway — UPI, Card, Net Banking, etc.
+                const res = await fetch('/api/udhari/pay-sabpaisa', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session?.access_token}`
+                    },
+                    body: JSON.stringify({ requestId })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+
+                // Redirect to SabPaisa payment gateway via POST form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = data.paymentUrl;
+                form.innerHTML = `
+                    <input type="hidden" name="encData" value="${data.encData}" />
+                    <input type="hidden" name="clientCode" value="${data.clientCode}" />
+                `;
+                document.body.appendChild(form);
+                form.submit();
+                // Don't setPayingId(null) — page will redirect away
+                return;
+            }
         } catch (error) {
             toast.error(error.message || 'Payment failed');
-            if (error.message.includes('Insufficient wallet balance')) {
+            if (error.message?.includes('Insufficient wallet balance') || error.message?.includes('insufficient_balance')) {
                 router.push('/wallet');
             }
         } finally {
@@ -266,27 +293,72 @@ function UdhariCard({ req, onPay, payingId, onCopy, copiedCode }) {
                     <div className="md:w-64 flex flex-col gap-3 justify-center pt-4 md:pt-0 md:pl-6 border-t md:border-t-0 md:border-l border-gray-100">
                         {isApproved && (
                             <>
-                                <button
-                                    onClick={() => onPay(req.id)}
-                                    disabled={payingId === req.id}
-                                    className={`w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all duration-300 shadow-xl mb-3 ${
-                                        isOverdue 
-                                            ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-200' 
-                                            : 'bg-gray-900 hover:bg-black text-white shadow-gray-200'
-                                    }`}
-                                >
-                                    {payingId === req.id ? <Loader2 size={20} className="animate-spin" /> : <CreditCard size={20} />}
-                                    PAY NOW
-                                </button>
-                                
-                                <Link
-                                    href="/my-giftcards"
-                                    className="w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors mb-4"
-                                >
-                                    <Eye size={18} />
-                                    REVEAL CODE
-                                </Link>
-                                
+                                <div className="space-y-2 mb-3">
+                                    {/* Primary: Wallet payment */}
+                                    <button
+                                        onClick={() => onPay(req.id, 'wallet')}
+                                        disabled={payingId === req.id}
+                                        className={`w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all duration-300 shadow-xl ${
+                                            isOverdue
+                                                ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-200'
+                                                : 'bg-gray-900 hover:bg-black text-white shadow-gray-200'
+                                        }`}
+                                    >
+                                        {payingId === req.id ? <Loader2 size={20} className="animate-spin" /> : <CreditCard size={20} />}
+                                        PAY WITH WALLET
+                                    </button>
+
+                                    {/* Secondary: SabPaisa (UPI / Card) */}
+                                    <button
+                                        onClick={() => onPay(req.id, 'sabpaisa')}
+                                        disabled={payingId === req.id}
+                                        className="w-full py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all duration-300 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                                    >
+                                        {payingId === req.id ? <Loader2 size={18} className="animate-spin" /> : <Smartphone size={18} />}
+                                        PAY WITH UPI / CARD
+                                    </button>
+                                </div>
+
+                                {/* Inline coupon reveal for approved coupons */}
+                                <div className={`relative rounded-2xl p-4 transition-all duration-300 mb-4 ${
+                                    decryptedCode ? 'bg-amber-50 border-2 border-dashed border-amber-300' : 'bg-gray-50 border border-gray-100'
+                                }`}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">Coupon Code</span>
+                                        <button
+                                            onClick={handleRevealCode}
+                                            disabled={isDecrypting}
+                                            className="text-gray-400 hover:text-amber-600 transition-colors flex items-center gap-1 text-[10px] font-bold"
+                                        >
+                                            {isDecrypting ? (
+                                                <Loader2 size={14} className="animate-spin" />
+                                            ) : decryptedCode ? (
+                                                <><EyeOff size={14} /> HIDE</>
+                                            ) : (
+                                                <><Eye size={14} /> REVEAL CODE</>
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    {decryptedCode ? (
+                                        <div className="flex items-center justify-between gap-2 animate-in fade-in slide-in-from-bottom-2">
+                                            <span className="font-mono font-black text-xl text-gray-900 tracking-wider">
+                                                {decryptedCode}
+                                            </span>
+                                            <button
+                                                onClick={() => onCopy(decryptedCode)}
+                                                className="p-2 bg-white rounded-xl shadow-sm text-amber-600 hover:scale-110 transition-transform"
+                                            >
+                                                {copiedCode === decryptedCode ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-center p-1">
+                                            <span className="font-mono font-bold text-gray-300 tracking-[0.3em]">••••••••</span>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="flex items-start gap-2 text-[10px] text-gray-400 leading-tight px-1 mb-2">
                                     <Info size={12} className="shrink-0 mt-0.5" />
                                     <span>Payment must be made by {new Date(req.due_date).toLocaleDateString()} to avoid account restriction.</span>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Copy, Check, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function CouponCodeReveal({ couponId }) {
     const [revealedCode, setRevealedCode] = useState(null);
@@ -17,7 +18,12 @@ export default function CouponCodeReveal({ couponId }) {
 
         try {
             setIsDecrypting(true);
-            const response = await fetch(`/api/my-coupons/${couponId}/decrypt`);
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch(`/api/my-coupons/${couponId}/decrypt`, {
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token}`
+                }
+            });
             const data = await response.json();
 
             if (!response.ok) {

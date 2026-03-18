@@ -77,7 +77,9 @@ export function AuthProvider({ children }) {
                     if (mounted) setProfile(profileCache);
                 }
             } catch (err) {
-                console.error('Error initializing auth:', err);
+                if (!err.message?.includes('Refresh Token Not Found')) {
+                    console.error('Error initializing auth:', err);
+                }
             } finally {
                 if (mounted) setLoading(false);
             }

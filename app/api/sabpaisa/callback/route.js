@@ -193,6 +193,85 @@ export async function POST(request) {
             }
         }
 
+        // 5c. Handle Udhari Payment Settlement via SabPaisa (gateway-funded)
+        // NOTE: Uses settle_udhari_gateway_payment — NOT settle_udhari_payment.
+        // The gateway already collected funds, so we must NOT debit the customer wallet.
+        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'UDHARI_PAYMENT' && !wasAlreadySuccess) {
+            try {
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
+
+                const udhariRequestId = existingTxn.udf2;
+                const merchantId = existingTxn.udf3;
+
+                // Idempotency check — has this udhari already been settled?
+                const { data: existingSettlement } = await supabaseAdmin
+                    .from('udhari_requests')
+                    .select('id, status')
+                    .eq('id', udhariRequestId)
+                    .eq('status', 'completed')
+                    .maybeSingle();
+
+                if (existingSettlement) {
+                    console.log(`[Callback] Udhari already settled for txn ${clientTxnId}`);
+                } else {
+                    // Convert gateway amount to paise
+                    const amountPaise = Math.round(parseFloat(amount) * 100);
+
+                    // Call the gateway-specific settlement RPC:
+                    //   - marks coupon sold
+                    //   - creates order
+                    //   - credits merchant wallet
+                    //   - writes merchant ledger
+                    //   - marks udhari completed
+                    //   - does NOT touch customer_wallets
+                    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+                        'settle_udhari_gateway_payment',
+                        {
+                            p_udhari_request_id: udhariRequestId,
+                            p_customer_user_id:  existingTxn.user_id,
+                            p_amount_paise:      amountPaise,
+                            p_customer_email:    existingTxn.payer_email || null
+                        }
+                    );
+
+                    if (rpcError) {
+                        console.error('[Callback] Udhari gateway settlement RPC error:', rpcError.message);
+                        fulfillmentFailed = true;
+                        internalStatus = 'FAILED';
+                        result.transMsg = 'Udhari settlement failed. Payment will be refunded.';
+                    } else {
+                        console.log(`[Callback] Udhari settled (gateway) for txn ${clientTxnId}`, rpcResult);
+
+                        // Notify merchant of payment receipt
+                        const { data: merchant } = await supabaseAdmin
+                            .from('merchants')
+                            .select('user_id')
+                            .eq('id', merchantId)
+                            .single();
+
+                        if (merchant) {
+                            await supabaseAdmin.from('notifications').insert({
+                                user_id: merchant.user_id,
+                                title: 'Store Credit Payment Received ✅',
+                                body: `A store credit payment of ₹${amount} has been received via UPI/Card.`,
+                                type: 'success',
+                                reference_id: udhariRequestId,
+                                reference_type: 'udhari_completed'
+                            });
+                        }
+                    }
+                }
+            } catch (udhariError) {
+                console.error('[Callback] Udhari payment processing error:', udhariError.message);
+                fulfillmentFailed = true;
+                internalStatus = 'FAILED';
+                result.transMsg = 'Udhari processing error. Payment will be refunded.';
+            }
+        }
+
         // 6. Handle Gift Card Purchase — Atomic coupon+order with rollback safety
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GIFT_CARD' && !wasAlreadySuccess) {
             try {
