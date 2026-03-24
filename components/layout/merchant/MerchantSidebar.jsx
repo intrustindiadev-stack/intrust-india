@@ -16,13 +16,15 @@ import {
     ChevronLeft,
     Store,
     CreditCard,
-    Clock
+    Clock,
+    ShoppingBag
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
 const navigation = [
     { name: 'Dashboard', href: '/merchant/dashboard', icon: LayoutDashboard },
-    { name: 'Inventory', href: '/merchant/inventory', icon: Package },
+    { name: 'Wholesale Market', href: '/merchant/shopping/wholesale', icon: ShoppingBag },
+    { name: 'My Retail Shop', href: '/merchant/shopping/inventory', icon: Store },
     { name: 'Purchase Coupons', href: '/merchant/purchase', icon: ShoppingCart },
     { name: 'Store Credits', href: '/merchant/udhari', icon: CreditCard },
     { name: 'Growth Portfolio', href: '/merchant/lockin', icon: Clock },

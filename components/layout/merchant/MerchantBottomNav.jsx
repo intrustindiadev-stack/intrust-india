@@ -5,8 +5,8 @@ import Link from 'next/link';
 
 const navItems = [
     { icon: 'grid_view', label: 'Dashboard', href: '/merchant/dashboard' },
-    { icon: 'inventory_2', label: 'Inventory', href: '/merchant/inventory' },
-    { icon: 'add_shopping_cart', label: 'Purchase', href: '/merchant/purchase', special: true },
+    { icon: 'shopping_bag', label: 'Buy Stock', href: '/merchant/shopping/wholesale' },
+    { icon: 'storefront', label: 'My Shop', href: '/merchant/shopping/inventory' },
     { icon: 'account_balance_wallet', label: 'Wallet', href: '/merchant/wallet' },
     { icon: 'credit_score', label: 'Credits', href: '/merchant/udhari' },
 ];

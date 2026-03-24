@@ -57,6 +57,20 @@ export default function StatsCards({ stats }) {
                 <p className="text-slate-500 dark:text-slate-400 text-sm font-medium text-[#D4AF37]">Commission Paid</p>
             </div>
 
+            {/* shopping Spend Card (Wholesale) */}
+            <div className="merchant-glass p-6 rounded-3xl border border-orange-500/20 hover:border-orange-500 transition-all group relative overflow-hidden bg-gradient-to-br from-orange-500/5 to-transparent shadow-sm">
+                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl group-hover:bg-orange-500/20 transition-all"></div>
+                <div className="flex items-center justify-between mb-6">
+                    <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/30">
+                        <span className="material-icons-round text-orange-600">shopping_cart_checkout</span>
+                    </div>
+                </div>
+                <h3 className="text-4xl font-display font-bold mb-1 text-slate-800 dark:text-slate-100">
+                    ₹{(stats.shoppingSpend || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Shopping Spend</p>
+            </div>
+
             {/* Lockin Balance Card */}
             <div className="merchant-glass p-6 rounded-3xl border border-blue-500/20 hover:border-blue-500 transition-all group relative overflow-hidden bg-gradient-to-br from-blue-500/5 to-transparent shadow-sm cursor-pointer" onClick={() => window.location.href = '/merchant/lockin'}>
                 <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>

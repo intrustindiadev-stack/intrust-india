@@ -22,13 +22,15 @@ import {
     Loader2,
     CreditCard,
     Clock,
-    FileText
+    FileText,
+    ShoppingBag
 } from 'lucide-react';
 
 const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Merchants', href: '/admin/merchants', icon: Store },
+    { name: 'Shopping Service', href: '/admin/shopping', icon: ShoppingBag },
     { name: 'Partnership Growth', href: '/admin/lockin', icon: Clock },
     { name: 'Store Credit', href: '/admin/merchants/udhari', icon: CreditCard },
     { name: 'Gift Cards', href: '/admin/giftcards', icon: Gift },

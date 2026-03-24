@@ -63,26 +63,36 @@ export default async function MerchantDashboardPage() {
     if (couponsRes.error) console.error('[Dashboard] Coupons Fetch Error:', couponsRes.error);
     if (soldCouponsRes.error) console.error('[Dashboard] Sold Coupons Fetch Error:', soldCouponsRes.error);
 
-    const [activeCountRes, listedCountRes, soldCountRes, pendingUdhariRes, lockinRes] = await Promise.all([
+    const [activeCountRes, listedCountRes, soldCountRes, pendingUdhariRes, lockinRes, shoppingOrderItemsRes, shoppingOrderGroupsRes] = await Promise.all([
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'available'),
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'sold'),
         supabase.from('udhari_requests').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'pending'),
-        supabase.from('merchant_lockin_balances').select('amount_paise').eq('merchant_id', merchant.id).eq('status', 'active')
+        supabase.from('merchant_lockin_balances').select('amount_paise').eq('merchant_id', merchant.id).eq('status', 'active'),
+        supabase.from('shopping_order_items').select('unit_price_paise, quantity').eq('seller_id', merchant.id),
+        supabase.from('shopping_order_groups').select('total_amount_paise').eq('customer_id', user.id)
     ]);
 
     const coupons = couponsRes.data || [];
     const soldCouponsData = soldCouponsRes.data || [];
     const activeCount = activeCountRes.count || 0;
     const listedCount = listedCountRes.count || 0;
-    const soldCount = soldCountRes.count || 0;
+    const soldSoldCount = soldCountRes.count || 0;
 
     const pendingUdhariCount = pendingUdhariRes.count || 0;
     const lockinData = lockinRes.data || [];
     const totalLockinPaise = lockinData.reduce((sum, b) => sum + (b.amount_paise || 0), 0);
 
-    // Calculate Revenue
-    const totalRevenue = soldCouponsData.reduce((sum, c) => {
+    const shoppingOrderItems = shoppingOrderItemsRes.data || [];
+    const shoppingOrderGroups = shoppingOrderGroupsRes.data || [];
+    
+    const shoppingRevenue = shoppingOrderItems
+        .reduce((sum, o) => sum + (Number(o.unit_price_paise * o.quantity) || 0), 0);
+    const shoppingSpend = shoppingOrderGroups
+        .reduce((sum, o) => sum + (Number(o.total_amount_paise) || 0), 0);
+
+    // Calculate Coupon Revenue (existing logic)
+    const couponRevenue = soldCouponsData.reduce((sum, c) => {
         const sellingPrice = (c.merchant_selling_price_paise || 0) / 100;
         const purchasePrice = (c.merchant_purchase_price_paise || 0) / 100;
         const commission = (c.merchant_commission_paise || 0) / 100;
@@ -90,10 +100,11 @@ export default async function MerchantDashboardPage() {
     }, 0);
 
     const stats = {
-        totalSales: soldCount,
+        totalSales: soldSoldCount + shoppingOrderItems.length,
         activeCoupons: activeCount,
         listedCoupons: listedCount,
-        totalRevenue: totalRevenue,
+        totalRevenue: couponRevenue + (shoppingRevenue / 100),
+        shoppingSpend: shoppingSpend / 100,
         totalCommission: (merchant.total_commission_paid_paise || 0) / 100,
         pendingUdhari: pendingUdhariCount,
         lockinBalance: totalLockinPaise / 100,

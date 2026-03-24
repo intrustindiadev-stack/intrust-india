@@ -41,7 +41,7 @@ export default async function AnalyticsPage() {
     // - Available coupons (for inventory)
     // - Listed coupons (for inventory)
 
-    const [soldCouponsRes, availableCountRes, listedCountRes, udhariRevenueRes] = await Promise.all([
+    const [soldCouponsRes, availableCountRes, listedCountRes, udhariRevenueRes, shoppingOrdersRes] = await Promise.all([
         supabase
             .from('coupons')
             .select('*')
@@ -52,7 +52,8 @@ export default async function AnalyticsPage() {
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'available'),
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
         
-        supabase.from('merchant_transactions').select('amount_paise', { count: 'exact' }).eq('merchant_id', merchant.id).eq('transaction_type', 'udhari_payment')
+        supabase.from('merchant_transactions').select('amount_paise', { count: 'exact' }).eq('merchant_id', merchant.id).eq('transaction_type', 'udhari_payment'),
+        supabase.from('shopping_orders').select('*, shopping_products(title)').or(`seller_id.eq.${merchant.id}, buyer_id.eq.${merchant.id}`)
     ]);
 
     const soldCoupons = soldCouponsRes.data || [];
@@ -60,6 +61,14 @@ export default async function AnalyticsPage() {
     const listedCount = listedCountRes.count || 0;
     const soldCount = soldCoupons.length;
     const udhariRevenue = (udhariRevenueRes.data || []).reduce((sum, tx) => sum + (tx.amount_paise || 0), 0) / 100;
+    
+    const shoppingOrders = shoppingOrdersRes.data || [];
+    const shoppingRevenue = shoppingOrders
+        .filter(o => o.seller_id === merchant.id)
+        .reduce((sum, o) => sum + (Number(o.total_price_paise) || 0), 0) / 100;
+    const shoppingSpend = shoppingOrders
+        .filter(o => o.buyer_id === merchant.id)
+        .reduce((sum, o) => sum + (Number(o.total_price_paise) || 0), 0) / 100;
 
     // 4. Calculate Metrics
     const totalRevenue = soldCoupons.reduce((sum, c) => {
@@ -67,9 +76,9 @@ export default async function AnalyticsPage() {
         const purchasePrice = (c.merchant_purchase_price_paise || 0) / 100;
         const commission = (c.merchant_commission_paise || 0) / 100;
         return sum + (sellingPrice - purchasePrice - commission);
-    }, 0);
+    }, 0) + shoppingRevenue;
 
-    const totalSalesValue = soldCoupons.reduce((sum, c) => sum + ((c.merchant_selling_price_paise || 0) / 100), 0);
+    const totalSalesValue = soldCoupons.reduce((sum, c) => sum + ((c.merchant_selling_price_paise || 0) / 100), 0) + shoppingRevenue;
     const totalCommission = (merchant.total_commission_paid_paise || 0) / 100;
 
     // 5. Prepare Chart Data
@@ -155,6 +164,13 @@ export default async function AnalyticsPage() {
             icon: Package,
             color: 'text-orange-600',
             bg: 'bg-orange-50'
+        },
+        {
+            label: 'Shopping Spend',
+            value: `₹${shoppingSpend.toFixed(2)}`,
+            icon: ShoppingBag,
+            color: 'text-amber-600',
+            bg: 'bg-amber-50'
         },
     ];
 
@@ -246,6 +262,74 @@ export default async function AnalyticsPage() {
                     inventoryData={inventoryData}
                     brandData={brandData}
                 />
+            </div>
+
+            {/* Shopping Performance Section */}
+            <div className="merchant-glass rounded-3xl p-8 border border-black/5 dark:border-white/5 mb-12 shadow-xl">
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 font-display">Shopping Performance</h2>
+                        <p className="text-slate-500 text-sm mt-1">Overview of wholesale purchases and retail sales</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <div className="p-6 rounded-2xl bg-blue-50/50 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/20">
+                        <h3 className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-4">Retail Earnings</h3>
+                        <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">₹{shoppingRevenue.toLocaleString('en-IN')}</p>
+                        <p className="text-xs text-slate-500 mt-2">Revenue from products sold to customers</p>
+                    </div>
+                    <div className="p-6 rounded-2xl bg-orange-50/50 dark:bg-orange-500/5 border border-orange-100 dark:border-orange-500/20">
+                        <h3 className="text-sm font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest mb-4">Wholesale Spend</h3>
+                        <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">₹{shoppingSpend.toLocaleString('en-IN')}</p>
+                        <p className="text-xs text-slate-500 mt-2">Total amount spent on buying platform products</p>
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="text-slate-400 text-xs uppercase tracking-wider font-bold border-b border-black/5 dark:border-white/5">
+                                <th className="pb-4 pt-2 px-2">Product</th>
+                                <th className="pb-4 pt-2">Type</th>
+                                <th className="pb-4 pt-2">Quantity</th>
+                                <th className="pb-4 pt-2">Unit Price</th>
+                                <th className="pb-4 pt-2">Total</th>
+                                <th className="pb-4 pt-2">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                            {shoppingOrders.length > 0 ? (
+                                shoppingOrders.slice(0, 10).map((order) => (
+                                    <tr key={order.id} className="group hover:bg-black/5 dark:hover:bg-white/5 transition-all">
+                                        <td className="py-4 px-2 font-bold text-slate-700 dark:text-slate-200">
+                                            {order.shopping_products?.title || 'Unknown Product'}
+                                        </td>
+                                        <td className="py-4">
+                                            <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
+                                                order.order_type === 'wholesale' 
+                                                ? 'bg-blue-100 text-blue-600 dark:bg-blue-500/20' 
+                                                : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20'
+                                            }`}>
+                                                {order.order_type}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 text-slate-600 dark:text-slate-400">{order.quantity}</td>
+                                        <td className="py-4 text-slate-600 dark:text-slate-400">₹{(order.unit_price_paise / 100).toFixed(2)}</td>
+                                        <td className="py-4 font-bold text-slate-800 dark:text-slate-200">₹{(order.total_price_paise / 100).toFixed(2)}</td>
+                                        <td className="py-4 text-slate-400 text-xs">
+                                            {new Date(order.created_at).toLocaleDateString()}
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="6" className="py-12 text-center text-slate-400 italic">No shopping orders found</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

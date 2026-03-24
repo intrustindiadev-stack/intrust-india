@@ -37,7 +37,8 @@ export default async function AdminDashboard() {
         totalCouponsCount,
         todaySalesCount,
         recentTransactions,
-        pendingApprovals
+        pendingApprovals,
+        shoppingStats
     ] = await Promise.all([
         // 1. Total Revenue (Paid Orders)
         supabase.from('orders')
@@ -147,6 +148,22 @@ export default async function AdminDashboard() {
             .then(({ data, error }) => {
                 if (error) console.error('Error fetching pending approvals:', error);
                 return data || [];
+            }),
+
+        // 7. Shopping Stats
+        supabase.from('shopping_orders')
+            .select('total_price_paise, order_type')
+            .then(({ data, error }) => {
+                if (error) {
+                    console.error('Error fetching shopping stats:', error);
+                    return { revenue: 0, sales: 0 };
+                }
+                const stats = (data || []).reduce((acc, order) => {
+                    acc.revenue += Number(order.total_price_paise) || 0;
+                    acc.sales += 1;
+                    return acc;
+                }, { revenue: 0, sales: 0 });
+                return stats;
             })
     ]);
 
@@ -224,6 +241,18 @@ export default async function AdminDashboard() {
                         </div>
                         <p className="text-sm font-medium text-gray-500 mb-1">Orders Today</p>
                         <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">{todaySalesCount}</h3>
+                    </div>
+                    {/* Shopping Revenue */}
+                    <div className="snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl transition-all duration-300">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                            </div>
+                            <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full">New</span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-500 mb-1">Shopping Revenue</p>
+                        <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">{formatPrice(shoppingStats.revenue)}</h3>
                     </div>
                 </div>
 
