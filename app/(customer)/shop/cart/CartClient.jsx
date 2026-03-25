@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import SabpaisaPaymentModal from "@/components/payment/SabpaisaPaymentModal";
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -40,6 +41,8 @@ const CartClient = ({ userId }) => {
   const [error, setError] = useState(null);
   const [paymentMode, setPaymentMode] = useState('wallet');
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [draftGroupId, setDraftGroupId] = useState(null);
   const supabase = createClient();
   const router = useRouter();
   const { theme } = useTheme();
@@ -121,13 +124,25 @@ const CartClient = ({ userId }) => {
     try {
       setCheckingOut(true);
       setError(null);
-      const { data, error: rpcError } = await supabase.rpc("customer_checkout_v4", { p_customer_id: userId });
-      if (rpcError) throw rpcError;
-      if (data.success) {
-        setOrderSuccess(true);
-        setTimeout(() => router.push("/orders?success=true"), 3000);
-      } else {
-        setError(data.message || "Checkout failed");
+      
+      if (paymentMode === 'wallet') {
+        const { data, error: rpcError } = await supabase.rpc("customer_checkout_v4", { p_customer_id: userId });
+        if (rpcError) throw rpcError;
+        if (data.success) {
+          setOrderSuccess(true);
+          setTimeout(() => router.push("/orders?success=true"), 3000);
+        } else {
+          setError(data.message || "Checkout failed");
+        }
+      } else if (paymentMode === 'gateway') {
+        const { data, error: rpcError } = await supabase.rpc("draft_cart_orders", { p_customer_id: userId });
+        if (rpcError) throw rpcError;
+        if (data.success) {
+          setDraftGroupId(data.group_id);
+          setIsPaymentModalOpen(true);
+        } else {
+          setError(data.message || "Checkout initialization failed");
+        }
       }
     } catch (err) {
       console.error("Checkout error:", err);
@@ -156,7 +171,7 @@ const CartClient = ({ userId }) => {
   // Payment modes
   const paymentModes = [
     { id: 'wallet', label: 'InTrust Wallet', sub: `Balance: ₹${(walletBalance / 100).toLocaleString('en-IN')}`, icon: Wallet, color: '#10b981' },
-    { id: 'upi', label: 'UPI Payment', sub: 'GPay, PhonePe, Paytm', icon: CreditCard, color: '#6366f1', disabled: true },
+    { id: 'gateway', label: 'UPI / Cards / Netbanking', sub: 'Pay via SabPaisa', icon: CreditCard, color: '#6366f1', disabled: false },
     { id: 'cod', label: 'Cash on Delivery', sub: 'Pay when delivered', icon: Banknote, color: '#f59e0b', disabled: true },
   ];
 
@@ -584,7 +599,7 @@ const CartClient = ({ userId }) => {
         <div className="flex items-center justify-between gap-3">
           <div>
             <span className={`text-[9px] font-black uppercase tracking-wider ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
-              {paymentMode === 'wallet' ? 'Pay via Wallet' : paymentMode === 'upi' ? 'Pay via UPI' : 'Cash on Delivery'}
+              {paymentMode === 'wallet' ? 'Pay via Wallet' : paymentMode === 'gateway' ? 'Pay via Gateway' : 'Cash on Delivery'}
             </span>
             <motion.p 
               key={finalPayable}
@@ -614,6 +629,18 @@ const CartClient = ({ userId }) => {
           </button>
         </div>
       </div>
+
+      {isPaymentModalOpen && (
+        <SabpaisaPaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          amount={finalPayable / 100}
+          user={{ id: userId, email: profile?.email || '', phone: profile?.phone_number || '' }}
+          productInfo={{ title: 'Cart Checkout' }}
+          metadata={{ type: 'cart_checkout', groupId: draftGroupId }}
+          initialMethod="gateway"
+        />
+      )}
     </div>
   );
 };

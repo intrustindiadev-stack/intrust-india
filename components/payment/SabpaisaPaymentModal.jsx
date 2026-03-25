@@ -144,6 +144,10 @@ export default function SabpaisaPaymentModal({
         clientTxnId = `WLT_${Date.now()}_${uniqueRandomStr}`;
         udf1 = "WALLET_TOPUP";
         udf2 = "WALLET_TOPUP";
+      } else if (metadata?.type === "cart_checkout") {
+        clientTxnId = `CART_${Date.now()}_${uniqueRandomStr}`;
+        udf1 = "CART_CHECKOUT";
+        udf2 = metadata.groupId;
       } else {
         clientTxnId = `GC_${Date.now()}_${uniqueRandomStr}`;
         udf1 = "GIFT_CARD";
