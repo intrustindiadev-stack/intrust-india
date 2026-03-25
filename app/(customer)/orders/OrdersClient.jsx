@@ -2,16 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabaseClient";
-import { 
-  Package, 
-  ChevronDown, 
-  ChevronUp, 
-  Clock, 
-  CheckCircle2, 
+import {
+  Package,
+  ChevronRight,
+  CheckCircle2,
   ShoppingBag,
   ExternalLink,
   Store,
-  ArrowLeft
+  ArrowRight,
+  Clock,
+  MapPin
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -20,7 +20,6 @@ import { useSearchParams } from "next/navigation";
 const OrdersClient = ({ userId }) => {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedGroupId, setExpandedGroupId] = useState(null);
   const searchParams = useSearchParams();
   const isSuccess = searchParams.get("success") === "true";
   const supabase = createClient();
@@ -33,7 +32,7 @@ const OrdersClient = ({ userId }) => {
           *,
           shopping_order_items (
             *,
-            shopping_products (title, image_url),
+            shopping_products (title, image_url, mrp_paise, suggested_retail_price_paise),
             merchants (business_name)
           )
         `)
@@ -42,9 +41,6 @@ const OrdersClient = ({ userId }) => {
 
       if (error) throw error;
       setGroups(data || []);
-      if (isSuccess && data?.length > 0) {
-        setExpandedGroupId(data[0].id);
-      }
     } catch (err) {
       console.error("Error fetching customer orders:", err);
     } finally {
@@ -58,127 +54,150 @@ const OrdersClient = ({ userId }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <div className="w-10 h-10 border-4 border-gray-200 border-t-green-600 rounded-full animate-spin"></div>
+        <p className="text-sm font-semibold text-gray-500">Loading your orders...</p>
       </div>
     );
   }
 
   if (groups.length === 0) {
     return (
-      <div className="text-center py-20 bg-white/5 border border-dashed border-white/10 rounded-[2.5rem]">
-        <ShoppingBag className="w-16 h-16 text-gray-700 mx-auto mb-6" />
-        <h3 className="text-2xl font-bold text-gray-400">No orders yet</h3>
-        <p className="text-gray-500 mt-2 mb-8">Start your shopping journey with InTrust Merchants.</p>
-        <Link href="/shop" className="px-8 py-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all font-bold">
-          Explore Shop
+      <div className="text-center py-16 bg-white rounded-xl border border-gray-200 shadow-sm mt-4">
+        <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <ShoppingBag className="w-10 h-10 text-gray-300" />
+        </div>
+        <h3 className="text-xl font-bold text-gray-800 mb-2">No orders found</h3>
+        <p className="text-gray-500 mb-6 text-sm">Looks like you haven't made any purchases yet.</p>
+        <Link
+          href="/shop"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors"
+        >
+          Start Shopping
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-4 pb-12">
       {isSuccess && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-6 mb-8 animate-in fade-in zoom-in duration-500">
-          <div className="flex items-center gap-4 text-emerald-400">
-            <CheckCircle2 className="w-8 h-8" />
-            <div>
-              <h3 className="text-xl font-bold">Order Placed Successfully!</h3>
-              <p className="text-sm opacity-80">Your items are being processed by the merchants.</p>
-            </div>
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
+          <CheckCircle2 className="w-6 h-6 text-green-600 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-green-800 font-bold">Order Placed Successfully</h3>
+            <p className="text-green-700 text-sm mt-1">Your items are being processed. Thank you for shopping with us!</p>
           </div>
         </div>
       )}
 
-      <div className="space-y-4">
-        {groups.map((group) => (
-          <div 
-            key={group.id} 
-            className={`border rounded-3xl transition-all overflow-hidden ${
-              expandedGroupId === group.id 
-                ? "bg-white/5 border-white/20 shadow-2xl" 
-                : "bg-white/[0.02] border-white/10 hover:border-white/20"
-            }`}
+      {groups.map((group) => {
+        const itemCount = group.shopping_order_items?.length || 0;
+
+        return (
+          <div
+            key={group.id}
+            className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm"
           >
-            <button 
-              onClick={() => setExpandedGroupId(expandedGroupId === group.id ? null : group.id)}
-              className="w-full text-left p-6 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-6">
-                <div className={`p-3 rounded-2xl transition-colors ${expandedGroupId === group.id ? "bg-emerald-500 text-white" : "bg-white/5 text-gray-400"}`}>
-                  <Package className="w-6 h-6" />
-                </div>
+            {/* Header */}
+            <div className="bg-gray-50 border-b border-gray-200 p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold text-lg">Order #{group.id.slice(0, 8)}</span>
-                    <span className="bg-emerald-500/10 text-emerald-400 text-[10px] uppercase font-black px-2 py-0.5 rounded-md">
-                      {group.status}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm text-gray-500">Order ID:</span>
+                    <span className="font-semibold text-gray-800 uppercase">{group.id.slice(0, 8)}</span>
+                    <span className={`ml-2 inline-block px-2 py-0.5 text-[10px] uppercase font-bold rounded ${
+                      group.delivery_status === 'delivered' ? 'bg-green-100 text-green-800' :
+                      group.delivery_status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                      group.delivery_status === 'packed' ? 'bg-orange-100 text-orange-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {group.delivery_status || 'pending'}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-400 mt-1">
-                    {format(new Date(group.created_at), "PPP")} • {group.shopping_order_items?.length} items
-                  </p>
+                  <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-gray-500">
+                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {format(new Date(group.created_at), "dd MMM yyyy, h:mm a")}</span>
+                    <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {group.delivery_address ? (group.delivery_address.slice(0, 30) + (group.delivery_address.length > 30 ? '...' : '')) : 'No address'}</span>
+                    <span>{itemCount} {itemCount === 1 ? 'Item' : 'Items'}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-8">
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Total</p>
-                  <p className="text-xl font-black">₹{(group.total_amount_paise / 100).toLocaleString()}</p>
-                </div>
-                {expandedGroupId === group.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-              </div>
-            </button>
 
-            {expandedGroupId === group.id && (
-              <div className="px-6 pb-6 pt-2 animate-in slide-in-from-top-4 duration-300">
-                <div className="h-px bg-white/10 mb-6" />
-                <div className="space-y-4">
-                  {group.shopping_order_items?.map((item) => (
-                    <div key={item.id} className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 group/item">
-                      <div className="w-16 h-16 bg-white/10 rounded-xl overflow-hidden flex-shrink-0">
-                        {item.shopping_products?.image_url ? (
-                          <img src={item.shopping_products.image_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="text-gray-700" /></div>
-                        )}
-                      </div>
-                      <div className="flex-grow flex justify-between items-center">
-                        <div>
-                          <h5 className="font-bold text-gray-200 group-hover/item:text-emerald-400 transition-colors uppercase tracking-tight">
-                            {item.shopping_products?.title}
-                          </h5>
-                          <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                            <Store className="w-3 h-3" />
-                            Sold by {item.merchants?.business_name || "Merchant"}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-black">₹{(item.unit_price_paise * item.quantity / 100).toLocaleString()}</p>
-                          <p className="text-[10px] text-gray-500 mt-1">Qty: {item.quantity}</p>
-                        </div>
+                <div className="text-left sm:text-right flex flex-col items-start sm:items-end">
+                  <p className="text-xs text-gray-500 mb-0.5">Order Total</p>
+                  <p className="text-lg font-black text-gray-900">₹{(group.total_amount_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                  {group.shopping_order_items?.some(item => (item.shopping_products?.suggested_retail_price_paise || 0) > item.unit_price_paise) && (
+                    <div className="mt-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded border border-emerald-100 italic">
+                      You saved ₹{((group.shopping_order_items.reduce((acc, item) => {
+                        const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || item.unit_price_paise;
+                        return acc + (Math.max(0, mrp - item.unit_price_paise) * item.quantity);
+                      }, 0)) / 100).toLocaleString('en-IN')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Items List */}
+            <div className="divide-y divide-gray-100">
+              {group.shopping_order_items?.map((item) => (
+                <div key={item.id} className="p-4 flex gap-4">
+                  {/* Thumbnail */}
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-md border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center">
+                    {item.shopping_products?.image_url ? (
+                      <img
+                        src={item.shopping_products.image_url}
+                        alt={item.shopping_products.title}
+                        className="w-full h-full object-contain p-1 mix-blend-multiply"
+                      />
+                    ) : (
+                      <Package className="w-8 h-8 text-gray-300" />
+                    )}
+                  </div>
+
+                  {/* Item Details */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between">
+                    <div>
+                      <h4 className="font-semibold text-gray-800 text-sm sm:text-base leading-snug line-clamp-2">
+                        {item.shopping_products?.title}
+                      </h4>
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+                        <Store className="w-3.5 h-3.5" />
+                        <span>Sold by {item.merchants?.business_name || "InTrust Official"}</span>
                       </div>
                     </div>
-                  ))}
+
+                    <div className="mt-2 flex items-end justify-between">
+                      <div className="font-bold text-gray-900">
+                        ₹{((item.unit_price_paise) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </div>
+                      <div className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium">
+                        Qty: {item.quantity}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-between items-center bg-white/5 p-6 rounded-[2rem] border border-white/5">
-                   <div className="text-center sm:text-left">
-                     <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Payment Method</p>
-                     <p className="text-sm font-bold text-gray-300">InTrust Wallet (Internal)</p>
-                   </div>
-                   <Link 
-                     href="/transactions" 
-                     className="flex items-center gap-2 text-emerald-400 text-sm font-bold hover:underline"
-                   >
-                     View Transaction Details <ExternalLink className="w-4 h-4" />
-                   </Link>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 border-t border-gray-200 p-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="text-sm">
+                  <span className="text-gray-500">Paid via: </span>
+                  <span className="font-semibold text-gray-700">InTrust Wallet</span>
                 </div>
+
+                <Link
+                  href={`/orders/${group.id}`}
+                  className="w-full sm:w-auto text-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded transition-colors"
+                >
+                  View Details
+                </Link>
               </div>
-            )}
+            </div>
           </div>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 };

@@ -23,6 +23,7 @@ import DashboardStats from '@/components/customer/dashboard/DashboardStats';
 import QuickServices from '@/components/customer/dashboard/QuickServices';
 import RecentActivity from '@/components/customer/dashboard/RecentActivity';
 import QuickActions from '@/components/customer/dashboard/QuickActions';
+import RecentShoppingOrders from '@/components/customer/RecentShoppingOrders';
 import GoldSubscription from '@/components/customer/dashboard/GoldSubscription';
 import ReferralGenzSection from '@/components/customer/dashboard/ReferralGenzSection';
 import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
@@ -36,9 +37,9 @@ const OnboardingModal = dynamic(() => import('@/components/customer/dashboard/On
 
 function DashboardSkeleton() {
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)]">
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)] flex flex-col">
             <Navbar />
-            <div className="pt-[12vh] sm:pt-[15vh] pb-24 px-4 sm:px-6">
+            <div className="pt-24 sm:pt-32 px-4 sm:px-6 flex-grow">
                 <div className="max-w-7xl mx-auto animate-pulse">
                     <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-8" />
                     <div className="h-8 sm:h-10 w-64 sm:w-80 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
@@ -452,7 +453,7 @@ export default function CustomerDashboardPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)]">
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)] flex flex-col">
             <Navbar />
 
             {!userData.completedOnboarding && user && (
@@ -462,7 +463,7 @@ export default function CustomerDashboardPage() {
                 />
             )}
 
-            <div className="pt-[12vh] sm:pt-[15vh] pb-24 px-4 sm:px-6">
+            <div className="pt-24 sm:pt-32 px-4 sm:px-6 flex-grow">
                 <div className="max-w-7xl mx-auto">
                     <div className="mb-4 sm:mb-8">
                         <Breadcrumbs items={[{ label: 'Dashboard' }]} />
@@ -500,6 +501,10 @@ export default function CustomerDashboardPage() {
                             )}
 
                             <QuickServices services={quickServices} />
+                            
+                            {/* Insert shopping orders before generic activity */}
+                            <RecentShoppingOrders userId={user?.id} />
+                            
                             <RecentActivity orders={recentActivity} />
 
                             {/* KYC Banner */}

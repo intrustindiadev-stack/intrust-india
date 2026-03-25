@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import {
-    ChevronLeft,
     ShoppingCart,
     ShieldCheck,
     Truck,
@@ -11,24 +10,29 @@ import {
     Minus,
     Loader2,
     Package,
-    ArrowRight,
-    Sparkles,
     CheckCircle2,
-    MapPin,
-    BadgeCheck
+    BadgeCheck,
+    ChevronRight,
+    Zap,
+    ArrowLeft,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
-export default function ProductDetailClient({ product, inventory, customer }) {
+export default function ProductDetailClient({ product, inventory, customer, recommendedProducts = [] }) {
     const router = useRouter();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [addedToCart, setAddedToCart] = useState(false);
     const supabase = createClient();
 
-    // Determine the "best" offer (platform or cheapest merchant)
+    // Offers logic
     const platformOffer = {
         is_platform_direct: true,
         retail_price_paise: product.suggested_retail_price_paise,
@@ -68,8 +72,19 @@ export default function ProductDetailClient({ product, inventory, customer }) {
             });
 
             if (error) throw error;
+
+            if (data?.message === 'MIXED_SELLER_ERROR') {
+                const confirmClear = window.confirm("Your cart contains items from another seller. Clear cart to add this item?");
+                if (confirmClear) {
+                    await supabase.from('shopping_cart').delete().eq('customer_id', customer.id);
+                    return addToCart(); // Retry adding after clearing
+                }
+                return;
+            }
+
+            setAddedToCart(true);
             toast.success('Added to cart!');
-            router.refresh();
+            setTimeout(() => { setAddedToCart(false); router.refresh(); }, 1200);
         } catch (err) {
             console.error('Add to cart error:', err);
             toast.error('Failed to add to cart');
@@ -81,266 +96,399 @@ export default function ProductDetailClient({ product, inventory, customer }) {
     const primaryColor = product.shopping_categories?.color_primary || '#3b82f6';
     const secondaryColor = product.shopping_categories?.color_secondary || '#4f46e5';
 
+    // Pricing
+    const sellingPrice = selectedOffer.retail_price_paise;
+    const mrp = product.mrp_paise || product.suggested_retail_price_paise || sellingPrice;
+    const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;
+    const savings = finalMrp - sellingPrice;
+    const savingsPercent = finalMrp > 0 ? Math.round((savings / finalMrp) * 100) : 0;
+    const categoryName = product.shopping_categories?.name || 'Category';
+
     return (
-        <div className="relative min-h-screen transition-all duration-1000 overflow-x-hidden">
-            {/* Immersive Nebula Background - High Vibrancy */}
+        <div className={`min-h-screen relative ${isDark ? 'bg-[#080a10]' : 'bg-[#f7f8fa]'}`}>
+
+            {/* ====== AMBIENT BACKGROUND ====== */}
             <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-                <div className="absolute inset-0 bg-white" />
-                <div 
-                    className="absolute -top-[10%] -left-[10%] w-[100%] h-[100%] opacity-[0.25] blur-[150px] rounded-full animate-blob mix-blend-multiply" 
-                    style={{ background: `radial-gradient(circle, ${primaryColor} 0%, transparent 70%)` }}
+                <div className={`absolute inset-0 ${isDark ? 'bg-[#080a10]' : 'bg-[#f7f8fa]'}`} />
+                <div
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-[140%] h-[60%]"
+                    style={{
+                        background: `radial-gradient(ellipse at center top, ${primaryColor}${isDark ? '18' : '0a'} 0%, transparent 60%)`,
+                        filter: 'blur(40px)'
+                    }}
                 />
-                <div 
-                    className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] opacity-[0.2] blur-[130px] rounded-full animate-blob delay-4000 mix-blend-multiply" 
-                    style={{ background: `radial-gradient(circle, ${secondaryColor} 0%, transparent 70%)` }}
+                <div
+                    className="absolute top-[30%] right-0 w-[40%] h-[30%]"
+                    style={{
+                        background: `radial-gradient(circle, ${secondaryColor}${isDark ? '10' : '05'} 0%, transparent 60%)`,
+                        filter: 'blur(60px)'
+                    }}
                 />
-                <div className="absolute inset-0 backdrop-blur-[120px] bg-white/40" />
             </div>
 
-            {/* Premium Mesh Texture */}
-            <div className="fixed inset-0 opacity-[0.03] pointer-events-none -z-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
+            {/* ====== MAIN CONTENT ====== */}
+            <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-8 pt-24 md:pt-28 pb-28 sm:pb-32 relative z-10">
 
-            <div className="max-w-7xl mx-auto px-4 md:px-8 relative pt-24 pb-32">
-                {/* Back Button - Premium Glass */}
-                <motion.button
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
+                {/* Back Button */}
+                <button
                     onClick={() => router.back()}
-                    className="mb-10 flex items-center gap-3 text-slate-400 hover:text-slate-900 transition-all font-black text-xs uppercase tracking-[0.2em] group bg-white/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/50 shadow-sm"
+                    className={`flex items-center gap-2 mb-3 px-1 py-1 rounded-xl transition-all group ${isDark ? 'text-white/40 hover:text-white/70' : 'text-slate-400 hover:text-slate-700'}`}
                 >
-                    <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" strokeWidth={3} />
-                   Back to Store
-                </motion.button>
+                    <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
+                    <span className="text-xs font-bold uppercase tracking-wider">Back</span>
+                </button>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
-                    {/* Left: Product Showcase Section */}
-                    <div className="lg:col-span-7 space-y-10">
-                        <motion.div 
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="aspect-square bg-white/40 backdrop-blur-3xl rounded-[4rem] p-12 md:p-20 relative overflow-hidden group border border-white/80 shadow-[0_50px_100px_-30px_rgba(0,0,0,0.05)]"
+                {/* Breadcrumb — compact on mobile */}
+                <nav className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-4 sm:mb-6 overflow-x-auto whitespace-nowrap no-scrollbar">
+                    <Link href="/shop" className={`transition-colors ${isDark ? 'text-white/30 hover:text-white/60' : 'text-slate-400 hover:text-slate-600'}`}>Shop</Link>
+                    <ChevronRight size={10} className={isDark ? 'text-white/15' : 'text-slate-300'} />
+                    <Link href={`/shop/${encodeURIComponent(categoryName.toLowerCase())}`}
+                        className="transition-colors"
+                        style={{ color: isDark ? `${primaryColor}90` : primaryColor }}
+                    >
+                        {categoryName}
+                    </Link>
+                    <ChevronRight size={10} className={isDark ? 'text-white/15' : 'text-slate-300'} />
+                    <span className={isDark ? 'text-white/60' : 'text-slate-700'}>
+                        {product.title.length > 20 ? product.title.substring(0, 20) + '...' : product.title}
+                    </span>
+                </nav>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-14">
+
+                    {/* ====== LEFT: PRODUCT IMAGE ====== */}
+                    <div className="lg:col-span-6">
+                        <div
+                            className={`aspect-[4/3] sm:aspect-square rounded-2xl sm:rounded-[2rem] p-4 sm:p-8 md:p-16 flex items-center justify-center relative overflow-hidden ${isDark ? 'bg-[#0c0e16]' : 'bg-white shadow-sm'
+                                }`}
+                            style={{
+                                border: isDark ? `1px solid ${primaryColor}15` : '1px solid #e2e8f0',
+                                boxShadow: isDark
+                                    ? `0 0 80px ${primaryColor}08, inset 0 0 60px ${primaryColor}05`
+                                    : '0 4px 24px rgba(0,0,0,0.04)'
+                            }}
                         >
-                            {/* Inner Glow and Effects */}
-                            <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
-                            <div 
-                                className="absolute -top-32 -left-32 w-64 h-64 blur-3xl opacity-10 rounded-full" 
-                                style={{ background: primaryColor }}
-                            />
+                            {isDark && (
+                                <div
+                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] rounded-full"
+                                    style={{
+                                        background: `radial-gradient(circle, ${primaryColor}12 0%, transparent 70%)`,
+                                        filter: 'blur(40px)'
+                                    }}
+                                />
+                            )}
 
                             {product.image_url ? (
                                 <img
                                     src={product.image_url}
                                     alt={product.title}
-                                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-1000 ease-out"
+                                    className={`w-full h-full object-contain relative z-10 ${isDark ? '' : 'mix-blend-multiply'}`}
                                 />
                             ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-slate-200">
-                                    <Package size={140} strokeWidth={0.5} />
-                                    <span className="mt-6 font-black uppercase tracking-[0.3em] text-[10px]">No Asset Found</span>
+                                <div className={`flex flex-col items-center justify-center ${isDark ? 'text-white/10' : 'text-slate-200'}`}>
+                                    <Package size={60} strokeWidth={1} />
                                 </div>
                             )}
 
-                            {/* Floating Metadata Badges */}
-                            <div className="absolute top-10 left-10 flex flex-col gap-3">
-                                <motion.div 
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.3 }}
-                                    className="bg-slate-950 text-white px-5 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] shadow-2xl flex items-center gap-2"
+                            {/* Badges */}
+                            <div className="absolute top-3 left-3 sm:top-5 sm:left-5 flex flex-col gap-1.5 z-20">
+                                {savingsPercent > 0 && (
+                                    <div className="bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-black shadow-lg">
+                                        {savingsPercent}% OFF
+                                    </div>
+                                )}
+                                <div
+                                    className="px-2.5 py-1 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-white"
+                                    style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
                                 >
-                                    <Sparkles size={12} className="text-yellow-400" />
-                                    Verified Choice
-                                </motion.div>
-                                <motion.div 
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.4 }}
-                                    className="bg-white/90 backdrop-blur px-5 py-2.5 rounded-2xl text-[9px] font-black text-slate-900 uppercase tracking-[0.2em] border border-slate-100 shadow-sm"
-                                >
-                                    {product.shopping_categories?.name || 'Collection Item'}
-                                </motion.div>
+                                    {categoryName}
+                                </div>
                             </div>
-                        </motion.div>
-
-                        {/* High-End Feature Grid */}
-                        <div className="grid grid-cols-3 gap-6">
-                            <motion.div 
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.5 }}
-                                className="bg-white/40 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/60 text-center shadow-xl shadow-slate-200/20 group hover:-translate-y-2 transition-all"
-                            >
-                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-50 group-hover:scale-110 transition-transform">
-                                    <Truck className="text-slate-900" size={20} />
-                                </div>
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic mb-1">Global Shipping</p>
-                                <p className="text-xs font-black text-slate-900 italic">Curated Delivery</p>
-                            </motion.div>
-                            <motion.div 
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.6 }}
-                                className="bg-white/40 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/60 text-center shadow-xl shadow-slate-200/20 group hover:-translate-y-2 transition-all"
-                            >
-                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-50 group-hover:scale-110 transition-transform">
-                                    <ShieldCheck className="text-emerald-600" size={20} />
-                                </div>
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic mb-1">InTrust Care</p>
-                                <p className="text-xs font-black text-slate-900 italic">100% Assurance</p>
-                            </motion.div>
-                            <motion.div 
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.7 }}
-                                className="bg-white/40 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/60 text-center shadow-xl shadow-slate-200/20 group hover:-translate-y-2 transition-all"
-                            >
-                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-50 group-hover:scale-110 transition-transform">
-                                    <Store className="text-indigo-600" size={20} />
-                                </div>
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic mb-1">Node Access</p>
-                                <p className="text-xs font-black text-slate-900 italic">Boutique Pickup</p>
-                            </motion.div>
                         </div>
                     </div>
 
-                    {/* Right: Premium Information Section */}
-                    <div className="lg:col-span-5 flex flex-col pt-4">
-                        <div className="sticky top-40">
-                            <motion.div 
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="mb-12"
+                    {/* ====== RIGHT: PRODUCT INFO ====== */}
+                    <div className="lg:col-span-6 flex flex-col">
+
+                        {/* Title + Description */}
+                        <h1 className={`text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight leading-tight mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {product.title}
+                        </h1>
+                        <p className={`text-xs sm:text-sm font-medium leading-relaxed mb-4 line-clamp-3 ${isDark ? 'text-white/35' : 'text-slate-500'}`}>
+                            {product.description || 'Premium quality product vetted by InTrust for our customers.'}
+                        </p>
+
+                        {/* ====== PRICING ====== */}
+                        <div
+                            className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl mb-4 ${isDark ? 'bg-white/[0.03]' : 'bg-white shadow-sm'}`}
+                            style={{ border: isDark ? `1px solid ${primaryColor}15` : '1px solid #e2e8f0' }}
+                        >
+                            <div className="flex items-end gap-2 mb-1.5">
+                                <span className={`text-2xl sm:text-3xl md:text-4xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                    ₹{(sellingPrice / 100).toLocaleString('en-IN')}
+                                </span>
+                                {savings > 0 && (
+                                    <span className={`text-sm sm:text-lg font-bold line-through pb-0.5 ${isDark ? 'text-white/20' : 'text-slate-400'}`}>
+                                        MRP ₹{(finalMrp / 100).toLocaleString('en-IN')}
+                                    </span>
+                                )}
+                            </div>
+
+                            {savings > 0 && (
+                                <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs sm:text-sm font-black ${isDark ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                                    <Zap size={12} />
+                                    You save ₹{(savings / 100).toLocaleString('en-IN')}
+                                </div>
+                            )}
+
+                            <p className={`text-[9px] sm:text-[10px] font-bold mt-2 uppercase tracking-widest ${isDark ? 'text-white/15' : 'text-slate-400'}`}>
+                                Inclusive of all taxes
+                            </p>
+                        </div>
+
+                        {/* ====== DESKTOP ADD TO CART (hidden on mobile, shown on lg+) ====== */}
+                        <div className="hidden sm:flex items-center gap-3 mb-4">
+                            {/* Quantity */}
+                            <div
+                                className={`flex items-center p-1 rounded-xl flex-shrink-0 ${isDark ? 'bg-white/[0.04]' : 'bg-white shadow-sm'}`}
+                                style={{ border: isDark ? `1px solid ${primaryColor}15` : '1px solid #e2e8f0' }}
                             >
-                                <div className="flex items-center gap-3 text-emerald-600 font-black text-[10px] uppercase tracking-[0.3em] mb-6 italic">
-                                    <span className="w-10 h-[2px] bg-emerald-600/20 rounded-full" />
-                                    The Boutique Selection
-                                </div>
-                                <h1 className="text-5xl md:text-6xl font-black text-slate-950 tracking-tighter leading-[0.85] mb-8 italic">
-                                    {product.title}
-                                </h1>
-                                <p className="text-slate-500 text-lg md:text-xl leading-relaxed font-bold italic opacity-80 max-w-lg">
-                                    {product.description || 'Elevate your standards with this meticulously vetted selection. Designed for those who seek the intersection of performance and aesthetics.'}
-                                </p>
-                            </motion.div>
+                                <button
+                                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                    className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:bg-slate-100'}`}
+                                >
+                                    <Minus size={16} strokeWidth={3} />
+                                </button>
+                                <span className={`w-10 text-center font-black text-lg ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                    {quantity}
+                                </span>
+                                <button
+                                    onClick={() => setQuantity(quantity + 1)}
+                                    className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:bg-slate-100'}`}
+                                >
+                                    <Plus size={16} strokeWidth={3} />
+                                </button>
+                            </div>
 
-                            <motion.div 
-                                initial={{ opacity: 0, scale: 0.98 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.2 }}
-                                className="bg-white/40 backdrop-blur-[50px] rounded-[3.5rem] p-10 md:p-12 border border-white shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] mb-10 relative overflow-hidden"
+                            <motion.button
+                                whileTap={{ scale: 0.96 }}
+                                onClick={addToCart}
+                                disabled={loading || addedToCart}
+                                className={`flex-1 h-12 rounded-xl font-black text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all disabled:opacity-80 overflow-hidden relative ${
+                                    addedToCart 
+                                        ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]' 
+                                        : isDark 
+                                            ? 'text-white' 
+                                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_6px_20px_rgba(16,185,129,0.25)]'
+                                }`}
+                                style={!addedToCart && isDark ? {
+                                    background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                                    boxShadow: `0 8px 30px ${primaryColor}30`
+                                } : {}}
                             >
-                                {/* Inner Card Glow */}
-                                <div 
-                                    className="absolute -top-20 -right-20 w-40 h-40 blur-3xl opacity-10 rounded-full" 
-                                    style={{ background: secondaryColor }}
-                                />
+                                <AnimatePresence mode="wait">
+                                    {loading ? (
+                                        <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="flex items-center gap-2">
+                                            <Loader2 className="animate-spin" size={20} />
+                                        </motion.div>
+                                    ) : addedToCart ? (
+                                        <motion.div key="success" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="flex items-center gap-2">
+                                            <CheckCircle2 size={20} strokeWidth={2.5} />
+                                            <span>Added to Cart</span>
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div key="default" initial={{ opacity: 0, y: -15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 15 }} className="flex items-center gap-2">
+                                            <ShoppingCart size={18} strokeWidth={2.5} />
+                                            <span>Add to Cart</span>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.button>
+                        </div>
 
-                                <div className="flex flex-col md:flex-row items-baseline justify-between gap-6 mb-12 relative z-10">
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-3 italic">Acquisition Value</p>
-                                        <h2 className="text-5xl md:text-6xl font-black text-slate-950 tracking-tighter leading-none italic">
-                                            ₹{(selectedOffer.retail_price_paise / 100).toLocaleString('en-IN')}
-                                        </h2>
-                                    </div>
-                                    <div className="md:text-right bg-emerald-50 md:bg-transparent px-4 py-2 rounded-xl md:p-0">
-                                        <div className="flex items-center md:justify-end gap-2 text-emerald-500 mb-2">
-                                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                            <p className="text-[10px] font-black uppercase tracking-widest italic leading-none">High Demand</p>
-                                        </div>
-                                        <p className="text-xs font-black text-slate-950 italic">Only {selectedOffer.stock} Units Remaining</p>
-                                    </div>
+                        {/* ====== MERCHANT INFO ====== */}
+                        <div
+                            className={`p-3 sm:p-4 rounded-xl flex items-center justify-between mb-4 ${isDark ? 'bg-white/[0.03]' : 'bg-slate-50'}`}
+                            style={{ border: isDark ? `1px solid ${primaryColor}10` : '1px solid #e2e8f0' }}
+                        >
+                            <div className="flex items-center gap-2.5">
+                                <div
+                                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 ${isDark ? '' : 'bg-white shadow-sm border border-slate-200 text-slate-500'}`}
+                                    style={isDark ? {
+                                        background: `${primaryColor}15`,
+                                        border: `1px solid ${primaryColor}20`,
+                                        color: primaryColor
+                                    } : {}}
+                                >
+                                    <Store size={16} strokeWidth={2} />
                                 </div>
-
-                                <div className="flex flex-col sm:flex-row items-center gap-6 mb-12 relative z-10">
-                                    <div className="flex items-center bg-white/60 p-2 rounded-[2rem] border border-white shadow-inner">
-                                        <button
-                                            onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                            className="w-14 h-14 flex items-center justify-center bg-white shadow-xl shadow-slate-200/20 border border-slate-50 rounded-2xl text-slate-400 hover:text-slate-950 transition-all active:scale-90"
-                                        >
-                                            <Minus size={20} strokeWidth={4} />
-                                        </button>
-                                        <span className="w-14 text-center font-black text-2xl italic text-slate-950">
-                                            {quantity}
-                                        </span>
-                                        <button
-                                            onClick={() => setQuantity(quantity + 1)}
-                                            className="w-14 h-14 flex items-center justify-center bg-white shadow-xl shadow-slate-200/20 border border-slate-50 rounded-2xl text-slate-400 hover:text-slate-950 transition-all active:scale-90"
-                                        >
-                                            <Plus size={20} strokeWidth={4} />
-                                        </button>
-                                    </div>
-
-                                    <div className="flex-1 w-full sm:w-auto">
-                                        <button
-                                            onClick={addToCart}
-                                            disabled={loading}
-                                            className="w-full bg-slate-950 text-white h-18 rounded-[2.2rem] font-black uppercase tracking-[0.3em] text-[11px] italic flex items-center justify-center gap-4 hover:bg-black transition-all shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] active:scale-95 disabled:opacity-50 group py-6"
-                                        >
-                                            {loading ? <Loader2 className="animate-spin" size={24} /> : (
-                                                <>
-                                                    <ShoppingCart size={20} strokeWidth={3} className="group-hover:rotate-12 transition-transform" />
-                                                    Add to Selection
-                                                </>
-                                            )}
-                                        </button>
+                                <div className="min-w-0">
+                                    <p className={`text-[9px] sm:text-[10px] uppercase tracking-wider font-extrabold ${isDark ? 'text-white/25' : 'text-slate-400'}`}>Sold by</p>
+                                    <div className="flex items-center gap-1">
+                                        <p className={`font-black text-xs sm:text-sm truncate ${isDark ? 'text-white/80' : 'text-slate-800'}`}>{selectedOffer.merchant_name}</p>
+                                        <BadgeCheck size={12} className="text-emerald-500 shrink-0" />
                                     </div>
                                 </div>
+                            </div>
+                            <div className="text-right shrink-0 ml-2">
+                                <div className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${isDark ? 'bg-emerald-900/30 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>
+                                    In Stock
+                                </div>
+                                <p className={`text-[9px] font-bold mt-0.5 ${isDark ? 'text-white/20' : 'text-slate-500'}`}>{selectedOffer.stock} left</p>
+                            </div>
+                        </div>
 
-                                {/* Merchant Module - Ultra Premium */}
-                                <div className="pt-10 border-t border-slate-900/5 flex items-center justify-between relative z-10">
-                                    <div className="flex items-center gap-5">
-                                        <div className="w-16 h-16 rounded-[1.8rem] bg-slate-950/5 flex items-center justify-center text-slate-400 border border-white shadow-inner relative group/merchant">
-                                            <Store size={24} strokeWidth={1.5} />
-                                            <div className="absolute -top-2 -right-2 bg-slate-950 text-white p-1.5 rounded-full shadow-xl">
-                                                <BadgeCheck size={12} className="text-yellow-400" />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2 italic">Verified Boutique Node</p>
-                                            <div className="flex items-center gap-2">
-                                                <p className="text-xl font-black text-slate-950 italic">{selectedOffer.merchant_name}</p>
-                                                <div className="px-2 py-0.5 bg-emerald-50 rounded-md">
-                                                    <p className="text-[8px] font-black text-emerald-600 uppercase italic">Pro Merchant</p>
-                                                </div>
-                                            </div>
-                                            {selectedOffer.merchant_location && (
-                                                <div className="flex items-center gap-2 mt-2 opacity-60">
-                                                    <MapPin size={10} className="text-slate-400" />
-                                                    <p className="text-[10px] font-bold text-slate-500 truncate max-w-[180px] italic">{selectedOffer.merchant_location}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <button className="text-slate-400 hover:text-slate-950 font-black text-[9px] uppercase tracking-[0.2em] flex items-center gap-2 transition-colors italic hidden sm:flex border border-slate-100 px-4 py-2 rounded-xl bg-white/50">
-                                        Merchant Protocol <ArrowRight size={12} />
-                                    </button>
+                        {/* ====== TRUST BADGES ====== */}
+                        <div className="grid grid-cols-4 gap-2 sm:gap-3">
+                            {[
+                                { icon: ShieldCheck, title: "Quality", sub: "Original" },
+                                { icon: Truck, title: "Delivery", sub: "Tracked" },
+                                { icon: CheckCircle2, title: "Secure", sub: "Safe Pay" },
+                                { icon: BadgeCheck, title: "Genuine", sub: "Verified" }
+                            ].map((f, i) => (
+                                <div
+                                    key={i}
+                                    className={`flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg sm:rounded-xl text-center ${isDark ? 'bg-white/[0.02]' : 'bg-white shadow-sm'}`}
+                                    style={{ border: isDark ? `1px solid ${primaryColor}08` : '1px solid #f1f5f9' }}
+                                >
+                                    <f.icon
+                                        className="mb-1"
+                                        size={16}
+                                        strokeWidth={1.5}
+                                        style={{ color: isDark ? `${primaryColor}80` : '#64748b' }}
+                                    />
+                                    <p className={`text-[9px] sm:text-[10px] font-black leading-tight ${isDark ? 'text-white/50' : 'text-slate-700'}`}>{f.title}</p>
+                                    <p className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-white/15' : 'text-slate-400'}`}>{f.sub}</p>
                                 </div>
-                            </motion.div>
-
-                            {/* Trust Protocol Bar */}
-                            <motion.div 
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.8 }}
-                                className="flex items-center justify-center gap-10 py-6 opacity-30 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700"
-                            >
-                                <div className="flex flex-col items-center gap-2">
-                                     <CheckCircle2 size={18} />
-                                     <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-900">Verified Origin</span>
-                                </div>
-                                <div className="w-1 h-1 rounded-full bg-slate-300" />
-                                <div className="flex flex-col items-center gap-2">
-                                     <ShieldCheck size={18} />
-                                     <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-900">SSL Encrypted</span>
-                                </div>
-                                <div className="w-1 h-1 rounded-full bg-slate-300" />
-                                <div className="flex flex-col items-center gap-2">
-                                     <ArrowRight size={18} />
-                                     <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-900">Global Logistics</span>
-                                </div>
-                            </motion.div>
+                            ))}
                         </div>
                     </div>
+                </div>
+
+                {/* ====== RECOMMENDED PRODUCTS ====== */}
+                {recommendedProducts.length > 0 && (
+                    <div className="mt-8 sm:mt-12">
+                        <h2 className={`text-lg sm:text-xl font-black mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            More in {categoryName}
+                        </h2>
+                        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-4 -mx-3 px-3">
+                            {recommendedProducts.map(item => {
+                                const rProduct = item.shopping_products;
+                                const rPrice = (item.retail_price_paise || 0) / 100;
+                                const rMrp = (rProduct.mrp_paise || rProduct.suggested_retail_price_paise || item.retail_price_paise || 0) / 100;
+                                const rSavings = rMrp > rPrice ? Math.round(((rMrp - rPrice) / rMrp) * 100) : 0;
+
+                                return (
+                                    <Link
+                                        key={item.id}
+                                        href={`/shop/product/${item.product_id}`}
+                                        className={`flex-shrink-0 w-[140px] sm:w-[160px] rounded-xl overflow-hidden transition-all hover:shadow-md group ${isDark ? 'bg-[#12151c] border' : 'bg-white border border-slate-100 shadow-sm'
+                                            }`}
+                                        style={isDark ? { borderColor: `${primaryColor}10` } : {}}
+                                    >
+                                        <div className={`aspect-square p-3 flex items-center justify-center relative ${isDark ? 'bg-[#0c0e14]' : 'bg-slate-50/50'}`}>
+                                            {rSavings > 0 && (
+                                                <div className="absolute top-1.5 left-1.5 text-[9px] font-black text-white bg-emerald-500 px-1.5 py-0.5 rounded-md z-10">
+                                                    {rSavings}% OFF
+                                                </div>
+                                            )}
+                                            {rProduct.image_url ? (
+                                                <img src={rProduct.image_url} alt={rProduct.title} className={`w-[80%] h-[80%] object-contain group-hover:scale-105 transition-transform ${isDark ? '' : 'mix-blend-multiply'}`} />
+                                            ) : (
+                                                <Package size={24} className={isDark ? 'text-white/10' : 'text-slate-200'} />
+                                            )}
+                                        </div>
+                                        <div className="p-2.5">
+                                            <p className={`text-[10px] font-bold truncate mb-0.5 ${isDark ? 'text-white/25' : 'text-slate-400'}`}>
+                                                Sold by {item.merchants?.business_name || 'InTrust Official'}
+                                            </p>
+                                            <h4 className={`text-xs font-bold line-clamp-2 leading-tight min-h-[2.4em] mb-1.5 ${isDark ? 'text-white/70' : 'text-slate-800'}`}>
+                                                {rProduct.title}
+                                            </h4>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                                    ₹{rPrice.toLocaleString('en-IN')}
+                                                </span>
+                                                {rMrp > rPrice && (
+                                                    <span className={`text-[10px] line-through ${isDark ? 'text-white/20' : 'text-slate-400'}`}>
+                                                        ₹{rMrp.toLocaleString('en-IN')}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* ====== MOBILE STICKY ADD TO CART BAR ====== */}
+            <div className={`fixed bottom-0 left-0 w-full z-50 sm:hidden backdrop-blur-xl border-t ${isDark ? 'bg-[#080a10]/90 border-white/[0.06]' : 'bg-white/95 border-slate-200'}`}>
+                <div className="flex items-center gap-3 px-3 py-3">
+                    <div className="flex-1 min-w-0">
+                        <p className={`text-lg font-black leading-none ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            ₹{((sellingPrice * quantity) / 100).toLocaleString('en-IN')}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                    className={`w-6 h-6 flex items-center justify-center rounded-md text-xs font-black ${isDark ? 'bg-white/[0.08] text-white/60' : 'bg-slate-100 text-slate-600'}`}
+                                >
+                                    <Minus size={12} strokeWidth={3} />
+                                </button>
+                                <span className={`text-xs font-black w-5 text-center ${isDark ? 'text-white/70' : 'text-slate-700'}`}>{quantity}</span>
+                                <button
+                                    onClick={() => setQuantity(quantity + 1)}
+                                    className={`w-6 h-6 flex items-center justify-center rounded-md text-xs font-black ${isDark ? 'bg-white/[0.08] text-white/60' : 'bg-slate-100 text-slate-600'}`}
+                                >
+                                    <Plus size={12} strokeWidth={3} />
+                                </button>
+                            </div>
+                            {savings > 0 && quantity > 0 && (
+                                <span className={`text-[10px] font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                                    Save ₹{((savings * quantity) / 100).toLocaleString('en-IN')}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        onClick={addToCart}
+                        disabled={loading || addedToCart}
+                        className={`h-12 px-6 min-w-[150px] rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-80 shrink-0 overflow-hidden relative ${
+                            addedToCart 
+                                ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]' 
+                                : isDark 
+                                    ? 'text-white' 
+                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.25)]'
+                        }`}
+                        style={!addedToCart && isDark ? {
+                            background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                            boxShadow: `0 4px 20px ${primaryColor}30`
+                        } : {}}
+                    >
+                        <AnimatePresence mode="wait">
+                            {loading ? (
+                                <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="flex items-center gap-2">
+                                    <Loader2 className="animate-spin" size={18} />
+                                </motion.div>
+                            ) : addedToCart ? (
+                                <motion.div key="success" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="flex items-center gap-1.5">
+                                    <CheckCircle2 size={16} strokeWidth={2.5} />
+                                    <span>Added</span>
+                                </motion.div>
+                            ) : (
+                                <motion.div key="default" initial={{ opacity: 0, y: -15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 15 }} className="flex items-center gap-1.5">
+                                    <ShoppingCart size={16} strokeWidth={2.5} />
+                                    <span>Add to Cart</span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.button>
                 </div>
             </div>
         </div>

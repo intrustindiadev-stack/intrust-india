@@ -16,6 +16,9 @@ export default function MerchantProductForm({ merchantId }) {
         description: '',
         category: '',
         retail_price_paise: '',
+        mrp_paise: '',
+        gst_percentage: '0',
+        hsn_code: '',
         stock_quantity: '0',
         image_url: '',
     });
@@ -46,6 +49,7 @@ export default function MerchantProductForm({ merchantId }) {
 
         try {
             const retailPricePaise = Math.round(parseFloat(formData.retail_price_paise) * 100);
+            const mrpPaise = formData.mrp_paise ? Math.round(parseFloat(formData.mrp_paise) * 100) : retailPricePaise;
 
             // Find the category object to get its ID
             const selectedCategory = fullCategories.find(c => c.name === formData.category);
@@ -61,7 +65,10 @@ export default function MerchantProductForm({ merchantId }) {
                     image_url: formData.image_url,
                     wholesale_price_paise: 0, // Not applicable for custom products
                     suggested_retail_price_paise: retailPricePaise,
+                    mrp_paise: mrpPaise,
                     admin_stock: 0, // Not applicable
+                    gst_percentage: parseInt(formData.gst_percentage || 0),
+                    hsn_code: formData.hsn_code || null,
                 }])
                 .select()
                 .single();
@@ -165,7 +172,7 @@ export default function MerchantProductForm({ merchantId }) {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Retail Price (₹)</label>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Selling Price (₹)</label>
                                 <div className="relative">
                                     <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black">₹</span>
                                     <input
@@ -180,6 +187,55 @@ export default function MerchantProductForm({ merchantId }) {
                                     />
                                 </div>
                             </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">MRP (Max Retail Price)</label>
+                                <div className="relative">
+                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black">₹</span>
+                                    <input
+                                        type="number"
+                                        name="mrp_paise"
+                                        value={formData.mrp_paise}
+                                        onChange={handleChange}
+                                        required
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        className="w-full pl-10 pr-5 py-3.5 rounded-2xl bg-blue-50/30 border border-blue-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black text-blue-600"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">GST Percentage (%)</label>
+                                <select
+                                    name="gst_percentage"
+                                    value={formData.gst_percentage}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black text-slate-900 appearance-none"
+                                >
+                                    <option value="0">0%</option>
+                                    <option value="5">5%</option>
+                                    <option value="12">12%</option>
+                                    <option value="18">18%</option>
+                                    <option value="28">28%</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">HSN/SAC Code (Optional)</label>
+                                <input
+                                    type="text"
+                                    name="hsn_code"
+                                    value={formData.hsn_code}
+                                    onChange={handleChange}
+                                    placeholder="e.g. 123456"
+                                    className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black text-slate-900 text-sm"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6 mt-4">
                             <div>
                                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Initial Stock</label>
                                 <input

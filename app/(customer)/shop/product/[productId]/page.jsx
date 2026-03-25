@@ -22,8 +22,7 @@ export default async function ProductDetailPage({ params }) {
         redirect("/shop");
     }
 
-    // 2. Fetch Inventory Info (Merchant or Platform)
-    // We'll check if there are any merchants selling this, or if it's a platform-direct item.
+    // 2. Fetch Inventory Info
     const { data: inventory } = await supabase
         .from('merchant_inventory')
         .select(`
@@ -46,14 +45,57 @@ export default async function ProductDetailPage({ params }) {
         customerProfile = profile;
     }
 
+    // 4. Fetch recommended products from same category (exclude current product)
+    let recommendedProducts = [];
+    if (product.category) {
+        const { data: recInventory } = await supabase
+            .from('merchant_inventory')
+            .select(`
+                id,
+                retail_price_paise,
+                stock_quantity,
+                product_id,
+                is_active,
+                merchants (business_name),
+                shopping_products!inner (id, title, image_url, category, suggested_retail_price_paise, mrp_paise)
+            `)
+            .eq('is_active', true)
+            .gt('stock_quantity', 0)
+            .ilike('shopping_products.category', product.category)
+            .neq('product_id', productId)
+            .limit(8);
+
+        const { data: recPlatform } = await supabase
+            .from('shopping_products')
+            .select('*')
+            .eq('is_active', true)
+            .gt('admin_stock', 0)
+            .ilike('category', product.category)
+            .neq('id', productId)
+            .limit(8);
+
+        const platformMapped = (recPlatform || []).map(p => ({
+            id: `platform-${p.id}`,
+            product_id: p.id,
+            retail_price_paise: p.suggested_retail_price_paise,
+            stock_quantity: p.admin_stock,
+            is_platform_direct: true,
+            merchants: { business_name: 'InTrust Official' },
+            shopping_products: p
+        }));
+
+        recommendedProducts = [...platformMapped, ...(recInventory || [])].slice(0, 10);
+    }
+
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen">
             <Navbar customer={customerProfile} />
-            <main className="pt-24 pb-32">
+            <main>
                 <ProductDetailClient 
                     product={product} 
                     inventory={inventory || []} 
-                    customer={customerProfile} 
+                    customer={customerProfile}
+                    recommendedProducts={recommendedProducts}
                 />
             </main>
         </div>

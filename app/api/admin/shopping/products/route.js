@@ -22,6 +22,8 @@ export async function POST(request) {
             admin_stock,
             image_url,
             is_active,
+            gst_percentage,
+            hsn_code
         } = body;
 
         // Use RPC to bypass RLS safely without service role key
@@ -32,9 +34,12 @@ export async function POST(request) {
             p_category_id: category_id,
             p_wholesale_price: wholesale_price_paise,
             p_retail_price: suggested_retail_price_paise,
+            p_mrp_paise: body.mrp_paise || suggested_retail_price_paise,
             p_admin_stock: admin_stock,
             p_image_url: image_url,
-            p_is_active: is_active
+            p_is_active: is_active,
+            p_gst_percentage: gst_percentage || 0,
+            p_hsn_code: hsn_code || null
         });
 
         if (error) {
@@ -75,9 +80,12 @@ export async function PATCH(request) {
             p_category_id: payload.category_id,
             p_wholesale_price: payload.wholesale_price_paise,
             p_retail_price: payload.suggested_retail_price_paise,
+            p_mrp_paise: payload.mrp_paise,
             p_admin_stock: payload.admin_stock,
             p_image_url: payload.image_url,
-            p_is_active: payload.is_active
+            p_is_active: payload.is_active,
+            p_gst_percentage: payload.gst_percentage || 0,
+            p_hsn_code: payload.hsn_code || null
         });
 
         if (error) {

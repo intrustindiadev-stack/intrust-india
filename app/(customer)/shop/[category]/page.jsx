@@ -28,7 +28,7 @@ export default async function CategoryStorefrontPage({ params }) {
                 custom_title,
                 custom_description,
                 merchants (business_name),
-                shopping_products!inner (id, title, description, image_url, category)
+                shopping_products!inner (id, title, description, image_url, category, mrp_paise, suggested_retail_price_paise)
             `)
             .eq('is_active', true)
             .gt('stock_quantity', 0)
@@ -78,10 +78,10 @@ export default async function CategoryStorefrontPage({ params }) {
     }
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen">
             <Navbar />
             
-            <main className="pt-28 pb-32">
+            <main className="pt-20 md:pt-24">
                 <StorefrontV2Client 
                     category={category}
                     categoryMetadata={categoryData}

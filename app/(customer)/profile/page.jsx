@@ -16,6 +16,7 @@ import ProfileHero from '@/components/customer/profile/ProfileHero';
 import ProfileStats from '@/components/customer/profile/ProfileStats';
 import PersonalInfoForm from '@/components/customer/profile/PersonalInfoForm';
 import AddressSection from '@/components/customer/profile/AddressSection';
+import RecentShoppingOrders from '@/components/customer/RecentShoppingOrders';
 
 // ── Icons & Utils ──
 import { Check, X, Star } from 'lucide-react';
@@ -278,6 +279,14 @@ export default function CustomerProfilePage() {
 
                         {/* ══ MAIN CONTENT ════════════════════════════════════════ */}
                         <div className="lg:col-span-8 space-y-6">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.15 }}
+                            >
+                                <RecentShoppingOrders userId={authUser?.id} limit={2} />
+                            </motion.div>
+
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}

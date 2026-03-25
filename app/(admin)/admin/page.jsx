@@ -150,19 +150,22 @@ export default async function AdminDashboard() {
                 return data || [];
             }),
 
-        // 7. Shopping Stats
-        supabase.from('shopping_orders')
-            .select('total_price_paise, order_type')
+        // 7. Shopping Stats (from shopping_order_groups)
+        supabase.from('shopping_order_groups')
+            .select('total_amount_paise, delivery_status, is_platform_order')
             .then(({ data, error }) => {
                 if (error) {
                     console.error('Error fetching shopping stats:', error);
-                    return { revenue: 0, sales: 0 };
+                    return { revenue: 0, sales: 0, pendingOrders: 0, platformRevenue: 0, commissionRevenue: 0 };
                 }
                 const stats = (data || []).reduce((acc, order) => {
-                    acc.revenue += Number(order.total_price_paise) || 0;
+                    acc.revenue += Number(order.total_amount_paise) || 0;
                     acc.sales += 1;
+                    if (order.delivery_status === 'pending') acc.pendingOrders += 1;
+                    if (order.is_platform_order) acc.platformRevenue += Number(order.total_amount_paise) || 0;
+                    else acc.commissionRevenue += Math.round((Number(order.total_amount_paise) || 0) * 0.05);
                     return acc;
-                }, { revenue: 0, sales: 0 });
+                }, { revenue: 0, sales: 0, pendingOrders: 0, platformRevenue: 0, commissionRevenue: 0 });
                 return stats;
             })
     ]);
@@ -253,6 +256,9 @@ export default async function AdminDashboard() {
                         </div>
                         <p className="text-sm font-medium text-gray-500 mb-1">Shopping Revenue</p>
                         <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">{formatPrice(shoppingStats.revenue)}</h3>
+                        {shoppingStats.pendingOrders > 0 && (
+                            <p className="text-xs font-bold text-amber-600 mt-1">{shoppingStats.pendingOrders} orders pending</p>
+                        )}
                     </div>
                 </div>
 
@@ -409,6 +415,21 @@ export default async function AdminDashboard() {
                                     <div className="flex-1">
                                         <h3 className="font-bold text-slate-900 group-hover:text-sky-600 transition-colors">Merchant Directory</h3>
                                         <p className="text-sm text-slate-500 mt-1 leading-snug">Review applications and control access</p>
+                                    </div>
+                                </Link>
+
+                                <Link href="/admin/shopping/orders" className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-violet-100 transition-all">
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xl shadow-lg shadow-violet-500/20 group-hover:scale-110 transition-transform relative">
+                                        📦
+                                        {shoppingStats.pendingOrders > 0 && (
+                                            <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{shoppingStats.pendingOrders}</span>
+                                        )}
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-slate-900 group-hover:text-violet-600 transition-colors">Shopping Orders</h3>
+                                        <p className="text-sm text-slate-500 mt-1 leading-snug">
+                                            {shoppingStats.sales} total · {shoppingStats.pendingOrders} pending dispatch
+                                        </p>
                                     </div>
                                 </Link>
                             </div>

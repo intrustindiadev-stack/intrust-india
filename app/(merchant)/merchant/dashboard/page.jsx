@@ -156,6 +156,15 @@ export default async function MerchantDashboardPage() {
                         <span className="material-icons-round text-sm">inventory_2</span>
                         <span>View Inventory</span>
                     </Link>
+                    <Link href="/merchant/shopping/orders" className="w-full sm:w-auto px-6 py-3 rounded-xl merchant-glass hover:bg-black/5 dark:hover:bg-white/10 transition-all flex items-center justify-center space-x-2 border border-black/5 dark:border-white/10 relative">
+                        <span className="material-icons-round text-emerald-500 text-sm">local_shipping</span>
+                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Shopping Orders</span>
+                        {shoppingOrderItems.length > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                {shoppingOrderItems.length}
+                            </span>
+                        )}
+                    </Link>
                 </div>
             </div>
 

@@ -16,7 +16,10 @@ export default function ProductForm({ initialData = null }) {
         category: initialData?.category || '',
         wholesale_price_paise: initialData?.wholesale_price_paise ? (initialData.wholesale_price_paise / 100).toString() : '',
         suggested_retail_price_paise: initialData?.suggested_retail_price_paise ? (initialData.suggested_retail_price_paise / 100).toString() : '',
+        mrp_paise: initialData?.mrp_paise ? (initialData.mrp_paise / 100).toString() : (initialData?.suggested_retail_price_paise ? (initialData.suggested_retail_price_paise / 100).toString() : ''),
         admin_stock: initialData?.admin_stock?.toString() || '0',
+        gst_percentage: initialData?.gst_percentage?.toString() || '0',
+        hsn_code: initialData?.hsn_code || '',
         image_url: initialData?.image_url || '',
         is_active: initialData?.is_active ?? true,
     });
@@ -56,7 +59,10 @@ export default function ProductForm({ initialData = null }) {
                 ...formData,
                 wholesale_price_paise: Math.round(parseFloat(formData.wholesale_price_paise) * 100),
                 suggested_retail_price_paise: Math.round(parseFloat(formData.suggested_retail_price_paise) * 100),
+                mrp_paise: Math.round(parseFloat(formData.mrp_paise) * 100),
                 admin_stock: parseInt(formData.admin_stock),
+                gst_percentage: parseInt(formData.gst_percentage || 0),
+                hsn_code: formData.hsn_code || null,
                 category_id: categoryId, // Pass the category ID
             };
 
@@ -196,19 +202,68 @@ export default function ProductForm({ initialData = null }) {
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Suggested Retail Price (₹)</label>
-                            <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
-                                <input
-                                    type="number"
-                                    name="suggested_retail_price_paise"
-                                    value={formData.suggested_retail_price_paise}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Selling Price (₹)</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
+                                    <input
+                                        type="number"
+                                        name="suggested_retail_price_paise"
+                                        value={formData.suggested_retail_price_paise}
+                                        onChange={handleChange}
+                                        required
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Official MRP (₹)</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
+                                    <input
+                                        type="number"
+                                        name="mrp_paise"
+                                        value={formData.mrp_paise}
+                                        onChange={handleChange}
+                                        required
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-bold text-blue-600 bg-blue-50/30"
+                                    />
+                                </div>
+                                <p className="text-[10px] text-slate-500 mt-1 italic">Used for "DMart-style" discount display</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1.5">GST Percentage (%)</label>
+                                <select
+                                    name="gst_percentage"
+                                    value={formData.gst_percentage}
                                     onChange={handleChange}
                                     required
-                                    step="0.01"
-                                    placeholder="0.00"
-                                    className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none bg-white"
+                                >
+                                    <option value="0">0%</option>
+                                    <option value="5">5%</option>
+                                    <option value="12">12%</option>
+                                    <option value="18">18%</option>
+                                    <option value="28">28%</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1.5">HSN/SAC Code (Optional)</label>
+                                <input
+                                    type="text"
+                                    name="hsn_code"
+                                    value={formData.hsn_code}
+                                    onChange={handleChange}
+                                    placeholder="e.g. 123456"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                                 />
                             </div>
                         </div>
