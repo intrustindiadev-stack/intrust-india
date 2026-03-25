@@ -636,7 +636,7 @@ const CartClient = ({ userId }) => {
           onClose={() => setIsPaymentModalOpen(false)}
           amount={finalPayable / 100}
           user={{ id: userId, email: profile?.email || '', phone: profile?.phone_number || '' }}
-          productInfo={{ title: 'Cart Checkout' }}
+          productInfo={{ title: `${itemCount} Item${itemCount > 1 ? 's' : ''} in Cart` }}
           metadata={{ type: 'cart_checkout', groupId: draftGroupId }}
           initialMethod="gateway"
         />

@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import StorefrontV2Client from './StorefrontV2Client';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +92,7 @@ export default async function CategoryStorefrontPage({ params }) {
             </main>
 
             <Footer />
+            <CustomerBottomNav />
         </div>
     );
 }

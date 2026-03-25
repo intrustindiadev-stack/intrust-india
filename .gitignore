@@ -40,6 +40,14 @@ sabpaisa-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
 # backups
 supabase_backup.sql
 dump_error.log
+
+# agent folders
+.agent*
+.agents*
+
+# generated docs
+docs/

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3 } from 'lucide-react';
+import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -14,6 +15,7 @@ export default function StorefrontV2Client({ category, categoryMetadata, initial
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const [cart, setCart] = useState([]);
+    const [wishlistIds, setWishlistIds] = useState(new Set());
     const [activeSubCategory, setActiveSubCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [cartLoading, setCartLoading] = useState(false);
@@ -23,8 +25,56 @@ export default function StorefrontV2Client({ category, categoryMetadata, initial
     useEffect(() => {
         if (customer?.id) {
             syncCartFromDB();
+            syncWishlistFromDB();
         }
     }, [customer?.id]);
+
+    const syncWishlistFromDB = async () => {
+        const { data } = await supabase
+            .from('user_wishlists')
+            .select('product_id')
+            .eq('user_id', customer.id);
+        if (data) setWishlistIds(new Set(data.map(r => r.product_id)));
+    };
+
+    const toggleWishlist = async (item) => {
+        if (!customer?.id) {
+            router.push('/login');
+            return;
+        }
+        const productId = item.product_id;
+        const alreadySaved = wishlistIds.has(productId);
+
+        if (alreadySaved) {
+            const { error } = await supabase
+                .from('user_wishlists')
+                .delete()
+                .eq('user_id', customer.id)
+                .eq('product_id', productId);
+            if (!error) {
+                setWishlistIds(prev => { const next = new Set(prev); next.delete(productId); return next; });
+                toast.success('Removed from wishlist');
+            } else {
+                console.error('Wishlist remove error:', error);
+                toast.error('Could not remove from wishlist');
+            }
+        } else {
+            const { error } = await supabase.from('user_wishlists').upsert({
+                user_id: customer.id,
+                product_id: productId,
+                merchant_id: item.merchant_id || null,
+                inventory_id: item.is_platform_direct ? null : item.id,
+                is_platform_item: !!item.is_platform_direct,
+            }, { onConflict: 'user_id,product_id' });
+            if (!error) {
+                setWishlistIds(prev => new Set([...prev, productId]));
+                toast.success('Saved to wishlist! ♥');
+            } else {
+                console.error('Wishlist save error:', error);
+                toast.error('Could not save to wishlist');
+            }
+        }
+    };
 
     const syncCartFromDB = async () => {
         setCartLoading(true);
@@ -276,6 +326,8 @@ export default function StorefrontV2Client({ category, categoryMetadata, initial
                                         onRemove={() => removeFromCart(item)}
                                         primaryColor={primaryColor}
                                         secondaryColor={secondaryColor}
+                                        isWishlisted={wishlistIds.has(item.product_id)}
+                                        onWishlist={() => toggleWishlist(item)}
                                     />
                                 ))}
                             </AnimatePresence>

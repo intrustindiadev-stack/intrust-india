@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     ShoppingCart,
     ShieldCheck,
@@ -15,6 +15,7 @@ import {
     ChevronRight,
     Zap,
     ArrowLeft,
+    Heart,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
@@ -30,7 +31,61 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(false);
     const [addedToCart, setAddedToCart] = useState(false);
+    const [isWishlisted, setIsWishlisted] = useState(false);
+    const [wishlistLoading, setWishlistLoading] = useState(false);
     const supabase = createClient();
+
+    useEffect(() => {
+        if (!customer?.id) return;
+        supabase
+            .from('user_wishlists')
+            .select('id')
+            .eq('user_id', customer.id)
+            .eq('product_id', product.id)
+            .maybeSingle()
+            .then(({ data }) => setIsWishlisted(!!data));
+    }, [customer?.id, product.id]);
+
+    const toggleWishlist = async () => {
+        if (!customer?.id) {
+            toast.error('Please login to save items');
+            return;
+        }
+        setWishlistLoading(true);
+        try {
+            if (isWishlisted) {
+                const { error } = await supabase
+                    .from('user_wishlists')
+                    .delete()
+                    .eq('user_id', customer.id)
+                    .eq('product_id', product.id);
+                if (!error) {
+                    setIsWishlisted(false);
+                    toast.success('Removed from wishlist');
+                } else {
+                    console.error('Wishlist remove error:', error);
+                    toast.error('Could not remove from wishlist');
+                }
+            } else {
+                const { error } = await supabase.from('user_wishlists').upsert({
+                    user_id: customer.id,
+                    product_id: product.id,
+                    merchant_id: selectedOffer.is_platform_direct ? null : (inventory[0]?.merchant_id || null),
+                    inventory_id: selectedOffer.is_platform_direct ? null : (selectedOffer.id || null),
+                    is_platform_item: !!selectedOffer.is_platform_direct,
+                }, { onConflict: 'user_id,product_id' });
+                if (!error) {
+                    setIsWishlisted(true);
+                    toast.success('Saved to wishlist! ♥');
+                } else {
+                    console.error('Wishlist save error:', error);
+                    toast.error('Could not save to wishlist');
+                }
+            }
+        } finally {
+            setWishlistLoading(false);
+        }
+    };
 
     // Offers logic
     const platformOffer = {
@@ -204,6 +259,24 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                     {categoryName}
                                 </div>
                             </div>
+
+                            {/* Wishlist Heart Button */}
+                            <button
+                                onClick={toggleWishlist}
+                                disabled={wishlistLoading}
+                                className="absolute top-3 right-3 sm:top-5 sm:right-5 w-10 h-10 rounded-full bg-white/90 dark:bg-[#080a10]/80 backdrop-blur-sm flex items-center justify-center shadow-md transition-all hover:scale-110 active:scale-95 z-30 border border-white/20"
+                                style={isDark ? { borderColor: `${primaryColor}20` } : {}}
+                            >
+                                {wishlistLoading
+                                    ? <Loader2 size={16} className="animate-spin text-slate-400" />
+                                    : <Heart
+                                        size={18}
+                                        className={isWishlisted ? 'text-pink-500' : (isDark ? 'text-white/40' : 'text-slate-400')}
+                                        fill={isWishlisted ? 'currentColor' : 'none'}
+                                        strokeWidth={isWishlisted ? 0 : 2}
+                                    />
+                                }
+                            </button>
                         </div>
                     </div>
 

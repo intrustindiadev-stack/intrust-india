@@ -2,12 +2,13 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, LayoutGrid, ShoppingBag, User } from 'lucide-react';
+import { Home, LayoutGrid, ShoppingBag, User, Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const navItems = [
     { icon: Home, label: 'Home', href: '/dashboard' },
     { icon: LayoutGrid, label: 'Services', href: '/services' },
+    { icon: Heart, label: 'Wishlist', href: '/wishlist' },
     { icon: ShoppingBag, label: 'My Cards', href: '/my-giftcards' },
     { icon: User, label: 'Profile', href: '/profile' },
 ];

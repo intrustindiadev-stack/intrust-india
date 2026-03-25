@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, MapPin, Star, ShoppingBag, Loader2, ArrowRight, Package } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, MapPin, Star, ShoppingBag, Loader2, ArrowRight, Package, Heart } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,51 @@ export default function StorefrontClient({ initialInventory, customer }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeCategory, setActiveCategory] = useState('All');
     const [isPurchasing, setIsPurchasing] = useState(null); // inventoryId
+    const [wishlistIds, setWishlistIds] = useState(new Set());
+
+    useEffect(() => {
+        if (!customer) return;
+        supabase
+            .from('user_wishlists')
+            .select('product_id')
+            .eq('user_id', customer.id)
+            .then(({ data }) => {
+                if (data) setWishlistIds(new Set(data.map(r => r.product_id)));
+            });
+    }, [customer]);
+
+    const toggleWishlist = async (item) => {
+        if (!customer) {
+            toast.error('Please login to save items');
+            router.push('/login');
+            return;
+        }
+        const productId = item.shopping_products.id;
+        const alreadySaved = wishlistIds.has(productId);
+        if (alreadySaved) {
+            const { error } = await supabase
+                .from('user_wishlists')
+                .delete()
+                .eq('user_id', customer.id)
+                .eq('product_id', productId);
+            if (!error) {
+                setWishlistIds(prev => { const next = new Set(prev); next.delete(productId); return next; });
+                toast.success('Removed from wishlist');
+            }
+        } else {
+            const { error } = await supabase.from('user_wishlists').upsert({
+                user_id: customer.id,
+                product_id: productId,
+                merchant_id: item.merchants?.id || null,
+                inventory_id: item.id,
+                is_platform_item: false,
+            }, { onConflict: 'user_id,product_id' });
+            if (!error) {
+                setWishlistIds(prev => new Set([...prev, productId]));
+                toast.success('Added to wishlist!');
+            }
+        }
+    };
 
     const categories = ['All', ...new Set(initialInventory.map(i => i.shopping_products.category || 'General'))];
 
@@ -111,6 +156,18 @@ export default function StorefrontClient({ initialInventory, customer }) {
                                             {product.category || 'General'}
                                         </div>
                                     </div>
+
+                                    {/* Wishlist Heart Button */}
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); toggleWishlist(item); }}
+                                        className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-sm transition-all hover:scale-110 active:scale-95 z-10"
+                                    >
+                                        <Heart
+                                            size={16}
+                                            className={wishlistIds.has(product.id) ? 'text-pink-500' : 'text-slate-400'}
+                                            fill={wishlistIds.has(product.id) ? 'currentColor' : 'none'}
+                                        />
+                                    </button>
                                     
                                     {/* Action Reveal Overlay */}
                                     <div className="absolute inset-0 bg-blue-900/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none group-hover:pointer-events-auto">

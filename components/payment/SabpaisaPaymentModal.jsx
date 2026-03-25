@@ -10,6 +10,7 @@ import {
   Loader2,
   Tag,
   Gift,
+  Package,
 } from "lucide-react";
 import PaymentMethodCard from "./PaymentMethodCard";
 import WalletPaymentOption from "./WalletPaymentOption";
@@ -267,14 +268,24 @@ export default function SabpaisaPaymentModal({
               <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/10 mb-5">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center">
-                    <Gift size={20} className="text-indigo-200" />
+                    {metadata?.type === 'cart_checkout' ? (
+                      <Package size={20} className="text-indigo-200" />
+                    ) : metadata?.type === 'wallet_topup' ? (
+                      <Wallet size={20} className="text-indigo-200" />
+                    ) : (
+                      <Gift size={20} className="text-indigo-200" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-white truncate">
                       {productInfo?.title || "Gift Card"}
                     </p>
                     <p className="text-xs text-indigo-300/80">
-                      Digital Gift Card
+                      {metadata?.type === 'cart_checkout' 
+                        ? 'Shopping Cart Order' 
+                        : metadata?.type === 'wallet_topup' 
+                          ? 'Wallet Top-Up' 
+                          : 'Digital Gift Card'}
                     </p>
                   </div>
                 </div>
@@ -483,9 +494,10 @@ export default function SabpaisaPaymentModal({
               </>
             )}
 
-            {!initialMethod && (
+            {(!initialMethod || initialMethod === 'gateway') && (
               <>
                 {/* ── Other Methods ── */}
+                {!initialMethod && (
                 <div className="flex items-center gap-3 mb-4">
                   <div className="h-px bg-gray-200 flex-1" />
                   <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-widest whitespace-nowrap">
@@ -493,6 +505,7 @@ export default function SabpaisaPaymentModal({
                   </h4>
                   <div className="h-px bg-gray-200 flex-1" />
                 </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <PaymentMethodCard

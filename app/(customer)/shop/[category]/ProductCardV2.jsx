@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Minus, Package, BadgeCheck, Check } from 'lucide-react';
+import { Plus, Minus, Package, BadgeCheck, Check, Heart } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#000000', secondaryColor = '#1e293b' }) {
+export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#000000', secondaryColor = '#1e293b', isWishlisted = false, onWishlist }) {
     const router = useRouter();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -73,6 +73,21 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                             <Package size={32} strokeWidth={1} />
                         </div>
                     )}
+
+                    {/* Wishlist Heart Button */}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onWishlist?.(); }}
+                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm transition-all hover:scale-110 active:scale-95 z-10 border border-white/20"
+                        style={isDark ? { background: 'rgba(12,14,20,0.85)', borderColor: 'rgba(255,255,255,0.06)' } : {}}
+                    >
+                        <Heart
+                            size={14}
+                            className={isWishlisted ? 'text-pink-500' : (isDark ? 'text-white/30' : 'text-slate-400')}
+                            fill={isWishlisted ? 'currentColor' : 'none'}
+                            strokeWidth={isWishlisted ? 0 : 2}
+                        />
+                    </button>
+
                 </div>
 
                 {/* Info */}

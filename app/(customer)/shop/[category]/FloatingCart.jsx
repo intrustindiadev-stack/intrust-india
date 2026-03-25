@@ -9,8 +9,8 @@ import { useRouter } from 'next/navigation';
 export default function FloatingCart({ count, total, savings, items, customer, onClear, primaryColor = '#3b82f6', secondaryColor = '#4f46e5' }) {
     const router = useRouter();
     return (
-        <div className="fixed bottom-0 left-0 w-full z-50 animate-in slide-in-from-bottom-5">
-            <div className="bg-emerald-600 text-white px-4 py-3 md:px-6 md:py-4 flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
+        <div className="fixed bottom-[92px] md:bottom-0 left-0 w-full z-40 animate-in slide-in-from-bottom-5 px-4 md:px-0">
+            <div className="bg-emerald-600 dark:bg-emerald-500 text-white px-4 py-3 md:px-6 md:py-4 flex items-center justify-between shadow-[0_8px_32px_rgba(16,185,129,0.3)] rounded-2xl md:rounded-none">
                 {/* Cart Info */}
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-emerald-700 rounded-lg relative">
