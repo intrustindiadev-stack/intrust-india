@@ -272,6 +272,60 @@ export async function POST(request) {
             }
         }
 
+        // 5d. Handle Cart Checkout
+        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'CART_CHECKOUT' && !wasAlreadySuccess) {
+            try {
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
+
+                const groupId = existingTxn.udf2;
+                const amountPaise = Math.round(parseFloat(amount) * 100);
+
+                const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+                    'finalize_gateway_orders',
+                    {
+                        p_group_id: groupId,
+                        p_customer_id: existingTxn.user_id,
+                        p_amount_paise: amountPaise
+                    }
+                );
+
+                if (rpcError || (rpcResult && !rpcResult.success)) {
+                    console.error('[Callback] Cart checkout finalize error:', rpcError?.message || rpcResult?.message);
+                    fulfillmentFailed = true;
+                    internalStatus = 'FAILED';
+                    result.transMsg = 'Cart order fulfillment failed. Payment will be refunded.';
+                } else {
+                    console.log(`[Callback] Cart checkout fulfilled for txn ${clientTxnId}`);
+                }
+            } catch (cartError) {
+                console.error('[Callback] Cart checkout processing error:', cartError.message);
+                fulfillmentFailed = true;
+                internalStatus = 'FAILED';
+                result.transMsg = 'Cart checkout processing error. Payment will be refunded.';
+            }
+        }
+
+        // 5e. Handle Cart Checkout Failure
+        if (existingTxn && internalStatus !== 'SUCCESS' && existingTxn.udf1 === 'CART_CHECKOUT') {
+            try {
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
+                const groupId = existingTxn.udf2;
+                await supabaseAdmin
+                    .from('shopping_order_groups')
+                    .update({ status: 'failed' })
+                    .eq('id', groupId);
+                console.log(`[Callback] Cart checkout marked as failed/aborted for txn ${clientTxnId}`);
+            } catch (failError) {
+                console.error('[Callback] Failed to flag cart checkout as failed:', failError.message);
+            }
+        }
+
         // 6. Handle Gift Card Purchase — Atomic coupon+order with rollback safety
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GIFT_CARD' && !wasAlreadySuccess) {
             try {
