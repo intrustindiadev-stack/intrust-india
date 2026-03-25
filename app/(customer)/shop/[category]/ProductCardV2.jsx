@@ -33,8 +33,8 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
             className={`group relative flex flex-col h-full rounded-2xl overflow-hidden transition-all duration-300 ${isDark
-                    ? 'bg-[#12151c] hover:bg-[#161a24] border shadow-lg'
-                    : 'bg-white border-slate-200 shadow-sm hover:shadow-md border'
+                ? 'bg-[#12151c] hover:bg-[#161a24] border shadow-lg'
+                : 'bg-white border-slate-200 shadow-sm hover:shadow-md border'
                 }`}
             style={isDark ? {
                 borderColor: `${primaryColor}12`,
@@ -75,13 +75,14 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                     )}
                 </div>
 
-                {/* Info */}
                 <div className="flex flex-col flex-1 text-left px-1">
-                    <div className="flex items-center gap-1 mb-1">
-                        <p className={`text-[10px] font-extrabold truncate ${isDark ? 'text-white/35' : 'text-slate-500'}`}>
-                            Sold by {item.merchants?.business_name || 'InTrust Official'}
-                        </p>
-                        <BadgeCheck size={10} className="text-emerald-500 shrink-0" />
+                    <div className="flex items-center justify-between gap-1 mb-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                            <p className={`text-[11px] font-black uppercase tracking-wider truncate ${isDark ? 'text-emerald-400/80' : 'text-emerald-600'}`}>
+                                {item.merchants?.business_name || 'InTrust Official'}
+                            </p>
+                            <BadgeCheck size={12} className="text-emerald-500 shrink-0" />
+                        </div>
                     </div>
                     <h3 className={`text-xs md:text-sm font-bold leading-[1.3] line-clamp-2 min-h-[2.6em] mb-2 ${isDark ? 'text-white/80' : 'text-slate-800'}`}>
                         {item.custom_title || product.title}
@@ -119,7 +120,7 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                             exit={{ scale: 0.8, opacity: 0 }}
                             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                             className="flex items-center justify-center text-white shadow-sm h-9 md:h-10 w-full"
-                            style={{ 
+                            style={{
                                 background: isDark ? primaryColor : '#10b981',
                                 boxShadow: isDark ? `0 4px 16px ${primaryColor}40` : '0 4px 14px rgba(16,185,129,0.3)'
                             }}
@@ -153,7 +154,7 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                             >
                                 <Minus size={14} strokeWidth={3} />
                             </button>
-                            <motion.span 
+                            <motion.span
                                 key={cartItem.quantity}
                                 initial={{ scale: 1.4, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
@@ -177,11 +178,10 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                             whileTap={{ scale: 0.95 }}
                             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                             onClick={handleAdd}
-                            className={`w-full h-9 md:h-10 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-colors ${
-                                isDark
+                            className={`w-full h-9 md:h-10 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-colors ${isDark
                                     ? 'border text-white/70 hover:text-white'
                                     : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-500 hover:text-white hover:border-emerald-500'
-                            }`}
+                                }`}
                             style={isDark ? {
                                 borderColor: `${primaryColor}30`,
                                 color: primaryColor

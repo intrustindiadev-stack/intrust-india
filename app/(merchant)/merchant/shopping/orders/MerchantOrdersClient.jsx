@@ -6,17 +6,17 @@ import {
     Package, Search, Clock, CheckCircle2, Truck,
     TrendingUp, TrendingDown, DollarSign, ShoppingBag,
     ChevronDown, ChevronUp, MapPin, ArrowUpRight, AlertTriangle,
-    RotateCcw, Receipt
+    RotateCcw, Receipt, Store
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
 
 const STATUS_CONFIG = {
-    pending:   { label: "Pending",   color: "text-amber-400",  bg: "bg-amber-500/10",  border: "border-amber-500/20", icon: Clock },
-    packed:    { label: "Packed",    color: "text-blue-400",   bg: "bg-blue-500/10",   border: "border-blue-500/20",  icon: Package },
-    shipped:   { label: "Shipped",   color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20",icon: Truck },
-    delivered: { label: "Delivered", color: "text-emerald-400",bg: "bg-emerald-500/10",border: "border-emerald-500/20",icon: CheckCircle2 },
-    cancelled: { label: "Cancelled", color: "text-red-400",    bg: "bg-red-500/10",    border: "border-red-500/20",   icon: AlertTriangle },
+    pending: { label: "Pending", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", icon: Clock },
+    packed: { label: "Packed", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", icon: Package },
+    shipped: { label: "Shipped", color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20", icon: Truck },
+    delivered: { label: "Delivered", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", icon: CheckCircle2 },
+    cancelled: { label: "Cancelled", color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20", icon: AlertTriangle },
 };
 
 const STATUS_FLOW = ["pending", "packed", "shipped", "delivered"];
@@ -74,12 +74,26 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                         </div>
                     </div>
                 </div>
-                <Link
-                    href="/merchant/shopping/inventory"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-gray-300 hover:bg-white/10 transition-all"
-                >
-                    <ShoppingBag size={14} /> My Inventory
-                </Link>
+                <div className="flex flex-wrap items-center gap-3">
+                    <Link
+                        href="/merchant/shopping/wholesale"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-sm font-bold text-white transition-all shadow-lg shadow-blue-600/20"
+                    >
+                        <Package size={14} /> Buy Stock
+                    </Link>
+                    <Link
+                        href="/merchant/shopping/inventory"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-sm font-bold text-white transition-all shadow-lg shadow-violet-600/20"
+                    >
+                        <Store size={14} /> My Shop
+                    </Link>
+                    <Link
+                        href="/merchant/shopping/inventory"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-gray-300 hover:bg-white/10 transition-all"
+                    >
+                        <ShoppingBag size={14} /> My Inventory
+                    </Link>
+                </div>
             </div>
 
             {/* Financial Stats */}
@@ -151,9 +165,8 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                                    filter === f ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "hover:bg-white/10 text-gray-400"
-                                }`}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap flex items-center gap-1.5 ${filter === f ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "hover:bg-white/10 text-gray-400"
+                                    }`}
                             >
                                 {cfg.label}
                                 <span className={`px-1 py-0.5 rounded-md text-[9px] font-black ${filter === f ? "bg-white/20" : "bg-white/10"}`}>{count}</span>
@@ -264,6 +277,10 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                                                                 <div>
                                                                     <p className="text-sm font-semibold text-white truncate">{item.product_title}</p>
                                                                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[9px] font-black uppercase tracking-wider border border-emerald-500/20">
+                                                                            <Store size={8} strokeWidth={3} />
+                                                                            Your Store
+                                                                        </div>
                                                                         {item.hsn_code && <span className="text-[9px] text-gray-500 font-medium">HSN: {item.hsn_code}</span>}
                                                                         {gstRate > 0 && <span className="text-[9px] text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded font-black">GST {gstRate}%</span>}
                                                                         <span className="text-[9px] text-gray-500">× {item.quantity}</span>
@@ -275,8 +292,8 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                                                             {gstRate > 0 && (
                                                                 <div className="mt-2 grid grid-cols-3 gap-2 text-[9px] text-gray-500">
                                                                     <span>Base: ₹{(baseTaxable / 100).toFixed(2)}</span>
-                                                                    <span>CGST {gstRate/2}%: ₹{(gstAmount / 200).toFixed(2)}</span>
-                                                                    <span>SGST {gstRate/2}%: ₹{(gstAmount / 200).toFixed(2)}</span>
+                                                                    <span>CGST {gstRate / 2}%: ₹{(gstAmount / 200).toFixed(2)}</span>
+                                                                    <span>SGST {gstRate / 2}%: ₹{(gstAmount / 200).toFixed(2)}</span>
                                                                 </div>
                                                             )}
                                                         </div>

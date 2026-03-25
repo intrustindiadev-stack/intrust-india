@@ -291,6 +291,7 @@ export default async function AnalyticsPage() {
                         <thead>
                             <tr className="text-slate-400 text-xs uppercase tracking-wider font-bold border-b border-black/5 dark:border-white/5">
                                 <th className="pb-4 pt-2 px-2">Product</th>
+                                <th className="pb-4 pt-2">Seller / Store</th>
                                 <th className="pb-4 pt-2">Type</th>
                                 <th className="pb-4 pt-2">Quantity</th>
                                 <th className="pb-4 pt-2">Unit Price</th>
@@ -304,6 +305,16 @@ export default async function AnalyticsPage() {
                                     <tr key={order.id} className="group hover:bg-black/5 dark:hover:bg-white/5 transition-all">
                                         <td className="py-4 px-2 font-bold text-slate-700 dark:text-slate-200">
                                             {order.shopping_products?.title || 'Unknown Product'}
+                                        </td>
+                                        <td className="py-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-6 h-6 rounded-lg ${order.order_type === 'wholesale' ? 'bg-blue-500/10 text-blue-600' : 'bg-emerald-500/10 text-emerald-600'} flex items-center justify-center shrink-0`}>
+                                                    <ShoppingBag size={12} />
+                                                </div>
+                                                <span className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                                                    {order.order_type === 'wholesale' ? 'InTrust Official' : 'Your Store'}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="py-4">
                                             <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
