@@ -34,6 +34,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const CartClient = ({ userId }) => {
   const [cartItems, setCartItems] = useState([]);
+  const [stockWarnings, setStockWarnings] = useState(new Map());
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -76,6 +77,37 @@ const CartClient = ({ userId }) => {
 
       if (cartError) throw cartError;
       setCartItems(cart || []);
+
+      if (cart && cart.length > 0) {
+        const warnings = new Map();
+        const platformProductIds = cart.filter(i => i.is_platform_item).map(i => i.shopping_products?.id).filter(Boolean);
+        const merchantInventoryIds = cart.filter(i => !i.is_platform_item).map(i => i.inventory_id).filter(Boolean);
+
+        const [platformStockRes, merchantStockRes] = await Promise.all([
+          platformProductIds.length > 0 
+            ? supabase.from('shopping_products').select('id, admin_stock').in('id', platformProductIds)
+            : Promise.resolve({ data: [] }),
+          merchantInventoryIds.length > 0 
+            ? supabase.from('merchant_inventory').select('id, stock_quantity').in('id', merchantInventoryIds)
+            : Promise.resolve({ data: [] })
+        ]);
+
+        const platformStockMap = new Map((platformStockRes.data || []).map(p => [p.id, p.admin_stock || 0]));
+        const merchantStockMap = new Map((merchantStockRes.data || []).map(m => [m.id, m.stock_quantity || 0]));
+
+        for (const item of cart) {
+          const liveStock = item.is_platform_item 
+            ? platformStockMap.get(item.shopping_products?.id) || 0
+            : merchantStockMap.get(item.inventory_id) || 0;
+            
+          if (liveStock < item.quantity || liveStock === 0) {
+            warnings.set(item.id, liveStock);
+          }
+        }
+        setStockWarnings(warnings);
+      } else {
+        setStockWarnings(new Map());
+      }
 
       const { data: wallet } = await supabase
         .from("customer_wallets")
@@ -129,6 +161,12 @@ const CartClient = ({ userId }) => {
         const { data, error: rpcError } = await supabase.rpc("customer_checkout_v4", { p_customer_id: userId });
         if (rpcError) throw rpcError;
         if (data.success) {
+          fetch('/api/shopping/notify-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ group_id: data.group_id, amount_paise: finalPayable })
+          }).catch(console.error);
+
           setOrderSuccess(true);
           setTimeout(() => router.push("/orders?success=true"), 3000);
         } else {
@@ -154,7 +192,10 @@ const CartClient = ({ userId }) => {
 
   // Bill
   const billDetails = cartItems.reduce((acc, item) => {
-    const sellingPrice = item.is_platform_item ? (item.shopping_products?.suggested_retail_price_paise || 0) : (item.merchant_inventory?.retail_price_paise || 0);
+    const sellingPrice = item.is_platform_item 
+      ? (item.shopping_products?.suggested_retail_price_paise || 0) 
+      : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
+    
     const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
     const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;
     acc.mrpTotal += (finalMrp * item.quantity);
@@ -166,7 +207,8 @@ const CartClient = ({ userId }) => {
   const deliveryFee = 5000; // Fixed ₹50 delivery fee
   const finalPayable = billDetails.sellingTotal > 0 ? billDetails.sellingTotal + deliveryFee : 0;
   const itemCount = cartItems.reduce((a, i) => a + i.quantity, 0);
-  const canPay = paymentMode === 'wallet' ? walletBalance >= finalPayable : true;
+  const hasStockIssues = stockWarnings.size > 0;
+  const canPay = (paymentMode === 'wallet' ? walletBalance >= finalPayable : true) && !hasStockIssues;
 
   // Payment modes
   const paymentModes = [
@@ -194,7 +236,7 @@ const CartClient = ({ userId }) => {
             initial={{ scale: 0 }} 
             animate={{ scale: 1 }} 
             transition={{ type: "spring", stiffness: 300, damping: 12, delay: 0.4 }}
-            className="w-24 h-24 mx-auto mb-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.3)]"
+            className="w-24 h-24 mx-auto mb-6 rounded-full bg-blue-600 flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.3)]"
           >
             <motion.div
               initial={{ pathLength: 0, opacity: 0 }}
@@ -228,7 +270,7 @@ const CartClient = ({ userId }) => {
               initial={{ width: 0 }} 
               animate={{ width: "100%" }} 
               transition={{ delay: 0.5, duration: 2.5, ease: "linear" }}
-              className="h-full rounded-full bg-emerald-500"
+              className="h-full rounded-full bg-blue-600"
             />
           </motion.div>
         </motion.div>
@@ -240,7 +282,7 @@ const CartClient = ({ userId }) => {
   if (loading) {
     return (
       <div className={`flex flex-col items-center justify-center min-h-[60vh] gap-4 ${isDark ? 'bg-[#080a10]' : 'bg-[#f7f8fa]'}`}>
-        <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
         <p className={`font-bold animate-pulse ${isDark ? 'text-white/30' : 'text-slate-400'}`}>Loading your cart...</p>
       </div>
     );
@@ -255,12 +297,12 @@ const CartClient = ({ userId }) => {
           animate={{ scale: 1, opacity: 1 }}
           className={`max-w-md mx-auto text-center py-16 px-6 rounded-2xl ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white shadow-sm border border-slate-100'}`}
         >
-          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 ${isDark ? 'bg-emerald-900/20' : 'bg-emerald-50'}`}>
-            <ShoppingBag className="w-9 h-9 text-emerald-500" />
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 ${isDark ? 'bg-blue-900/10' : 'bg-blue-50'}`}>
+            <ShoppingBag className="w-9 h-9 text-blue-600" />
           </div>
           <h2 className={`text-xl font-black mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>Your cart is empty</h2>
           <p className={`text-sm mb-6 ${isDark ? 'text-white/30' : 'text-slate-500'}`}>Add items to get started.</p>
-          <Link href="/shop" className="inline-flex items-center justify-center w-full gap-2 px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl transition-all active:scale-95">
+          <Link href="/shop" className="inline-flex items-center justify-center w-full gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl transition-all active:scale-95">
             Shop Now
           </Link>
         </motion.div>
@@ -293,10 +335,10 @@ const CartClient = ({ userId }) => {
               initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
               className={`rounded-2xl p-4 sm:p-5 relative overflow-hidden ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white border border-slate-100 shadow-sm'}`}
             >
-              <div className={`absolute top-0 left-0 w-1 h-full bg-emerald-500`} />
+              <div className={`absolute top-0 left-0 w-1 h-full bg-blue-600`} />
               <div className="flex items-start justify-between gap-3">
                 <div className="flex gap-3 min-w-0">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isDark ? 'bg-emerald-900/30 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isDark ? 'bg-blue-900/20 text-blue-500' : 'bg-blue-50 text-blue-600'}`}>
                     <MapPin size={16} />
                   </div>
                   <div className="min-w-0">
@@ -331,24 +373,28 @@ const CartClient = ({ userId }) => {
                     <span className={`text-[10px] px-1.5 py-0.5 rounded ${isDark ? 'bg-white/[0.06] text-white/40' : 'bg-slate-100 text-slate-500'}`}>{cartItems.length}</span>
                   </h2>
                   {cartItems.length > 0 && (
-                    <p className={`text-[10px] font-bold flex items-center gap-1.5 mt-0.5 ${isDark ? 'text-emerald-400/70' : 'text-emerald-600'}`}>
+                    <p className={`text-[10px] font-bold flex items-center gap-1.5 mt-0.5 ${isDark ? 'text-blue-500/70' : 'text-blue-600'}`}>
                       <Store size={10} />
                       Sold by {cartItems[0].is_platform_item ? "InTrust Official" : (cartItems[0].merchant_inventory?.merchants?.business_name || "Merchant")}
                     </p>
                   )}
                 </div>
-                <Link href="/shop" className="text-emerald-500 text-xs font-black flex items-center gap-1 hover:underline">
+                <Link href="/shop" className="text-blue-600 text-xs font-black flex items-center gap-1 hover:underline">
                   <Plus size={14} /> Add more
                 </Link>
               </div>
 
               <AnimatePresence mode="popLayout">
                 {cartItems.map((item, idx) => {
-                  const sellingPrice = item.is_platform_item ? (item.shopping_products?.suggested_retail_price_paise || 0) : (item.merchant_inventory?.retail_price_paise || 0);
+                  const sellingPrice = item.is_platform_item 
+                    ? (item.shopping_products?.suggested_retail_price_paise || 0) 
+                    : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
                   const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
                   const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;
                   const savings = finalMrp - sellingPrice;
                   const merchantName = item.is_platform_item ? "InTrust Official" : (item.merchant_inventory?.merchants?.business_name || "Merchant");
+                  const liveStock = stockWarnings.has(item.id) ? stockWarnings.get(item.id) : null;
+                  const hasStockIssue = liveStock !== null;
 
                   return (
                     <motion.div 
@@ -378,11 +424,18 @@ const CartClient = ({ userId }) => {
                               <p className={`text-[9px] uppercase tracking-widest font-black ${isDark ? 'text-white/25' : 'text-slate-400'}`}>
                                 {merchantName}
                               </p>
-                              <BadgeCheck size={9} className="text-emerald-500 shrink-0" />
+                              <BadgeCheck size={9} className="text-blue-600 shrink-0" />
                             </div>
                             <h3 className={`text-xs sm:text-sm font-bold leading-tight line-clamp-2 ${isDark ? 'text-white/80' : 'text-slate-800'}`}>
                               {item.merchant_inventory?.custom_title || item.shopping_products?.title}
                             </h3>
+                            {hasStockIssue && (
+                              <div className="mt-1">
+                                <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${isDark ? 'bg-red-900/20 text-red-400 border border-red-800/30' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                                  {liveStock === 0 ? 'Out of Stock' : `Only ${liveStock} left`}
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <button 
                             onClick={() => removeItem(item.id)} 
@@ -399,7 +452,7 @@ const CartClient = ({ userId }) => {
                               {savings > 0 && (
                                 <>
                                   <span className={`text-[10px] line-through ${isDark ? 'text-white/15' : 'text-slate-400'}`}>₹{(finalMrp / 100).toLocaleString('en-IN')}</span>
-                                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${isDark ? 'bg-emerald-900/30 text-emerald-400' : 'bg-emerald-50 text-emerald-700'}`}>
+                                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${isDark ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
                                     Save ₹{(savings / 100).toLocaleString('en-IN')}
                                   </span>
                                 </>
@@ -407,7 +460,7 @@ const CartClient = ({ userId }) => {
                             </div>
                           </div>
 
-                          <div className={`flex items-center rounded-lg overflow-hidden h-7 ${isDark ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                          <div className={`flex items-center rounded-lg overflow-hidden h-7 ${isDark ? 'bg-blue-900/20 text-blue-400 border border-blue-800/20' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}>
                             <button onClick={() => updateQuantity(item.id, -1)} className="w-7 h-full flex items-center justify-center hover:bg-black/5 active:scale-90 transition-all">
                               <Minus size={12} strokeWidth={3} />
                             </button>
@@ -415,11 +468,19 @@ const CartClient = ({ userId }) => {
                               key={item.quantity}
                               initial={{ scale: 1.3 }}
                               animate={{ scale: 1 }}
-                              className={`w-7 text-center text-xs font-black h-full flex flex-col justify-center ${isDark ? 'bg-emerald-900/20 border-x border-emerald-800/20' : 'bg-white border-x border-emerald-100'}`}
+                              className={`w-7 text-center text-xs font-black h-full flex flex-col justify-center ${isDark ? 'bg-blue-900/20 border-x border-blue-800/10' : 'bg-white border-x border-blue-100'}`}
                             >
                               {item.quantity}
                             </motion.span>
-                            <button onClick={() => updateQuantity(item.id, 1)} className="w-7 h-full flex items-center justify-center hover:bg-black/5 active:scale-90 transition-all">
+                            <button 
+                              onClick={() => updateQuantity(item.id, 1)} 
+                              disabled={hasStockIssue && item.quantity >= liveStock}
+                              className={`w-7 h-full flex items-center justify-center transition-all ${
+                                hasStockIssue && item.quantity >= liveStock
+                                  ? 'opacity-30 cursor-not-allowed'
+                                  : 'hover:bg-black/5 active:scale-90'
+                              }`}
+                            >
                               <Plus size={12} strokeWidth={3} />
                             </button>
                           </div>
@@ -480,7 +541,7 @@ const CartClient = ({ userId }) => {
                 {totalDiscount > 0 && (
                   <motion.div 
                     initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-                    className={`mt-3 flex items-center gap-2 text-[10px] font-black rounded-lg p-2.5 ${isDark ? 'bg-emerald-900/20 text-emerald-400 border border-emerald-800/20' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}
+                    className={`mt-3 flex items-center gap-2 text-[10px] font-black rounded-lg p-2.5 ${isDark ? 'bg-blue-900/20 text-blue-400 border border-blue-800/10' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}
                   >
                     <Sparkles size={12} />
                     You save ₹{(totalDiscount / 100).toLocaleString('en-IN')} on this order!
@@ -560,17 +621,19 @@ const CartClient = ({ userId }) => {
                   </div>
                 )}
 
-                <button
+                   <button
                   disabled={checkingOut || !canPay}
                   onClick={handleCheckout}
                   className={`w-full py-3.5 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] ${
                     !canPay
                       ? `cursor-not-allowed ${isDark ? 'bg-white/[0.04] text-white/20' : 'bg-slate-100 text-slate-400'}`
-                      : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_6px_20px_rgba(16,185,129,0.2)]"
+                      : "bg-blue-600 hover:bg-blue-700 text-white shadow-[0_6px_20px_rgba(37,99,235,0.25)]"
                   }`}
                 >
                   {checkingOut ? (
                     <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>
+                  ) : hasStockIssues ? (
+                    "Some items are out of stock"
                   ) : !canPay ? (
                     paymentMode === 'wallet' ? "Insufficient Wallet Balance" : "Coming Soon"
                   ) : (
@@ -598,7 +661,7 @@ const CartClient = ({ userId }) => {
         )}
         <div className="flex items-center justify-between gap-3">
           <div>
-            <span className={`text-[9px] font-black uppercase tracking-wider ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+            <span className={`text-[9px] font-black uppercase tracking-wider ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
               {paymentMode === 'wallet' ? 'Pay via Wallet' : paymentMode === 'gateway' ? 'Pay via Gateway' : 'Cash on Delivery'}
             </span>
             <motion.p 
@@ -622,10 +685,18 @@ const CartClient = ({ userId }) => {
             className={`flex-1 py-3 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] ${
               !canPay
                 ? `cursor-not-allowed ${isDark ? 'bg-white/[0.04] text-white/20' : 'bg-slate-100 text-slate-400'}`
-                : "bg-emerald-600 text-white shadow-[0_4px_14px_rgba(16,185,129,0.25)]"
+                : "bg-blue-600 text-white shadow-[0_4px_14px_rgba(37,99,235,0.25)]"
             }`}
           >
-            {checkingOut ? <Loader2 className="w-5 h-5 animate-spin" /> : !canPay ? "Low Balance" : <>Place Order <ArrowRight size={14} strokeWidth={3} /></>}
+            {checkingOut ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : hasStockIssues ? (
+              "Some items are out of stock"
+            ) : !canPay ? (
+              paymentMode === 'wallet' ? "Low Balance" : "Coming Soon"
+            ) : (
+              <>Place Order <ArrowRight size={14} strokeWidth={3} /></>
+            )}
           </button>
         </div>
       </div>

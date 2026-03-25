@@ -41,15 +41,12 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                 boxShadow: `0 4px 24px ${primaryColor}06`
             } : {}}
         >
-            {/* Discount Badge - using category color in dark mode */}
-            {discountPct > 0 && (
                 <div
-                    className={`absolute top-0 left-0 text-white text-[10px] font-black px-2.5 py-1 rounded-br-xl z-10 ${!isDark ? 'bg-emerald-500' : ''}`}
-                    style={isDark ? { background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` } : {}}
+                    className={`absolute top-0 left-0 text-white text-[10px] font-black px-2.5 py-1 rounded-br-xl z-10`}
+                    style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
                 >
                     {discountPct}% OFF
                 </div>
-            )}
 
             <div
                 onClick={() => router.push(`/shop/product/${item.product_id}`)}
@@ -93,10 +90,10 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                 <div className="flex flex-col flex-1 text-left px-1">
                     <div className="flex items-center justify-between gap-1 mb-1.5">
                         <div className="flex items-center gap-1.5 min-w-0">
-                            <p className={`text-[11px] font-black uppercase tracking-wider truncate ${isDark ? 'text-emerald-400/80' : 'text-emerald-600'}`}>
+                            <p className="text-[11px] font-black uppercase tracking-wider truncate" style={{ color: isDark ? `${primaryColor}CC` : primaryColor }}>
                                 {item.merchants?.business_name || 'InTrust Official'}
                             </p>
-                            <BadgeCheck size={12} className="text-emerald-500 shrink-0" />
+                            <BadgeCheck size={12} className="shrink-0" style={{ color: primaryColor }} />
                         </div>
                     </div>
                     <h3 className={`text-xs md:text-sm font-bold leading-[1.3] line-clamp-2 min-h-[2.6em] mb-2 ${isDark ? 'text-white/80' : 'text-slate-800'}`}>
@@ -110,7 +107,12 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                                 <span className={`text-xs font-medium line-through ${isDark ? 'text-white/20' : 'text-slate-400'}`}>
                                     ₹{mrp.toLocaleString('en-IN', { minimumFractionDigits: 0 })}
                                 </span>
-                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isDark ? 'bg-emerald-900/40 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded transition-colors`}
+                                    style={{ 
+                                        backgroundColor: isDark ? `${primaryColor}20` : `${primaryColor}10`,
+                                        color: primaryColor 
+                                    }}
+                                >
                                     Save ₹{savings.toLocaleString('en-IN', { minimumFractionDigits: 0 })}
                                 </span>
                             </div>
@@ -136,8 +138,8 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                             className="flex items-center justify-center text-white shadow-sm h-9 md:h-10 w-full"
                             style={{
-                                background: isDark ? primaryColor : '#10b981',
-                                boxShadow: isDark ? `0 4px 16px ${primaryColor}40` : '0 4px 14px rgba(16,185,129,0.3)'
+                                background: primaryColor,
+                                boxShadow: isDark ? `0 4px 16px ${primaryColor}40` : `0 4px 14px ${primaryColor}30`
                             }}
                         >
                             <motion.div
@@ -157,10 +159,8 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                             className="mx-auto flex items-center justify-between text-white rounded-xl overflow-hidden shadow-sm h-9 md:h-10 w-full"
                             style={{
-                                background: isDark
-                                    ? `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
-                                    : '#10b981',
-                                boxShadow: isDark ? `0 4px 16px ${primaryColor}30` : '0 2px 8px rgba(16,185,129,0.3)'
+                                background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                                boxShadow: isDark ? `0 4px 16px ${primaryColor}30` : `0 2px 8px ${primaryColor}25`
                             }}
                         >
                             <button
@@ -193,16 +193,26 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                             whileTap={{ scale: 0.95 }}
                             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                             onClick={handleAdd}
-                            className={`w-full h-9 md:h-10 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-colors ${isDark
-                                    ? 'border text-white/70 hover:text-white'
-                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-500 hover:text-white hover:border-emerald-500'
-                                }`}
-                            style={isDark ? {
-                                borderColor: `${primaryColor}30`,
-                                color: primaryColor
-                            } : {}}
-                            onMouseEnter={(e) => { if (isDark) { e.target.style.background = `${primaryColor}15`; } }}
-                            onMouseLeave={(e) => { if (isDark) { e.target.style.background = 'transparent'; } }}
+                            className={`w-full h-9 md:h-10 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-all active:scale-95 ${isDark ? 'border' : 'border shadow-sm hover:shadow-md'}`}
+                            style={{
+                                borderColor: `${primaryColor}40`,
+                                color: isDark ? primaryColor : 'white',
+                                backgroundColor: isDark ? 'transparent' : primaryColor
+                            }}
+                            onMouseEnter={(e) => { 
+                                if (isDark) { 
+                                    e.target.style.background = `${primaryColor}15`; 
+                                } else {
+                                    e.target.style.filter = 'brightness(1.1)';
+                                }
+                            }}
+                            onMouseLeave={(e) => { 
+                                if (isDark) { 
+                                    e.target.style.background = 'transparent'; 
+                                } else {
+                                    e.target.style.filter = 'none';
+                                }
+                            }}
                         >
                             ADD <Plus size={14} strokeWidth={2.5} />
                         </motion.button>

@@ -15,7 +15,11 @@ export default async function AdminShoppingPage() {
         .select(`
             *,
             shopping_categories (name),
-            merchants!shopping_products_merchant_owner_id_fkey (id, business_name)
+            merchant_inventory (
+                merchant_id,
+                is_platform_product,
+                merchants (id, business_name)
+            )
         `)
         .order('created_at', { ascending: false });
 
@@ -28,8 +32,8 @@ export default async function AdminShoppingPage() {
 
     const stats = {
         totalProducts: products?.length || 0,
-        platformProducts: products?.filter(p => !p.merchant_owner_id).length || 0,
-        customProducts: products?.filter(p => !!p.merchant_owner_id).length || 0,
+        platformProducts: products?.filter(p => !p.merchant_inventory?.some(inv => inv.is_platform_product === false)).length || 0,
+        customProducts: products?.filter(p => p.merchant_inventory?.some(inv => inv.is_platform_product === false)).length || 0,
         activeProducts: products?.filter(p => p.is_active).length || 0,
         totalOrders: orderStats?.length || 0,
         pendingOrders: orderStats?.filter(o => o.delivery_status === 'pending').length || 0,

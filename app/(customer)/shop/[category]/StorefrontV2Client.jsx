@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabaseClient';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import ProductCardV2 from './ProductCardV2';
 import FloatingCart from './FloatingCart';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function StorefrontV2Client({ category, categoryMetadata, initialInventory, customer }) {
@@ -19,6 +20,8 @@ export default function StorefrontV2Client({ category, categoryMetadata, initial
     const [activeSubCategory, setActiveSubCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [cartLoading, setCartLoading] = useState(false);
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    const [pendingCartItem, setPendingCartItem] = useState(null);
     const supabase = createClient();
 
     // Preserve User's core sync logic
@@ -116,11 +119,8 @@ export default function StorefrontV2Client({ category, categoryMetadata, initial
             if (error) throw error;
 
             if (data?.message === 'MIXED_SELLER_ERROR') {
-                const confirmClear = window.confirm("Your cart contains items from another seller. Clear cart to add this item?");
-                if (confirmClear) {
-                    await supabase.from('shopping_cart').delete().eq('customer_id', customer.id);
-                    return addToCart(item); // Retry adding after clearing
-                }
+                setPendingCartItem(item);
+                setConfirmModalOpen(true);
                 return;
             }
 
@@ -129,6 +129,23 @@ export default function StorefrontV2Client({ category, categoryMetadata, initial
             console.error('Error adding to cart:', err);
             toast.error("Failed to add to cart");
         }
+    };
+
+    const handleConfirmClearCart = async () => {
+        if (!pendingCartItem) return;
+        setConfirmModalOpen(false);
+        try {
+            await supabase.from('shopping_cart').delete().eq('customer_id', customer.id);
+            await addToCart(pendingCartItem);
+        } catch (err) {
+            console.error('Error clearing cart:', err);
+        }
+        setPendingCartItem(null);
+    };
+
+    const handleCancelClearCart = () => {
+        setConfirmModalOpen(false);
+        setPendingCartItem(null);
     };
 
     const removeFromCart = async (item) => {
@@ -349,6 +366,16 @@ export default function StorefrontV2Client({ category, categoryMetadata, initial
                     secondaryColor={secondaryColor}
                 />
             )}
+
+            <ConfirmModal
+                isOpen={confirmModalOpen}
+                onConfirm={handleConfirmClearCart}
+                onCancel={handleCancelClearCart}
+                title="Different Store"
+                message="Your cart contains items from another seller. Clear cart to add this item?"
+                confirmLabel="Clear & Add"
+                cancelLabel="Cancel"
+            />
         </div>
     );
 }

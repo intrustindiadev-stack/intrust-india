@@ -23,6 +23,7 @@ import { toast } from 'react-hot-toast';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 export default function ProductDetailClient({ product, inventory, customer, recommendedProducts = [] }) {
     const router = useRouter();
@@ -33,6 +34,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const [addedToCart, setAddedToCart] = useState(false);
     const [isWishlisted, setIsWishlisted] = useState(false);
     const [wishlistLoading, setWishlistLoading] = useState(false);
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const supabase = createClient();
 
     useEffect(() => {
@@ -129,11 +131,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
             if (error) throw error;
 
             if (data?.message === 'MIXED_SELLER_ERROR') {
-                const confirmClear = window.confirm("Your cart contains items from another seller. Clear cart to add this item?");
-                if (confirmClear) {
-                    await supabase.from('shopping_cart').delete().eq('customer_id', customer.id);
-                    return addToCart(); // Retry adding after clearing
-                }
+                setConfirmModalOpen(true);
                 return;
             }
 
@@ -146,6 +144,20 @@ export default function ProductDetailClient({ product, inventory, customer, reco
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleConfirmClearCart = async () => {
+        setConfirmModalOpen(false);
+        try {
+            await supabase.from('shopping_cart').delete().eq('customer_id', customer.id);
+            await addToCart();
+        } catch (err) {
+            console.error('Error clearing cart:', err);
+        }
+    };
+
+    const handleCancelClearCart = () => {
+        setConfirmModalOpen(false);
     };
 
     const primaryColor = product.shopping_categories?.color_primary || '#3b82f6';
@@ -248,7 +260,9 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                             {/* Badges */}
                             <div className="absolute top-3 left-3 sm:top-5 sm:left-5 flex flex-col gap-1.5 z-20">
                                 {savingsPercent > 0 && (
-                                    <div className="bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-black shadow-lg">
+                                    <div className="text-white px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-black shadow-lg"
+                                        style={{ backgroundColor: primaryColor }}
+                                    >
                                         {savingsPercent}% OFF
                                     </div>
                                 )}
@@ -308,7 +322,13 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                             </div>
 
                             {savings > 0 && (
-                                <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs sm:text-sm font-black ${isDark ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                                <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs sm:text-sm font-black border transition-all`}
+                                    style={{ 
+                                        backgroundColor: isDark ? `${primaryColor}15` : `${primaryColor}10`,
+                                        color: primaryColor,
+                                        borderColor: isDark ? `${primaryColor}25` : `${primaryColor}15`
+                                    }}
+                                >
                                     <Zap size={12} />
                                     You save ₹{(savings / 100).toLocaleString('en-IN')}
                                 </div>
@@ -349,15 +369,21 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                 disabled={loading || addedToCart}
                                 className={`flex-1 h-12 rounded-xl font-black text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all disabled:opacity-80 overflow-hidden relative ${
                                     addedToCart 
-                                        ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]' 
+                                        ? 'text-white' 
                                         : isDark 
                                             ? 'text-white' 
-                                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_6px_20px_rgba(16,185,129,0.25)]'
+                                            : 'text-white hover:brightness-110'
                                 }`}
-                                style={!addedToCart && isDark ? {
-                                    background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-                                    boxShadow: `0 8px 30px ${primaryColor}30`
-                                } : {}}
+                                style={{
+                                    background: addedToCart 
+                                        ? `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` 
+                                        : isDark 
+                                            ? `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
+                                            : primaryColor,
+                                    boxShadow: addedToCart 
+                                        ? `0 0 20px ${primaryColor}60` 
+                                        : `0 8px 30px ${primaryColor}30`
+                                }}
                             >
                                 <AnimatePresence mode="wait">
                                     {loading ? (
@@ -399,12 +425,17 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                     <p className={`text-[9px] sm:text-[10px] uppercase tracking-wider font-extrabold ${isDark ? 'text-white/25' : 'text-slate-400'}`}>Sold by</p>
                                     <div className="flex items-center gap-1">
                                         <p className={`font-black text-xs sm:text-sm truncate ${isDark ? 'text-white/80' : 'text-slate-800'}`}>{selectedOffer.merchant_name}</p>
-                                        <BadgeCheck size={12} className="text-emerald-500 shrink-0" />
+                                        <BadgeCheck size={12} className="shrink-0" style={{ color: primaryColor }} />
                                     </div>
                                 </div>
                             </div>
                             <div className="text-right shrink-0 ml-2">
-                                <div className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${isDark ? 'bg-emerald-900/30 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>
+                                <div className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider`}
+                                    style={{ 
+                                        backgroundColor: isDark ? `${primaryColor}20` : `${primaryColor}10`,
+                                        color: primaryColor
+                                    }}
+                                >
                                     In Stock
                                 </div>
                                 <p className={`text-[9px] font-bold mt-0.5 ${isDark ? 'text-white/20' : 'text-slate-500'}`}>{selectedOffer.stock} left</p>
@@ -461,7 +492,9 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                     >
                                         <div className={`aspect-square p-3 flex items-center justify-center relative ${isDark ? 'bg-[#0c0e14]' : 'bg-slate-50/50'}`}>
                                             {rSavings > 0 && (
-                                                <div className="absolute top-1.5 left-1.5 text-[9px] font-black text-white bg-emerald-500 px-1.5 py-0.5 rounded-md z-10">
+                                                <div className="absolute top-1.5 left-1.5 text-[9px] font-black text-white px-1.5 py-0.5 rounded-md z-10"
+                                                    style={{ backgroundColor: primaryColor }}
+                                                >
                                                     {rSavings}% OFF
                                                 </div>
                                             )}
@@ -521,7 +554,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                 </button>
                             </div>
                             {savings > 0 && quantity > 0 && (
-                                <span className={`text-[10px] font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                                <span className={`text-[10px] font-bold`} style={{ color: primaryColor }}>
                                     Save ₹{((savings * quantity) / 100).toLocaleString('en-IN')}
                                 </span>
                             )}
@@ -534,15 +567,21 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                         disabled={loading || addedToCart}
                         className={`h-12 px-6 min-w-[150px] rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-80 shrink-0 overflow-hidden relative ${
                             addedToCart 
-                                ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]' 
+                                ? 'text-white' 
                                 : isDark 
                                     ? 'text-white' 
-                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.25)]'
+                                    : 'text-white hover:brightness-110'
                         }`}
-                        style={!addedToCart && isDark ? {
-                            background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-                            boxShadow: `0 4px 20px ${primaryColor}30`
-                        } : {}}
+                        style={{
+                            background: addedToCart 
+                                ? `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` 
+                                : isDark 
+                                    ? `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
+                                    : primaryColor,
+                            boxShadow: addedToCart 
+                                ? `0 0 20px ${primaryColor}60` 
+                                : `0 4px 14px ${primaryColor}30`
+                        }}
                     >
                         <AnimatePresence mode="wait">
                             {loading ? (
@@ -564,6 +603,16 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                     </motion.button>
                 </div>
             </div>
+
+            <ConfirmModal
+                isOpen={confirmModalOpen}
+                onConfirm={handleConfirmClearCart}
+                onCancel={handleCancelClearCart}
+                title="Different Store"
+                message="Your cart contains items from another seller. Clear cart to add this item?"
+                confirmLabel="Clear & Add"
+                cancelLabel="Cancel"
+            />
         </div>
     );
 }

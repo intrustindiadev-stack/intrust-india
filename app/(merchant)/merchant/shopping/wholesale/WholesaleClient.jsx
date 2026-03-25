@@ -44,23 +44,26 @@ export default function WholesaleClient({ products = [], merchant, categories = 
 
         setIsPurchasing(true);
         try {
-            for (const item of cartItems) {
-                const { data, error } = await supabase.rpc('purchase_platform_products', {
-                    p_product_id: item.id,
-                    p_quantity: item.quantity,
-                    p_merchant_id: merchant.id
-                });
+            // Prepare payload for bulk RPC
+            const payload = cartItems.map(item => ({
+                product_id: item.id,
+                quantity: item.quantity
+            }));
 
-                if (error) throw error;
-                if (data && !data.success) throw new Error(data.message);
-            }
+            const { data, error } = await supabase.rpc('purchase_platform_products_bulk', {
+                p_items: payload,
+                p_merchant_id: merchant.id
+            });
+
+            if (error) throw error;
+            if (data && !data.success) throw new Error(data.message);
 
             toast.success('All items purchased successfully!');
             setCart({});
             router.refresh();
         } catch (error) {
             console.error('Purchase error:', error);
-            toast.error(error.message || 'One or more purchases failed');
+            toast.error(error.message || 'Purchase failed');
         } finally {
             setIsPurchasing(false);
         }
@@ -74,7 +77,20 @@ export default function WholesaleClient({ products = [], merchant, categories = 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
             {/* Main Content Area */}
             <div className="xl:col-span-2 space-y-8">
-                
+
+                {/* Tab Bar */}
+                <div className="flex items-center gap-3">
+                    <span className="whitespace-nowrap px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest bg-slate-900 text-white shadow-xl shadow-slate-900/20">
+                        Buy Stock
+                    </span>
+                    <Link
+                        href="/merchant/shopping/wholesale/history"
+                        className="whitespace-nowrap px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all"
+                    >
+                        Purchase History
+                    </Link>
+                </div>
+
                 {/* Category Filters */}
                 {categories.length > 0 && (
                     <div className="flex items-center gap-3 overflow-x-auto pb-4 custom-scrollbar">

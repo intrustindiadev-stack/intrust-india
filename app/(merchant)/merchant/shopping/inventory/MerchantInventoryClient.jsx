@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Filter, Edit3, Trash2, Tag, Box, Info, Store } from 'lucide-react';
+import { Search, Edit3, Tag, Box, Info, Store, ShoppingBag, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function MerchantInventoryClient({ initialInventory, merchant }) {
     const router = useRouter();
@@ -47,22 +48,49 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
         }
     };
 
-    const handleUpdateStock = async (itemId, newStock) => {
+    /**
+     * Stock update route — guarded server-side.
+     * Platform products are rejected by the RPC; only custom products can be updated.
+     */
+    const handleUpdateStock = async (item, newStock) => {
         if (newStock < 0 || isNaN(newStock)) return;
+
+        // Prevent even sending the request for platform products — the UI shouldn't
+        // offer the input, but this is a last-resort client guard.
+        if (item.is_platform_product) {
+            toast.error('Platform product stock is managed via Wholesale. Please restock there.');
+            return;
+        }
+
         try {
-            const { error } = await supabase
-                .from('merchant_inventory')
-                .update({ stock_quantity: newStock })
-                .eq('id', itemId);
+            const { data, error } = await supabase.rpc('update_merchant_inventory_stock', {
+                p_inventory_id: item.id,
+                p_new_stock: newStock,
+            });
 
             if (error) throw error;
-            
-            setInventory(prev => prev.map(item => 
-                item.id === itemId ? { ...item, stock_quantity: newStock } : item
+            if (data && !data.success) throw new Error(data.message);
+
+            setInventory(prev => prev.map(i => 
+                i.id === item.id ? { ...i, stock_quantity: newStock } : i
             ));
             toast.success('Stock updated');
+
+            if (newStock <= 5) {
+                const title = item.custom_title || item.shopping_products.title;
+                supabase.from('notifications').insert({
+                    user_id: merchant.user_id,
+                    title: 'Low Stock Alert',
+                    body: `Only ${newStock} units left for ${title}. Restock soon to avoid losing sales.`,
+                    type: 'warning',
+                    reference_id: item.id,
+                    reference_type: 'merchant_inventory'
+                }).then(({ error: notifError }) => {
+                    if (notifError) console.error('Failed to insert low stock notification:', notifError);
+                });
+            }
         } catch (error) {
-            toast.error('Failed to update stock');
+            toast.error(error.message || 'Failed to update stock');
         }
     };
 
@@ -138,6 +166,7 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                     filteredInventory.map((item) => {
                         const product = item.shopping_products;
                         const isUpdatingThis = isUpdating === item.id;
+                        const isPlatform = item.is_platform_product;
                         
                         return (
                             <div key={item.id} className={`bg-white rounded-[2.5rem] border shadow-xl transition-all duration-500 overflow-visible ${item.is_active ? 'border-slate-100 shadow-slate-200/40 hover:shadow-blue-600/5' : 'border-slate-200 opacity-75 bg-slate-50/50 shadow-none grayscale-[0.2]'}`}>
@@ -166,7 +195,7 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                                                 <h3 className="text-2xl font-black text-slate-900 truncate tracking-tight">
                                                     {item.custom_title || product.title}
                                                 </h3>
-                                                {item.is_platform_product ? (
+                                                {isPlatform ? (
                                                     <span className="px-3 py-1 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
                                                         <Box size={12} /> Platform
                                                     </span>
@@ -186,7 +215,7 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2">Category:</span>
                                                     <span className="text-sm font-bold text-slate-900">{product.category || 'General'}</span>
                                                 </div>
-                                                {item.is_platform_product && (
+                                                {isPlatform && (
                                                     <div className="flex items-center px-4 py-2 rounded-xl bg-blue-50/50 border border-blue-100/50">
                                                         <span className="text-[10px] font-black uppercase tracking-widest text-blue-400 mr-2">Cost Price:</span>
                                                         <span className="text-sm font-black text-blue-700">₹{(product.wholesale_price_paise / 100).toLocaleString('en-IN')}</span>
@@ -218,20 +247,44 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                                             </div>
                                         </div>
 
-                                        {/* Stock Editor */}
+                                        {/* Stock - conditional by product type */}
                                         <div className="space-y-2 w-full sm:w-auto">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Local Stock</label>
-                                            <div className="relative">
-                                                <input 
-                                                    type="number" 
-                                                    defaultValue={item.stock_quantity}
-                                                    onBlur={(e) => handleUpdateStock(item.id, parseInt(e.target.value))}
-                                                    className={`w-full sm:w-32 px-5 py-3 rounded-xl bg-white border-2 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-black text-lg text-center shadow-sm hover:border-slate-200 ${item.stock_quantity <= 5 ? 'border-amber-200 text-amber-700 bg-amber-50/30' : 'border-slate-100 text-slate-900'}`}
-                                                />
-                                                {item.stock_quantity <= 5 && (
-                                                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-pulse ring-4 ring-amber-50" />
-                                                )}
-                                            </div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">
+                                                {isPlatform ? 'Stock' : 'Local Stock'}
+                                            </label>
+
+                                            {isPlatform ? (
+                                                /* Platform product: read-only display + restock hint */
+                                                <div className="flex flex-col gap-2">
+                                                    <div className={`w-full sm:w-32 px-5 py-3 rounded-xl border-2 text-lg font-black text-center select-none ${item.stock_quantity <= 5 ? 'border-amber-200 text-amber-700 bg-amber-50/30' : 'border-slate-100 bg-slate-50 text-slate-700'}`}>
+                                                        {item.stock_quantity}
+                                                        {item.stock_quantity <= 5 && (
+                                                            <span className="block text-[10px] font-black text-amber-500 uppercase tracking-widest mt-0.5">Low</span>
+                                                        )}
+                                                    </div>
+                                                    <Link
+                                                        href="/merchant/shopping/wholesale"
+                                                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-100 text-blue-600 text-[10px] font-black uppercase tracking-widest transition-all group/ws"
+                                                    >
+                                                        <ShoppingBag size={12} />
+                                                        Restock via Wholesale
+                                                        <ArrowRight size={10} className="group-hover/ws:translate-x-0.5 transition-transform" />
+                                                    </Link>
+                                                </div>
+                                            ) : (
+                                                /* Custom product: editable stock input */
+                                                <div className="relative">
+                                                    <input 
+                                                        type="number" 
+                                                        defaultValue={item.stock_quantity}
+                                                        onBlur={(e) => handleUpdateStock(item, parseInt(e.target.value))}
+                                                        className={`w-full sm:w-32 px-5 py-3 rounded-xl bg-white border-2 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-black text-lg text-center shadow-sm hover:border-slate-200 ${item.stock_quantity <= 5 ? 'border-amber-200 text-amber-700 bg-amber-50/30' : 'border-slate-100 text-slate-900'}`}
+                                                    />
+                                                    {item.stock_quantity <= 5 && (
+                                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-pulse ring-4 ring-amber-50" />
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Toggle Action */}

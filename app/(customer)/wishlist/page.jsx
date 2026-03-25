@@ -16,7 +16,8 @@ export default async function WishlistPage() {
     .select(`
       id, added_at, is_platform_item, inventory_id,
       shopping_products ( id, title, image_url, category, suggested_retail_price_paise, mrp_paise ),
-      merchants ( id, business_name )
+      merchants ( id, business_name ),
+      merchant_inventory ( retail_price_paise )
     `)
     .eq('user_id', user.id)
     .order('added_at', { ascending: false });

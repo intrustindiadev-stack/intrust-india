@@ -71,6 +71,21 @@ export async function PATCH(request) {
             return NextResponse.json({ error: 'Product ID required' }, { status: 400 });
         }
 
+        const payloadKeys = Object.keys(payload);
+        if (payloadKeys.length === 1 && payloadKeys[0] === 'admin_stock') {
+            const { data, error } = await supabase.rpc('admin_update_product_stock', {
+                p_id: id,
+                p_admin_stock: payload.admin_stock
+            });
+
+            if (error) {
+                console.error('RPC Error:', error);
+                throw error;
+            }
+
+            return NextResponse.json({ product: data }, { status: 200 });
+        }
+
         // Use RPC to bypass RLS safely
         const { data, error } = await supabase.rpc('admin_update_shopping_product', {
             p_id: id,

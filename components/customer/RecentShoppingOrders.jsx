@@ -43,6 +43,7 @@ export default function RecentShoppingOrders({ userId, limit = 3 }) {
             delivery_status
           `)
           .eq("customer_id", userId)
+          .eq("status", "completed") // only show paid/fulfilled orders
           .order("created_at", { ascending: false })
           .limit(limit);
 
@@ -102,6 +103,10 @@ export default function RecentShoppingOrders({ userId, limit = 3 }) {
             const firstItem = order.shopping_order_items?.[0];
             const itemImage = firstItem?.shopping_products?.image_url;
             const remainingItems = (order.shopping_order_items?.length || 1) - 1;
+            const totalSavedPaise = order.shopping_order_items?.reduce((acc, item) => {
+              const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || item.unit_price_paise;
+              return acc + (Math.max(0, mrp - item.unit_price_paise) * item.quantity);
+            }, 0) || 0;
 
             return (
               <Link key={order.id} href={`/orders/${order.id}`}>
@@ -146,12 +151,11 @@ export default function RecentShoppingOrders({ userId, limit = 3 }) {
                       }`}>
                       {order.delivery_status || 'pending'}
                     </p>
-                    <p className="text-[10px] font-black text-emerald-500 mt-1 italic">
-                      Saved ₹{((order.shopping_order_items.reduce((acc, item) => {
-                        const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || item.unit_price_paise;
-                        return acc + (Math.max(0, mrp - item.unit_price_paise) * item.quantity);
-                      }, 0)) / 100).toLocaleString('en-IN')}
-                    </p>
+                    {totalSavedPaise > 0 && (
+                      <p className="text-[10px] font-black text-emerald-500 mt-1 italic">
+                        Saved ₹{(totalSavedPaise / 100).toLocaleString('en-IN')}
+                      </p>
+                    )}
                   </div>
                 </motion.div>
               </Link>

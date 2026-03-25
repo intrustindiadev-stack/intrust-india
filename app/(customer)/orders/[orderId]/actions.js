@@ -1,0 +1,80 @@
+"use server";
+
+import { createServerSupabaseClient, createAdminClient } from "@/lib/supabaseServer";
+import { CustomerWalletService } from "@/lib/wallet/customerWalletService";
+
+export async function cancelOrderAction(orderId) {
+    try {
+        // Use cookie-based client ONLY to identify the authenticated user
+        const supabase = await createServerSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+            return { success: false, message: "Unauthorized" };
+        }
+
+        // Use admin client for all DB operations to bypass RLS update restrictions
+        const adminClient = createAdminClient();
+
+        // 1. Fetch order and verify ownership + cancellability
+        const { data: order, error: fetchError } = await adminClient
+            .from("shopping_order_groups")
+            .select("id, customer_id, delivery_status, status, payment_method, total_amount_paise")
+            .eq("id", orderId)
+            .eq("customer_id", user.id) // ownership check
+            .single();
+
+        if (fetchError || !order) {
+            console.error("[cancelOrder] Fetch error:", fetchError);
+            return { success: false, message: "Order not found" };
+        }
+
+        // Block if already cancelled or not pending
+        if (order.delivery_status !== 'pending') {
+            return { success: false, message: `Order cannot be cancelled (current status: ${order.delivery_status})` };
+        }
+        if (order.status === 'failed' || order.status === 'cancelled') {
+            return { success: false, message: "This order has already been cancelled." };
+        }
+        // Only refund if the order was actually PAID (status = 'completed')
+        // Gateway-drafted orders (status='pending') have no payment made yet
+        const wasPaid = order.status === 'completed';
+        const shouldRefundWallet = wasPaid && order.payment_method === 'wallet';
+
+        // 2. Update order status atomically via admin client
+        const { error: updateError } = await adminClient
+            .from("shopping_order_groups")
+            .update({
+                delivery_status: 'cancelled',
+                status: 'failed'
+            })
+            .eq("id", orderId)
+            .eq("customer_id", user.id); // double-check ownership in WHERE clause
+
+        if (updateError) {
+            console.error("[cancelOrder] Failed to update order status:", updateError);
+            return { success: false, message: "Failed to cancel order. Please try again." };
+        }
+
+        // 3. Only refund wallet if payment was actually fulfilled
+        if (shouldRefundWallet) {
+            try {
+                await CustomerWalletService.creditWallet(
+                    user.id,
+                    order.total_amount_paise / 100,
+                    'REFUND',
+                    `Refund for cancelled order ${orderId.slice(0, 8).toUpperCase()}`,
+                    { id: orderId, type: 'SHOPPING_ORDER_CANCEL' }
+                );
+            } catch (refundErr) {
+                console.error("[cancelOrder] Wallet refund failed after cancel:", refundErr);
+                // Order is cancelled - log for manual reconciliation but don't fail the response
+            }
+        }
+
+        return { success: true, refunded: shouldRefundWallet };
+    } catch (err) {
+        console.error("[cancelOrder] Unexpected error:", err);
+        return { success: false, message: err.message || "An unexpected error occurred" };
+    }
+}

@@ -73,10 +73,10 @@ BEGIN
 
     -- 3. CREATE ORDER GROUP
     INSERT INTO public.shopping_order_groups (
-        customer_id, total_amount_paise, status, delivery_status, merchant_id, is_platform_order, delivery_address, delivery_fee_paise
+        customer_id, total_amount_paise, status, delivery_status, merchant_id, is_platform_order, delivery_address, delivery_fee_paise, payment_method
     )
     VALUES (
-        p_customer_id, v_total_paise, 'pending', 'pending', v_merchant_id, v_is_platform, v_delivery_address, v_delivery_fee_paise
+        p_customer_id, v_total_paise, 'pending', 'pending', v_merchant_id, v_is_platform, v_delivery_address, v_delivery_fee_paise, 'gateway'
     )
     RETURNING id INTO v_group_id;
 
@@ -186,6 +186,11 @@ BEGIN
                 (SELECT wallet_balance_paise FROM public.merchants WHERE id = v_item.seller_id),
                 'Sale profit after 5% commission deduction (Gateway Checkout)'
             );
+
+            INSERT INTO public.notifications (user_id, title, body, type, reference_id, reference_type)
+            SELECT user_id, 'New Order Received 🛒', 'A customer placed an order. Check your orders page.', 'success', p_group_id, 'shopping_order'
+            FROM public.merchants 
+            WHERE id = v_item.seller_id;
         END IF;
     END LOOP;
 

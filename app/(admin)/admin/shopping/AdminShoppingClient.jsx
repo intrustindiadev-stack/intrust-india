@@ -8,6 +8,7 @@ import {
     CheckCircle2, AlertTriangle
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "react-hot-toast";
 
 const TAB_PLATFORM = "platform";
 const TAB_CUSTOM = "custom";
@@ -16,9 +17,52 @@ export default function AdminShoppingClient({ products, stats }) {
     const [activeTab, setActiveTab] = useState(TAB_PLATFORM);
     const [search, setSearch] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("all");
+    const [stockEdits, setStockEdits] = useState({});
+    const [savingStock, setSavingStock] = useState(new Set());
 
-    const platformProducts = products.filter(p => !p.merchant_owner_id);
-    const customProducts = products.filter(p => !!p.merchant_owner_id);
+    const handleAdminStockUpdate = async (productId, newStock) => {
+        const parsedStock = parseInt(newStock);
+        if (isNaN(parsedStock) || parsedStock < 0) return;
+
+        setSavingStock(prev => {
+            const next = new Set(prev);
+            next.add(productId);
+            return next;
+        });
+
+        try {
+            const res = await fetch('/api/admin/shopping/products', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: productId, admin_stock: parsedStock })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to update stock');
+            }
+
+            toast.success('Stock updated successfully');
+            setStockEdits(prev => ({ ...prev, [productId]: parsedStock }));
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message || 'Failed to update stock');
+            setStockEdits(prev => {
+                const next = { ...prev };
+                delete next[productId];
+                return next;
+            });
+        } finally {
+            setSavingStock(prev => {
+                const next = new Set(prev);
+                next.delete(productId);
+                return next;
+            });
+        }
+    };
+
+    const platformProducts = products.filter(p => !p.merchant_inventory?.some(inv => inv.is_platform_product === false));
+    const customProducts = products.filter(p => p.merchant_inventory?.some(inv => inv.is_platform_product === false));
     const currentProducts = activeTab === TAB_PLATFORM ? platformProducts : customProducts;
 
     // Get unique categories for current tab
@@ -27,7 +71,7 @@ export default function AdminShoppingClient({ products, stats }) {
     const filtered = currentProducts.filter(p => {
         const matchesSearch = !search ||
             p.title.toLowerCase().includes(search.toLowerCase()) ||
-            (p.merchants?.business_name || "").toLowerCase().includes(search.toLowerCase());
+            (p.merchant_inventory?.find(inv => inv.is_platform_product === false)?.merchants?.business_name || "").toLowerCase().includes(search.toLowerCase());
         const cat = p.category || p.shopping_categories?.name;
         const matchesCat = categoryFilter === "all" || cat === categoryFilter;
         return matchesSearch && matchesCat;
@@ -180,13 +224,13 @@ export default function AdminShoppingClient({ products, stats }) {
                     </div>
                 ) : (
                     filtered.map(product => {
-                        const isMerchantProduct = !!product.merchant_owner_id;
+                        const isMerchantProduct = product.merchant_inventory?.some(inv => inv.is_platform_product === false);
                         const categoryName = product.shopping_categories?.name || product.category || "General";
-                        const lowStock = (product.admin_stock || 0) < 5;
+                        const currentStock = stockEdits[product.id] !== undefined ? parseInt(stockEdits[product.id]) || 0 : (product.admin_stock || 0);
+                        const lowStock = currentStock < 5;
 
                         return (
-                            <Link
-                                href={`/admin/shopping/edit/${product.id}`}
+                            <div
                                 key={product.id}
                                 className="group bg-white p-5 rounded-[2rem] border border-slate-50 shadow-sm hover:shadow-xl hover:shadow-blue-600/5 transition-all flex items-center gap-5"
                             >
@@ -208,7 +252,7 @@ export default function AdminShoppingClient({ products, stats }) {
                                         <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{categoryName}</span>
                                         {isMerchantProduct && (
                                             <span className="text-[9px] font-black text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded-lg uppercase tracking-wider">
-                                                {product.merchants?.business_name || "Merchant"}
+                                                {product.merchant_inventory?.find(inv => inv.is_platform_product === false)?.merchants?.business_name || "Merchant"}
                                             </span>
                                         )}
                                         {product.gst_percentage > 0 && (
@@ -232,19 +276,28 @@ export default function AdminShoppingClient({ products, stats }) {
                                         {!isMerchantProduct && (
                                             <div>
                                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Stock</p>
-                                                <p className={`font-black text-sm flex items-center gap-1 ${lowStock ? "text-red-500" : "text-slate-900"}`}>
-                                                    {lowStock && <AlertTriangle size={10} />}
-                                                    {product.admin_stock || 0}
-                                                </p>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <input 
+                                                        type="number"
+                                                        value={stockEdits[product.id] ?? (product.admin_stock || 0)}
+                                                        onChange={(e) => setStockEdits(prev => ({ ...prev, [product.id]: e.target.value }))}
+                                                        onBlur={(e) => handleAdminStockUpdate(product.id, e.target.value)}
+                                                        className={`w-16 px-2 py-1 bg-slate-50 border rounded-lg text-sm font-black outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${lowStock ? "border-amber-200 text-amber-600 bg-amber-50/50" : "border-slate-200 text-slate-900"}`}
+                                                    />
+                                                    {savingStock.has(product.id) && (
+                                                        <div className="w-3 h-3 rounded-full border-2 border-slate-300 border-t-blue-600 animate-spin" />
+                                                    )}
+                                                    {lowStock && !savingStock.has(product.id) && <AlertTriangle size={14} className="text-amber-500" />}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="p-2.5 rounded-full bg-slate-50 text-slate-300 group-hover:bg-blue-600 group-hover:text-white transition-all shrink-0">
+                                <Link href={`/admin/shopping/edit/${product.id}`} className="p-2.5 rounded-full bg-slate-50 text-slate-300 hover:bg-blue-600 hover:text-white transition-all shrink-0">
                                     <Edit size={14} />
-                                </div>
-                            </Link>
+                                </Link>
+                            </div>
                         );
                     })
                 )}

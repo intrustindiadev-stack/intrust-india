@@ -6,11 +6,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 export default function WishlistClient({ userId, initialItems }) {
   const [items, setItems] = useState(initialItems);
   const [movingId, setMovingId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [pendingWishlistItem, setPendingWishlistItem] = useState(null);
+  const [addingAllGroupKey, setAddingAllGroupKey] = useState(null);
+  const [pendingGroup, setPendingGroup] = useState(null);
   const router = useRouter();
 
   // Group by merchant
@@ -51,11 +56,8 @@ export default function WishlistClient({ userId, initialItems }) {
       if (error) throw error;
 
       if (data?.message === 'MIXED_SELLER_ERROR') {
-        const confirmClear = window.confirm("Your cart contains items from another store. Clear cart to add this item?");
-        if (confirmClear) {
-          await supabase.from('shopping_cart').delete().eq('customer_id', userId);
-          return moveToCart(item); // Retry after clearing
-        }
+        setPendingWishlistItem(item);
+        setConfirmModalOpen(true);
         return;
       }
 
@@ -67,6 +69,66 @@ export default function WishlistClient({ userId, initialItems }) {
     } finally {
       setMovingId(null);
     }
+  };
+
+  const addAllToCart = async (group) => {
+    setAddingAllGroupKey(group.label);
+    try {
+      const [first, ...rest] = group.items;
+      const { data, error } = await supabase.rpc('add_to_shopping_cart', {
+        p_customer_id: userId,
+        p_inventory_id: first.is_platform_item ? null : first.inventory_id,
+        p_product_id: first.shopping_products.id,
+        p_quantity: 1,
+        p_is_platform: first.is_platform_item
+      });
+
+      if (error) throw error;
+
+      if (data?.message === 'MIXED_SELLER_ERROR') {
+        setPendingGroup(group);
+        setConfirmModalOpen(true);
+        return;
+      }
+
+      for (const item of rest) {
+        await moveToCart(item);
+      }
+
+      toast.success('All items added to cart!');
+      router.push('/shop/cart');
+    } catch (err) {
+      console.error('Error adding all to cart:', err);
+      toast.error('Failed to add all items to cart');
+    } finally {
+      setAddingAllGroupKey(null);
+    }
+  };
+
+  const handleConfirmClearCart = async () => {
+    setConfirmModalOpen(false);
+    if (pendingGroup) {
+      const group = pendingGroup;
+      setPendingGroup(null);
+      setPendingWishlistItem(null);
+      await supabase.from('shopping_cart').delete().eq('customer_id', userId);
+      await addAllToCart(group);
+    } else if (pendingWishlistItem) {
+      const item = pendingWishlistItem;
+      setPendingWishlistItem(null);
+      try {
+        await supabase.from('shopping_cart').delete().eq('customer_id', userId);
+        await moveToCart(item);
+      } catch (err) {
+        console.error('Error clearing cart:', err);
+      }
+    }
+  };
+
+  const handleCancelClearCart = () => {
+    setConfirmModalOpen(false);
+    setPendingWishlistItem(null);
+    setPendingGroup(null);
   };
 
   if (items.length === 0) {
@@ -116,11 +178,23 @@ export default function WishlistClient({ userId, initialItems }) {
             <div key={group.label}>
               <div className="flex items-center gap-2 mb-3 text-xs font-black uppercase tracking-widest text-slate-400">
                 <Store size={12} /> {group.label}
+                {group.items.length > 1 && (
+                  <button
+                    onClick={() => addAllToCart(group)}
+                    disabled={!!addingAllGroupKey || !!movingId}
+                    className="ml-auto flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
+                  >
+                    {addingAllGroupKey === group.label ? <Loader2 size={10} className="animate-spin" /> : <ShoppingCart size={10} />}
+                    Add All
+                  </button>
+                )}
               </div>
               <AnimatePresence mode="popLayout">
                 {group.items.map((item, idx) => {
                   const product = item.shopping_products;
-                  const price = product?.suggested_retail_price_paise;
+                  const price = item.is_platform_item 
+                    ? product?.suggested_retail_price_paise 
+                    : (item.merchant_inventory?.retail_price_paise || product?.suggested_retail_price_paise);
                   return (
                     <motion.div
                       key={item.id}
@@ -171,6 +245,16 @@ export default function WishlistClient({ userId, initialItems }) {
           ))}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmModalOpen}
+        onConfirm={handleConfirmClearCart}
+        onCancel={handleCancelClearCart}
+        title="Different Store"
+        message="Your cart contains items from another store. Clear cart to add this item?"
+        confirmLabel="Clear & Add"
+        cancelLabel="Cancel"
+      />
     </div>
   );
 }

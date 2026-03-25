@@ -5,15 +5,18 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS public.merchant_transactions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     merchant_id UUID NOT NULL REFERENCES public.merchants(id),
-    transaction_type TEXT NOT NULL, -- 'purchase', 'wallet_topup', 'udhari_payment', 'payout'
+    transaction_type TEXT NOT NULL, -- 'purchase', 'wallet_topup', 'udhari_payment', 'payout', 'sale_earnings'
     amount_paise BIGINT NOT NULL,
     commission_paise BIGINT DEFAULT 0,
-    balance_after_paise BIGINT,
+    balance_after_paise BIGINT NOT NULL, -- REQUIRED: Always compute post-transaction balance
     coupon_id UUID NULL REFERENCES public.coupons(id),
     description TEXT,
     metadata JSONB,
     created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- NOTE: All shopping RPCs (purchase_platform_products, customer_purchase_from_merchant, etc.)
+-- MUST include balance_after_paise in inserts to this table to maintain ledger integrity.
 
 -- Add indexes
 CREATE INDEX idx_merchant_transactions_merchant_id ON public.merchant_transactions(merchant_id);

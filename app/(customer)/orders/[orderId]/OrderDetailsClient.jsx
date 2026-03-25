@@ -124,6 +124,49 @@ const OrderDetailsClient = ({ order, userId }) => {
           )}
         </motion.div>
 
+        {/* Delivery Info */}
+        {(status === 'shipped' || status === 'delivered') && order.tracking_number && (
+          <motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className={`rounded-2xl p-5 mb-6 flex flex-col sm:flex-row gap-4 justify-between sm:items-center ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white border border-slate-100 shadow-sm'}`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDark ? 'bg-white/[0.04] text-white/50' : 'bg-violet-50 text-violet-600'}`}>
+                <Truck size={18} />
+              </div>
+              <div>
+                <h3 className={`text-xs font-black uppercase tracking-widest ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
+                  Tracking Number
+                </h3>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="font-bold text-sm font-mono">{order.tracking_number}</p>
+                  <button 
+                    onClick={() => {
+                        navigator.clipboard.writeText(order.tracking_number);
+                        alert("Tracking number copied!");
+                    }}
+                    className={`text-[10px] px-2 py-1 rounded-lg font-black uppercase tracking-wider transition-all active:scale-95 ${isDark ? 'bg-white/[0.04] text-white/50 hover:bg-white/[0.08]' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            {order.estimated_delivery_date && (
+              <div className={`sm:text-right border-t sm:border-t-0 sm:border-l pt-3 sm:pt-0 sm:pl-5 ${isDark ? 'border-white/[0.06]' : 'border-slate-100'}`}>
+                <h3 className={`text-xs font-black uppercase tracking-widest ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
+                  {status === 'delivered' ? 'Delivered On' : 'Estimated Delivery'}
+                </h3>
+                <p className={`font-black text-sm mt-0.5 ${status === 'delivered' ? 'text-emerald-500' : ''}`}>
+                  {format(new Date(status === 'delivered' ? (order.updated_at || order.estimated_delivery_date) : order.estimated_delivery_date), "dd MMM yyyy")}
+                </p>
+              </div>
+            )}
+          </motion.div>
+        )}
+
         {/* Order Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <motion.div 
@@ -261,9 +304,21 @@ const OrderDetailsClient = ({ order, userId }) => {
             >
               <Download size={14} /> Download Invoice
             </Link>
-            <button className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${isDark ? 'bg-white/[0.04] hover:bg-white/[0.08]' : 'bg-slate-50 hover:bg-slate-100'}`}>
-              <HelpCircle size={14} /> Support
-            </button>
+            {status === 'pending' ? (
+              <Link 
+                href="/contact"
+                className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${isDark ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}
+              >
+                <HelpCircle size={14} /> Contact to Cancel
+              </Link>
+            ) : (
+              <Link 
+                href="/contact"
+                className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${isDark ? 'bg-white/[0.04] hover:bg-white/[0.08]' : 'bg-slate-50 hover:bg-slate-100'}`}
+              >
+                <HelpCircle size={14} /> Support
+              </Link>
+            )}
           </div>
         </motion.div>
 

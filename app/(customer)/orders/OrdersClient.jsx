@@ -37,6 +37,7 @@ const OrdersClient = ({ userId }) => {
           )
         `)
         .eq("customer_id", userId)
+        .neq("status", "pending")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -184,7 +185,11 @@ const OrdersClient = ({ userId }) => {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div className="text-sm">
                   <span className="text-gray-500">Paid via: </span>
-                  <span className="font-semibold text-gray-700">InTrust Wallet</span>
+                  <span className="font-semibold text-gray-700">
+                    {group.payment_method === 'gateway' ? "Online Payment (SabPaisa)" : 
+                     group.payment_method === 'cod' ? "Cash on Delivery" : 
+                     "InTrust Wallet"}
+                  </span>
                 </div>
 
                 <Link

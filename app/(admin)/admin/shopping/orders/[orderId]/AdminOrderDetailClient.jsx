@@ -33,6 +33,8 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
     const [order, setOrder] = useState(initialOrder);
     const [updating, setUpdating] = useState(false);
     const [error, setError] = useState(null);
+    const [trackingNumber, setTrackingNumber] = useState("");
+    const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState("");
 
     const cfg = STATUS_CONFIG[order.delivery_status] || STATUS_CONFIG.pending;
     const StatusIcon = cfg.icon;
@@ -52,10 +54,17 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
         try {
             const { data, error: rpcError } = await supabase.rpc("admin_update_order_status", {
                 p_order_id: order.id,
-                p_delivery_status: newStatus
+                p_delivery_status: newStatus,
+                p_tracking_number: newStatus === 'shipped' ? trackingNumber : null,
+                p_estimated_delivery_date: newStatus === 'shipped' ? estimatedDeliveryDate : null
             });
             if (rpcError || !data?.success) throw new Error(rpcError?.message || "Update failed");
-            setOrder(prev => ({ ...prev, delivery_status: newStatus }));
+            setOrder(prev => ({ 
+                ...prev, 
+                delivery_status: newStatus,
+                tracking_number: newStatus === 'shipped' ? trackingNumber : prev.tracking_number,
+                estimated_delivery_date: newStatus === 'shipped' ? estimatedDeliveryDate : prev.estimated_delivery_date
+            }));
         } catch (err) {
             setError(err.message);
         } finally {
@@ -109,27 +118,47 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Delivery Progress</h2>
-                    <div className="flex items-center gap-2">
-                        {!isCancelled && nextStatus && (
-                            <button
-                                onClick={() => updateStatus(nextStatus)}
-                                disabled={updating}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-blue-600 text-white text-xs font-black rounded-xl transition-all disabled:opacity-50"
-                            >
-                                {updating ? <RefreshCw size={12} className="animate-spin" /> : <ArrowUpRight size={12} />}
-                                Mark as {STATUS_CONFIG[nextStatus]?.label}
-                            </button>
+                    <div className="flex flex-col items-end gap-3">
+                        {nextStatus === 'shipped' && (
+                            <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    placeholder="Tracking No. (e.g. DTDC123)"
+                                    className="px-3 py-2 text-xs font-medium border border-slate-200 rounded-xl outline-none focus:border-blue-500 transition-all font-mono"
+                                    value={trackingNumber}
+                                    onChange={e => setTrackingNumber(e.target.value)}
+                                />
+                                <input 
+                                    type="date" 
+                                    min={new Date().toISOString().split('T')[0]}
+                                    className="px-3 py-2 text-xs font-medium border border-slate-200 rounded-xl outline-none focus:border-blue-500 transition-all"
+                                    value={estimatedDeliveryDate}
+                                    onChange={e => setEstimatedDeliveryDate(e.target.value)}
+                                />
+                            </div>
                         )}
-                        {!isCancelled && (
-                            <button
-                                onClick={() => updateStatus("cancelled")}
-                                disabled={updating}
-                                className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black rounded-xl border border-red-200 transition-all disabled:opacity-50"
-                            >
-                                <XCircle size={12} className="inline mr-1" />
-                                Cancel Order
-                            </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {!isCancelled && nextStatus && (
+                                <button
+                                    onClick={() => updateStatus(nextStatus)}
+                                    disabled={updating || (nextStatus === 'shipped' && !trackingNumber)}
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-blue-600 text-white text-xs font-black rounded-xl transition-all disabled:opacity-50"
+                                >
+                                    {updating ? <RefreshCw size={12} className="animate-spin" /> : <ArrowUpRight size={12} />}
+                                    Mark as {STATUS_CONFIG[nextStatus]?.label}
+                                </button>
+                            )}
+                            {!isCancelled && (
+                                <button
+                                    onClick={() => updateStatus("cancelled")}
+                                    disabled={updating}
+                                    className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black rounded-xl border border-red-200 transition-all disabled:opacity-50"
+                                >
+                                    <XCircle size={12} className="inline mr-1" />
+                                    Cancel Order
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 

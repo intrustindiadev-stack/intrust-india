@@ -299,6 +299,19 @@ export async function POST(request) {
                     result.transMsg = 'Cart order fulfillment failed. Payment will be refunded.';
                 } else {
                     console.log(`[Callback] Cart checkout fulfilled for txn ${clientTxnId}`);
+                    
+                    try {
+                        await supabaseAdmin.from('notifications').insert({
+                            user_id: existingTxn.user_id,
+                            title: 'Order Placed Successfully ✅',
+                            body: `Your order of ₹${amount} has been confirmed. Track it in your orders.`,
+                            type: 'success',
+                            reference_id: groupId,
+                            reference_type: 'shopping_order'
+                        });
+                    } catch (notificationError) {
+                        console.error('[Callback] Failed to insert customer notification segment:', notificationError.message);
+                    }
                 }
             } catch (cartError) {
                 console.error('[Callback] Cart checkout processing error:', cartError.message);

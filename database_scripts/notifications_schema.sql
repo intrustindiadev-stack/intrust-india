@@ -38,6 +38,11 @@ CREATE POLICY "users_update_own_notifications" ON public.notifications
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
+-- Users can insert their own notifications
+CREATE POLICY "users_insert_own_notifications" ON public.notifications
+    FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
 -- Comments
 COMMENT ON TABLE public.notifications IS 'In-app notifications for merchants and admins';
 COMMENT ON COLUMN public.notifications.reference_id IS 'UUID of the related entity (e.g. payout_requests.id)';
