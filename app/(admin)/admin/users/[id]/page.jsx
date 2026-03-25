@@ -172,7 +172,7 @@ export default async function AdminUserDetailPage({ params }) {
     activities.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     return (
-        <div className="p-6 max-w-7xl mx-auto font-[family-name:var(--font-outfit)]">
+        <div className="p-6 pb-32 max-w-7xl mx-auto font-[family-name:var(--font-outfit)]">
             {/* Header */}
             <div className="bg-white rounded-3xl p-8 mb-8 border border-gray-200 shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-cyan-500" />

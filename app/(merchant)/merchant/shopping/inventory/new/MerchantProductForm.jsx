@@ -69,6 +69,7 @@ export default function MerchantProductForm({ merchantId }) {
                     admin_stock: 0, // Not applicable
                     gst_percentage: parseInt(formData.gst_percentage || 0),
                     hsn_code: formData.hsn_code || null,
+                    merchant_owner_id: merchantId,
                 }])
                 .select()
                 .single();

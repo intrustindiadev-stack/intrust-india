@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { X, AlertTriangle, CheckCircle, Loader2, ArrowUp, ArrowDown, Info, Wallet } from 'lucide-react';
+import { X, AlertTriangle, CheckCircle, Loader2, ArrowUp, ArrowDown, Info, Wallet, Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabaseClient';
 
 /**
@@ -90,40 +91,57 @@ export default function WalletAdjustModal({ userId, walletType, currentBalance, 
         setShowConfirm(false);
         setError('');
     };
-
     return (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 perspective-1000">
-            {/* Backdrop */}
-            <div 
-                className="absolute inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity" 
-                onClick={() => !loading && onClose(!!success)} 
-            />
+            {/* Backdrop with sophisticated blur and fade */}
+            <AnimatePresence>
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+                    onClick={() => !loading && onClose(!!success)} 
+                />
+            </AnimatePresence>
 
-            {/* Modal */}
-            <div className="relative w-full sm:max-w-lg bg-white rounded-t-[2.5rem] sm:rounded-3xl shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.3)] sm:shadow-2xl overflow-hidden mt-auto sm:mt-0 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300 max-h-[92vh] flex flex-col border border-white/20">
+            {/* Modal Body — Bottom Sheet on Mobile, Centered Card on Desktop */}
+            <motion.div 
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                className="relative w-full sm:max-w-lg bg-white rounded-t-[2.5rem] sm:rounded-3xl shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.3)] sm:shadow-2xl overflow-hidden mt-auto sm:mt-0 max-h-[92vh] flex flex-col border border-white/20"
+            >
                 
-                {/* Mobile Drag Handle */}
+                {/* Mobile Drag Handle — Visual cue for bottom sheet */}
                 <div className="w-full flex justify-center pt-3 pb-1 sm:hidden absolute top-0 z-20">
-                    <div className="w-12 h-1.5 bg-white/40 rounded-full" />
+                    <div className="w-12 h-1.5 bg-white/30 rounded-full" />
                 </div>
 
-                {/* Header */}
-                <div className={`px-6 pt-10 pb-6 sm:pt-6 sm:pb-6 flex items-start justify-between relative overflow-hidden transition-colors duration-500 ease-in-out ${
+                {/* Header Section — Dynamic gradients and glassmorphism */}
+                <div className={`px-6 pt-10 pb-6 sm:pt-6 sm:pb-6 flex items-start justify-between relative overflow-hidden transition-all duration-700 ease-in-out ${
                     success ? 'bg-gradient-to-br from-emerald-500 via-teal-500 to-emerald-700' :
                     operation === 'credit'
                         ? 'bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700'
                         : 'bg-gradient-to-br from-orange-500 via-orange-600 to-red-700'
                 } text-white shrink-0`}>
+                    {/* Pattern Overlay */}
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
-                    <div className="relative z-10">
-                        <h2 className="text-2xl sm:text-xl font-black tracking-tight flex items-center gap-2">
-                            <Wallet size={24} className="opacity-80 drop-shadow-sm" />
-                            {walletType === 'customer' ? 'Customer' : 'Merchant'} Wallet
-                        </h2>
-                        <p className="text-white/80 text-sm sm:text-xs font-medium mt-1">
-                            {showConfirm ? 'Reviewing adjustment parameters' : success ? 'Adjustment securely processed' : 'Configure strict balance adjustment'}
+                    
+                    <div className="relative z-10 space-y-1">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
+                                <Wallet size={18} className="text-white drop-shadow-sm" />
+                            </div>
+                            <h2 className="text-xl font-black tracking-tight">
+                                {walletType === 'customer' ? 'Customer' : 'Merchant'} Wallet
+                            </h2>
+                        </div>
+                        <p className="text-white/80 text-[11px] font-bold uppercase tracking-widest pl-1">
+                            {showConfirm ? 'Review adjustments' : success ? 'Transaction Complete' : 'Balance Governance'}
                         </p>
                     </div>
+
                     <button
                         onClick={() => !loading && onClose(!!success)}
                         className="relative z-10 w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-black/10 hover:bg-black/20 backdrop-blur-md flex items-center justify-center transition-all border border-white/10"
@@ -131,27 +149,36 @@ export default function WalletAdjustModal({ userId, walletType, currentBalance, 
                     >
                         <X size={20} className="sm:w-4 sm:h-4 text-white" />
                     </button>
-                    {/* Decorative Blobs */}
-                    <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-                    <div className="absolute top-0 left-1/2 w-40 h-40 bg-black/5 rounded-full blur-2xl"></div>
+
+                    {/* Animated Decorative Blobs */}
+                    <motion.div 
+                        animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                        className="absolute -bottom-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"
+                    ></motion.div>
                 </div>
 
-                {/* Main Content Area */}
-                <div className="p-6 sm:p-6 space-y-7 sm:space-y-6 overflow-y-auto overscroll-contain bg-slate-50/50">
+                {/* Main Content Area — Scrollable on small screens */}
+                <div className="p-6 sm:p-7 space-y-7 sm:space-y-6 overflow-y-auto overscroll-contain bg-slate-50/50 scrollbar-hide">
                     
                     {success ? (
-                        /* SUCCESS STATE */
-                        <div className="text-center py-6 sm:py-4 space-y-6 animate-in slide-in-from-right-8 duration-300">
-                            <div className="w-20 h-20 sm:w-16 sm:h-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center ring-8 ring-emerald-50">
-                                <CheckCircle size={40} className="text-emerald-500 sm:w-8 sm:h-8" />
+                        /* SUCCESS STATE — Celebratory UI */
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="text-center py-6 sm:py-4 space-y-6"
+                        >
+                            <div className="w-20 h-20 mx-auto rounded-3xl bg-emerald-50 flex items-center justify-center ring-8 ring-emerald-500/5 rotate-3 shadow-xl">
+                                <CheckCircle size={40} className="text-emerald-500" />
                             </div>
                             <div>
-                                <h3 className="text-2xl sm:text-xl font-black text-slate-900 tracking-tight">
-                                    {success.duplicate ? 'Already Processed' : 'Adjustment Successful'}
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                                    {success.duplicate ? 'Already Processed' : 'Transaction Verified'}
                                 </h3>
-                                <div className="mt-3 inline-flex flex-col items-center bg-white border border-slate-200 shadow-sm rounded-2xl p-4">
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">New Balance</span>
-                                    <span className="text-3xl font-black text-slate-900 bg-clip-text text-transparent bg-gradient-to-br from-slate-900 to-slate-600">
+                                <div className="mt-4 inline-flex flex-col items-center bg-white border border-slate-200 shadow-xl rounded-[2rem] p-6 px-10 relative overflow-hidden group">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <span className="relative z-10 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Updated Balance</span>
+                                    <span className="relative z-10 text-4xl font-black text-slate-900">
                                         ₹{success.newBalance?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
@@ -159,84 +186,87 @@ export default function WalletAdjustModal({ userId, walletType, currentBalance, 
                             
                             <div className="bg-white rounded-2xl p-4 text-left space-y-3 shadow-sm border border-slate-100">
                                 <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-2">
-                                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Audit Log ID</span>
-                                    <span className="font-mono text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md">{success.auditLogId?.slice(0, 12)}...</span>
+                                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Audit Log ID</span>
+                                    <span className="font-mono text-[10px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">{success.auditLogId?.slice(0, 16)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-sm">
-                                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Timestamp</span>
-                                    <span className="text-slate-600 font-bold text-xs">
+                                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Settlement Time</span>
+                                    <span className="text-slate-600 font-black text-xs">
                                         {success.timestamp ? new Date(success.timestamp).toLocaleString('en-IN') : 'N/A'}
                                     </span>
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 pt-4 border-t border-slate-200/60">
+                            <div className="flex gap-4 pt-4">
                                 <button
                                     onClick={handleNewAdjustment}
-                                    className="flex-1 py-3.5 sm:py-3 rounded-xl sm:rounded-lg border-2 border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-100 hover:border-slate-300 transition-colors shadow-sm"
+                                    className="flex-1 py-4 rounded-2xl border-2 border-slate-200 text-slate-700 text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
                                 >
-                                    New Adjustment
+                                    New Entry
                                 </button>
                                 <button
                                     onClick={() => onClose(true)}
-                                    className="flex-1 py-3.5 sm:py-3 rounded-xl sm:rounded-lg bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition-all shadow-md active:scale-[0.98]"
+                                    className="flex-1 py-4 rounded-2xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 active:scale-95"
                                 >
-                                    Done
+                                    Finish
                                 </button>
                             </div>
-                        </div>
+                        </motion.div>
                     ) : showConfirm ? (
                         /* CONFIRMATION STATE */
-                        <div className="space-y-6 sm:space-y-5 animate-in slide-in-from-right-8 duration-300">
-                            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-4 items-start shadow-inner">
-                                <div className="p-2 bg-amber-100 rounded-lg shrink-0">
-                                    <AlertTriangle size={20} className="text-amber-600" />
+                        <div className="space-y-6 animate-in slide-in-from-right-8 duration-500">
+                            <div className="bg-amber-50 border border-amber-200 rounded-[1.5rem] p-5 flex gap-4 items-center shadow-inner">
+                                <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center shrink-0 border border-amber-200">
+                                    <AlertTriangle size={24} className="text-amber-600" />
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-amber-900 text-sm">Review Carefully</h4>
-                                    <p className="text-amber-700/80 text-xs mt-0.5 leading-relaxed font-medium">
-                                        You are about to modify user funds. This action cannot be easily undone and is strictly logged.
+                                    <h4 className="font-black text-amber-900 text-sm uppercase tracking-tight">Security Review</h4>
+                                    <p className="text-amber-700/80 text-[11px] font-bold leading-relaxed">
+                                        Verify parameters before execution. This adjustment is permanent.
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-5 space-y-4">
-                                <div className="flex justify-between items-center text-sm">
-                                    <span className="text-slate-500 font-medium">Operation</span>
-                                    <span className={`font-black uppercase tracking-widest text-[10px] px-2.5 py-1 rounded-md ${
-                                        operation === 'credit' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-red-100 text-red-700 border border-red-200'
+                            <div className="bg-white shadow-xl border border-slate-100 rounded-[2rem] p-6 space-y-5 relative overflow-hidden group">
+                                <div className="flex justify-between items-center relative z-10">
+                                    <span className="text-slate-500 font-black text-[10px] uppercase tracking-widest">Type</span>
+                                    <span className={`font-black uppercase tracking-widest text-[9px] px-3 py-1.5 rounded-full ${
+                                        operation === 'credit' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
                                     }`}>
                                         {operation}
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-center text-sm">
-                                    <span className="text-slate-500 font-medium">Amount</span>
-                                    <span className="font-black text-slate-900 text-lg">₹{parsedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                                </div>
                                 
-                                <div className="h-px bg-slate-100 my-2" />
-                                
-                                <div className="flex justify-between items-center text-sm">
-                                    <span className="text-slate-500 font-medium">Current Balance</span>
-                                    <span className="font-bold text-slate-600">₹{currentBalance.toLocaleString('en-IN')}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-600 font-bold bg-slate-100 px-2.5 py-1 rounded-lg text-xs">New Balance</span>
-                                    <span className={`font-black text-xl ${previewBalance >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
-                                        ₹{previewBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                <div className="flex flex-col items-center justify-center py-2 relative z-10">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Adjustment Amount</span>
+                                    <span className="font-black text-4xl text-slate-900 tracking-tight">
+                                        ₹{parsedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                     </span>
+                                </div>
+                                
+                                <div className="h-px bg-slate-100 w-full" />
+                                
+                                <div className="grid grid-cols-2 gap-4 pt-2 relative z-10">
+                                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Current</p>
+                                        <p className="font-black text-slate-700 text-sm">₹{currentBalance.toLocaleString('en-IN')}</p>
+                                    </div>
+                                    <div className="bg-slate-900 p-3 rounded-2xl shadow-lg">
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Projected</p>
+                                        <p className="font-black text-white text-sm">₹{previewBalance.toLocaleString('en-IN')}</p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-5">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                    <Info size={12} /> Reason Provided
+                            <div className="bg-white shadow-sm border border-slate-100 rounded-2xl p-5">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <Info size={12} /> Justification provided
                                 </p>
-                                <p className="text-sm text-slate-700 font-medium leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">{reason}</p>
+                                <p className="text-sm text-slate-700 font-bold leading-relaxed italic border-l-4 border-slate-200 pl-4">{reason}</p>
                             </div>
 
                             {error && (
-                                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 font-medium flex items-center gap-2">
+                                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-xs text-red-700 font-black flex items-center gap-2 animate-bounce-short">
                                     <AlertTriangle size={16} /> {error}
                                 </div>
                             )}
@@ -244,194 +274,169 @@ export default function WalletAdjustModal({ userId, walletType, currentBalance, 
                             <div className="flex gap-3 pt-2">
                                 <button
                                     onClick={() => { setShowConfirm(false); setError(''); }}
-                                    className="flex-1 py-3.5 sm:py-3 rounded-xl sm:rounded-lg border-2 border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-100 transition-colors"
+                                    className="flex-1 py-4 rounded-2xl border-2 border-slate-200 text-slate-700 text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
                                     disabled={loading}
                                 >
-                                    Modify Form
+                                    Modify
                                 </button>
                                 <button
                                     onClick={handleSubmit}
                                     disabled={loading}
-                                    className={`flex-1 py-3.5 sm:py-3 rounded-xl sm:rounded-lg text-white text-sm font-bold transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 ${
+                                    className={`flex-[2] py-4 rounded-2xl text-white text-xs font-black uppercase tracking-widest transition-all shadow-2xl active:scale-95 flex items-center justify-center gap-3 ${
                                         operation === 'credit'
-                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-emerald-500/30'
-                                            : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-red-500/30'
-                                    } disabled:opacity-70 disabled:filter-grayscale`}
+                                            ? 'bg-emerald-600 shadow-emerald-600/20'
+                                            : 'bg-red-600 shadow-red-600/20'
+                                    } disabled:opacity-70`}
                                 >
                                     {loading ? (
-                                        <><Loader2 size={18} className="animate-spin" /> Processing...</>
+                                        <><Loader2 size={18} className="animate-spin" /> Finalizing...</>
                                     ) : (
-                                        `Execute ${operation === 'credit' ? 'Credit' : 'Debit'}`
+                                        `Confirm ${operation}`
                                     )}
                                 </button>
                             </div>
                         </div>
                     ) : (
-                        /* FORM STATE */
-                        <div className="space-y-7 sm:space-y-6 animate-in fade-in duration-300">
+                        /* INITIAL FORM STATE */
+                        <div className="space-y-7 animate-in fade-in duration-500">
                             
-                            {/* Current Balance Display */}
-                            <div className="bg-slate-900 rounded-2xl p-5 sm:p-4 text-white shadow-inner flex justify-between items-center relative overflow-hidden">
-                                <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/5 rounded-full blur-xl"></div>
-                                <div className="relative z-10">
-                                    <p className="text-[10px] sm:text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                                        Current Balance
-                                    </p>
-                                    <p className="text-3xl sm:text-2xl font-black tracking-tight text-white drop-shadow-sm">
-                                        ₹{currentBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                    </p>
-                                </div>
+                            {/* Modern Balance Display Card */}
+                            <div className="bg-slate-900 rounded-[2rem] p-6 text-white shadow-2xl flex flex-col items-center justify-center relative overflow-hidden ring-1 ring-white/10">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10" />
+                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -ml-5 -mb-5" />
+                                
+                                <span className="relative z-10 text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] mb-2 px-3 py-1 bg-white/5 rounded-full border border-white/5">Available Liquidity</span>
+                                <h3 className="relative z-10 text-4xl font-black tracking-tight drop-shadow-lg">
+                                    ₹{currentBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                </h3>
                             </div>
 
-                            {/* Segmented Control for Operation */}
-                            <div>
-                                <label className="text-[11px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 px-1">
-                                    Operation Type
-                                </label>
-                                <div className="relative flex p-1.5 bg-slate-200/70 rounded-2xl sm:rounded-xl overflow-hidden shadow-inner">
-                                    {/* Sliding Background */}
-                                    <div 
-                                        className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-white rounded-xl sm:rounded-lg shadow-sm transition-transform duration-300 ease-spring"
-                                        style={{ transform: operation === 'credit' ? 'translateX(0)' : 'translateX(100%)' }}
-                                    ></div>
-                                    
+                            {/* Elevated Segmented Control */}
+                            <div className="space-y-3">
+                                <div className="flex p-1.5 bg-slate-200/50 rounded-2xl overflow-hidden shadow-inner border border-slate-100">
                                     <button
                                         onClick={() => setOperation('credit')}
-                                        className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-3 sm:py-2.5 rounded-xl sm:rounded-lg text-sm font-bold transition-all duration-300 ${
-                                            operation === 'credit' ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'
+                                        className={`flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-500 ${
+                                            operation === 'credit' ? 'bg-white text-emerald-600 shadow-md transform scale-[1.02]' : 'bg-transparent text-slate-500 opacity-60 hover:opacity-100'
                                         }`}
                                     >
-                                        <ArrowUp size={16} className={operation === 'credit' ? 'animate-bounce-short' : ''} /> 
-                                        Credit (Add)
+                                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${operation === 'credit' ? 'bg-emerald-50' : 'bg-slate-100 group-hover:bg-slate-200'}`}>
+                                            <ArrowUp size={14} strokeWidth={3} />
+                                        </div>
+                                        Credit
                                     </button>
                                     <button
                                         onClick={() => setOperation('debit')}
-                                        className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-3 sm:py-2.5 rounded-xl sm:rounded-lg text-sm font-bold transition-all duration-300 ${
-                                            operation === 'debit' ? 'text-red-600' : 'text-slate-500 hover:text-slate-700'
+                                        className={`flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-500 ${
+                                            operation === 'debit' ? 'bg-white text-red-600 shadow-md transform scale-[1.02]' : 'bg-transparent text-slate-500 opacity-60 hover:opacity-100'
                                         }`}
                                     >
-                                        <ArrowDown size={16} className={operation === 'debit' ? 'animate-bounce-short' : ''} /> 
-                                        Debit (Remove)
+                                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${operation === 'debit' ? 'bg-red-50' : 'bg-slate-100 group-hover:bg-slate-200'}`}>
+                                            <ArrowDown size={14} strokeWidth={3} />
+                                        </div>
+                                        Debit
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Amount Input with Quick Actions */}
-                            <div>
-                                <div className="flex justify-between items-center mb-2 px-1">
-                                    <label className="text-[11px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest block">
-                                        Amount
-                                    </label>
-                                    <span className="text-[10px] font-bold text-slate-400 bg-slate-200 px-2 py-0.5 rounded-md">
-                                        Max: ₹{maxAmount.toLocaleString('en-IN')}
-                                    </span>
+                            {/* Ultra-Modern Amount Input */}
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-end px-1">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Adjustment Amount</label>
+                                    <span className="text-[9px] font-black text-slate-500 bg-white border border-slate-100 px-2 py-0.5 rounded shadow-sm">Limit: ₹{maxAmount.toLocaleString('en-IN')}</span>
                                 </div>
+                                
                                 <div className="relative group">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold justify-center items-center flex pointer-events-none transition-colors group-focus-within:text-slate-900 group-focus-within:scale-110">₹</span>
-                                    <input
-                                        type="number"
-                                        value={amount}
-                                        onChange={(e) => setAmount(e.target.value)}
-                                        placeholder="0.00"
-                                        min="0"
-                                        max={maxAmount}
-                                        step="0.01"
-                                        className="w-full pl-10 pr-4 py-4 sm:py-3.5 rounded-2xl sm:rounded-xl border-2 border-slate-200 focus:border-slate-800 focus:ring-4 focus:ring-slate-100 text-xl font-black text-slate-900 placeholder:text-slate-300 outline-none transition-all shadow-sm"
-                                    />
+                                    <div className={`absolute inset-0 bg-gradient-to-r ${operation === 'credit' ? 'from-emerald-500/10 to-teal-500/10' : 'from-orange-500/10 to-red-500/10'} rounded-2xl blur-xl group-focus-within:opacity-100 opacity-0 transition-opacity`} />
+                                    <div className="relative flex items-center bg-white border-2 border-slate-100 rounded-2xl p-1 shadow-sm transition-all focus-within:border-slate-800 focus-within:shadow-xl">
+                                        <div className="pl-5 font-black text-2xl text-slate-300">₹</div>
+                                        <input
+                                            type="number"
+                                            value={amount}
+                                            onChange={(e) => setAmount(e.target.value)}
+                                            placeholder="0.00"
+                                            className="w-full px-4 py-5 font-black text-3xl text-slate-900 placeholder:text-slate-200 bg-transparent outline-none tracking-tight"
+                                        />
+                                    </div>
                                 </div>
 
-                                {/* Quick amounts */}
-                                <div className="flex gap-2 mt-3 overflow-x-auto pb-1 hide-scrollbar">
+                                {/* Smart Chips — One-handed mobile interaction */}
+                                <div className="flex gap-2.5 overflow-x-auto pb-2 px-1 scrollbar-hide">
                                     {quickAmounts.map(val => (
                                         <button
                                             key={val}
                                             onClick={() => setAmount(val.toString())}
-                                            className={`shrink-0 px-4 py-2 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-lg text-xs font-bold border ${
+                                            className={`group shrink-0 h-10 px-5 rounded-xl border-2 transition-all flex items-center gap-1.5 ${
                                                 parsedAmount === val 
-                                                ? 'bg-slate-800 border-slate-800 text-white shadow-md' 
-                                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400 hover:bg-slate-50'
-                                            } transition-all`}
+                                                ? 'bg-slate-900 border-slate-900 text-white shadow-lg' 
+                                                : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300'
+                                            }`}
                                         >
-                                            +₹{val}
+                                            <Plus size={12} className={`transition-transform duration-300 ${parsedAmount === val ? 'rotate-45' : ''}`} />
+                                            <span className="text-xs font-black">₹{val}</span>
                                         </button>
                                     ))}
                                 </div>
                                 
                                 {parsedAmount > 0 && !debitValid && (
-                                    <p className="text-[11px] text-red-500 font-bold mt-2 flex items-center gap-1.5 animate-in slide-in-from-top-1 px-1">
-                                        <AlertTriangle size={12} /> Debit exceeds current balance
-                                    </p>
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+                                        className="bg-red-50 text-red-600 p-3 rounded-xl border border-red-100 flex items-center gap-2 text-[11px] font-black uppercase tracking-tight"
+                                    >
+                                        <AlertTriangle size={14} /> Insufficient Balance for Debit
+                                    </motion.div>
                                 )}
                             </div>
 
-                            {/* Live Preview Bar */}
-                            {parsedAmount > 0 && (
-                                <div className="bg-white border-2 border-blue-100 rounded-2xl p-4 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-bottom-2">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-                                            <Info size={16} className="text-blue-500" />
-                                        </div>
-                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">New Balance</p>
-                                    </div>
-                                    <span className="font-black text-lg sm:text-lg text-slate-900">
-                                        ₹{previewBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* Reason */}
-                            <div>
-                                <div className="flex justify-between items-center mb-2 px-1">
-                                    <label className="text-[11px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest block">
-                                        Business Reason
-                                    </label>
-                                </div>
-                                <div className="relative group">
+                            {/* Intelligent Multi-line Textarea */}
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Auditable Reason</label>
+                                <div className="relative">
                                     <textarea
                                         value={reason}
                                         onChange={(e) => setReason(e.target.value)}
-                                        placeholder="Detailed justification for logs..."
-                                        rows={3}
-                                        maxLength={500}
-                                        className="w-full px-4 py-4 sm:py-3.5 rounded-2xl sm:rounded-xl border-2 border-slate-200 focus:border-slate-800 focus:ring-4 focus:ring-slate-100 text-sm font-medium text-slate-900 placeholder:text-slate-300 resize-none outline-none transition-all shadow-sm"
+                                        placeholder="Explain the reason for this adjustment..."
+                                        rows={2}
+                                        className="w-full p-5 bg-white border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-800 placeholder:text-slate-300 focus:border-slate-800 focus:shadow-xl outline-none transition-all resize-none shadow-sm"
                                     />
-                                    <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                                        {reason.length >= 10 && (
-                                            <span className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 animate-in zoom-in">
-                                                <CheckCircle size={12} />
-                                            </span>
-                                        )}
-                                        <p className={`text-[10px] sm:text-[9px] font-black bg-white/80 backdrop-blur px-2 py-1 rounded-md ${
-                                            reason.length > 450 ? 'text-amber-500 border border-amber-200' : 'text-slate-400'
-                                        }`}>
-                                            {reason.length}/500
-                                        </p>
+                                    <div className={`absolute bottom-3 right-3 text-[9px] font-black px-2 py-1 rounded bg-slate-50 transition-colors ${reason.length < 10 ? 'text-red-400' : 'text-slate-400'}`}>
+                                        {reason.length}/500
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Submit */}
+                            {/* Primary Action */}
                             <button
                                 onClick={() => setShowConfirm(true)}
                                 disabled={!formValid}
-                                className={`w-full py-4 sm:py-3.5 rounded-2xl sm:rounded-xl text-white text-[15px] sm:text-sm font-black tracking-wide transition-all shadow-lg active:scale-[0.98] ${
+                                className={`w-full py-5 rounded-2xl text-[13px] font-black uppercase tracking-[0.2em] transition-all shadow-2xl active:scale-95 group relative overflow-hidden ${
                                     formValid
                                         ? operation === 'credit'
-                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-emerald-500/30'
-                                            : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-red-500/30'
-                                        : 'bg-slate-300 shadow-none cursor-not-allowed text-slate-400'
+                                            ? 'bg-slate-900 text-white shadow-slate-900/30'
+                                            : 'bg-red-600 text-white shadow-red-600/30'
+                                        : 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none'
                                 }`}
                             >
-                                Review {operation === 'credit' ? 'Credit' : 'Debit'} 
-                                <span className="ml-2 font-serif opacity-70">→</span>
+                                <span className="relative z-10 flex items-center justify-center gap-3">
+                                    Review Details
+                                    <ArrowUp className="rotate-90 w-4 h-4 transition-transform group-hover:translate-x-1" />
+                                </span>
+                                {formValid && (
+                                    <motion.div 
+                                        className="absolute inset-0 bg-white/10"
+                                        initial={false}
+                                        whileHover={{ x: "100%" }}
+                                        transition={{ duration: 0.6 }}
+                                    />
+                                )}
                             </button>
-
-                            {/* Safe padding for bottom notches on some mobile devices when sheet is open */}
-                            <div className="h-4 sm:hidden pb-safe"></div>
                         </div>
                     )}
+
+                    {/* Safe spacing for bottom navigation and notches on mobile */}
+                    <div className="h-10 sm:hidden pointer-events-none" />
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }

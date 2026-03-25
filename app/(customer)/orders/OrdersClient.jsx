@@ -160,8 +160,8 @@ const OrdersClient = ({ userId }) => {
                       <h4 className="font-semibold text-gray-800 text-sm sm:text-base leading-snug line-clamp-2">
                         {item.shopping_products?.title}
                       </h4>
-                      <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
-                        <Store className="w-3.5 h-3.5" />
+                      <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                        <Store className="w-3.5 h-3.5" strokeWidth={2.5} />
                         <span>Sold by {item.merchants?.business_name || "InTrust Official"}</span>
                       </div>
                     </div>
