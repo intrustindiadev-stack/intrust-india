@@ -92,30 +92,30 @@ export default function WalletAdjustModal({ userId, walletType, currentBalance, 
         setError('');
     };
     return (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 perspective-1000">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-4 pb-[85px] sm:pb-4 perspective-1000 overflow-hidden">
             {/* Backdrop with sophisticated blur and fade */}
             <AnimatePresence>
                 <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+                    className="absolute inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity" 
                     onClick={() => !loading && onClose(!!success)} 
                 />
             </AnimatePresence>
 
-            {/* Modal Body — Bottom Sheet on Mobile, Centered Card on Desktop */}
+            {/* Modal Body — Floating Bottom Sheet on Mobile, Centered Card on Desktop */}
             <motion.div 
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                className="relative w-full sm:max-w-lg bg-white rounded-t-[2.5rem] sm:rounded-3xl shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.3)] sm:shadow-2xl overflow-hidden mt-auto sm:mt-0 max-h-[92vh] flex flex-col border border-white/20"
+                initial={{ y: "100%", opacity: 0, scale: 0.95 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: "100%", opacity: 0, scale: 0.95 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="relative w-full sm:max-w-lg bg-white rounded-[2rem] sm:rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden max-h-[85vh] flex flex-col border border-white/40 ring-1 ring-slate-900/5 mx-auto"
             >
                 
                 {/* Mobile Drag Handle — Visual cue for bottom sheet */}
                 <div className="w-full flex justify-center pt-3 pb-1 sm:hidden absolute top-0 z-20">
-                    <div className="w-12 h-1.5 bg-white/30 rounded-full" />
+                    <div className="w-12 h-1.5 bg-white/40 rounded-full drop-shadow-sm" />
                 </div>
 
                 {/* Header Section — Dynamic gradients and glassmorphism */}
@@ -433,8 +433,8 @@ export default function WalletAdjustModal({ userId, walletType, currentBalance, 
                         </div>
                     )}
 
-                    {/* Safe spacing for bottom navigation and notches on mobile */}
-                    <div className="h-10 sm:hidden pointer-events-none" />
+                    {/* Safe spacing inside scroll on mobile */}
+                    <div className="h-4 sm:hidden pointer-events-none" />
                 </div>
             </motion.div>
         </div>
