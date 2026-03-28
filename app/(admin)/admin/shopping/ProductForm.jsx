@@ -255,17 +255,18 @@ export default function ProductForm({ initialData = null }) {
                                     <option value="28">28%</option>
                                 </select>
                             </div>
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-1.5">HSN/SAC Code (Optional)</label>
-                                <input
-                                    type="text"
-                                    name="hsn_code"
-                                    value={formData.hsn_code}
-                                    onChange={handleChange}
-                                    placeholder="e.g. 123456"
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                                />
-                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1.5">HSN/SAC Code (Optional)</label>
+                            <input
+                                type="text"
+                                name="hsn_code"
+                                value={formData.hsn_code}
+                                onChange={handleChange}
+                                placeholder="e.g. 123456"
+                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                            />
                         </div>
                     </div>
 

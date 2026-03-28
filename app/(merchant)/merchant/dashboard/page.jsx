@@ -85,7 +85,7 @@ export default async function MerchantDashboardPage() {
 
     const shoppingOrderItems = shoppingOrderItemsRes.data || [];
     const shoppingOrderGroups = shoppingOrderGroupsRes.data || [];
-    
+
     const shoppingRevenue = shoppingOrderItems
         .reduce((sum, o) => sum + (Number(o.unit_price_paise * o.quantity) || 0), 0);
     const shoppingSpend = shoppingOrderGroups
@@ -153,7 +153,7 @@ export default async function MerchantDashboardPage() {
                         )}
                     </Link>
                     <Link href="/merchant/inventory" className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#D4AF37] text-[#020617] font-bold hover:bg-opacity-90 transition-all flex items-center justify-center space-x-2 gold-glow">
-                        <span className="material-icons-round text-sm">inventory_2</span>
+                        <span className="material-icons-round text-sm">inventory</span>
                         <span>View Inventory</span>
                     </Link>
                     <Link href="/merchant/shopping/orders" className="w-full sm:w-auto px-6 py-3 rounded-xl merchant-glass hover:bg-black/5 dark:hover:bg-white/10 transition-all flex items-center justify-center space-x-2 border border-black/5 dark:border-white/10 relative">

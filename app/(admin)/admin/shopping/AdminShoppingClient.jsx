@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import {
     ShoppingBag, Plus, Package, TrendingUp, DollarSign,
     ChevronRight, Tags, ClipboardList, Store, Edit,
@@ -13,12 +14,64 @@ import { toast } from "react-hot-toast";
 const TAB_PLATFORM = "platform";
 const TAB_CUSTOM = "custom";
 
-export default function AdminShoppingClient({ products, stats }) {
+export default function AdminShoppingClient({ products: initialProducts, stats: initialStats, initialOrders }) {
+    const [localProducts, setLocalProducts] = useState(initialProducts);
+    const [localOrders, setLocalOrders] = useState(initialOrders);
     const [activeTab, setActiveTab] = useState(TAB_PLATFORM);
     const [search, setSearch] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("all");
     const [stockEdits, setStockEdits] = useState({});
     const [savingStock, setSavingStock] = useState(new Set());
+
+    // REALTIME SUBSCRIPTION
+    useEffect(() => {
+        const productChannel = supabase
+            .channel('admin-shopping-products')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_products' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    setLocalProducts(prev => [payload.new, ...prev]);
+                } else if (payload.eventType === 'UPDATE') {
+                    setLocalProducts(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p));
+                } else if (payload.eventType === 'DELETE') {
+                    setLocalProducts(prev => prev.filter(p => p.id === payload.old.id));
+                }
+            })
+            .subscribe();
+
+        const orderChannel = supabase
+            .channel('admin-shopping-orders')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_order_groups' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    setLocalOrders(prev => [payload.new, ...prev]);
+                } else if (payload.eventType === 'UPDATE') {
+                    setLocalOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o));
+                } else if (payload.eventType === 'DELETE') {
+                    setLocalOrders(prev => prev.filter(o => o.id === payload.old.id));
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(productChannel);
+            supabase.removeChannel(orderChannel);
+        };
+    }, []);
+
+    // COMPUTED STATS (REALTIME)
+    const stats = useMemo(() => {
+        const products = localProducts;
+        const orderStats = localOrders;
+        
+        return {
+            totalProducts: products.length,
+            platformProducts: products.filter(p => !p.merchant_inventory?.some(inv => inv.is_platform_product === false)).length,
+            customProducts: products.filter(p => p.merchant_inventory?.some(inv => inv.is_platform_product === false)).length,
+            activeProducts: products.filter(p => p.is_active).length,
+            totalOrders: orderStats.length,
+            pendingOrders: orderStats.filter(o => o.delivery_status === 'pending').length,
+            totalRevenue: orderStats.reduce((sum, o) => sum + (o.total_amount_paise || 0), 0),
+        };
+    }, [localProducts, localOrders]);
 
     const handleAdminStockUpdate = async (productId, newStock) => {
         const parsedStock = parseInt(newStock);
@@ -61,8 +114,8 @@ export default function AdminShoppingClient({ products, stats }) {
         }
     };
 
-    const platformProducts = products.filter(p => !p.merchant_inventory?.some(inv => inv.is_platform_product === false));
-    const customProducts = products.filter(p => p.merchant_inventory?.some(inv => inv.is_platform_product === false));
+    const platformProducts = localProducts.filter(p => !p.merchant_inventory?.some(inv => inv.is_platform_product === false));
+    const customProducts = localProducts.filter(p => p.merchant_inventory?.some(inv => inv.is_platform_product === false));
     const currentProducts = activeTab === TAB_PLATFORM ? platformProducts : customProducts;
 
     // Get unique categories for current tab

@@ -40,5 +40,5 @@ export default async function AdminShoppingPage() {
         totalRevenue: orderStats?.reduce((sum, o) => sum + (o.total_amount_paise || 0), 0) || 0,
     };
 
-    return <AdminShoppingClient products={products || []} stats={stats} />;
+    return <AdminShoppingClient products={products || []} stats={stats} initialOrders={orderStats || []} />;
 }

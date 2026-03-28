@@ -20,6 +20,7 @@ export default function MerchantProductForm({ merchantId }) {
         gst_percentage: '0',
         hsn_code: '',
         stock_quantity: '0',
+        wholesale_price_paise: '',
         image_url: '',
     });
 
@@ -50,6 +51,7 @@ export default function MerchantProductForm({ merchantId }) {
         try {
             const retailPricePaise = Math.round(parseFloat(formData.retail_price_paise) * 100);
             const mrpPaise = formData.mrp_paise ? Math.round(parseFloat(formData.mrp_paise) * 100) : retailPricePaise;
+            const wholesalePricePaise = formData.wholesale_price_paise ? Math.round(parseFloat(formData.wholesale_price_paise) * 100) : 0;
 
             // Find the category object to get its ID
             const selectedCategory = fullCategories.find(c => c.name === formData.category);
@@ -63,13 +65,12 @@ export default function MerchantProductForm({ merchantId }) {
                     category: formData.category,
                     category_id: selectedCategory ? selectedCategory.id : null,
                     image_url: formData.image_url,
-                    wholesale_price_paise: 0, // Not applicable for custom products
+                    wholesale_price_paise: wholesalePricePaise, // Used to store Custom Product Cost Price
                     suggested_retail_price_paise: retailPricePaise,
                     mrp_paise: mrpPaise,
                     admin_stock: 0, // Not applicable
                     gst_percentage: parseInt(formData.gst_percentage || 0),
                     hsn_code: formData.hsn_code || null,
-
                 }])
                 .select()
                 .single();
@@ -201,6 +202,28 @@ export default function MerchantProductForm({ merchantId }) {
                                         step="0.01"
                                         placeholder="0.00"
                                         className="w-full pl-10 pr-5 py-3.5 rounded-2xl bg-blue-50/30 border border-blue-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black text-blue-600"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6 mt-4">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1 flex justify-between items-center">
+                                    <span>Purchase Price / CP (₹)</span>
+                                    <span className="text-[8px] text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full">Used for Profit calculation</span>
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black">₹</span>
+                                    <input
+                                        type="number"
+                                        name="wholesale_price_paise"
+                                        value={formData.wholesale_price_paise}
+                                        onChange={handleChange}
+                                        required
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        className="w-full pl-10 pr-5 py-3.5 rounded-2xl bg-orange-50/50 border border-orange-100 focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all font-black text-orange-900"
                                     />
                                 </div>
                             </div>
