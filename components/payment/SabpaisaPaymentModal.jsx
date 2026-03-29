@@ -176,8 +176,28 @@ export default function SabpaisaPaymentModal({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Payment initiation failed");
+        // Content-type-aware error parsing: server may return HTML on fatal errors.
+        const contentType = response.headers.get('content-type') || '';
+        let userMessage = 'Payment initiation failed. Please try again.';
+        let correlationId = null;
+        if (contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            userMessage = errorData.error || userMessage;
+            correlationId = errorData.correlationId || null;
+          } catch (parseErr) {
+            // JSON parse failed despite content-type header — fall through to generic message
+            console.error('[SabpaisaModal] Failed to parse error JSON:', parseErr);
+          }
+        } else {
+          // Non-JSON body (e.g. HTML error page) — log raw for support, show stable message
+          const rawText = await response.text().catch(() => '[unreadable]');
+          console.error('[SabpaisaModal] Non-JSON error response from /api/sabpaisa/initiate:', rawText);
+        }
+        if (correlationId) {
+          console.error(`[SabpaisaModal] Server correlationId: ${correlationId}`);
+        }
+        throw new Error(userMessage);
       }
 
       // The API returns JSON data to safely build the form

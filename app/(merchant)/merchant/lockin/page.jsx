@@ -11,7 +11,8 @@ import {
     PieChart as PieIcon,
     Calendar,
     ArrowUpRight,
-    Clock
+    Clock,
+    AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';

@@ -1,3 +1,8 @@
+// Force Node.js runtime — this route decrypts SabPaisa gateway responses using
+// AES-256-GCM + HMAC-SHA384 via node:crypto (lib/sabpaisa/encrypt.js → decrypt).
+// The Edge runtime does not expose Node crypto, so we must pin explicitly.
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
 import { decrypt } from '@/lib/sabpaisa/encrypt';
 import { createClient } from '@supabase/supabase-js';
