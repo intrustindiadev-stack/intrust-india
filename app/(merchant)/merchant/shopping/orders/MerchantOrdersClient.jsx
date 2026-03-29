@@ -6,20 +6,215 @@ import {
     Package, Search, Clock, CheckCircle2, Truck,
     TrendingUp, TrendingDown, DollarSign, ShoppingBag,
     ChevronDown, ChevronUp, MapPin, ArrowUpRight, AlertTriangle,
-    RotateCcw, Receipt, Store
+    RotateCcw, Receipt, Store, Filter, Calendar, ExternalLink,
+    MoreVertical, Download, X
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 
 const STATUS_CONFIG = {
-    pending: { label: "Pending", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", icon: Clock },
-    packed: { label: "Packed", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", icon: Package },
-    shipped: { label: "Shipped", color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20", icon: Truck },
-    delivered: { label: "Delivered", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", icon: CheckCircle2 },
-    cancelled: { label: "Cancelled", color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20", icon: AlertTriangle },
+    pending: { label: "Pending", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20 dark:border-amber-500/30", icon: Clock },
+    packed: { label: "Packed", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20 dark:border-blue-500/30", icon: Package },
+    shipped: { label: "Shipped", color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20 dark:border-violet-500/30", icon: Truck },
+    delivered: { label: "Delivered", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20 dark:border-emerald-500/30", icon: CheckCircle2 },
+    cancelled: { label: "Cancelled", color: "text-red-600 dark:text-red-400", bg: "bg-red-500/10", border: "border-red-500/20 dark:border-red-500/30", icon: AlertTriangle },
 };
 
 const STATUS_FLOW = ["pending", "packed", "shipped", "delivered"];
+
+const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, onToggle, isCancelled }) => {
+    const orderGrossProfit = (order.items || []).reduce((s, i) => s + (i.gross_profit_paise || 0), 0);
+    const orderCommission = (order.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0);
+    const orderNetProfit = (order.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0);
+    const StatusIcon = cfg.icon;
+
+    return (
+        <motion.div
+            layout
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`group bg-white dark:bg-white/[0.03] backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg dark:hover:shadow-none hover:border-emerald-500/30 dark:hover:border-white/20 ${isExpanded ? 'ring-1 ring-emerald-500/20 shadow-xl' : ''}`}
+        >
+            {/* Header / Clickable Area */}
+            <div
+                className="p-5 cursor-pointer select-none"
+                onClick={onToggle}
+            >
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    {/* ID + Status Section */}
+                    <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-2xl ${cfg.bg} flex items-center justify-center shrink-0 border ${cfg.border} shadow-inner`}>
+                            <StatusIcon className={`w-6 h-6 ${cfg.color}`} />
+                        </div>
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-slate-900 dark:text-white font-black tracking-widest text-sm font-mono opacity-90 group-hover:opacity-100 transition-opacity">
+                                    #{order.id.slice(0, 8).toUpperCase()}
+                                </span>
+                                <span className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-black tracking-tighter border ${cfg.color} ${cfg.bg} ${cfg.border}`}>
+                                    {cfg.label}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-gray-400 font-medium">
+                                <Calendar size={12} className="opacity-50" />
+                                <span>{order.created_at ? format(new Date(order.created_at), "dd MMM, HH:mm") : "N/A"}</span>
+                                <span className="opacity-20">•</span>
+                                <span className="truncate">{order.customer_name || "Guest User"}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Quick Stats Section */}
+                    <div className="flex items-center justify-end gap-6">
+                        <div className="text-right">
+                            <p className="text-[10px] text-slate-500 dark:text-gray-500 font-black uppercase tracking-wider mb-0.5">Order Total</p>
+                            <p className="font-bold text-slate-900 dark:text-white text-lg leading-none">₹{((order.total_amount_paise || 0) / 100).toLocaleString("en-IN")}</p>
+                        </div>
+                        <div className="text-right hidden sm:block">
+                            <p className="text-[10px] text-emerald-600 dark:text-emerald-500/70 font-black uppercase tracking-wider mb-0.5">Net Income</p>
+                            <p className="font-bold text-emerald-600 dark:text-emerald-400 text-lg leading-none">₹{(orderNetProfit / 100).toLocaleString("en-IN")}</p>
+                        </div>
+                        <div className={`p-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 group-hover:bg-slate-200 dark:group-hover:bg-white/10 transition-colors ${isExpanded ? 'rotate-180' : ''}`}>
+                            <ChevronDown size={14} className="text-slate-500 dark:text-gray-400" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Expanded Content */}
+            <AnimatePresence>
+                {isExpanded && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden border-t border-slate-100 dark:border-white/[0.05]"
+                    >
+                        <div className="p-6 pt-2 space-y-6">
+                            {/* Meta Info */}
+                            {order.delivery_address && (
+                                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05]">
+                                    <MapPin size={14} className="text-slate-400 dark:text-gray-500 shrink-0" />
+                                    <span className="text-xs text-slate-500 dark:text-gray-400 leading-relaxed italic">{order.delivery_address}</span>
+                                </div>
+                            )}
+
+                            {/* Items List */}
+                            <div className="space-y-4">
+                                <p className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest px-1">Order Items ({order.items?.length || 0})</p>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {(order.items || []).map(item => {
+                                        const gstRate = item.gst_percentage || 0;
+                                        const totalPaise = item.total_price_paise || 0;
+                                        const baseTaxable = totalPaise / (1 + gstRate / 100);
+                                        const gstAmount = totalPaise - baseTaxable;
+
+                                        return (
+                                            <div key={item.id} className="relative group/item flex gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/[0.05] hover:border-emerald-500/20 dark:hover:border-white/10 transition-all">
+                                                <div className="w-16 h-16 bg-white dark:bg-white/[0.03] rounded-xl overflow-hidden shrink-0 flex items-center justify-center border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-none">
+                                                    {item.product_image ? (
+                                                        <img src={item.product_image} alt="" className="w-full h-full object-cover dark:opacity-80 group-hover/item:opacity-100 transition-opacity" />
+                                                    ) : (
+                                                        <Package size={24} className="text-slate-300 dark:text-gray-600" />
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                                                        <h4 className="text-sm font-bold text-slate-800 dark:text-white/90 truncate group-hover/item:text-emerald-600 dark:group-hover/item:text-white transition-colors">{item.product_title}</h4>
+                                                        <p className="font-bold text-slate-900 dark:text-white text-sm">₹{(totalPaise / 100).toLocaleString("en-IN")}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                                                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-black border border-emerald-500/20 flex items-center gap-1">
+                                                            <Store size={8} /> STORE
+                                                        </span>
+                                                        <span className="text-[9px] text-slate-500 dark:text-gray-500 font-bold uppercase tracking-tight">× {item.quantity} units</span>
+                                                        {gstRate > 0 && <span className="text-[9px] text-teal-600 dark:text-teal-400/80 font-black">GST {gstRate}%</span>}
+                                                    </div>
+                                                    {gstRate > 0 && (
+                                                        <div className="flex items-center gap-3 text-[10px] text-slate-400 dark:text-gray-600 font-medium">
+                                                            <span>Base: ₹{(baseTaxable / 100).toFixed(2)}</span>
+                                                            <span className="opacity-30">|</span>
+                                                            <span>Tax: ₹{(gstAmount / 100).toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Financial Summary Ledger */}
+                            <div className="bg-gradient-to-br from-slate-50 to-white dark:from-white/[0.04] dark:to-transparent border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm dark:shadow-none">
+                                <div className="p-4 border-b border-slate-100 dark:border-white/[0.05] bg-slate-100/50 dark:bg-white/[0.03]">
+                                    <p className="text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                        <Receipt size={12} className="text-slate-400 dark:text-gray-500" /> Transaction Ledger
+                                    </p>
+                                </div>
+                                <div className="p-5 space-y-3">
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-slate-500 dark:text-gray-500 font-medium tracking-wide">Gross Transaction Value</span>
+                                        <span className="font-bold text-slate-900 dark:text-white tracking-widest">₹{((order.total_amount_paise || 0) / 100).toLocaleString("en-IN")}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-slate-500 dark:text-gray-500 font-medium tracking-wide">Total Sales Profit</span>
+                                        <span className="font-bold text-blue-600 dark:text-blue-400">₹{(orderGrossProfit / 100).toLocaleString("en-IN")}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-slate-500 dark:text-gray-500 font-medium tracking-wide">Platform Fee</span>
+                                            <span className="text-[9px] px-1 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 font-black">5%</span>
+                                        </div>
+                                        <span className="font-bold text-amber-600 dark:text-amber-500/90">−₹{(orderCommission / 100).toLocaleString("en-IN")}</span>
+                                    </div>
+                                    <div className="pt-4 mt-2 border-t border-slate-100 dark:border-white/[0.05] flex justify-between items-center">
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 dark:text-gray-500 font-black uppercase tracking-tight mb-0.5">Final Net Credit</p>
+                                            <p className="text-xs text-emerald-600 dark:text-emerald-500/70 font-medium">Settled to your wallet</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="block text-2xl font-black text-emerald-400 tracking-tighter">₹{(orderNetProfit / 100).toLocaleString("en-IN")}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Action Bar */}
+                            {!isCancelled && (
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+                                    <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-500/70 font-semibold bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10 w-fit">
+                                        <CheckCircle2 size={12} />
+                                        <span>Ready for next stage</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <Link
+                                            href={`/orders/${order.id}/invoice`}
+                                            target="_blank"
+                                            className="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-gray-300 text-xs font-black transition-all flex items-center gap-2 tracking-wide"
+                                        >
+                                            <Download size={14} /> PDF INVOICE
+                                        </Link>
+                                        {nextStatus && (
+                                            <button
+                                                onClick={() => onUpdate(order.id, nextStatus)}
+                                                disabled={isUpdating}
+                                                className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 group/btn"
+                                            >
+                                                {isUpdating ? <RotateCcw size={14} className="animate-spin" /> : <ArrowUpRight size={14} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />}
+                                                MARK AS {STATUS_CONFIG[nextStatus]?.label.toUpperCase()}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
+    );
+};
 
 export default function MerchantOrdersClient({ orders: initialOrders, stats, merchantId }) {
     const supabase = createClient();
@@ -53,306 +248,145 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
             if (error) throw error;
             setOrders(prev => prev.map(o => o.id === orderId ? { ...o, delivery_status: newStatus } : o));
         } catch (err) {
-            alert("Failed to update: " + err.message);
+            console.error("Status update failed:", err);
         } finally {
             setUpdatingId(null);
         }
     };
 
     return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-                <div>
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2.5 bg-emerald-500/10 rounded-xl">
-                            <Package className="w-6 h-6 text-emerald-500" />
+        <div className="space-y-10 pb-20">
+            {/* Header Hero Section */}
+            <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white shadow-xl dark:shadow-none dark:bg-white/[0.02] border border-slate-100 dark:border-white/10 p-8 rounded-3xl backdrop-blur-md">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-emerald-500/20 rounded-xl border border-emerald-500/30">
+                                <ShoppingBag className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                            <h1 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">Merchant Orders</h1>
                         </div>
-                        <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Orders Hub</h1>
-                            <p className="text-gray-400 text-sm mt-0.5">Track fulfillment and monitor your earnings</p>
-                        </div>
+                        <p className="text-slate-500 dark:text-gray-400 text-sm font-medium pl-1 hidden sm:block">Monitor your commerce performance and manage order fulfillment pipeline.</p>
                     </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                    <Link
-                        href="/merchant/shopping/wholesale"
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-sm font-bold text-white transition-all shadow-lg shadow-blue-600/20"
-                    >
-                        <Package size={14} /> Buy Stock
-                    </Link>
-                    <Link
-                        href="/merchant/shopping/inventory"
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-sm font-bold text-white transition-all shadow-lg shadow-violet-600/20"
-                    >
-                        <Store size={14} /> My Shop
-                    </Link>
-                    <Link
-                        href="/merchant/shopping/inventory"
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-gray-300 hover:bg-white/10 transition-all"
-                    >
-                        <ShoppingBag size={14} /> My Inventory
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <Link
+                            href="/merchant/shopping/wholesale"
+                            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-sm font-black text-black transition-all shadow-xl shadow-emerald-500/20 active:scale-95"
+                        >
+                            <ArrowUpRight size={16} /> BUY STOCK
+                        </Link>
+                        <Link
+                            href="/merchant/shopping/inventory"
+                            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/20 text-sm font-black text-white border border-slate-800 dark:border-white/10 transition-all backdrop-blur-md"
+                        >
+                            <Store size={16} /> MANAGE SHOP
+                        </Link>
+                    </div>
                 </div>
             </div>
 
-            {/* Financial Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Performance KPIs */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    {
-                        label: "Total Revenue",
-                        value: `₹${((stats.totalRevenue || 0) / 100).toLocaleString("en-IN")}`,
-                        icon: DollarSign,
-                        color: "text-emerald-400",
-                        bg: "bg-emerald-500/10",
-                        sub: `${stats.totalOrders} orders`
-                    },
-                    {
-                        label: "Gross Profit",
-                        value: `₹${((stats.totalGrossProfit || 0) / 100).toLocaleString("en-IN")}`,
-                        icon: TrendingUp,
-                        color: "text-blue-400",
-                        bg: "bg-blue-500/10",
-                        sub: "Before platform fee"
-                    },
-                    {
-                        label: "Platform Fee (5%)",
-                        value: `₹${((stats.totalCommission || 0) / 100).toLocaleString("en-IN")}`,
-                        icon: TrendingDown,
-                        color: "text-amber-400",
-                        bg: "bg-amber-500/10",
-                        sub: "Deducted by InTrust"
-                    },
-                    {
-                        label: "Net Earnings",
-                        value: `₹${((stats.totalNetProfit || 0) / 100).toLocaleString("en-IN")}`,
-                        icon: Receipt,
-                        color: "text-violet-400",
-                        bg: "bg-violet-500/10",
-                        sub: `${stats.deliveredOrders} delivered`
-                    },
-                ].map(s => (
-                    <div key={s.label} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 hover:border-white/20 transition-all">
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-gray-400 text-xs font-medium">{s.label}</span>
-                            <div className={`p-1.5 ${s.bg} rounded-lg`}>
-                                <s.icon className={`w-3.5 h-3.5 ${s.color}`} />
+                    { label: "Gross Revenue", value: (stats.totalRevenue || 0) / 100, icon: DollarSign, color: "text-slate-900 dark:text-white", bg: "bg-slate-100 dark:bg-white/10", border: "border-slate-200 dark:border-white/10", sub: `${stats.totalOrders} total orders` },
+                    { label: "Sales Profit", value: (stats.totalGrossProfit || 0) / 100, icon: TrendingUp, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10 dark:bg-blue-500/20", border: "border-blue-200 dark:border-blue-500/30", sub: "Earned from products" },
+                    { label: "Platform Fee", value: -(stats.totalCommission || 0) / 100, icon: TrendingDown, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-500/20", border: "border-amber-200 dark:border-amber-500/30", sub: "5% platform commission" },
+                    { label: "Net Earnings", value: (stats.totalNetProfit || 0) / 100, icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10 dark:bg-emerald-500/20", border: "border-emerald-200 dark:border-emerald-500/40", sub: `${stats.deliveredOrders} orders settled` },
+                ].map((s, idx) => (
+                    <motion.div
+                        key={s.label}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="group bg-white dark:bg-white/[0.03] backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-3xl p-6 hover:shadow-lg dark:hover:shadow-none hover:border-emerald-500/20 dark:hover:bg-white/[0.05] dark:hover:border-white/20 transition-all"
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <div className={`p-2 ${s.bg} rounded-xl border ${s.border}`}>
+                                <s.icon className={`w-4 h-4 ${s.color}`} />
                             </div>
+                            <span className="text-[10px] font-black text-slate-400 dark:text-gray-400 uppercase tracking-widest">{s.label}</span>
                         </div>
-                        <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-                        <p className="text-gray-500 text-[11px] mt-1">{s.sub}</p>
-                    </div>
+                        <div className="flex items-baseline gap-1">
+                            <span className={`text-2xl font-black tracking-tighter ${s.color}`}>
+                                {s.value < 0 ? "−" : ""}₹{Math.abs(s.value).toLocaleString("en-IN")}
+                            </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 dark:text-gray-500 font-bold mt-2 uppercase tracking-tight opacity-70">{s.sub}</p>
+                    </motion.div>
                 ))}
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            {/* Smart Search & Global Filters */}
+            <div className="sticky top-20 z-20 flex flex-col md:flex-row gap-4 items-stretch md:items-center bg-white/80 dark:bg-black/40 backdrop-blur-2xl border border-slate-200 dark:border-white/10 p-3 rounded-2xl shadow-xl dark:shadow-2xl">
+                <div className="relative flex-1 group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 transition-colors" />
                     <input
                         type="text"
-                        placeholder="Search by order ID, customer, product..."
+                        placeholder="Scan Order ID, Customer Name, or Product Brand..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white placeholder:text-gray-500 focus:ring-2 focus:ring-emerald-500/40 outline-none transition-all"
+                        className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-12 pr-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-600 focus:ring-1 focus:ring-emerald-500/40 focus:bg-white dark:focus:bg-white/[0.07] outline-none transition-all font-medium tracking-tight"
                     />
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 overflow-x-auto no-scrollbar">
                     {["all", "pending", "packed", "shipped", "delivered", "cancelled"].map(f => {
-                        const cfg = f === "all" ? { label: "All", color: "text-gray-300", bg: "" } : STATUS_CONFIG[f];
                         const count = f === "all" ? orders.length : orders.filter(o => o.delivery_status === f).length;
                         return (
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap flex items-center gap-1.5 ${filter === f ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "hover:bg-white/10 text-gray-400"
+                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${filter === f ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/20" : "hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-gray-500"
                                     }`}
                             >
-                                {cfg.label}
-                                <span className={`px-1 py-0.5 rounded-md text-[9px] font-black ${filter === f ? "bg-white/20" : "bg-white/10"}`}>{count}</span>
+                                {f}
+                                <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black ${filter === f ? "bg-black/10" : "bg-slate-200 dark:bg-white/10"}`}>{count}</span>
                             </button>
                         );
                     })}
                 </div>
             </div>
 
-            {/* Orders List */}
-            <div className="space-y-4">
+            {/* Orders Feed */}
+            <div className="space-y-6">
                 {filtered.length === 0 ? (
-                    <div className="text-center py-20 bg-white/5 border border-dashed border-white/10 rounded-3xl">
-                        <Package className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                        <h3 className="text-xl font-medium text-gray-400">No orders found</h3>
-                        <p className="text-gray-500 mt-2 text-sm">New orders will appear here when customers buy from you.</p>
-                    </div>
-                ) : (
-                    filtered.map(order => {
-                        const cfg = STATUS_CONFIG[order.delivery_status] || STATUS_CONFIG.pending;
-                        const StatusIcon = cfg.icon;
-                        const nextStatus = getNextStatus(order.delivery_status);
-                        const isExpanded = expandedId === order.id;
-                        const isUpdating = updatingId === order.id;
-                        const isCancelled = order.delivery_status === "cancelled";
-
-                        const orderGrossProfit = (order.items || []).reduce((s, i) => s + (i.gross_profit_paise || 0), 0);
-                        const orderCommission = (order.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0);
-                        const orderNetProfit = (order.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0);
-
-                        return (
-                            <div
-                                key={order.id}
-                                className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all"
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-center py-32 bg-slate-50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 rounded-[3rem] space-y-4 shadow-inner"
+                    >
+                        <div className="w-20 h-20 bg-white dark:bg-white/5 rounded-full flex items-center justify-center mx-auto border border-slate-100 dark:border-white/10 shadow-sm">
+                            <Package className="w-10 h-10 text-slate-300 dark:text-gray-700" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-700 dark:text-gray-300">Clean Slate</h3>
+                            <p className="text-slate-500 dark:text-gray-500 text-sm mt-1 max-w-xs mx-auto">We couldn't find any orders matching your current search or filter criteria.</p>
+                        </div>
+                        {search && (
+                            <button
+                                onClick={() => { setSearch(""); setFilter("all"); }}
+                                className="text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-widest hover:underline"
                             >
-                                {/* Order Header (always visible) */}
-                                <div
-                                    className="p-5 cursor-pointer"
-                                    onClick={() => setExpandedId(isExpanded ? null : order.id)}
-                                >
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                        {/* Left: ID + status + date */}
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className={`w-10 h-10 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0`}>
-                                                <StatusIcon className={`w-5 h-5 ${cfg.color}`} />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <p className="font-bold text-white font-mono text-sm">#{order.id.slice(0, 12).toUpperCase()}</p>
-                                                    <span className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-black border ${cfg.color} ${cfg.bg} ${cfg.border}`}>
-                                                        {cfg.label}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-3 mt-0.5">
-                                                    <p className="text-gray-400 text-xs">
-                                                        {order.created_at ? format(new Date(order.created_at), "dd MMM yyyy, hh:mm a") : "—"}
-                                                    </p>
-                                                    {order.customer_name && (
-                                                        <p className="text-gray-500 text-xs truncate">{order.customer_name}</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Right: amount + earnings */}
-                                        <div className="flex items-center gap-5 shrink-0">
-                                            <div className="text-right">
-                                                <p className="font-bold text-white">₹{((order.total_amount_paise || 0) / 100).toLocaleString("en-IN")}</p>
-                                                <p className="text-xs text-emerald-400 font-bold">
-                                                    Net: ₹{(orderNetProfit / 100).toLocaleString("en-IN")}
-                                                </p>
-                                            </div>
-                                            {isExpanded ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Expanded Detail */}
-                                {isExpanded && (
-                                    <div className="border-t border-white/5 p-5 space-y-5">
-                                        {/* Delivery Address */}
-                                        {order.delivery_address && (
-                                            <div className="flex items-start gap-2 text-xs text-gray-400">
-                                                <MapPin size={12} className="mt-0.5 text-gray-500 shrink-0" />
-                                                <span>{order.delivery_address}</span>
-                                            </div>
-                                        )}
-
-                                        {/* Items */}
-                                        <div className="space-y-3">
-                                            {(order.items || []).map(item => {
-                                                const gstRate = item.gst_percentage || 0;
-                                                const totalPaise = item.total_price_paise || 0;
-                                                const baseTaxable = totalPaise / (1 + gstRate / 100);
-                                                const gstAmount = totalPaise - baseTaxable;
-
-                                                return (
-                                                    <div key={item.id} className="flex gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                                                        <div className="w-12 h-12 bg-white/10 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
-                                                            {item.product_image ? (
-                                                                <img src={item.product_image} alt="" className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <Package size={18} className="text-gray-500" />
-                                                            )}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-start justify-between gap-2">
-                                                                <div>
-                                                                    <p className="text-sm font-semibold text-white truncate">{item.product_title}</p>
-                                                                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                                                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[9px] font-black uppercase tracking-wider border border-emerald-500/20">
-                                                                            <Store size={8} strokeWidth={3} />
-                                                                            Your Store
-                                                                        </div>
-                                                                        {item.hsn_code && <span className="text-[9px] text-gray-500 font-medium">HSN: {item.hsn_code}</span>}
-                                                                        {gstRate > 0 && <span className="text-[9px] text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded font-black">GST {gstRate}%</span>}
-                                                                        <span className="text-[9px] text-gray-500">× {item.quantity}</span>
-                                                                    </div>
-                                                                </div>
-                                                                <p className="font-bold text-white text-sm shrink-0">₹{(totalPaise / 100).toLocaleString("en-IN")}</p>
-                                                            </div>
-                                                            {/* Tax breakdown */}
-                                                            {gstRate > 0 && (
-                                                                <div className="mt-2 grid grid-cols-3 gap-2 text-[9px] text-gray-500">
-                                                                    <span>Base: ₹{(baseTaxable / 100).toFixed(2)}</span>
-                                                                    <span>CGST {gstRate / 2}%: ₹{(gstAmount / 200).toFixed(2)}</span>
-                                                                    <span>SGST {gstRate / 2}%: ₹{(gstAmount / 200).toFixed(2)}</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-
-                                        {/* Financial Breakdown */}
-                                        <div className="bg-white/5 rounded-xl border border-white/10 p-4 space-y-2">
-                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Transaction Summary</p>
-                                            {[
-                                                { label: "Order Total", value: order.total_amount_paise || 0, color: "text-white" },
-                                                { label: "Gross Profit", value: orderGrossProfit, color: "text-blue-400" },
-                                                { label: "Platform Commission (5%)", value: -orderCommission, color: "text-amber-400" },
-                                            ].map(row => (
-                                                <div key={row.label} className="flex justify-between items-center text-sm">
-                                                    <span className="text-gray-400">{row.label}</span>
-                                                    <span className={`font-bold ${row.color}`}>
-                                                        {row.value < 0 ? "−" : ""}₹{(Math.abs(row.value) / 100).toLocaleString("en-IN")}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                            <div className="pt-2 border-t border-white/10 flex justify-between items-center">
-                                                <span className="font-black text-white text-sm">Your Net Earnings</span>
-                                                <span className="font-black text-emerald-400 text-lg">₹{(orderNetProfit / 100).toLocaleString("en-IN")}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Status Actions */}
-                                        {!isCancelled && (
-                                            <div className="flex items-center justify-between pt-2">
-                                                <p className="text-xs text-gray-500">Update fulfillment status:</p>
-                                                <div className="flex gap-2">
-                                                    {nextStatus && (
-                                                        <button
-                                                            onClick={() => updateStatus(order.id, nextStatus)}
-                                                            disabled={isUpdating}
-                                                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black transition-all disabled:opacity-50"
-                                                        >
-                                                            {isUpdating ? <RotateCcw size={12} className="animate-spin" /> : <ArrowUpRight size={12} />}
-                                                            Mark as {STATUS_CONFIG[nextStatus]?.label}
-                                                        </button>
-                                                    )}
-                                                    <Link
-                                                        href={`/orders/${order.id}/invoice`}
-                                                        target="_blank"
-                                                        className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-gray-400 text-xs font-semibold transition-all"
-                                                    >
-                                                        Invoice
-                                                    </Link>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })
+                                Clear all filters
+                            </button>
+                        )}
+                    </motion.div>
+                ) : (
+                    <div className="space-y-4">
+                        {filtered.map(order => (
+                            <OrderCard
+                                key={order.id}
+                                order={order}
+                                cfg={STATUS_CONFIG[order.delivery_status] || STATUS_CONFIG.pending}
+                                nextStatus={getNextStatus(order.delivery_status)}
+                                isExpanded={expandedId === order.id}
+                                isUpdating={updatingId === order.id}
+                                isCancelled={order.delivery_status === "cancelled"}
+                                onUpdate={updateStatus}
+                                onToggle={() => setExpandedId(expandedId === order.id ? null : order.id)}
+                            />
+                        ))}
+                    </div>
                 )}
             </div>
         </div>

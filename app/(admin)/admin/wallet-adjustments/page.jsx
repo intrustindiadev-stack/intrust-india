@@ -181,11 +181,10 @@ export default async function WalletAdjustmentsPage({ searchParams }) {
                                             <p className="text-[10px] text-slate-400 font-medium">{log.target?.email || ''}</p>
                                         </td>
                                         <td className="px-4 py-4">
-                                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${
-                                                log.wallet_type === 'customer'
+                                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${log.wallet_type === 'customer'
                                                     ? 'bg-blue-50 text-blue-700 border-blue-100'
                                                     : 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                                            }`}>
+                                                }`}>
                                                 {log.wallet_type}
                                             </span>
                                         </td>
@@ -196,17 +195,15 @@ export default async function WalletAdjustmentsPage({ searchParams }) {
                                                 ) : (
                                                     <ArrowDownCircle size={14} className="text-red-500" />
                                                 )}
-                                                <span className={`text-xs font-bold uppercase ${
-                                                    log.operation === 'credit' ? 'text-emerald-700' : 'text-red-700'
-                                                }`}>
+                                                <span className={`text-xs font-bold uppercase ${log.operation === 'credit' ? 'text-emerald-700' : 'text-red-700'
+                                                    }`}>
                                                     {log.operation}
                                                 </span>
                                             </span>
                                         </td>
                                         <td className="px-4 py-4 text-right">
-                                            <span className={`font-black text-sm ${
-                                                log.operation === 'credit' ? 'text-emerald-700' : 'text-red-700'
-                                            }`}>
+                                            <span className={`font-black text-sm ${log.operation === 'credit' ? 'text-emerald-700' : 'text-red-700'
+                                                }`}>
                                                 {log.operation === 'credit' ? '+' : '-'}{formatCurrency(log.amount_paise)}
                                             </span>
                                         </td>
@@ -216,13 +213,12 @@ export default async function WalletAdjustmentsPage({ searchParams }) {
                                             </p>
                                         </td>
                                         <td className="px-4 py-4">
-                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${
-                                                log.status === 'completed'
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${log.status === 'completed'
                                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                                                     : log.status === 'failed'
                                                         ? 'bg-red-50 text-red-700 border-red-100'
                                                         : 'bg-amber-50 text-amber-700 border-amber-100'
-                                            }`}>
+                                                }`}>
                                                 {log.status === 'completed' && <CheckCircle size={10} />}
                                                 {log.status === 'failed' && <XCircle size={10} />}
                                                 {log.status === 'pending' && <Clock size={10} />}
