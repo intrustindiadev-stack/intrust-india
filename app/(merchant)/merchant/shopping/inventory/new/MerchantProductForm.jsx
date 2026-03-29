@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Loader2, Save, X, Upload, Package, Tag, DollarSign, Box, Info } from 'lucide-react';
+import MultiImageUploader from '@/components/shared/MultiImageUploader';
+import { uploadProductImage } from '@/app/(admin)/admin/shopping/upload-product-image';
 
 export default function MerchantProductForm({ merchantId }) {
     const router = useRouter();
@@ -21,7 +23,7 @@ export default function MerchantProductForm({ merchantId }) {
         hsn_code: '',
         stock_quantity: '0',
         wholesale_price_paise: '',
-        image_url: '',
+        product_images: [],
     });
 
     useEffect(() => {
@@ -52,6 +54,7 @@ export default function MerchantProductForm({ merchantId }) {
             const retailPricePaise = Math.round(parseFloat(formData.retail_price_paise) * 100);
             const mrpPaise = formData.mrp_paise ? Math.round(parseFloat(formData.mrp_paise) * 100) : retailPricePaise;
             const wholesalePricePaise = formData.wholesale_price_paise ? Math.round(parseFloat(formData.wholesale_price_paise) * 100) : 0;
+            const image_url = formData.product_images[0] || '';
 
             // Find the category object to get its ID
             const selectedCategory = fullCategories.find(c => c.name === formData.category);
@@ -64,7 +67,8 @@ export default function MerchantProductForm({ merchantId }) {
                     description: formData.description,
                     category: formData.category,
                     category_id: selectedCategory ? selectedCategory.id : null,
-                    image_url: formData.image_url,
+                    image_url,
+                    product_images: formData.product_images,
                     wholesale_price_paise: wholesalePricePaise, // Used to store Custom Product Cost Price
                     suggested_retail_price_paise: retailPricePaise,
                     mrp_paise: mrpPaise,
@@ -280,29 +284,16 @@ export default function MerchantProductForm({ merchantId }) {
                             <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
                                 <Upload size={20} />
                             </div>
-                            <h3 className="text-xl font-black text-slate-900">Product Image</h3>
+                            <h3 className="text-xl font-black text-slate-900">Product Images</h3>
                         </div>
 
-                        <div className="flex gap-6">
-                            <div className="flex-1">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Image URL</label>
-                                <input
-                                    type="url"
-                                    name="image_url"
-                                    value={formData.image_url}
-                                    onChange={handleChange}
-                                    placeholder="https://images.unsplash.com/..."
-                                    className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold text-sm text-blue-600 truncate"
-                                />
-                            </div>
-                            <div className="w-24 h-24 rounded-3xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200 shadow-inner">
-                                {formData.image_url ? (
-                                    <img src={formData.image_url} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                    <Box className="text-slate-300" size={32} />
-                                )}
-                            </div>
-                        </div>
+                        <MultiImageUploader
+                            images={formData.product_images}
+                            onChange={(urls) => setFormData(prev => ({ ...prev, product_images: urls }))}
+                            uploadAction={uploadProductImage}
+                            role="merchant"
+                            maxImages={5}
+                        />
                     </div>
                 </div>
             </div>

@@ -20,9 +20,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion } from "framer-motion";
+import { cancelOrderAction } from "./actions";
 
 const OrderDetailsClient = ({ order, userId }) => {
   const router = useRouter();
+  const [isCancelling, setIsCancelling] = React.useState(false);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -39,6 +41,25 @@ const OrderDetailsClient = ({ order, userId }) => {
 
   const currentStepIndex = steps.findIndex(s => s.key === status);
   const isCancelled = status === 'cancelled';
+
+  const handleCancelOrder = async () => {
+    if (!window.confirm("Are you sure you want to cancel this order? This action cannot be undone.")) return;
+    
+    setIsCancelling(true);
+    try {
+        const res = await cancelOrderAction(order.id);
+        if (res.success) {
+            alert(res.refunded ? "Order cancelled successfully. Refund initiated to your wallet/store credit." : "Order cancelled successfully.");
+            router.refresh();
+        } else {
+            alert(res.message || "Failed to cancel order.");
+        }
+    } catch (err) {
+        alert("An error occurred while cancelling the order.");
+    } finally {
+        setIsCancelling(false);
+    }
+  };
 
   // Bill summary
   const billDetails = items.reduce((acc, item) => {
@@ -282,7 +303,12 @@ const OrderDetailsClient = ({ order, userId }) => {
                 <span className="text-2xl font-black">₹{(finalPayable / 100).toLocaleString('en-IN')}</span>
               </div>
               <p className={`text-[10px] font-bold mt-1 text-right ${isDark ? 'text-white/20' : 'text-slate-400'}`}>
-                Paid using InTrust Wallet
+                Paid using {
+                  order.payment_method === 'gateway' ? "Online Payment (SabPaisa)" : 
+                  order.payment_method === 'cod' ? "Cash on Delivery" : 
+                  order.payment_method === 'store_credit' ? "Store Credit (Udhari)" :
+                  "InTrust Wallet"
+                }
               </p>
             </div>
           </div>
@@ -304,14 +330,16 @@ const OrderDetailsClient = ({ order, userId }) => {
             >
               <Download size={14} /> Download Invoice
             </Link>
-            {status === 'pending' ? (
-              <Link 
-                href="/contact"
-                className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${isDark ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}
+            
+            {(status === 'pending' || status === 'packed') ? (
+              <button 
+                onClick={handleCancelOrder}
+                disabled={isCancelling}
+                className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${isDark ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-red-50 text-red-600 hover:bg-red-100'} ${isCancelling ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <HelpCircle size={14} /> Contact to Cancel
-              </Link>
-            ) : (
+                <HelpCircle size={14} /> {isCancelling ? 'Cancelling...' : 'Cancel Order'}
+              </button>
+            ) : (!isCancelled && status !== 'failed') && (
               <Link 
                 href="/contact"
                 className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${isDark ? 'bg-white/[0.04] hover:bg-white/[0.08]' : 'bg-slate-50 hover:bg-slate-100'}`}

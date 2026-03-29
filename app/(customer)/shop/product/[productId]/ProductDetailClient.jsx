@@ -35,6 +35,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const [isWishlisted, setIsWishlisted] = useState(false);
     const [wishlistLoading, setWishlistLoading] = useState(false);
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const supabase = createClient();
 
     useEffect(() => {
@@ -245,17 +246,25 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                 />
                             )}
 
-                            {product.image_url ? (
-                                <img
-                                    src={product.image_url}
-                                    alt={product.title}
-                                    className={`w-full h-full object-contain relative z-10 ${isDark ? '' : 'mix-blend-multiply'}`}
-                                />
-                            ) : (
-                                <div className={`flex flex-col items-center justify-center ${isDark ? 'text-white/10' : 'text-slate-200'}`}>
-                                    <Package size={60} strokeWidth={1} />
-                                </div>
-                            )}
+                            {(() => {
+                                const allImages = product.product_images?.length
+                                    ? product.product_images
+                                    : product.image_url
+                                        ? [product.image_url]
+                                        : [];
+                                const displayUrl = allImages[selectedImageIndex] || null;
+                                return displayUrl ? (
+                                    <img
+                                        src={displayUrl}
+                                        alt={product.title}
+                                        className={`w-full h-full object-contain relative z-10 ${isDark ? '' : 'mix-blend-multiply'}`}
+                                    />
+                                ) : (
+                                    <div className={`flex flex-col items-center justify-center ${isDark ? 'text-white/10' : 'text-slate-200'}`}>
+                                        <Package size={60} strokeWidth={1} />
+                                    </div>
+                                );
+                            })()}
 
                             {/* Badges */}
                             <div className="absolute top-3 left-3 sm:top-5 sm:left-5 flex flex-col gap-1.5 z-20">
@@ -292,6 +301,41 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                 }
                             </button>
                         </div>
+
+                        {/* Thumbnail strip — shown only when multiple images exist */}
+                        {(() => {
+                            const allImages = product.product_images?.length > 1
+                                ? product.product_images
+                                : null;
+                            if (!allImages) return null;
+                            return (
+                                <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar pb-1">
+                                    {allImages.map((url, idx) => (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => setSelectedImageIndex(idx)}
+                                            className={`shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${
+                                                idx === selectedImageIndex
+                                                    ? isDark
+                                                        ? 'border-white/40 scale-105'
+                                                        : 'border-slate-700 scale-105'
+                                                    : isDark
+                                                        ? 'border-white/10 opacity-60 hover:opacity-100'
+                                                        : 'border-slate-200 opacity-70 hover:opacity-100'
+                                            }`}
+                                            style={idx === selectedImageIndex ? { borderColor: primaryColor } : {}}
+                                        >
+                                            <img
+                                                src={url}
+                                                alt={`View ${idx + 1}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     {/* ====== RIGHT: PRODUCT INFO ====== */}

@@ -12,6 +12,7 @@ import {
 import { format } from "date-fns";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import StoreCreditRequestsTab from "./StoreCreditRequestsTab";
 
 const STATUS_CONFIG = {
     pending: { label: "Pending", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20 dark:border-amber-500/30", icon: Clock },
@@ -223,6 +224,7 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
     const [search, setSearch] = useState("");
     const [expandedId, setExpandedId] = useState(null);
     const [updatingId, setUpdatingId] = useState(null);
+    const [activeView, setActiveView] = useState("orders"); // "orders" | "credits"
 
     const filtered = orders.filter(o => {
         const matchesFilter = filter === "all" || o.delivery_status === filter;
@@ -317,10 +319,32 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                 ))}
             </div>
 
-            {/* Smart Search & Global Filters */}
-            <div className="sticky top-20 z-20 flex flex-col md:flex-row gap-4 items-stretch md:items-center bg-white/80 dark:bg-black/40 backdrop-blur-2xl border border-slate-200 dark:border-white/10 p-3 rounded-2xl shadow-xl dark:shadow-2xl">
-                <div className="relative flex-1 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 transition-colors" />
+            {/* View Toggles */}
+            <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-xl w-fit">
+                <button 
+                    onClick={() => setActiveView("orders")}
+                    className={`px-6 py-2 rounded-lg text-sm font-black tracking-tight transition-all ${
+                        activeView === "orders" ? "bg-white dark:bg-black text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    }`}
+                >
+                    Standard Orders
+                </button>
+                <button 
+                    onClick={() => setActiveView("credits")}
+                    className={`px-6 py-2 rounded-lg text-sm font-black tracking-tight transition-all ${
+                        activeView === "credits" ? "bg-white dark:bg-black text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    }`}
+                >
+                    Store Credit Requests
+                </button>
+            </div>
+
+            {activeView === "orders" ? (
+                <>
+                    {/* Smart Search & Global Filters */}
+                    <div className="sticky top-20 z-20 flex flex-col md:flex-row gap-4 items-stretch md:items-center bg-white/80 dark:bg-black/40 backdrop-blur-2xl border border-slate-200 dark:border-white/10 p-3 rounded-2xl shadow-xl dark:shadow-2xl">
+                        <div className="relative flex-1 group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 transition-colors" />
                     <input
                         type="text"
                         placeholder="Scan Order ID, Customer Name, or Product Brand..."
@@ -388,7 +412,13 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                         ))}
                     </div>
                 )}
-            </div>
+                    </div>
+                </>
+            ) : (
+                <div className="relative">
+                    <StoreCreditRequestsTab merchantId={merchantId} />
+                </div>
+            )}
         </div>
     );
 }

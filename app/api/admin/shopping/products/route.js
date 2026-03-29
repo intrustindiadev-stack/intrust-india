@@ -21,6 +21,7 @@ export async function POST(request) {
             suggested_retail_price_paise,
             admin_stock,
             image_url,
+            product_images,
             is_active,
             gst_percentage,
             hsn_code
@@ -37,6 +38,7 @@ export async function POST(request) {
             p_mrp_paise: body.mrp_paise || suggested_retail_price_paise,
             p_admin_stock: admin_stock,
             p_image_url: image_url,
+            p_product_images: product_images || [],
             p_is_active: is_active,
             p_gst_percentage: gst_percentage || 0,
             p_hsn_code: hsn_code || null
@@ -98,6 +100,7 @@ export async function PATCH(request) {
             p_mrp_paise: payload.mrp_paise,
             p_admin_stock: payload.admin_stock,
             p_image_url: payload.image_url,
+            p_product_images: payload.product_images || [],
             p_is_active: payload.is_active,
             p_gst_percentage: payload.gst_percentage || 0,
             p_hsn_code: payload.hsn_code || null

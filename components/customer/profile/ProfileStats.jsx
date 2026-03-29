@@ -3,7 +3,8 @@
 import { motion } from 'framer-motion';
 import { Wallet, Clock, CreditCard, ChevronRight } from 'lucide-react';
 
-function StoreCreditCard({ activeCount, onManage }) {
+function StoreCreditCard({ activeCount, totalAmountPaise = 0, onManage }) {
+    const amount = totalAmountPaise / 100;
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -17,19 +18,26 @@ function StoreCreditCard({ activeCount, onManage }) {
             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-amber-500/10 transition-all duration-700" />
 
             <div className="relative z-10">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/10">
-                            <Clock size={18} className="text-white" />
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/10">
+                                <Clock size={18} className="text-white" />
+                            </div>
+                            <h3 className="text-[10px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-[0.2em]">Store Credits</h3>
                         </div>
-                        <h3 className="text-[10px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-[0.2em]">Store Credits</h3>
+                        {activeCount > 0 && (
+                            <div className="flex flex-col items-end gap-1">
+                                <span className="px-3 py-1 bg-amber-500 text-white dark:text-black rounded-full text-[9px] font-black shadow-lg shadow-amber-500/10 uppercase tracking-widest">
+                                    {activeCount} ACTIVE
+                                </span>
+                                {amount > 0 && (
+                                    <span className="text-[10px] font-black text-amber-600/80">
+                                        ₹{amount.toLocaleString('en-IN', { minimumFractionDigits: 0 })} DUE
+                                    </span>
+                                )}
+                            </div>
+                        )}
                     </div>
-                    {activeCount > 0 && (
-                        <span className="px-3 py-1 bg-amber-500 text-white dark:text-black rounded-full text-[9px] font-black shadow-lg shadow-amber-500/10 uppercase tracking-widest">
-                            {activeCount} ACTIVE
-                        </span>
-                    )}
-                </div>
 
                 <div className="mb-8">
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Available for Use</p>
@@ -98,11 +106,18 @@ function WalletCard({ balancePaise, onManage }) {
     );
 }
 
-export default function ProfileStats({ udhariCount, walletPaise, onManageCredits, onManageWallet }) {
+export default function ProfileStats({ walletBalancePaise, activeUdhariCount, activeUdhariPaise = 0, onManageWallet, onManageUdhari }) {
     return (
-        <div className="grid grid-cols-1 gap-5">
-            <StoreCreditCard activeCount={udhariCount} onManage={onManageCredits} />
-            <WalletCard balancePaise={walletPaise} onManage={onManageWallet} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <StoreCreditCard 
+                activeCount={activeUdhariCount} 
+                totalAmountPaise={activeUdhariPaise}
+                onManage={onManageUdhari} 
+            />
+            <WalletCard 
+                balancePaise={walletBalancePaise} 
+                onManage={onManageWallet} 
+            />
         </div>
     );
 }

@@ -29,9 +29,9 @@ export async function cancelOrderAction(orderId) {
             return { success: false, message: "Order not found" };
         }
 
-        // Block if already cancelled or not pending
-        if (order.delivery_status !== 'pending') {
-            return { success: false, message: `Order cannot be cancelled (current status: ${order.delivery_status})` };
+        // Block if already shipped or delivered
+        if (['shipped', 'delivered'].includes(order.delivery_status)) {
+            return { success: false, message: `Order cannot be cancelled as it has already been ${order.delivery_status}.` };
         }
         if (order.status === 'failed' || order.status === 'cancelled') {
             return { success: false, message: "This order has already been cancelled." };
@@ -39,7 +39,7 @@ export async function cancelOrderAction(orderId) {
         // Only refund if the order was actually PAID (status = 'completed')
         // Gateway-drafted orders (status='pending') have no payment made yet
         const wasPaid = order.status === 'completed';
-        const shouldRefundWallet = wasPaid && order.payment_method === 'wallet';
+        const shouldRefundWallet = wasPaid && (order.payment_method === 'wallet' || order.payment_method === 'store_credit');
 
         // 2. Update order status atomically via admin client
         const { error: updateError } = await adminClient
@@ -54,6 +54,18 @@ export async function cancelOrderAction(orderId) {
         if (updateError) {
             console.error("[cancelOrder] Failed to update order status:", updateError);
             return { success: false, message: "Failed to cancel order. Please try again." };
+        }
+
+        if (order.payment_method === 'store_credit') {
+            const { error: udhariError } = await adminClient
+                .from("udhari_requests")
+                .update({ status: 'cancelled' })
+                .eq("shopping_order_group_id", orderId)
+                .in("status", ['approved', 'completed']);
+
+            if (udhariError) {
+                console.error("[cancelOrder] Failed to cancel udhari request:", udhariError);
+            }
         }
 
         // 3. Only refund wallet if payment was actually fulfilled

@@ -7,9 +7,11 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
-import { Clock, ShieldCheck, CreditCard, ChevronRight, AlertCircle, Loader2, Copy, CheckCircle2, Eye, EyeOff, Info, Calendar, Lock, Smartphone } from 'lucide-react';
+import { Clock, ShieldCheck, CreditCard, ChevronRight, AlertCircle, Loader2, Copy, CheckCircle2, Eye, EyeOff, Info, Calendar, Lock, Smartphone, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
+import ShopOrderCreditCard from '@/components/customer/store-credits/ShopOrderCreditCard';
+import { RequestTimeline, UdhariStatusBadge } from '@/components/customer/store-credits/UdhariSharedComponents';
 
 export default function StoreCreditsPage() {
     const { user, loading: authLoading } = useAuth();
@@ -17,6 +19,7 @@ export default function StoreCreditsPage() {
 
     const [activeTab, setActiveTab] = useState('approved');
     const [requests, setRequests] = useState([]);
+    const [shopRequests, setShopRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [payingId, setPayingId] = useState(null);
     const [copiedCode, setCopiedCode] = useState(null);
@@ -54,12 +57,53 @@ export default function StoreCreditsPage() {
                 return ['completed', 'denied', 'expired', 'cancelled'].includes(req.status);
             });
 
-            setRequests(filtered);
+            setRequests(filtered.filter(r => r.source_type !== 'shop_order'));
         } catch (error) {
             console.error('Error fetching udhari:', error);
             toast.error('Failed to load store credits');
         } finally {
             setLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        if (!user) return;
+        fetchShopRequests();
+    }, [user, activeTab]);
+
+    async function fetchShopRequests() {
+        try {
+            let query = supabase
+                .from('udhari_requests')
+                .select(`
+                    *,
+                    shopping_order_group:shopping_order_group_id (
+                        id,
+                        total_amount_paise,
+                        shopping_order_items (
+                            id,
+                            quantity,
+                            shopping_products (
+                                id,
+                                title,
+                                image_url
+                            )
+                        )
+                    )
+                `)
+                .eq('customer_id', user.id)
+                .eq('source_type', 'shop_order')
+                .order('requested_at', { ascending: false });
+
+            if (activeTab === 'pending') query = query.eq('status', 'pending');
+            else if (activeTab === 'approved') query = query.eq('status', 'approved');
+            else query = query.in('status', ['completed', 'denied', 'expired', 'cancelled']);
+
+            const { data, error } = await query;
+            if (error) throw error;
+            setShopRequests(data || []);
+        } catch (err) {
+            console.error('Error fetching shop udhari:', err);
         }
     }
 
@@ -89,6 +133,7 @@ export default function StoreCreditsPage() {
                 if (!res.ok) throw new Error(data.error);
                 toast.success('Payment successful!');
                 fetchRequests();
+                fetchShopRequests();
 
             } else if (paymentMethod === 'sabpaisa') {
                 // SabPaisa gateway — UPI, Card, Net Banking, etc.
@@ -173,10 +218,20 @@ export default function StoreCreditsPage() {
                             <Loader2 size={32} className="animate-spin mb-4 text-amber-500" />
                             <p className="font-medium">Fetching your records...</p>
                         </div>
-                    ) : requests.length === 0 ? (
-                        <NoRequests activeTab={activeTab} onBrowse={() => router.push('/gift-cards')} />
+                    ) : (requests.length === 0 && shopRequests.length === 0) ? (
+                        <NoRequests activeTab={activeTab} onBrowse={() => router.push('/shop')} onBrowseGiftCards={() => router.push('/gift-cards')} />
                     ) : (
                         <AnimatePresence mode="popLayout">
+                            {/* Shop Order Credit Cards */}
+                            {shopRequests.map((req) => (
+                                <ShopOrderCreditCard
+                                    key={`shop-${req.id}`}
+                                    req={req}
+                                    payingId={payingId}
+                                    onPaySuccess={fetchShopRequests}
+                                />
+                            ))}
+                            {/* Gift Card Udhari Cards */}
                             {requests.map((req) => (
                                 <UdhariCard 
                                     key={req.id} 
@@ -431,78 +486,9 @@ function UdhariCard({ req, onPay, payingId, onCopy, copiedCode }) {
     );
 }
 
-function RequestTimeline({ status }) {
-    const stages = [
-        { key: 'requested', label: 'Requested', icon: Clock },
-        { key: 'approved', label: 'Approved', icon: CheckCircle2 },
-        { key: 'paid', label: 'Paid', icon: CreditCard }
-    ];
-
-    const currentIdx = status === 'pending' ? 0 : status === 'approved' ? 1 : (status === 'completed' ? 2 : -1);
-
-    return (
-        <div className="mt-6 flex items-center justify-between relative max-w-[280px]">
-            <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2" />
-            {stages.map((stage, idx) => {
-                const isActive = idx <= currentIdx;
-                const isPulse = idx === currentIdx && status !== 'completed';
-                
-                return (
-                    <div key={idx} className="relative z-10 flex flex-col items-center">
-                        <div className={`w-4 h-4 rounded-full border-2 transition-all duration-500 ${
-                            isActive ? 'bg-amber-500 border-amber-500 scale-110' : 'bg-white border-gray-200'
-                        } ${isPulse ? 'animate-pulse' : ''}`} />
-                        <span className={`text-[9px] font-black uppercase tracking-tight mt-1 transition-colors ${
-                            isActive ? 'text-gray-900' : 'text-gray-300'
-                        }`}>
-                            {stage.label}
-                        </span>
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
-function UdhariStatusBadge({ status, daysLeft }) {
-    if (status === 'pending') return (
-        <div className="flex items-center gap-1.5 bg-blue-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg shadow-blue-200">
-            <Clock size={12} />
-            Pending
-        </div>
-    );
-    if (status === 'denied') return (
-        <div className="flex items-center gap-1.5 bg-red-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg shadow-red-200">
-            <AlertCircle size={12} />
-            Denied
-        </div>
-    );
-    if (status === 'completed') return (
-        <div className="flex items-center gap-1.5 bg-green-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg shadow-green-200">
-            <CheckCircle2 size={12} />
-            Paid
-        </div>
-    );
-
-    if (status === 'approved') {
-        const isOverdue = daysLeft !== null && daysLeft < 0;
-        const colorClass = isOverdue ? 'bg-red-500 shadow-red-200' : 'bg-amber-500 shadow-amber-200';
-        const label = isOverdue ? 'Overdue' : daysLeft === 0 ? 'Due Today' : `${daysLeft}d Left`;
-
-        return (
-            <div className={`flex items-center gap-1.5 ${colorClass} text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg`}>
-                <Clock size={12} />
-                {label}
-            </div>
-        );
-    }
-
-    return null;
-}
-
-function NoRequests({ activeTab, onBrowse }) {
+function NoRequests({ activeTab, onBrowse, onBrowseGiftCards }) {
     const config = {
-        approved: { title: "No Active Credits", desc: "Browse gift cards to get your first store credit!" },
+        approved: { title: "No Active Credits", desc: "Browse gift cards or the shop to get your first store credit!" },
         pending: { title: "No Pending Requests", desc: "Requests sent to merchants will appear here for tracking." },
         history: { title: "History is Empty", desc: "Once you settle or complete requests, they'll show up here." }
     };
@@ -517,12 +503,22 @@ function NoRequests({ activeTab, onBrowse }) {
             <p className="text-gray-500 max-w-xs mx-auto font-medium mb-8 leading-relaxed">
                 {desc}
             </p>
-            <button
-                onClick={onBrowse}
-                className="px-10 py-4 bg-gray-900 text-white rounded-2xl font-black hover:bg-black transition-all hover:scale-105 active:scale-95 shadow-xl shadow-gray-200 text-sm tracking-widest"
-            >
-                SHOP GIFT CARDS
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                    onClick={onBrowse}
+                    className="px-8 py-4 bg-gray-900 text-white rounded-2xl font-black hover:bg-black transition-all hover:scale-105 active:scale-95 shadow-xl shadow-gray-200 text-sm tracking-widest"
+                >
+                    SHOP PRODUCTS
+                </button>
+                {onBrowseGiftCards && (
+                    <button
+                        onClick={onBrowseGiftCards}
+                        className="px-8 py-4 bg-amber-500 text-white rounded-2xl font-black hover:bg-amber-600 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-amber-200 text-sm tracking-widest"
+                    >
+                        GIFT CARDS
+                    </button>
+                )}
+            </div>
         </div>
     );
 }

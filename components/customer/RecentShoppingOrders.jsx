@@ -43,7 +43,7 @@ export default function RecentShoppingOrders({ userId, limit = 3 }) {
             delivery_status
           `)
           .eq("customer_id", userId)
-          .eq("status", "completed") // only show paid/fulfilled orders
+          .in("status", ["completed", "pending"]) // show paid or store credit (pending) orders
           .order("created_at", { ascending: false })
           .limit(limit);
 

@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
 import AdminShoppingClient from './AdminShoppingClient';
 
@@ -9,8 +9,11 @@ export default async function AdminShoppingPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect('/login');
 
+    // Use admin client so RLS doesn't block shopping_order_groups
+    const adminSupabase = createAdminClient();
+
     // Fetch ALL products (platform + custom/merchant)
-    const { data: products, error } = await supabase
+    const { data: products, error } = await adminSupabase
         .from('shopping_products')
         .select(`
             *,
@@ -25,10 +28,12 @@ export default async function AdminShoppingPage() {
 
     if (error) console.error('Error fetching products:', error);
 
-    // Fetch all orders for quick stats
-    const { data: orderStats } = await supabase
+    // Fetch all orders for quick stats (was failing with anon client due to RLS)
+    const { data: orderStats, error: ordersError } = await adminSupabase
         .from('shopping_order_groups')
         .select('id, delivery_status, total_amount_paise, is_platform_order', { count: 'exact' });
+
+    if (ordersError) console.error('[AdminShopping] orders error:', ordersError.message);
 
     const stats = {
         totalProducts: products?.length || 0,
@@ -42,3 +47,4 @@ export default async function AdminShoppingPage() {
 
     return <AdminShoppingClient products={products || []} stats={stats} initialOrders={orderStats || []} />;
 }
+

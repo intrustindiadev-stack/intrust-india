@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Clock, ShieldCheck, CheckCircle2, AlertCircle, X, ChevronRight, Search, Loader2 } from 'lucide-react';
+import { Clock, ShieldCheck, CheckCircle2, AlertCircle, X, ChevronRight, Search, Loader2, ShoppingBag } from 'lucide-react';
 
 export default function MerchantUdhariPage() {
     const { user, loading: authLoading } = useAuth();
@@ -88,7 +88,7 @@ export default function MerchantUdhariPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
 
-            toast.success('Request approved! Gift card reserved.');
+            toast.success(data.message || 'Request approved!');
             setShowApproveModal(false);
             setSelectedApproveRequest(null);
             fetchRequests();
@@ -366,8 +366,19 @@ function UdhariRow({ req, activeTab, processingId, onApproveClick, onDenyClick }
 
             {/* Order Details */}
             <div className="flex-1 lg:border-l border-slate-100 dark:border-white/5 lg:pl-6 space-y-1">
-                <div className="text-xs font-bold uppercase text-slate-500 mb-1">Gift Card Details</div>
-                <div className="font-medium text-slate-900 dark:text-slate-100">{req.coupon?.title}</div>
+                <div className="text-xs font-bold uppercase text-slate-500 mb-1">
+                    {req.source_type === 'shop_order' ? 'Shop Order Details' : 'Gift Card Details'}
+                </div>
+                <div className="font-medium text-slate-900 dark:text-slate-100 line-clamp-1">
+                    {req.source_type === 'shop_order' ? (
+                        <span className="flex items-center gap-1.5 font-bold">
+                            <ShoppingBag size={14} className="text-[#D4AF37]" />
+                            Order #{req.shopping_order_group_id?.slice(0, 8).toUpperCase()}
+                        </span>
+                    ) : (
+                        req.coupon?.title
+                    )}
+                </div>
                 <div className="text-2xl font-extrabold text-transparent bg-gradient-to-r from-[#D4AF37] to-[#c9a227] bg-clip-text">
                     ₹{(req.amount_paise / 100).toFixed(2)}
                 </div>

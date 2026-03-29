@@ -1,22 +1,59 @@
-import { Users, CreditCard, TrendingUp, Activity, DollarSign, Store } from "lucide-react";
+import { Users, CreditCard, TrendingUp, Activity, DollarSign, Store, ShoppingBag } from "lucide-react";
 import AdminAnalyticsCharts from "./AdminAnalyticsCharts";
 import AnalyticsPieCharts from "./AnalyticsPieCharts";
+import AdminShoppingAnalytics from "./AdminShoppingAnalytics";
+import AdminActivityFeed from "./AdminActivityFeed";
 import { createAdminClient } from '@/lib/supabaseServer';
 
+
+export const dynamic = 'force-dynamic';
+
 export default async function AnalyticsPage() {
+
     const supabase = createAdminClient();
 
-    const { data: orders } = await supabase.from('orders').select('id, amount, created_at, payment_status, giftcard_id, user_id').order('created_at', { ascending: false });
-    const { data: users } = await supabase.from('user_profiles').select('id, created_at, role, full_name, email').order('created_at', { ascending: false });
-    const { data: merchants } = await supabase.from('merchants').select('id, status');
+    // Parallel fetch all data sources
+    const [
+        transactionsRes,
+        usersRes,
+        merchantsRes,
+        shoppingOrdersRes,
+        shoppingProductsRes,
+        shoppingItemsRes,
+    ] = await Promise.all([
+        supabase.from('transactions').select('id, amount, total_paid_paise, created_at, status, coupon_id, user_id').order('created_at', { ascending: false }),
+        supabase.from('user_profiles').select('id, created_at, role, full_name, email').order('created_at', { ascending: false }),
+        supabase.from('merchants').select('id, status'),
+        supabase.from('shopping_order_groups').select('id, total_amount_paise, delivery_status, is_platform_order, created_at, customer_id'),
+        supabase.from('shopping_products').select('id, title, category, admin_stock, is_active, created_at'),
+        supabase.from('shopping_order_items').select('group_id, product_id, quantity, unit_price_paise, profit_paise'),
+    ]);
 
-    const validOrders = (orders || []).filter(o => o.payment_status === 'paid');
+    const transactions = transactionsRes.data || [];
+    const users = usersRes.data || [];
+    const merchants = merchantsRes.data || [];
+    const shoppingOrders = shoppingOrdersRes.data || [];
+    const shoppingProducts = shoppingProductsRes.data || [];
+    const shoppingItems = shoppingItemsRes.data || [];
+
+    // Log any errors so they show in the Next.js terminal
+    if (transactionsRes.error) console.error('[Analytics] transactions error:', transactionsRes.error.message);
+    if (shoppingOrdersRes.error) console.error('[Analytics] shopping_order_groups error:', shoppingOrdersRes.error.message);
+    if (shoppingProductsRes.error) console.error('[Analytics] shopping_products error:', shoppingProductsRes.error.message);
+    if (shoppingItemsRes.error) console.error('[Analytics] shopping_order_items error:', shoppingItemsRes.error.message);
+    console.log('[Analytics] shoppingOrders count:', shoppingOrders.length, 'shoppingProducts count:', shoppingProducts.length);
+
+
+    // Valid transactions (successful payments)
+    const validTransactions = transactions.filter(t => t.status === 'completed' || t.status === 'SUCCESS');
 
     // Quick Stats Calculation
-    const totalRevenue = validOrders.reduce((acc, curr) => acc + ((curr.amount || 0) / 100), 0);
+    // NOTE: `amount` is stored in rupees (e.g. 500.00), total_paid_paise is null for most rows
+    const totalRevenue = validTransactions.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
     const totalUsers = (users || []).filter(u => u.role !== 'admin').length;
     const activeMerchants = (merchants || []).filter(m => m.status === 'approved' || m.status === 'verified').length;
-    const totalTransactions = validOrders.length;
+    const totalTransactions = validTransactions.length;
+
 
     // Formatting Helpers
     const formatCurrency = (amount) => {
@@ -26,14 +63,16 @@ export default async function AnalyticsPage() {
         return `₹${amount.toFixed(2)}`;
     };
 
-    const stats = [
-        { title: "Total Revenue", value: formatCurrency(totalRevenue), change: "Live", trend: "up", icon: DollarSign, color: "text-green-600", bg: "bg-green-100" },
-        { title: "Total Users", value: totalUsers.toLocaleString('en-IN'), change: "Live", trend: "up", icon: Users, color: "text-blue-600", bg: "bg-blue-100" },
-        { title: "Active Merchants", value: activeMerchants.toLocaleString('en-IN'), change: "Live", trend: "up", icon: Store, color: "text-purple-600", bg: "bg-purple-100" },
-        { title: "Transactions", value: totalTransactions.toLocaleString('en-IN'), change: "Live", trend: "up", icon: Activity, color: "text-orange-600", bg: "bg-orange-100" },
-    ];
+    // ── Shopping Stats ────────────────────────────────────────────────────────
+    const totalShoppingRevenue = shoppingOrders.reduce((acc, o) => acc + (Number(o.total_amount_paise) || 0), 0);
+    const totalShoppingOrders = shoppingOrders.length;
+    const pendingDispatch = shoppingOrders.filter(o => o.delivery_status === 'pending').length;
+    const totalProducts = shoppingProducts.length;
+    const activeProducts = shoppingProducts.filter(p => p.is_active).length;
+    const platformRevenue = shoppingOrders.filter(o => o.is_platform_order).reduce((acc, o) => acc + (Number(o.total_amount_paise) || 0), 0);
+    const merchantCommissionRevenue = shoppingItems.reduce((acc, item) => acc + (Number(item.profit_paise) || 0), 0);
 
-    // User Growth Data (Last 14 days)
+    // Shopping Orders over last 14 days
     const last14Days = [...Array(14)].map((_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - (13 - i));
@@ -43,24 +82,54 @@ export default async function AnalyticsPage() {
         };
     });
 
+    const shoppingOrdersChartData = last14Days.map(day => {
+        const count = shoppingOrders.filter(o => o.created_at?.startsWith(day.dateStr)).length;
+        return { date: day.display, orders: count };
+    });
+
+    // Top 5 Products by Revenue from order items
+    const productRevenueMap = {};
+    for (const item of shoppingItems) {
+        if (!item.product_id) continue;
+        if (!productRevenueMap[item.product_id]) productRevenueMap[item.product_id] = 0;
+        productRevenueMap[item.product_id] += (Number(item.unit_price_paise) || 0) * (Number(item.quantity) || 1);
+    }
+    const productMap = shoppingProducts.reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+    const top5Products = Object.entries(productRevenueMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([pid, rev]) => ({
+            name: productMap[pid]?.title || `Product ${pid.slice(0, 6)}`,
+            revenue: Math.round(rev / 100),
+        }));
+
+    const stats = [
+        { title: "Total Revenue", value: formatCurrency(totalRevenue), change: "Live", trend: "up", icon: DollarSign, color: "text-green-600", bg: "bg-green-100" },
+        { title: "Total Users", value: totalUsers.toLocaleString('en-IN'), change: "Live", trend: "up", icon: Users, color: "text-blue-600", bg: "bg-blue-100" },
+        { title: "Active Merchants", value: activeMerchants.toLocaleString('en-IN'), change: "Live", trend: "up", icon: Store, color: "text-purple-600", bg: "bg-purple-100" },
+        { title: "Transactions", value: totalTransactions.toLocaleString('en-IN'), change: "Live", trend: "up", icon: Activity, color: "text-orange-600", bg: "bg-orange-100" },
+        { title: "Shopping Revenue", value: formatCurrency(totalShoppingRevenue / 100), change: "Live", trend: "up", icon: ShoppingBag, color: "text-amber-600", bg: "bg-amber-100" },
+    ];
+
+    // User Growth Data (Last 14 days)
     const userGrowthData = last14Days.map(day => {
         const count = (users || []).filter(u => u.created_at?.startsWith(day.dateStr)).length;
-        // Adding visual +1 to ensure the chart renders a baseline if empty
         return { date: day.display, users: count + 1 };
     });
 
-    // Revenue Stream
-    const gcSales = validOrders.filter(o => o.giftcard_id).reduce((acc, curr) => acc + ((curr.amount || 0) / 100), 0);
-    const voucherSales = validOrders.filter(o => !o.giftcard_id).reduce((acc, curr) => acc + ((curr.amount || 0) / 100), 0);
+    // Revenue Streams — amount is in rupees; shopping revenue is in paise → convert
+    const gcSales = validTransactions.filter(t => t.coupon_id).reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+    const otherSales = validTransactions.filter(t => !t.coupon_id).reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+    const shoppingRev = Math.round(totalShoppingRevenue / 100); // paise → rupees
 
-    // Fallbacks if zero
     const revenueSourceData = [
-        { name: 'Gift Card Sales', value: gcSales || 500 },
-        { name: 'Merchant Vouchers', value: voucherSales || 500 },
+        { name: 'Gift Card Sales', value: Math.round(gcSales) || 500 },
+        { name: 'Other Sales', value: Math.round(otherSales) || 500 },
+        { name: 'Shopping Revenue', value: shoppingRev || 500 },
     ];
 
-    // ── PIE CHART DATA ──────────────────────────────
 
+    // ── PIE CHART DATA ──────────────────────────────
     // 1. User Role Distribution
     const allNonAdminUsers = (users || []).filter(u => u.role !== 'admin');
     const merchantUsers = allNonAdminUsers.filter(u => u.role === 'merchant').length;
@@ -70,14 +139,14 @@ export default async function AnalyticsPage() {
         { name: 'Merchants', value: merchantUsers || 1 },
     ];
 
-    // 2. Order Payment Status
-    const paidOrders = (orders || []).filter(o => o.payment_status === 'paid').length;
-    const failedOrders = (orders || []).filter(o => o.payment_status === 'failed').length;
-    const pendingOrders = (orders || []).filter(o => o.payment_status !== 'paid' && o.payment_status !== 'failed').length;
+    // 2. Transaction Status Distribution (from transactions table)
+    const successTx = transactions.filter(t => t.status === 'completed' || t.status === 'SUCCESS').length;
+    const failedTx = transactions.filter(t => t.status === 'failed' || t.status === 'FAILED' || t.status === 'ABORTED').length;
+    const pendingTx = transactions.filter(t => !['completed', 'SUCCESS', 'failed', 'FAILED', 'ABORTED'].includes(t.status)).length;
     const orderStatusData = [
-        { name: 'Paid', value: paidOrders || 1 },
-        { name: 'Failed', value: failedOrders || 1 },
-        { name: 'Pending', value: pendingOrders || 1 },
+        { name: 'Success', value: successTx || 1 },
+        { name: 'Failed', value: failedTx || 1 },
+        { name: 'Pending', value: pendingTx || 1 },
     ];
 
     // 3. Merchant Status Breakdown
@@ -93,22 +162,24 @@ export default async function AnalyticsPage() {
     ];
     // ───────────────────────────────────────────────
 
-    // Real-time Activity Feed
+    // Initial Activity Feed data (server-rendered seed for client component)
     const profileMap = (users || []).reduce((acc, u) => { acc[u.id] = u; return acc; }, {});
-    let recentActivity = (orders || []).slice(0, 10).map(order => {
-        const user = profileMap[order.user_id];
+    let initialActivity = validTransactions.slice(0, 10).map(tx => {
+        const user = profileMap[tx.user_id];
         return {
-            id: order.id,
+            id: tx.id,
             user: user?.full_name || user?.email || 'Unknown User',
-            time: new Date(order.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-            amount: `₹${((order.amount || 0) / 100).toLocaleString('en-IN')}`,
-            status: order.payment_status === 'paid' ? 'success' : order.payment_status === 'failed' ? 'error' : 'info'
+            time: new Date(tx.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            // amount is in rupees already (e.g. "500.00")
+            amount: `₹${Number(tx.amount || 0).toLocaleString('en-IN')}`,
+            status: (tx.status === 'completed' || tx.status === 'SUCCESS') ? 'success' : (tx.status === 'failed' || tx.status === 'FAILED') ? 'error' : 'info'
         };
     });
 
-    if (recentActivity.length === 0) {
-        recentActivity = [{ id: 'empty', user: 'System Agent', action: 'Waiting for orders...', time: 'Just now', amount: '', status: 'info' }];
+    if (initialActivity.length === 0) {
+        initialActivity = [{ id: 'empty', user: 'System Agent', action: 'Waiting for transactions...', time: 'Just now', amount: '', status: 'info' }];
     }
+
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B0F19] p-4 sm:p-6 lg:p-8 transition-colors duration-300">
@@ -119,7 +190,7 @@ export default async function AnalyticsPage() {
                         Platform Analytics
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
-                        Real-time overview of platform performance & activity
+                        Real-time overview of platform performance &amp; activity
                     </p>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-full border border-emerald-200 dark:border-emerald-500/20 w-fit">
@@ -132,7 +203,7 @@ export default async function AnalyticsPage() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-8">
                 {stats.map((stat, index) => (
                     <div
                         key={index}
@@ -167,6 +238,20 @@ export default async function AnalyticsPage() {
                 initialMerchantStatusData={merchantStatusData}
             />
 
+            <AdminShoppingAnalytics
+                initialShoppingStats={{
+                    totalRevenue: totalShoppingRevenue,
+                    totalOrders: totalShoppingOrders,
+                    pendingDispatch,
+                    totalProducts,
+                    activeProducts,
+                    platformRevenue,
+                    merchantCommissionRevenue,
+                }}
+                initialTop5Products={top5Products}
+                initialShoppingOrdersChartData={shoppingOrdersChartData}
+            />
+
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
                 {/* Charts Section (Takes up 2 cols on large screens) */}
                 <div className="xl:col-span-2">
@@ -181,42 +266,7 @@ export default async function AnalyticsPage() {
 
                 {/* Real-time Activity Feed */}
                 <div className="xl:col-span-1">
-                    <div className="bg-white dark:bg-slate-800/50 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 sticky top-24">
-                        <h2 className="text-xl font-extrabold text-slate-900 dark:text-white mb-6 font-[family-name:var(--font-outfit)] flex items-center gap-2">
-                            <Activity className="text-blue-500" size={20} />
-                            Live Activity Feed
-                        </h2>
-                        <div className="space-y-5 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                            {recentActivity.map((activity) => (
-                                <div key={activity.id} className="flex items-start gap-4 pb-5 border-b border-slate-100 dark:border-slate-700/50 last:border-0 last:pb-0 group">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-extrabold text-lg shrink-0 shadow-sm transition-transform group-hover:scale-105
-                                        ${activity.status === 'error' ? 'bg-red-50 text-red-600 border-2 border-red-100' :
-                                            activity.status === 'success' ? 'bg-emerald-50 text-emerald-600 border-2 border-emerald-100' : 'bg-blue-50 text-blue-600 border-2 border-blue-100'}`
-                                    }>
-                                        {activity.user.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="flex-1 min-w-0 pt-0.5">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                                                {activity.user}
-                                            </p>
-                                            <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full uppercase tracking-wider">{activity.time}</span>
-                                        </div>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5 truncate">
-                                            {activity.action}
-                                        </p>
-                                        {activity.amount && (
-                                            <p className={`text-sm font-extrabold mt-1.5 ${activity.amount.startsWith('-') ? 'text-emerald-500' :
-                                                activity.status === 'error' ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'
-                                                }`}>
-                                                {activity.amount}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    <AdminActivityFeed initialActivity={initialActivity} />
                 </div>
             </div>
         </div>

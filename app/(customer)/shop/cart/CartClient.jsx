@@ -24,7 +24,8 @@ import {
   BadgeCheck,
   PartyPopper,
   X,
-  Store
+  Store,
+  Clock
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -44,6 +45,10 @@ const CartClient = ({ userId }) => {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [draftGroupId, setDraftGroupId] = useState(null);
+  const [udhariEnabled, setUdhariEnabled] = useState(false);
+  const [udhariDisabledReason, setUdhariDisabledReason] = useState(null);
+  const [storeCreditDuration, setStoreCreditDuration] = useState(10);
+  const [creditRequestSent, setCreditRequestSent] = useState(false);
   const supabase = createClient();
   const router = useRouter();
   const { theme } = useTheme();
@@ -118,10 +123,43 @@ const CartClient = ({ userId }) => {
 
       const { data: userProfile } = await supabase
         .from("user_profiles")
-        .select("full_name, phone_number, address, city, state, pincode")
+        .select("full_name, phone, address")
         .eq("id", userId)
         .single();
       setProfile(userProfile);
+
+      // Fetch udhari settings for the merchant in the cart (if any)
+      if (cart && cart.length > 0) {
+        if (cart.every(i => i.is_platform_item)) {
+          setUdhariEnabled(false);
+          setUdhariDisabledReason('platform');
+        } else {
+          const nonPlatformItems = cart.filter(i => !i.is_platform_item);
+          const inventoryIds = nonPlatformItems.map(i => i.inventory_id).filter(Boolean);
+          
+          if (inventoryIds.length > 0) {
+            const { data: merchantsData } = await supabase
+              .from('merchant_inventory')
+              .select('merchant_id')
+              .in('id', inventoryIds);
+              
+            const uniqueMerchants = [...new Set(merchantsData?.map(m => m.merchant_id))];
+            
+            if (uniqueMerchants.length > 1) {
+              setUdhariEnabled(false);
+              setUdhariDisabledReason('mixed');
+            } else if (uniqueMerchants.length === 1) {
+              const { data: udhariSettings } = await supabase
+                .from('merchant_udhari_settings')
+                .select('udhari_enabled')
+                .eq('merchant_id', uniqueMerchants[0])
+                .single();
+              setUdhariEnabled(udhariSettings?.udhari_enabled === true);
+              setUdhariDisabledReason(null);
+            }
+          }
+        }
+      }
     } catch (err) {
       console.error("Error fetching cart data:", err);
       setError("Failed to load cart");
@@ -153,6 +191,12 @@ const CartClient = ({ userId }) => {
   };
 
   const handleCheckout = async () => {
+    // Guard: prevent double-submission if a draft order already exists
+    if (draftGroupId) {
+      setIsPaymentModalOpen(true);
+      return;
+    }
+
     try {
       setCheckingOut(true);
       setError(null);
@@ -178,13 +222,64 @@ const CartClient = ({ userId }) => {
         if (data.success) {
           setDraftGroupId(data.group_id);
           setIsPaymentModalOpen(true);
+          // Keep checkingOut=true — button stays locked until modal is closed
+          return;
         } else {
           setError(data.message || "Checkout initialization failed");
         }
+      } else if (paymentMode === 'store_credit') {
+        // Step 1: Draft the cart orders to get a group_id
+        const { data: draftData, error: draftError } = await supabase.rpc("draft_cart_orders", { p_customer_id: userId });
+        if (draftError) throw draftError;
+        if (!draftData.success) {
+          setError(draftData.message || "Failed to create order draft");
+          return;
+        }
+
+        const groupId = draftData.group_id;
+
+        // Step 2: Resolve merchant ID from cart items
+        const merchantItem = cartItems.find(i => !i.is_platform_item);
+        let merchantId = null;
+        if (merchantItem?.inventory_id) {
+          const { data: invRow } = await supabase
+            .from('merchant_inventory')
+            .select('merchant_id')
+            .eq('id', merchantItem.inventory_id)
+            .single();
+          merchantId = invRow?.merchant_id;
+        }
+
+        if (!merchantId) {
+          setError("Could not determine merchant for store credit request.");
+          return;
+        }
+
+        // Step 3: Call the store-credit request API
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch('/api/shopping/request-store-credit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({
+            groupId,
+            merchantId,
+            durationDays: storeCreditDuration,
+            amountPaise: finalPayable,
+          })
+        });
+        const resData = await res.json();
+        if (!res.ok) throw new Error(resData.error);
+
+        // Step 4: Show a success overlay then redirect to store-credits
+        setCreditRequestSent(true);
+        setTimeout(() => router.push("/store-credits"), 3500);
       }
     } catch (err) {
       console.error("Checkout error:", err);
-      setError("Unexpected error during checkout");
+      setError(err.message || "Unexpected error during checkout");
     } finally {
       setCheckingOut(false);
     }
@@ -208,14 +303,72 @@ const CartClient = ({ userId }) => {
   const finalPayable = billDetails.sellingTotal > 0 ? billDetails.sellingTotal + deliveryFee : 0;
   const itemCount = cartItems.reduce((a, i) => a + i.quantity, 0);
   const hasStockIssues = stockWarnings.size > 0;
-  const canPay = (paymentMode === 'wallet' ? walletBalance >= finalPayable : true) && !hasStockIssues;
+  const canPay = (
+    paymentMode === 'wallet' ? walletBalance >= finalPayable :
+    paymentMode === 'store_credit' ? udhariEnabled :
+    true
+  ) && !hasStockIssues;
 
   // Payment modes
   const paymentModes = [
     { id: 'wallet', label: 'InTrust Wallet', sub: `Balance: ₹${(walletBalance / 100).toLocaleString('en-IN')}`, icon: Wallet, color: '#10b981' },
     { id: 'gateway', label: 'UPI / Cards / Netbanking', sub: 'Pay via SabPaisa', icon: CreditCard, color: '#6366f1', disabled: false },
-    { id: 'cod', label: 'Cash on Delivery', sub: 'Pay when delivered', icon: Banknote, color: '#f59e0b', disabled: true },
+    { id: 'store_credit', label: 'Store Credit', sub: udhariEnabled ? 'Pay later — 0% interest' : udhariDisabledReason === 'platform' ? 'Not available for platform products' : udhariDisabledReason === 'mixed' ? 'Not available for mixed-merchant carts' : 'Not available for this merchant', icon: Clock, color: '#f59e0b', disabled: !udhariEnabled },
+    { id: 'cod', label: 'Cash on Delivery', sub: 'Pay when delivered', icon: Banknote, color: '#94a3b8', disabled: true },
   ];
+
+  // ========== STORE CREDIT REQUEST SENT OVERLAY ==========
+  if (creditRequestSent) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={`fixed inset-0 z-[100] flex items-center justify-center ${isDark ? 'bg-[#080a10]' : 'bg-white'}`}
+      >
+        <motion.div
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
+          className="text-center px-8 max-w-md"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 12, delay: 0.4 }}
+            className="w-24 h-24 mx-auto mb-6 rounded-full bg-amber-500 flex items-center justify-center shadow-[0_0_40px_rgba(245,158,11,0.3)]"
+          >
+            <Clock size={48} className="text-white" strokeWidth={2.5} />
+          </motion.div>
+
+          <motion.h1
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className={`text-2xl font-black mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}
+          >
+            Credit Request Sent! ⏳
+          </motion.h1>
+          <motion.p
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className={`text-sm font-medium mb-8 ${isDark ? 'text-white/40' : 'text-slate-500'}`}
+          >
+            Your order is pending merchant approval. You'll be notified once approved. Redirecting to Store Credits...
+          </motion.p>
+
+          <motion.div className={`w-full h-1 rounded-full overflow-hidden ${isDark ? 'bg-white/[0.06]' : 'bg-slate-100'}`}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: "100%" }}
+              transition={{ delay: 0.5, duration: 3, ease: "linear" }}
+              className="h-full rounded-full bg-amber-500"
+            />
+          </motion.div>
+        </motion.div>
+      </motion.div>
+    );
+  }
 
   // ========== ORDER SUCCESS OVERLAY ==========
   if (orderSuccess) {
@@ -347,8 +500,8 @@ const CartClient = ({ userId }) => {
                       <div className={`text-xs leading-relaxed font-medium ${isDark ? 'text-white/40' : 'text-slate-500'}`}>
                         <p className={`font-bold ${isDark ? 'text-white/70' : 'text-slate-700'}`}>{profile.full_name}</p>
                         <p className="truncate">{profile.address}</p>
-                        <p>{profile.city}, {profile.state} {profile.pincode}</p>
-                        {profile.phone_number && <p className="flex items-center gap-1 mt-1"><Phone size={10} /> {profile.phone_number}</p>}
+                        <p>{profile.address || "Address not provided"}</p>
+                        {profile.phone && <p className="flex items-center gap-1 mt-1"><Phone size={10} /> {profile.phone}</p>}
                       </div>
                     ) : (
                       <p className="text-xs text-amber-500 font-bold">Please update your address in profile.</p>
@@ -607,6 +760,39 @@ const CartClient = ({ userId }) => {
                     );
                   })}
                 </div>
+
+                {/* Store Credit Duration Picker */}
+                {paymentMode === 'store_credit' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`mt-3 p-3 rounded-xl border ${isDark ? 'bg-amber-900/10 border-amber-800/20' : 'bg-amber-50 border-amber-200'}`}
+                  >
+                    <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
+                      Repayment Duration
+                    </p>
+                    <div className="flex gap-2">
+                      {[5, 10, 15].map(days => (
+                        <button
+                          key={days}
+                          onClick={() => setStoreCreditDuration(days)}
+                          className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${
+                            storeCreditDuration === days
+                              ? 'bg-amber-500 text-white shadow-md'
+                              : isDark
+                                ? 'bg-white/5 text-white/50 hover:bg-white/10'
+                                : 'bg-white text-slate-500 hover:bg-amber-100 border border-amber-200'
+                          }`}
+                        >
+                          {days} Days
+                        </button>
+                      ))}
+                    </div>
+                    <p className={`text-[10px] mt-2 font-medium ${isDark ? 'text-amber-400/60' : 'text-amber-600'}`}>
+                      Convenience fee of 3% applies on settlement.
+                    </p>
+                  </motion.div>
+                )}
               </motion.div>
 
               {/* Desktop Place Order */}
@@ -662,7 +848,7 @@ const CartClient = ({ userId }) => {
         <div className="flex items-center justify-between gap-3">
           <div>
             <span className={`text-[9px] font-black uppercase tracking-wider ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-              {paymentMode === 'wallet' ? 'Pay via Wallet' : paymentMode === 'gateway' ? 'Pay via Gateway' : 'Cash on Delivery'}
+              {paymentMode === 'wallet' ? 'Pay via Wallet' : paymentMode === 'gateway' ? 'Pay via Gateway' : paymentMode === 'store_credit' ? 'Store Credit' : 'Cash on Delivery'}
             </span>
             <motion.p 
               key={finalPayable}
@@ -693,7 +879,7 @@ const CartClient = ({ userId }) => {
             ) : hasStockIssues ? (
               "Some items are out of stock"
             ) : !canPay ? (
-              paymentMode === 'wallet' ? "Low Balance" : "Coming Soon"
+              paymentMode === 'wallet' ? "Low Balance" : paymentMode === 'store_credit' ? "Not Available" : "Coming Soon"
             ) : (
               <>Place Order <ArrowRight size={14} strokeWidth={3} /></>
             )}
@@ -704,9 +890,15 @@ const CartClient = ({ userId }) => {
       {isPaymentModalOpen && (
         <SabpaisaPaymentModal
           isOpen={isPaymentModalOpen}
-          onClose={() => setIsPaymentModalOpen(false)}
+          onClose={() => {
+            // Re-enable buttons when modal is dismissed without completing payment
+            setIsPaymentModalOpen(false);
+            setCheckingOut(false);
+            // Clear draft so a fresh one is created if they retry
+            setDraftGroupId(null);
+          }}
           amount={finalPayable / 100}
-          user={{ id: userId, email: profile?.email || '', phone: profile?.phone_number || '' }}
+          user={{ id: userId, email: profile?.email || '', phone: profile?.phone || '' }}
           productInfo={{ title: `${itemCount} Item${itemCount > 1 ? 's' : ''} in Cart` }}
           metadata={{ type: 'cart_checkout', groupId: draftGroupId }}
           initialMethod="gateway"

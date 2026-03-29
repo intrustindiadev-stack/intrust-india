@@ -40,17 +40,17 @@ export default async function AdminDashboard() {
         pendingApprovals,
         shoppingStats
     ] = await Promise.all([
-        // 1. Total Revenue (Paid Orders)
-        supabase.from('orders')
-            .select('amount')
-            .eq('payment_status', 'paid')
+        // 1. Total Revenue (from transactions table)
+        supabase.from('transactions')
+            .select('total_paid_paise')
+            .in('status', ['completed', 'SUCCESS'])
             .then(({ data, error }) => {
                 if (error) {
                     console.error('Error fetching revenue:', error.message || error);
                     return 0;
                 }
                 if (!data || !Array.isArray(data)) return 0;
-                return data.reduce((sum, order) => sum + (Number(order.amount) || 0), 0);
+                return data.reduce((sum, tx) => sum + (Number(tx.total_paid_paise) || 0), 0);
             }),
 
         // 2. Active Merchants (User Profiles with role 'merchant')
@@ -71,71 +71,58 @@ export default async function AdminDashboard() {
                 return count || 0;
             }),
 
-        // 4. Today Sales
-        supabase.from('orders')
+        // 4. Today Sales (from transactions table)
+        supabase.from('transactions')
             .select('*', { count: 'exact', head: true })
-            .eq('payment_status', 'paid')
+            .in('status', ['completed', 'SUCCESS'])
             .gte('created_at', new Date().toISOString().split('T')[0]) // YYYY-MM-DD
             .then(({ count, error }) => {
                 if (error) console.error('Error fetching today sales:', error);
                 return count || 0;
             }),
 
-        // 5. Recent Transactions - Optimized single query
-        supabase.from('orders')
-            .select(`
-                id,
-                amount,
-                created_at,
-                payment_status,
-                user_id,
-                giftcard_id,
-                coupons (
-                    id,
-                    brand,
-                    merchant_id,
-                    merchants (
-                        id,
-                        business_name
-                    )
-                )
-            `)
-            .eq('payment_status', 'paid')
+        // 5. Recent Transactions - from transactions table
+        supabase.from('transactions')
+            .select('id, user_id, coupon_id, amount, total_paid_paise, status, payment_mode, created_at')
+            .in('status', ['completed', 'SUCCESS'])
             .order('created_at', { ascending: false })
             .limit(10)
-            .then(async ({ data: orders, error }) => {
+            .then(async ({ data: txns, error }) => {
                 if (error) {
                     console.error('Error fetching transactions:', error);
                     return [];
                 }
 
-                if (!orders?.length) return [];
+                if (!txns?.length) return [];
 
-                // Fetch all user profiles in parallel with orders query
-                const userIds = [...new Set(orders.map(o => o.user_id).filter(Boolean))];
-                const couponIds = [...new Set(orders.map(o => o.giftcard_id).filter(Boolean))];
+                const userIds = [...new Set(txns.map(t => t.user_id).filter(Boolean))];
+                const couponIds = [...new Set(txns.map(t => t.coupon_id).filter(Boolean))];
 
                 const profileQuery = supabase
                     .from('user_profiles')
                     .select('id, full_name, email')
                     .in('id', userIds);
 
-                const udhariQuery = supabase
-                    .from('udhari_requests')
-                    .select('coupon_id')
-                    .in('coupon_id', couponIds)
-                    .eq('status', 'completed');
+                const couponQuery = couponIds.length > 0
+                    ? supabase.from('coupons').select('id, brand, merchant_id, merchants(id, business_name)').in('id', couponIds)
+                    : Promise.resolve({ data: [] });
 
-                const [{ data: profiles }, { data: udharis }] = await Promise.all([profileQuery, udhariQuery]);
+                const udhariQuery = couponIds.length > 0
+                    ? supabase.from('udhari_requests').select('coupon_id').in('coupon_id', couponIds).eq('status', 'completed')
+                    : Promise.resolve({ data: [] });
+
+                const [{ data: profiles }, { data: coupons }, { data: udharis }] = await Promise.all([profileQuery, couponQuery, udhariQuery]);
+
                 const profileMap = (profiles || []).reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+                const couponMap = (coupons || []).reduce((acc, c) => ({ ...acc, [c.id]: c }), {});
                 const udhariSet = new Set((udharis || []).map(u => u.coupon_id));
 
-                return orders.map(order => ({
-                    ...order,
-                    buyer_name: profileMap[order.user_id]?.full_name || profileMap[order.user_id]?.email || 'Unknown User',
-                    brand: order.coupons?.brand || 'Unknown Brand',
-                    merchant_name: order.coupons?.merchants?.business_name || 'Platform',
-                    source: udhariSet.has(order.giftcard_id) ? 'Udhari Settlement' : 'Direct Purchase'
+                return txns.map(tx => ({
+                    ...tx,
+                    buyer_name: profileMap[tx.user_id]?.full_name || profileMap[tx.user_id]?.email || 'Unknown User',
+                    brand: couponMap[tx.coupon_id]?.brand || 'Gift Card',
+                    merchant_name: couponMap[tx.coupon_id]?.merchants?.business_name || 'Platform',
+                    source: udhariSet.has(tx.coupon_id) ? 'Udhari Settlement' : 'Direct Purchase'
                 }));
             }),
 
@@ -361,7 +348,7 @@ export default async function AdminDashboard() {
                                                         {new Date(tx.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                     </td>
                                                     <td className="p-4 pr-6 text-right font-bold text-slate-900">
-                                                        {formatPrice(tx.amount)}
+                                                        {formatPrice(tx.total_paid_paise || tx.amount)}
                                                     </td>
                                                 </tr>
                                             ))

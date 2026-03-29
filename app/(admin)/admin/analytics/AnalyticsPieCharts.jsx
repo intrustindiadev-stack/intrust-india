@@ -128,52 +128,17 @@ export default function AnalyticsPieCharts({ initialUserRoleData, initialOrderSt
     const [lastUpdated, setLastUpdated] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
 
-    // ── Fetch fresh data from Supabase ─────────────────────────────────────
+    // ── Fetch fresh data from API route (uses admin client, bypasses RLS) ─────
     const refresh = useCallback(async () => {
         setRefreshing(true);
         try {
-            const supabase = createClient();
+            const res = await fetch('/api/admin/analytics/summary');
+            if (!res.ok) throw new Error(`API error: ${res.status}`);
+            const { userRoleData: uRD, orderStatusData: oSD, merchantStatusData: mSD } = await res.json();
 
-            const [usersRes, ordersRes, merchantsRes] = await Promise.all([
-                supabase.from('user_profiles').select('id, role'),
-                supabase.from('orders').select('id, payment_status'),
-                supabase.from('merchants').select('id, status'),
-            ]);
-
-            const users = usersRes.data || [];
-            const orders = ordersRes.data || [];
-            const merchants = merchantsRes.data || [];
-
-            // User roles
-            const nonAdmin = users.filter(u => u.role !== 'admin');
-            const mCount = nonAdmin.filter(u => u.role === 'merchant').length;
-            const cCount = nonAdmin.filter(u => u.role !== 'merchant').length;
-            setUserRoleData([
-                { name: 'Customers', value: cCount || 1 },
-                { name: 'Merchants', value: mCount || 1 },
-            ]);
-
-            // Order statuses
-            const paid = orders.filter(o => o.payment_status === 'paid').length;
-            const failed = orders.filter(o => o.payment_status === 'failed').length;
-            const pending = orders.filter(o => o.payment_status !== 'paid' && o.payment_status !== 'failed').length;
-            setOrderStatusData([
-                { name: 'Paid', value: paid || 1 },
-                { name: 'Failed', value: failed || 1 },
-                { name: 'Pending', value: pending || 1 },
-            ]);
-
-            // Merchant statuses
-            const approved = merchants.filter(m => m.status === 'approved' || m.status === 'verified').length;
-            const pendingM = merchants.filter(m => m.status === 'pending').length;
-            const rejected = merchants.filter(m => m.status === 'rejected').length;
-            const suspended = merchants.filter(m => m.status === 'suspended').length;
-            setMerchantStatusData([
-                { name: 'Approved', value: approved || 1 },
-                { name: 'Pending', value: pendingM || 1 },
-                { name: 'Rejected', value: rejected || 1 },
-                { name: 'Suspended', value: suspended || 1 },
-            ]);
+            if (uRD) setUserRoleData(uRD);
+            if (oSD) setOrderStatusData(oSD);
+            if (mSD) setMerchantStatusData(mSD);
 
             setLastUpdated(new Date());
         } catch (err) {
@@ -183,6 +148,7 @@ export default function AnalyticsPieCharts({ initialUserRoleData, initialOrderSt
         }
     }, []);
 
+
     // ── Supabase Realtime subscriptions ────────────────────────────────────
     useEffect(() => {
         const supabase = createClient();
@@ -190,7 +156,7 @@ export default function AnalyticsPieCharts({ initialUserRoleData, initialOrderSt
         const channel = supabase
             .channel('admin-analytics-pie')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'user_profiles' }, () => refresh())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => refresh())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => refresh())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'merchants' }, () => refresh())
             .subscribe();
 
@@ -198,6 +164,8 @@ export default function AnalyticsPieCharts({ initialUserRoleData, initialOrderSt
 
         return () => { supabase.removeChannel(channel); };
     }, [refresh]);
+
+
 
     return (
         <section className="mb-8">

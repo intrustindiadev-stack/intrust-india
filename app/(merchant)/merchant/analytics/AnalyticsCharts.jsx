@@ -122,7 +122,6 @@ export default function AnalyticsCharts({ revenueData, inventoryData, brandData 
                                     ))}
                                 </Pie>
                                 <Tooltip
-                                    formatter={(value) => [value, 'Coupons']}
                                     contentStyle={{ backgroundColor: 'rgba(255,255,255,0.95)', borderColor: 'rgba(0,0,0,0.05)', borderRadius: '16px', backdropFilter: 'blur(8px)', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
                                     itemStyle={{ color: '#1e293b', fontWeight: 'bold' }}
                                 />

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Loader2, Plus, ArrowRight, Package, Upload, Save } from 'lucide-react';
+import MultiImageUploader from '@/components/shared/MultiImageUploader';
+import { uploadProductImage } from './upload-product-image';
 
 export default function ProductForm({ initialData = null }) {
     const router = useRouter();
@@ -20,7 +22,11 @@ export default function ProductForm({ initialData = null }) {
         admin_stock: initialData?.admin_stock?.toString() || '0',
         gst_percentage: initialData?.gst_percentage?.toString() || '0',
         hsn_code: initialData?.hsn_code || '',
-        image_url: initialData?.image_url || '',
+        product_images: initialData?.product_images?.length
+            ? initialData.product_images
+            : initialData?.image_url
+                ? [initialData.image_url]
+                : [],
         is_active: initialData?.is_active ?? true,
     });
 
@@ -55,8 +61,11 @@ export default function ProductForm({ initialData = null }) {
             const selectedCategory = categories.find(cat => cat.name === formData.category);
             const categoryId = selectedCategory ? selectedCategory.id : null;
 
+            const image_url = formData.product_images[0] || '';
+
             const payload = {
                 ...formData,
+                image_url,
                 wholesale_price_paise: Math.round(parseFloat(formData.wholesale_price_paise) * 100),
                 suggested_retail_price_paise: Math.round(parseFloat(formData.suggested_retail_price_paise) * 100),
                 mrp_paise: Math.round(parseFloat(formData.mrp_paise) * 100),
@@ -272,29 +281,13 @@ export default function ProductForm({ initialData = null }) {
 
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                         <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-4">Media</h3>
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Product Image URL</label>
-                            <div className="flex gap-4">
-                                <div className="flex-1">
-                                    <input
-                                        type="url"
-                                        name="image_url"
-                                        value={formData.image_url}
-                                        onChange={handleChange}
-                                        placeholder="https://example.com/image.jpg"
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
-                                    />
-                                </div>
-                                <div className="w-12 h-12 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
-                                    {formData.image_url ? (
-                                        <img src={formData.image_url} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <Upload className="text-slate-400 w-5 h-5" />
-                                    )}
-                                </div>
-                            </div>
-                            <p className="text-[10px] text-slate-500 mt-2 italic font-medium">Please provide a direct link to an image (JPEG, PNG, WEBP)</p>
-                        </div>
+                        <MultiImageUploader
+                            images={formData.product_images}
+                            onChange={(urls) => setFormData(prev => ({ ...prev, product_images: urls }))}
+                            uploadAction={uploadProductImage}
+                            role="admin"
+                            maxImages={5}
+                        />
                     </div>
                 </div>
             </div>

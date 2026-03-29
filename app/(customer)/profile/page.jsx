@@ -78,6 +78,7 @@ export default function CustomerProfilePage() {
     const [profile, setProfile] = useState(null);
     const [wallet, setWallet] = useState(null);
     const [udhariCount, setUdhariCount] = useState(0);
+    const [udhariPaise, setUdhariPaise] = useState(0);
     const [purchaseCount, setPurchaseCount] = useState(0);
     const [totalSavedPaise, setTotalSavedPaise] = useState(0);
     const [profileLoading, setProfileLoading] = useState(true);
@@ -135,8 +136,12 @@ export default function CustomerProfilePage() {
                         if (newWallet) setWallet(newWallet);
                     }
 
-                    const { count } = await supabase.from('udhari_requests').select('*', { count: 'exact', head: true }).eq('customer_id', authUser.id).in('status', ['pending', 'approved']);
-                    if (!cancelled) setUdhariCount(count || 0);
+                    const { data: udhariRequests } = await supabase.from('udhari_requests').select('amount_paise').eq('customer_id', authUser.id).in('status', ['pending', 'approved']);
+                    if (!cancelled && udhariRequests) {
+                        setUdhariCount(udhariRequests.length);
+                        const totalUdhari = udhariRequests.reduce((sum, req) => sum + (req.amount_paise || 0), 0);
+                        setUdhariPaise(totalUdhari);
+                    }
 
                     const { data: couponsData } = await supabase.from('coupons').select('face_value_paise, selling_price_paise').eq('purchased_by', authUser.id).eq('status', 'sold');
                     if (!cancelled && couponsData) {
@@ -240,10 +245,11 @@ export default function CustomerProfilePage() {
                                 transition={{ delay: 0.2 }}
                             >
                                 <ProfileStats
-                                    udhariCount={udhariCount}
-                                    walletPaise={wallet?.balance_paise || 0}
-                                    onManageCredits={() => router.push('/store-credits')}
+                                    walletBalancePaise={wallet?.balance_paise}
+                                    activeUdhariCount={udhariCount}
+                                    activeUdhariPaise={udhariPaise}
                                     onManageWallet={() => router.push('/wallet')}
+                                    onManageUdhari={() => router.push('/store-credits')}
                                 />
                             </motion.div>
 

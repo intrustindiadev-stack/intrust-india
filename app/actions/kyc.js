@@ -292,12 +292,12 @@ export async function getKYCRecord(userId = null) {
         // If requesting another user's record, verify admin status
         if (userId && userId !== user.id) {
             const { data: adminCheck } = await supabase
-                .from('app_admins')
-                .select('user_id')
-                .eq('user_id', user.id)
+                .from('user_profiles')
+                .select('role')
+                .eq('id', user.id)
                 .single();
 
-            if (!adminCheck) {
+            if (!adminCheck || adminCheck.role !== 'admin') {
                 console.warn('[KYC] Unauthorized admin access attempt');
                 return {
                     error: 'Unauthorized: Admin access required'

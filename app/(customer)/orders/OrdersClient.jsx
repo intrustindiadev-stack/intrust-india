@@ -37,7 +37,7 @@ const OrdersClient = ({ userId }) => {
           )
         `)
         .eq("customer_id", userId)
-        .neq("status", "pending")
+        .in("status", ["completed", "pending"])
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -188,6 +188,7 @@ const OrdersClient = ({ userId }) => {
                   <span className="font-semibold text-gray-700">
                     {group.payment_method === 'gateway' ? "Online Payment (SabPaisa)" : 
                      group.payment_method === 'cod' ? "Cash on Delivery" : 
+                     group.payment_method === 'store_credit' ? "Store Credit (Udhari)" :
                      "InTrust Wallet"}
                   </span>
                 </div>
