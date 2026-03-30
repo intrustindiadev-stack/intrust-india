@@ -46,6 +46,7 @@ export async function getAllGiftCards() {
         const { data, error } = await supabase
             .from('coupons')
             .select('*')
+            .neq('status', 'deleted')
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -304,9 +305,77 @@ export async function updateGiftCard(id, formData) {
 }
 
 /**
- * Soft delete gift card (set status to expired)
+ * Delete gift card (soft delete = set to expired, hard delete if already expired)
  */
 export async function deleteGiftCard(id) {
+    try {
+        const isAdmin = await verifyAdmin();
+        if (!isAdmin) {
+            return { success: false, error: 'Unauthorized' };
+        }
+
+        const supabase = createAdminClient();
+
+        // Find current status
+        const { data: currentCard, error: fetchError } = await supabase
+            .from('coupons')
+            .select('status')
+            .eq('id', id)
+            .single();
+
+        if (fetchError) {
+            return { success: false, error: 'Gift card not found' };
+        }
+
+        if (currentCard.status === 'expired') {
+            // Soft delete level 2 (permanently removed from admin view)
+            const { data, error } = await supabase
+                .from('coupons')
+                .update({ 
+                    status: 'deleted',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Error permanently deleting gift card:', error);
+                return { success: false, error: error.message };
+            }
+
+            revalidatePath('/admin/giftcards');
+            return { success: true, data, type: 'perma-deleted' };
+        } else {
+            // Soft delete
+            const { data, error } = await supabase
+                .from('coupons')
+                .update({
+                    status: 'expired',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Error deleting gift card:', error);
+                return { success: false, error: error.message };
+            }
+
+            revalidatePath('/admin/giftcards');
+            return { success: true, data, type: 'soft-deleted' };
+        }
+    } catch (error) {
+        console.error('Server error:', error);
+        return { success: false, error: 'Failed to delete gift card' };
+    }
+}
+
+/**
+ * Soft delete all expired gift cards
+ */
+export async function bulkDeleteExpiredGiftCards() {
     try {
         const isAdmin = await verifyAdmin();
         if (!isAdmin) {
@@ -318,25 +387,22 @@ export async function deleteGiftCard(id) {
         const { data, error } = await supabase
             .from('coupons')
             .update({
-                status: 'expired',
+                status: 'deleted',
                 updated_at: new Date().toISOString()
             })
-            .eq('id', id)
-            .select()
-            .single();
+            .eq('status', 'expired')
+            .select();
 
         if (error) {
-            console.error('Error deleting gift card:', error);
+            console.error('Error bulk deleting gift cards:', error);
             return { success: false, error: error.message };
         }
 
-        // Revalidate the gift cards list page
         revalidatePath('/admin/giftcards');
-
-        return { success: true, data };
+        return { success: true, deletedCount: data?.length || 0 };
     } catch (error) {
         console.error('Server error:', error);
-        return { success: false, error: 'Failed to delete gift card' };
+        return { success: false, error: 'Failed to bulk delete gift cards' };
     }
 }
 
@@ -352,10 +418,11 @@ export async function getGiftCardStats() {
 
         const supabase = createAdminClient();
 
-        // Get total count
+        // Get total count (excluding 'deleted')
         const { count: totalCount } = await supabase
             .from('coupons')
-            .select('*', { count: 'exact', head: true });
+            .select('*', { count: 'exact', head: true })
+            .neq('status', 'deleted');
 
         // Get active count
         const { count: activeCount } = await supabase

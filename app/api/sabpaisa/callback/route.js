@@ -314,8 +314,28 @@ export async function POST(request) {
                             reference_id: groupId,
                             reference_type: 'shopping_order'
                         });
+
+                        // Notify all admins of the new order
+                        const { data: adminProfiles } = await supabaseAdmin
+                            .from('user_profiles')
+                            .select('id')
+                            .eq('role', 'admin');
+
+                        if (adminProfiles && adminProfiles.length > 0) {
+                            const adminNotifs = adminProfiles.map((ap) => ({
+                                user_id: ap.id,
+                                title: 'New Platform Order 🛍️',
+                                body: `A new shopping order of ₹${amount} has been placed (ID: ${groupId.slice(0, 8).toUpperCase()}).`,
+                                type: 'info',
+                                reference_id: groupId,
+                                reference_type: 'shopping_order'
+                            }));
+
+                            await supabaseAdmin.from('notifications').insert(adminNotifs);
+                        }
+
                     } catch (notificationError) {
-                        console.error('[Callback] Failed to insert customer notification segment:', notificationError.message);
+                        console.error('[Callback] Failed to insert notifications:', notificationError.message);
                     }
                 }
             } catch (cartError) {

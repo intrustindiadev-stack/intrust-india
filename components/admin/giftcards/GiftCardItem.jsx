@@ -8,6 +8,7 @@ export default function GiftCardItem({ card, onEdit, onDelete, deleteLoading }) 
     const [confirmDelete, setConfirmDelete] = useState(false);
     const isAvailable = card.status === 'available';
     const isSold = card.status === 'sold';
+    const isExpired = card.status === 'expired';
 
     useEffect(() => {
         let timer;
@@ -93,7 +94,7 @@ export default function GiftCardItem({ card, onEdit, onDelete, deleteLoading }) 
                                 ) : (
                                     <Check size={14} strokeWidth={3} />
                                 )}
-                                Confirm
+                                {isExpired ? 'Delete Forever' : 'Confirm'}
                             </button>
                             <button
                                 onClick={() => setConfirmDelete(false)}
@@ -114,8 +115,12 @@ export default function GiftCardItem({ card, onEdit, onDelete, deleteLoading }) 
                             </button>
                             <button
                                 onClick={() => setConfirmDelete(true)}
-                                className="p-2 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-all border border-slate-100 hover:border-red-100 shadow-sm"
-                                title="Delete Card"
+                                className={`p-2 bg-slate-50 text-slate-400 rounded-xl transition-all border shadow-sm ${
+                                    isExpired 
+                                    ? 'hover:bg-red-100 hover:text-red-600 border-slate-100 hover:border-red-200' 
+                                    : 'hover:bg-red-50 hover:text-red-500 border-slate-100 hover:border-red-100'
+                                }`}
+                                title={isExpired ? "Permanently Delete Card" : "Delete Card"}
                             >
                                 <Trash2 size={16} strokeWidth={2.5} />
                             </button>

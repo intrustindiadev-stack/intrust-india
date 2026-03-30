@@ -15,6 +15,7 @@ export default async function ProductDetailPage({ params }) {
             shopping_categories(name, color_primary, color_secondary)
         `)
         .eq('id', productId)
+        .is('deleted_at', null)
         .single();
 
     if (productError || !product) {
@@ -70,6 +71,7 @@ export default async function ProductDetailPage({ params }) {
             .select('*')
             .eq('is_active', true)
             .gt('admin_stock', 0)
+            .is('deleted_at', null)
             .ilike('category', product.category)
             .neq('id', productId)
             .limit(8);

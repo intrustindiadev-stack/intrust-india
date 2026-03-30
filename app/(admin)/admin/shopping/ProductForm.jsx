@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Loader2, Plus, ArrowRight, Package, Upload, Save } from 'lucide-react';
+import { Loader2, Plus, ArrowRight, Package, Upload, Save, Trash2 } from 'lucide-react';
 import MultiImageUploader from '@/components/shared/MultiImageUploader';
 import { uploadProductImage } from './upload-product-image';
 
 export default function ProductForm({ initialData = null }) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
     const [categories, setCategories] = useState([]);
     const [formData, setFormData] = useState({
         title: initialData?.title || '',
@@ -101,6 +103,27 @@ export default function ProductForm({ initialData = null }) {
             toast.error(error.message || 'Failed to save product');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!initialData?.id) return;
+        setConfirmDelete(false);
+        setDeleting(true);
+        try {
+            const res = await fetch(`/api/admin/shopping/products?id=${initialData.id}`, {
+                method: 'DELETE',
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || 'Failed to delete product');
+            toast.success('Product deleted successfully');
+            router.push('/admin/shopping');
+            router.refresh();
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            toast.error(error.message || 'Failed to delete product');
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -292,22 +315,60 @@ export default function ProductForm({ initialData = null }) {
                 </div>
             </div>
 
-            <div className="flex items-center justify-end gap-4 pt-6 border-t border-slate-200">
-                <button
-                    type="button"
-                    onClick={() => router.back()}
-                    className="px-6 py-2.5 rounded-xl text-slate-600 font-bold hover:bg-slate-100 transition-all border border-slate-200"
-                >
-                    Cancel
-                </button>
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-xl font-bold transition-all disabled:opacity-50 shadow-lg shadow-blue-600/20"
-                >
-                    {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <Save className="w-5 h-5" />}
-                    <span>{initialData ? 'Update Product' : 'Create Product'}</span>
-                </button>
+            <div className="flex items-center justify-between gap-4 pt-6 border-t border-slate-200">
+                {/* Delete — only in edit mode */}
+                {initialData?.id ? (
+                    <div className="flex items-center gap-2">
+                        {confirmDelete ? (
+                            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-2">
+                                <span className="text-sm font-bold text-red-600">Delete this product?</span>
+                                <button
+                                    type="button"
+                                    onClick={handleDelete}
+                                    disabled={deleting}
+                                    className="inline-flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white text-xs font-black px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+                                >
+                                    {deleting ? <Loader2 size={12} className="animate-spin" /> : null}
+                                    Yes, Delete
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirmDelete(false)}
+                                    className="text-xs font-bold text-slate-500 hover:text-slate-800 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setConfirmDelete(true)}
+                                className="inline-flex items-center gap-2 text-red-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
+                            >
+                                <Trash2 size={15} />
+                                Delete Product
+                            </button>
+                        )}
+                    </div>
+                ) : <div />}
+
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => router.back()}
+                        className="px-6 py-2.5 rounded-xl text-slate-600 font-bold hover:bg-slate-100 transition-all border border-slate-200"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-xl font-bold transition-all disabled:opacity-50 shadow-lg shadow-blue-600/20"
+                    >
+                        {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <Save className="w-5 h-5" />}
+                        <span>{initialData ? 'Update Product' : 'Create Product'}</span>
+                    </button>
+                </div>
             </div>
         </form>
     );

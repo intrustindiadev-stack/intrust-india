@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createMultipleGiftCards } from '../actions';
 import { uploadGiftCardImage } from '../upload-image';
 import { ArrowLeft, Save, Loader2, Upload, X, Image as ImageIcon, Wand2, Trash2 } from 'lucide-react';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import Link from 'next/link';
 
 const CATEGORIES = [
@@ -192,7 +192,6 @@ export default function NewGiftCardPage() {
 
     return (
         <div className="max-w-4xl space-y-6">
-            <Toaster position="top-right" />
             {/* Header */}
             <div className="flex items-start sm:items-center gap-4">
                 <Link

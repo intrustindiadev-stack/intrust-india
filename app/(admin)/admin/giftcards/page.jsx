@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAllGiftCards, deleteGiftCard } from './actions';
-import { Plus, Search, Package, TrendingUp, Gift } from 'lucide-react';
+import { getAllGiftCards, deleteGiftCard, bulkDeleteExpiredGiftCards } from './actions';
+import { Plus, Search, Package, TrendingUp, Gift, Trash2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import EditGiftCardModal from './EditGiftCardModal';
 import GiftCardItem from '@/components/admin/giftcards/GiftCardItem';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 export default function GiftCardsListPage() {
     const router = useRouter();
@@ -18,6 +18,7 @@ export default function GiftCardsListPage() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [deleteLoading, setDeleteLoading] = useState(null);
+    const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
 
     // Edit Modal State
     const [selectedCard, setSelectedCard] = useState(null);
@@ -72,13 +73,32 @@ export default function GiftCardsListPage() {
         const result = await deleteGiftCard(id);
 
         if (result.success) {
-            toast.success('Gift card deleted (expired)!');
+            if (result.type === 'perma-deleted') {
+                toast.success('Gift card permanently deleted!');
+            } else {
+                toast.success('Gift card marked as expired!');
+            }
             await loadGiftCards();
         } else {
             toast.error('Failed to delete gift card: ' + result.error);
         }
 
         setDeleteLoading(null);
+    }
+
+    async function handleBulkDelete() {
+        if (!confirm('Are you sure you want to permanently delete ALL expired gift cards? This action cannot be undone.')) return;
+
+        setBulkDeleteLoading(true);
+        const result = await bulkDeleteExpiredGiftCards();
+
+        if (result.success) {
+            toast.success(`Successfully deleted ${result.deletedCount} expired gift card(s)!`);
+            await loadGiftCards();
+        } else {
+            toast.error('Failed to bulk delete: ' + result.error);
+        }
+        setBulkDeleteLoading(false);
     }
 
     function handleEditClick(card) {
@@ -118,7 +138,6 @@ export default function GiftCardsListPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto font-[family-name:var(--font-outfit)] space-y-8">
-            <Toaster position="top-right" />
 
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -163,9 +182,9 @@ export default function GiftCardsListPage() {
                     </div>
                 </div>
 
-                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group">
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group flex flex-col justify-between">
                     <div className="absolute -right-6 -top-6 w-24 h-24 bg-red-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
-                    <div className="relative flex items-center justify-between">
+                    <div className="relative flex items-center justify-between z-10">
                         <div>
                             <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Expired</p>
                             <p className="text-4xl font-extrabold text-red-500">{stats.expired}</p>
@@ -174,6 +193,22 @@ export default function GiftCardsListPage() {
                             <Gift className="text-red-500" size={28} strokeWidth={2.5} />
                         </div>
                     </div>
+                    {stats.expired > 0 && (
+                        <div className="relative z-10 mt-4 pt-4 border-t border-slate-100">
+                            <button
+                                onClick={handleBulkDelete}
+                                disabled={bulkDeleteLoading}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-bold transition-colors disabled:opacity-50"
+                            >
+                                {bulkDeleteLoading ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                    <Trash2 size={16} />
+                                )}
+                                {bulkDeleteLoading ? 'Deleting...' : 'Delete All Expired'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 

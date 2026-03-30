@@ -20,11 +20,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion } from "framer-motion";
-import { cancelOrderAction } from "./actions";
 
 const OrderDetailsClient = ({ order, userId }) => {
   const router = useRouter();
-  const [isCancelling, setIsCancelling] = React.useState(false);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -42,24 +40,6 @@ const OrderDetailsClient = ({ order, userId }) => {
   const currentStepIndex = steps.findIndex(s => s.key === status);
   const isCancelled = status === 'cancelled';
 
-  const handleCancelOrder = async () => {
-    if (!window.confirm("Are you sure you want to cancel this order? This action cannot be undone.")) return;
-    
-    setIsCancelling(true);
-    try {
-        const res = await cancelOrderAction(order.id);
-        if (res.success) {
-            alert(res.refunded ? "Order cancelled successfully. Refund initiated to your wallet/store credit." : "Order cancelled successfully.");
-            router.refresh();
-        } else {
-            alert(res.message || "Failed to cancel order.");
-        }
-    } catch (err) {
-        alert("An error occurred while cancelling the order.");
-    } finally {
-        setIsCancelling(false);
-    }
-  };
 
   // Bill summary
   const billDetails = items.reduce((acc, item) => {
@@ -104,7 +84,7 @@ const OrderDetailsClient = ({ order, userId }) => {
               <AlertCircle size={24} />
               <div>
                 <h3 className="font-black text-lg">Order Cancelled</h3>
-                <p className="text-xs opacity-80">This order was cancelled. Refunds are usually processed within 5-7 working days.</p>
+                <p className="text-xs opacity-80">This order was cancelled. Please contact support if you have any questions.</p>
               </div>
             </div>
           ) : (
@@ -331,20 +311,12 @@ const OrderDetailsClient = ({ order, userId }) => {
               <Download size={14} /> Download Invoice
             </Link>
             
-            {(status === 'pending' || status === 'packed') ? (
-              <button 
-                onClick={handleCancelOrder}
-                disabled={isCancelling}
-                className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${isDark ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-red-50 text-red-600 hover:bg-red-100'} ${isCancelling ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <HelpCircle size={14} /> {isCancelling ? 'Cancelling...' : 'Cancel Order'}
-              </button>
-            ) : (!isCancelled && status !== 'failed') && (
+            {!isCancelled && status !== 'failed' && (
               <Link 
                 href="/contact"
                 className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${isDark ? 'bg-white/[0.04] hover:bg-white/[0.08]' : 'bg-slate-50 hover:bg-slate-100'}`}
               >
-                <HelpCircle size={14} /> Support
+                <HelpCircle size={14} /> Contact Support to Cancel
               </Link>
             )}
           </div>

@@ -24,6 +24,7 @@ export default async function AdminShoppingPage() {
                 merchants (id, business_name)
             )
         `)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
     if (error) console.error('Error fetching products:', error);

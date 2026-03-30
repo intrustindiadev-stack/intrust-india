@@ -39,6 +39,7 @@ export default async function CategoryStorefrontPage({ params }) {
             .select('*')
             .eq('is_active', true)
             .gt('admin_stock', 0)
+            .is('deleted_at', null)
             .ilike('category', category)
     ]);
 

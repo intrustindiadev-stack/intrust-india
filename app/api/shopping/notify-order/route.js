@@ -50,6 +50,28 @@ export async function POST(request) {
             console.error('[Notify Order] Failed to insert notification:', notifyError.message);
         }
 
+        // Notify all admins of the new order
+        const { data: adminProfiles } = await admin
+            .from('user_profiles')
+            .select('id')
+            .eq('role', 'admin');
+
+        if (adminProfiles && adminProfiles.length > 0) {
+            const adminNotifs = adminProfiles.map((ap) => ({
+                user_id: ap.id,
+                title: 'New Platform Order 🛍️',
+                body: `A new shopping order of ₹${formattedAmount} has been placed (ID: ${group_id.slice(0, 8).toUpperCase()}).`,
+                type: 'info',
+                reference_id: group_id,
+                reference_type: 'shopping_order'
+            }));
+
+            const { error: adminNotifyErr } = await admin.from('notifications').insert(adminNotifs);
+            if (adminNotifyErr) {
+                console.error('[Notify Order] Failed to notify admins:', adminNotifyErr.message);
+            }
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('[Notify Order] Server Error:', error);

@@ -36,10 +36,7 @@ export async function cancelOrderAction(orderId) {
         if (order.status === 'failed' || order.status === 'cancelled') {
             return { success: false, message: "This order has already been cancelled." };
         }
-        // Only refund if the order was actually PAID (status = 'completed')
-        // Gateway-drafted orders (status='pending') have no payment made yet
-        const wasPaid = order.status === 'completed';
-        const shouldRefundWallet = wasPaid && (order.payment_method === 'wallet' || order.payment_method === 'store_credit');
+        // Wallet refund on cancellation is intentionally disabled.
 
         // 2. Update order status atomically via admin client
         const { error: updateError } = await adminClient
@@ -68,23 +65,9 @@ export async function cancelOrderAction(orderId) {
             }
         }
 
-        // 3. Only refund wallet if payment was actually fulfilled
-        if (shouldRefundWallet) {
-            try {
-                await CustomerWalletService.creditWallet(
-                    user.id,
-                    order.total_amount_paise / 100,
-                    'REFUND',
-                    `Refund for cancelled order ${orderId.slice(0, 8).toUpperCase()}`,
-                    { id: orderId, type: 'SHOPPING_ORDER_CANCEL' }
-                );
-            } catch (refundErr) {
-                console.error("[cancelOrder] Wallet refund failed after cancel:", refundErr);
-                // Order is cancelled - log for manual reconciliation but don't fail the response
-            }
-        }
+        // Wallet refund on cancellation is disabled.
 
-        return { success: true, refunded: shouldRefundWallet };
+        return { success: true };
     } catch (err) {
         console.error("[cancelOrder] Unexpected error:", err);
         return { success: false, message: err.message || "An unexpected error occurred" };

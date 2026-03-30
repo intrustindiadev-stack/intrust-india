@@ -29,6 +29,7 @@ export default async function WholesaleHubPage() {
         .select('*')
         .eq('is_active', true)
         .gt('admin_stock', 0)
+        .is('deleted_at', null)
         .order('title');
 
     if (productsError) console.error('Error fetching wholesale products:', productsError);

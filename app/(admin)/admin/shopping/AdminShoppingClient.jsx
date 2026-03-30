@@ -6,7 +6,7 @@ import {
     ShoppingBag, Plus, Package, TrendingUp, DollarSign,
     ChevronRight, Tags, ClipboardList, Store, Edit,
     ToggleLeft, ToggleRight, Search, Filter, Clock,
-    CheckCircle2, AlertTriangle
+    CheckCircle2, AlertTriangle, Trash2
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
@@ -22,6 +22,8 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
     const [categoryFilter, setCategoryFilter] = useState("all");
     const [stockEdits, setStockEdits] = useState({});
     const [savingStock, setSavingStock] = useState(new Set());
+    const [deletingId, setDeletingId] = useState(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     // REALTIME SUBSCRIPTION
     useEffect(() => {
@@ -31,7 +33,12 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                 if (payload.eventType === 'INSERT') {
                     setLocalProducts(prev => [payload.new, ...prev]);
                 } else if (payload.eventType === 'UPDATE') {
-                    setLocalProducts(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p));
+                    if (payload.new.deleted_at) {
+                        // Soft-deleted — remove from list
+                        setLocalProducts(prev => prev.filter(p => p.id !== payload.new.id));
+                    } else {
+                        setLocalProducts(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p));
+                    }
                 } else if (payload.eventType === 'DELETE') {
                     setLocalProducts(prev => prev.filter(p => p.id === payload.old.id));
                 }
@@ -111,6 +118,28 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                 next.delete(productId);
                 return next;
             });
+        }
+    };
+
+    const handleDeleteProduct = async (productId) => {
+        setConfirmDeleteId(null);
+        setDeletingId(productId);
+        try {
+            const res = await fetch(`/api/admin/shopping/products?id=${productId}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to delete product');
+            }
+            // Optimistically remove from list (realtime will also handle it)
+            setLocalProducts(prev => prev.filter(p => p.id !== productId));
+            toast.success('Product deleted');
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message || 'Failed to delete product');
+        } finally {
+            setDeletingId(null);
         }
     };
 
@@ -347,9 +376,41 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                                     </div>
                                 </div>
 
-                                <Link href={`/admin/shopping/edit/${product.id}`} className="p-2.5 rounded-full bg-slate-50 text-slate-300 hover:bg-blue-600 hover:text-white transition-all shrink-0">
-                                    <Edit size={14} />
-                                </Link>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <Link href={`/admin/shopping/edit/${product.id}`} className="p-2.5 rounded-full bg-slate-50 text-slate-300 hover:bg-blue-600 hover:text-white transition-all">
+                                        <Edit size={14} />
+                                    </Link>
+
+                                    {confirmDeleteId === product.id ? (
+                                        <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-full px-3 py-1.5">
+                                            <span className="text-[10px] font-black text-red-600 uppercase tracking-wide whitespace-nowrap">Delete?</span>
+                                            <button
+                                                onClick={() => handleDeleteProduct(product.id)}
+                                                className="text-[10px] font-black text-white bg-red-500 hover:bg-red-600 px-2 py-0.5 rounded-full transition-colors"
+                                            >
+                                                Yes
+                                            </button>
+                                            <button
+                                                onClick={() => setConfirmDeleteId(null)}
+                                                className="text-[10px] font-black text-slate-500 hover:text-slate-800 px-1 transition-colors"
+                                            >
+                                                No
+                                            </button>
+                                        </div>
+                                    ) : deletingId === product.id ? (
+                                        <div className="p-2.5 rounded-full bg-red-50">
+                                            <div className="w-3.5 h-3.5 rounded-full border-2 border-red-200 border-t-red-500 animate-spin" />
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setConfirmDeleteId(product.id)}
+                                            className="p-2.5 rounded-full bg-slate-50 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-all"
+                                            title="Delete product"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         );
                     })
