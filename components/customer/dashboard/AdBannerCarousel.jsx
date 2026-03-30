@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Gift, Users, Crown, Zap } from 'lucide-react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
 
 const banners = [
     {
@@ -79,8 +80,36 @@ export default function AdBannerCarousel() {
     const [[page, direction], setPage] = useState([0, 0]);
     const [isHovered, setIsHovered] = useState(false);
     const [hasInteracted, setHasInteracted] = useState(false);
+    const [dynamicBanners, setDynamicBanners] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const currentIndex = ((page % banners.length) + banners.length) % banners.length;
+    useEffect(() => {
+        const fetchBanners = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('platform_banners')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('sort_order', { ascending: true })
+                    .order('created_at', { ascending: false });
+
+                if (!error && data) {
+                    setDynamicBanners(data);
+                }
+            } catch (err) {
+                console.error("Error fetching dynamic banners:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchBanners();
+    }, []);
+
+    // Use dynamic banners if available, else static
+    const activeBanners = dynamicBanners.length > 0 ? dynamicBanners : banners;
+
+    const currentIndex = ((page % activeBanners.length) + activeBanners.length) % activeBanners.length;
 
     const paginate = useCallback((newDirection) => {
         setPage(([prev]) => [prev + newDirection, newDirection]);
@@ -95,8 +124,11 @@ export default function AdBannerCarousel() {
         return () => clearInterval(timer);
     }, [isHovered, paginate]);
 
-    const banner = banners[currentIndex];
-    const IconComponent = banner.icon;
+    const banner = activeBanners[currentIndex];
+    const isDynamic = dynamicBanners.length > 0;
+    const IconComponent = !isDynamic ? banner.icon : null;
+
+    if (loading) return null; // or a skeleton
 
     return (
         <div
@@ -132,47 +164,61 @@ export default function AdBannerCarousel() {
                         className="relative cursor-grab active:cursor-grabbing"
                         style={{ background: banner.bg, touchAction: 'pan-y' }}
                     >
-                        {/* Decorative Elements */}
-                        <div className="absolute top-0 right-0 w-40 h-40 sm:w-64 sm:h-64 rounded-full opacity-20 blur-3xl pointer-events-none"
-                            style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)' }}
-                        />
-                        <div className="absolute bottom-0 left-0 w-32 h-32 sm:w-48 sm:h-48 rounded-full opacity-10 blur-2xl pointer-events-none"
-                            style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%)' }}
-                        />
+                        {isDynamic ? (
+                            // Dynamic Image Render
+                            <Link href={banner.target_url || '#'} className="block w-full min-h-[140px] sm:min-h-[200px] relative">
+                                <img
+                                    src={banner.image_url}
+                                    alt={banner.title}
+                                    className="absolute inset-0 w-full h-full object-cover"
+                                />
+                            </Link>
+                        ) : (
+                            // Static Render
+                            <>
+                                {/* Decorative Elements */}
+                                <div className="absolute top-0 right-0 w-40 h-40 sm:w-64 sm:h-64 rounded-full opacity-20 blur-3xl pointer-events-none"
+                                    style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)' }}
+                                />
+                                <div className="absolute bottom-0 left-0 w-32 h-32 sm:w-48 sm:h-48 rounded-full opacity-10 blur-2xl pointer-events-none"
+                                    style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%)' }}
+                                />
 
-                        {/* Floating shapes */}
-                        <div className="absolute top-4 right-8 w-2 h-2 bg-white/20 rounded-full animate-pulse" />
-                        <div className="absolute top-12 right-16 w-1.5 h-1.5 bg-white/15 rounded-full animate-pulse delay-300" />
-                        <div className="absolute bottom-8 right-12 w-3 h-3 bg-white/10 rounded-full animate-pulse delay-700" />
+                                {/* Floating shapes */}
+                                <div className="absolute top-4 right-8 w-2 h-2 bg-white/20 rounded-full animate-pulse" />
+                                <div className="absolute top-12 right-16 w-1.5 h-1.5 bg-white/15 rounded-full animate-pulse delay-300" />
+                                <div className="absolute bottom-8 right-12 w-3 h-3 bg-white/10 rounded-full animate-pulse delay-700" />
 
-                        {/* Content */}
-                        <div className="relative z-10 flex items-center justify-between p-4 sm:p-8 lg:p-10 min-h-[140px] sm:min-h-[200px]">
-                            <div className="flex-1 pr-2 sm:pr-4">
-                                <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
-                                    <span className="text-[9px] sm:text-xs font-bold uppercase tracking-[0.15em] text-white/80 bg-white/10 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full backdrop-blur-sm">
-                                        {banner.subtitle}
-                                    </span>
+                                {/* Content */}
+                                <div className="relative z-10 flex items-center justify-between p-4 sm:p-8 lg:p-10 min-h-[140px] sm:min-h-[200px]">
+                                    <div className="flex-1 pr-2 sm:pr-4">
+                                        <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+                                            <span className="text-[9px] sm:text-xs font-bold uppercase tracking-[0.15em] text-white/80 bg-white/10 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full backdrop-blur-sm">
+                                                {banner.subtitle}
+                                            </span>
+                                        </div>
+                                        <h3 className="text-lg sm:text-3xl lg:text-4xl font-black text-white mb-1 sm:mb-2 tracking-tight leading-tight">
+                                            {banner.title}
+                                        </h3>
+                                        <p className="text-white/70 text-[11px] sm:text-sm lg:text-base mb-2.5 sm:mb-5 max-w-md leading-relaxed line-clamp-2">
+                                            {banner.description}
+                                        </p>
+                                        <Link
+                                            href={banner.href}
+                                            className="inline-flex items-center gap-1.5 sm:gap-2 bg-white/20 hover:bg-white/30 active:bg-white/40 backdrop-blur-md text-white text-[11px] sm:text-sm font-bold py-2 px-4 sm:py-3 sm:px-6 rounded-lg sm:rounded-xl transition-all duration-200 border border-white/20 shadow-lg"
+                                        >
+                                            {banner.cta}
+                                            <ChevronRight size={12} className="sm:w-3.5 sm:h-3.5" />
+                                        </Link>
+                                    </div>
+
+                                    {/* Icon — visible on all sizes */}
+                                    <div className={`flex items-center justify-center w-12 h-12 sm:w-20 sm:h-20 lg:w-28 lg:h-28 rounded-xl sm:rounded-2xl lg:rounded-3xl ${banner.iconBg} backdrop-blur-sm border border-white/10 shadow-2xl flex-shrink-0`}>
+                                        <IconComponent className="w-6 h-6 sm:w-10 sm:h-10 lg:w-14 lg:h-14 text-white/90" strokeWidth={1.5} />
+                                    </div>
                                 </div>
-                                <h3 className="text-lg sm:text-3xl lg:text-4xl font-black text-white mb-1 sm:mb-2 tracking-tight leading-tight">
-                                    {banner.title}
-                                </h3>
-                                <p className="text-white/70 text-[11px] sm:text-sm lg:text-base mb-2.5 sm:mb-5 max-w-md leading-relaxed line-clamp-2">
-                                    {banner.description}
-                                </p>
-                                <Link
-                                    href={banner.href}
-                                    className="inline-flex items-center gap-1.5 sm:gap-2 bg-white/20 hover:bg-white/30 active:bg-white/40 backdrop-blur-md text-white text-[11px] sm:text-sm font-bold py-2 px-4 sm:py-3 sm:px-6 rounded-lg sm:rounded-xl transition-all duration-200 border border-white/20 shadow-lg"
-                                >
-                                    {banner.cta}
-                                    <ChevronRight size={12} className="sm:w-3.5 sm:h-3.5" />
-                                </Link>
-                            </div>
-
-                            {/* Icon — visible on all sizes */}
-                            <div className={`flex items-center justify-center w-12 h-12 sm:w-20 sm:h-20 lg:w-28 lg:h-28 rounded-xl sm:rounded-2xl lg:rounded-3xl ${banner.iconBg} backdrop-blur-sm border border-white/10 shadow-2xl flex-shrink-0`}>
-                                <IconComponent className="w-6 h-6 sm:w-10 sm:h-10 lg:w-14 lg:h-14 text-white/90" strokeWidth={1.5} />
-                            </div>
-                        </div>
+                            </>
+                        )}
                     </motion.div>
                 </AnimatePresence>
 
@@ -195,7 +241,7 @@ export default function AdBannerCarousel() {
 
             {/* Dots Indicator */}
             <div className="flex items-center justify-center gap-1.5 sm:gap-2 mt-2.5 sm:mt-4">
-                {banners.map((_, index) => (
+                {activeBanners.map((_, index) => (
                     <button
                         key={index}
                         onClick={() => {
@@ -204,8 +250,8 @@ export default function AdBannerCarousel() {
                             setPage([index, newDirection]);
                         }}
                         className={`transition-all duration-300 rounded-full ${index === currentIndex
-                                ? 'w-5 sm:w-8 h-[6px] sm:h-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 shadow-sm shadow-indigo-500/30'
-                                : 'w-[6px] sm:w-2.5 h-[6px] sm:h-2.5 bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500'
+                            ? 'w-5 sm:w-8 h-[6px] sm:h-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 shadow-sm shadow-indigo-500/30'
+                            : 'w-[6px] sm:w-2.5 h-[6px] sm:h-2.5 bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500'
                             }`}
                         aria-label={`Go to banner ${index + 1}`}
                     />
