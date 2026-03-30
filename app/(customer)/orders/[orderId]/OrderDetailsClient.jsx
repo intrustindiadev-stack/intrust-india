@@ -20,8 +20,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion } from "framer-motion";
+import { generateOrderInvoice } from "@/lib/invoiceGenerator";
 
-const OrderDetailsClient = ({ order, userId }) => {
+const OrderDetailsClient = ({ order, userId, customerProfile }) => {
   const router = useRouter();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -303,15 +304,46 @@ const OrderDetailsClient = ({ order, userId }) => {
           )}
 
           <div className="mt-8 flex gap-3">
-            <Link 
-              href={`/orders/${order.id}/invoice`} 
-              target="_blank"
+            <button 
+              onClick={() => {
+                const items = order.shopping_order_items || [];
+                const merchant = items[0]?.merchants;
+                generateOrderInvoice({
+                  order: order,
+                  items: items,
+                  seller: order.is_platform_order
+                    ? {
+                        name: 'Intrust Financial Services (India) Pvt. Ltd.',
+                        address: 'TF-312/MM09, Ashima Mall, Narmadapuram Rd, Danish Naga, Bhopal, MP 462026',
+                        phone: '18002030052',
+                        gstin: '23AAFC14866A1ZV',
+                      }
+                    : {
+                        name: merchant?.business_name || 'Merchant',
+                        address: merchant?.business_address || '',
+                        phone: merchant?.business_phone || '',
+                        gstin: merchant?.gst_number || 'Unregistered',
+                      },
+                  customer: {
+                    name: customerProfile?.full_name || order.customer_name || 'Customer',
+                    phone: customerProfile?.phone || order.customer_phone || '',
+                    address: order.delivery_address || '',
+                  },
+                  type: 'shopping',
+                });
+              }}
               className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${isDark ? 'bg-white/[0.04] hover:bg-white/[0.08]' : 'bg-slate-50 hover:bg-slate-100'}`}
             >
               <Download size={14} /> Download Invoice
-            </Link>
-            
-            {!isCancelled && status !== 'failed' && (
+            </button>
+            {status === 'pending' ? (
+              <Link 
+                href="/contact"
+                className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${isDark ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}
+              >
+                <HelpCircle size={14} /> Contact to Cancel
+              </Link>
+            ) : (
               <Link 
                 href="/contact"
                 className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${isDark ? 'bg-white/[0.04] hover:bg-white/[0.08]' : 'bg-slate-50 hover:bg-slate-100'}`}

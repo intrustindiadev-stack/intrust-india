@@ -18,7 +18,7 @@ export default async function OrderDetailsPage({ params }) {
             shopping_order_items (
                 *,
                 shopping_products (title, image_url, mrp_paise, suggested_retail_price_paise),
-                merchants (business_name, business_address, business_phone)
+                merchants (business_name, business_address, business_phone, gst_number)
             )
         `)
         .eq("id", orderId)
@@ -41,7 +41,7 @@ export default async function OrderDetailsPage({ params }) {
         <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#080a10]">
             <Navbar customer={customerProfile} />
             <main>
-                <OrderDetailsClient order={order} userId={user.id} />
+                <OrderDetailsClient order={order} userId={user.id} customerProfile={customerProfile} />
             </main>
             <CustomerBottomNav />
         </div>

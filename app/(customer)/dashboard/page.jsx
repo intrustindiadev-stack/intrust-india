@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import {
     Wallet, Package, TrendingUp, Gift, Heart, Star,
-    Smartphone, Zap, Tv, Store, CreditCard, ScanLine, Grid,
+    Smartphone, ShoppingCart, Tv, Store, CreditCard, ScanLine, Grid,
     CheckCircle, Clock, ChevronRight, Check, Lock, Calendar, AlertCircle, X, Shield, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -435,7 +435,7 @@ export default function CustomerDashboardPage() {
 
     const quickServices = [
         { id: 1, label: 'Gift Cards', icon: Gift, color: 'text-purple-600 bg-purple-50', href: '/gift-cards' },
-        { id: 2, label: 'Electricity', icon: Zap, color: 'text-amber-600 bg-amber-50', href: '/coming-soon' },
+        { id: 2, label: 'Shopping', icon: ShoppingCart, color: 'text-amber-600 bg-amber-50', href: '/shop' },
         { id: 3, label: 'Fastag', icon: CreditCard, color: 'text-emerald-600 bg-emerald-50', href: '/coming-soon' },
         { id: 4, label: 'Rent Pay', icon: Store, color: 'text-indigo-600 bg-indigo-50', href: '/coming-soon' },
         { id: 5, label: 'Scan & Pay', icon: ScanLine, color: 'text-rose-600 bg-rose-50', href: '/coming-soon' },
@@ -501,10 +501,10 @@ export default function CustomerDashboardPage() {
                             )}
 
                             <QuickServices services={quickServices} />
-                            
+
                             {/* Insert shopping orders before generic activity */}
                             <RecentShoppingOrders userId={user?.id} />
-                            
+
                             <RecentActivity orders={recentActivity} />
 
                             {/* KYC Banner */}

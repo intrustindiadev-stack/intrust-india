@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import StoreCreditRequestsTab from "./StoreCreditRequestsTab";
+import { generateOrderInvoice } from "@/lib/invoiceGenerator";
 
 const STATUS_CONFIG = {
     pending: { label: "Pending", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20 dark:border-amber-500/30", icon: Clock },
@@ -24,7 +25,7 @@ const STATUS_CONFIG = {
 
 const STATUS_FLOW = ["pending", "packed", "shipped", "delivered"];
 
-const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, onToggle, isCancelled }) => {
+const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, onToggle, isCancelled, merchantInfo }) => {
     const orderGrossProfit = (order.items || []).reduce((s, i) => s + (i.gross_profit_paise || 0), 0);
     const orderCommission = (order.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0);
     const orderNetProfit = (order.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0);
@@ -189,13 +190,33 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                         <span>Ready for next stage</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <Link
-                                            href={`/orders/${order.id}/invoice`}
-                                            target="_blank"
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                generateOrderInvoice({
+                                                    order: {
+                                                        ...order,
+                                                        delivery_fee_paise: order.delivery_fee_paise || 0,
+                                                    },
+                                                    items: order.items || [],
+                                                    seller: {
+                                                        name: merchantInfo?.business_name || 'Merchant Store',
+                                                        address: merchantInfo?.business_address || '',
+                                                        phone: merchantInfo?.business_phone || '',
+                                                        gstin: merchantInfo?.gst_number || 'Unregistered',
+                                                    },
+                                                    customer: {
+                                                        name: order.customer_name || 'Customer',
+                                                        phone: order.customer_phone || '',
+                                                        address: order.delivery_address || '',
+                                                    },
+                                                    type: 'shopping',
+                                                });
+                                            }}
                                             className="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-gray-300 text-xs font-black transition-all flex items-center gap-2 tracking-wide"
                                         >
                                             <Download size={14} /> PDF INVOICE
-                                        </Link>
+                                        </button>
                                         {nextStatus && (
                                             <button
                                                 onClick={() => onUpdate(order.id, nextStatus)}
@@ -217,7 +238,7 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
     );
 };
 
-export default function MerchantOrdersClient({ orders: initialOrders, stats, merchantId }) {
+export default function MerchantOrdersClient({ orders: initialOrders, stats, merchantId, merchantInfo }) {
     const supabase = createClient();
     const [orders, setOrders] = useState(initialOrders);
     const [filter, setFilter] = useState("all");
@@ -408,6 +429,7 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                                 isCancelled={order.delivery_status === "cancelled"}
                                 onUpdate={updateStatus}
                                 onToggle={() => setExpandedId(expandedId === order.id ? null : order.id)}
+                                merchantInfo={merchantInfo}
                             />
                         ))}
                     </div>

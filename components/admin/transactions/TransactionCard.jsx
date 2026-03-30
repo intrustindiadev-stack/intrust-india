@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, XCircle, Layers, Download } from 'lucide-react';
-import { generateInvoice } from '@/lib/invoiceGenerator';
+import { generateOrderInvoice } from '@/lib/invoiceGenerator';
 
 export default function TransactionCard({ txn }) {
     const isCredit = txn.type === 'Credit';
@@ -14,12 +14,34 @@ export default function TransactionCard({ txn }) {
         'Gift Card Order': 'bg-sky-50 text-sky-600 border-sky-200',
         'Wallet': 'bg-amber-50 text-amber-600 border-amber-200',
         'Merchant Wallet': 'bg-teal-50 text-teal-600 border-teal-200',
+        'Udhari Settlement': 'bg-rose-50 text-rose-600 border-rose-200',
     };
 
-    const handleDownload = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        generateInvoice(txn);
+    const handleDownloadReceipt = () => {
+        generateOrderInvoice({
+            order: {
+                id: txn.rawId || txn.id || 'TXN',
+                created_at: txn.dateRaw || new Date().toISOString(),
+                customer_name: txn.user || 'Customer',
+                faceValue: 0,
+                paidAmount: txn.amountRaw || 0,
+                brand: txn.source === 'Gift Card Order' ? 'Gift Card' : txn.description || 'Transaction',
+                giftcard_name: txn.description || 'Transaction',
+            },
+            items: [],
+            seller: {
+                name: 'Intrust Financial Services (India) Pvt. Ltd.',
+                address: 'TF-312/MM09, Ashima Mall, Narmadapuram Rd, Danish Naga, Bhopal, MP 462026',
+                phone: '18002030052',
+                gstin: '23AAFC14866A1ZV',
+            },
+            customer: {
+                name: txn.user || 'Customer',
+                phone: '',
+                address: '',
+            },
+            type: 'giftcard',
+        });
     };
 
     return (
@@ -92,18 +114,18 @@ export default function TransactionCard({ txn }) {
             {/* Footer */}
             <div className="flex justify-between items-center border-t border-slate-100 pt-3">
                 {txn.id && (
-                    <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 truncate max-w-[120px]">
+                    <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 truncate max-w-[180px]">
                         {txn.id}
                     </span>
                 )}
-
-                <button
-                    onClick={handleDownload}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all text-[10px] font-bold border border-blue-100 shadow-sm cursor-pointer"
-                >
-                    <Download size={14} />
-                    Download
-                </button>
+                {isSuccess && (
+                    <button
+                        onClick={handleDownloadReceipt}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-all active:scale-95"
+                    >
+                        <Download size={12} /> Invoice
+                    </button>
+                )}
             </div>
         </div>
     );

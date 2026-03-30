@@ -12,7 +12,7 @@ export default async function MerchantOrdersPage() {
 
   const { data: merchant } = await supabase
     .from("merchants")
-    .select("id, business_name")
+    .select("id, business_name, business_address, business_phone, gst_number")
     .eq("user_id", user.id)
     .single();
 
@@ -43,7 +43,7 @@ export default async function MerchantOrdersPage() {
   return (
     <div className="relative">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <MerchantOrdersClient orders={orders} stats={stats} merchantId={merchant.id} />
+        <MerchantOrdersClient orders={orders} stats={stats} merchantId={merchant.id} merchantInfo={merchant} />
       </main>
     </div>
   );

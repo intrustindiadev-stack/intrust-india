@@ -41,6 +41,13 @@ export default async function MyCouponsPage() {
         redirect('/login');
     }
 
+    // Fetch user profile for invoice details
+    const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('full_name, email, phone')
+        .eq('id', user.id)
+        .single();
+
     // Fetch orders with coupons (only paid orders)
     console.log('🔍 [MY-GIFTCARDS] Fetching orders for user:', user.id);
 
@@ -214,6 +221,7 @@ export default async function MyCouponsPage() {
                 totalValue={totalValue}
                 totalSavings={totalSavings}
                 udhariCount={udhariCount || 0}
+                userProfile={userProfile || { full_name: user.email, email: user.email }}
             />
             <CustomerBottomNav />
         </>
