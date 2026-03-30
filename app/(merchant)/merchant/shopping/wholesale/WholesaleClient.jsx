@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ShoppingCart, Package, Plus, Minus, Trash2, Loader2, CheckCircle2, Tags } from 'lucide-react';
+import { ShoppingCart, Package, Plus, Minus, Trash2, Loader2, CheckCircle2, Tags, Wallet, CreditCard, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,7 @@ export default function WholesaleClient({ products = [], merchant, categories = 
     const router = useRouter();
     const [cart, setCart] = useState({}); // { productId: quantity }
     const [isPurchasing, setIsPurchasing] = useState(false);
+    const [isProcessingGateway, setIsProcessingGateway] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('All');
 
     const updateQuantity = (productId, delta, maxStock) => {
@@ -66,6 +67,99 @@ export default function WholesaleClient({ products = [], merchant, categories = 
             toast.error(error.message || 'Purchase failed');
         } finally {
             setIsPurchasing(false);
+        }
+    };
+
+    const handleGatewayPurchase = async () => {
+        if (cartItems.length === 0) return;
+        setIsProcessingGateway(true);
+
+        const loadingToast = toast.loading('Initiating secure payment...');
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (!session) {
+                toast.error('Session expired. Please login again.', { id: loadingToast });
+                return;
+            }
+
+            // 1. Create Draft
+            const draftRes = await fetch('/api/merchant/shopping/wholesale/draft', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    items: cartItems.map(item => ({
+                        product_id: item.id,
+                        quantity: item.quantity
+                    })),
+                    merchantId: merchant.id
+                })
+            });
+
+            const draftData = await draftRes.json();
+            if (!draftRes.ok) throw new Error(draftData.error || 'Failed to create wholesale draft');
+
+            // 2. Fetch User Profile for SabPaisa (Contact info)
+            const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('name, email, mobile')
+                .eq('id', merchant.user_id)
+                .single();
+
+            // 3. Initiate SabPaisa
+            const clientTxnId = `WHLS-${Date.now()}-${merchant.id.slice(0, 4)}`;
+            const initiateRes = await fetch('/api/sabpaisa/initiate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    clientTxnId,
+                    amount: (draftData.totalPaise / 100).toFixed(2),
+                    payerName: profile?.name || merchant.business_name || 'Merchant',
+                    payerEmail: profile?.email || '',
+                    payerMobile: profile?.mobile || '',
+                    udf1: 'WHOLESALE_PURCHASE',
+                    udf2: draftData.draftId, // Draft ID
+                    udf3: merchant.id // Merchant ID
+                })
+            });
+
+            const initiateData = await initiateRes.json();
+            if (!initiateRes.ok) throw new Error(initiateData.error || 'Failed to initiate payment');
+
+            toast.success('Redirecting to secure gateway...', { id: loadingToast });
+
+            // 4. Redirect to SabPaisa
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = initiateData.paymentUrl;
+
+            const fields = {
+                encData: initiateData.encData,
+                clientCode: initiateData.clientCode
+            };
+
+            for (const [key, value] of Object.entries(fields)) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            }
+
+            document.body.appendChild(form);
+            form.submit();
+
+        } catch (err) {
+            console.error('[Wholesale Gateway Error]', err);
+            toast.error(err.message || 'An error occurred during gateway initiation.', { id: loadingToast });
+            setIsProcessingGateway(false);
         }
     };
 
@@ -257,31 +351,41 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                                         <div className="text-4xl font-black text-white tracking-tight">₹{subtotalInRupees.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
                                     </div>
 
-                                    <button
-                                        onClick={handlePurchase}
-                                        disabled={isPurchasing || cartItems.length === 0 || subtotalInRupees > merchantBalance}
-                                        className="w-full bg-white hover:bg-blue-50 disabled:bg-white/10 disabled:text-white/20 text-[#1e3a5f] py-5 rounded-[1.5rem] font-black text-lg shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-95"
-                                    >
-                                        {isPurchasing ? (
-                                            <>
-                                                <Loader2 className="animate-spin" size={20} />
-                                                <span>Processing Transaction...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CheckCircle2 size={24} />
-                                                <span>Confirm Payment</span>
-                                            </>
-                                        )}
-                                    </button>
+                                    <div className="flex flex-col gap-3">
+                                        {/* Wallet Payment Option */}
+                                        <button
+                                            onClick={handlePurchase}
+                                            disabled={isPurchasing || isProcessingGateway || cartItems.length === 0 || subtotalInRupees > merchantBalance}
+                                            className="w-full bg-white hover:bg-blue-50 disabled:bg-white/10 disabled:text-white/20 text-[#1e3a5f] py-4 rounded-[1.2rem] font-black text-sm shadow-xl transition-all flex items-center justify-center gap-3 active:scale-95 px-6"
+                                        >
+                                            {isPurchasing ? (
+                                                <Loader2 className="animate-spin" size={18} />
+                                            ) : (
+                                                <Wallet size={18} />
+                                            )}
+                                            <span>Pay via Wallet Balance</span>
+                                        </button>
+
+                                        {/* Gateway Payment Option */}
+                                        <button
+                                            onClick={handleGatewayPurchase}
+                                            disabled={isPurchasing || isProcessingGateway || cartItems.length === 0}
+                                            className="w-full bg-blue-500 hover:bg-blue-400 disabled:bg-blue-500/20 disabled:text-white/20 text-white py-4 rounded-[1.2rem] font-black text-sm shadow-xl transition-all flex items-center justify-center gap-3 active:scale-95 px-6"
+                                        >
+                                            {isProcessingGateway ? (
+                                                <Loader2 className="animate-spin" size={18} />
+                                            ) : (
+                                                <CreditCard size={18} />
+                                            )}
+                                            <span>Pay Via (UPI/Cards)</span>
+                                        </button>
+                                    </div>
                                     
                                     {subtotalInRupees > merchantBalance && (
-                                        <Link 
-                                            href="/merchant/wallet"
-                                            className="block text-center text-xs font-black uppercase tracking-widest text-emerald-400 hover:text-emerald-300"
-                                        >
-                                            Add ₹{(subtotalInRupees - merchantBalance).toLocaleString()} Top Up
-                                        </Link>
+                                        <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-[10px] font-bold leading-tight">
+                                            <Info size={14} className="shrink-0" />
+                                            <p>Your wallet balance is insufficient. Use "Pay Via (UPI/Cards)" to source inventory directly.</p>
+                                        </div>
                                     )}
                                 </div>
                             </>

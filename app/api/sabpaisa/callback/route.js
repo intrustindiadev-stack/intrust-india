@@ -490,6 +490,55 @@ export async function POST(request) {
             }
         }
 
+        // 5f. Handle Wholesale Purchase Fulfillment
+        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'WHOLESALE_PURCHASE' && !wasAlreadySuccess) {
+            try {
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
+
+                const draftId = existingTxn.udf2;
+                const amountPaise = Math.round(parseFloat(amount) * 100);
+
+                const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+                    'finalize_wholesale_gateway_purchase',
+                    {
+                        p_draft_id: draftId,
+                        p_amount_paise: amountPaise
+                    }
+                );
+
+                if (rpcError || (rpcResult && !rpcResult.success)) {
+                    console.error('[Callback] Wholesale fulfillment error:', rpcError?.message || rpcResult?.message);
+                    fulfillmentFailed = true;
+                    internalStatus = 'FAILED';
+                    result.transMsg = 'Wholesale fulfillment failed. Payment will be refunded.';
+                } else {
+                    console.log(`[Callback] Wholesale purchase fulfilled for txn ${clientTxnId}`);
+                    
+                    try {
+                        // Notify Merchant of successful stock purchase
+                        await supabaseAdmin.from('notifications').insert({
+                            user_id: existingTxn.user_id,
+                            title: 'Stock Purchased Successfully 📦',
+                            body: `Your wholesale order of ₹${amount} has been processed. Items are now in your inventory.`,
+                            type: 'success',
+                            reference_id: draftId,
+                            reference_type: 'wholesale_purchase'
+                        });
+                    } catch (notificationError) {
+                        console.error('[Callback] Failed to insert wholesale notification:', notificationError.message);
+                    }
+                }
+            } catch (wholesaleError) {
+                console.error('[Callback] Wholesale processing error:', wholesaleError.message);
+                fulfillmentFailed = true;
+                internalStatus = 'FAILED';
+                result.transMsg = 'Wholesale processing error. Payment will be refunded.';
+            }
+        }
+
         // 7b. Catch-all: Downgrade to failure if fulfillment failed on any path but status wasn't reset
         if (fulfillmentFailed && internalStatus === 'SUCCESS') {
             internalStatus = 'FAILED';
