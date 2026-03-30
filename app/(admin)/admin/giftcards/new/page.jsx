@@ -15,7 +15,8 @@ const CATEGORIES = [
     'Food',
     'Travel',
     'Gaming',
-    'Fashion'
+    'Fashion',
+    'HealthCare'
 ];
 
 export default function NewGiftCardPage() {

@@ -23,7 +23,8 @@ import {
     CreditCard,
     Clock,
     FileText,
-    ShoppingBag
+    ShoppingBag,
+    Image as ImageIcon
 } from 'lucide-react';
 
 const navigation = [
@@ -37,7 +38,8 @@ const navigation = [
     { name: 'Payouts', href: '/admin/payouts', icon: Banknote },
     { name: 'Transactions', href: '/admin/transactions', icon: Receipt },
     { name: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
-    { name: 'Invoice Settings', href: '/admin/settings/invoice', icon: FileText },
+    { name: 'Invoice Generator', href: '/admin/invoice', icon: FileText },
+    { name: 'Banners', href: '/admin/banners', icon: ImageIcon },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
