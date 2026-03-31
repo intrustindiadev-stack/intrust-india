@@ -160,8 +160,8 @@ export default function ProductDetailClient({ product, inventory, customer, reco
         setConfirmModalOpen(false);
     };
 
-    const primaryColor = product.shopping_categories?.color_primary || '#3b82f6';
-    const secondaryColor = product.shopping_categories?.color_secondary || '#4f46e5';
+    const primaryColor = '#3b82f6';
+    const secondaryColor = '#60a5fa';
 
     // Pricing
     const sellingPrice = selectedOffer.retail_price_paise;
@@ -209,12 +209,12 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                 <nav className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-4 sm:mb-6 overflow-x-auto whitespace-nowrap no-scrollbar">
                     <Link href="/shop" className={`transition-colors ${isDark ? 'text-white/30 hover:text-white/60' : 'text-slate-400 hover:text-slate-600'}`}>Shop</Link>
                     <ChevronRight size={10} className={isDark ? 'text-white/15' : 'text-slate-300'} />
-                    <Link href={`/shop/${encodeURIComponent(categoryName.toLowerCase())}`}
+                    <span 
                         className="transition-colors"
                         style={{ color: isDark ? `${primaryColor}90` : primaryColor }}
                     >
                         {categoryName}
-                    </Link>
+                    </span>
                     <ChevronRight size={10} className={isDark ? 'text-white/15' : 'text-slate-300'} />
                     <span className={isDark ? 'text-white/60' : 'text-slate-700'}>
                         {product.title.length > 20 ? product.title.substring(0, 20) + '...' : product.title}

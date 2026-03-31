@@ -8,7 +8,7 @@ export default function StructuredData() {
         "alternateName": "Intrust Financial Service India Pvt Ltd",
         "url": "https://www.intrustindia.com",
         "logo": "https://www.intrustindia.com/icons/intrustLogo.png",
-        "image": "https://www.intrustindia.com/og-image.png",
+        "image": "https://www.intrustindia.com/icons/intrustLogo.png",
         "description": "Premium financial service provider in India offering instant personal loans, business loans, and gold loans.",
         "foundingDate": "2014",
         "address": {

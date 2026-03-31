@@ -44,6 +44,12 @@ const CartClient = ({ userId }) => {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [draftGroupId, setDraftGroupId] = useState(null);
+
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [addressForm, setAddressForm] = useState({
+    address: "", city: "", state: "", pincode: "", phone: ""
+  });
   const supabase = createClient();
   const router = useRouter();
   const { theme } = useTheme();
@@ -118,10 +124,21 @@ const CartClient = ({ userId }) => {
 
       const { data: userProfile } = await supabase
         .from("user_profiles")
-        .select("full_name, phone_number, address, city, state, pincode")
+        .select("full_name, phone, address")
         .eq("id", userId)
         .single();
       setProfile(userProfile);
+      
+      if (userProfile) {
+        const p = (userProfile.address || "").split(',').map(s => s.trim());
+        setAddressForm({
+          address: p[0] || "",
+          city: p[1] || "",
+          state: p[2] || "",
+          pincode: p[3] || "",
+          phone: userProfile.phone || ""
+        });
+      }
     } catch (err) {
       console.error("Error fetching cart data:", err);
       setError("Failed to load cart");
@@ -131,6 +148,35 @@ const CartClient = ({ userId }) => {
   };
 
   useEffect(() => { fetchData(); }, [userId]);
+
+  const handleSaveAddress = async (e) => {
+    e.preventDefault();
+    setSavingAddress(true);
+    try {
+      const combinedAddress = [addressForm.address, addressForm.city, addressForm.state, addressForm.pincode]
+        .filter(Boolean)
+        .join(', ');
+
+      const { error } = await supabase.from('user_profiles').update({
+        address: combinedAddress,
+        phone: addressForm.phone
+      }).eq('id', userId);
+      
+      if (error) throw error;
+      
+      setProfile(prev => ({ 
+        ...prev, 
+        address: combinedAddress,
+        phone: addressForm.phone
+      }));
+      setIsAddressModalOpen(false);
+    } catch (err) {
+      console.error('Save address error:', err);
+      setError('Failed to save delivery address');
+    } finally {
+      setSavingAddress(false);
+    }
+  };
 
   const updateQuantity = async (itemId, delta) => {
     const item = cartItems.find(i => i.id === itemId);
@@ -208,7 +254,10 @@ const CartClient = ({ userId }) => {
   const finalPayable = billDetails.sellingTotal > 0 ? billDetails.sellingTotal + deliveryFee : 0;
   const itemCount = cartItems.reduce((a, i) => a + i.quantity, 0);
   const hasStockIssues = stockWarnings.size > 0;
-  const canPay = (paymentMode === 'wallet' ? walletBalance >= finalPayable : true) && !hasStockIssues;
+  const hasValidAddress = profile && profile.address && profile.phone;
+  const hasSufficientBalance = paymentMode === 'wallet' ? walletBalance >= finalPayable : true;
+  const isPaymentModeValid = paymentMode === 'wallet' || paymentMode === 'gateway';
+  const canCheckout = hasSufficientBalance && !hasStockIssues && hasValidAddress && isPaymentModeValid;
 
   // Payment modes
   const paymentModes = [
@@ -343,21 +392,20 @@ const CartClient = ({ userId }) => {
                   </div>
                   <div className="min-w-0">
                     <h3 className={`font-black text-sm mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>Delivering to Home</h3>
-                    {profile ? (
+                    {hasValidAddress ? (
                       <div className={`text-xs leading-relaxed font-medium ${isDark ? 'text-white/40' : 'text-slate-500'}`}>
                         <p className={`font-bold ${isDark ? 'text-white/70' : 'text-slate-700'}`}>{profile.full_name}</p>
-                        <p className="truncate">{profile.address}</p>
-                        <p>{profile.city}, {profile.state} {profile.pincode}</p>
-                        {profile.phone_number && <p className="flex items-center gap-1 mt-1"><Phone size={10} /> {profile.phone_number}</p>}
+                        <p className="line-clamp-2">{profile.address}</p>
+                        {profile.phone && <p className="flex items-center gap-1 mt-1"><Phone size={10} /> {profile.phone}</p>}
                       </div>
                     ) : (
                       <p className="text-xs text-amber-500 font-bold">Please update your address in profile.</p>
                     )}
                   </div>
                 </div>
-                <Link href="/profile" className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg shrink-0 transition-colors ${isDark ? 'bg-white/[0.04] text-white/40 hover:text-white/70' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
-                  Change
-                </Link>
+                <button onClick={() => setIsAddressModalOpen(true)} className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg shrink-0 transition-colors ${isDark ? 'bg-white/[0.04] text-white/40 hover:text-white/70' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
+                  {hasValidAddress ? 'Change' : 'Add Info'}
+                </button>
               </div>
             </motion.div>
 
@@ -621,11 +669,11 @@ const CartClient = ({ userId }) => {
                   </div>
                 )}
 
-                   <button
-                  disabled={checkingOut || !canPay}
+                <button
+                  disabled={checkingOut || !canCheckout}
                   onClick={handleCheckout}
                   className={`w-full py-3.5 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] ${
-                    !canPay
+                    !canCheckout
                       ? `cursor-not-allowed ${isDark ? 'bg-white/[0.04] text-white/20' : 'bg-slate-100 text-slate-400'}`
                       : "bg-blue-600 hover:bg-blue-700 text-white shadow-[0_6px_20px_rgba(37,99,235,0.25)]"
                   }`}
@@ -633,9 +681,13 @@ const CartClient = ({ userId }) => {
                   {checkingOut ? (
                     <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>
                   ) : hasStockIssues ? (
-                    "Some items are out of stock"
-                  ) : !canPay ? (
-                    paymentMode === 'wallet' ? "Insufficient Wallet Balance" : "Coming Soon"
+                    "Some items out of stock"
+                  ) : !hasValidAddress ? (
+                    "Add Delivery Address"
+                  ) : !hasSufficientBalance && paymentMode === 'wallet' ? (
+                     "Insufficient Wallet Balance"
+                  ) : !isPaymentModeValid ? (
+                     "Coming Soon"
                   ) : (
                     <>Place Order <ArrowRight size={16} strokeWidth={3} /></>
                   )}
@@ -680,10 +732,10 @@ const CartClient = ({ userId }) => {
           </div>
           
           <button
-            disabled={checkingOut || !canPay}
+            disabled={checkingOut || !canCheckout}
             onClick={handleCheckout}
             className={`flex-1 py-3 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] ${
-              !canPay
+              !canCheckout
                 ? `cursor-not-allowed ${isDark ? 'bg-white/[0.04] text-white/20' : 'bg-slate-100 text-slate-400'}`
                 : "bg-blue-600 text-white shadow-[0_4px_14px_rgba(37,99,235,0.25)]"
             }`}
@@ -691,9 +743,13 @@ const CartClient = ({ userId }) => {
             {checkingOut ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : hasStockIssues ? (
-              "Some items are out of stock"
-            ) : !canPay ? (
-              paymentMode === 'wallet' ? "Low Balance" : "Coming Soon"
+              "Out of stock items"
+            ) : !hasValidAddress ? (
+              "Add Address"
+            ) : !hasSufficientBalance && paymentMode === 'wallet' ? (
+              "Low Balance"
+            ) : !isPaymentModeValid ? (
+              "Coming Soon"
             ) : (
               <>Place Order <ArrowRight size={14} strokeWidth={3} /></>
             )}
@@ -712,6 +768,61 @@ const CartClient = ({ userId }) => {
           initialMethod="gateway"
         />
       )}
+
+      {/* ADDRESS MODAL */}
+      <AnimatePresence>
+        {isAddressModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${isDark ? 'bg-[#080a10]/80' : 'bg-slate-900/60'} backdrop-blur-sm`}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className={`w-full max-w-sm rounded-[24px] p-5 sm:p-6 shadow-2xl ${isDark ? 'bg-[#12151c] border border-white/[0.08]' : 'bg-white border border-slate-100'}`}
+            >
+              <div className="flex justify-between items-center mb-5">
+                <h3 className={`text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>Delivery Info</h3>
+                <button onClick={() => setIsAddressModalOpen(false)} className={`p-1.5 rounded-xl active:scale-95 transition-all ${isDark ? 'bg-white/[0.05] text-white/50 hover:bg-white/[0.1] hover:text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'}`}>
+                  <X size={16} strokeWidth={3} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveAddress} className="space-y-3.5">
+                <div>
+                  <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Street Address</label>
+                  <input required type="text" value={addressForm.address} onChange={e => setAddressForm(f => ({...f, address: e.target.value}))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="House no, Street area" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>City</label>
+                    <input required type="text" value={addressForm.city} onChange={e => setAddressForm(f => ({...f, city: e.target.value}))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="City" />
+                  </div>
+                  <div>
+                    <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Pincode</label>
+                    <input required type="text" value={addressForm.pincode} onChange={e => setAddressForm(f => ({...f, pincode: e.target.value}))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="123456" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 pb-2">
+                  <div>
+                    <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>State</label>
+                    <input required type="text" value={addressForm.state} onChange={e => setAddressForm(f => ({...f, state: e.target.value}))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="State" />
+                  </div>
+                  <div>
+                    <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Phone</label>
+                    <input required type="tel" value={addressForm.phone} onChange={e => setAddressForm(f => ({...f, phone: e.target.value}))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="9876543210" />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button type="submit" disabled={savingAddress} className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] transition-all text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-[0_4px_14px_rgba(37,99,235,0.25)] flex justify-center items-center gap-2">
+                    {savingAddress ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save & Continue"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
