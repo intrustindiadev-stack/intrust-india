@@ -136,11 +136,22 @@ export default async function MerchantDashboardPage() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 mt-6">
                 <div>
                     <h2 className="font-display text-4xl font-bold mb-2 text-slate-800 dark:text-slate-100">Merchant Dashboard</h2>
-                    <p className="text-slate-500 dark:text-slate-400 flex flex-wrap items-center">
-                        Manage your inventory and track performance
-                        <span className="hidden sm:inline mx-2 text-slate-300 dark:text-slate-700">•</span>
-                        <span className="text-[#D4AF37] text-xs font-semibold tracking-wider uppercase mt-2 sm:mt-0">V.2.0 PREMIUM</span>
-                    </p>
+                    <div className="flex flex-col gap-2">
+                        <p className="text-slate-500 dark:text-slate-400">
+                            Manage your inventory and track performance
+                        </p>
+                        <div className="flex items-center gap-3">
+                            <span className="text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/50 dark:border-amber-800/30 rounded-md">
+                                V.2.0 PREMIUM
+                            </span>
+                            {merchant.subscription_expires_at && (
+                                <span className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/30 px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold tracking-wide inline-flex items-center gap-1.5 shadow-sm">
+                                    <span className="material-icons-round text-sm">verified</span>
+                                    Valid Till: {new Date(merchant.subscription_expires_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </span>
+                            )}
+                        </div>
+                    </div>
                 </div>
                 <div className="flex flex-wrap space-x-0 sm:space-x-4 gap-y-3">
                     <Link href="/merchant/purchase" className="w-full sm:w-auto px-6 py-3 rounded-xl merchant-glass hover:bg-black/5 dark:hover:bg-white/10 transition-all flex items-center justify-center space-x-2 border border-black/5 dark:border-white/10">
