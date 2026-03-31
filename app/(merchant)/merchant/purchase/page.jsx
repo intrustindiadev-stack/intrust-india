@@ -2,9 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import Link from 'next/link';
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2, Package, RefreshCw, Tags, Sparkles } from 'lucide-react';
+import MerchantFloatingCart from '@/components/merchant/shopping/MerchantFloatingCart';
+import SuccessAnimation from '@/components/ui/SuccessAnimation';
+
+const COMMISSION_RATE = 0.03;
 
 export default function PurchasePage() {
     const [cart, setCart] = useState({});
@@ -13,6 +18,8 @@ export default function PurchasePage() {
     const [error, setError] = useState(null);
     const [purchasing, setPurchasing] = useState(false);
     const [merchantBalance, setMerchantBalance] = useState(0);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [successStats, setSuccessStats] = useState(null);
 
     const fetchData = async () => {
         try {
@@ -62,30 +69,33 @@ export default function PurchasePage() {
         }
     };
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    useEffect(() => { fetchData(); }, []);
 
     const addToCart = (item) => setCart(prev => ({ ...prev, [item.id]: 1 }));
-    const deleteFromCart = (itemId) => setCart(prev => {
+    const removeFromCart = (itemId) => setCart(prev => {
         const newCart = { ...prev };
         delete newCart[itemId];
         return newCart;
     });
 
-    const cartSubtotal = Object.entries(cart).reduce((total, [id, qty]) => {
+    // Normalized cart items for MerchantFloatingCart
+    const cartItems = Object.entries(cart).map(([id]) => {
         const item = inventory.find(i => i.id === id);
-        return total + (item?.price || 0) * qty;
-    }, 0);
+        if (!item) return null;
+        return {
+            id: item.id,
+            title: item.brand,
+            unit_price: item.price + item.price * COMMISSION_RATE,
+            quantity: 1,
+        };
+    }).filter(Boolean);
 
-    const merchantCommission = cartSubtotal * 0.03;
-    const cartTotal = cartSubtotal + merchantCommission;
-    const cartItems = Object.entries(cart).length;
+    const subtotalWithCommission = cartItems.reduce((s, i) => s + i.unit_price, 0);
 
-    const handlePurchase = async () => {
-        if (cartItems === 0) return;
-        if (merchantBalance < cartTotal) {
-            toast.error(`Insufficient balance! You need ₹${cartTotal.toFixed(2)} but have ₹${merchantBalance.toFixed(2)}`);
+    const handlePurchaseWallet = async () => {
+        if (cartItems.length === 0) return;
+        if (merchantBalance < subtotalWithCommission) {
+            toast.error(`Insufficient balance! Need ₹${subtotalWithCommission.toFixed(2)} but have ₹${merchantBalance.toFixed(2)}`);
             return;
         }
 
@@ -96,17 +106,19 @@ export default function PurchasePage() {
             const response = await fetch('/api/merchant/purchase', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ couponIds })
+                body: JSON.stringify({ couponIds }),
             });
 
             const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.message || 'Purchase failed');
 
-            if (!response.ok || !result.success) {
-                throw new Error(result.message || 'Purchase failed');
-            }
-
-            toast.success(`Purchase successful! Check your inventory.`);
+            // Show success animation
+            setSuccessStats([
+                { label: 'Coupons Added', value: cartItems.length },
+                { label: 'Total Paid', value: `₹${subtotalWithCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` },
+            ]);
             setCart({});
+            setShowSuccess(true);
             fetchData();
         } catch (err) {
             console.error('Purchase error:', err);
@@ -118,19 +130,30 @@ export default function PurchasePage() {
 
     if (loading) {
         return (
-            <div className="relative min-h-[60vh] flex items-center justify-center">
-                <span className="material-icons-round animate-spin text-[#D4AF37] text-4xl">autorenew</span>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                >
+                    <RefreshCw size={32} className="text-[#D4AF37]" />
+                </motion.div>
+                <p className="text-slate-400 dark:text-slate-500 text-sm font-medium">Loading available coupons...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="relative min-h-[60vh] flex flex-col items-center justify-center">
-                <span className="material-icons-round text-red-500 dark:text-red-400 text-6xl mb-4">error_outline</span>
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Failed to load</h3>
-                <p className="text-slate-500 dark:text-slate-400 mb-6 text-center max-w-sm">{error}</p>
-                <button onClick={fetchData} className="px-6 py-3 rounded-xl bg-[#D4AF37] text-[#020617] font-bold hover:bg-opacity-90 transition-all gold-glow">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center">
+                    <span className="material-icons-round text-red-500 text-3xl">error_outline</span>
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Failed to load</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-center max-w-sm">{error}</p>
+                <button
+                    onClick={fetchData}
+                    className="px-6 py-3 rounded-2xl bg-[#D4AF37] text-black font-black text-sm hover:opacity-90 transition-all shadow-lg shadow-amber-500/20"
+                >
                     Try Again
                 </button>
             </div>
@@ -138,180 +161,166 @@ export default function PurchasePage() {
     }
 
     return (
-        <div className="relative">
-            {/* Background embellishments */}
-            <div className="fixed top-[-10%] left-[-5%] w-[40%] h-[40%] bg-[#D4AF37]/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
-            <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none -z-10 dark:opacity-20"></div>
+        <>
+            <SuccessAnimation
+                isVisible={showSuccess}
+                onClose={() => setShowSuccess(false)}
+                title="Purchase Complete!"
+                message="Your coupons have been added to your inventory and are ready to sell."
+                stats={successStats}
+                primaryAction={{ label: 'View My Coupons', href: '/merchant/inventory' }}
+                secondaryAction={{ label: 'Buy More Coupons', onClick: () => setShowSuccess(false) }}
+            />
 
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 mt-6">
-                <div>
-                    <h2 className="font-display text-4xl font-bold mb-2 text-slate-800 dark:text-slate-100">Purchase Coupons</h2>
-                    <p className="text-slate-500 dark:text-slate-400 flex flex-wrap items-center">
-                        Acquire premium gift cards for your inventory
-                        <span className="hidden sm:inline mx-2 text-slate-300 dark:text-slate-700">•</span>
-                        <span className="text-[#D4AF37] text-xs font-semibold tracking-wider uppercase mt-2 sm:mt-0">WHOLESALE MARKET</span>
-                    </p>
-                </div>
-                <div className="flex bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-full py-2 px-6 items-center space-x-3 shadow-sm">
-                    <span className="material-icons-round text-[#D4AF37] text-lg">account_balance_wallet</span>
+            <div className="relative">
+                {/* Background glows */}
+                <div className="fixed top-[-10%] left-[-5%] w-[40%] h-[40%] bg-[#D4AF37]/8 rounded-full blur-[120px] pointer-events-none -z-10" />
+                <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
                     <div>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-bold">Wallet Balance</p>
-                        <p className="text-lg font-bold text-[#D4AF37]">₹{merchantBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#D4AF37]/10 text-[#D4AF37] text-[10px] font-black uppercase tracking-widest mb-3">
+                            <Sparkles size={12} />
+                            Wholesale Market
+                        </div>
+                        <h2 className="font-display text-3xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                            Purchase Coupons
+                        </h2>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">
+                            Acquire premium gift cards for your inventory
+                        </p>
+                    </div>
+                    {/* Wallet balance pill */}
+                    <div className="flex items-center gap-3 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-2xl py-3 px-5 self-start sm:self-auto shadow-sm">
+                        <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/20 flex items-center justify-center">
+                            <span className="material-icons-round text-[#D4AF37] text-lg">account_balance_wallet</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-black">Wallet Balance</p>
+                            <p className="text-lg font-black text-[#D4AF37]">₹{merchantBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    {inventory.map((item) => {
-                        const commission = item.price * 0.03;
-                        const totalCost = item.price + commission;
-                        const discount = ((item.faceValue - item.price) / item.faceValue * 100).toFixed(0);
-
-                        return (
-                            <div key={item.id} className="merchant-glass rounded-3xl p-6 border border-black/5 dark:border-white/5 hover:border-[#D4AF37]/30 transition-all group overflow-hidden relative shadow-sm">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/5 rounded-bl-full -z-10 group-hover:bg-[#D4AF37]/10 transition-colors"></div>
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="relative w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-black/5 dark:border-white/10 overflow-hidden shrink-0">
-                                            {item.imageUrl ? (
-                                                <Image src={item.imageUrl} alt={item.brand} fill className="object-cover" />
-                                            ) : (
-                                                <span className="font-bold text-[#D4AF37] text-xl">{item.brand.charAt(0)}</span>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{item.brand}</h3>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">Face Value: ₹{item.faceValue.toLocaleString('en-IN')}</p>
-                                        </div>
-                                    </div>
-                                    <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full text-emerald-600 dark:text-emerald-400 text-xs font-bold">
-                                        {discount}% OFF
-                                    </div>
-                                </div>
-
-                                <div className="mb-6 pb-6 border-b border-black/5 dark:border-white/5 space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-500 dark:text-slate-400">Platform/Wholesale Price</span>
-                                        <span className="text-slate-700 dark:text-slate-200">₹{item.price.toLocaleString('en-IN')}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-500 dark:text-slate-400">Platform Fee (3%)</span>
-                                        <span className="text-slate-700 dark:text-slate-200">+ ₹{commission.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-[15px] font-bold mt-2 pt-2 border-t border-black/5 dark:border-white/5">
-                                        <span className="text-slate-600 dark:text-slate-300">Your Cost</span>
-                                        <span className="text-[#D4AF37]">₹{totalCost.toFixed(2)}</span>
-                                    </div>
-                                </div>
-
-                                {cart[item.id] ? (
-                                    <button onClick={() => deleteFromCart(item.id)} className="w-full py-3 merchant-glass bg-white/40 dark:bg-white/5 hover:bg-red-500/10 text-red-500 dark:text-red-400 text-sm font-bold rounded-xl transition-all border border-red-500/20 flex items-center justify-center space-x-2 shadow-sm">
-                                        <span className="material-icons-round text-sm">remove_shopping_cart</span>
-                                        <span>Remove from Cart</span>
-                                    </button>
-                                ) : (
-                                    <button onClick={() => addToCart(item)} className="w-full py-3 merchant-glass bg-white/40 dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-xl transition-all border border-black/5 dark:border-white/10 flex items-center justify-center space-x-2 shadow-sm">
-                                        <span className="material-icons-round text-[#D4AF37] text-sm">add_shopping_cart</span>
-                                        <span>Add to Cart</span>
-                                    </button>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-
-                <div className="lg:col-span-1">
-                    <div className="sticky top-24 merchant-glass rounded-3xl border border-black/5 dark:border-white/5 p-6 shadow-xl">
-                        <h3 className="font-display text-xl font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center">
-                            <span className="material-icons-round text-[#D4AF37] mr-2">shopping_basket</span>
-                            Order Summary
-                        </h3>
-
-                        {cartItems === 0 ? (
-                            <div className="text-center py-10">
-                                <div className="w-16 h-16 mx-auto bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center mb-4 border border-black/10 dark:border-white/10">
-                                    <span className="material-icons-round text-slate-400 dark:text-slate-500 text-3xl">remove_shopping_cart</span>
-                                </div>
-                                <p className="text-slate-500 dark:text-slate-400 font-medium">Your cart is empty.</p>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 italic">Select coupons from the market to purchase.</p>
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                    {/* Coupon Cards Grid */}
+                    <div className="xl:col-span-2">
+                        {inventory.length === 0 ? (
+                            <div className="py-20 text-center bg-white dark:bg-white/5 rounded-[2.5rem] border border-dashed border-slate-200 dark:border-white/10">
+                                <Tags size={56} className="mx-auto text-slate-200 dark:text-white/10 mb-4" />
+                                <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 mb-1">
+                                    No coupons available
+                                </h3>
+                                <p className="text-slate-400 dark:text-slate-500 text-sm">Check back later for new listings.</p>
                             </div>
                         ) : (
-                            <>
-                                <div className="space-y-4 mb-6 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
-                                    {Object.entries(cart).map(([id, qty]) => {
-                                        const item = inventory.find(i => i.id === id);
-                                        if (!item) return null;
-                                        const cost = (item.price * 1.03) * qty;
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-40 xl:pb-4">
+                                {inventory.map((item) => {
+                                    const commission = item.price * COMMISSION_RATE;
+                                    const totalCost = item.price + commission;
+                                    const discount = ((item.faceValue - item.price) / item.faceValue * 100).toFixed(0);
+                                    const inCart = !!cart[item.id];
 
-                                        return (
-                                            <div key={id} className="group flex justify-between items-center p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10 transition-colors">
-                                                <div className="flex-1">
-                                                    <p className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate">{item.brand}</p>
-                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">₹{item.price}</p>
+                                    return (
+                                        <motion.div
+                                            key={item.id}
+                                            layout
+                                            whileHover={{ y: -2 }}
+                                            className={`merchant-glass rounded-[2rem] p-5 border transition-all duration-300 group overflow-hidden relative shadow-sm ${inCart
+                                                ? 'border-[#D4AF37]/50 shadow-lg shadow-[#D4AF37]/10 bg-[#D4AF37]/5'
+                                                : 'border-black/5 dark:border-white/5 hover:border-[#D4AF37]/30 hover:shadow-xl hover:shadow-[#D4AF37]/5'
+                                                }`}
+                                        >
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-[#D4AF37]/5 rounded-bl-full -z-10 group-hover:bg-[#D4AF37]/10 transition-colors" />
+
+                                            <div className="flex justify-between items-start mb-5">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="relative w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-black/5 dark:border-white/10 overflow-hidden flex-shrink-0 shadow-sm">
+                                                        {item.imageUrl ? (
+                                                            <Image src={item.imageUrl} alt={item.brand} fill className="object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center">
+                                                                <span className="font-black text-[#D4AF37] text-xl">{item.brand.charAt(0)}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-base font-black text-slate-800 dark:text-slate-100">{item.brand}</h3>
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                            Face Value: ₹{item.faceValue.toLocaleString('en-IN')}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div className="flex flex-col items-end pl-3">
-                                                    <span className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-1">₹{cost.toFixed(2)}</span>
-                                                    <button onClick={() => deleteFromCart(id)} className="text-[10px] text-red-500 dark:text-red-400 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity hover:underline font-bold uppercase tracking-wider">
-                                                        Remove
-                                                    </button>
+                                                <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full text-emerald-600 dark:text-emerald-400 text-xs font-black flex-shrink-0">
+                                                    {discount}% OFF
                                                 </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
 
-                                <div className="border-t border-black/5 dark:border-white/10 pt-6 space-y-3 mb-8">
-                                    <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
-                                        <span>Subtotal ({cartItems} items)</span>
-                                        <span className="text-slate-700 dark:text-slate-200">₹{cartSubtotal.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
-                                        <span>Platform Commission (3%)</span>
-                                        <span className="text-slate-700 dark:text-slate-200">₹{merchantCommission.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-end border-t border-black/10 dark:border-white/10 pt-4 mt-4">
-                                        <span className="font-bold text-slate-600 dark:text-slate-300">Total</span>
-                                        <div className="text-right">
-                                            <span className="text-[10px] text-[#D4AF37] block mb-1 uppercase tracking-wider font-bold">Payable Amount</span>
-                                            <span className="text-3xl font-display font-bold text-[#D4AF37]">₹{cartTotal.toFixed(2)}</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                            {/* Price breakdown */}
+                                            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-1.5 mb-4">
+                                                <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+                                                    <span>Wholesale Price</span>
+                                                    <span className="font-bold text-slate-700 dark:text-slate-200">₹{item.price.toLocaleString('en-IN')}</span>
+                                                </div>
+                                                <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+                                                    <span>Platform Fee (3%)</span>
+                                                    <span className="font-bold text-slate-700 dark:text-slate-200">+₹{commission.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm font-black pt-1.5 border-t border-slate-200 dark:border-white/10">
+                                                    <span className="text-slate-600 dark:text-slate-300">Your Cost</span>
+                                                    <span className="text-[#D4AF37]">₹{totalCost.toFixed(2)}</span>
+                                                </div>
+                                            </div>
 
-                                {merchantBalance < cartTotal && (
-                                    <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex flex-col items-center text-center">
-                                        <span className="material-icons-round text-red-500 dark:text-red-400 mb-2">account_balance_wallet</span>
-                                        <p className="text-sm text-red-500 dark:text-red-400 font-semibold mb-1">Insufficient Balance</p>
-                                        <p className="text-xs text-red-500/80">Add ₹{(cartTotal - merchantBalance).toFixed(2)} to proceed.</p>
-                                        <Link href="/merchant/wallet" className="text-xs font-bold text-red-600 dark:text-red-300 mt-3 underline hover:opacity-80">
-                                            Go to Wallet
-                                        </Link>
-                                    </div>
-                                )}
-
-                                <button
-                                    onClick={handlePurchase}
-                                    disabled={purchasing || merchantBalance < cartTotal}
-                                    className="w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed bg-[#D4AF37] text-[#020617] hover:bg-opacity-90 gold-glow shadow-lg shadow-[#D4AF37]/20"
-                                >
-                                    {purchasing ? (
-                                        <>
-                                            <span className="material-icons-round animate-spin text-sm">autorenew</span>
-                                            <span>Processing...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span className="material-icons-round text-sm">payment</span>
-                                            <span>Complete Purchase</span>
-                                        </>
-                                    )}
-                                </button>
-                            </>
+                                            {/* Cart Button */}
+                                            <AnimatePresence mode="wait">
+                                                {inCart ? (
+                                                    <motion.button
+                                                        key="remove"
+                                                        initial={{ opacity: 0, scale: 0.95 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        exit={{ opacity: 0, scale: 0.95 }}
+                                                        onClick={() => removeFromCart(item.id)}
+                                                        className="w-full py-3 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-500 dark:text-red-400 text-sm font-black transition-all border border-red-500/20 flex items-center justify-center gap-2 active:scale-95"
+                                                    >
+                                                        <span className="material-icons-round text-sm">remove_shopping_cart</span>
+                                                        Remove from Cart
+                                                    </motion.button>
+                                                ) : (
+                                                    <motion.button
+                                                        key="add"
+                                                        initial={{ opacity: 0, scale: 0.95 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        exit={{ opacity: 0, scale: 0.95 }}
+                                                        onClick={() => addToCart(item)}
+                                                        className="w-full py-3 rounded-2xl bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 text-[#D4AF37] dark:text-amber-400 text-sm font-black transition-all border border-[#D4AF37]/20 flex items-center justify-center gap-2 active:scale-95"
+                                                    >
+                                                        <span className="material-icons-round text-sm">add_shopping_cart</span>
+                                                        Add to Cart
+                                                    </motion.button>
+                                                )}
+                                            </AnimatePresence>
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
                         )}
                     </div>
+
+                    {/* Floating Cart */}
+                    <MerchantFloatingCart
+                        cartItems={cartItems}
+                        merchantBalance={merchantBalance}
+                        subtotalInRupees={subtotalWithCommission}
+                        onRemoveItem={removeFromCart}
+                        onPurchaseWallet={handlePurchaseWallet}
+                        isPurchasing={purchasing}
+                        disableGateway={true}
+                        walletLabel="Complete Purchase"
+                    />
                 </div>
             </div>
-        </div>
+        </>
     );
 }

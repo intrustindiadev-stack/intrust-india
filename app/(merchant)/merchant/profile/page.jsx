@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useMerchant } from '@/hooks/useMerchant';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 export default function ProfilePage() {
     const { merchant, loading: merchantLoading, error: merchantError } = useMerchant();
@@ -11,10 +12,25 @@ export default function ProfilePage() {
         gst_number: '',
     });
     const [saving, setSaving] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-    const handleLogout = async () => {
-        await supabase.auth.signOut();
-        window.location.href = "/login";
+    const handleLogout = () => {
+        setShowLogoutModal(true);
+    };
+
+    const confirmLogout = async () => {
+        setShowLogoutModal(false);
+        setIsLoggingOut(true);
+        try {
+            await supabase.auth.signOut();
+            window.location.href = "/login";
+        } catch (err) {
+            console.error('Logout error:', err);
+            window.location.href = "/login";
+        } finally {
+            setIsLoggingOut(false);
+        }
     };
 
     useEffect(() => {
@@ -161,12 +177,22 @@ export default function ProfilePage() {
                                 className="w-full sm:w-auto px-10 py-4 border border-red-500/20 text-red-500 font-bold rounded-xl hover:bg-red-500/10 transition-all flex items-center justify-center gap-2"
                             >
                                 <span className="material-icons-round text-sm">logout</span>
-                                <span>Logout</span>
+                                <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
+
+            <ConfirmModal
+                isOpen={showLogoutModal}
+                onConfirm={confirmLogout}
+                onCancel={() => setShowLogoutModal(false)}
+                title="Confirm Logout"
+                message="Are you sure you want to log out from your merchant account?"
+                confirmLabel="Logout"
+                cancelLabel="Cancel"
+            />
         </div>
     );
 }

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMerchant } from "@/hooks/useMerchant";
 import { supabase } from "@/lib/supabaseClient";
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import { useState } from 'react';
 import KycStatusCard from "./KycStatusCard";
 import WalletCard from "./WalletCard";
 
@@ -27,9 +29,25 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { label: "Settings", href: "/merchant/settings", icon: "settings" },
     ];
 
-    const handleLogout = async () => {
-        await supabase.auth.signOut();
-        window.location.href = "/login";
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+    const handleLogout = () => {
+        setShowLogoutModal(true);
+    };
+
+    const confirmLogout = async () => {
+        setShowLogoutModal(false);
+        setIsLoggingOut(true);
+        try {
+            await supabase.auth.signOut();
+            window.location.href = "/login";
+        } catch (error) {
+            console.error('Logout error:', error);
+            window.location.href = "/login";
+        } finally {
+            setIsLoggingOut(false);
+        }
     };
 
     return (
@@ -125,13 +143,24 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                     </div>
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center space-x-2 py-3 rounded-xl border border-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-500/10 transition-all text-sm font-medium"
+                        disabled={isLoggingOut}
+                        className="w-full flex items-center justify-center space-x-2 py-3 rounded-xl border border-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-500/10 transition-all text-sm font-medium disabled:opacity-50"
                     >
                         <span className="material-icons-round text-sm">logout</span>
-                        <span>Logout</span>
+                        <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
                     </button>
                 </div>
             </aside>
+
+            <ConfirmModal
+                isOpen={showLogoutModal}
+                onConfirm={confirmLogout}
+                onCancel={() => setShowLogoutModal(false)}
+                title="Confirm Logout"
+                message="Are you sure you want to log out from your merchant account?"
+                confirmLabel="Logout"
+                cancelLabel="Cancel"
+            />
         </>
     );
 }

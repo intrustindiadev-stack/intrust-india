@@ -6,6 +6,7 @@ import { LayoutDashboard, Users, Store, DollarSign, Settings, LogOut, Loader2 } 
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabaseClient';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
@@ -19,8 +20,14 @@ export default function AdminBottomNav({ isSidebarOpen }) {
     const pathname = usePathname();
     const router = useRouter();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-    const handleLogout = async () => {
+    const handleLogout = () => {
+        setShowLogoutModal(true);
+    };
+
+    const confirmLogout = async () => {
+        setShowLogoutModal(false);
         setIsLoggingOut(true);
         try {
             const supabase = createClient();
@@ -98,6 +105,16 @@ export default function AdminBottomNav({ isSidebarOpen }) {
                     </button>
                 </div>
             </motion.nav>
+
+            <ConfirmModal
+                isOpen={showLogoutModal}
+                onConfirm={confirmLogout}
+                onCancel={() => setShowLogoutModal(false)}
+                title="Confirm Logout"
+                message="Are you sure you want to log out? You will need to log in again to access the admin panel."
+                confirmLabel="Logout"
+                cancelLabel="Stay Logged In"
+            />
         </>
     );
 }

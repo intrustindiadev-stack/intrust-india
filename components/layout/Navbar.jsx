@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import MobileNav from './MobileNav';
 import GoldBadge from '@/components/ui/GoldBadge';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
@@ -49,12 +50,27 @@ export default function Navbar() {
         };
     }, [menuOpen]);
 
-    const handleLogout = async () => {
-        await fetch('/auth/logout', {
-            method: 'POST',
-        });
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-        window.location.href = '/';
+    const handleLogout = () => {
+        setShowLogoutModal(true);
+    };
+
+    const confirmLogout = async () => {
+        setShowLogoutModal(false);
+        setIsLoggingOut(true);
+        try {
+            await fetch('/auth/logout', {
+                method: 'POST',
+            });
+            window.location.href = '/';
+        } catch (error) {
+            console.error('Logout error:', error);
+            window.location.href = '/';
+        } finally {
+            setIsLoggingOut(false);
+        }
     };
 
     const menuItems = [
@@ -168,7 +184,6 @@ export default function Navbar() {
                                     <NotificationBell apiPath="/api/notifications" variant="navbar" />
                                 </motion.div>
                             )}
-
                             {/* Theme Toggle */}
                             <motion.button
                                 initial={{ opacity: 0, scale: 0.9 }}
@@ -359,6 +374,16 @@ export default function Navbar() {
                 handleSignOut={handleLogout}
                 menuItems={menuItems}
                 apiPath="/api/notifications"
+            />
+
+            <ConfirmModal
+                isOpen={showLogoutModal}
+                onConfirm={confirmLogout}
+                onCancel={() => setShowLogoutModal(false)}
+                title="Confirm Logout"
+                message="Are you sure you want to sign out from INTRUST?"
+                confirmLabel={isLoggingOut ? "Signing Out..." : "Sign Out"}
+                cancelLabel="Cancel"
             />
         </>
     );

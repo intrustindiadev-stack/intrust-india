@@ -26,6 +26,7 @@ import {
     ShoppingBag,
     Image as ImageIcon
 } from 'lucide-react';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -47,8 +48,14 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
     const pathname = usePathname();
     const router = useRouter();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-    const handleLogout = async () => {
+    const handleLogout = () => {
+        setShowLogoutModal(true);
+    };
+
+    const confirmLogout = async () => {
+        setShowLogoutModal(false);
         setIsLoggingOut(true);
         try {
             const supabase = createClient();
@@ -178,6 +185,16 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                     </div>
                 </div>
             </aside>
+
+            <ConfirmModal
+                isOpen={showLogoutModal}
+                onConfirm={confirmLogout}
+                onCancel={() => setShowLogoutModal(false)}
+                title="Confirm Logout"
+                message="Are you sure you want to log out? You will need to log in again to access the admin panel."
+                confirmLabel="Logout"
+                cancelLabel="Stay Logged In"
+            />
         </>
     );
 }

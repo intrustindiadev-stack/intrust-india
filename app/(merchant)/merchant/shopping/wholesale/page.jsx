@@ -44,28 +44,28 @@ export default async function WholesaleHubPage() {
     if (categoriesError) console.error('Error fetching categories:', categoriesError);
 
     return (
-        <div className="p-8 lg:p-12 max-w-7xl mx-auto bg-[#f8f9fb] min-h-screen">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
-                <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/5 text-slate-500 text-[10px] font-black uppercase tracking-widest leading-none">
+        <div className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+                <div className="space-y-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/5 text-slate-500 text-[10px] font-black uppercase tracking-widest leading-none">
                         <Sparkles size={12} className="text-blue-600" />
                         Platform Wholesale Market
                     </div>
-                    <h1 className="text-5xl font-black text-slate-950 tracking-tight leading-none font-[family-name:var(--font-outfit)]">
+                    <h1 className="text-3xl sm:text-5xl font-black text-slate-950 dark:text-slate-100 tracking-tight leading-none font-[family-name:var(--font-outfit)]">
                         Inventory <span className="text-blue-600">Sourcing</span>
                     </h1>
-                    <p className="text-slate-400 font-medium text-lg max-w-md">
+                    <p className="text-slate-400 font-medium text-base max-w-md">
                         Browse and stock up your digital shelves with verified platform products.
                     </p>
                 </div>
 
-                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shadow-sm border border-amber-100/50">
-                        <Wallet size={24} />
+                <div className="bg-white dark:bg-white/5 p-4 sm:p-6 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-xl shadow-slate-200/40 dark:shadow-none flex items-center gap-4 self-start md:self-auto">
+                    <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 shadow-sm border border-amber-100/50 dark:border-amber-500/20">
+                        <Wallet size={22} />
                     </div>
-                    <div className="pr-4">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Merchant Credit</p>
-                        <p className="text-xl font-black text-slate-900 tracking-tight">
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">Merchant Credit</p>
+                        <p className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
                             ₹{(merchant.wallet_balance_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </p>
                     </div>
