@@ -318,8 +318,8 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                             >
                                 {/* Image */}
                                 <div className="w-20 h-20 rounded-2xl bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 group-hover:bg-slate-100 transition-colors">
-                                    {product.image_url ? (
-                                        <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+                                    {product.product_images?.[0] ? (
+                                        <img src={product.product_images[0]} alt="" className="w-full h-full object-cover" />
                                     ) : (
                                         <Package size={28} className="text-slate-200" />
                                     )}

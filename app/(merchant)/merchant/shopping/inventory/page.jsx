@@ -32,7 +32,7 @@ export default async function MerchantShopPage() {
             shopping_products (
                 title,
                 description,
-                image_url,
+                product_images,
                 category,
                 suggested_retail_price_paise,
                 wholesale_price_paise

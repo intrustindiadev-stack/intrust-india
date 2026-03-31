@@ -42,8 +42,9 @@ sabpaisa-debug.log*
 next-env.d.ts
 
 # backups
-supabase_backup.sql
+supabase_backup*.sql
 dump_error.log
+/scripts/backup_supabase.ps1
 
 # agent folders
 .agent*

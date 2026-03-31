@@ -59,9 +59,9 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                         boxShadow: `inset 0 0 40px ${primaryColor}08`
                     } : {}}
                 >
-                    {product.image_url ? (
+                    {product.product_images?.[0] ? (
                         <img
-                            src={product.image_url}
+                            src={product.product_images[0]}
                             alt={product.title}
                             className={`w-[85%] h-[85%] object-contain transition-transform duration-500 group-hover:scale-110 ${isDark ? '' : 'mix-blend-multiply'}`}
                         />

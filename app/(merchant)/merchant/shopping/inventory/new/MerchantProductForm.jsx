@@ -54,7 +54,6 @@ export default function MerchantProductForm({ merchantId }) {
             const retailPricePaise = Math.round(parseFloat(formData.retail_price_paise) * 100);
             const mrpPaise = formData.mrp_paise ? Math.round(parseFloat(formData.mrp_paise) * 100) : retailPricePaise;
             const wholesalePricePaise = formData.wholesale_price_paise ? Math.round(parseFloat(formData.wholesale_price_paise) * 100) : 0;
-            const image_url = formData.product_images[0] || '';
 
             // Find the category object to get its ID
             const selectedCategory = fullCategories.find(c => c.name === formData.category);
@@ -67,7 +66,6 @@ export default function MerchantProductForm({ merchantId }) {
                     description: formData.description,
                     category: formData.category,
                     category_id: selectedCategory ? selectedCategory.id : null,
-                    image_url,
                     product_images: formData.product_images,
                     wholesale_price_paise: wholesalePricePaise, // Used to store Custom Product Cost Price
                     suggested_retail_price_paise: retailPricePaise,

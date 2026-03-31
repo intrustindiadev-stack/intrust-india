@@ -143,8 +143,8 @@ export default function StorefrontClient({ initialInventory, customer }) {
                         return (
                             <div key={item.id} className="group bg-white rounded-[3rem] border border-slate-100 overflow-hidden hover:shadow-2xl hover:shadow-blue-600/10 transition-all duration-500 flex flex-col hover:-translate-y-2">
                                 <div className="aspect-[4/5] bg-slate-100 relative overflow-hidden">
-                                    {product.image_url ? (
-                                        <img src={product.image_url} alt={product.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                    {product.product_images?.[0] ? (
+                                        <img src={product.product_images[0]} alt={product.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-slate-200">
                                             <Package size={64} />

@@ -72,7 +72,7 @@ const CartClient = ({ userId }) => {
           shopping_products (
             id,
             title,
-            image_url,
+            product_images,
             mrp_paise,
             suggested_retail_price_paise,
             category
@@ -563,8 +563,8 @@ const CartClient = ({ userId }) => {
                         href={`/shop/product/${item.shopping_products?.id}`}
                         className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex-shrink-0 p-1.5 flex items-center justify-center ${isDark ? 'bg-[#0c0e14] border border-white/[0.04]' : 'bg-slate-50 border border-slate-100'}`}
                       >
-                        {item.shopping_products?.image_url ? (
-                          <img src={item.shopping_products.image_url} alt="product" className={`w-full h-full object-contain ${isDark ? '' : 'mix-blend-multiply'}`} />
+                        {item.shopping_products?.product_images?.[0] ? (
+                          <img src={item.shopping_products.product_images[0]} alt="product" className={`w-full h-full object-contain ${isDark ? '' : 'mix-blend-multiply'}`} />
                         ) : (
                           <Package size={20} className={isDark ? 'text-white/10' : 'text-slate-200'} />
                         )}

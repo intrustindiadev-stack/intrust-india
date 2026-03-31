@@ -249,9 +249,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                             {(() => {
                                 const allImages = product.product_images?.length
                                     ? product.product_images
-                                    : product.image_url
-                                        ? [product.image_url]
-                                        : [];
+                                    : [];
                                 const displayUrl = allImages[selectedImageIndex] || null;
                                 return displayUrl ? (
                                     <img
@@ -542,8 +540,8 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                                     {rSavings}% OFF
                                                 </div>
                                             )}
-                                            {rProduct.image_url ? (
-                                                <img src={rProduct.image_url} alt={rProduct.title} className={`w-[80%] h-[80%] object-contain group-hover:scale-105 transition-transform ${isDark ? '' : 'mix-blend-multiply'}`} />
+                                            {rProduct.product_images?.[0] ? (
+                                                <img src={rProduct.product_images[0]} alt={rProduct.title} className={`w-[80%] h-[80%] object-contain group-hover:scale-105 transition-transform ${isDark ? '' : 'mix-blend-multiply'}`} />
                                             ) : (
                                                 <Package size={24} className={isDark ? 'text-white/10' : 'text-slate-200'} />
                                             )}

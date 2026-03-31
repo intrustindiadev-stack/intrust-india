@@ -232,8 +232,8 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                                 <div key={product.id} className="bg-white p-4 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-blue-600/10 transition-all duration-500 flex flex-col group">
                                     <div className={`aspect-square rounded-[2rem] relative overflow-hidden mb-6 bg-gradient-to-br ${gradientClass} p-1`}>
                                         <div className="w-full h-full bg-white rounded-[1.8rem] overflow-hidden relative">
-                                            {product.image_url ? (
-                                                <img src={product.image_url} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                            {product.product_images?.[0] ? (
+                                                <img src={product.product_images[0]} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                                             ) : (
                                                 <div className={`w-full h-full bg-gradient-to-br ${gradientClass} opacity-10 flex items-center justify-center`}>
                                                     <Package size={64} className="text-slate-400 opacity-50" />

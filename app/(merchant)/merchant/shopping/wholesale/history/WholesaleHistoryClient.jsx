@@ -83,9 +83,9 @@ export default function WholesaleHistoryClient({ orders = [], merchant }) {
                             >
                                 {/* Product Image */}
                                 <div className="w-16 h-16 rounded-2xl bg-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                                    {product?.image_url ? (
+                                    {product?.product_images?.[0] ? (
                                         <img
-                                            src={product.image_url}
+                                            src={product.product_images[0]}
                                             alt={product?.title || 'Product'}
                                             className="w-full h-full object-cover"
                                         />

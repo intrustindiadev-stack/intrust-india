@@ -29,7 +29,7 @@ export default async function CategoryStorefrontPage({ params }) {
                 custom_title,
                 custom_description,
                 merchants (business_name),
-                shopping_products!inner (id, title, description, image_url, category, mrp_paise, suggested_retail_price_paise)
+                shopping_products!inner (id, title, description, product_images, category, mrp_paise, suggested_retail_price_paise)
             `)
             .eq('is_active', true)
             .gt('stock_quantity', 0)

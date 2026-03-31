@@ -58,7 +58,7 @@ export default async function ProductDetailPage({ params }) {
                 product_id,
                 is_active,
                 merchants (business_name),
-                shopping_products!inner (id, title, image_url, category, suggested_retail_price_paise, mrp_paise)
+                shopping_products!inner (id, title, product_images, category, suggested_retail_price_paise, mrp_paise)
             `)
             .eq('is_active', true)
             .gt('stock_quantity', 0)

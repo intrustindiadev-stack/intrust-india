@@ -175,8 +175,8 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                                     <div className="flex gap-8 flex-1 min-w-0 items-center">
                                         <div className="w-32 h-32 rounded-[2rem] bg-gradient-to-br from-slate-100 to-slate-200 shrink-0 overflow-hidden relative shadow-inner p-1">
                                             <div className="w-full h-full bg-white rounded-[1.8rem] overflow-hidden relative group">
-                                                {product.image_url ? (
-                                                    <img src={product.image_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                                {product.product_images?.[0] ? (
+                                                    <img src={product.product_images[0]} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-50">
                                                         <Store size={40} />

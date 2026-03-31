@@ -26,9 +26,7 @@ export default function ProductForm({ initialData = null }) {
         hsn_code: initialData?.hsn_code || '',
         product_images: initialData?.product_images?.length
             ? initialData.product_images
-            : initialData?.image_url
-                ? [initialData.image_url]
-                : [],
+            : [],
         is_active: initialData?.is_active ?? true,
     });
 
@@ -63,18 +61,15 @@ export default function ProductForm({ initialData = null }) {
             const selectedCategory = categories.find(cat => cat.name === formData.category);
             const categoryId = selectedCategory ? selectedCategory.id : null;
 
-            const image_url = formData.product_images[0] || '';
-
             const payload = {
                 ...formData,
-                image_url,
                 wholesale_price_paise: Math.round(parseFloat(formData.wholesale_price_paise) * 100),
                 suggested_retail_price_paise: Math.round(parseFloat(formData.suggested_retail_price_paise) * 100),
                 mrp_paise: Math.round(parseFloat(formData.mrp_paise) * 100),
                 admin_stock: parseInt(formData.admin_stock),
                 gst_percentage: parseInt(formData.gst_percentage || 0),
                 hsn_code: formData.hsn_code || null,
-                category_id: categoryId, // Pass the category ID
+                category_id: categoryId,
             };
 
             let res;
