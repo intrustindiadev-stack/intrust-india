@@ -206,8 +206,8 @@ export default function WishlistClient({ userId, initialItems }) {
                       className="flex gap-4 p-4 rounded-2xl mb-3 bg-white border border-slate-100 shadow-sm"
                     >
                       <Link href={`/shop/product/${product?.id}`} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50 border border-slate-100">
-                        {product?.image_url ? (
-                          <img src={product.image_url} alt={product.title} className="w-full h-full object-contain" />
+                        {product?.product_images?.[0] ? (
+                          <img src={product.product_images[0]} alt={product.title} className="w-full h-full object-contain" />
                         ) : (
                           <Package size={20} className="text-slate-200" />
                         )}

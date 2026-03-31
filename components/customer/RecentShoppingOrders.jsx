@@ -37,7 +37,7 @@ export default function RecentShoppingOrders({ userId, limit = 3 }) {
               id,
               quantity,
               unit_price_paise,
-              shopping_products (title, image_url, mrp_paise, suggested_retail_price_paise),
+              shopping_products (title, product_images, mrp_paise, suggested_retail_price_paise),
               merchants (business_name)
             ),
             delivery_status
@@ -101,7 +101,7 @@ export default function RecentShoppingOrders({ userId, limit = 3 }) {
         <div className="space-y-4">
           {orders.map((order) => {
             const firstItem = order.shopping_order_items?.[0];
-            const itemImage = firstItem?.shopping_products?.image_url;
+            const itemImage = firstItem?.shopping_products?.product_images?.[0];
             const remainingItems = (order.shopping_order_items?.length || 1) - 1;
             const totalSavedPaise = order.shopping_order_items?.reduce((acc, item) => {
               const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || item.unit_price_paise;

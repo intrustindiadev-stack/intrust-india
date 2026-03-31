@@ -233,7 +233,7 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
               return (
                 <div key={item.id} className={`flex gap-3 pb-4 border-b last:border-b-0 last:pb-0 ${isDark ? 'border-white/[0.03]' : 'border-slate-50'}`}>
                   <div className={`w-14 h-14 rounded-xl overflow-hidden p-1 flex items-center justify-center ${isDark ? 'bg-black/20' : 'bg-slate-50 shadow-inner'}`}>
-                    <img src={item.shopping_products?.image_url} alt="" className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal" />
+                    <img src={item.shopping_products?.product_images?.[0]} alt="" className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-bold line-clamp-1">{item.shopping_products?.title}</h4>

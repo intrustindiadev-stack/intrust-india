@@ -86,7 +86,7 @@ export default function StoreCreditsPage() {
                             shopping_products (
                                 id,
                                 title,
-                                image_url
+                                product_images
                             )
                         )
                     )

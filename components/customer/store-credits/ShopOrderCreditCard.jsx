@@ -100,9 +100,9 @@ export default function ShopOrderCreditCard({ req, payingId, onPaySuccess }) {
                                         key={item.id || idx}
                                         className="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-gray-50 border border-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0"
                                     >
-                                        {item.shopping_products?.image_url ? (
+                                        {item.shopping_products?.product_images?.[0] ? (
                                             <img
-                                                src={item.shopping_products.image_url}
+                                                src={item.shopping_products.product_images[0]}
                                                 alt={item.shopping_products.title}
                                                 className="w-full h-full object-contain p-1.5"
                                             />

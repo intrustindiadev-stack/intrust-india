@@ -32,7 +32,7 @@ const OrdersClient = ({ userId }) => {
           *,
           shopping_order_items (
             *,
-            shopping_products (title, image_url, mrp_paise, suggested_retail_price_paise),
+            shopping_products (title, product_images, mrp_paise, suggested_retail_price_paise),
             merchants (business_name)
           )
         `)
@@ -144,9 +144,9 @@ const OrdersClient = ({ userId }) => {
                 <div key={item.id} className="p-4 flex gap-4">
                   {/* Thumbnail */}
                   <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-md border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center">
-                    {item.shopping_products?.image_url ? (
+                    {item.shopping_products?.product_images?.[0] ? (
                       <img
-                        src={item.shopping_products.image_url}
+                        src={item.shopping_products.product_images[0]}
                         alt={item.shopping_products.title}
                         className="w-full h-full object-contain p-1 mix-blend-multiply"
                       />
