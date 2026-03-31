@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMerchant } from "@/hooks/useMerchant";
 import { supabase } from "@/lib/supabaseClient";
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import { useState } from 'react';
 import KycStatusCard from "./KycStatusCard";
 import WalletCard from "./WalletCard";
 
@@ -27,9 +29,25 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { label: "Settings", href: "/merchant/settings", icon: "settings" },
     ];
 
-    const handleLogout = async () => {
-        await supabase.auth.signOut();
-        window.location.href = "/login";
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+    const handleLogout = () => {
+        setShowLogoutModal(true);
+    };
+
+    const confirmLogout = async () => {
+        setShowLogoutModal(false);
+        setIsLoggingOut(true);
+        try {
+            await supabase.auth.signOut();
+            window.location.href = "/login";
+        } catch (error) {
+            console.error('Logout error:', error);
+            window.location.href = "/login";
+        } finally {
+            setIsLoggingOut(false);
+        }
     };
 
     return (
@@ -112,26 +130,47 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 </nav>
 
                 <div className="p-4 mt-auto">
-                    <div className="merchant-glass bg-white/40 dark:bg-white/5 p-3 rounded-xl flex items-center space-x-3 mb-4 shadow-sm">
-                        <div className="w-10 h-10 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                            <span className="material-icons-round text-slate-400">account_circle</span>
+                    <div className="merchant-glass bg-white/40 dark:bg-white/5 p-3 rounded-xl flex items-center space-x-3 mb-4 shadow-sm border border-black/5 dark:border-white/5">
+                        <div className="w-10 h-10 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                            {merchant?.user_profiles?.avatar_url ? (
+                                <img 
+                                    src={merchant.user_profiles.avatar_url} 
+                                    alt={merchant.business_name} 
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <span className="material-icons-round text-slate-400">account_circle</span>
+                            )}
                         </div>
                         <div className="overflow-hidden">
-                            <p className="text-xs font-bold truncate text-slate-800 dark:text-slate-100">{merchant?.business_name || "Merchant"}</p>
-                            <Link href="/merchant/profile" className="text-[10px] text-slate-500 dark:text-slate-400 truncate block hover:underline">
+                            <p className="text-xs font-black truncate text-slate-800 dark:text-slate-100 uppercase tracking-tighter">
+                                {merchant?.business_name || "Merchant"}
+                            </p>
+                            <Link href="/merchant/profile" className="text-[10px] text-slate-500 dark:text-slate-400 truncate block hover:underline font-bold">
                                 View Profile
                             </Link>
                         </div>
                     </div>
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center space-x-2 py-3 rounded-xl border border-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-500/10 transition-all text-sm font-medium"
+                        disabled={isLoggingOut}
+                        className="w-full flex items-center justify-center space-x-2 py-3 rounded-xl border border-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-500/10 transition-all text-sm font-medium disabled:opacity-50"
                     >
                         <span className="material-icons-round text-sm">logout</span>
-                        <span>Logout</span>
+                        <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
                     </button>
                 </div>
             </aside>
+
+            <ConfirmModal
+                isOpen={showLogoutModal}
+                onConfirm={confirmLogout}
+                onCancel={() => setShowLogoutModal(false)}
+                title="Confirm Logout"
+                message="Are you sure you want to log out from your merchant account?"
+                confirmLabel="Logout"
+                cancelLabel="Cancel"
+            />
         </>
     );
 }

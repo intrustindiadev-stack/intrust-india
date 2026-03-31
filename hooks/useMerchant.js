@@ -60,7 +60,15 @@ export function useMerchant() {
                     if (merchantError && merchantError.code !== 'PGRST116') {
                         throw merchantError;
                     }
-                    setMerchant(data || null);
+
+                    // Fetch associated profile
+                    const { data: profileData } = await supabase
+                        .from('user_profiles')
+                        .select('*')
+                        .eq('id', user.id)
+                        .single();
+
+                    setMerchant(data ? { ...data, user_profiles: profileData } : null);
                 }
 
             } catch (err) {

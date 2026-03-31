@@ -1,29 +1,31 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Edit3, Tag, Box, Info, Store, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Search, Tag, Box, ShoppingBag, ArrowRight, Store, Lock, Package, Plus, Minus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function MerchantInventoryClient({ initialInventory, merchant }) {
-    const router = useRouter();
     const [inventory, setInventory] = useState(initialInventory);
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterType, setFilterType] = useState('all'); // all, platform, custom
-    const [isUpdating, setIsUpdating] = useState(null); // id of product being updated
+    const [filterType, setFilterType] = useState('all');
+    const [isUpdating, setIsUpdating] = useState(null);
+    // Track per-item editable price state (custom products only)
+    const [editPrices, setEditPrices] = useState({});
 
     const filteredInventory = inventory.filter(item => {
         const product = item.shopping_products;
-        const title = item.custom_title || product.title;
-        const category = product.category;
-        
-        const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                             (category && category.toLowerCase().includes(searchQuery.toLowerCase()));
-        const matchesFilter = filterType === 'all' || 
-                             (filterType === 'platform' && item.is_platform_product) ||
-                             (filterType === 'custom' && !item.is_platform_product);
+        const title = item.custom_title || product?.title || '';
+        const category = product?.category || '';
+        const matchesSearch =
+            title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            category.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesFilter =
+            filterType === 'all' ||
+            (filterType === 'platform' && item.is_platform_product) ||
+            (filterType === 'custom' && !item.is_platform_product);
         return matchesSearch && matchesFilter;
     });
 
@@ -36,29 +38,24 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                 .eq('id', itemId);
 
             if (error) throw error;
-            
-            setInventory(prev => prev.map(item => 
-                item.id === itemId ? { ...item, is_active: !currentStatus } : item
-            ));
-            toast.success(currentStatus ? 'Unpublished from shop' : 'Published to shop');
-        } catch (error) {
+
+            setInventory(prev =>
+                prev.map(item =>
+                    item.id === itemId ? { ...item, is_active: !currentStatus } : item
+                )
+            );
+            toast.success(currentStatus ? 'Unpublished from shop' : 'Published to shop!');
+        } catch {
             toast.error('Failed to update visibility');
         } finally {
             setIsUpdating(null);
         }
     };
 
-    /**
-     * Stock update route — guarded server-side.
-     * Platform products are rejected by the RPC; only custom products can be updated.
-     */
     const handleUpdateStock = async (item, newStock) => {
         if (newStock < 0 || isNaN(newStock)) return;
-
-        // Prevent even sending the request for platform products — the UI shouldn't
-        // offer the input, but this is a last-resort client guard.
         if (item.is_platform_product) {
-            toast.error('Platform product stock is managed via Wholesale. Please restock there.');
+            toast.error('Platform product stock is managed via Wholesale.');
             return;
         }
 
@@ -71,33 +68,34 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
             if (error) throw error;
             if (data && !data.success) throw new Error(data.message);
 
-            setInventory(prev => prev.map(i => 
-                i.id === item.id ? { ...i, stock_quantity: newStock } : i
-            ));
+            setInventory(prev =>
+                prev.map(i => i.id === item.id ? { ...i, stock_quantity: newStock } : i)
+            );
             toast.success('Stock updated');
 
             if (newStock <= 5) {
-                const title = item.custom_title || item.shopping_products.title;
+                const title = item.custom_title || item.shopping_products?.title;
                 supabase.from('notifications').insert({
                     user_id: merchant.user_id,
                     title: 'Low Stock Alert',
-                    body: `Only ${newStock} units left for ${title}. Restock soon to avoid losing sales.`,
+                    body: `Only ${newStock} units left for ${title}. Restock soon.`,
                     type: 'warning',
                     reference_id: item.id,
-                    reference_type: 'merchant_inventory'
+                    reference_type: 'merchant_inventory',
                 }).then(({ error: notifError }) => {
-                    if (notifError) console.error('Failed to insert low stock notification:', notifError);
+                    if (notifError) console.error('Low stock notification error:', notifError);
                 });
             }
-        } catch (error) {
-            toast.error(error.message || 'Failed to update stock');
+        } catch (err) {
+            toast.error(err.message || 'Failed to update stock');
         }
     };
 
+    // Only allowed for CUSTOM products — platform products get the suggested retail price locked
     const handleUpdatePrice = async (itemId, newPriceRupees) => {
         const pricePaise = Math.round(parseFloat(newPriceRupees) * 100);
         if (isNaN(pricePaise) || pricePaise < 0) return;
-        
+
         try {
             const { error } = await supabase
                 .from('merchant_inventory')
@@ -105,219 +103,328 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                 .eq('id', itemId);
 
             if (error) throw error;
-            
-            setInventory(prev => prev.map(item => 
-                item.id === itemId ? { ...item, retail_price_paise: pricePaise } : item
-            ));
-            toast.success('Price updated');
-        } catch (error) {
+
+            setInventory(prev =>
+                prev.map(item =>
+                    item.id === itemId ? { ...item, retail_price_paise: pricePaise } : item
+                )
+            );
+            setEditPrices(prev => ({ ...prev, [itemId]: undefined }));
+            toast.success('Retail price updated');
+        } catch {
             toast.error('Failed to update price');
         }
     };
 
     return (
-        <div className="space-y-10">
+        <div className="space-y-6">
             {/* Filters Bar */}
-            <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
-                <div className="relative w-full lg:max-w-xl">
-                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <input 
-                        type="text" 
-                        placeholder="Search your inventory by name or category..."
+            <div className="flex flex-col sm:flex-row gap-3">
+                {/* Search */}
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search by name or category..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-14 pr-6 py-4 rounded-[2rem] border-2 border-white focus:border-blue-100 shadow-xl shadow-slate-200/50 bg-white/80 backdrop-blur-xl focus:ring-4 focus:ring-blue-500/10 outline-none transition-all placeholder:text-slate-400 font-medium text-slate-900"
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3 rounded-2xl border-2 border-white dark:border-white/10 focus:border-blue-200 dark:focus:border-blue-600 shadow-lg shadow-slate-200/50 dark:shadow-none bg-white dark:bg-white/5 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all placeholder:text-slate-400 font-medium text-slate-900 dark:text-slate-100 text-sm"
                     />
                 </div>
-                
-                <div className="flex items-center p-1.5 bg-white/80 backdrop-blur-xl rounded-[2rem] w-full lg:w-auto shadow-xl shadow-slate-200/50 border border-white">
-                    <button 
-                        onClick={() => setFilterType('all')}
-                        className={`flex-1 lg:flex-none px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${filterType === 'all' ? 'bg-[#1e3a5f] shadow-lg shadow-blue-900/20 text-white' : 'text-slate-500 hover:text-slate-900'}`}
-                    >
-                        All Items
-                    </button>
-                    <button 
-                        onClick={() => setFilterType('platform')}
-                        className={`flex-1 lg:flex-none px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${filterType === 'platform' ? 'bg-[#1e3a5f] shadow-lg shadow-blue-900/20 text-white' : 'text-slate-500 hover:text-slate-900'}`}
-                    >
-                        Platform
-                    </button>
-                    <button 
-                        onClick={() => setFilterType('custom')}
-                        className={`flex-1 lg:flex-none px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${filterType === 'custom' ? 'bg-[#1e3a5f] shadow-lg shadow-blue-900/20 text-white' : 'text-slate-500 hover:text-slate-900'}`}
-                    >
-                        Custom
-                    </button>
+
+                {/* Type Filter */}
+                <div className="flex items-center p-1 bg-white dark:bg-white/5 rounded-2xl border border-white dark:border-white/10 shadow-lg shadow-slate-200/50 dark:shadow-none flex-shrink-0">
+                    {['all', 'platform', 'custom'].map(type => (
+                        <button
+                            key={type}
+                            onClick={() => setFilterType(type)}
+                            className={`flex-1 sm:flex-none px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filterType === type
+                                ? 'bg-[#1e3a5f] text-white shadow-lg shadow-blue-900/20'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                                }`}
+                        >
+                            {type === 'all' ? 'All' : type === 'platform' ? 'Platform' : 'Custom'}
+                        </button>
+                    ))}
                 </div>
             </div>
 
-            {/* Inventory List */}
-            <div className="space-y-6">
+            {/* Count */}
+            <p className="text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-widest">
+                {filteredInventory.length} product{filteredInventory.length !== 1 ? 's' : ''} found
+            </p>
+
+            {/* Inventory Cards */}
+            <AnimatePresence>
                 {filteredInventory.length === 0 ? (
-                    <div className="py-24 text-center bg-white rounded-[3rem] border border-dashed border-slate-300 shadow-sm">
-                        <div className="w-24 h-24 bg-slate-50 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
-                            <Box className="text-slate-300" size={48} />
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="py-20 text-center bg-white dark:bg-white/5 rounded-[2.5rem] border border-dashed border-slate-200 dark:border-white/10"
+                    >
+                        <div className="w-20 h-20 bg-slate-50 dark:bg-white/5 rounded-[1.5rem] flex items-center justify-center mx-auto mb-5">
+                            <Package className="text-slate-300 dark:text-white/20" size={40} />
                         </div>
-                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Catalog is Empty</h3>
-                        <p className="text-slate-500 mt-2 font-medium max-w-sm mx-auto">You haven't added any products to your shop yet. Try sourcing from the wholesale market.</p>
-                    </div>
+                        <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight mb-2">
+                            Catalog is Empty
+                        </h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm max-w-xs mx-auto font-medium mb-6">
+                            Source products from the wholesale market to stock your shop.
+                        </p>
+                        <Link
+                            href="/merchant/shopping/wholesale"
+                            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#1e3a5f] text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-900/20 hover:bg-[#2c5282] transition-all"
+                        >
+                            <ShoppingBag size={16} />
+                            Browse Wholesale
+                            <ArrowRight size={14} />
+                        </Link>
+                    </motion.div>
                 ) : (
-                    filteredInventory.map((item) => {
-                        const product = item.shopping_products;
-                        const isUpdatingThis = isUpdating === item.id;
-                        const isPlatform = item.is_platform_product;
-                        
-                        return (
-                            <div key={item.id} className={`bg-white rounded-[2.5rem] border shadow-xl transition-all duration-500 overflow-visible ${item.is_active ? 'border-slate-100 shadow-slate-200/40 hover:shadow-blue-600/5' : 'border-slate-200 opacity-75 bg-slate-50/50 shadow-none grayscale-[0.2]'}`}>
-                                <div className="flex flex-col xl:flex-row p-6 lg:p-8 gap-8">
-                                    {/* Product Info */}
-                                    <div className="flex gap-8 flex-1 min-w-0 items-center">
-                                        <div className="w-32 h-32 rounded-[2rem] bg-gradient-to-br from-slate-100 to-slate-200 shrink-0 overflow-hidden relative shadow-inner p-1">
-                                            <div className="w-full h-full bg-white rounded-[1.8rem] overflow-hidden relative group">
-                                                {product.product_images?.[0] ? (
-                                                    <img src={product.product_images[0]} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-50">
-                                                        <Store size={40} />
-                                                    </div>
-                                                )}
-                                                {!item.is_active && (
-                                                    <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-[2px] flex items-center justify-center">
-                                                        <span className="bg-white/90 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm">Draft</span>
-                                                    </div>
-                                                )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {filteredInventory.map((item, idx) => {
+                            const product = item.shopping_products;
+                            const isPlatform = item.is_platform_product;
+                            const isUpdatingThis = isUpdating === item.id;
+                            const title = item.custom_title || product?.title || 'Untitled';
+                            const description = item.custom_description || product?.description || '';
+                            const currentEditPrice = editPrices[item.id];
+
+                            const costPaise = isPlatform ? product?.wholesale_price_paise : null;
+                            const retailPaise = item.retail_price_paise;
+                            const suggestedPaise = product?.suggested_retail_price_paise;
+
+                            // For platform products: retail price is locked to the platform-suggested price
+                            const displayRetailPrice = isPlatform
+                                ? (suggestedPaise / 100)
+                                : (retailPaise / 100);
+
+                            return (
+                                <motion.div
+                                    key={item.id}
+                                    layout
+                                    initial={{ opacity: 0, y: 12 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: idx * 0.04 }}
+                                    className={`bg-white dark:bg-white/5 rounded-[2rem] border overflow-hidden shadow-sm transition-all duration-300 flex flex-col ${item.is_active
+                                        ? 'border-slate-100 dark:border-white/10 hover:shadow-xl hover:shadow-blue-600/5'
+                                        : 'border-slate-200 dark:border-white/5 opacity-65 grayscale-[0.3]'
+                                        }`}
+                                >
+                                    {/* Image + Badges */}
+                                    <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-100 to-slate-200 dark:from-white/5 dark:to-white/10 overflow-hidden">
+                                        {product?.product_images?.[0] ? (
+                                            <img
+                                                src={product.product_images[0]}
+                                                alt={title}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center">
+                                                <Store size={36} className="text-slate-300 dark:text-white/20" />
                                             </div>
+                                        )}
+
+                                        {/* Overlay when inactive */}
+                                        {!item.is_active && (
+                                            <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px] flex items-center justify-center">
+                                                <span className="bg-white/90 dark:bg-black/60 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 shadow-sm">
+                                                    Draft
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* Type badge */}
+                                        <div className="absolute top-3 left-3">
+                                            {isPlatform ? (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-600/90 text-white text-[9px] font-black uppercase tracking-widest backdrop-blur-sm shadow-sm">
+                                                    <Box size={10} /> Platform
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-600/90 text-white text-[9px] font-black uppercase tracking-widest backdrop-blur-sm shadow-sm">
+                                                    <Tag size={10} /> Custom
+                                                </span>
+                                            )}
                                         </div>
-                                        
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <h3 className="text-2xl font-black text-slate-900 truncate tracking-tight">
-                                                    {item.custom_title || product.title}
-                                                </h3>
-                                                {isPlatform ? (
-                                                    <span className="px-3 py-1 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                                                        <Box size={12} /> Platform
-                                                    </span>
-                                                ) : (
-                                                    <span className="px-3 py-1 rounded-lg bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                                                        <Tag size={12} /> Custom
-                                                    </span>
-                                                )}
-                                            </div>
-                                            
-                                            <p className="text-slate-500 font-medium line-clamp-2 mb-4 max-w-2xl leading-relaxed">
-                                                {item.custom_description || product.description}
-                                            </p>
-                                            
-                                            <div className="flex flex-wrap gap-4 items-center">
-                                                <div className="flex items-center px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 shadow-sm">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2">Category:</span>
-                                                    <span className="text-sm font-bold text-slate-900">{product.category || 'General'}</span>
-                                                </div>
-                                                {isPlatform && (
-                                                    <div className="flex items-center px-4 py-2 rounded-xl bg-blue-50/50 border border-blue-100/50">
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-400 mr-2">Cost Price:</span>
-                                                        <span className="text-sm font-black text-blue-700">₹{(product.wholesale_price_paise / 100).toLocaleString('en-IN')}</span>
-                                                    </div>
-                                                )}
-                                            </div>
+
+                                        {/* Stock badge */}
+                                        <div className="absolute top-3 right-3">
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest backdrop-blur-sm shadow-sm ${item.stock_quantity <= 5
+                                                ? 'bg-amber-500/90 text-white'
+                                                : 'bg-black/40 text-white'
+                                                }`}>
+                                                {item.stock_quantity <= 5 && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
+                                                {item.stock_quantity} in stock
+                                            </span>
                                         </div>
                                     </div>
 
-                                    {/* Controls Area */}
-                                    <div className="flex flex-col sm:flex-row items-center gap-6 xl:border-l xl:border-slate-100 xl:pl-10">
-                                        
-                                        {/* Selling Price Editor */}
-                                        <div className="space-y-2 w-full sm:w-auto">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 flex items-center gap-1.5">
-                                                Retail Price
-                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                            </label>
-                                            <div className="relative group/price">
-                                                <div className="absolute left-1 top-1 bottom-1 w-10 flex items-center justify-center bg-slate-100 rounded-xl text-slate-500 font-black">
-                                                    ₹
+                                    {/* Card Body */}
+                                    <div className="p-4 flex flex-col gap-3 flex-1">
+                                        {/* Title + Category */}
+                                        <div>
+                                            <h3 className="text-base font-black text-slate-900 dark:text-slate-100 tracking-tight line-clamp-1 mb-0.5">
+                                                {title}
+                                            </h3>
+                                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                                                {product?.category || 'General'}
+                                            </p>
+                                        </div>
+
+                                        {/* Price info row */}
+                                        <div className="flex items-stretch gap-2">
+                                            {/* Cost Price (platform only) */}
+                                            {isPlatform && costPaise != null && (
+                                                <div className="flex-1 p-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-0.5">Cost</p>
+                                                    <p className="text-sm font-black text-blue-700 dark:text-blue-300">
+                                                        ₹{(costPaise / 100).toLocaleString('en-IN')}
+                                                    </p>
                                                 </div>
-                                                <input 
-                                                    type="number" 
-                                                    defaultValue={item.retail_price_paise / 100}
-                                                    onBlur={(e) => handleUpdatePrice(item.id, e.target.value)}
-                                                    className="w-full sm:w-36 pl-14 pr-4 py-3 rounded-xl bg-white border-2 border-slate-100 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-black text-slate-900 text-lg shadow-sm hover:border-slate-200"
-                                                />
+                                            )}
+
+                                            {/* Retail Price */}
+                                            <div className="flex-1 p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
+                                                <div className="flex items-center gap-1 mb-0.5">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                                        {isPlatform ? 'Retail (Fixed)' : 'Retail Price'}
+                                                    </p>
+                                                    {isPlatform && (
+                                                        <Lock size={8} className="text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                                                    )}
+                                                </div>
+                                                {isPlatform ? (
+                                                    <p className="text-sm font-black text-slate-800 dark:text-slate-100">
+                                                        ₹{displayRetailPrice.toLocaleString('en-IN')}
+                                                    </p>
+                                                ) : (
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-xs font-black text-slate-500 dark:text-slate-400">₹</span>
+                                                        <input
+                                                            type="number"
+                                                            value={currentEditPrice !== undefined ? currentEditPrice : (retailPaise / 100)}
+                                                            onChange={e => setEditPrices(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                                            onBlur={e => handleUpdatePrice(item.id, e.target.value)}
+                                                            className="w-full text-sm font-black text-slate-800 dark:text-slate-100 bg-transparent outline-none focus:text-blue-600 dark:focus:text-blue-400 transition-colors [appearance:textfield]"
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {/* Stock - conditional by product type */}
-                                        <div className="space-y-2 w-full sm:w-auto">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">
-                                                {isPlatform ? 'Stock' : 'Local Stock'}
-                                            </label>
-
-                                            {isPlatform ? (
-                                                /* Platform product: read-only display + restock hint */
-                                                <div className="flex flex-col gap-2">
-                                                    <div className={`w-full sm:w-32 px-5 py-3 rounded-xl border-2 text-lg font-black text-center select-none ${item.stock_quantity <= 5 ? 'border-amber-200 text-amber-700 bg-amber-50/30' : 'border-slate-100 bg-slate-50 text-slate-700'}`}>
-                                                        {item.stock_quantity}
-                                                        {item.stock_quantity <= 5 && (
-                                                            <span className="block text-[10px] font-black text-amber-500 uppercase tracking-widest mt-0.5">Low</span>
-                                                        )}
+                                        {/* Profit tile */}
+                                        {isPlatform && costPaise != null && suggestedPaise != null ? (() => {
+                                            const profitPerUnit = (suggestedPaise - costPaise) / 100;
+                                            const marginPct = ((profitPerUnit / (suggestedPaise / 100)) * 100).toFixed(1);
+                                            const totalProfit = profitPerUnit * item.stock_quantity;
+                                            const isPositive = profitPerUnit > 0;
+                                            return (
+                                                <div className={`flex items-stretch gap-2 p-2.5 rounded-xl border ${isPositive
+                                                    ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20'
+                                                    : 'bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20'
+                                                    }`}>
+                                                    <div className="flex-1">
+                                                        <p className={`text-[9px] font-black uppercase tracking-widest mb-0.5 ${isPositive ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500'}`}>
+                                                            Profit / Unit
+                                                        </p>
+                                                        <p className={`text-sm font-black ${isPositive ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600'}`}>
+                                                            ₹{profitPerUnit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                                            <span className="text-[9px] font-bold ml-1 opacity-70">({marginPct}%)</span>
+                                                        </p>
                                                     </div>
-                                                    <Link
-                                                        href="/merchant/shopping/wholesale"
-                                                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-100 text-blue-600 text-[10px] font-black uppercase tracking-widest transition-all group/ws"
-                                                    >
-                                                        <ShoppingBag size={12} />
-                                                        Restock via Wholesale
-                                                        <ArrowRight size={10} className="group-hover/ws:translate-x-0.5 transition-transform" />
-                                                    </Link>
+                                                    <div className="flex-1 border-l border-current/10 pl-2.5">
+                                                        <p className={`text-[9px] font-black uppercase tracking-widest mb-0.5 ${isPositive ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500'}`}>
+                                                            Total Potential
+                                                        </p>
+                                                        <p className={`text-sm font-black ${isPositive ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600'}`}>
+                                                            ₹{totalProfit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                                        </p>
+                                                    </div>
                                                 </div>
+                                            );
+                                        })() : !isPlatform ? (
+                                            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Profit</p>
+                                                <span className="text-xs font-black text-slate-400 dark:text-slate-500">—</span>
+                                                <p className="text-[8px] text-slate-400 dark:text-slate-500 ml-auto">No cost tracked for custom products</p>
+                                            </div>
+                                        ) : null}
+
+                                        {/* Platform locked price note */}
+                                        {isPlatform && (
+                                            <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
+                                                <Lock size={11} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                                                <p className="text-[9px] font-bold text-amber-600 dark:text-amber-400 leading-relaxed">
+                                                    Retail price is set by the platform and cannot be modified.
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Stock controls */}
+                                        <div>
+                                            {isPlatform ? (
+                                                <Link
+                                                    href="/merchant/shopping/wholesale"
+                                                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest transition-all group"
+                                                >
+                                                    <ShoppingBag size={12} />
+                                                    Restock via Wholesale
+                                                    <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                                                </Link>
                                             ) : (
-                                                /* Custom product: editable stock input */
-                                                <div className="relative">
-                                                    <input 
-                                                        type="number" 
-                                                        defaultValue={item.stock_quantity}
-                                                        onBlur={(e) => handleUpdateStock(item, parseInt(e.target.value))}
-                                                        className={`w-full sm:w-32 px-5 py-3 rounded-xl bg-white border-2 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-black text-lg text-center shadow-sm hover:border-slate-200 ${item.stock_quantity <= 5 ? 'border-amber-200 text-amber-700 bg-amber-50/30' : 'border-slate-100 text-slate-900'}`}
-                                                    />
-                                                    {item.stock_quantity <= 5 && (
-                                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-pulse ring-4 ring-amber-50" />
-                                                    )}
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mr-1">Stock</p>
+                                                    <div className="flex items-center bg-slate-100 dark:bg-white/10 rounded-xl overflow-hidden flex-1">
+                                                        <button
+                                                            onClick={() => handleUpdateStock(item, Math.max(0, item.stock_quantity - 1))}
+                                                            className="px-3 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                                                        >
+                                                            <Minus size={13} />
+                                                        </button>
+                                                        <input
+                                                            type="number"
+                                                            defaultValue={item.stock_quantity}
+                                                            onBlur={e => handleUpdateStock(item, parseInt(e.target.value))}
+                                                            className="flex-1 text-center text-sm font-black text-slate-900 dark:text-slate-100 bg-transparent outline-none [appearance:textfield] py-2"
+                                                        />
+                                                        <button
+                                                            onClick={() => handleUpdateStock(item, item.stock_quantity + 1)}
+                                                            className="px-3 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                                                        >
+                                                            <Plus size={13} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
 
-                                        {/* Toggle Action */}
-                                        <div className="mt-6 sm:mt-0 xl:ml-6 flex items-center">
-                                            <button 
-                                                onClick={() => handleToggleActive(item.id, item.is_active)}
-                                                disabled={isUpdatingThis}
-                                                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-xl disabled:opacity-50 relative overflow-hidden group ${
-                                                    item.is_active 
-                                                    ? 'bg-red-50 text-red-600 hover:bg-red-100 shadow-red-500/10 hover:shadow-red-500/20' 
-                                                    : 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/20 hover:shadow-emerald-500/30 ring-2 ring-emerald-500 ring-offset-2 ring-offset-white'
+                                        {/* Publish / Depublish */}
+                                        <button
+                                            onClick={() => handleToggleActive(item.id, item.is_active)}
+                                            disabled={isUpdatingThis}
+                                            className={`w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${item.is_active
+                                                ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-100 dark:border-red-500/20'
+                                                : 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-500 ring-offset-1 dark:ring-offset-transparent'
                                                 }`}
-                                            >
-                                                {isUpdatingThis ? (
-                                                    <span className="flex items-center justify-center gap-2">
-                                                        <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                                                        Saving...
-                                                    </span>
-                                                ) : item.is_active ? 'Depublish' : 'Publish Live'}
-                                                
-                                                {!item.is_active && (
-                                                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                                                )}
-                                            </button>
-                                        </div>
-
+                                        >
+                                            {isUpdatingThis ? (
+                                                <>
+                                                    <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                                                    Saving...
+                                                </>
+                                            ) : item.is_active ? (
+                                                'Depublish'
+                                            ) : (
+                                                'Publish Live'
+                                            )}
+                                        </button>
                                     </div>
-                                </div>
-                            </div>
-                        );
-                    })
+                                </motion.div>
+                            );
+                        })}
+                    </div>
                 )}
-            </div>
+            </AnimatePresence>
         </div>
     );
 }
