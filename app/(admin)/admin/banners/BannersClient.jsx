@@ -10,6 +10,7 @@ export default function BannersClient({ initialBanners }) {
     const [banners, setBanners] = useState(initialBanners || []);
     const [isUploading, setIsUploading] = useState(false);
     const [showAddForm, setShowAddForm] = useState(false);
+    const [activeTab, setActiveTab] = useState('customer');
     
     // Form state
     const [newBanner, setNewBanner] = useState({
@@ -84,7 +85,8 @@ export default function BannersClient({ initialBanners }) {
                     image_url: publicUrl,
                     target_url: newBanner.target_url.trim() || null,
                     is_active: true,
-                    sort_order: newSortOrder
+                    sort_order: newSortOrder,
+                    audience: activeTab
                 }])
                 .select()
                 .single();
@@ -169,14 +171,38 @@ export default function BannersClient({ initialBanners }) {
                         <ImageIcon className="text-blue-600" size={32} />
                         Dynamic Banners
                     </h1>
-                    <p className="text-slate-500 mt-1">Manage promotional banners on the customer dashboard</p>
+                    <p className="text-slate-500 mt-1">Manage promotional banners on the dashboards</p>
                 </div>
                 <button
                     onClick={() => setShowAddForm(!showAddForm)}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors"
                 >
                     {showAddForm ? <XCircle size={18} /> : <Plus size={18} />}
-                    {showAddForm ? 'Cancel' : 'Upload New Banner'}
+                    {showAddForm ? 'Cancel' : `Upload ${activeTab === 'customer' ? 'Customer' : 'Merchant'} Banner`}
+                </button>
+            </div>
+
+            {/* Audience Tabs */}
+            <div className="flex bg-slate-100 p-1 rounded-xl w-full sm:w-fit mt-4 flex-shrink-0">
+                <button
+                    onClick={() => { setActiveTab('customer'); setShowAddForm(false); }}
+                    className={`flex-1 sm:px-8 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                        activeTab === 'customer'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                    }`}
+                >
+                    Customer Banners
+                </button>
+                <button
+                    onClick={() => { setActiveTab('merchant'); setShowAddForm(false); }}
+                    className={`flex-1 sm:px-8 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                        activeTab === 'merchant'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                    }`}
+                >
+                    Merchant Banners
                 </button>
             </div>
 
@@ -295,14 +321,20 @@ export default function BannersClient({ initialBanners }) {
                 </div>
 
                 <div className="divide-y divide-slate-100 min-h-[200px]">
-                    {banners.length === 0 ? (
-                        <div className="text-center py-12 text-slate-500">
-                            <ImageIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                            <p className="font-medium text-slate-900 mb-1">No custom banners yet</p>
-                            <p className="text-sm">Upload an image to get started. The dashboard will show default banners until you add active ones here.</p>
-                        </div>
-                    ) : (
-                        banners.sort((a, b) => a.sort_order - b.sort_order).map((banner, index) => (
+                    {(() => {
+                        const filteredBanners = banners.filter(b => (b.audience || 'customer') === activeTab);
+                        
+                        if (filteredBanners.length === 0) {
+                            return (
+                                <div className="text-center py-12 text-slate-500">
+                                    <ImageIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                    <p className="font-medium text-slate-900 mb-1">No custom {activeTab} banners yet</p>
+                                    <p className="text-sm">Upload an image to get started. The dashboard will show default banners until you add active ones here.</p>
+                                </div>
+                            );
+                        }
+
+                        return filteredBanners.sort((a, b) => a.sort_order - b.sort_order).map((banner, index) => (
                             <div key={banner.id} className="grid grid-cols-12 gap-4 p-4 items-center group hover:bg-slate-50/50 transition-colors">
                                 {/* Sort Order */}
                                 <div className="col-span-1 flex flex-col items-center justify-center gap-1 text-slate-400">
@@ -367,8 +399,8 @@ export default function BannersClient({ initialBanners }) {
                                     </button>
                                 </div>
                             </div>
-                        ))
-                    )}
+                        ));
+                    })()}
                 </div>
             </div>
         </div>

@@ -2,57 +2,45 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Gift, Users, Crown, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Crown, Zap, TrendingUp, Users } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
 const banners = [
     {
         id: 1,
-        title: 'Flat 20% OFF',
-        subtitle: 'On All Gift Cards',
-        description: 'Shop top brands at unbeatable prices. Limited time offer!',
-        cta: 'Browse Gift Cards',
-        href: '/gift-cards',
-        icon: Gift,
-        bg: 'linear-gradient(135deg, #7C3AED 0%, #4F46E5 50%, #3730A3 100%)',
-        glowColor: 'shadow-purple-500/40',
+        title: 'Boost Your Sales',
+        subtitle: 'Premium Listings',
+        description: 'Get your coupons featured on the homepage for maximum visibility.',
+        cta: 'Upgrade Now',
+        href: '/merchant/settings',
+        icon: Crown,
+        bg: 'linear-gradient(135deg, #D4AF37 0%, #B49A28 50%, #8A7217 100%)',
+        glowColor: 'shadow-yellow-500/40',
         iconBg: 'bg-white/20',
     },
     {
         id: 2,
-        title: 'Refer & Earn',
-        subtitle: '₹100 Cashback',
-        description: 'Invite friends and earn cashback on every successful referral.',
-        cta: 'Start Referring',
-        href: '/refer',
-        icon: Users,
+        title: '0% Extra Commission',
+        subtitle: 'Special Offer',
+        description: 'No extra platform fees on your first 100 sales this month.',
+        cta: 'View Details',
+        href: '/merchant/analytics',
+        icon: Zap,
         bg: 'linear-gradient(135deg, #059669 0%, #0D9488 50%, #0891B2 100%)',
         glowColor: 'shadow-teal-500/40',
         iconBg: 'bg-white/20',
     },
     {
         id: 3,
-        title: 'Upgrade to Gold',
-        subtitle: 'Exclusive Benefits',
-        description: 'Get priority support, extra cashback, and premium perks.',
-        cta: 'Go Gold',
-        href: '#gold',
-        icon: Crown,
-        bg: 'linear-gradient(135deg, #D97706 0%, #B45309 50%, #92400E 100%)',
-        glowColor: 'shadow-amber-500/40',
-        iconBg: 'bg-white/20',
-    },
-    {
-        id: 4,
-        title: 'Pay Bills Instantly',
-        subtitle: 'Electricity, Fastag & More',
-        description: 'Seamless bill payments with wallet balance. Zero hassle.',
-        cta: 'Pay Now',
-        href: '/services',
-        icon: Zap,
-        bg: 'linear-gradient(135deg, #E11D48 0%, #DB2777 50%, #A21CAF 100%)',
-        glowColor: 'shadow-pink-500/40',
+        title: 'Expand Reach',
+        subtitle: 'New Customers',
+        description: 'Access millions of active shoppers across the platform.',
+        cta: 'List Inventory',
+        href: '/merchant/inventory',
+        icon: Users,
+        bg: 'linear-gradient(135deg, #7C3AED 0%, #4F46E5 50%, #3730A3 100%)',
+        glowColor: 'shadow-purple-500/40',
         iconBg: 'bg-white/20',
     },
 ];
@@ -76,7 +64,7 @@ const slideVariants = {
     }),
 };
 
-export default function AdBannerCarousel() {
+export default function MerchantAdBannerCarousel() {
     const [[page, direction], setPage] = useState([0, 0]);
     const [isHovered, setIsHovered] = useState(false);
     const [hasInteracted, setHasInteracted] = useState(false);
@@ -90,7 +78,7 @@ export default function AdBannerCarousel() {
                     .from('platform_banners')
                     .select('*')
                     .eq('is_active', true)
-                    .eq('audience', 'customer')
+                    .eq('audience', 'merchant')
                     .order('sort_order', { ascending: true })
                     .order('created_at', { ascending: false });
 
@@ -215,7 +203,7 @@ export default function AdBannerCarousel() {
 
                                     {/* Icon — visible on all sizes */}
                                     <div className={`flex items-center justify-center w-12 h-12 sm:w-20 sm:h-20 lg:w-28 lg:h-28 rounded-xl sm:rounded-2xl lg:rounded-3xl ${banner.iconBg} backdrop-blur-sm border border-white/10 shadow-2xl flex-shrink-0`}>
-                                        <IconComponent className="w-6 h-6 sm:w-10 sm:h-10 lg:w-14 lg:h-14 text-white/90" strokeWidth={1.5} />
+                                        {IconComponent && <IconComponent className="w-6 h-6 sm:w-10 sm:h-10 lg:w-14 lg:h-14 text-white/90" strokeWidth={1.5} />}
                                     </div>
                                 </div>
                             </>
@@ -251,7 +239,7 @@ export default function AdBannerCarousel() {
                             setPage([index, newDirection]);
                         }}
                         className={`transition-all duration-300 rounded-full ${index === currentIndex
-                            ? 'w-5 sm:w-8 h-[6px] sm:h-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 shadow-sm shadow-indigo-500/30'
+                            ? 'w-5 sm:w-8 h-[6px] sm:h-2.5 bg-gradient-to-r from-yellow-500 to-amber-500 shadow-sm shadow-yellow-500/30'
                             : 'w-[6px] sm:w-2.5 h-[6px] sm:h-2.5 bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500'
                             }`}
                         aria-label={`Go to banner ${index + 1}`}

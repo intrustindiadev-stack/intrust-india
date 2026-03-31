@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
-import { Wallet, Heart, ShoppingBag } from 'lucide-react';
+import { Wallet, Heart, ShoppingBag, Package } from 'lucide-react';
 import Link from 'next/link';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -8,16 +8,29 @@ import ShopHubClient from './ShopHubClient';
 
 export const dynamic = 'force-dynamic';
 
-export default async function CategoryHubPage() {
+export default async function MerchantHubPage() {
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Fetch dynamic categories
-    const { data: categories } = await supabase
-        .from('shopping_categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+    // Fetch active merchants with user_profiles
+    const { data: merchants } = await supabase
+        .from('merchants')
+        .select(`
+            id, 
+            business_name,
+            user_profiles!left (avatar_url)
+        `)
+        .eq('status', 'approved')
+        .order('business_name', { ascending: true });
+
+    const allMerchants = [
+        {
+            id: 'official',
+            business_name: 'Intrust Official',
+            user_profiles: { avatar_url: '/icons/intrustLogo.png' }
+        },
+        ...(merchants || [])
+    ];
 
     let customerProfile = null;
     let wishlistCount = 0;
@@ -55,10 +68,10 @@ export default async function CategoryHubPage() {
                         <div className="flex items-center justify-between mb-6">
                             <div>
                                 <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-1">
-                                    Shop Now
+                                    Intrust Mart
                                 </h1>
                                 <p className="text-slate-500 dark:text-white/30 font-medium text-sm">
-                                    Browse local product categories
+                                    Shop top local brands & merchants
                                 </p>
                             </div>
                             
@@ -84,6 +97,11 @@ export default async function CategoryHubPage() {
                                                 </span>
                                             )}
                                         </Link>
+
+                                        <Link href="/orders" className="bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl p-2.5 border border-emerald-100 dark:border-emerald-500/20 flex flex-col items-center justify-center shrink-0 transition-colors w-14 h-[62px] relative group">
+                                            <Package size={20} className="transition-transform group-hover:scale-110" />
+                                            <span className="text-[9px] font-black uppercase mt-1">Orders</span>
+                                        </Link>
                                     </>
                                 )}
 
@@ -103,7 +121,7 @@ export default async function CategoryHubPage() {
                             </div>
                         </div>
 
-                        <ShopHubClient categories={categories || []} />
+                        <ShopHubClient merchants={allMerchants} />
                     </div>
                 </div>
             </main>

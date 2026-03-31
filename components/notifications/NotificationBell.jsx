@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 /**
@@ -22,6 +23,7 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
     const buttonRef = useRef(null);
     const dropdownRef = useRef(null);
     const pollRef = useRef(null);
+    const router = useRouter();
 
     useEffect(() => { setMounted(true); }, []);
 
@@ -111,6 +113,40 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
         return 'text-blue-400';
     };
 
+    /** @param {Notification} n */
+    const handleNotificationClick = (n) => {
+        if (!n.read) markRead(n.id);
+        
+        setOpen(false); // Close dropdown
+
+        if (!n.reference_type) return;
+
+        let basePath = '';
+        if (apiPath.includes('/admin')) basePath = '/admin';
+        else if (apiPath.includes('/merchant')) basePath = '/merchant';
+
+        switch (n.reference_type) {
+            case 'order':
+            case 'shopping_order':
+                if (n.reference_id) {
+                    if (basePath === '/admin' || basePath === '/merchant') {
+                        router.push(`${basePath}/shopping/orders/${n.reference_id}`);
+                    } else {
+                        router.push(`/orders/${n.reference_id}`);
+                    }
+                }
+                break;
+            case 'wallet':
+                router.push(basePath ? `${basePath}/wallet` : '/wallet');
+                break;
+            case 'loan':
+                router.push(basePath ? `${basePath}/loans` : '/loans/personal');
+                break;
+            default:
+                break;
+        }
+    };
+
     const dropdown = open && mounted ? createPortal(
         <div
             ref={dropdownRef}
@@ -146,7 +182,7 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                     notifications.map((n) => (
                         <button
                             key={n.id}
-                            onClick={() => { if (!n.read) markRead(n.id); }}
+                            onClick={() => handleNotificationClick(n)}
                             className={`w-full text-left px-4 py-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors flex gap-3 items-start ${!n.read ? 'bg-[#D4AF37]/5' : ''}`}
                         >
                             <span className={`material-icons-round text-lg mt-0.5 flex-shrink-0 ${typeColor(n.type)}`}>

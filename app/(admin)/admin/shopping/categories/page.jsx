@@ -75,7 +75,7 @@ export default async function AdminCategoriesPage() {
                                 {/* Decorative Gradient Blobs */}
                                 <div 
                                     className="absolute -top-10 -right-10 w-32 h-32 opacity-0 group-hover:opacity-10 transition-opacity duration-700 blur-2xl" 
-                                    style={{ background: `linear-gradient(to bottom right, ${cat.color_primary || '#3b82f6'}, ${cat.color_secondary || '#4f46e5'})` }}
+                                    style={{ background: `linear-gradient(to bottom right, #3b82f6, #60a5fa)` }}
                                 />
                                 
                                 <div className="absolute top-4 right-4 p-2 rounded-full bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all opacity-0 group-hover:opacity-100">
@@ -93,8 +93,7 @@ export default async function AdminCategoriesPage() {
                                         <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
                                     ) : (
                                         <div 
-                                            className="w-full h-full opacity-30" 
-                                            style={{ background: `linear-gradient(to bottom right, ${cat.color_primary || '#3b82f6'}, ${cat.color_secondary || '#4f46e5'})` }}
+                                            className="w-full h-full opacity-30 bg-blue-500" 
                                         />
                                     )}
                                 </div>

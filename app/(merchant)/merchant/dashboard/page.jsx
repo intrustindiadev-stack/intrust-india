@@ -4,6 +4,8 @@ import Link from 'next/link';
 import StatsCards from '@/components/merchant/StatsCards';
 import TransactionsTable from '@/components/merchant/TransactionsTable';
 
+import MerchantAdBannerCarousel from '@/components/merchant/MerchantAdBannerCarousel';
+
 export const dynamic = 'force-dynamic';
 
 export default async function MerchantDashboardPage() {
@@ -128,6 +130,8 @@ export default async function MerchantDashboardPage() {
             {/* Background embellishments */}
             <div className="fixed top-[-10%] left-[-5%] w-[40%] h-[40%] bg-[#D4AF37]/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
             <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+
+            <MerchantAdBannerCarousel />
 
             <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 mt-6">
                 <div>

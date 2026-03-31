@@ -15,8 +15,6 @@ export default function CategoryForm({ initialData = null }) {
         name: initialData?.name || '',
         description: initialData?.description || '',
         image_url: initialData?.image_url || '',
-        color_primary: initialData?.color_primary || '#3b82f6',
-        color_secondary: initialData?.color_secondary || '#4f46e5',
         display_order: initialData?.display_order?.toString() || '0',
         is_active: initialData?.is_active ?? true,
     });
@@ -163,57 +161,6 @@ export default function CategoryForm({ initialData = null }) {
                                         <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
                                     </div>
                                 )}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Primary Color (Hex)</label>
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="color"
-                                            name="color_primary"
-                                            value={formData.color_primary}
-                                            onChange={handleChange}
-                                            className="w-12 h-12 rounded-xl border border-slate-200 cursor-pointer overflow-hidden p-0 bg-transparent"
-                                        />
-                                        <input
-                                            type="text"
-                                            name="color_primary"
-                                            value={formData.color_primary}
-                                            onChange={handleChange}
-                                            placeholder="#3b82f6"
-                                            className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:border-blue-500 font-mono text-xs uppercase"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Secondary Color (Hex)</label>
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="color"
-                                            name="color_secondary"
-                                            value={formData.color_secondary}
-                                            onChange={handleChange}
-                                            className="w-12 h-12 rounded-xl border border-slate-200 cursor-pointer overflow-hidden p-0 bg-transparent"
-                                        />
-                                        <input
-                                            type="text"
-                                            name="color_secondary"
-                                            value={formData.color_secondary}
-                                            onChange={handleChange}
-                                            placeholder="#4f46e5"
-                                            className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:border-blue-500 font-mono text-xs uppercase"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="pt-2">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Theme Preview</label>
-                                <div 
-                                    className="h-16 rounded-2xl w-full border border-slate-100 shadow-inner" 
-                                    style={{ background: `linear-gradient(to right, ${formData.color_primary}, ${formData.color_secondary})` }}
-                                />
                             </div>
                         </div>
                     </div>
