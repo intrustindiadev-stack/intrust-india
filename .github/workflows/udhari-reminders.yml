@@ -1,0 +1,15 @@
+name: Store Credit Reminders
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Every day at midnight UTC (05:30 AM IST)
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Reminders API
+        run: |
+          curl -X GET "https://intrustindia.com/api/udhari/reminders" \
+          -H "Accept: application/json"

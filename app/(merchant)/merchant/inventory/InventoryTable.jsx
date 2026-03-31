@@ -6,7 +6,6 @@ import ListToMarketplace from '@/components/merchant/ListToMarketplace';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function InventoryTable({ initialCoupons }) {
-    const [inventory] = useState(initialCoupons);
     const [selectedCoupon, setSelectedCoupon] = useState(null);
     const [showListModal, setShowListModal] = useState(false);
 
@@ -34,7 +33,7 @@ export default function InventoryTable({ initialCoupons }) {
         <>
             {/* Mobile View (Cards) */}
             <div className="md:hidden flex flex-col divide-y divide-black/5 dark:divide-white/5">
-                {inventory.map((coupon) => {
+                {initialCoupons.map((coupon) => {
                     const rawPurchasePrice = coupon.purchase_price ?? ((coupon.merchant_purchase_price_paise || 0) / 100);
                     const purchasePrice = Math.abs(rawPurchasePrice);
                     const sellingPrice = (coupon.merchant_selling_price_paise || 0) / 100;
@@ -150,7 +149,7 @@ export default function InventoryTable({ initialCoupons }) {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                        {inventory.map((coupon) => {
+                        {initialCoupons.map((coupon) => {
                             const rawPurchasePrice = coupon.purchase_price ?? ((coupon.merchant_purchase_price_paise || 0) / 100);
 
                             // Ensure purchase price is treated as a positive number (Total Investment)

@@ -337,7 +337,20 @@ function UdhariRow({ req, activeTab, processingId, onApproveClick, onDenyClick }
                             <h3 className="font-bold text-slate-900 dark:text-slate-100">{req.customer?.full_name || 'Unknown User'}</h3>
                             {req.customer?.kyc_status === 'verified' && <ShieldCheck size={14} className="text-green-500" />}
                         </div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{req.customer?.phone || 'No phone'}</p>
+                                                <p className="text-sm text-slate-500 dark:text-slate-400 group relative">
+                            {(() => {
+                                const isOverdue = req.status === 'approved' && req.due_date && new Date() > new Date(req.due_date);
+                                if (isOverdue) return req.customer?.phone || 'No phone';
+                                const phone = req.customer?.phone || '';
+                                if (!phone) return 'No phone';
+                                return `${phone.slice(0, 3)}XXXXXX${phone.slice(-2)}`;
+                            })()}
+                            {!(req.status === 'approved' && req.due_date && new Date() > new Date(req.due_date)) && (
+                                <span className="absolute left-0 -bottom-8 hidden group-hover:block bg-slate-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10 shadow-xl border border-white/10">
+                                    Full number revealed if overdue
+                                </span>
+                            )}
+                        </p>
                         
                         {/* Trust metrics */}
                         <div className="flex flex-wrap gap-2 mt-2">

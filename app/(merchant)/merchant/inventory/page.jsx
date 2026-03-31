@@ -46,42 +46,45 @@ export default async function InventoryPage({ searchParams }) {
         redirect('/merchant-apply');
     }
 
-    // 4. Fetch stats in parallel (using COUNT), filter out sold coupons
-    const [totalRes, listedRes, unlistedRes, totalValueRes] = await Promise.all([
+    // 4. Fetch stats in parallel (using COUNT)
+    const [totalRes, listedRes, unlistedRes, soldRes, totalValueRes] = await Promise.all([
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'available'),
-
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true).eq('status', 'available'),
-
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', false).eq('status', 'available'),
-
-        // For total value, we need to actually fetch the prices
-        supabase.from('coupons').select('merchant_purchase_price_paise').eq('merchant_id', merchant.id).eq('status', 'available')
+        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'sold'),
+        supabase.from('coupons').select('merchant_purchase_price_paise, face_value_paise').eq('merchant_id', merchant.id).eq('status', 'available')
     ]);
 
     const stats = {
         total: totalRes.count || 0,
         listed: listedRes.count || 0,
         unlisted: unlistedRes.count || 0,
+        sold: soldRes.count || 0,
         totalValue: (totalValueRes.data || []).reduce((sum, c) => sum + Math.abs(c.merchant_purchase_price_paise || 0), 0) / 100,
+        faceValue: (totalValueRes.data || []).reduce((sum, c) => sum + (c.face_value_paise || 0), 0) / 100,
     };
 
-    // 5. Fetch paginated inventory based on filter (only available coupons)
+    // 5. Fetch paginated inventory based on filter (primarily available, but include others for context if needed)
     let inventoryQuery = supabase
         .from('coupons')
         .select('*')
-        .eq('status', 'available')
         .order('created_at', { ascending: false })
         .range((page - 1) * limit, page * limit - 1);
-
+    
     if (merchant) {
         inventoryQuery = inventoryQuery.eq('merchant_id', merchant.id);
     }
 
     // Apply filter
     if (filter === 'listed') {
-        inventoryQuery = inventoryQuery.eq('listed_on_marketplace', true);
+        inventoryQuery = inventoryQuery.eq('listed_on_marketplace', true).eq('status', 'available');
     } else if (filter === 'unlisted') {
-        inventoryQuery = inventoryQuery.eq('listed_on_marketplace', false);
+        inventoryQuery = inventoryQuery.eq('listed_on_marketplace', false).eq('status', 'available');
+    } else if (filter === 'history') {
+        inventoryQuery = inventoryQuery.in('status', ['sold', 'expired', 'deleted']);
+    } else {
+        // Default 'all' filter shows only available items to avoid clutter
+        inventoryQuery = inventoryQuery.eq('status', 'available');
     }
 
     const { data: rawInventory, error: inventoryError } = await inventoryQuery;
@@ -220,6 +223,16 @@ export default async function InventoryPage({ searchParams }) {
                     <span className="material-icons-round text-sm">visibility_off</span>
                     <span>Unlisted ({stats.unlisted})</span>
                 </Link>
+                <Link
+                    href="/merchant/inventory?filter=history"
+                    className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all focus:outline-none flex items-center space-x-2 ${filter === 'history'
+                        ? 'bg-[#D4AF37] text-[#020617] shadow-lg shadow-[#D4AF37]/20 gold-glow'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                        }`}
+                >
+                    <span className="material-icons-round text-sm">history</span>
+                    <span>Sold ({stats.sold})</span>
+                </Link>
             </div>
 
             {/* Inventory Table Container */}
@@ -233,7 +246,11 @@ export default async function InventoryPage({ searchParams }) {
                             <span className="material-icons-round text-4xl text-slate-400 dark:text-slate-500">inventory_2</span>
                         </div>
                         <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">
-                            {filter === 'all' ? 'Inventory is empty' : `No ${filter} coupons found`}
+                            {filter === 'all'
+                                ? 'No active coupons found'
+                                : filter === 'history'
+                                    ? 'No sales history found'
+                                    : `No ${filter} coupons found`}
                         </h3>
                         <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm mx-auto">
                             It looks like you don't have any coupons matching this criteria. Purchase new coupons from the wholesale market or browse other filters.
