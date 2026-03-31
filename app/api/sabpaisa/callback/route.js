@@ -539,6 +539,83 @@ export async function POST(request) {
             }
         }
 
+        // 5g. Handle Merchant Subscription Fulfillment (first-time OR renewal)
+        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'MERCHANT_SUBSCRIPTION' && !wasAlreadySuccess) {
+            try {
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
+
+                const merchantId = existingTxn.udf2;
+
+                // Compute new expiry: 30 days from now
+                const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+                const expiryFormatted = new Date(newExpiry).toLocaleDateString('en-IN', {
+                    day: 'numeric', month: 'short', year: 'numeric'
+                });
+
+                // Fetch current merchant to know if first-time or renewal
+                const { data: merchantCheck } = await supabaseAdmin
+                    .from('merchants')
+                    .select('subscription_status, subscription_expires_at')
+                    .eq('id', merchantId)
+                    .single();
+
+                const isRenewal = merchantCheck?.subscription_status === 'active';
+
+                // 1. Activate / Renew Subscription — always extend expiry on successful payment
+                const { error: merchUpdateErr } = await supabaseAdmin
+                    .from('merchants')
+                    .update({
+                        subscription_status: 'active',
+                        subscription_expires_at: newExpiry
+                    })
+                    .eq('id', merchantId);
+
+                if (merchUpdateErr) throw merchUpdateErr;
+
+                // 2. Grant Merchant Role (only needed for first-time activation)
+                if (!isRenewal) {
+                    const { error: roleUpdateErr } = await supabaseAdmin
+                        .from('user_profiles')
+                        .update({ role: 'merchant' })
+                        .eq('id', existingTxn.user_id);
+
+                    if (roleUpdateErr) throw roleUpdateErr;
+                }
+
+                // 3. Notify Success
+                await supabaseAdmin.from('notifications').insert({
+                    user_id: existingTxn.user_id,
+                    title: isRenewal ? 'Subscription Renewed! ✅' : 'Store Activated! 🎉',
+                    body: isRenewal
+                        ? `Your monthly subscription has been renewed. Next renewal due: ${expiryFormatted}.`
+                        : `Your ₹149 subscription is active. Next renewal due: ${expiryFormatted}. You now have full access to the Merchant Dashboard.`,
+                    type: 'success',
+                    reference_type: 'merchant_subscription'
+                });
+
+                // 4. Audit Log
+                await supabaseAdmin.from('audit_logs').insert([{
+                    actor_id: existingTxn.user_id,
+                    actor_role: isRenewal ? 'merchant' : 'customer',
+                    action: isRenewal ? 'merchant_subscription_renewed' : 'merchant_subscription_paid',
+                    entity_type: 'merchant',
+                    entity_id: merchantId,
+                    description: `Merchant subscription ${isRenewal ? 'renewed' : 'activated'} via SabPaisa (${clientTxnId}). Expires: ${expiryFormatted}`,
+                    metadata: { amount, clientTxnId, newExpiry }
+                }]);
+
+                console.log(`[Callback] Merchant Subscription ${isRenewal ? 'renewed' : 'activated'} for txn ${clientTxnId}. Expires: ${newExpiry}`);
+            } catch (subError) {
+                console.error('[Callback] Merchant Subscription fulfillment error:', subError.message);
+                fulfillmentFailed = true;
+                internalStatus = 'FAILED';
+                result.transMsg = 'Failed to activate merchant subscription. Contact support.';
+            }
+        }
+
         // 7b. Catch-all: Downgrade to failure if fulfillment failed on any path but status wasn't reset
         if (fulfillmentFailed && internalStatus === 'SUCCESS') {
             internalStatus = 'FAILED';

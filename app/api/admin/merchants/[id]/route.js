@@ -34,7 +34,7 @@ export async function GET(request, { params }) {
         // 3. Fetch merchant
         const { data: merchant, error: merchantError } = await admin
             .from('merchants')
-            .select('id, user_id, business_name, gst_number, status, created_at')
+            .select('id, user_id, business_name, gst_number, status, subscription_status, subscription_expires_at, created_at')
             .eq('id', merchantId)
             .single();
 

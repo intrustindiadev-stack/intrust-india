@@ -36,6 +36,19 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                                 {udhariEnabled ? 'Store Credit: ON' : 'Store Credit: OFF'}
                             </div>
                         )}
+                        {isApproved && (
+                            <div className="flex flex-col items-end gap-1">
+                                <div className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-widest border transition-colors ${merchant.subscriptionStatus === 'active' ? 'bg-amber-50 text-amber-700 border-amber-200' : merchant.subscriptionStatus === 'expired' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>
+                                    Sub: {merchant.subscriptionStatus || 'unpaid'}
+                                </div>
+                                {merchant.subscriptionExpiresAt && (
+                                    <div className={`text-[8px] font-bold ${new Date(merchant.subscriptionExpiresAt) < new Date() ? 'text-rose-500' : 'text-slate-400'}`}>
+                                        {new Date(merchant.subscriptionExpiresAt) < new Date() ? 'Expired: ' : 'Renews: '}
+                                        {new Date(merchant.subscriptionExpiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 

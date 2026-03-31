@@ -41,6 +41,8 @@ export default function AdminMerchantsPage() {
                 email: m.user_profiles?.email || 'N/A',
                 gstNumber: m.gst_number || 'N/A',
                 status: m.status || 'pending',
+                subscriptionStatus: m.subscription_status || 'unpaid',
+                subscriptionExpiresAt: m.subscription_expires_at || null,
                 bankVerified: m.bank_verified || false,
                 hasBankData: !!(m.bank_account_number || m.bank_data?.account_number),
                 bankAccountName: m.bank_account_name || m.bank_data?.account_holder_name || null,

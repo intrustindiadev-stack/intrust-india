@@ -132,6 +132,19 @@ export default async function AdminMerchantDetailPage({ params }) {
                                     }`}>
                                     {merchant.status}
                                 </span>
+                                {isApproved && (
+                                    <span className={`inline-flex items-center px-3 sm:px-4 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest border shadow-sm ${merchant.subscription_status === 'active' 
+                                        ? 'bg-amber-100 text-amber-800 border-amber-300' 
+                                        : 'bg-rose-100 text-rose-800 border-rose-300'}`}>
+                                        Sub: {merchant.subscription_status || 'unpaid'}
+                                    </span>
+                                )}
+                                {isApproved && merchant.subscription_expires_at && (
+                                    <span className={`inline-flex items-center px-3 sm:px-4 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black tracking-widest border shadow-sm ${new Date(merchant.subscription_expires_at) < new Date() ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                        {new Date(merchant.subscription_expires_at) < new Date() ? '⚠ Expired: ' : '🔄 Renews: '}
+                                        {new Date(merchant.subscription_expires_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </span>
+                                )}
                                 <Link
                                     href={`/admin/users/${merchant.user_id}`}
                                     className="group inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-600 hover:text-white transition-all shadow-sm"

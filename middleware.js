@@ -85,11 +85,14 @@ export async function middleware(request) {
             '/refer',
             '/wishlist',
             '/shop/cart',
+            '/merchant-apply',
+            '/merchant-status',
+            '/merchant-subscribe'
             // '/gift-cards' removed - browsing should be public, only purchase requires auth
         ]
 
         const adminRoutes = ['/admin']
-        const merchantRoutes = ['/merchant']
+        const merchantRoutes = ['/merchant/']
         const { pathname } = request.nextUrl
 
         // Check if current path is protected

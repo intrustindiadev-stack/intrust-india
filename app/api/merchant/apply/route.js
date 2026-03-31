@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 import { sprintVerify } from '@/lib/sprintVerify';
 
@@ -139,17 +139,42 @@ export async function POST(request) {
             );
         }
 
-        // Update user profile role to merchant only if approved
-        if (finalStatus === 'approved') {
-            const { error: roleError } = await supabase
+        // Notify admins about the new application
+        try {
+            const adminSupabase = createAdminClient();
+            const { data: admins } = await adminSupabase
                 .from('user_profiles')
-                .update({ role: 'merchant' })
-                .eq('id', user.id);
-
-            if (roleError) {
-                console.error('Error updating user role:', roleError);
-                // We don't fail the whole request, but we log it
+                .select('id')
+                .eq('role', 'admin');
+                
+            if (admins && admins.length > 0) {
+                const notifications = admins.map(admin => ({
+                    user_id: admin.id,
+                    title: 'New Merchant Application 🏪',
+                    body: `${businessName} has applied to become a merchant. Status: ${finalStatus}`,
+                    type: 'info',
+                    reference_type: 'merchant_application',
+                    reference_id: merchant.id,
+                    read: false
+                }));
+                const { error: notifInsertError } = await adminSupabase.from('notifications').insert(notifications);
+                if (notifInsertError) console.error('Error inserting admin notifications:', notifInsertError);
             }
+            
+            
+            // If they are auto-approved by KYC, give them a notification to pay
+            if (finalStatus === 'approved') {
+                await adminSupabase.from('notifications').insert({
+                    user_id: user.id,
+                    title: 'KYC Verified - Action Required 🎉',
+                    body: `Your merchant application for ${businessName} was automatically verified! Please pay the ₹149 subscription fee to activate your panel.`,
+                    type: 'success',
+                    reference_type: 'merchant_approved',
+                    read: false
+                });
+            }
+        } catch (notifError) {
+            console.error('Error sending notifications:', notifError);
         }
 
         // Log the merchant creation

@@ -38,6 +38,8 @@ export async function GET(request) {
                 business_name,
                 gst_number,
                 status,
+                subscription_status,
+                subscription_expires_at,
                 bank_verified,
                 bank_account_number,
                 bank_account_name,

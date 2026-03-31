@@ -266,7 +266,7 @@ export default function CustomerDashboardPage() {
                         )
                     `).eq('user_id', user.id).eq('payment_status', 'paid').order('created_at', { ascending: false }),
                     supabase.from('customer_wallet_transactions').select('id, type, amount_paise, description, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
-                    supabase.from('merchants').select('status').eq('user_id', user.id).maybeSingle()
+                    supabase.from('merchants').select('status, subscription_status').eq('user_id', user.id).maybeSingle()
                 ]);
 
                 const results = await Promise.race([mainFetch, timeoutTx]);
@@ -368,7 +368,9 @@ export default function CustomerDashboardPage() {
                     activeCards,
                     completedOnboarding: profile?.completed_onboarding ?? true,
                     referralCode: profile?.referral_code || null,
-                    merchantStatus: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.status : null
+                    merchantStatus: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.status : null,
+                    merchantSubscriptionStatus: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.subscription_status : null,
+                    merchantSubscriptionExpiresAt: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.subscription_expires_at : null
                 });
 
             } catch (error) {
@@ -509,7 +511,11 @@ export default function CustomerDashboardPage() {
 
                             {/* KYC Banner */}
                             {(userData.kycStatus === 'verified' || userData.merchantStatus) && (
-                                <MerchantOpportunityBanner merchantStatus={userData.merchantStatus} />
+                                <MerchantOpportunityBanner 
+                                    merchantStatus={userData.merchantStatus} 
+                                    subscriptionStatus={userData.merchantSubscriptionStatus} 
+                                    subscriptionExpiresAt={userData.merchantSubscriptionExpiresAt}
+                                />
                             )}
                         </div>
 

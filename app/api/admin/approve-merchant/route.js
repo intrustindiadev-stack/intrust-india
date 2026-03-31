@@ -68,18 +68,10 @@ export async function POST(request) {
 
         const targetUserId = userId || existingMerchant.user_id;
 
-        // Fetch current role to allow rollback
-        const { data: targetProfile } = await adminSupabase
-            .from('user_profiles')
-            .select('role')
-            .eq('id', targetUserId)
-            .single();
-        const prevRole = targetProfile?.role || 'customer';
-
-        // 5. Update Merchant Status to 'approved'
+        // 5. Update Merchant Status to 'approved' and subscription_status to 'unpaid'
         const { data: merchantData, error: merchantError } = await adminSupabase
             .from('merchants')
-            .update({ status: 'approved' })
+            .update({ status: 'approved', subscription_status: 'unpaid' })
             .eq('id', existingMerchant.id)
             .select()
             .single();
@@ -92,27 +84,17 @@ export async function POST(request) {
             );
         }
 
-        // 6. Update User Role to 'merchant'
-        const { error: roleError } = await adminSupabase
-            .from('user_profiles')
-            .update({ role: 'merchant' })
-            .eq('id', targetUserId);
+        // 6. Notify User to complete subscription
+        await adminSupabase.from('notifications').insert({
+            user_id: targetUserId,
+            title: 'Merchant Application Approved 🎉',
+            body: `Congratulations! Your merchant application for ${existingMerchant.business_name} has been approved. Please pay the one-time subscription fee of ₹149 to activate your panel.`,
+            type: 'success',
+            reference_type: 'merchant_approved',
+            read: false
+        });
 
-        if (roleError) {
-            console.error('Error updating user role:', roleError);
-            // Rollback merchant status
-            await adminSupabase
-                .from('merchants')
-                .update({ status: existingMerchant.status })
-                .eq('id', existingMerchant.id);
-
-            return NextResponse.json(
-                { error: 'Failed to update user role. Merchant approval reverted.' },
-                { status: 500 }
-            );
-        }
-
-        // 7. Log Action (Optional but good practice)
+        // 7. Log Action
         const { error: auditError } = await adminSupabase.from('audit_logs').insert([
             {
                 actor_id: user.id,
@@ -120,11 +102,12 @@ export async function POST(request) {
                 action: 'admin_action',
                 entity_type: 'merchant',
                 entity_id: merchantData.id,
-                description: `Approved merchant application for user ${targetUserId}`,
+                description: `Approved merchant application for user ${targetUserId} (awaiting subscription)`,
                 metadata: {
                     sub_action: 'approved_merchant',
                     previous_status: existingMerchant.status,
                     new_status: 'approved',
+                    subscription_status: 'unpaid',
                     target_user_id: targetUserId
                 }
             }
@@ -132,15 +115,10 @@ export async function POST(request) {
 
         if (auditError) {
             console.error('Error logging audit:', auditError);
-            // Rollback user role and merchant status
-            await adminSupabase
-                .from('user_profiles')
-                .update({ role: prevRole })
-                .eq('id', targetUserId);
-
+            // Rollback merchant status
             await adminSupabase
                 .from('merchants')
-                .update({ status: existingMerchant.status })
+                .update({ status: existingMerchant.status, subscription_status: 'unpaid' })
                 .eq('id', existingMerchant.id);
 
             return NextResponse.json(
@@ -151,7 +129,7 @@ export async function POST(request) {
 
         return NextResponse.json({
             success: true,
-            message: 'Merchant approved and role updated successfully.'
+            message: 'Merchant approved. User notified to complete subscription payment.'
         });
 
     } catch (error) {

@@ -13,13 +13,24 @@ import {
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 
 const getPaymentConfig = (txnId, transaction, userRole) => {
+    const isMerchantSub = txnId?.startsWith('MSUB_') || transaction?.udf1 === 'MERCHANT_SUBSCRIPTION';
     const isGoldSub = txnId?.startsWith('GOLD_') || transaction?.udf1 === 'GOLD_SUBSCRIPTION';
     const isGiftCard = txnId?.startsWith('GC_') || txnId?.startsWith('WALLET_') || transaction?.udf1 === 'GIFT_CARD';
     const isWalletTopup = txnId?.startsWith('WLT_') || transaction?.udf1 === 'WALLET_TOPUP';
 
     const dashboardLink = userRole === 'merchant' ? '/merchant/dashboard' : '/dashboard';
 
-    if (isGoldSub) {
+    if (isMerchantSub) {
+        return {
+            variant: 'amber',
+            title: 'STORE ACTIVATED 🎉',
+            description: 'Your payment was successful. Welcome to your Merchant Dashboard! You will be redirected shortly.',
+            methodLabel: transaction?.payment_mode || 'Online Payment',
+            amount: transaction?.paid_amount || transaction?.amount,
+            primary: { label: 'ENTER DASHBOARD', href: '/merchant/dashboard', variant: 'amber' },
+            secondary: { label: 'View Profile', href: '/merchant/profile', variant: 'amber' }
+        };
+    } else if (isGoldSub) {
         return {
             variant: 'amber',
             title: 'ELITE GOLD ACTIVATED',
@@ -144,6 +155,10 @@ const SuccessPage = () => {
                 if (tx.status === 'SUCCESS') {
                     setTransaction(tx);
                     setVerificationState('verified');
+                    
+                    if (txnId.startsWith('MSUB_') || tx.udf1 === 'MERCHANT_SUBSCRIPTION') {
+                        setTimeout(() => router.replace('/merchant/dashboard'), 5000);
+                    }
                 } else if (tx.status === 'FAILED' || tx.status === 'ERROR') {
                     router.replace(`/payment/failure?txnId=${txnId}`);
                 } else {

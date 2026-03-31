@@ -126,6 +126,12 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
         else if (apiPath.includes('/merchant')) basePath = '/merchant';
 
         switch (n.reference_type) {
+            case 'merchant_approved':
+                router.push('/merchant-subscribe');
+                break;
+            case 'merchant_application':
+                router.push('/admin/merchants');
+                break;
             case 'order':
             case 'shopping_order':
                 if (n.reference_id) {
