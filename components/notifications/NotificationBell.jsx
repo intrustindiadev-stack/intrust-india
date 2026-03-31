@@ -116,39 +116,113 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
     /** @param {Notification} n */
     const handleNotificationClick = (n) => {
         if (!n.read) markRead(n.id);
-        
+
         setOpen(false); // Close dropdown
 
         if (!n.reference_type) return;
 
-        let basePath = '';
-        if (apiPath.includes('/admin')) basePath = '/admin';
-        else if (apiPath.includes('/merchant')) basePath = '/merchant';
+        // Determine user context from the API path used by this bell instance
+        const isAdmin = apiPath.includes('/admin');
+        const isMerchant = apiPath.includes('/merchant');
 
         switch (n.reference_type) {
-            case 'merchant_approved':
-                router.push('/merchant-subscribe');
-                break;
+            // ── Merchant onboarding ──────────────────────────────────────────
             case 'merchant_application':
+                // Admin gets notified → go to admin merchants list
                 router.push('/admin/merchants');
                 break;
+
+            case 'merchant_approved':
+                // Customer/user gets notified → go to subscription payment page
+                router.push('/merchant-subscribe');
+                break;
+
+            case 'merchant_subscription':
+                // Merchant gets notified after subscription payment
+                router.push('/merchant/dashboard');
+                break;
+
+            // ── Shopping orders ──────────────────────────────────────────────
             case 'order':
             case 'shopping_order':
                 if (n.reference_id) {
-                    if (basePath === '/admin' || basePath === '/merchant') {
-                        router.push(`${basePath}/shopping/orders/${n.reference_id}`);
+                    if (isAdmin) {
+                        router.push(`/admin/shopping/orders/${n.reference_id}`);
+                    } else if (isMerchant) {
+                        router.push(`/merchant/shopping/orders`);
                     } else {
                         router.push(`/orders/${n.reference_id}`);
                     }
+                } else {
+                    if (isAdmin) router.push('/admin/shopping/orders');
+                    else if (isMerchant) router.push('/merchant/shopping/orders');
+                    else router.push('/orders');
                 }
                 break;
+
+            // ── Wallet & adjustments ─────────────────────────────────────────
             case 'wallet':
-                router.push(basePath ? `${basePath}/wallet` : '/wallet');
+            case 'wallet_adjustment':
+                if (isAdmin) router.push('/admin/wallet-adjustments');
+                else if (isMerchant) router.push('/merchant/wallet');
+                else router.push('/wallet');
                 break;
+
+            // ── Payout requests ──────────────────────────────────────────────
+            case 'payout_request':
+                if (isAdmin) router.push('/admin/payouts');
+                else router.push('/merchant/wallet');
+                break;
+
+            // ── Bank verification ────────────────────────────────────────────
+            case 'bank_verification':
+                // Merchant gets notified
+                router.push('/merchant/settings');
+                break;
+
+            // ── Udhari / Store credit ────────────────────────────────────────
+            case 'udhari_request':
+                // Merchant gets notified of a new store credit request
+                router.push('/merchant/udhari');
+                break;
+
+            case 'udhari_approved':
+            case 'udhari_denied':
+            case 'udhari_completed':
+            case 'udhari_reminder':
+            case 'udhari_overdue_alert':
+                // Customer gets notified about their store credit status
+                if (isMerchant) router.push('/merchant/udhari');
+                else router.push('/store-credits');
+                break;
+
+            // ── Wholesale / Inventory ────────────────────────────────────────
+            case 'wholesale_purchase':
+            case 'merchant_inventory':
+                // Merchant gets notified
+                router.push('/merchant/shopping/inventory');
+                break;
+
+            // ── Lockin / Growth fund ─────────────────────────────────────────
+            case 'lockin_balance':
+                // Merchant gets notified
+                router.push('/merchant/lockin');
+                break;
+
+            // ── Loans ────────────────────────────────────────────────────────
             case 'loan':
-                router.push(basePath ? `${basePath}/loans` : '/loans/personal');
+                if (isAdmin) router.push('/admin');
+                else router.push('/loans/personal');
                 break;
+
+            // ── Gift cards ───────────────────────────────────────────────────
+            case 'GIFT_CARD_PURCHASE':
+                router.push('/my-giftcards');
+                break;
+
+            // ── Fallback ─────────────────────────────────────────────────────
             default:
+                // No known route — do nothing (notification is still marked read)
                 break;
         }
     };
