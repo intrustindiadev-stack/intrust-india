@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Scale, FileText, Lock, RefreshCcw, ChevronRight } from 'lucide-react';
+import { Scale, FileText, Lock, RefreshCcw, ChevronRight, Truck, ShieldCheck, AlertCircle } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 
@@ -12,25 +12,79 @@ export default function LegalCenterPage() {
     const tabs = [
         { id: 'terms', label: 'Terms & Conditions', icon: FileText },
         { id: 'privacy', label: 'Privacy Policy', icon: Lock },
+        { id: 'shipping', label: 'Shipping & Delivery', icon: Truck },
+        { id: 'product', label: 'Product Policy', icon: ShieldCheck },
         { id: 'refund', label: 'Refund Policy', icon: RefreshCcw },
     ];
 
     const content = {
         terms: {
             title: "Terms and Conditions",
-            lastUpdated: "January 15, 2026",
+            lastUpdated: "March 31, 2026",
             body: (
                 <div className="space-y-6 text-gray-600 dark:text-gray-300 leading-relaxed">
                     <p>Welcome to Intrust Financial Service India Pvt Ltd. By accessing our platform, you agree to be bound by these Terms and Conditions.</p>
 
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">1. Acceptance of Terms</h3>
-                    <p>By registering for an account, purchasing gift cards, or utilizing our wallet services, you agree to comply with all local laws and these guidelines. We reserve the right to modify these terms at any time without prior notice.</p>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">1. Account Responsibility</h3>
+                    <p>Customers are solely responsible for maintaining the confidentiality of their login details (Username, Password, OTPs) and all activities performed under their account. Intrust will not be liable for any loss resulting from unauthorized access due to user negligence.</p>
 
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">2. Gift Card Purchases</h3>
-                    <p>All gift card purchases made on our platform are final. Gift cards are delivered digitally and are subject to the specific terms set out by the issuing merchant. Intrust Financial Service acts as an intermediary marketplace and is not responsible for the products or services purchased using these cards.</p>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">2. Payments & Transactions</h3>
+                    <p>All payments must be made through authorized channels only (UPI, Credit/Debit Cards, NetBanking). While we ensure a secure gateway, we are not liable for transaction failures or delays caused by bank-side technical issues, server downtimes, or network congestion.</p>
 
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">3. User Conduct</h3>
-                    <p>You agree not to use our services for fraudulent activities, money laundering, or any illegal purposes. We maintain the right to suspend or terminate accounts suspected of violating these terms.</p>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">3. User Conduct & Termination</h3>
+                    <p>Any fraudulent, abusive, or illegal activity—including but not limited to attempts to bypass security, spreading malware, or harassing staff—will lead to immediate account termination and reporting to the appropriate authorities.</p>
+
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">4. Force Majeure</h3>
+                    <p>We are not responsible for service delays or failures caused by unforeseen events beyond our control, such as strikes, natural disasters, pandemics, or government-mandated internet outages.</p>
+                </div>
+            )
+        },
+        shipping: {
+            title: "Shipping & Delivery Policy",
+            lastUpdated: "March 31, 2026",
+            body: (
+                <div className="space-y-6 text-gray-600 dark:text-gray-300 leading-relaxed">
+                    <div className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-2xl border border-blue-100 dark:border-blue-900/20 mb-8">
+                        <p className="text-sm font-bold text-blue-700 dark:text-blue-400 flex items-center gap-2">
+                            <Truck size={18} /> Typical Delivery Window: 3–7 Business Days
+                        </p>
+                    </div>
+
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">1. Dispatch & Tracking</h3>
+                    <p>Once your order is shipped, you will receive a Tracking ID via SMS/Email. This ID allows you to monitor the real-time status of your parcel through our logistics partners.</p>
+
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">2. Delivery Attempts</h3>
+                    <p>A maximum of 2 or 3 delivery attempts will be made at your provided address. If the delivery fails after these attempts, the order will be automatically returned to our warehouse, and a return-to-origin fee may apply.</p>
+
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">3. Customer Responsibility</h3>
+                    <p>The customer is responsible for providing the correct delivery address and an active contact number. Failure to provide accurate details that results in delivery failure is not the responsibility of Intrust.</p>
+
+                    <div className="bg-amber-50 dark:bg-amber-900/10 p-5 rounded-2xl border border-amber-100 dark:border-amber-900/20 mt-8 flex items-start gap-4">
+                        <AlertCircle className="text-amber-600 shrink-0" size={24} />
+                        <div>
+                            <p className="text-sm font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest mb-1">Critical Quality Warning</p>
+                            <p className="text-sm font-bold text-amber-600/80">We explicitly advise customers NOT to accept any parcel if the outer packaging is tampered with, torn, or unsealed at the time of delivery.</p>
+                        </div>
+                    </div>
+                </div>
+            )
+        },
+        product: {
+            title: "Product Policy",
+            lastUpdated: "March 31, 2026",
+            body: (
+                <div className="space-y-6 text-gray-600 dark:text-gray-300 leading-relaxed">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">1. Quality Assurance (QC)</h3>
+                    <p>All items undergo a rigorous Quality Control (QC) process before dispatch to ensure they are defect-free and meet our premium quality standards.</p>
+
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">2. Standards & Safety</h3>
+                    <p>We guarantee that all products meet applicable safety standards and certification requirements as mandated by Indian regulatory authorities.</p>
+
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">3. Visual Representation</h3>
+                    <p>We strive to ensure that product images and descriptions on our platform match the actual product. However, minor variations in color or packaging may occur due to light and manufacturer updates.</p>
+
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">4. Availability & Warranty</h3>
+                    <p>Items are subject to stock availability; orders may be cancelled if an item goes out of stock unexpectedly. Warranty details for each product will clearly state whether it is provided by the Brand/Manufacturer or the Seller.</p>
                 </div>
             )
         },
@@ -137,9 +191,6 @@ export default function LegalCenterPage() {
                                         <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2">{content[activeTab].title}</h2>
                                         <p className="text-sm font-medium text-gray-500">Effective Date: {content[activeTab].lastUpdated}</p>
                                     </div>
-                                    <button className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
-                                        Download PDF
-                                    </button>
                                 </div>
 
                                 <div className="prose prose-blue dark:prose-invert max-w-none">

@@ -30,8 +30,9 @@ export default function Footer() {
         legal: [
             { label: 'Privacy Policy', href: '/legal' },
             { label: 'Terms of Service', href: '/legal' },
+            { label: 'Shipping Policy', href: '/legal' },
+            { label: 'Product Policy', href: '/legal' },
             { label: 'Refund Policy', href: '/legal' },
-            { label: 'Grievance Officer', href: '/contact' },
         ],
     };
 
