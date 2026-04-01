@@ -22,6 +22,7 @@ import RecentShoppingOrders from '@/components/customer/RecentShoppingOrders';
 import { Check, X, Star } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { createClient } from '@/lib/supabaseClient';
+import LiveButton from '@/components/merchant/LiveButton';
 
 const supabase = createClient();
 
@@ -213,6 +214,7 @@ export default function CustomerProfilePage() {
                                         <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Premium Member</span>
                                     </div>
                                 )}
+                                <LiveButton />
                             </div>
                             <p className="text-sm font-medium text-gray-400 dark:text-gray-500 max-w-lg leading-relaxed">
                                 View and manage your personal details, linked contact numbers, and verified profile status.

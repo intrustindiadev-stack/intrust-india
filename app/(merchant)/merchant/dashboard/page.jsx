@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import StatsCards from '@/components/merchant/StatsCards';
 import TransactionsTable from '@/components/merchant/TransactionsTable';
-
 import MerchantAdBannerCarousel from '@/components/merchant/MerchantAdBannerCarousel';
+import LiveButton from '@/components/merchant/LiveButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -141,6 +141,7 @@ export default async function MerchantDashboardPage() {
                             Manage your inventory and track performance
                         </p>
                         <div className="flex items-center gap-3">
+                            <LiveButton />
                             <span className="text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/50 dark:border-amber-800/30 rounded-md">
                                 V.2.0 PREMIUM
                             </span>

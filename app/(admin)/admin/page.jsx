@@ -193,7 +193,7 @@ export default async function AdminDashboard() {
                                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                             </span>
                             <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">
-                                Live Node Active
+                                Live
                             </span>
                         </div>
                         <AdminClock />
