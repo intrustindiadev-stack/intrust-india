@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import WalletTopup from '@/components/wallet/WalletTopup';
 import WithdrawalForm from '@/components/wallet/WithdrawalForm'; // Assuming this component exists
 import { useRouter, useSearchParams } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function WalletPage() {
     const router = useRouter();
@@ -14,6 +16,45 @@ export default function WalletPage() {
     const [error, setError] = useState(null);
     const [showTopup, setShowTopup] = useState(false);
     const [showWithdrawal, setShowWithdrawal] = useState(false); // New state for withdrawal
+    const [balanceRevealed, setBalanceRevealed] = useState(false);
+    const [tapping, setTapping] = useState(false);
+    const [displayBalance, setDisplayBalance] = useState(0);
+    const animFrameRef = useRef(null);
+
+    // Counting animation — runs every time balance is revealed
+    useEffect(() => {
+        if (!balanceRevealed) {
+            setDisplayBalance(0);
+            return;
+        }
+        const target = Number(balance);
+        const duration = 1200; // ms
+        const startTime = performance.now();
+
+        const easeOutExpo = (t) =>
+            t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+
+        const tick = (now) => {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = easeOutExpo(progress);
+            setDisplayBalance(eased * target);
+            if (progress < 1) {
+                animFrameRef.current = requestAnimationFrame(tick);
+            } else {
+                setDisplayBalance(target);
+            }
+        };
+
+        animFrameRef.current = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(animFrameRef.current);
+    }, [balanceRevealed, balance]);
+
+    const handleBalanceTap = () => {
+        setTapping(true);
+        setTimeout(() => setTapping(false), 500);
+        setBalanceRevealed((prev) => !prev);
+    };
     const [user, setUser] = useState(null);
     const [merchantData, setMerchantData] = useState(null); // New state for merchant data
     const searchParams = useSearchParams();
@@ -111,16 +152,78 @@ export default function WalletPage() {
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center relative z-10 gap-6">
                     <div>
-                        <div className="flex items-center space-x-2 text-[#D4AF37] mb-2">
+                        {/* Label row */}
+                        <div className="flex items-center gap-2 text-[#D4AF37] mb-2">
                             <span className="material-icons-round text-xl">account_balance_wallet</span>
                             <span className="font-bold uppercase tracking-widest text-[10px]">Available Balance</span>
                         </div>
-                        {loading ? (
-                            <div className="h-14 w-48 bg-black/5 dark:bg-white/10 animate-pulse rounded-xl" />
-                        ) : (
-                            <h2 className="text-5xl sm:text-6xl font-display font-bold text-slate-800 dark:text-slate-100 tracking-tight">
-                                ₹{Number(balance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </h2>
+
+                        {/* Balance tile — tap to reveal */}
+                        <motion.button
+                            onClick={handleBalanceTap}
+                            whileTap={{ scale: 0.97 }}
+                            className="relative flex items-end gap-3 cursor-pointer select-none group/bal"
+                            aria-label={balanceRevealed ? 'Hide balance' : 'Reveal balance'}
+                        >
+                            {/* Ripple */}
+                            <AnimatePresence>
+                                {tapping && (
+                                    <motion.span
+                                        key="ripple"
+                                        className="absolute inset-0 rounded-2xl bg-[#D4AF37]/20 pointer-events-none"
+                                        initial={{ opacity: 0.7, scale: 0.85 }}
+                                        animate={{ opacity: 0, scale: 1.4 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                                    />
+                                )}
+                            </AnimatePresence>
+
+                            {loading ? (
+                                <div className="h-14 w-48 bg-black/5 dark:bg-white/10 animate-pulse rounded-xl" />
+                            ) : (
+                                <div className="relative overflow-hidden">
+                                    <AnimatePresence mode="wait" initial={false}>
+                                        {balanceRevealed ? (
+                                            <motion.h2
+                                                key="amount"
+                                                className="text-5xl sm:text-6xl font-display font-bold text-slate-800 dark:text-slate-100 tracking-tight"
+                                                initial={{ y: 20, opacity: 0, filter: 'blur(4px)' }}
+                                                animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
+                                                exit={{ y: -20, opacity: 0, filter: 'blur(4px)' }}
+                                                transition={{ duration: 0.3, ease: 'easeOut' }}
+                                            >
+                                                ₹{displayBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </motion.h2>
+                                        ) : (
+                                            <motion.h2
+                                                key="dots"
+                                                className="text-5xl sm:text-6xl font-display font-bold text-slate-800/50 dark:text-slate-100/40 tracking-[0.25em]"
+                                                initial={{ y: 20, opacity: 0, filter: 'blur(4px)' }}
+                                                animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
+                                                exit={{ y: -20, opacity: 0, filter: 'blur(4px)' }}
+                                                transition={{ duration: 0.3, ease: 'easeOut' }}
+                                            >
+                                                ••••••
+                                            </motion.h2>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            )}
+
+                            {/* Eye icon */}
+                            {!loading && (
+                                <span className="mb-1.5 text-[#D4AF37]/60 group-hover/bal:text-[#D4AF37] transition-colors">
+                                    {balanceRevealed ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </span>
+                            )}
+                        </motion.button>
+
+                        {/* Hint text */}
+                        {!loading && (
+                            <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 mt-2 tracking-wide">
+                                {balanceRevealed ? 'Tap to hide' : 'Tap to reveal balance'}
+                            </p>
                         )}
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">

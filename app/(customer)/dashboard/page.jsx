@@ -438,10 +438,6 @@ export default function CustomerDashboardPage() {
     const quickServices = [
         { id: 1, label: 'Gift Cards', icon: Gift, color: 'text-purple-600 bg-purple-50', href: '/gift-cards' },
         { id: 2, label: 'Shopping', icon: ShoppingCart, color: 'text-amber-600 bg-amber-50', href: '/shop' },
-        { id: 3, label: 'Fastag', icon: CreditCard, color: 'text-emerald-600 bg-emerald-50', href: '/coming-soon' },
-        { id: 4, label: 'Rent Pay', icon: Store, color: 'text-indigo-600 bg-indigo-50', href: '/coming-soon' },
-        { id: 5, label: 'Scan & Pay', icon: ScanLine, color: 'text-rose-600 bg-rose-50', href: '/coming-soon' },
-        { id: 6, label: 'More', icon: Grid, color: 'text-slate-600 bg-slate-50', href: '/coming-soon' },
     ];
 
     const stats = [
@@ -486,7 +482,7 @@ export default function CustomerDashboardPage() {
                             )}
                         </h1>
                         <p className="text-slate-500 dark:text-gray-400 text-sm sm:text-lg">
-                            Manage your wallet, cards, and payments across the system.
+                            Manage your eCommerce orders, wallet, gift cards, and payments.
                         </p>
                     </motion.div>
 
@@ -511,9 +507,9 @@ export default function CustomerDashboardPage() {
 
                             {/* KYC Banner */}
                             {(userData.kycStatus === 'verified' || userData.merchantStatus) && (
-                                <MerchantOpportunityBanner 
-                                    merchantStatus={userData.merchantStatus} 
-                                    subscriptionStatus={userData.merchantSubscriptionStatus} 
+                                <MerchantOpportunityBanner
+                                    merchantStatus={userData.merchantStatus}
+                                    subscriptionStatus={userData.merchantSubscriptionStatus}
                                     subscriptionExpiresAt={userData.merchantSubscriptionExpiresAt}
                                 />
                             )}

@@ -6,7 +6,7 @@ import DisclaimerNote from '@/components/customer/dashboard/DisclaimerNote';
 export async function generateMetadata() {
   return {
     title: "INTRUST",
-    description: "Get instant personal loans, business loans, and gold loans with InTrust India. Simple, secure, and fast financial solutions for everyone.",
+    description: "Shop smarter with InTrust India. Discover eCommerce deals, buy gift cards instantly, and enjoy a seamless, secure shopping experience — all in one place.",
     alternates: {
       canonical: "/",
     },
