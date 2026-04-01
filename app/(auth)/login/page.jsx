@@ -215,7 +215,7 @@ export default function LoginPage() {
                                 <button
                                     type="submit"
                                     disabled={loading || phone.length !== 10}
-                                    className="w-full py-3.5 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all disabled:bg-[#4A6FA5] disabled:opacity-100 disabled:hover:bg-[#4A6FA5] disabled:hover:scale-100 disabled:hover:shadow-none disabled:cursor-not-allowed"
                                 >
                                     {loading ? (
                                         <>
@@ -280,7 +280,7 @@ export default function LoginPage() {
                                 <button
                                     type="submit"
                                     disabled={loading || otp.length !== 6}
-                                    className="w-full py-3.5 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all disabled:bg-[#4A6FA5] disabled:opacity-100 disabled:hover:bg-[#4A6FA5] disabled:hover:scale-100 disabled:hover:shadow-none disabled:cursor-not-allowed"
                                 >
                                     {loading ? (
                                         <>
