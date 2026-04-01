@@ -3,39 +3,12 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Zap, Banknote, ShoppingBag, Headphones,
-    Smartphone, Tv, Car, Flame, Wallet, CreditCard,
-    Landmark, Gift, FileText, Heart, HelpCircle,
-    Sparkles, Briefcase, Info, CheckCircle2, ChevronRight, Check, X,
+    ShoppingBag, Gift, HelpCircle,
+    Sparkles, CheckCircle2, ChevronRight, Check, X,
     ShieldAlert
 } from 'lucide-react';
 
 const SERVICE_CATEGORIES = [
-    {
-        id: 'bills',
-        label: 'Bills & Recharges',
-        icon: Zap,
-        color: 'text-blue-600 bg-blue-50',
-        services: [
-            { id: 'mobile', label: 'Mobile Recharge', icon: Smartphone },
-            { id: 'dth', label: 'DTH', icon: Tv },
-            { id: 'electricity', label: 'Electricity', icon: Zap },
-            { id: 'fastag', label: 'FASTag', icon: Car },
-            { id: 'gas', label: 'Gas Booking', icon: Flame }
-        ]
-    },
-    {
-        id: 'finance',
-        label: 'Finance & Loans',
-        icon: Banknote,
-        color: 'text-emerald-600 bg-emerald-50',
-        services: [
-            { id: 'loans', label: 'Instant Loans', icon: Banknote },
-            { id: 'business', label: 'Business Loans', icon: Landmark },
-            { id: 'wallet', label: 'Digital Wallet', icon: Wallet },
-            { id: 'cards', label: 'Credit Cards', icon: CreditCard }
-        ]
-    },
     {
         id: 'shopping',
         label: 'Shopping & Rewards',
@@ -44,8 +17,6 @@ const SERVICE_CATEGORIES = [
         services: [
             { id: 'gift', label: 'Gift Cards', icon: Gift },
             { id: 'store', label: 'Online Store', icon: ShoppingBag },
-            { id: 'coupons', label: 'My Coupons', icon: FileText },
-            { id: 'rewards', label: 'Redeem Points', icon: Heart }
         ]
     }
 ];

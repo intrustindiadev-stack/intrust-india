@@ -40,9 +40,9 @@ export default function MerchantFloatingCart({
     };
 
     const CartContent = () => (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
             {/* Balance bar */}
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 mb-4">
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 mb-4 shrink-0">
                 <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-blue-300/70 mb-0.5">Your Wallet</p>
                     <p className="text-lg font-black text-white">₹{merchantBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
@@ -56,7 +56,7 @@ export default function MerchantFloatingCart({
 
             {/* Items */}
             {itemCount === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center py-10 border border-dashed border-white/10 rounded-[2rem] bg-white/5">
+                <div className="flex-1 flex flex-col items-center justify-center py-10 border border-dashed border-white/10 rounded-[2rem] bg-white/5 shrink-0">
                     <Tags className="text-white/20 mb-4" size={40} />
                     <p className="text-white/40 text-sm font-bold text-center px-6">
                         Add items to see your order here.
@@ -64,42 +64,44 @@ export default function MerchantFloatingCart({
                 </div>
             ) : (
                 <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0 custom-scrollbar mb-4">
-                    {cartItems.map((item) => (
-                        <motion.div
-                            key={item.id}
-                            layout
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 10 }}
-                            className="flex items-center justify-between group bg-white/5 hover:bg-white/10 p-3 rounded-2xl border border-white/5 transition-colors"
-                        >
-                            <div className="flex-1 min-w-0 pr-3">
-                                <p className="font-bold text-sm text-white truncate mb-0.5">
-                                    {item.title || item.brand}
-                                </p>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-blue-300">
-                                    ₹{(item.unit_price).toLocaleString()} × {item.quantity || 1}
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-3 flex-shrink-0">
-                                <p className="font-black text-white text-sm">
-                                    ₹{(item.unit_price * (item.quantity || 1)).toLocaleString()}
-                                </p>
-                                <button
-                                    onClick={() => onRemoveItem(item.id)}
-                                    className="w-8 h-8 rounded-xl bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-400 hover:text-red-300 transition-all opacity-100 group-hover:opacity-100"
-                                >
-                                    <Trash2 size={13} />
-                                </button>
-                            </div>
-                        </motion.div>
-                    ))}
+                    <AnimatePresence>
+                        {cartItems.map((item) => (
+                            <motion.div
+                                key={item.id}
+                                layout
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 10 }}
+                                className="flex items-center justify-between group bg-white/5 hover:bg-white/10 p-3 rounded-2xl border border-white/5 transition-colors"
+                            >
+                                <div className="flex-1 min-w-0 pr-3">
+                                    <p className="font-bold text-sm text-white truncate mb-0.5">
+                                        {item.title || item.brand}
+                                    </p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-300">
+                                        ₹{(item.unit_price).toLocaleString()} × {item.quantity || 1}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-3 flex-shrink-0">
+                                    <p className="font-black text-white text-sm">
+                                        ₹{(item.unit_price * (item.quantity || 1)).toLocaleString()}
+                                    </p>
+                                    <button
+                                        onClick={() => onRemoveItem(item.id)}
+                                        className="w-8 h-8 rounded-xl bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-400 hover:text-red-300 transition-all opacity-100 group-hover:opacity-100 active:scale-90"
+                                    >
+                                        <Trash2 size={13} />
+                                    </button>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
                 </div>
             )}
 
             {/* Summary */}
             {itemCount > 0 && (
-                <div className="pt-4 border-t border-white/10 space-y-4 flex-shrink-0">
+                <div className="pt-4 border-t border-white/10 space-y-4 shrink-0 pb-2">
                     {showCommission && (
                         <div className="space-y-1.5 text-xs">
                             <div className="flex justify-between text-blue-300/70 font-medium">

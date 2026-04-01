@@ -20,6 +20,8 @@ export default function WalletPage() {
     const [tapping, setTapping] = useState(false);
     const [displayBalance, setDisplayBalance] = useState(0);
     const animFrameRef = useRef(null);
+    
+    const balance = wallet?.balance ?? 0;
 
     // Counting animation — runs every time balance is revealed
     useEffect(() => {
@@ -113,8 +115,6 @@ export default function WalletPage() {
             fetchWalletData();
         }
     }, [searchParams, fetchWalletData]);
-
-    const balance = wallet?.balance ?? 0;
 
     return (
         <div className="relative">
