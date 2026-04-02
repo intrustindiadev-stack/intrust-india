@@ -5,13 +5,25 @@ import DisclaimerNote from '@/components/customer/dashboard/DisclaimerNote';
 
 export async function generateMetadata() {
   return {
-    title: "INTRUST",
-    description: "Shop smarter with InTrust India. Discover eCommerce deals, buy gift cards instantly, and enjoy a seamless, secure shopping experience — all in one place.",
+    title: "Intrust India",
+    description: "InTrust India — Buy gift cards, explore NFC solutions, and enjoy a curated e-commerce experience. Fast, secure, and trusted by 10,000+ customers. Based in Bhopal, serving all of India.",
+    keywords: [
+      "gift cards online india",
+      "nfc card india",
+      "premium ecommerce india",
+      "financial services india",
+    ],
     alternates: {
       canonical: "/",
     },
+    openGraph: {
+      title: "InTrust India | E-commerce, Gift Cards & NFC",
+      description: "Purchase gift cards, order NFC smart cards, and enjoy a curated e-commerce experience — all in one trusted platform across India.",
+      url: "https://www.intrustindia.com",
+    },
   };
 }
+
 
 
 export default async function Home() {

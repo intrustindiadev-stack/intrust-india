@@ -1,12 +1,20 @@
 export const metadata = {
-    title: "About Us",
-    description: "Learn about InTrust India — our mission, values, and the story behind building the digital trust layer for India's financial future.",
+    title: "About InTrust India | Our Story & Mission",
+    description: "Learn about InTrust India — founded in 2014 to bring transparent digital services to all of India. 10,000+ customers, 50+ cities, and growing. Based in Bhopal, Madhya Pradesh.",
+    keywords: [
+        "about intrust india",
+        "intrust india company history",
+        "ecommerce india",
+        "gift card company india",
+        "digital payments bhopal",
+    ],
     alternates: {
         canonical: "/about",
     },
     openGraph: {
         title: "About InTrust India",
-        description: "Learn about InTrust India — our mission, values, and our journey of financial innovation since 2014.",
+        description: "Since 2014, InTrust India has been empowering customers with gift cards, premium ecommerce, and innovative NFC products across India.",
+        url: "https://www.intrustindia.com/about",
     },
 };
 

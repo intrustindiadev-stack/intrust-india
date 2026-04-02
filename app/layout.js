@@ -38,11 +38,20 @@ const dmSans = DM_Sans({
 export const metadata = {
   metadataBase: new URL("https://www.intrustindia.com"),
   title: {
-    default: "INTRUST | Gift Cards, NFC & Smart E-commerce",
-    template: "%s | INTRUST"
+    default: "InTrust India | E-commerce, Gift Cards & NFC Solutions",
+    template: "%s | InTrust India"
   },
-  description: "INTRUST is India's premium platform for Gift Cards, innovative NFC solutions, and a curated e-commerce experience. Discover a faster, smarter way to shop and share.",
-  keywords: ["gift cards india", "nfc cards india", "digital gifting", "nfc solutions", "premium ecommerce", "InTrust India", "smart shopping"],
+  description: "InTrust India offers gift cards, NFC smart cards, and a curated e-commerce experience. Trusted by 10,000+ customers across India.",
+  keywords: [
+    "gift cards india",
+    "nfc smart card india",
+    "digital gifting india",
+    "intrust india",
+    "intrustindia.com",
+    "online shopping india",
+    "bill payment app india",
+    "premium ecommerce india"
+  ],
   authors: [{ name: "InTrust India" }],
   creator: "InTrust India",
   publisher: "InTrust India",
@@ -55,16 +64,16 @@ export const metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "INTRUST | Premium Gift Cards & NFC Tech",
-    description: "The next generation of e-commerce. Instant gift cards and innovative NFC products delivered with speed and style across India.",
+    title: "InTrust India | Gift Cards & NFC",
+    description: "Purchase gift cards, NFC solutions, and enjoy a curated e-commerce experience across India.",
     url: "https://www.intrustindia.com",
     siteName: "InTrust India",
     images: [
       {
-        url: "/icon.png",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "InTrust India - Gift Cards & NFC",
+        alt: "InTrust India - Gift Cards & NFC Solutions",
       },
     ],
     locale: "en_IN",
@@ -72,15 +81,15 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "INTRUST | Gift Cards & NFC Innovations",
-    description: "Shop premium gift cards and state-of-the-art NFC solutions with INTRUST India.",
+    title: "InTrust India | Gift Cards & NFC",
+    description: "Gift cards, NFC innovations, and premium e-commerce — all in one place with InTrust India.",
     images: ["/og-image.png"],
   },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "INTRUST",
+    title: "InTrust",
   },
   category: "ecommerce",
   icons: {
@@ -110,7 +119,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${inter.variable} ${outfit.variable} ${poppins.variable} ${sora.variable} ${dmSans.variable}`}>
+    <html lang="en-IN" className={`${inter.variable} ${outfit.variable} ${poppins.variable} ${sora.variable} ${dmSans.variable}`}>
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Material+Icons+Round&display=swap" rel="stylesheet" />
       </head>
