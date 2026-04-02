@@ -18,6 +18,11 @@ export default function SignupPage() {
     const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState('');
 
+    useEffect(() => {
+        // Clear the ad viewed flag so the modal shows freshly upon successful signup
+        sessionStorage.removeItem('intrust_adv_seen');
+    }, []);
+
     const handleContinue = (e) => {
         if (e) e.preventDefault();
         if (name.trim().length < 2) {
@@ -124,7 +129,7 @@ export default function SignupPage() {
                 {/* Logo & Header */}
                 <div className="text-center mb-10 transition-all duration-500 transform scale-100 hover:scale-105">
                     <div className="inline-flex items-center justify-center w-20 h-20 mb-6 rounded-[24px] bg-gradient-to-br from-[#92BCEA] to-[#7aaad6] shadow-2xl shadow-blue-200/50 dark:shadow-none p-4">
-                        <Image src="/icons/intrustLogo.png" alt="INTRUST" width={48} height={48} className="object-contain filter drop-shadow-md" />
+                        <Image src="/icon.png" alt="INTRUST" width={48} height={48} className="object-contain filter drop-shadow-md" />
                     </div>
                     <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white font-[family-name:var(--font-outfit)] tracking-tight">
                         INTRUST

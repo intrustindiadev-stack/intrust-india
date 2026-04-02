@@ -81,7 +81,7 @@ export default function CTASection() {
                     className="mb-6"
                 >
                     <Image
-                        src="/icons/intrustLogo.png"
+                        src="/icon.png"
                         alt="INTRUST"
                         width={64}
                         height={64}

@@ -23,7 +23,7 @@ export default function ProductForm({ initialData = null }) {
         mrp_paise: initialData?.mrp_paise ? (initialData.mrp_paise / 100).toString() : (initialData?.suggested_retail_price_paise ? (initialData.suggested_retail_price_paise / 100).toString() : ''),
         admin_stock: initialData?.admin_stock?.toString() || '0',
         gst_percentage: initialData?.gst_percentage?.toString() || '0',
-        hsn_code: initialData?.hsn_code || '',
+        hsn_code: initialData?.hsn_code || '9971',
         product_images: initialData?.product_images?.length
             ? initialData.product_images
             : [],

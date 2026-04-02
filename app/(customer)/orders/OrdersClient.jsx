@@ -107,12 +107,11 @@ const OrdersClient = ({ userId }) => {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm text-gray-500">Order ID:</span>
                     <span className="font-semibold text-gray-800 uppercase">{group.id.slice(0, 8)}</span>
-                    <span className={`ml-2 inline-block px-2 py-0.5 text-[10px] uppercase font-bold rounded ${
-                      group.delivery_status === 'delivered' ? 'bg-green-100 text-green-800' :
+                    <span className={`ml-2 inline-block px-2 py-0.5 text-[10px] uppercase font-bold rounded ${group.delivery_status === 'delivered' ? 'bg-green-100 text-green-800' :
                       group.delivery_status === 'shipped' ? 'bg-blue-100 text-blue-800' :
-                      group.delivery_status === 'packed' ? 'bg-orange-100 text-orange-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
+                        group.delivery_status === 'packed' ? 'bg-orange-100 text-orange-800' :
+                          'bg-yellow-100 text-yellow-800'
+                      }`}>
                       {group.delivery_status || 'pending'}
                     </span>
                   </div>
@@ -186,10 +185,10 @@ const OrdersClient = ({ userId }) => {
                 <div className="text-sm">
                   <span className="text-gray-500">Paid via: </span>
                   <span className="font-semibold text-gray-700">
-                    {group.payment_method === 'gateway' ? "Online Payment (SabPaisa)" : 
-                     group.payment_method === 'cod' ? "Cash on Delivery" : 
-                     group.payment_method === 'store_credit' ? "Store Credit (Udhari)" :
-                     "InTrust Wallet"}
+                    {group.payment_method === 'gateway' ? "Online Payment (SabPaisa)" :
+                      group.payment_method === 'cod' ? "Cash on Delivery" :
+                        group.payment_method === 'store_credit' ? "Store Credit (Udhari)" :
+                          "InTrust Wallet"}
                   </span>
                 </div>
 

@@ -40,6 +40,7 @@ export default function ServicesPage() {
         { id: 'cards', category: 'finance', title: "Credit Cards", subtitle: "Apply for a card", icon: CreditCard, href: "/cards" },
 
         // Shopping
+        { id: 'nfc', category: 'shopping', title: "NFC Smart Card", subtitle: "Nexus 2040 Edition", icon: Smartphone, href: "/nfc-service", highlight: true, badge: "Elite" },
         { id: 'gift', category: 'shopping', title: "Gift Cards", subtitle: "For your loved ones", icon: Gift, href: "/gift-cards" },
         { id: 'store', category: 'shopping', title: "Online Store", subtitle: "Exclusive Deals", icon: ShoppingBag, href: "/shop", badge: "New" },
         { id: 'coupons', category: 'shopping', title: "My Coupons", subtitle: "Rewards & Codes", icon: FileText, href: "/my-giftcards" },

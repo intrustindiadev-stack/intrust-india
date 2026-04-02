@@ -59,7 +59,7 @@ export default function InTrustProgressLoader({
                     {/* Central Logo - Explicit Size & Centered */}
                     <div className="col-start-1 row-start-1 relative z-20 w-16 h-16 md:w-20 md:h-20 flex items-center justify-center">
                         <Image
-                            src="/icons/intrustLogo.png"
+                            src="/icon.png"
                             alt="InTrust"
                             fill
                             className="object-contain drop-shadow-md p-1"

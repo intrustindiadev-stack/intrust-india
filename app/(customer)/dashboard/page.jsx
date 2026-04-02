@@ -28,6 +28,7 @@ import GoldSubscription from '@/components/customer/dashboard/GoldSubscription';
 import ReferralGenzSection from '@/components/customer/dashboard/ReferralGenzSection';
 import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 import DisclaimerNote from '@/components/customer/dashboard/DisclaimerNote';
+import AdvertisementModal from '@/components/home/AdvertisementModal';
 
 const OpportunitiesSection = dynamic(() => import('@/components/customer/OpportunitiesSection'), { ssr: false });
 const MerchantOpportunityBanner = dynamic(() => import('@/components/customer/MerchantOpportunityBanner'), { ssr: false });
@@ -438,6 +439,7 @@ export default function CustomerDashboardPage() {
     const quickServices = [
         { id: 1, label: 'Gift Cards', icon: Gift, color: 'text-purple-600 bg-purple-50', href: '/gift-cards' },
         { id: 2, label: 'Shopping', icon: ShoppingCart, color: 'text-amber-600 bg-amber-50', href: '/shop' },
+        { id: 3, label: 'NFC Card', icon: Smartphone, color: 'text-blue-600 bg-blue-50', href: '/nfc-service' },
     ];
 
     const stats = [
@@ -452,6 +454,7 @@ export default function CustomerDashboardPage() {
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)] flex flex-col">
+            <AdvertisementModal />
             <Navbar />
 
             {!userData.completedOnboarding && user && (

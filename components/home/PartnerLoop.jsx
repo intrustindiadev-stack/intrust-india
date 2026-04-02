@@ -10,16 +10,16 @@ import {
 export default function PartnerLoop({ className = "", showBorder = true }) {
 
 
-    // Partners with specific "Trust" focus
+    // E-commerce/Digital Service Partners
     const partners = [
-        { name: 'HDFC Bank', icon: Building2 },
-        { name: 'ICICI Bank', icon: Landmark },
-        { name: 'SBI', icon: CreditCard },
-        { name: 'Razorpay', icon: Shield },
-        { name: 'BBPS', icon: Zap },
-        { name: 'NPCI', icon: Smartphone },
-        { name: 'Visa', icon: Globe },
-        { name: 'Mastercard', icon: CreditCard },
+        { name: 'Amazon Pay', icon: ShoppingBag },
+        { name: 'Google Play', icon: Smartphone },
+        { name: 'Apple', icon: Smartphone },
+        { name: 'Flipkart', icon: Store },
+        { name: 'Netflix', icon: Wifi },
+        { name: 'Swiggy', icon: ShoppingBag },
+        { name: 'Zomato', icon: Store },
+        { name: 'Myntra', icon: Sparkles },
     ];
 
     const marqueePartners = [...partners, ...partners, ...partners]; // Triple for smoothness

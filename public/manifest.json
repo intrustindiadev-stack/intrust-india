@@ -1,7 +1,7 @@
 {
-    "name": "INTRUST",
+    "name": "INTRUST | Premium Gift Cards & NFC",
     "short_name": "INTRUST",
-    "description": "Loans, payments, shopping, and more—all in one secure platform",
+    "description": "Premium Gift Cards, NFC solutions, and smart e-commerce—all in one secure platform",
     "start_url": "/dashboard",
     "display": "standalone",
     "background_color": "#ffffff",

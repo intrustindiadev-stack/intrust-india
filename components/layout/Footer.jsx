@@ -52,7 +52,7 @@ export default function Footer() {
                         <div className="flex items-center gap-3 mb-6">
                             <div className="relative w-9 h-9">
                                 <Image
-                                    src="/icons/intrustLogo.png"
+                                    src="/icon.png"
                                     alt="INTRUST"
                                     fill
                                     className="object-contain"

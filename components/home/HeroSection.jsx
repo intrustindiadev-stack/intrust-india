@@ -37,6 +37,7 @@ export default function HeroSection() {
     const prelinks = [
         { icon: Gift, label: 'Gift Cards', href: '/gift-cards' },
         { icon: ShoppingBag, label: 'Shopping', href: '/shop' },
+        { icon: Zap, label: 'NFC Service', href: '/nfc-service' },
     ];
 
     return (

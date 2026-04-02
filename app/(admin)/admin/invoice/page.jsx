@@ -23,7 +23,7 @@ import { generateManualInvoice } from '@/lib/invoiceGenerator';
 
 const EMPTY_ITEM = {
     name: '',
-    hsn_sac: '',
+    hsn_sac: '9971',
     quantity: 1,
     unit_price: 0,
     gst_percent: 18,

@@ -3,13 +3,13 @@ import Script from 'next/script';
 export default function StructuredData() {
     const jsonLd = {
         "@context": "https://schema.org",
-        "@type": ["FinancialService", "Organization"],
-        "name": "InTrust India",
-        "alternateName": "Intrust Financial Service India Pvt Ltd",
+        "@type": ["Store", "Organization"],
+        "name": "INTRUST",
+        "alternateName": "INTRUST | Premium Gift Cards & NFC",
         "url": "https://www.intrustindia.com",
-        "logo": "https://www.intrustindia.com/icons/intrustLogo.png",
-        "image": "https://www.intrustindia.com/icons/intrustLogo.png",
-        "description": "Premium financial service provider in India offering Shopping Offers",
+        "logo": "https://www.intrustindia.com/icon.png",
+        "image": "https://www.intrustindia.com/icon.png",
+        "description": "Premium Gift Cards, innovative NFC solutions, and smart e-commerce platform.",
         "foundingDate": "2014",
         "address": {
             "@type": "PostalAddress",

@@ -25,7 +25,7 @@ const STATUS_CONFIG = {
 
 const STATUS_FLOW = ["pending", "packed", "shipped", "delivered"];
 
-const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, onToggle, isCancelled, merchantInfo }) => {
+const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, onToggle, isCancelled, merchantInfo, setShippingModal, setShippingData }) => {
     const orderGrossProfit = (order.items || []).reduce((s, i) => s + (i.gross_profit_paise || 0), 0);
     const orderCommission = (order.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0);
     const orderNetProfit = (order.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0);
@@ -193,6 +193,20 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
+                                                setShippingModal({ ...order, mode: 'schedule' });
+                                                setShippingData({
+                                                    tracking_number: order.tracking_number || '',
+                                                    estimated_delivery_at: order.estimated_delivery_at ? format(new Date(order.estimated_delivery_at), "yyyy-MM-dd'T'HH:mm") : format(new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
+                                                    status_notes: order.status_notes || ''
+                                                });
+                                            }}
+                                            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 active:scale-95"
+                                        >
+                                            <Calendar size={14} /> Schedule
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
                                                 generateOrderInvoice({
                                                     order: {
                                                         ...order,
@@ -219,7 +233,10 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                         </button>
                                         {nextStatus && (
                                             <button
-                                                onClick={() => onUpdate(order.id, nextStatus)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onUpdate(order.id, nextStatus);
+                                                }}
                                                 disabled={isUpdating}
                                                 className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 group/btn"
                                             >
@@ -246,6 +263,12 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
     const [expandedId, setExpandedId] = useState(null);
     const [updatingId, setUpdatingId] = useState(null);
     const [activeView, setActiveView] = useState("orders"); // "orders" | "credits"
+    const [shippingModal, setShippingModal] = useState(null); // { id: string }
+    const [shippingData, setShippingData] = useState({
+        tracking_number: '',
+        estimated_delivery_at: format(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
+        status_notes: ''
+    });
 
     const filtered = orders.filter(o => {
         const matchesFilter = filter === "all" || o.delivery_status === filter;
@@ -261,24 +284,50 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
         return idx >= 0 && idx < STATUS_FLOW.length - 1 ? STATUS_FLOW[idx + 1] : null;
     };
 
-    const updateStatus = async (orderId, newStatus) => {
+    const updateStatus = async (orderId, newStatus, tracking = null, estAt = null, notes = null) => {
+        if (newStatus === 'shipped' && !tracking && !shippingModal) {
+            setShippingModal({ id: orderId });
+            return;
+        }
+
         setUpdatingId(orderId);
         try {
-            const { error } = await supabase
-                .from("shopping_order_groups")
-                .update({ delivery_status: newStatus })
-                .eq("id", orderId);
+            const { data, error } = await supabase.rpc("update_order_delivery_v3", {
+                p_order_id: orderId,
+                p_new_status: newStatus,
+                p_tracking_number: tracking,
+                p_estimated_at: estAt,
+                p_status_notes: notes,
+                p_is_merchant: true
+            });
+
             if (error) throw error;
-            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, delivery_status: newStatus } : o));
+            if (!data?.success) throw new Error(data?.message || "Status update failed");
+
+            setOrders(prev => prev.map(o => o.id === orderId ? {
+                ...o,
+                delivery_status: newStatus,
+                tracking_number: tracking || o.tracking_number,
+                estimated_delivery_at: estAt || o.estimated_delivery_at,
+                status_notes: notes || o.status_notes
+            } : o));
+            setShippingModal(null);
+            setShippingData({
+                tracking_number: '',
+                estimated_delivery_at: format(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
+                status_notes: ''
+            });
         } catch (err) {
             console.error("Status update failed:", err);
+            toast.error(err.message || "Failed to update order status");
         } finally {
             setUpdatingId(null);
         }
     };
 
     return (
-        <div className="space-y-10 pb-20">
+        <>
+            <div className="space-y-10 pb-20">
             {/* Header Hero Section */}
             <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
@@ -342,19 +391,17 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
 
             {/* View Toggles */}
             <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-xl w-fit">
-                <button 
+                <button
                     onClick={() => setActiveView("orders")}
-                    className={`px-6 py-2 rounded-lg text-sm font-black tracking-tight transition-all ${
-                        activeView === "orders" ? "bg-white dark:bg-black text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
-                    }`}
+                    className={`px-6 py-2 rounded-lg text-sm font-black tracking-tight transition-all ${activeView === "orders" ? "bg-white dark:bg-black text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
+                        }`}
                 >
                     Standard Orders
                 </button>
-                <button 
+                <button
                     onClick={() => setActiveView("credits")}
-                    className={`px-6 py-2 rounded-lg text-sm font-black tracking-tight transition-all ${
-                        activeView === "credits" ? "bg-white dark:bg-black text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
-                    }`}
+                    className={`px-6 py-2 rounded-lg text-sm font-black tracking-tight transition-all ${activeView === "credits" ? "bg-white dark:bg-black text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
+                        }`}
                 >
                     Store Credit Requests
                 </button>
@@ -366,74 +413,76 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                     <div className="sticky top-20 z-20 flex flex-col md:flex-row gap-4 items-stretch md:items-center bg-white/80 dark:bg-black/40 backdrop-blur-2xl border border-slate-200 dark:border-white/10 p-3 rounded-2xl shadow-xl dark:shadow-2xl">
                         <div className="relative flex-1 group">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 transition-colors" />
-                    <input
-                        type="text"
-                        placeholder="Scan Order ID, Customer Name, or Product Brand..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-12 pr-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-600 focus:ring-1 focus:ring-emerald-500/40 focus:bg-white dark:focus:bg-white/[0.07] outline-none transition-all font-medium tracking-tight"
-                    />
-                </div>
-                <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 overflow-x-auto no-scrollbar">
-                    {["all", "pending", "packed", "shipped", "delivered", "cancelled"].map(f => {
-                        const count = f === "all" ? orders.length : orders.filter(o => o.delivery_status === f).length;
-                        return (
-                            <button
-                                key={f}
-                                onClick={() => setFilter(f)}
-                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${filter === f ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/20" : "hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-gray-500"
-                                    }`}
-                            >
-                                {f}
-                                <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black ${filter === f ? "bg-black/10" : "bg-slate-200 dark:bg-white/10"}`}>{count}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* Orders Feed */}
-            <div className="space-y-6">
-                {filtered.length === 0 ? (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-center py-32 bg-slate-50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 rounded-[3rem] space-y-4 shadow-inner"
-                    >
-                        <div className="w-20 h-20 bg-white dark:bg-white/5 rounded-full flex items-center justify-center mx-auto border border-slate-100 dark:border-white/10 shadow-sm">
-                            <Package className="w-10 h-10 text-slate-300 dark:text-gray-700" />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-bold text-slate-700 dark:text-gray-300">Clean Slate</h3>
-                            <p className="text-slate-500 dark:text-gray-500 text-sm mt-1 max-w-xs mx-auto">We couldn't find any orders matching your current search or filter criteria.</p>
-                        </div>
-                        {search && (
-                            <button
-                                onClick={() => { setSearch(""); setFilter("all"); }}
-                                className="text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-widest hover:underline"
-                            >
-                                Clear all filters
-                            </button>
-                        )}
-                    </motion.div>
-                ) : (
-                    <div className="space-y-4">
-                        {filtered.map(order => (
-                            <OrderCard
-                                key={order.id}
-                                order={order}
-                                cfg={STATUS_CONFIG[order.delivery_status] || STATUS_CONFIG.pending}
-                                nextStatus={getNextStatus(order.delivery_status)}
-                                isExpanded={expandedId === order.id}
-                                isUpdating={updatingId === order.id}
-                                isCancelled={order.delivery_status === "cancelled"}
-                                onUpdate={updateStatus}
-                                onToggle={() => setExpandedId(expandedId === order.id ? null : order.id)}
-                                merchantInfo={merchantInfo}
+                            <input
+                                type="text"
+                                placeholder="Scan Order ID, Customer Name, or Product Brand..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-12 pr-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-600 focus:ring-1 focus:ring-emerald-500/40 focus:bg-white dark:focus:bg-white/[0.07] outline-none transition-all font-medium tracking-tight"
                             />
-                        ))}
+                        </div>
+                        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 overflow-x-auto no-scrollbar">
+                            {["all", "pending", "packed", "shipped", "delivered", "cancelled"].map(f => {
+                                const count = f === "all" ? orders.length : orders.filter(o => o.delivery_status === f).length;
+                                return (
+                                    <button
+                                        key={f}
+                                        onClick={() => setFilter(f)}
+                                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${filter === f ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/20" : "hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-gray-500"
+                                            }`}
+                                    >
+                                        {f}
+                                        <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black ${filter === f ? "bg-black/10" : "bg-slate-200 dark:bg-white/10"}`}>{count}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
-                )}
+
+                    {/* Orders Feed */}
+                    <div className="space-y-6">
+                        {filtered.length === 0 ? (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="text-center py-32 bg-slate-50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 rounded-[3rem] space-y-4 shadow-inner"
+                            >
+                                <div className="w-20 h-20 bg-white dark:bg-white/5 rounded-full flex items-center justify-center mx-auto border border-slate-100 dark:border-white/10 shadow-sm">
+                                    <Package className="w-10 h-10 text-slate-300 dark:text-gray-700" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-slate-700 dark:text-gray-300">Clean Slate</h3>
+                                    <p className="text-slate-500 dark:text-gray-500 text-sm mt-1 max-w-xs mx-auto">We couldn't find any orders matching your current search or filter criteria.</p>
+                                </div>
+                                {search && (
+                                    <button
+                                        onClick={() => { setSearch(""); setFilter("all"); }}
+                                        className="text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-widest hover:underline"
+                                    >
+                                        Clear all filters
+                                    </button>
+                                )}
+                            </motion.div>
+                        ) : (
+                            <div className="space-y-4">
+                                {filtered.map(order => (
+                                    <OrderCard
+                                        key={order.id}
+                                        order={order}
+                                        cfg={STATUS_CONFIG[order.delivery_status] || STATUS_CONFIG.pending}
+                                        nextStatus={getNextStatus(order.delivery_status)}
+                                        isExpanded={expandedId === order.id}
+                                        isUpdating={updatingId === order.id}
+                                        isCancelled={order.delivery_status === "cancelled"}
+                                        onUpdate={updateStatus}
+                                        onToggle={() => setExpandedId(expandedId === order.id ? null : order.id)}
+                                        merchantInfo={merchantInfo}
+                                        setShippingModal={setShippingModal}
+                                        setShippingData={setShippingData}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </>
             ) : (
@@ -442,5 +491,106 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                 </div>
             )}
         </div>
+
+        {/* Shipping Modal */}
+        <AnimatePresence>
+            {shippingModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setShippingModal(null)}
+                        className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+                    />
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 dark:border-white/10"
+                    >
+                        <div className="p-8">
+                            <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Order Fulfillment</h2>
+                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-1">Order #{shippingModal.id.slice(0, 8).toUpperCase()}</p>
+                                </div>
+                                <button onClick={() => setShippingModal(null)} className="p-3 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
+                                    <X size={20} className="text-slate-400" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Tracking ID / Number</label>
+                                    <div className="relative">
+                                        <Truck className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                        <input
+                                            type="text"
+                                            placeholder="Enter shipping tracking ID..."
+                                            className="w-full pl-11 pr-5 py-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-bold text-sm text-slate-900 dark:text-white"
+                                            value={shippingData.tracking_number}
+                                            onChange={(e) => setShippingData(prev => ({ ...prev, tracking_number: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Estimated Delivery (Manual Date & Time)</label>
+                                    <div className="relative group">
+                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
+                                        <input
+                                            type="datetime-local"
+                                            className="w-full pl-11 pr-5 py-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-bold text-sm text-slate-900 dark:text-white"
+                                            value={shippingData.estimated_delivery_at}
+                                            onChange={(e) => setShippingData(prev => ({ ...prev, estimated_delivery_at: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Delivery Person / Notes</label>
+                                    <textarea
+                                        placeholder="e.g. Delivery Partner: Rahul (+91 98XXX XXXXX)"
+                                        rows={2}
+                                        className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-bold text-sm text-slate-900 dark:text-white resize-none"
+                                        value={shippingData.status_notes}
+                                        onChange={(e) => setShippingData(prev => ({ ...prev, status_notes: e.target.value }))}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-10">
+                                <button
+                                    onClick={() => updateStatus(
+                                        shippingModal.id, 
+                                        shippingModal.mode === 'schedule' ? shippingModal.delivery_status : 'shipped', 
+                                        shippingData.tracking_number, 
+                                        shippingData.estimated_delivery_at, 
+                                        shippingData.status_notes
+                                    )}
+                                    disabled={updatingId === shippingModal.id}
+                                    className={`w-full py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 disabled:opacity-50 ${
+                                        shippingModal.mode === 'schedule' 
+                                        ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20' 
+                                        : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20'
+                                    }`}
+                                >
+                                    {updatingId === shippingModal.id ? (
+                                        <RotateCcw className="animate-spin" size={18} />
+                                    ) : (
+                                        <>
+                                            {shippingModal.mode === 'schedule' ? <Calendar size={18} /> : <Truck size={18} />}
+                                            {shippingModal.mode === 'schedule' ? 'SAVE DELIVERY INFO' : 'CONFIRM SHIPMENT'}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
+        </>
     );
 }

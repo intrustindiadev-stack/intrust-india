@@ -20,7 +20,7 @@ export default function MerchantProductForm({ merchantId }) {
         retail_price_paise: '',
         mrp_paise: '',
         gst_percentage: '0',
-        hsn_code: '',
+        hsn_code: '9971',
         stock_quantity: '0',
         wholesale_price_paise: '',
         product_images: [],

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabaseClient";
 import {
     Package, MapPin, Phone, Store, ChevronLeft, Clock, Truck,
     CheckCircle2, XCircle, RefreshCw, ArrowUpRight, User, 
-    Receipt, Download, TrendingUp, AlertCircle, Info
+    Receipt, Download, TrendingUp, AlertCircle, Info, Calendar
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -33,8 +33,9 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
     const [order, setOrder] = useState(initialOrder);
     const [updating, setUpdating] = useState(false);
     const [error, setError] = useState(null);
-    const [trackingNumber, setTrackingNumber] = useState("");
-    const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState("");
+    const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || "");
+    const [estimatedDeliveryAt, setEstimatedDeliveryAt] = useState("");
+    const [statusNotes, setStatusNotes] = useState("");
 
     const cfg = STATUS_CONFIG[order.delivery_status] || STATUS_CONFIG.pending;
     const StatusIcon = cfg.icon;
@@ -52,20 +53,28 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
         setUpdating(true);
         setError(null);
         try {
-            const { data, error: rpcError } = await supabase.rpc("admin_update_order_status", {
+            const { data, error: rpcError } = await supabase.rpc("update_order_delivery_v3", {
                 p_order_id: order.id,
-                p_delivery_status: newStatus,
-                p_tracking_number: newStatus === 'shipped' ? trackingNumber : null,
-                p_estimated_delivery_date: newStatus === 'shipped' ? estimatedDeliveryDate : null
+                p_new_status: newStatus,
+                p_tracking_number: newStatus === 'shipped' ? trackingNumber : order.tracking_number,
+                p_estimated_at: estimatedDeliveryAt || null,
+                p_status_notes: statusNotes || null,
+                p_is_admin: true
             });
-            if (rpcError || !data?.success) throw new Error(rpcError?.message || "Update failed");
+            
+            if (rpcError || !data?.success) throw new Error(rpcError?.message || data?.message || "Update failed");
+            
             setOrder(prev => ({ 
                 ...prev, 
                 delivery_status: newStatus,
                 tracking_number: newStatus === 'shipped' ? trackingNumber : prev.tracking_number,
-                estimated_delivery_date: newStatus === 'shipped' ? estimatedDeliveryDate : prev.estimated_delivery_date
+                estimated_delivery_at: estimatedDeliveryAt || prev.estimated_delivery_at,
+                status_notes: statusNotes || prev.status_notes
             }));
+            
+            setStatusNotes(""); // Clear notes after update
         } catch (err) {
+            console.error("Update error:", err);
             setError(err.message);
         } finally {
             setUpdating(false);
@@ -118,31 +127,13 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Delivery Progress</h2>
-                    <div className="flex flex-col items-end gap-3">
-                        {nextStatus === 'shipped' && (
-                            <div className="flex gap-2">
-                                <input 
-                                    type="text" 
-                                    placeholder="Tracking No. (e.g. DTDC123)"
-                                    className="px-3 py-2 text-xs font-medium border border-slate-200 rounded-xl outline-none focus:border-blue-500 transition-all font-mono"
-                                    value={trackingNumber}
-                                    onChange={e => setTrackingNumber(e.target.value)}
-                                />
-                                <input 
-                                    type="date" 
-                                    min={new Date().toISOString().split('T')[0]}
-                                    className="px-3 py-2 text-xs font-medium border border-slate-200 rounded-xl outline-none focus:border-blue-500 transition-all"
-                                    value={estimatedDeliveryDate}
-                                    onChange={e => setEstimatedDeliveryDate(e.target.value)}
-                                />
-                            </div>
-                        )}
+                    <div className="flex flex-col items-end gap-3 shrink-0">
                         <div className="flex items-center gap-2">
                             {!isCancelled && nextStatus && (
                                 <button
                                     onClick={() => updateStatus(nextStatus)}
-                                    disabled={updating || (nextStatus === 'shipped' && !trackingNumber)}
-                                    className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-blue-600 text-white text-xs font-black rounded-xl transition-all disabled:opacity-50"
+                                    disabled={updating}
+                                    className="inline-flex items-center gap-2 px-5 py-3 bg-slate-900 hover:bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-slate-900/10 active:scale-95"
                                 >
                                     {updating ? <RefreshCw size={12} className="animate-spin" /> : <ArrowUpRight size={12} />}
                                     Mark as {STATUS_CONFIG[nextStatus]?.label}
@@ -150,9 +141,13 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
                             )}
                             {!isCancelled && (
                                 <button
-                                    onClick={() => updateStatus("cancelled")}
+                                    onClick={() => {
+                                        if (confirm("Are you sure you want to cancel this order? This cannot be undone.")) {
+                                            updateStatus("cancelled");
+                                        }
+                                    }}
                                     disabled={updating}
-                                    className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black rounded-xl border border-red-200 transition-all disabled:opacity-50"
+                                    className="px-5 py-3 bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-black uppercase tracking-widest rounded-xl border border-red-200 transition-all disabled:opacity-50 active:scale-95"
                                 >
                                     <XCircle size={12} className="inline mr-1" />
                                     Cancel Order
@@ -201,7 +196,58 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
                 )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                {/* Manual Delivery Schedule - NEW */}
+                {!['delivered', 'cancelled'].includes(order.delivery_status) && (
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col">
+                        <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <Calendar size={12} /> Manual Delivery Estimate
+                        </h2>
+                        
+                        <div className="space-y-4 flex-1">
+                            <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1.5 ml-1">Est. Date & Time</label>
+                                <input 
+                                    type="datetime-local"
+                                    className="w-full px-3 py-2.5 text-xs font-bold border border-slate-200 rounded-xl outline-none focus:border-blue-500 bg-slate-50/50"
+                                    value={estimatedDeliveryAt}
+                                    onChange={(e) => setEstimatedDeliveryAt(e.target.value)}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1.5 ml-1">Tracking ID / ID</label>
+                                <input 
+                                    type="text"
+                                    placeholder="Enter ID..."
+                                    className="w-full px-3 py-2.5 text-xs font-bold border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-mono bg-slate-50/50"
+                                    value={trackingNumber}
+                                    onChange={(e) => setTrackingNumber(e.target.value)}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1.5 ml-1">Fulfillment Notes</label>
+                                <input 
+                                    type="text"
+                                    placeholder="Driver contact, extra info..."
+                                    className="w-full px-3 py-2.5 text-xs font-bold border border-slate-200 rounded-xl outline-none focus:border-blue-500 bg-slate-50/50"
+                                    value={statusNotes}
+                                    onChange={(e) => setStatusNotes(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => updateStatus(order.delivery_status)}
+                            disabled={updating}
+                            className="mt-6 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/10 active:scale-95 disabled:opacity-50"
+                        >
+                            {updating ? <RefreshCw className="animate-spin mx-auto" size={14} /> : 'Save Delivery Info'}
+                        </button>
+                    </div>
+                )}
+
                 {/* Customer Info */}
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
                     <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">

@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
                 {/* Logo */}
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] shadow-lg">
-                        <Image src="/icons/intrustLogo.png" alt="INTRUST" width={40} height={40} className="object-contain" />
+                        <Image src="/icon.png" alt="INTRUST" width={40} height={40} className="object-contain" />
                     </div>
                     <h1 className="text-3xl font-bold text-gray-900 font-[family-name:var(--font-outfit)]">
                         INTRUST

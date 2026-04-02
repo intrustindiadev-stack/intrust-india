@@ -344,11 +344,15 @@ const CartClient = ({ userId }) => {
   }, { mrpTotal: 0, sellingTotal: 0 });
 
   const totalDiscount = billDetails.mrpTotal > billDetails.sellingTotal ? billDetails.mrpTotal - billDetails.sellingTotal : 0;
-  const deliveryFee = 5000; // Fixed ₹50 delivery fee
+  const deliveryFee = 9900; // Fixed ₹99 delivery fee
   const finalPayable = billDetails.sellingTotal > 0 ? billDetails.sellingTotal + deliveryFee : 0;
   const itemCount = cartItems.reduce((a, i) => a + i.quantity, 0);
   const hasStockIssues = stockWarnings.size > 0;
   const hasValidAddress = profile && profile.address && profile.phone;
+  
+  const MIN_ORDER_VALUE = 49900;
+  const isMinOrderMet = billDetails.sellingTotal >= MIN_ORDER_VALUE;
+
   const hasSufficientBalance = paymentMode === 'wallet' ? walletBalance >= finalPayable : true;
   const canPay = (
     paymentMode === 'wallet' ? walletBalance >= finalPayable :
@@ -356,7 +360,7 @@ const CartClient = ({ userId }) => {
     true
   );
   const isPaymentModeValid = paymentMode === 'wallet' || paymentMode === 'gateway' || paymentMode === 'store_credit';
-  const canCheckout = canPay && !hasStockIssues && hasValidAddress && isPaymentModeValid;
+  const canCheckout = canPay && !hasStockIssues && hasValidAddress && isPaymentModeValid && isMinOrderMet;
 
   // Payment modes
   const paymentModes = [
@@ -739,7 +743,18 @@ const CartClient = ({ userId }) => {
                   </div>
                 </div>
 
-                {totalDiscount > 0 && (
+                {/* Minimum order warning inside the bill section */}
+                {!isMinOrderMet && billDetails.sellingTotal > 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+                    className={`mt-3 flex items-start gap-2 text-[11px] font-bold rounded-lg p-3 ${isDark ? 'bg-amber-900/10 text-amber-500 border border-amber-800/20' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}
+                  >
+                    <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                    <p>Minimum order value is <strong>₹499</strong>. Please add items worth ₹{((MIN_ORDER_VALUE - billDetails.sellingTotal)/100).toLocaleString('en-IN')} more to checkout.</p>
+                  </motion.div>
+                )}
+
+                {totalDiscount > 0 && isMinOrderMet && (
                   <motion.div 
                     initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
                     className={`mt-3 flex items-center gap-2 text-[10px] font-black rounded-lg p-2.5 ${isDark ? 'bg-blue-900/20 text-blue-400 border border-blue-800/10' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}
@@ -866,6 +881,8 @@ const CartClient = ({ userId }) => {
                 >
                   {checkingOut ? (
                     <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>
+                  ) : !isMinOrderMet ? (
+                    `Add ₹${((MIN_ORDER_VALUE - billDetails.sellingTotal)/100).toLocaleString('en-IN')} more to order`
                   ) : hasStockIssues ? (
                     "Some items out of stock"
                   ) : !hasValidAddress ? (
@@ -928,6 +945,8 @@ const CartClient = ({ userId }) => {
           >
             {checkingOut ? (
               <Loader2 className="w-5 h-5 animate-spin" />
+            ) : !isMinOrderMet ? (
+              `Add ₹${((MIN_ORDER_VALUE - billDetails.sellingTotal)/100).toLocaleString('en-IN')} more`
             ) : hasStockIssues ? (
               "Out of stock items"
             ) : !hasValidAddress ? (

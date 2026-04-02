@@ -39,7 +39,7 @@ export async function POST(request) {
             p_product_images: product_images || [],
             p_is_active: is_active,
             p_gst_percentage: gst_percentage || 0,
-            p_hsn_code: hsn_code || null
+            p_hsn_code: hsn_code || '9971'
         });
 
         if (error) {
@@ -100,7 +100,7 @@ export async function PATCH(request) {
             p_product_images: payload.product_images || [],
             p_is_active: payload.is_active,
             p_gst_percentage: payload.gst_percentage || 0,
-            p_hsn_code: payload.hsn_code || null
+            p_hsn_code: payload.hsn_code || '9971'
         });
 
         if (error) {

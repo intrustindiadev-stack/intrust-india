@@ -53,7 +53,7 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                             <div className="flex items-center gap-2.5">
                                 <div className="relative w-8 h-8">
                                     <Image
-                                        src="/icons/intrustLogo.png"
+                                        src="/icon.png"
                                         alt="INTRUST"
                                         fill
                                         className="object-contain"

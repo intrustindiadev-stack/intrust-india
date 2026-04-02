@@ -34,9 +34,10 @@ export default function AdminOrdersClient({ orders: initialOrders, stats: initia
     const [updatingId, setUpdatingId] = useState(null);
     const [expandedOrder, setExpandedOrder] = useState(null);
     const [shippingModal, setShippingModal] = useState(null); // { id: string }
-    const [shippingData, setShippingData] = useState({ 
-        tracking_number: '', 
-        estimated_delivery_date: format(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd') 
+    const [shippingData, setShippingData] = useState({
+        tracking_number: '',
+        estimated_delivery_at: format(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
+        status_notes: ''
     });
 
     // REALTIME SUBSCRIPTION
@@ -78,36 +79,40 @@ export default function AdminOrdersClient({ orders: initialOrders, stats: initia
         return matchesSearch && matchesStatus && matchesType;
     }), [orders, searchQuery, statusFilter, typeFilter]);
 
-    const updateStatus = async (orderId, newStatus, tracking = null, estDate = null) => {
+    const updateStatus = async (orderId, newStatus, tracking = null, estAt = null, notes = null) => {
         setUpdatingId(orderId);
         try {
-            console.log('Updating order status:', { orderId, newStatus, tracking, estDate });
-            const { data, error } = await supabase.rpc("admin_update_order_status", {
+            console.log('Updating order status:', { orderId, newStatus, tracking, estAt, notes });
+            
+            // Standard status update
+            const { data, error } = await supabase.rpc("update_order_status_v2", {
                 p_order_id: orderId,
                 p_delivery_status: newStatus,
                 p_tracking_number: tracking,
-                p_estimated_delivery_date: estDate
+                p_estimated_delivery_at: estAt,
+                p_status_notes: notes
             });
-            
+
             if (error) {
                 console.error('RPC Error:', error);
                 throw new Error(error.message);
             }
-            
+
             if (!data?.success) {
                 console.error('Logic Error:', data);
                 throw new Error(data?.message || "Status update failed");
             }
 
             toast.success(`Order marked as ${newStatus}`);
-            setOrders(prev => prev.map(o => o.id === orderId ? { 
-                ...o, 
+            setOrders(prev => prev.map(o => o.id === orderId ? {
+                ...o,
                 delivery_status: newStatus,
                 tracking_number: tracking || o.tracking_number,
-                estimated_delivery_date: estDate || o.estimated_delivery_date
+                estimated_delivery_at: estAt || o.estimated_delivery_at,
+                status_notes: notes || o.status_notes
             } : o));
             setShippingModal(null);
-            setShippingData({ tracking_number: '', estimated_delivery_date: '' });
+            setShippingData({ tracking_number: '', estimated_delivery_at: '', status_notes: '' });
         } catch (err) {
             console.error('Update Status Error:', err);
             toast.error(err.message || "An unexpected error occurred");
@@ -478,16 +483,30 @@ export default function AdminOrdersClient({ orders: initialOrders, stats: initia
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Estimated Delivery (3-7 Days Policy)</label>
-                                        <div className="relative">
-                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1 underline decoration-blue-500/30 underline-offset-4">Precise Delivery Commitment</label>
+                                        <div className="relative group">
+                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
                                             <input
-                                                type="date"
+                                                type="datetime-local"
                                                 className="w-full pl-11 pr-5 py-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-sm text-slate-900 dark:text-white"
-                                                value={shippingData.estimated_delivery_date}
-                                                onChange={(e) => setShippingData(prev => ({ ...prev, estimated_delivery_date: e.target.value }))}
+                                                value={shippingData.estimated_delivery_at}
+                                                onChange={(e) => setShippingData(prev => ({ ...prev, estimated_delivery_at: e.target.value }))}
                                             />
                                         </div>
+                                        <p className="mt-2 px-1 text-[9px] font-bold text-slate-400 flex items-center gap-1">
+                                            <Clock size={10} /> Customers can reschedule until the order is shipped.
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Delivery Partner / Note</label>
+                                        <textarea
+                                            placeholder="e.g. Out with Driver Rajesh (+91 99XXXXXX)"
+                                            rows={2}
+                                            className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-sm text-slate-900 dark:text-white resize-none"
+                                            value={shippingData.status_notes}
+                                            onChange={(e) => setShippingData(prev => ({ ...prev, status_notes: e.target.value }))}
+                                        />
                                     </div>
 
                                     {/* Policy Reference for Admin */}
@@ -504,7 +523,7 @@ export default function AdminOrdersClient({ orders: initialOrders, stats: initia
                                 </div>
 
                                 <button
-                                    onClick={() => updateStatus(shippingModal.id, 'shipped', shippingData.tracking_number, shippingData.estimated_delivery_date)}
+                                    onClick={() => updateStatus(shippingModal.id, 'shipped', shippingData.tracking_number, shippingData.estimated_delivery_at, shippingData.status_notes)}
                                     disabled={updatingId === shippingModal.id}
                                     className="w-full py-5 rounded-[2rem] bg-blue-600 hover:bg-blue-700 text-white font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-600/20"
                                 >

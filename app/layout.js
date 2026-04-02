@@ -38,11 +38,11 @@ const dmSans = DM_Sans({
 export const metadata = {
   metadataBase: new URL("https://www.intrustindia.com"),
   title: {
-    default: "INTRUST",
+    default: "INTRUST | Gift Cards, NFC & Smart E-commerce",
     template: "%s | INTRUST"
   },
-  description: "InTrust India offers instant personal loans, business loans, and gold loans with fast approval. Manage your investments, insurance, and payments in one secure platform.",
-  keywords: ["personal loan india", "business loan bhopal", "gold loan india", "instant loan approval india", "financial services india", "InTrust India"],
+  description: "INTRUST is India's premium platform for Gift Cards, innovative NFC solutions, and a curated e-commerce experience. Discover a faster, smarter way to shop and share.",
+  keywords: ["gift cards india", "nfc cards india", "digital gifting", "nfc solutions", "premium ecommerce", "InTrust India", "smart shopping"],
   authors: [{ name: "InTrust India" }],
   creator: "InTrust India",
   publisher: "InTrust India",
@@ -55,16 +55,16 @@ export const metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "InTrust India | Financial Services & Instant Loans",
-    description: "Secure and fast financial services including personal and business loans. Your trusted partner for financial growth in India.",
+    title: "INTRUST | Premium Gift Cards & NFC Tech",
+    description: "The next generation of e-commerce. Instant gift cards and innovative NFC products delivered with speed and style across India.",
     url: "https://www.intrustindia.com",
     siteName: "InTrust India",
     images: [
       {
-        url: "/og-image.png",
+        url: "/icon.png",
         width: 1200,
         height: 630,
-        alt: "InTrust India - Financial Services",
+        alt: "InTrust India - Gift Cards & NFC",
       },
     ],
     locale: "en_IN",
@@ -72,17 +72,22 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "InTrust India | Instant Loans & Financial Services",
-    description: "Get instant loans and manage your finances securely with InTrust India.",
+    title: "INTRUST | Gift Cards & NFC Innovations",
+    description: "Shop premium gift cards and state-of-the-art NFC solutions with INTRUST India.",
     images: ["/og-image.png"],
   },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "InTrust India",
+    title: "INTRUST",
   },
-  category: "finance",
+  category: "ecommerce",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
   robots: {
     index: true,
     follow: true,

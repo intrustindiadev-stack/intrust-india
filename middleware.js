@@ -66,16 +66,8 @@ export async function middleware(request) {
     )
 
     try {
-        // Set a timeout for getUser to prevent mobile Safari hangs
-        const getUserPromise = supabase.auth.getUser();
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Auth timeout')), 3000)
-        );
-
-        const { data: { user } } = await Promise.race([
-            getUserPromise,
-            timeoutPromise
-        ]);
+        // Get user session reliably without artificial timeouts to prevent token refresh race conditions
+        const { data: { user } } = await supabase.auth.getUser();
 
         // Protected routes that require authentication
         const protectedRoutes = [

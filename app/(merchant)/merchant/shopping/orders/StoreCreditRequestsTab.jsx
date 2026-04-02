@@ -26,7 +26,6 @@ export default function StoreCreditRequestsTab({ merchantId }) {
                     id,
                     customer_id,
                     amount_paise,
-                    fee_paise,
                     duration_days,
                     status,
                     created_at,
