@@ -1,0 +1,2 @@
+title,description,category,wholesale_price_paise,suggested_retail_price_paise,admin_stock,is_active,category_id,mrp_paise,gst_percentage,hsn_code,product_images
+Example Product Name,Short product description,Groceries,10000,12000,100,TRUE,17d09c62-31c0-4c7e-b6dd-9dc1a97aafb8,13000,5,9971,

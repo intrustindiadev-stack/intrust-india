@@ -73,7 +73,8 @@ export default function WalletPage() {
 
             // Fetch wallet data
             const walletRes = await fetch('/api/wallet/balance', {
-                headers: { Authorization: `Bearer ${session.access_token}` }
+                headers: { Authorization: `Bearer ${session.access_token}` },
+                cache: 'no-store'
             });
 
             if (!walletRes.ok) throw new Error('Failed to fetch wallet data');

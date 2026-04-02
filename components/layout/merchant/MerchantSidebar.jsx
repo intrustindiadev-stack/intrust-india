@@ -27,6 +27,7 @@ const navigation = [
     { name: 'My Retail Shop', href: '/merchant/shopping/inventory', icon: Store },
     { name: 'Purchase Coupons', href: '/merchant/purchase', icon: ShoppingCart },
     { name: 'Store Credits', href: '/merchant/udhari', icon: CreditCard },
+    { name: 'NFC Card', href: '/merchant/nfc-service', icon: CreditCard },
     { name: 'Growth Portfolio', href: '/merchant/lockin', icon: Clock },
     { name: 'Wallet', href: '/merchant/wallet', icon: Wallet },
     { name: 'Withdrawals', href: '/merchant/wallet/withdrawals', icon: Wallet },

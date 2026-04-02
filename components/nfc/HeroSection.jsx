@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, Cpu, Shield, Zap } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronRight, Cpu, Shield, Zap, ClipboardList } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import NFC3DCard from './NFC3DCard';
 
@@ -61,16 +62,23 @@ export default function HeroSection({ previewName }) {
                         High-fidelity physical craftsmanship meets encrypted digital identity. <span className={`hidden lg:inline ${isDark ? 'text-white/60' : 'text-slate-900'}`}>The ultimate extension of your professional self.</span>
                     </p>
 
-                    <div className="flex flex-col sm:flex-row items-center gap-8 w-full sm:w-auto">
+                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
                         <button
                             onClick={scrollToOrder}
                             className={`group relative w-full sm:w-auto px-12 py-6 font-black uppercase tracking-[0.3em] rounded-2xl overflow-hidden transition-all active:scale-95 shadow-2xl ${isDark ? 'bg-white text-black' : 'bg-slate-900 text-white shadow-slate-900/30'}`}
                         >
                             <span className="relative z-10 flex items-center justify-center gap-3 text-[11px]">
-                                Configure <ChevronRight size={18} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
+                                Buy Now <ChevronRight size={18} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
                             </span>
                             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-400 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[0.16,1,0.3,1]" />
                         </button>
+
+                        <Link
+                            href="/customer/nfc-orders"
+                            className={`group w-full sm:w-auto px-10 py-6 font-black uppercase tracking-[0.2em] rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 text-[11px] border-2 ${isDark ? 'border-white/10 text-white/60 hover:border-blue-500/50 hover:text-blue-400' : 'border-slate-200 text-slate-500 hover:border-blue-500 hover:text-blue-600'}`}
+                        >
+                            <ClipboardList size={16} /> My Orders
+                        </Link>
 
                         <div className="flex items-center gap-6">
                             <div className="flex flex-col items-center gap-1.5 opacity-40 hover:opacity-100 transition-opacity cursor-help">

@@ -87,222 +87,278 @@ export default function NFCOrderForm({ onPreviewUpdate, setIsSuccess }) {
     const prevStep = () => setStep(s => s - 1);
 
     const handleFormSubmit = async (e) => {
-        if (e) e.preventDefault();
+        e.preventDefault();
+        if (!user) { toast.error('Please sign in to continue.'); return; }
+        if (!paymentMethod) { toast.error('Select a payment method.'); return; }
         setIsSubmitting(true);
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error('Not authenticated. Please log in.');
+            if (!session) { toast.error('Session expired.'); setIsSubmitting(false); return; }
 
-            // 1. Create the Pending Order
-            const response = await fetch('/api/nfc/order', {
+            const res = await fetch('/api/nfc/order', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
                 body: JSON.stringify({
                     cardHolderName: formData.cardHolderName,
                     phone: formData.phone,
                     deliveryAddress: formData.deliveryAddress,
                     salePricePaise: totalAmountPaise,
-                    paymentMethod
-                })
+                    paymentMethod,
+                }),
             });
 
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Failed to initialize order');
+            const data = await res.json();
+
+            if (!res.ok) {
+                toast.error(data.error || 'Order failed');
+                setIsSubmitting(false);
+                return;
+            }
 
             if (paymentMethod === 'wallet') {
-                // Wallet payment already handled on backend if successful
-                setIsSuccess(true);
-                toast.success("Identity Forge Complete. Wallet Synchronized.");
+                toast.success('Order placed! Paid via InTrust Wallet.');
+                fetchBalance();
+                if (setIsSuccess) setIsSuccess(true);
             } else {
-                // Online Payment requires SabPaisa Modal
-                setPendingOrderId(result.orderId);
+                setPendingOrderId(data.orderId);
                 setShowPaymentModal(true);
             }
         } catch (err) {
-            console.error('Order Error:', err);
-            toast.error(err.message);
+            toast.error('Something went wrong.');
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    const stepLabels = ['Personalise', 'Delivery', 'Review', 'Payment'];
+
     return (
-        <div className={`w-full rounded-[32px] sm:rounded-[48px] border transition-all duration-700 p-6 sm:p-12 relative overflow-visible ${isDark
-            ? "bg-[#0a0c11]/80 backdrop-blur-3xl border-white/5 shadow-2xl"
-            : "bg-white border-slate-200 shadow-xl shadow-slate-200/50"
+        <div className={`w-full rounded-2xl border transition-all duration-500 p-6 sm:p-10 relative overflow-visible ${isDark
+            ? "bg-[#111318] border-white/[0.06]"
+            : "bg-white border-slate-200/80 shadow-lg shadow-slate-100"
             }`}>
 
-            {/* Full Focus Ordering Wizard */}
             <div className="relative z-10">
-                {/* Stepper Logic */}
-                <div className="flex items-center justify-center gap-4 sm:gap-6 mb-12">
-                    {[1, 2, 3, 4].map(s => (
-                        <div key={s} className="flex items-center gap-4 sm:gap-6">
-                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-[10px] sm:text-[14px] font-black transition-all duration-700 ${step >= s
-                                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
-                                : isDark ? "bg-white/5 text-white/20 border border-white/5" : "bg-slate-100 text-slate-400 border border-slate-200"
-                                }`}>
-                                {step > s ? <Check size={18} strokeWidth={4} /> : s}
+                {/* Stepper */}
+                <div className="flex items-center justify-between mb-10 px-2">
+                    {stepLabels.map((label, i) => {
+                        const s = i + 1;
+                        const isActive = step === s;
+                        const isComplete = step > s;
+                        return (
+                            <div key={s} className="flex items-center flex-1 last:flex-none">
+                                <div className="flex flex-col items-center gap-1.5">
+                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-black transition-all duration-300 ${
+                                        isComplete ? "bg-blue-600 text-white" :
+                                        isActive ? "bg-blue-600 text-white ring-4 ring-blue-600/20" :
+                                        isDark ? "bg-white/[0.04] text-white/25 border border-white/[0.06]" : "bg-slate-100 text-slate-400 border border-slate-200"
+                                    }`}>
+                                        {isComplete ? <Check size={14} strokeWidth={3} /> : s}
+                                    </div>
+                                    <span className={`text-[9px] font-black uppercase tracking-widest hidden sm:block ${
+                                        isActive ? 'text-blue-600' :
+                                        isComplete ? (isDark ? 'text-white/50' : 'text-slate-500') :
+                                        isDark ? 'text-white/20' : 'text-slate-400'
+                                    }`}>{label}</span>
+                                </div>
+                                {s < 4 && (
+                                    <div className={`flex-1 h-[1.5px] mx-3 rounded-full transition-colors duration-300 ${
+                                        step > s ? "bg-blue-600" : isDark ? "bg-white/[0.05]" : "bg-slate-200"
+                                    }`} />
+                                )}
                             </div>
-                            {s < 4 && <div className={`w-8 sm:w-12 h-[2.5px] rounded-full transition-colors duration-700 ${step > s ? "bg-blue-500" : isDark ? "bg-white/5" : "bg-slate-100"}`} />}
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 <form onSubmit={handleFormSubmit} className="relative z-10">
                     <AnimatePresence mode="wait">
+                        {/* Step 1 — Name */}
                         {step === 1 && (
-                            <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-10">
-                                <div className="space-y-6 text-center sm:text-left">
-                                    <label className={`block text-[11px] font-black uppercase tracking-[0.6em] mb-4 text-blue-500`}>1. Configuration</label>
-                                    <div className="relative group">
+                            <motion.div key="step1" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }} className="space-y-6">
+                                <div>
+                                    <h3 className={`text-lg font-black uppercase tracking-tight italic mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>Card Holder Name</h3>
+                                    <p className={`text-sm font-medium tracking-tight mb-5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>This name will be laser-engraved on your InTrust NFC card.</p>
+                                    <div className="relative">
                                         <input
                                             type="text"
-                                            placeholder="HOLDER NAME"
-                                            className={`w-full h-20 pl-8 pr-16 rounded-2xl outline-none transition-all font-black text-xl uppercase tracking-widest placeholder:text-slate-300/30 ${isDark ? "bg-black/40 border border-white/10 text-white focus:border-blue-500/50" : "bg-slate-50 border border-slate-200 text-slate-800 focus:border-blue-500"}`}
+                                            placeholder="Enter your full name"
+                                            className={`w-full h-14 px-5 rounded-xl outline-none transition-all text-base font-black tracking-tight uppercase placeholder:normal-case placeholder:text-sm placeholder:font-medium placeholder:tracking-normal ${isDark
+                                                ? "bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-white/20 focus:border-blue-500/50 focus:bg-white/[0.06]"
+                                                : "bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white"
+                                            }`}
                                             value={formData.cardHolderName}
                                             onChange={(e) => updateFormData('cardHolderName', e.target.value)}
                                             required
                                             maxLength={18}
                                         />
-                                        <div className={`absolute right-8 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/10' : 'text-slate-200'}`}>
-                                            <Layers size={24} />
-                                        </div>
+                                        <span className={`absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium ${isDark ? 'text-white/15' : 'text-slate-300'}`}>
+                                            {formData.cardHolderName.length}/18
+                                        </span>
                                     </div>
-                                    <div className="flex items-center justify-center sm:justify-start gap-3 px-4 py-3 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
-                                        <Star size={12} className="text-blue-500" />
-                                        <span className="text-[9px] font-black text-blue-500/60 uppercase tracking-widest italic">Laser-Engraved Typography</span>
-                                    </div>
+                                    <p className={`text-xs mt-2.5 flex items-center gap-1.5 ${isDark ? 'text-white/25' : 'text-slate-400'}`}>
+                                        <Info size={12} /> Max 18 characters · Laser-engraved on card
+                                    </p>
                                 </div>
-                                <button type="button" onClick={nextStep} disabled={!formData.cardHolderName} className="w-full h-20 rounded-2xl bg-blue-600 text-white font-black text-[12px] uppercase tracking-[0.5em] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-20">
-                                    CONTINUE <ArrowRight size={20} />
+                                <button
+                                    type="button"
+                                    onClick={nextStep}
+                                    disabled={!formData.cardHolderName}
+                                    className="w-full h-14 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
+                                    Continue <ArrowRight size={16} />
                                 </button>
                             </motion.div>
                         )}
 
+                        {/* Step 2 — Delivery */}
                         {step === 2 && (
-                            <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-10">
-                                <div className="space-y-8">
-                                    <label className={`block text-[11px] font-black uppercase tracking-[0.6em] text-blue-500`}>2. Logistics</label>
-                                    <div className="relative">
-                                        <input
-                                            type="tel"
-                                            placeholder="VERIFIED PHONE"
-                                            className={`w-full h-20 pl-8 pr-16 rounded-2xl outline-none transition-all font-black text-xl tracking-tighter ${isDark ? "bg-black/40 border border-white/10 text-white focus:border-blue-500/50" : "bg-slate-50 border border-slate-200 text-slate-800 focus:border-blue-500"}`}
-                                            value={formData.phone}
-                                            onChange={(e) => updateFormData('phone', e.target.value)}
-                                            required
-                                        />
-                                        <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-20"><Phone size={24} /></div>
-                                    </div>
-                                    <div className="relative">
-                                        <textarea
-                                            rows={3}
-                                            placeholder="SECURE DELIVERY ADDRESS + PINCODE"
-                                            className={`w-full p-8 rounded-3xl outline-none transition-all font-black text-[13px] tracking-widest leading-loose resize-none ${isDark ? "bg-black/40 border border-white/10 text-white focus:border-blue-500/50" : "bg-slate-50 border border-slate-200 text-slate-800 focus:border-blue-500"}`}
-                                            value={formData.deliveryAddress}
-                                            onChange={(e) => updateFormData('deliveryAddress', e.target.value)}
-                                            required
-                                        />
-                                        <div className="absolute right-8 top-8 opacity-20"><MapPin size={24} /></div>
+                            <motion.div key="step2" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }} className="space-y-6">
+                                <div>
+                                    <h3 className={`text-lg font-black uppercase tracking-tight italic mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>Delivery Details</h3>
+                                    <p className={`text-sm font-medium tracking-tight mb-5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Where should we deliver your NFC card?</p>
+                                    <div className="space-y-4">
+                                        <div className="relative">
+                                            <Phone size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/20' : 'text-slate-400'}`} />
+                                            <input
+                                                type="tel"
+                                                placeholder="Phone number"
+                                                className={`w-full h-14 pl-11 pr-5 rounded-xl outline-none transition-all text-sm font-black tracking-tight ${isDark
+                                                    ? "bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-white/20 focus:border-blue-500/50 focus:bg-white/[0.06]"
+                                                    : "bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white"
+                                                }`}
+                                                value={formData.phone}
+                                                onChange={(e) => updateFormData('phone', e.target.value)}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="relative">
+                                            <MapPin size={16} className={`absolute left-4 top-4 ${isDark ? 'text-white/20' : 'text-slate-400'}`} />
+                                            <textarea
+                                                rows={3}
+                                                placeholder="Full delivery address with pincode"
+                                                className={`w-full pl-11 pr-5 py-4 rounded-xl outline-none transition-all text-sm font-bold tracking-tight resize-none ${isDark
+                                                    ? "bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-white/20 focus:border-blue-500/50 focus:bg-white/[0.06]"
+                                                    : "bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white"
+                                                }`}
+                                                value={formData.deliveryAddress}
+                                                onChange={(e) => updateFormData('deliveryAddress', e.target.value)}
+                                                required
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <button type="button" onClick={prevStep} className={`h-20 rounded-2xl font-black text-[11px] uppercase tracking-widest border transition-all ${isDark ? "bg-white/5 text-white/40 border-white/10" : "bg-slate-50 text-slate-400 border-slate-200"}`}>BACK</button>
-                                    <button type="button" onClick={nextStep} disabled={!formData.phone || !formData.deliveryAddress} className="h-20 rounded-2xl bg-blue-600 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-20 shadow-xl">REVIEW <ArrowRight size={20} /></button>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button type="button" onClick={prevStep} className={`h-14 rounded-xl font-black text-[11px] uppercase tracking-widest border transition-colors ${isDark ? "bg-white/[0.04] text-white/50 border-white/[0.06] hover:bg-white/[0.08]" : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"}`}>Back</button>
+                                    <button type="button" onClick={nextStep} disabled={!formData.phone || !formData.deliveryAddress} className="h-14 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">Review <ArrowRight size={16} /></button>
                                 </div>
                             </motion.div>
                         )}
 
+                        {/* Step 3 — Review */}
                         {step === 3 && (
-                            <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-10">
-                                <div className={`p-10 rounded-[40px] border relative overflow-hidden transition-colors ${isDark ? "bg-blue-600/5 border-blue-500/20 shadow-inner" : "bg-slate-50 border-slate-200 shadow-sm"}`}>
-                                    <div className="space-y-8 relative z-10">
-                                        <div className={`flex justify-between items-end pb-8 border-b ${isDark ? 'border-white/5' : 'border-slate-200'}`}>
-                                            <div>
-                                                <p className={`text-[9px] font-black uppercase opacity-40 mb-2 tracking-[0.4em] ${isDark ? 'text-white' : 'text-slate-900'}`}>IDENTIFIER</p>
-                                                <p className={`text-3xl font-black tracking-tighter uppercase italic ${isDark ? 'text-white' : 'text-slate-900'}`}>InTrust Elite</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className={`text-[9px] font-black uppercase opacity-40 mb-2 tracking-[0.4em] ${isDark ? 'text-white' : 'text-slate-900'}`}>PAYABLE</p>
-                                                <p className="text-3xl font-black text-blue-600 italic">₹{totalAmount.toLocaleString()}</p>
-                                            </div>
+                            <motion.div key="step3" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }} className="space-y-6">
+                                <div>
+                                    <h3 className={`text-lg font-black uppercase tracking-tight italic mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>Order Summary</h3>
+                                    <p className={`text-sm font-medium tracking-tight mb-5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Review your order before proceeding to payment.</p>
+                                </div>
+
+                                {/* Order Details */}
+                                <div className={`rounded-xl border overflow-hidden ${isDark ? 'border-white/[0.06]' : 'border-slate-200'}`}>
+                                    {/* Card Info */}
+                                    <div className={`px-5 py-4 flex items-center justify-between ${isDark ? 'bg-white/[0.02]' : 'bg-slate-50'}`}>
+                                        <div>
+                                            <p className={`text-[9px] font-black uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Card for</p>
+                                            <p className={`text-base font-black tracking-tight italic ${isDark ? 'text-white' : 'text-slate-900'}`}>{formData.cardHolderName}</p>
                                         </div>
-                                        <div className="space-y-6">
-                                            <div className="flex justify-between items-center px-4 py-3 rounded-2xl bg-blue-600/5 border border-blue-500/10">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-500/60">Crafting</span>
-                                                <span className="font-black italic">₹{price}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center px-4 py-3 rounded-2xl bg-blue-600/5 border border-blue-500/10">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-500/60">Protocol Tax (18%)</span>
-                                                <span className="font-black italic">₹{gstAmount.toFixed(0)}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center px-4 py-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/60">Global Courier</span>
-                                                <span className="font-black italic text-emerald-500">₹{deliveryPrice}</span>
-                                            </div>
+                                        <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>InTrust NFC</div>
+                                    </div>
+
+                                    {/* Price Breakdown */}
+                                    <div className="px-5 py-4 space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className={`text-sm font-medium tracking-tight ${isDark ? 'text-white/50' : 'text-slate-600'}`}>Card Price</span>
+                                            <span className={`text-sm font-black italic ${isDark ? 'text-white' : 'text-slate-900'}`}>₹{price}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className={`text-sm font-medium tracking-tight ${isDark ? 'text-white/50' : 'text-slate-600'}`}>GST ({gstPercent}%)</span>
+                                            <span className={`text-sm font-black italic ${isDark ? 'text-white' : 'text-slate-900'}`}>₹{gstAmount.toFixed(0)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className={`text-sm font-medium tracking-tight ${isDark ? 'text-white/50' : 'text-slate-600'}`}>Delivery</span>
+                                            <span className={`text-sm font-black italic ${isDark ? 'text-white' : 'text-slate-900'}`}>₹{deliveryPrice}</span>
+                                        </div>
+                                        <div className={`border-t pt-3 flex justify-between items-center ${isDark ? 'border-white/[0.06]' : 'border-slate-200'}`}>
+                                            <span className={`text-sm font-black uppercase tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Total</span>
+                                            <span className="text-xl font-black italic text-blue-600">₹{totalAmount.toLocaleString()}</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <button type="button" onClick={prevStep} className={`h-20 rounded-2xl font-black text-[11px] uppercase tracking-widest border transition-all ${isDark ? "bg-white/5 text-white/40 border-white/10" : "bg-slate-50 text-slate-400 border-slate-200"}`}>BACK</button>
-                                    <button type="button" onClick={nextStep} className="h-20 rounded-2xl bg-blue-600 text-white font-black text-[11px] uppercase tracking-[0.4em] flex items-center justify-center gap-3 shadow-xl transition-all">CHECKOUT <ArrowRight size={20} /></button>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button type="button" onClick={prevStep} className={`h-14 rounded-xl font-black text-[11px] uppercase tracking-widest border transition-colors ${isDark ? "bg-white/[0.04] text-white/50 border-white/[0.06] hover:bg-white/[0.08]" : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"}`}>Back</button>
+                                    <button type="button" onClick={nextStep} className="h-14 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-colors">Checkout <ArrowRight size={16} /></button>
                                 </div>
                             </motion.div>
                         )}
 
+                        {/* Step 4 — Payment */}
                         {step === 4 && (
-                            <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-10">
-                                <div className="space-y-6">
-                                    <label className={`block text-[11px] font-black uppercase tracking-[0.6em] text-blue-500`}>4. Settlement</label>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentMethod('wallet')}
-                                            className={`p-6 rounded-3xl border-2 text-left transition-all relative overflow-hidden group ${paymentMethod === 'wallet' ? 'border-blue-500 bg-blue-500/10' : isDark ? 'border-white/5 bg-white/5' : 'border-slate-200 bg-white'}`}
-                                        >
-                                            <div className="relative z-10 flex flex-col gap-4">
-                                                <div className="flex items-center justify-between">
-                                                    <WalletIcon size={24} className={paymentMethod === 'wallet' ? 'text-blue-500' : 'opacity-20'} />
-                                                    {paymentMethod === 'wallet' && <Check className="text-blue-500" size={16} strokeWidth={4} />}
-                                                </div>
-                                                <div>
-                                                    <p className="text-[12px] font-black uppercase tracking-widest">InTrust Wallet</p>
-                                                    <p className="text-[10px] font-bold tracking-tighter opacity-40">Bal: ₹{walletBalance ? (walletBalance.balance).toLocaleString() : '0.00'}</p>
-                                                </div>
-                                                {kycStatus !== 'verified' && (
-                                                    <div className="mt-2 text-[8px] font-black text-amber-500 uppercase flex items-center gap-1.5"><AlertCircle size={10} /> KYC Verified Only</div>
-                                                )}
-                                            </div>
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentMethod('online')}
-                                            className={`p-6 rounded-3xl border-2 text-left transition-all relative overflow-hidden group ${paymentMethod === 'online' ? 'border-blue-500 bg-blue-500/10' : isDark ? 'border-white/5 bg-white/5' : 'border-slate-200 bg-white'}`}
-                                        >
-                                            <div className="relative z-10 flex flex-col gap-4">
-                                                <div className="flex items-center justify-between">
-                                                    <CreditCard size={24} className={paymentMethod === 'online' ? 'text-blue-500' : 'opacity-20'} />
-                                                    {paymentMethod === 'online' && <Check className="text-blue-500" size={16} strokeWidth={4} />}
-                                                </div>
-                                                <div>
-                                                    <p className="text-[12px] font-black uppercase tracking-widest">Gateway Access</p>
-                                                    <p className="text-[10px] font-bold tracking-tighter opacity-40">UPI / Cards / Net Banking</p>
-                                                </div>
-                                                <div className="mt-2 text-[8px] font-black text-blue-500 uppercase flex items-center gap-1.5"><ShieldCheck size={10} /> Secure Encryption</div>
-                                            </div>
-                                        </button>
-                                    </div>
+                            <motion.div key="step4" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }} className="space-y-6">
+                                <div>
+                                    <h3 className={`text-lg font-black uppercase tracking-tight italic mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>Payment Method</h3>
+                                    <p className={`text-sm font-medium tracking-tight mb-5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Choose how you'd like to pay ₹{totalAmount.toLocaleString()}</p>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <button type="button" onClick={prevStep} className={`h-20 rounded-2xl font-black text-[11px] uppercase tracking-widest border transition-all ${isDark ? "bg-white/5 text-white/40 border-white/10" : "bg-slate-50 text-slate-400 border-slate-200"}`}>BACK</button>
-                                    <button type="submit" disabled={isSubmitting || (paymentMethod === 'wallet' && ((walletBalance?.balance_paise || 0) < totalAmountPaise || kycStatus !== 'verified'))} className="h-20 rounded-2xl bg-blue-600 text-white font-black text-[11px] uppercase tracking-[0.4em] flex items-center justify-center gap-3 shadow-xl disabled:opacity-20">
-                                        {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : "FINALIZE PROTOCOL"}
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {/* Wallet Option */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('wallet')}
+                                        className={`p-5 rounded-xl border-2 text-left transition-all ${paymentMethod === 'wallet'
+                                            ? 'border-blue-600 bg-blue-600/[0.05]'
+                                            : isDark ? 'border-white/[0.06] bg-white/[0.02] hover:border-white/10' : 'border-slate-200 bg-white hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between mb-3">
+                                            <WalletIcon size={20} className={paymentMethod === 'wallet' ? 'text-blue-600' : isDark ? 'text-white/30' : 'text-slate-400'} />
+                                            {paymentMethod === 'wallet' && <Check className="text-blue-600" size={16} strokeWidth={3} />}
+                                        </div>
+                                        <p className={`text-sm font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>InTrust Wallet</p>
+                                        <p className={`text-xs font-bold tracking-tight ${isDark ? 'text-white/35' : 'text-slate-500'}`}>Bal: ₹{walletBalance ? parseFloat(walletBalance.balance).toLocaleString() : '0.00'}</p>
+                                        {kycStatus !== 'verified' && (
+                                            <p className="text-[9px] text-amber-500 font-black uppercase tracking-wider mt-2 flex items-center gap-1"><AlertCircle size={10} /> KYC Required</p>
+                                        )}
+                                    </button>
+
+                                    {/* Online Option */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('online')}
+                                        className={`p-5 rounded-xl border-2 text-left transition-all ${paymentMethod === 'online'
+                                            ? 'border-blue-600 bg-blue-600/[0.05]'
+                                            : isDark ? 'border-white/[0.06] bg-white/[0.02] hover:border-white/10' : 'border-slate-200 bg-white hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between mb-3">
+                                            <CreditCard size={20} className={paymentMethod === 'online' ? 'text-blue-600' : isDark ? 'text-white/30' : 'text-slate-400'} />
+                                            {paymentMethod === 'online' && <Check className="text-blue-600" size={16} strokeWidth={3} />}
+                                        </div>
+                                        <p className={`text-sm font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Online Payment</p>
+                                        <p className={`text-xs font-bold tracking-tight ${isDark ? 'text-white/35' : 'text-slate-500'}`}>UPI / Cards / Net Banking</p>
+                                        <p className="text-[9px] text-blue-500 font-black uppercase tracking-wider mt-2 flex items-center gap-1"><ShieldCheck size={10} /> Secure Encryption</p>
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button type="button" onClick={prevStep} className={`h-14 rounded-xl font-black text-[11px] uppercase tracking-widest border transition-colors ${isDark ? "bg-white/[0.04] text-white/50 border-white/[0.06] hover:bg-white/[0.08]" : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"}`}>Back</button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting || !paymentMethod || (paymentMethod === 'wallet' && ((walletBalance?.balance_paise || 0) < totalAmountPaise || kycStatus !== 'verified'))}
+                                        className="h-14 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <>Place Order <Check size={16} strokeWidth={3} /></>}
                                     </button>
                                 </div>
                             </motion.div>
@@ -310,7 +366,7 @@ export default function NFCOrderForm({ onPreviewUpdate, setIsSuccess }) {
                     </AnimatePresence>
                 </form>
 
-                {/* Production Payment Modal Integration */}
+                {/* Payment Modal */}
                 {user && (
                     <SabpaisaPaymentModal
                         isOpen={showPaymentModal}

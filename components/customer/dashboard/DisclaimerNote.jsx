@@ -71,15 +71,11 @@ export default function DisclaimerNote() {
 
                                     {/* Message */}
                                     <p className="text-[12px] leading-relaxed text-[#617073] dark:text-gray-400">
-                                        INTRUST India is{' '}
+                                        INTRUST India is an integrated platform specializing in{' '}
                                         <span className="font-medium text-[#171A21] dark:text-gray-200">
-                                            not a loan provider, NBFC, or licensed bank.
+                                            E-commerce, Digital Gift Cards, and Premium NFC Services.
                                         </span>{' '}
-                                        We solely facilitate the processing of your application based on your submitted profile and eligibility. We do not guarantee loan approval, and{' '}
-                                        <span className="font-medium text-[#171A21] dark:text-gray-200">
-                                            all credit decisions are made independently by the respective financial institution.
-                                        </span>{' '}
-                                        Our role is limited to guiding you through the process.
+                                        We facilitate the processing of your orders and service requests to ensure a seamless experience. Our role is to assist you throughout the transaction and service journey.
                                     </p>
                                 </div>
 
