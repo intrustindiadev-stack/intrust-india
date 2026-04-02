@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import Link from 'next/link';
+import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 import {
     Zap, Banknote, ShoppingBag, Headphones,
     Smartphone, Tv, Car, Flame, Wallet, CreditCard,
@@ -64,13 +65,18 @@ export default function ServicesPage() {
             <div className="pt-28 px-4 md:px-8 max-w-7xl mx-auto">
 
                 {/* Header Section */}
-                <div className="mb-8">
+                <div className="mb-4">
                     <h1 className="text-3xl md:text-4xl font-bold text-[#171A21] dark:text-gray-100 mb-3 tracking-tight">
                         Services
                     </h1>
                     <p className="text-slate-500 dark:text-gray-400 text-sm md:text-base mb-8 max-w-2xl">
                         Everything you need to manage your payments and finances.
                     </p>
+
+                    {/* Ad Banner Carousel */}
+                    <div className="mb-8">
+                        <AdBannerCarousel />
+                    </div>
 
                     {/* Premium Search Bar */}
                     <div className="relative group">

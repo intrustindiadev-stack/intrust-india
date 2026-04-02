@@ -139,16 +139,20 @@ export default function NFCAdminPage() {
         }
     };
 
-    const filteredOrders = useMemo(() => orders.filter(o => 
-        (o.card_holder_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (o.phone || "").toLowerCase().includes(searchQuery.toLowerCase())
-    ), [orders, searchQuery]);
+    const filteredOrders = useMemo(() => orders.filter(o => {
+        const matchesSearch = (o.card_holder_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (o.phone || "").toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesSearch && o.payment_status === 'paid';
+    }), [orders, searchQuery]);
 
-    const stats = useMemo(() => ({
-        total: orders.length,
-        revenue: orders.reduce((sum, o) => sum + (Number(o.sale_price_paise) || 0), 0) / 100,
-        pending: orders.filter(o => o.status === 'pending').length
-    }), [orders]);
+    const stats = useMemo(() => {
+        const paidOrders = orders.filter(o => o.payment_status === 'paid');
+        return {
+            total: paidOrders.length,
+            revenue: paidOrders.reduce((sum, o) => sum + (Number(o.sale_price_paise) || 0), 0) / 100,
+            pending: paidOrders.filter(o => o.status === 'pending').length
+        };
+    }, [orders]);
 
     if (isLoading) return (
         <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">

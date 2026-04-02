@@ -52,3 +52,7 @@ dump_error.log
 
 # generated docs
 docs/
+
+#zip
+.zip
+deploy_pipeline.zip
