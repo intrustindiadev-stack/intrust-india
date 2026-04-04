@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import AdminSidebar from './AdminSidebar';
 import AdminBottomNav from './AdminBottomNav';
-import { Menu, Search } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
 export default function AdminLayout({ children, adminProfile }) {
@@ -16,12 +16,18 @@ export default function AdminLayout({ children, adminProfile }) {
     };
 
     const adminName = adminProfile?.full_name || 'Admin System';
+    const isSuperAdmin = adminProfile?.role === 'super_admin';
+
+    // Static color maps to avoid Tailwind purging dynamic class names
+    const accentText = isSuperAdmin ? 'text-red-600' : 'text-blue-600';
+    const accentBg = isSuperAdmin ? 'bg-red-600' : 'bg-blue-600';
+    const accentShadow = isSuperAdmin ? 'shadow-red-500/20' : 'shadow-blue-500/20';
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] transition-colors duration-300">
+        <div className="min-h-screen bg-[#F8FAFC] transition-colors duration-300" data-admin-role={adminProfile?.role}>
             {/* Sidebar */}
             <AdminSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} adminProfile={adminProfile} />
-            <AdminBottomNav isSidebarOpen={sidebarOpen} />
+            <AdminBottomNav isSidebarOpen={sidebarOpen} adminProfile={adminProfile} />
 
             {/* Main Content */}
             <div className="lg:pl-72 min-h-screen flex flex-col">
@@ -47,9 +53,11 @@ export default function AdminLayout({ children, adminProfile }) {
                             <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-gray-200">
                                 <div className="text-right">
                                     <p className="text-sm font-bold text-gray-900 leading-tight">{adminName}</p>
-                                    <p className="text-xs text-blue-600 font-medium tracking-wide uppercase">Platform Access</p>
+                                    <p className={`text-xs ${accentText} font-medium tracking-wide uppercase`}>
+                                        {isSuperAdmin ? 'Super Admin' : 'Platform Access'}
+                                    </p>
                                 </div>
-                                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20 overflow-hidden shrink-0">
+                                <div className={`w-10 h-10 rounded-xl ${accentBg} flex items-center justify-center text-white font-bold shadow-lg ${accentShadow} overflow-hidden shrink-0`}>
                                     {adminProfile?.avatar_url ? (
                                         <img src={adminProfile.avatar_url} alt={adminName} className="w-full h-full object-cover" />
                                     ) : (

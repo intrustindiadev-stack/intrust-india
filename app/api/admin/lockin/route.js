@@ -24,7 +24,7 @@ export async function POST(request) {
             .eq('id', authUser.id)
             .single();
 
-        if (adminProfile?.role !== 'admin') {
+        if (!['admin', 'super_admin'].includes(adminProfile?.role)) {
             return NextResponse.json({ error: 'Access denied' }, { status: 403 });
         }
 
@@ -107,7 +107,7 @@ export async function GET(request) {
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single();
-        if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        if (!['admin', 'super_admin'].includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
         const { data, error } = await supabase
             .from('merchant_lockin_balances')

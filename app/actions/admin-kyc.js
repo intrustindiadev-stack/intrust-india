@@ -44,7 +44,7 @@ export async function approveKYC(kycId) {
 
         console.log("Admin check result:", adminCheck, adminErr);
 
-        if (!adminCheck || adminCheck.role !== 'admin') {
+        if (!adminCheck || !['admin', 'super_admin'].includes(adminCheck?.role)) {
             return {
                 success: false,
                 error: 'Unauthorized: Admin access required'
@@ -142,7 +142,7 @@ export async function rejectKYC(kycId, reason) {
             .eq('id', user.id)
             .single();
 
-        if (!adminCheck || adminCheck.role !== 'admin') {
+        if (!adminCheck || !['admin', 'super_admin'].includes(adminCheck?.role)) {
             return { success: false, error: 'Unauthorized: Admin access required' };
         }
 
@@ -206,7 +206,7 @@ export async function getKYCForAdmin(userId) {
             .eq('id', user.id)
             .single();
 
-        if (!adminCheck || adminCheck.role !== 'admin') return { error: 'Unauthorized: Admin access required' };
+        if (!adminCheck || !['admin', 'super_admin'].includes(adminCheck?.role)) return { error: 'Unauthorized: Admin access required' };
 
         const { data, error } = await adminClient
             .from('kyc_records')

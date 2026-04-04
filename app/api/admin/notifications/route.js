@@ -1,23 +1,10 @@
-import { createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
-
-async function getAdminUser(request) {
-    const authHeader = request.headers.get('Authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    const admin = createAdminClient();
-
-    let user = null;
-    if (token) {
-        const { data: { user: tokenUser }, error } = await admin.auth.getUser(token);
-        if (!error) user = tokenUser;
-    }
-    return { user, admin };
-}
+import { getAuthUser } from '@/lib/apiAuth';
 
 // GET /api/admin/notifications
 export async function GET(request) {
     try {
-        const { user, admin } = await getAdminUser(request);
+        const { user, admin } = await getAuthUser(request);
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const { data: profile } = await admin
@@ -26,7 +13,7 @@ export async function GET(request) {
             .eq('id', user.id)
             .single();
 
-        if (profile?.role !== 'admin') {
+        if (!['admin', 'super_admin'].includes(profile?.role)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
@@ -49,7 +36,7 @@ export async function GET(request) {
 // PATCH /api/admin/notifications — mark as read
 export async function PATCH(request) {
     try {
-        const { user, admin } = await getAdminUser(request);
+        const { user, admin } = await getAuthUser(request);
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const { data: profile } = await admin
@@ -58,7 +45,7 @@ export async function PATCH(request) {
             .eq('id', user.id)
             .single();
 
-        if (profile?.role !== 'admin') {
+        if (!['admin', 'super_admin'].includes(profile?.role)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 

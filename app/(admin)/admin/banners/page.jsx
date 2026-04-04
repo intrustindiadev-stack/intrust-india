@@ -19,7 +19,7 @@ export default async function BannersPage() {
         .eq('id', user.id)
         .single();
 
-    if (!profile || profile.role !== 'admin') {
+    if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
         redirect('/');
     }
 

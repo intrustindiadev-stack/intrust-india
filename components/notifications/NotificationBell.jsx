@@ -46,7 +46,33 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
     useEffect(() => {
         fetchNotifications();
         pollRef.current = setInterval(fetchNotifications, 30000);
-        return () => { if (pollRef.current) clearInterval(pollRef.current); };
+
+        // Supabase Realtime subscription for instant notification updates
+        let realtimeChannel = null;
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session?.user) return;
+            realtimeChannel = supabase
+                .channel(`notifications:${session.user.id}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'notifications',
+                        filter: `user_id=eq.${session.user.id}`,
+                    },
+                    (payload) => {
+                        setNotifications(prev => [payload.new, ...prev]);
+                        setUnreadCount(prev => prev + 1);
+                    }
+                )
+                .subscribe();
+        });
+
+        return () => {
+            if (pollRef.current) clearInterval(pollRef.current);
+            if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+        };
     }, [fetchNotifications]);
 
     // Close on outside click
@@ -218,6 +244,15 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
             // ── Gift cards ───────────────────────────────────────────────────
             case 'GIFT_CARD_PURCHASE':
                 router.push('/my-giftcards');
+                break;
+
+            // ── Admin Tasks ──────────────────────────────────────────────────
+            case 'admin_task':
+                if (n.reference_id) {
+                    router.push(`/admin/tasks`);
+                } else {
+                    router.push('/admin/tasks');
+                }
                 break;
 
             // ── Fallback ─────────────────────────────────────────────────────

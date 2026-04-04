@@ -16,11 +16,21 @@ const navItems = [
     { icon: Settings, label: 'Settings', href: '/admin/settings' },
 ];
 
-export default function AdminBottomNav({ isSidebarOpen }) {
+export default function AdminBottomNav({ isSidebarOpen, adminProfile }) {
     const pathname = usePathname();
     const router = useRouter();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+    const isSuperAdmin = adminProfile?.role === 'super_admin';
+
+    // Static color maps to avoid Tailwind v4 purging dynamic class names
+    const activePill = isSuperAdmin
+        ? 'absolute inset-0 bg-red-600 rounded-2xl shadow-lg shadow-red-500/30'
+        : 'absolute inset-0 bg-blue-600 rounded-2xl shadow-lg shadow-blue-500/30';
+    const containerShadow = isSuperAdmin
+        ? 'bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl shadow-red-900/10 rounded-3xl p-1.5 flex items-center justify-around'
+        : 'bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl shadow-blue-900/10 rounded-3xl p-1.5 flex items-center justify-around';
 
     const handleLogout = () => {
         setShowLogoutModal(true);
@@ -50,7 +60,7 @@ export default function AdminBottomNav({ isSidebarOpen }) {
                 transition={{ duration: 0.4, type: "spring", bounce: 0.2 }}
                 className="fixed bottom-6 left-4 right-4 z-50 md:hidden"
             >
-                <div className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl shadow-blue-900/10 rounded-3xl p-1.5 flex items-center justify-around">
+                <div className={containerShadow}>
                     {navItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = item.href === '/admin'
@@ -67,7 +77,7 @@ export default function AdminBottomNav({ isSidebarOpen }) {
                                 {isActive && (
                                     <motion.div
                                         layoutId="adminBottomNavActive"
-                                        className="absolute inset-0 bg-blue-600 rounded-2xl shadow-lg shadow-blue-500/30"
+                                        className={activePill}
                                         transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                                     />
                                 )}

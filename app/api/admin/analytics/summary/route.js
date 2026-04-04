@@ -22,7 +22,7 @@ export async function GET() {
             .eq('id', user.id)
             .single();
 
-        if (profile?.role !== 'admin') {
+        if (!['admin', 'super_admin'].includes(profile?.role)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
@@ -51,7 +51,7 @@ export async function GET() {
         const shoppingProducts = shoppingProductsRes.data || [];
 
         // ── Pie chart data ──
-        const nonAdmin = users.filter(u => u.role !== 'admin');
+        const nonAdmin = users.filter(u => !['admin', 'super_admin'].includes(u.role));
         const mCount = nonAdmin.filter(u => u.role === 'merchant').length;
         const cCount = nonAdmin.filter(u => u.role !== 'merchant').length;
         const userRoleData = [

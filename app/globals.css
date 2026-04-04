@@ -28,6 +28,7 @@
   --glass-border: rgba(255, 255, 255, 0.3);
 }
 
+
 /* Dark mode colors - using both selectors for compatibility */
 .dark,
 :root[data-theme="dark"] {

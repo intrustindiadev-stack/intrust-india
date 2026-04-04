@@ -1,0 +1,2 @@
+title,description,category,wholesale_price_paise,suggested_retail_price_paise,admin_stock,is_active,category_id,mrp_paise,gst_percentage,hsn_code,product_images,sync_status
+"Example Product (Delete me)","A brief description of the product","Groceries",5000,6000,100,TRUE,17d09c62-31c0-4c7e-b6dd-9dc1a97aafb8,7000,5,1234,"[]",

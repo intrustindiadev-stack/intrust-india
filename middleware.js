@@ -118,7 +118,7 @@ export async function middleware(request) {
                     .eq('id', user.id)
                     .single();
 
-                if (profile?.role === 'admin') {
+                if (profile?.role === 'admin' || profile?.role === 'super_admin') {
                     console.log('[MIDDLEWARE:ADMIN_REDIRECT]', { requestId, from: pathname, to: '/admin' });
                     const redirectResponse = NextResponse.redirect(new URL('/admin', request.url));
                     response.cookies.getAll().forEach(cookie => {

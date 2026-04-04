@@ -25,12 +25,14 @@ import {
     Clock,
     FileText,
     ShoppingBag,
-    Image as ImageIcon
+    Image as ImageIcon,
+    ClipboardList,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
-const navigation = [
+const baseNavigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { name: 'Tasks', href: '/admin/tasks', icon: ClipboardList },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Merchants', href: '/admin/merchants', icon: Store },
     { name: 'NFC', href: '/admin/nfc', icon: Smartphone },
@@ -51,6 +53,20 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
     const router = useRouter();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+    const isSuperAdmin = adminProfile?.role === 'super_admin';
+
+    // Static color maps — Tailwind v4 purges dynamic class names, so use full class strings
+    const logoGradient = isSuperAdmin
+        ? 'bg-gradient-to-br from-red-600 to-rose-700 shadow-red-500/20 group-hover:shadow-red-500/40'
+        : 'bg-gradient-to-br from-blue-600 to-indigo-700 shadow-blue-500/20 group-hover:shadow-blue-500/40';
+    const logoLabel = isSuperAdmin ? 'text-red-600' : 'text-blue-600';
+    const activeItemBg = isSuperAdmin ? 'bg-red-600/10 text-red-600' : 'bg-blue-600/10 text-blue-600';
+    const activeBar = isSuperAdmin
+        ? 'absolute left-0 top-0 bottom-0 w-1 bg-red-600 rounded-r-full shadow-[0_0_12px_rgba(220,38,38,0.3)]'
+        : 'absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.3)]';
+    const activeIcon = isSuperAdmin ? 'text-red-600' : 'text-blue-600';
+    const profileEmailColor = isSuperAdmin ? 'text-red-600' : 'text-blue-600';
 
     const handleLogout = () => {
         setShowLogoutModal(true);
@@ -98,12 +114,18 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                     <div className="flex items-center justify-between p-6 border-b border-slate-100">
                         <div className="flex items-center gap-3">
                             <Link href="/admin" className="flex items-center gap-3 group">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-shadow">
-                                    <Sparkles className="text-white w-5 h-5" />
+                                <div className="relative w-10 h-10 flex-shrink-0 overflow-hidden rounded-xl shadow-lg transition-shadow hover:shadow-xl bg-white p-0.5 border border-slate-100">
+                                    <img 
+                                        src="/icon.png" 
+                                        alt="INTRUST" 
+                                        className="w-full h-full object-contain rounded-lg"
+                                    />
                                 </div>
                                 <div>
                                     <div className="text-slate-900 font-bold text-lg tracking-wide">InTrust</div>
-                                    <div className="text-blue-600 text-xs font-semibold uppercase tracking-wider">Admin</div>
+                                    <div className={`${logoLabel} text-xs font-semibold uppercase tracking-wider`}>
+                                        {isSuperAdmin ? 'Super Admin' : 'Admin'}
+                                    </div>
                                 </div>
                             </Link>
                         </div>
@@ -122,12 +144,11 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                         <div className="px-3 mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                             Menu
                         </div>
-                        {navigation.map((item) => {
+                        {baseNavigation.map((item) => {
                             const Icon = item.icon;
                             // Detect nested Store Credit routes: /admin/merchants/:id/udhari or /admin/merchants/:id/udhari-settings
                             const isNestedUdhariRoute = /^\/admin\/merchants\/[^/]+\/udhari(|-settings)$/.test(pathname || '');
                             // Exact match for root dashboard '/admin', partial for others
-                            // For '/admin/merchants', exclude '/admin/merchants/udhari' and nested udhari routes
                             const isActive = item.href === '/admin'
                                 ? pathname === '/admin'
                                 : item.href === '/admin/merchants'
@@ -142,14 +163,14 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                                     href={item.href}
                                     onClick={() => setIsOpen(false)}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all group relative overflow-hidden ${isActive
-                                        ? 'bg-blue-600/10 text-blue-600'
+                                        ? activeItemBg
                                         : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                                         }`}
                                 >
                                     {isActive && (
-                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.3)]" />
+                                        <div className={activeBar} />
                                     )}
-                                    <Icon size={20} className={`transition-colors ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-700'}`} />
+                                    <Icon size={20} className={`transition-colors ${isActive ? activeIcon : 'text-slate-400 group-hover:text-slate-700'}`} />
                                     <span className="font-semibold">{item.name}</span>
                                 </Link>
                             );
@@ -169,7 +190,7 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="text-slate-900 font-bold text-sm truncate">{adminName}</div>
-                                    <div className="text-blue-600 text-xs font-medium truncate flex items-center gap-1">
+                                    <div className={`${profileEmailColor} text-xs font-medium truncate flex items-center gap-1`}>
                                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {adminProfile?.email || 'Online'}
                                     </div>
                                 </div>

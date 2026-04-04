@@ -50,7 +50,7 @@ export default async function AnalyticsPage() {
     // Quick Stats Calculation
     // NOTE: `amount` is stored in rupees (e.g. 500.00), total_paid_paise is null for most rows
     const totalRevenue = validTransactions.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-    const totalUsers = (users || []).filter(u => u.role !== 'admin').length;
+    const totalUsers = (users || []).filter(u => !['admin', 'super_admin'].includes(u.role)).length;
     const activeMerchants = (merchants || []).filter(m => m.status === 'approved' || m.status === 'verified').length;
     const totalTransactions = validTransactions.length;
 
@@ -131,7 +131,7 @@ export default async function AnalyticsPage() {
 
     // ── PIE CHART DATA ──────────────────────────────
     // 1. User Role Distribution
-    const allNonAdminUsers = (users || []).filter(u => u.role !== 'admin');
+    const allNonAdminUsers = (users || []).filter(u => !['admin', 'super_admin'].includes(u.role));
     const merchantUsers = allNonAdminUsers.filter(u => u.role === 'merchant').length;
     const customerUsers = allNonAdminUsers.filter(u => u.role !== 'merchant').length;
     const userRoleData = [

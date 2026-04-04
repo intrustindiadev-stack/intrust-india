@@ -297,7 +297,7 @@ export async function getKYCRecord(userId = null) {
                 .eq('id', user.id)
                 .single();
 
-            if (!adminCheck || adminCheck.role !== 'admin') {
+            if (!adminCheck || !['admin', 'super_admin'].includes(adminCheck?.role)) {
                 console.warn('[KYC] Unauthorized admin access attempt');
                 return {
                     error: 'Unauthorized: Admin access required'

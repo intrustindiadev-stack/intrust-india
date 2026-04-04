@@ -62,11 +62,20 @@ export function useAuth() {
     return state
 }
 
-// Hook to check if user is admin
+// Hook to check if user is admin (includes super_admin)
 export function useIsAdmin() {
     const { profile, loading } = useAuth()
     return {
-        isAdmin: profile?.role === 'admin',
+        isAdmin: profile?.role === 'admin' || profile?.role === 'super_admin',
+        loading,
+    }
+}
+
+// Hook to check if user is super admin
+export function useIsSuperAdmin() {
+    const { profile, loading } = useAuth()
+    return {
+        isSuperAdmin: profile?.role === 'super_admin',
         loading,
     }
 }
