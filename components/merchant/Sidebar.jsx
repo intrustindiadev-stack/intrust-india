@@ -23,6 +23,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { label: "Wallet", href: "/merchant/wallet", icon: "account_balance_wallet" },
         { label: "Shopping Orders", href: "/merchant/shopping/orders", icon: "shopping_basket" },
         { label: "Auto Mode", href: "/merchant/shopping/auto-mode", icon: "offline_bolt" },
+        { label: "Ratings", href: "/merchant/ratings", icon: "star" },
         { label: "Analytics", href: "/merchant/analytics", icon: "analytics" },
     ];
 

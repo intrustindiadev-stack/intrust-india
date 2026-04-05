@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Home, LayoutGrid, ShoppingBag, User, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ActiveOrdersOverlay from './ActiveOrdersOverlay';
+import RatingPromptModal from './RatingPromptModal';
+
 
 const navItems = [
     { icon: Home, label: 'Home', href: '/dashboard' },
@@ -35,6 +37,11 @@ export default function CustomerBottomNav() {
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 className="fixed bottom-0 left-0 right-0 z-50 md:hidden pb-safe flex flex-col justify-end pointer-events-none"
             >
+                {/* Rating Prompt Overlay Modal */}
+                <div className="pointer-events-auto w-full px-4 mb-2">
+                    <RatingPromptModal />
+                </div>
+
                 {/* Active Orders Overlay Modal */}
                 <div className="pointer-events-auto w-full px-4 mb-4">
                     <ActiveOrdersOverlay />

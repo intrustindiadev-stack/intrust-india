@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Search, Store, X, Sparkles, ChevronRight, BadgeCheck, MapPin } from 'lucide-react';
+import { Search, Store, X, Sparkles, ChevronRight, BadgeCheck, Star } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
@@ -66,7 +66,7 @@ function FeaturedCard({ merchant }) {
 }
 
 // ── Ultra-Premium Quick-Commerce Card (Zomato/Swiggy Style) ──────────────
-function MerchantCard({ merchant, idx }) {
+function MerchantCard({ merchant, idx, rating }) {
     let avatarUrl = null;
     if (Array.isArray(merchant.user_profiles)) {
         avatarUrl = merchant.user_profiles[0]?.avatar_url;
@@ -173,10 +173,22 @@ function MerchantCard({ merchant, idx }) {
 
                     {/* Highly Subtle Footer Tags */}
                     <div className="mt-5 pt-4 border-t border-dashed border-slate-200 dark:border-white/[0.08] flex items-center gap-3">
-                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                            <Sparkles size={11} className="text-amber-500" />
-                            Premium Store
-                        </span>
+                        {rating ? (
+                            <>
+                                <span className="flex items-center gap-1 text-[11px] font-bold text-amber-500">
+                                    <Star size={12} className="fill-amber-400 text-amber-400" />
+                                    {parseFloat(rating.avg_rating).toFixed(1)}
+                                </span>
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                                    {rating.total_ratings} {rating.total_ratings === 1 ? 'rating' : 'ratings'}
+                                </span>
+                            </>
+                        ) : (
+                            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                <Sparkles size={11} className="text-amber-500" />
+                                Premium Store
+                            </span>
+                        )}
                         <div className="w-[1px] h-3 bg-slate-200 dark:bg-slate-700" />
                         <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                             Tap to shop
@@ -190,7 +202,7 @@ function MerchantCard({ merchant, idx }) {
 }
 
 // ── Main Export ──────────────────────────────────────────────────────────────
-export default function ShopHubClient({ merchants = [] }) {
+export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
     const [searchQuery, setSearchQuery] = useState('');
     const inputRef = useRef(null);
 
@@ -307,7 +319,7 @@ export default function ShopHubClient({ merchants = [] }) {
                 >
                     {showFeatured && <FeaturedCard merchant={official} />}
                     {filtered.map((merchant, idx) => (
-                        <MerchantCard key={merchant.id} merchant={merchant} idx={idx} />
+                        <MerchantCard key={merchant.id} merchant={merchant} idx={idx} rating={ratingsMap[merchant.id]} />
                     ))}
                 </motion.div>
             )}

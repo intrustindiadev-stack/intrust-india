@@ -52,6 +52,7 @@ const navigationGroups = [
             { name: 'Shopping Service', href: '/admin/shopping', icon: ShoppingBag },
             { name: 'Auto Mode', href: '/admin/auto-mode', icon: Sparkles },
             { name: 'NFC Service', href: '/admin/nfc', icon: Smartphone },
+            { name: 'Gift Cards', href: '/admin/giftcards', icon: Gift },
         ]
     },
     {
@@ -59,7 +60,6 @@ const navigationGroups = [
         items: [
             { name: 'Transactions', href: '/admin/transactions', icon: Receipt },
             { name: 'Payouts', href: '/admin/payouts', icon: Banknote },
-            { name: 'Gift Cards', href: '/admin/giftcards', icon: Gift },
             { name: 'Invoice Generator', href: '/admin/invoice', icon: FileText },
         ]
     },
@@ -141,9 +141,9 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                         <div className="flex items-center gap-3">
                             <Link href="/admin" className="flex items-center gap-3 group">
                                 <div className="relative w-10 h-10 flex-shrink-0 overflow-hidden rounded-xl shadow-lg transition-shadow hover:shadow-xl bg-white p-0.5 border border-slate-100">
-                                    <img 
-                                        src="/icon.png" 
-                                        alt="INTRUST" 
+                                    <img
+                                        src="/icon.png"
+                                        alt="INTRUST"
                                         className="w-full h-full object-contain rounded-lg"
                                     />
                                 </div>

@@ -26,6 +26,15 @@ export default async function MerchantHubPage() {
         .eq('status', 'approved')
         .order('business_name', { ascending: true });
 
+    // Fetch aggregate ratings for all merchants
+    const { data: ratingStats } = await supabase
+        .from('merchant_rating_stats')
+        .select('merchant_id, avg_rating, total_ratings');
+
+    const ratingsMap = Object.fromEntries(
+        (ratingStats || []).map(r => [r.merchant_id, r])
+    );
+
     const allMerchants = [
         {
             id: 'official',
@@ -145,7 +154,7 @@ export default async function MerchantHubPage() {
                 {/* ── Main Content ── */}
                 <div className="max-w-7xl mx-auto px-4 md:px-8 pt-4 pb-8">
                     <Breadcrumbs items={[{ label: 'Intrust Mart' }]} />
-                    <ShopHubClient merchants={allMerchants} />
+                    <ShopHubClient merchants={allMerchants} ratingsMap={ratingsMap} />
                 </div>
 
             </main>
