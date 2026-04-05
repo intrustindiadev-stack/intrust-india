@@ -20,6 +20,7 @@ export default async function MerchantHubPage() {
             id,
             business_name,
             business_address,
+            shopping_banner_url,
             user_profiles!left (avatar_url, full_name)
         `)
         .eq('status', 'approved')

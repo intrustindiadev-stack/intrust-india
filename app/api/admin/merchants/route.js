@@ -45,6 +45,8 @@ export async function GET(request) {
                 bank_account_name,
                 bank_data,
                 created_at,
+                auto_mode_status,
+                auto_mode_valid_until,
                 merchant_udhari_settings(udhari_enabled)
             `)
             .order('created_at', { ascending: false });

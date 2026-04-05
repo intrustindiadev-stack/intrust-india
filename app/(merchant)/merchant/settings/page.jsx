@@ -21,6 +21,7 @@ export default function MerchantSettingsPage() {
         pan_number: '',
         business_phone: '',
         business_email: '',
+        shopping_banner_url: '',
     });
 
     const [bankData, setBankData] = useState({
@@ -89,6 +90,7 @@ export default function MerchantSettingsPage() {
                 pan_number: merchant?.pan_number || '',
                 business_phone: merchant?.business_phone || profile?.phone || '',
                 business_email: merchant?.business_email || user.email || '',
+                shopping_banner_url: merchant?.shopping_banner_url || '',
             });
         } catch (error) {
             console.error('Error fetching settings:', error);
@@ -115,6 +117,7 @@ export default function MerchantSettingsPage() {
                     pan_number: formData.pan_number,
                     business_phone: formData.business_phone,
                     business_email: formData.business_email,
+                    shopping_banner_url: formData.shopping_banner_url,
                 })
                 .eq('user_id', user.id);
 
@@ -124,6 +127,43 @@ export default function MerchantSettingsPage() {
             await fetchSettings();
         } catch (error) {
             console.error('Error saving settings:', error);
+            setError(error.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleBannerUpload = async (event) => {
+        try {
+            if (!event.target.files || event.target.files.length === 0) return;
+            const file = event.target.files[0];
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${merchantProfile.user_id}-${Date.now()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            setSaving(true);
+            setError(null);
+            
+            const { error: uploadError } = await supabase.storage
+                .from('merchant_banners')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+            
+            const { data: { publicUrl } } = supabase.storage
+                .from('merchant_banners')
+                .getPublicUrl(filePath);
+
+            setFormData(prev => ({ ...prev, shopping_banner_url: publicUrl }));
+            
+            // Also save to DB immediately
+            await supabase.from('merchants')
+                .update({ shopping_banner_url: publicUrl })
+                .eq('user_id', merchantProfile.user_id);
+                
+            setSuccess('Shopping banner uploaded successfully!');
+        } catch (error) {
+            console.error('Error uploading banner:', error);
             setError(error.message);
         } finally {
             setSaving(false);
@@ -249,6 +289,41 @@ export default function MerchantSettingsPage() {
                         </h2>
 
                         <div className="space-y-6 max-w-2xl">
+                            {/* Banner Upload */}
+                            <div className="group">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
+                                    Storefront Banner
+                                </label>
+                                <div className="mt-2 flex items-center gap-6">
+                                    <div className="relative w-full h-40 sm:h-48 bg-black/5 dark:bg-white/5 rounded-2xl border-2 border-dashed border-black/10 dark:border-white/10 flex flex-col items-center justify-center overflow-hidden group-hover:border-[#D4AF37]/50 transition-colors">
+                                        {formData.shopping_banner_url ? (
+                                            <>
+                                                <img 
+                                                    src={formData.shopping_banner_url} 
+                                                    alt="Store Banner" 
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                                    <span className="text-white font-bold text-sm bg-black/50 px-4 py-2 rounded-lg backdrop-blur-sm">Change Banner</span>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="text-center p-4">
+                                                <span className="material-icons-round text-4xl text-slate-400 mb-2">add_photo_alternate</span>
+                                                <p className="text-sm font-medium text-slate-500 max-w-xs">Upload a wide banner image to showcase on your customer storefront (16:9 recommended).</p>
+                                            </div>
+                                        )}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleBannerUpload}
+                                            disabled={saving}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="group">
                                 <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
                                     Business Name

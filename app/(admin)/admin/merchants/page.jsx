@@ -52,7 +52,8 @@ export default function AdminMerchantsPage() {
                     day: 'numeric'
                 }),
                 documents: 0,
-                udhariEnabled: m.udhari_enabled
+                udhariEnabled: m.udhari_enabled,
+                autoModeStatus: m.auto_mode_status || 'inactive'
             }));
 
             setMerchants(transformed);

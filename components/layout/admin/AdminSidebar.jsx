@@ -30,22 +30,48 @@ import {
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
-const baseNavigation = [
-    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { name: 'Tasks', href: '/admin/tasks', icon: ClipboardList },
-    { name: 'Users', href: '/admin/users', icon: Users },
-    { name: 'Merchants', href: '/admin/merchants', icon: Store },
-    { name: 'NFC', href: '/admin/nfc', icon: Smartphone },
-    { name: 'Shopping Service', href: '/admin/shopping', icon: ShoppingBag },
-    { name: 'Partnership Growth', href: '/admin/lockin', icon: Clock },
-    { name: 'Store Credit', href: '/admin/merchants/udhari', icon: CreditCard },
-    { name: 'Gift Cards', href: '/admin/giftcards', icon: Gift },
-    { name: 'Payouts', href: '/admin/payouts', icon: Banknote },
-    { name: 'Transactions', href: '/admin/transactions', icon: Receipt },
-    { name: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
-    { name: 'Invoice Generator', href: '/admin/invoice', icon: FileText },
-    { name: 'Banners', href: '/admin/banners', icon: ImageIcon },
-    { name: 'Settings', href: '/admin/settings', icon: Settings },
+const navigationGroups = [
+    {
+        title: 'Core System',
+        items: [
+            { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+            { name: 'Tasks', href: '/admin/tasks', icon: ClipboardList },
+        ]
+    },
+    {
+        title: 'Network Operations',
+        items: [
+            { name: 'Users', href: '/admin/users', icon: Users },
+            { name: 'Merchants', href: '/admin/merchants', icon: Store },
+            { name: 'Store Credit', href: '/admin/merchants/udhari', icon: CreditCard },
+        ]
+    },
+    {
+        title: 'Premium Services',
+        items: [
+            { name: 'Shopping Service', href: '/admin/shopping', icon: ShoppingBag },
+            { name: 'Auto Mode', href: '/admin/auto-mode', icon: Sparkles },
+            { name: 'NFC Service', href: '/admin/nfc', icon: Smartphone },
+        ]
+    },
+    {
+        title: 'Finance & Tools',
+        items: [
+            { name: 'Transactions', href: '/admin/transactions', icon: Receipt },
+            { name: 'Payouts', href: '/admin/payouts', icon: Banknote },
+            { name: 'Gift Cards', href: '/admin/giftcards', icon: Gift },
+            { name: 'Invoice Generator', href: '/admin/invoice', icon: FileText },
+        ]
+    },
+    {
+        title: 'Growth & Setup',
+        items: [
+            { name: 'Partnership Growth', href: '/admin/lockin', icon: Clock },
+            { name: 'Banners', href: '/admin/banners', icon: ImageIcon },
+            { name: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
+            { name: 'Settings', href: '/admin/settings', icon: Settings },
+        ]
+    }
 ];
 
 export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
@@ -140,41 +166,43 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                     </div>
 
                     {/* Navigation */}
-                    <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto hide-scrollbar">
-                        <div className="px-3 mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                            Menu
-                        </div>
-                        {baseNavigation.map((item) => {
-                            const Icon = item.icon;
-                            // Detect nested Store Credit routes: /admin/merchants/:id/udhari or /admin/merchants/:id/udhari-settings
-                            const isNestedUdhariRoute = /^\/admin\/merchants\/[^/]+\/udhari(|-settings)$/.test(pathname || '');
-                            // Exact match for root dashboard '/admin', partial for others
-                            const isActive = item.href === '/admin'
-                                ? pathname === '/admin'
-                                : item.href === '/admin/merchants'
-                                    ? (pathname === '/admin/merchants' || (pathname?.startsWith('/admin/merchants/') && !pathname?.startsWith('/admin/merchants/udhari'))) && !isNestedUdhariRoute
-                                    : item.href === '/admin/merchants/udhari'
-                                        ? pathname === item.href || pathname?.startsWith(item.href + '/') || isNestedUdhariRoute
-                                        : pathname === item.href || pathname?.startsWith(item.href + '/');
+                    <nav className="flex-1 py-4 px-4 space-y-6 overflow-y-auto hide-scrollbar">
+                        {navigationGroups.map((group, groupIdx) => (
+                            <div key={groupIdx} className="space-y-1.5">
+                                <div className="px-3 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                    {group.title}
+                                </div>
+                                {group.items.map((item) => {
+                                    const Icon = item.icon;
+                                    const isNestedUdhariRoute = /^\/admin\/merchants\/[^/]+\/udhari(|-settings)$/.test(pathname || '');
+                                    const isActive = item.href === '/admin'
+                                        ? pathname === '/admin'
+                                        : item.href === '/admin/merchants'
+                                            ? (pathname === '/admin/merchants' || (pathname?.startsWith('/admin/merchants/') && !pathname?.startsWith('/admin/merchants/udhari'))) && !isNestedUdhariRoute
+                                            : item.href === '/admin/merchants/udhari'
+                                                ? pathname === item.href || pathname?.startsWith(item.href + '/') || isNestedUdhariRoute
+                                                : pathname === item.href || pathname?.startsWith(item.href + '/');
 
-                            return (
-                                <Link
-                                    key={item.name}
-                                    href={item.href}
-                                    onClick={() => setIsOpen(false)}
-                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all group relative overflow-hidden ${isActive
-                                        ? activeItemBg
-                                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                                        }`}
-                                >
-                                    {isActive && (
-                                        <div className={activeBar} />
-                                    )}
-                                    <Icon size={20} className={`transition-colors ${isActive ? activeIcon : 'text-slate-400 group-hover:text-slate-700'}`} />
-                                    <span className="font-semibold">{item.name}</span>
-                                </Link>
-                            );
-                        })}
+                                    return (
+                                        <Link
+                                            key={item.name}
+                                            href={item.href}
+                                            onClick={() => setIsOpen(false)}
+                                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group relative overflow-hidden ${isActive
+                                                ? activeItemBg
+                                                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                                                }`}
+                                        >
+                                            {isActive && (
+                                                <div className={activeBar} />
+                                            )}
+                                            <Icon size={18} className={`transition-colors ${isActive ? activeIcon : 'text-slate-400 group-hover:text-slate-700'}`} />
+                                            <span className="font-bold text-sm tracking-tight">{item.name}</span>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        ))}
                     </nav>
 
                     {/* User Profile Footer */}

@@ -36,6 +36,12 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                                 {udhariEnabled ? 'Store Credit: ON' : 'Store Credit: OFF'}
                             </div>
                         )}
+                        {merchant.autoModeStatus === 'active' && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-md">
+                                <AlertCircle size={10} strokeWidth={3} className="text-indigo-600" />
+                                <span className="text-[9px] font-extrabold uppercase tracking-widest">Auto Mode</span>
+                            </div>
+                        )}
                         {isApproved && (
                             <div className="flex flex-col items-end gap-1">
                                 <div className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-widest border transition-colors ${merchant.subscriptionStatus === 'active' ? 'bg-amber-50 text-amber-700 border-amber-200' : merchant.subscriptionStatus === 'expired' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>

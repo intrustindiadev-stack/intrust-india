@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Home, LayoutGrid, ShoppingBag, User, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
+import ActiveOrdersOverlay from './ActiveOrdersOverlay';
 
 const navItems = [
     { icon: Home, label: 'Home', href: '/dashboard' },
@@ -32,11 +33,16 @@ export default function CustomerBottomNav() {
                 initial={{ y: 100 }}
                 animate={{ y: 0 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className="fixed bottom-0 left-0 right-0 z-50 md:hidden pb-safe"
+                className="fixed bottom-0 left-0 right-0 z-50 md:hidden pb-safe flex flex-col justify-end pointer-events-none"
             >
+                {/* Active Orders Overlay Modal */}
+                <div className="pointer-events-auto w-full px-4 mb-4">
+                    <ActiveOrdersOverlay />
+                </div>
+
                 {/* Glass Container */}
-                <div className="mx-4 mb-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2rem] p-2">
-                    <div className="flex items-center justify-between relative z-10">
+                <div className="mx-4 mb-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2rem] p-2 pointer-events-auto">
+                    <div className="flex items-center justify-between relative z-10 w-full">
                         {navItems.map((item) => {
                             const Icon = item.icon;
                             const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));

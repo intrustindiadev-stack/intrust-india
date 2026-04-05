@@ -65,88 +65,124 @@ function FeaturedCard({ merchant }) {
     );
 }
 
-// ── Regular Merchant Card ─────────────────────────────────────────────────
+// ── Ultra-Premium Quick-Commerce Card (Zomato/Swiggy Style) ──────────────
 function MerchantCard({ merchant, idx }) {
-    const accent = ACCENTS[idx % ACCENTS.length];
-    const avatarUrl = merchant.user_profiles?.avatar_url;
-    const initials = merchant.business_name.substring(0, 2).toUpperCase();
+    let avatarUrl = null;
+    if (Array.isArray(merchant.user_profiles)) {
+        avatarUrl = merchant.user_profiles[0]?.avatar_url;
+    } else {
+        avatarUrl = merchant.user_profiles?.avatar_url;
+    }
 
-    // Clean address: take first meaningful segment (before first comma)
+    const initials = merchant.business_name.substring(0, 2).toUpperCase();
     const rawAddress = merchant.business_address || '';
-    const addressLine = rawAddress
-        ? rawAddress.split(',')[0]?.trim()
-        : null;
+    const addressLine = rawAddress ? rawAddress.split(',')[0]?.trim() : 'Premium Hub';
+    
+    // Use uploaded banner if it exists, otherwise fall back to the premium default banner
+    const bannerImage = merchant.shopping_banner_url || '/images/default_merchant_banner.png';
 
     return (
         <motion.div variants={fadeUp} className="h-full">
             <Link
                 href={`/shop/${merchant.id}`}
-                className="group flex flex-col h-full bg-white dark:bg-[#13161f] rounded-2xl overflow-hidden border border-slate-100 dark:border-white/[0.05] shadow-sm hover:shadow-xl hover:shadow-slate-200/60 dark:hover:shadow-black/40 hover:-translate-y-0.5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="group flex flex-col h-full bg-white dark:bg-[#0c0e16] rounded-[2rem] overflow-hidden border border-slate-100/80 dark:border-white/[0.04] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.7)] hover:-translate-y-1.5 transition-all duration-500 focus-visible:outline-none"
             >
-                {/* ── Top: coloured header with avatar centered inside ── */}
-                <div className={`relative flex items-center justify-center bg-gradient-to-br ${accent.grad} h-[90px] sm:h-[100px] overflow-hidden shrink-0`}>
-                    {/* Decorative blobs — inside header, fully contained */}
-                    <div className="absolute top-0 right-0 w-20 h-20 rounded-full bg-white/10 -mr-8 -mt-8 pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-14 h-14 rounded-full bg-black/10 -ml-6 -mb-6 pointer-events-none" />
+                {/* ── Top Cover Image Area ── */}
+                <div className="relative w-full h-[140px] sm:h-[160px] transition-transform duration-700 group-hover:scale-105 origin-top bg-slate-100 dark:bg-[#13161f]">
+                    
+                    {/* Render the shopping banner (Custom or Default) */}
+                    <img 
+                        src={bannerImage} 
+                        alt={`${merchant.business_name} Banner`} 
+                        className="absolute inset-0 w-full h-full object-cover z-0"
+                    />
 
-                    {/* Avatar — centered inside header, no overflow clipping */}
-                    <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-white shadow-lg ring-2 ring-white/40 group-hover:scale-105 group-hover:rotate-1 transition-transform duration-300 z-10">
-                        {avatarUrl ? (
-                            <img
-                                src={avatarUrl}
-                                alt={merchant.business_name}
-                                className="w-full h-full object-cover"
-                                referrerPolicy="no-referrer"
-                                onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                    const fallback = e.currentTarget.parentElement?.querySelector('.avatar-fallback');
-                                    if (fallback) fallback.style.display = 'flex';
-                                }}
-                            />
-                        ) : null}
-                        <span
-                            className={`avatar-fallback absolute inset-0 flex items-center justify-center text-white font-black text-base bg-gradient-to-br ${accent.grad}`}
-                            style={{ display: avatarUrl ? 'none' : 'flex' }}
-                        >
-                            {initials}
-                        </span>
+                    {/* Glassmorphic Overlay for ambient depth */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/60 z-0" />
+
+                    {/* Explicit HTML Brand Text if using default banner (to prevent stretched/AI botched text) */}
+                    {!merchant.shopping_banner_url && (
+                        <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
+                            <span className="font-[family-name:var(--font-manrope)] font-black text-2xl tracking-[0.2em] uppercase text-white/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] mix-blend-overlay">
+                                Intrust Mart
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Floating Verified Pill (Zomato Pro style) */}
+                    <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 bg-white/20 backdrop-blur-md border border-white/30 text-white px-3 py-1.5 rounded-full shadow-lg">
+                        <BadgeCheck size={11} className="text-white" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest leading-none mt-[1px]">Partner</span>
+                    </div>
+
+                    {/* Dynamic 'Live' Indicator for Store Activity */}
+                    <div className="absolute top-4 right-4 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white/20 backdrop-blur-md border border-white/30 shadow-lg group-hover:bg-white/30 transition-colors">
+                        <Store size={12} className="text-white" />
+                    </div>
+
+                    {/* ── Overlapping Avatar (Stretching into the body) ── */}
+                    <div className="absolute -bottom-8 left-5 z-20 flex justify-center">
+                        <div className="w-[72px] h-[72px] rounded-[1.25rem] overflow-hidden bg-white dark:bg-[#13161f] p-1.5 shadow-[0_12px_24px_rgba(0,0,0,0.15)] ring-1 ring-black/5 dark:ring-white/10 group-hover:-translate-y-2 transition-transform duration-500">
+                            <div className="w-full h-full rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 flex items-center justify-center relative">
+                                {avatarUrl ? (
+                                    <img
+                                        src={avatarUrl}
+                                        alt={merchant.business_name}
+                                        className="w-full h-full object-cover"
+                                        referrerPolicy="no-referrer"
+                                        onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                            const fallback = e.currentTarget.parentElement?.querySelector('.avatar-fallback');
+                                            if (fallback) fallback.style.display = 'flex';
+                                        }}
+                                    />
+                                ) : null}
+                                <span
+                                    className="avatar-fallback absolute inset-0 flex items-center justify-center font-[family-name:var(--font-manrope)] font-black text-xl text-slate-800 dark:text-white"
+                                    style={{ display: avatarUrl ? 'none' : 'flex' }}
+                                >
+                                    {initials}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Body */}
-                <div className="flex flex-col flex-1 px-3 pt-3 pb-3 gap-1.5">
-
-                    {/* Store name */}
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white leading-tight line-clamp-2">
-                        {merchant.business_name}
-                    </h3>
-
-                    {/* Address */}
-                    {addressLine && (
-                        <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 dark:text-white/30 leading-tight line-clamp-1">
-                            <MapPin size={9} className="shrink-0" />
-                            {addressLine}
-                        </span>
-                    )}
-
-                    {/* Always: Verified badge */}
-                    <span className={`self-start inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full mt-0.5 ${accent.badge}`}>
-                        <BadgeCheck size={9} />
-                        Verified
-                    </span>
+                {/* ── Store Body & Details ── */}
+                <div className="relative flex flex-col flex-1 px-5 pt-11 pb-5 bg-white dark:bg-[#0c0e16] z-10">
+                    
+                    {/* Primary Info */}
+                    <div className="flex justify-between items-start gap-4">
+                        <div>
+                            <h3 className="text-xl sm:text-2xl font-[family-name:var(--font-manrope)] font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight line-clamp-1 group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors">
+                                {merchant.business_name}
+                            </h3>
+                            <p className="text-xs sm:text-sm font-[family-name:var(--font-inter)] font-semibold text-slate-500 dark:text-slate-400 mt-1 line-clamp-1 flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
+                                {addressLine}
+                            </p>
+                        </div>
+                        
+                        {/* Rating / Explore node */}
+                        <div className="shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-800/50 group-hover:bg-amber-500 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all duration-300">
+                            <ChevronRight size={18} strokeWidth={2.5} className="text-slate-400 dark:text-slate-500 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+                        </div>
+                    </div>
 
                     <div className="flex-1" />
 
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/[0.05] mt-1">
-                        <span className="text-[10px] font-bold text-slate-400 dark:text-white/30 flex items-center gap-1">
-                            <Store size={9} />
-                            Visit Store
+                    {/* Highly Subtle Footer Tags */}
+                    <div className="mt-5 pt-4 border-t border-dashed border-slate-200 dark:border-white/[0.08] flex items-center gap-3">
+                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                            <Sparkles size={11} className="text-amber-500" />
+                            Premium Store
                         </span>
-                        <span className={`w-6 h-6 rounded-full bg-gradient-to-br ${accent.grad} flex items-center justify-center text-white shadow-sm group-hover:scale-110 transition-transform duration-200`}>
-                            <ChevronRight size={12} strokeWidth={3} />
+                        <div className="w-[1px] h-3 bg-slate-200 dark:bg-slate-700" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                            Tap to shop
                         </span>
                     </div>
+
                 </div>
             </Link>
         </motion.div>
@@ -267,7 +303,7 @@ export default function ShopHubClient({ merchants = [] }) {
                     variants={stagger}
                     initial="hidden"
                     animate="show"
-                    className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5"
                 >
                     {showFeatured && <FeaturedCard merchant={official} />}
                     {filtered.map((merchant, idx) => (

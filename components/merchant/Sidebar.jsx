@@ -22,6 +22,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { label: "Lockin Portfolio", href: "/merchant/lockin", icon: "lock_clock" },
         { label: "Wallet", href: "/merchant/wallet", icon: "account_balance_wallet" },
         { label: "Shopping Orders", href: "/merchant/shopping/orders", icon: "shopping_basket" },
+        { label: "Auto Mode", href: "/merchant/shopping/auto-mode", icon: "offline_bolt" },
         { label: "Analytics", href: "/merchant/analytics", icon: "analytics" },
     ];
 
