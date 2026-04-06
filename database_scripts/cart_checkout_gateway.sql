@@ -12,14 +12,17 @@ DECLARE
     v_merchant_id UUID;
     v_is_platform BOOLEAN;
     v_delivery_address TEXT;
-    v_delivery_fee_paise BIGINT := 5000;
+    v_customer_name TEXT;
+    v_customer_phone TEXT;
+    v_delivery_fee_paise BIGINT := 9900;
     v_item RECORD;
 BEGIN
-    -- 1. Get Delivery Address from profile
-    SELECT address INTO v_delivery_address
+    -- 1. Get Customer Details and Delivery Address from profile
+    SELECT full_name, phone, address INTO v_customer_name, v_customer_phone, v_delivery_address
     FROM public.user_profiles
     WHERE id = p_customer_id;
-
+    
+    -- Fallback for address from KYC if profile is incomplete
     IF v_delivery_address IS NULL OR v_delivery_address = '' THEN
         SELECT full_address INTO v_delivery_address
         FROM public.kyc_records
@@ -73,10 +76,30 @@ BEGIN
 
     -- 3. CREATE ORDER GROUP
     INSERT INTO public.shopping_order_groups (
-        customer_id, total_amount_paise, status, delivery_status, merchant_id, is_platform_order, delivery_address, delivery_fee_paise, payment_method
+        customer_id, 
+        customer_name, 
+        customer_phone, 
+        total_amount_paise, 
+        status, 
+        delivery_status, 
+        merchant_id, 
+        is_platform_order, 
+        delivery_address, 
+        delivery_fee_paise, 
+        payment_method
     )
     VALUES (
-        p_customer_id, v_total_paise, 'pending', 'pending', v_merchant_id, v_is_platform, v_delivery_address, v_delivery_fee_paise, 'gateway'
+        p_customer_id, 
+        v_customer_name, 
+        v_customer_phone, 
+        v_total_paise, 
+        'pending', 
+        'pending', 
+        v_merchant_id, 
+        v_is_platform, 
+        v_delivery_address, 
+        v_delivery_fee_paise, 
+        'gateway'
     )
     RETURNING id INTO v_group_id;
 
@@ -92,7 +115,10 @@ BEGIN
         JOIN public.shopping_products p ON c.product_id = p.id
         WHERE c.customer_id = p_customer_id
     LOOP
-        IF v_item.is_platform_item THEN
+        -- Comment 2: Always set seller_id from merchant_inventory.merchant_id when inventory_id
+        -- is not null, regardless of is_platform_item. This preserves merchant attribution
+        -- even for resold platform products.
+        IF v_item.is_platform_item AND v_item.merchant_id IS NULL THEN
             INSERT INTO public.shopping_order_items (
                 group_id, seller_id, product_id, inventory_id, quantity, unit_price_paise, cost_price_paise, profit_paise
             ) VALUES (
@@ -100,6 +126,7 @@ BEGIN
                 (v_item.effective_price - v_item.platform_cost) * v_item.quantity
             );
         ELSE
+            -- Merchant item OR platform item sold through merchant inventory
             INSERT INTO public.shopping_order_items (
                 group_id, seller_id, product_id, inventory_id, quantity, unit_price_paise, cost_price_paise, profit_paise
             ) VALUES (
@@ -169,8 +196,11 @@ BEGIN
             WHERE id = v_item.inventory_id;
 
             UPDATE public.shopping_order_items
-            SET cost_price_paise = v_merchant_credit / v_item.quantity,
-                profit_paise = v_commission_paise
+            -- profit_paise = merchant's net credit (after commission deduction)
+            -- commission_amount_paise = platform fee taken (5%)
+            SET cost_price_paise = (SELECT wholesale_price_paise FROM public.shopping_products WHERE id = v_item.product_id),
+                profit_paise = v_merchant_credit,
+                commission_amount_paise = v_commission_paise
             WHERE id = v_item.id;
 
             UPDATE public.merchants

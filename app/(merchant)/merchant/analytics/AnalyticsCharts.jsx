@@ -47,8 +47,8 @@ export default function AnalyticsCharts({ revenueData, inventoryData, brandData 
                     <span className="material-icons-round text-blue-500 dark:text-blue-400 mr-2">timeline</span>
                     Revenue Trend (Last 30 Days)
                 </h3>
-                <div className="h-[300px] w-full relative z-10">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div className="h-[300px] w-full relative z-10 overflow-hidden">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                         <AreaChart
                             data={revenueData}
                             margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
@@ -104,7 +104,7 @@ export default function AnalyticsCharts({ revenueData, inventoryData, brandData 
                             <p className="font-semibold text-sm uppercase tracking-wider">No Data</p>
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <PieChart>
                                 <Pie
                                     data={inventoryData}
@@ -153,7 +153,7 @@ export default function AnalyticsCharts({ revenueData, inventoryData, brandData 
                             <p className="font-semibold text-sm uppercase tracking-wider">No Data</p>
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <BarChart
                                 layout="vertical"
                                 data={brandData}

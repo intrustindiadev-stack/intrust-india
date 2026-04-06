@@ -143,23 +143,30 @@ const CartClient = ({ userId }) => {
           const inventoryIds = nonPlatformItems.map(i => i.inventory_id).filter(Boolean);
           
           if (inventoryIds.length > 0) {
-            const { data: merchantsData } = await supabase
+            const { data: merchantsData, error: merchantsError } = await supabase
               .from('merchant_inventory')
               .select('merchant_id')
               .in('id', inventoryIds);
               
-            const uniqueMerchants = [...new Set(merchantsData?.map(m => m.merchant_id))];
+            if (merchantsError || !merchantsData) return;
+
+            const merchantIds = merchantsData.map(m => m.merchant_id).filter(id => id && id !== 'null');
+            const uniqueMerchants = [...new Set(merchantIds)];
             
             if (uniqueMerchants.length > 1) {
               setUdhariEnabled(false);
               setUdhariDisabledReason('mixed');
             } else if (uniqueMerchants.length === 1) {
-              const { data: udhariSettings } = await supabase
+              const { data: settings } = await supabase
                 .from('merchant_udhari_settings')
                 .select('udhari_enabled')
-                .eq('merchant_id', uniqueMerchants[0])
-                .single();
-              setUdhariEnabled(udhariSettings?.udhari_enabled === true);
+                .eq('merchant_id', uniqueMerchants[0]);
+              
+              if (settings && settings.length > 0) {
+                setUdhariEnabled(settings[0].udhari_enabled === true);
+              } else {
+                setUdhariEnabled(false);
+              }
               setUdhariDisabledReason(null);
             }
           }
@@ -194,9 +201,12 @@ const CartClient = ({ userId }) => {
         .filter(Boolean)
         .join(', ');
 
+      let finalPhone = (addressForm.phone || '').replace(/[^\d+]/g, '');
+      if (/^\d{10}$/.test(finalPhone)) finalPhone = '+91' + finalPhone;
+
       const { error } = await supabase.from('user_profiles').update({
         address: combinedAddress,
-        phone: addressForm.phone
+        phone: finalPhone || null
       }).eq('id', userId);
       
       if (error) throw error;

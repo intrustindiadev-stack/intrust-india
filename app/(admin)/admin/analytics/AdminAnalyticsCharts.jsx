@@ -70,8 +70,8 @@ export default function AdminAnalyticsCharts({ userGrowthData, revenueSourceData
                         Daily Metric
                     </span>
                 </div>
-                <div className="h-[320px] w-full mt-4">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div className="h-[320px] w-full mt-4 overflow-hidden">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                         <AreaChart
                             data={userGrowthData}
                             margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
@@ -125,8 +125,8 @@ export default function AdminAnalyticsCharts({ userGrowthData, revenueSourceData
                         Aggregate
                     </span>
                 </div>
-                <div className="h-[320px] w-full mt-4">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div className="h-[320px] w-full mt-4 overflow-hidden">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                         <BarChart
                             data={revenueSourceData}
                             margin={{ top: 20, right: 10, left: -10, bottom: 5 }}

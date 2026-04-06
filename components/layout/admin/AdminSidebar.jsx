@@ -84,15 +84,15 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
 
     // Static color maps — Tailwind v4 purges dynamic class names, so use full class strings
     const logoGradient = isSuperAdmin
-        ? 'bg-gradient-to-br from-red-600 to-rose-700 shadow-red-500/20 group-hover:shadow-red-500/40'
+        ? 'bg-gradient-to-br from-blue-900 to-indigo-950 shadow-blue-900/20 group-hover:shadow-blue-900/40'
         : 'bg-gradient-to-br from-blue-600 to-indigo-700 shadow-blue-500/20 group-hover:shadow-blue-500/40';
-    const logoLabel = isSuperAdmin ? 'text-red-600' : 'text-blue-600';
-    const activeItemBg = isSuperAdmin ? 'bg-red-600/10 text-red-600' : 'bg-blue-600/10 text-blue-600';
+    const logoLabel = isSuperAdmin ? 'text-blue-900' : 'text-blue-600';
+    const activeItemBg = isSuperAdmin ? 'bg-blue-900/10 text-blue-900' : 'bg-blue-600/10 text-blue-600';
     const activeBar = isSuperAdmin
-        ? 'absolute left-0 top-0 bottom-0 w-1 bg-red-600 rounded-r-full shadow-[0_0_12px_rgba(220,38,38,0.3)]'
+        ? 'absolute left-0 top-0 bottom-0 w-1 bg-blue-950 rounded-r-full shadow-[0_0_12px_rgba(23,37,84,0.3)]'
         : 'absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.3)]';
-    const activeIcon = isSuperAdmin ? 'text-red-600' : 'text-blue-600';
-    const profileEmailColor = isSuperAdmin ? 'text-red-600' : 'text-blue-600';
+    const activeIcon = isSuperAdmin ? 'text-blue-950' : 'text-blue-600';
+    const profileEmailColor = isSuperAdmin ? 'text-blue-900' : 'text-blue-600';
 
     const handleLogout = () => {
         setShowLogoutModal(true);

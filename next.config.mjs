@@ -23,12 +23,22 @@ const nextConfig = {
   serverExternalPackages: ['jsonwebtoken'],
 
   async headers() {
-    const sabpaisaInitUrl = process.env.SABPAISA_INIT_URL || process.env.NEXT_PUBLIC_SABPAISA_INIT_URL || 'https://securepay.sabpaisa.in';
-    let sabpaisaDomain = 'https://securepay.sabpaisa.in';
+    const sabpaisaUrl = process.env.SABPAISA_INIT_URL || process.env.NEXT_PUBLIC_SABPAISA_INIT_URL || 'https://securepay.sabpaisa.in';
+    const callbackUrl = process.env.SABPAISA_CALLBACK_URL || '';
+    
+    const allowedOrigins = ["'self'"];
+    
     try {
-      sabpaisaDomain = new URL(sabpaisaInitUrl).origin;
+      if (sabpaisaUrl) allowedOrigins.push(new URL(sabpaisaUrl).origin);
+      if (callbackUrl) allowedOrigins.push(new URL(callbackUrl).origin);
     } catch (e) {
-      console.warn('Invalid SABPAISA_INIT_URL, falling back to default live domain for CSP');
+      // Fallback if URLs are malformed
+    }
+
+    // In development or when using ngrok, add a broad https: fallback to prevent blocking
+    if (callbackUrl.includes('ngrok-free.dev') || process.env.NODE_ENV !== 'production') {
+      allowedOrigins.push("https:");
+      allowedOrigins.push("https://*");
     }
 
     return [
@@ -37,7 +47,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: `form-action 'self' ${sabpaisaDomain};`
+            value: `form-action ${allowedOrigins.join(' ')};`
           },
         ],
       },

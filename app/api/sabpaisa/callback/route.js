@@ -33,9 +33,17 @@ export async function POST(request) {
 
     try {
         const buildRedirectUrl = (path) => {
-            const url = new URL(path, request.url);
-            if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') url.protocol = 'http:';
-            return url;
+            // Respect ngrok/proxy headers if available
+            const protocol = request.headers.get('x-forwarded-proto') || (request.url.startsWith('https') ? 'https' : 'http');
+            const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+            
+            try {
+                const base = `${protocol}://${host}`;
+                return new URL(path, base);
+            } catch (e) {
+                // Fallback to relative if headers fail
+                return new URL(path, request.url);
+            }
         };
 
         // SabPaisa sends the response back via a POST form submission
@@ -236,9 +244,9 @@ export async function POST(request) {
                         'settle_udhari_gateway_payment',
                         {
                             p_udhari_request_id: udhariRequestId,
-                            p_customer_user_id:  existingTxn.user_id,
-                            p_amount_paise:      amountPaise,
-                            p_customer_email:    existingTxn.payer_email || null
+                            p_customer_user_id: existingTxn.user_id,
+                            p_amount_paise: amountPaise,
+                            p_customer_email: existingTxn.payer_email || null
                         }
                     );
 
@@ -298,13 +306,14 @@ export async function POST(request) {
                 );
 
                 if (rpcError || (rpcResult && !rpcResult.success)) {
-                    console.error('[Callback] Cart checkout finalize error:', rpcError?.message || rpcResult?.message);
+                    const detailedError = rpcError?.message || rpcResult?.message || 'Unknown fulfillment error';
+                    console.error('[Callback] Cart checkout finalize error:', detailedError);
                     fulfillmentFailed = true;
                     internalStatus = 'FAILED';
-                    result.transMsg = 'Cart order fulfillment failed. Payment will be refunded.';
+                    result.transMsg = `Cart order fulfillment failed: ${detailedError}. Payment will be refunded.`;
                 } else {
                     console.log(`[Callback] Cart checkout fulfilled for txn ${clientTxnId}`);
-                    
+
                     try {
                         await supabaseAdmin.from('notifications').insert({
                             user_id: existingTxn.user_id,
@@ -516,7 +525,7 @@ export async function POST(request) {
                     result.transMsg = 'Wholesale fulfillment failed. Payment will be refunded.';
                 } else {
                     console.log(`[Callback] Wholesale purchase fulfilled for txn ${clientTxnId}`);
-                    
+
                     try {
                         // Notify Merchant of successful stock purchase
                         await supabaseAdmin.from('notifications').insert({

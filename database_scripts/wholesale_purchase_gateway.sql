@@ -75,7 +75,7 @@ BEGIN
     SELECT user_id INTO v_merchant_user_id FROM public.merchants WHERE id = v_draft.merchant_id;
 
     -- 4. Process Each Item
-    FOR v_item IN SELECT * FROM jsonb_array_elements(v_draft.items)
+    FOR v_item IN SELECT unnest(v_draft.items)
     LOOP
         v_product_id := (v_item->>'product_id')::UUID;
         v_quantity := (v_item->>'quantity')::INT;
@@ -97,20 +97,43 @@ BEGIN
 
         -- Upsert into Merchant Inventory
         INSERT INTO public.merchant_inventory (
-            merchant_id, product_id, stock_quantity, retail_price_paise, updated_at
+            merchant_id, product_id, stock_quantity, retail_price_paise, updated_at, is_platform_product
         ) VALUES (
             v_draft.merchant_id, v_product_id, v_quantity, 
             (SELECT suggested_retail_price_paise FROM public.shopping_products WHERE id = v_product_id),
-            now()
+            now(),
+            true
         )
         ON CONFLICT (merchant_id, product_id)
         DO UPDATE SET 
             stock_quantity = public.merchant_inventory.stock_quantity + v_quantity,
+            is_platform_product = true,
             updated_at = now();
 
-        -- Log Order Item (for history)
-        -- Note: Bulk purchase tracking usually goes to shopping_orders, but this is wholesale.
-        -- We'll log it as a transaction for the merchant.
+        -- Log to shopping orders (for history)
+        INSERT INTO public.shopping_orders (
+            buyer_id,
+            buyer_type,
+            seller_id,
+            seller_type,
+            product_id,
+            quantity,
+            unit_price_paise,
+            total_price_paise,
+            order_type,
+            status
+        ) VALUES (
+            v_draft.merchant_id,
+            'merchant',
+            NULL, -- From admin
+            'admin',
+            v_product_id,
+            v_quantity,
+            v_unit_price,
+            v_quantity * v_unit_price,
+            'wholesale',
+            'completed'
+        );
     END LOOP;
 
     -- 5. Record Transaction

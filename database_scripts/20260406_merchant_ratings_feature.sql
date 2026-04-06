@@ -124,3 +124,7 @@ EXCEPTION WHEN OTHERS THEN
     RETURN json_build_object('success', false, 'message', SQLERRM);
 END;
 $$;
+
+-- 6. Grant Table Permissions
+GRANT ALL ON merchant_ratings TO anon, authenticated, service_role;
+-- (No sequence needed as ID is UUID, but keeping table grants for PostgREST access)

@@ -26,10 +26,10 @@ export default function AdminBottomNav({ isSidebarOpen, adminProfile }) {
 
     // Static color maps to avoid Tailwind v4 purging dynamic class names
     const activePill = isSuperAdmin
-        ? 'absolute inset-0 bg-red-600 rounded-2xl shadow-lg shadow-red-500/30'
+        ? 'absolute inset-0 bg-blue-900 rounded-2xl shadow-lg shadow-blue-900/30'
         : 'absolute inset-0 bg-blue-600 rounded-2xl shadow-lg shadow-blue-500/30';
     const containerShadow = isSuperAdmin
-        ? 'bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl shadow-red-900/10 rounded-3xl p-1.5 flex items-center justify-around'
+        ? 'bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl shadow-blue-950/10 rounded-3xl p-1.5 flex items-center justify-around'
         : 'bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl shadow-blue-900/10 rounded-3xl p-1.5 flex items-center justify-around';
 
     const handleLogout = () => {

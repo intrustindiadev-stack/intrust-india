@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import StatsCards from '@/components/merchant/StatsCards';
@@ -45,6 +45,10 @@ export default async function MerchantDashboardPage() {
     if (merchant.status === 'rejected') redirect('/merchant-status/rejected');
     if (merchant.status === 'suspended') redirect('/merchant-status/suspended');
 
+    // Comment 3: Use admin client for data queries to bypass RLS on shopping_order_items.
+    // Merchant identity has already been verified above via the authenticated client.
+    const adminDb = createAdminClient();
+
     // 3. Fetch Data in Parallel
     const [couponsRes, soldCouponsRes] = await Promise.all([
         supabase
@@ -71,7 +75,7 @@ export default async function MerchantDashboardPage() {
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'sold'),
         supabase.from('udhari_requests').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'pending'),
         supabase.from('merchant_lockin_balances').select('amount_paise').eq('merchant_id', merchant.id).eq('status', 'active'),
-        supabase.from('shopping_order_items').select('unit_price_paise, quantity').eq('seller_id', merchant.id),
+        adminDb.from('shopping_order_items').select('unit_price_paise, quantity').eq('seller_id', merchant.id),
         supabase.from('shopping_order_groups').select('total_amount_paise').eq('customer_id', user.id)
     ]);
 

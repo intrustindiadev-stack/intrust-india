@@ -260,7 +260,7 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
     );
 };
 
-export default function MerchantOrdersClient({ orders: initialOrders, stats, merchantId, merchantInfo }) {
+export default function MerchantOrdersClient({ orders: initialOrders, stats, merchantId, merchantInfo, error }) {
     const supabase = createClient();
     const [orders, setOrders] = useState(initialOrders);
     const [filter, setFilter] = useState("all");
@@ -333,6 +333,22 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
     return (
         <>
             <div className="space-y-10 pb-20">
+            {/* Comment 7: Error banner — shown when server-side data fetch fails */}
+            {error && (
+                <div className="flex items-start gap-4 p-5 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-2xl">
+                    <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-red-700 dark:text-red-400">Unable to load orders</p>
+                        <p className="text-xs text-red-500 dark:text-red-400/80 mt-0.5">Please try refreshing the page. If the issue persists, <a href="mailto:support@intrust.in" className="underline hover:no-underline">contact support</a>.</p>
+                    </div>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="shrink-0 text-xs font-black text-red-600 dark:text-red-400 hover:underline uppercase tracking-widest"
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
             {/* Header Hero Section */}
             <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
