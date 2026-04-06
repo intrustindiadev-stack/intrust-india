@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, CreditCard, Gift, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 const ADS = [
     {
@@ -12,6 +13,7 @@ const ADS = [
         subtitle: "Tap into the Future of Payments",
         image: "/images/ads/adv_smart_nfc_card.png",
         btnText: "Claim Your Card",
+        href: "/nfc-service",
         icon: CreditCard,
         gradient: "from-cyan-400 to-blue-600",
         shadow: "shadow-cyan-500/40",
@@ -22,6 +24,7 @@ const ADS = [
         subtitle: "Unlock 50% Bonus on Brands",
         image: "/images/ads/adv_digital_gift_cards.png",
         btnText: "Redeem Gift",
+        href: "/gift-cards",
         icon: Gift,
         gradient: "from-fuchsia-500 to-rose-600",
         shadow: "shadow-fuchsia-500/40",
@@ -32,6 +35,7 @@ const ADS = [
         subtitle: "Join the B2B Elite Network",
         image: "/images/ads/adv_intrust_ecosystem.png",
         btnText: "Enter the Hub",
+        href: "/services",
         icon: ShieldCheck,
         gradient: "from-indigo-400 to-purple-600",
         shadow: "shadow-indigo-500/40",
@@ -39,6 +43,7 @@ const ADS = [
 ];
 
 export default function AdvertisementModal() {
+    const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
 
     // Page tracking for Insta-story style direction and looping
@@ -229,7 +234,10 @@ export default function AdvertisementModal() {
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     transition={{ delay: 0.3, type: 'spring' }}
-                                    onClick={() => setIsOpen(false)}
+                                    onClick={() => {
+                                        setIsOpen(false);
+                                        router.push(currentAd.href);
+                                    }}
                                     className={`mt-6 w-full py-4 rounded-2xl bg-white text-black font-extrabold text-[15px] tracking-wide shadow-xl flex items-center justify-center gap-2 overflow-hidden relative group pointer-events-auto max-w-sm`}
                                 >
                                     <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite_ease-in-out] bg-gradient-to-r from-transparent via-black/5 to-transparent skew-x-12" />
