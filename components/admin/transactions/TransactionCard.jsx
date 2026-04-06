@@ -15,6 +15,7 @@ export default function TransactionCard({ txn }) {
         'Wallet': 'bg-amber-50 text-amber-600 border-amber-200',
         'Merchant Wallet': 'bg-teal-50 text-teal-600 border-teal-200',
         'Udhari Settlement': 'bg-rose-50 text-rose-600 border-rose-200',
+        'Wallet Adjustment': 'bg-purple-50 text-purple-700 border-purple-200',
     };
 
     const handleDownloadReceipt = () => {

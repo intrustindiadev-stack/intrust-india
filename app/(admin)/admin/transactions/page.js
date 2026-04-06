@@ -43,17 +43,25 @@ export default async function TransactionsPage({ searchParams }) {
         .select('id, merchant_id, transaction_type, amount_paise, description, created_at, metadata', { count: 'exact' })
         .order('created_at', { ascending: false });
 
-    const [txnResult, ordersResult, walletResult, merchantTxnResult] = await Promise.all([
+    // 5. Wallet adjustments (admin-issued credits/debits)
+    let walletAdjQuery = supabase
+        .from('wallet_adjustment_logs')
+        .select('id, target_user_id, admin_user_id, operation, amount_paise, reason, wallet_type, status, created_at', { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+    const [txnResult, ordersResult, walletResult, merchantTxnResult, walletAdjResult] = await Promise.all([
         txnQuery,
         ordersQuery,
         walletQuery,
         merchantTxnQuery,
+        walletAdjQuery,
     ]);
 
     const rawTxns = txnResult.data || [];
     const rawOrders = ordersResult.data || [];
     const rawWallet = walletResult.data || [];
     const rawMerchantTxns = merchantTxnResult.data || [];
+    const rawWalletAdj = walletAdjResult.data || [];
 
     // ──────────────── FETCH USER PROFILES ────────────────
     const allUserIds = [
@@ -61,6 +69,7 @@ export default async function TransactionsPage({ searchParams }) {
             ...rawTxns.map(t => t.user_id),
             ...rawOrders.map(o => o.user_id),
             ...rawWallet.map(w => w.user_id),
+            ...rawWalletAdj.map(a => a.target_user_id),
         ].filter(Boolean))
     ];
 
@@ -192,6 +201,29 @@ export default async function TransactionsPage({ searchParams }) {
         });
     });
 
+    // Wallet adjustments (admin-issued)
+    rawWalletAdj.forEach(a => {
+        const profile = profileMap[a.target_user_id] || {};
+        const isCredit = a.operation === 'credit';
+        const adjStatus = a.status === 'completed' ? 'Success' : a.status === 'failed' ? 'Failed' : 'Processing';
+
+        unified.push({
+            id: a.id.slice(0, 12),
+            rawId: a.id,
+            user: profile.full_name || profile.email || 'Unknown',
+            email: profile.email || '',
+            role: profile.role || 'user',
+            amountRaw: (a.amount_paise || 0) / 100,
+            amount: `₹${((a.amount_paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+            date: new Date(a.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            dateRaw: a.created_at,
+            status: adjStatus,
+            type: isCredit ? 'Credit' : 'Debit',
+            source: 'Wallet Adjustment',
+            description: a.reason || `Admin ${a.operation} (${a.wallet_type || 'customer'} wallet)`,
+        });
+    });
+
     // Sort all by date (newest first)
     unified.sort((a, b) => new Date(b.dateRaw) - new Date(a.dateRaw));
 
@@ -203,7 +235,7 @@ export default async function TransactionsPage({ searchParams }) {
         filtered = filtered.filter(t =>
             t.user.toLowerCase().includes(s) ||
             t.email.toLowerCase().includes(s) ||
-            t.id.toLowerCase().includes(s) ||
+            (t.id && t.id.toLowerCase().includes(s)) ||
             t.description.toLowerCase().includes(s)
         );
     }
@@ -322,14 +354,15 @@ export default async function TransactionsPage({ searchParams }) {
                     ))}
                     <span className="text-slate-300 self-center">|</span>
                     {/* Source filter pills */}
-                    {['', 'Payment Gateway', 'Gift Card Order', 'Wallet', 'Merchant Wallet'].map(s => (
+                    {['', 'Payment Gateway', 'Gift Card Order', 'Wallet', 'Merchant Wallet', 'Wallet Adjustment'].map(s => (
                         <Link
                             key={`source-${s}`}
                             href={buildUrl({ source: s, page: 1 })}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${sourceFilter === s
-                                ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800'
-                                }`}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${
+                                sourceFilter === s
+                                ? (s === 'Wallet Adjustment' ? 'bg-violet-700 text-white border-violet-700 shadow-md' : 'bg-slate-900 text-white border-slate-900 shadow-md')
+                                : (s === 'Wallet Adjustment' ? 'bg-violet-50 text-violet-700 border-violet-100 hover:border-violet-400' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800')
+                            }`}
                         >
                             {s || 'All Sources'}
                         </Link>

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ShoppingBag, Gift, HelpCircle,
     Sparkles, CheckCircle2, ChevronRight, Check, X,
-    ShieldAlert
+    ShieldAlert, Briefcase
 } from 'lucide-react';
 
 const SERVICE_CATEGORIES = [

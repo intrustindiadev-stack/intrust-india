@@ -11,7 +11,7 @@ export default function BannersClient({ initialBanners }) {
     const [isUploading, setIsUploading] = useState(false);
     const [showAddForm, setShowAddForm] = useState(false);
     const [activeTab, setActiveTab] = useState('customer');
-    
+
     // Form state
     const [newBanner, setNewBanner] = useState({
         title: '',
@@ -40,7 +40,7 @@ export default function BannersClient({ initialBanners }) {
 
     const handleUploadAndSave = async (e) => {
         e.preventDefault();
-        
+
         if (!selectedFile) {
             toast.error('Please select an image for the banner');
             return;
@@ -77,7 +77,7 @@ export default function BannersClient({ initialBanners }) {
 
             // 3. Save to database table
             const newSortOrder = banners.length > 0 ? Math.max(...banners.map(b => b.sort_order || 0)) + 1 : 0;
-            
+
             const { data: dbData, error: dbError } = await supabase
                 .from('platform_banners')
                 .insert([{
@@ -95,15 +95,15 @@ export default function BannersClient({ initialBanners }) {
 
             // Update UI list
             setBanners(prev => [...prev, dbData]);
-            
+
             toast.success('Banner added successfully!', { id: toastId });
-            
+
             // Reset form
             setNewBanner({ title: '', target_url: '' });
             setSelectedFile(null);
             setPreviewUrl(null);
             setShowAddForm(false);
-            
+
         } catch (error) {
             console.error('Banner upload error:', error);
             toast.error(error.message || 'Failed to upload banner', { id: toastId });
@@ -186,21 +186,19 @@ export default function BannersClient({ initialBanners }) {
             <div className="flex bg-slate-100 p-1 rounded-xl w-full sm:w-fit mt-4 flex-shrink-0">
                 <button
                     onClick={() => { setActiveTab('customer'); setShowAddForm(false); }}
-                    className={`flex-1 sm:px-8 py-2.5 rounded-lg text-sm font-bold transition-all ${
-                        activeTab === 'customer'
+                    className={`flex-1 sm:px-8 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'customer'
                             ? 'bg-white text-slate-900 shadow-sm'
                             : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
-                    }`}
+                        }`}
                 >
                     Customer Banners
                 </button>
                 <button
                     onClick={() => { setActiveTab('merchant'); setShowAddForm(false); }}
-                    className={`flex-1 sm:px-8 py-2.5 rounded-lg text-sm font-bold transition-all ${
-                        activeTab === 'merchant'
+                    className={`flex-1 sm:px-8 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'merchant'
                             ? 'bg-white text-slate-900 shadow-sm'
                             : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
-                    }`}
+                        }`}
                 >
                     Merchant Banners
                 </button>
@@ -216,14 +214,14 @@ export default function BannersClient({ initialBanners }) {
                     >
                         <form onSubmit={handleUploadAndSave} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                             <h2 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Upload Banner Image</h2>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* Left: Image Upload */}
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">
                                         Banner Graphic (Recommended: 16:9 or roughly 1200x600px)
                                     </label>
-                                    
+
                                     <div className="relative group rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 transition-colors flex flex-col items-center justify-center h-48 sm:h-64 overflow-hidden cursor-pointer">
                                         <input
                                             type="file"
@@ -232,7 +230,7 @@ export default function BannersClient({ initialBanners }) {
                                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                             disabled={isUploading}
                                         />
-                                        
+
                                         {previewUrl ? (
                                             <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                                         ) : (
@@ -244,7 +242,7 @@ export default function BannersClient({ initialBanners }) {
                                                 <p className="text-xs text-slate-500 mt-1">JPG, PNG, WEBP up to 5MB</p>
                                             </div>
                                         )}
-                                        
+
                                         {/* Overlay for re-upload when image exists */}
                                         {previewUrl && (
                                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -265,7 +263,7 @@ export default function BannersClient({ initialBanners }) {
                                         <input
                                             type="text"
                                             value={newBanner.title}
-                                            onChange={(e) => setNewBanner({...newBanner, title: e.target.value})}
+                                            onChange={(e) => setNewBanner({ ...newBanner, title: e.target.value })}
                                             placeholder="e.g., Diwali Mega Sale 2026"
                                             className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                             required
@@ -285,7 +283,7 @@ export default function BannersClient({ initialBanners }) {
                                             <input
                                                 type="text"
                                                 value={newBanner.target_url}
-                                                onChange={(e) => setNewBanner({...newBanner, target_url: e.target.value})}
+                                                onChange={(e) => setNewBanner({ ...newBanner, target_url: e.target.value })}
                                                 placeholder="e.g., /gift-cards or https://..."
                                                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                                 disabled={isUploading}
@@ -323,7 +321,7 @@ export default function BannersClient({ initialBanners }) {
                 <div className="divide-y divide-slate-100 min-h-[200px]">
                     {(() => {
                         const filteredBanners = banners.filter(b => (b.audience || 'customer') === activeTab);
-                        
+
                         if (filteredBanners.length === 0) {
                             return (
                                 <div className="text-center py-12 text-slate-500">
@@ -345,8 +343,8 @@ export default function BannersClient({ initialBanners }) {
                                 <div className="col-span-4 flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50 h-[80px]">
                                     {banner.image_url ? (
                                         <div className="w-full h-full relative">
-                                            <img 
-                                                src={banner.image_url} 
+                                            <img
+                                                src={banner.image_url}
                                                 alt={banner.title}
                                                 className={`w-full h-full object-cover ${!banner.is_active ? 'opacity-50 grayscale' : ''}`}
                                             />
@@ -376,11 +374,10 @@ export default function BannersClient({ initialBanners }) {
                                 <div className="col-span-2 text-center">
                                     <button
                                         onClick={() => toggleStatus(banner.id, banner.is_active)}
-                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-colors ${
-                                            banner.is_active 
-                                            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' 
-                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
-                                        }`}
+                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-colors ${banner.is_active
+                                                ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                                            }`}
                                     >
                                         {banner.is_active ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
                                         {banner.is_active ? 'Active' : 'Inactive'}
