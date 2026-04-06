@@ -16,7 +16,8 @@ import {
     AlertCircle,
     Calendar,
     X,
-    RotateCcw
+    RotateCcw,
+    Star
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -36,6 +37,12 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
     const [isRescheduling, setIsRescheduling] = useState(false);
     const [rescheduleDate, setRescheduleDate] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
+
+    // Rating State
+    const initialRating = order.merchant_ratings?.[0]?.rating_value || 0;
+    const [rating, setRating] = useState(initialRating);
+    const [hoverRating, setHoverRating] = useState(0);
+    const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
     const items = order.shopping_order_items || [];
     const status = order.delivery_status || 'pending';
@@ -245,6 +252,68 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                     </motion.div>
                 </div>
 
+                {/* Merchant Rating */}
+                {status === 'delivered' && !order.is_platform_order && (
+                    <motion.div
+                        initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}
+                        className={`rounded-2xl p-5 mb-6 ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white border border-slate-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]'}`}
+                    >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <h3 className="font-black text-lg">Rate Your Experience</h3>
+                                <p className={`text-sm font-medium mt-0.5 ${isDark ? 'text-white/50' : 'text-slate-500'}`}>
+                                    How was your experience with {items[0]?.merchants?.business_name || 'the merchant'}?
+                                </p>
+                            </div>
+                            <div className={`flex items-center gap-1.5 p-2 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/[0.05]' : 'bg-slate-50 border-slate-100'}`}>
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        disabled={rating > 0 || isSubmittingRating}
+                                        onClick={async () => {
+                                            if (rating > 0 || isSubmittingRating) return;
+                                            setIsSubmittingRating(true);
+                                            try {
+                                                const { error } = await supabase.from('merchant_ratings').insert({
+                                                    merchant_id: order.merchant_id,
+                                                    customer_id: userId,
+                                                    rating_value: star,
+                                                    shopping_order_group_id: order.id
+                                                });
+                                                if (error) {
+                                                    // Duplicate constraint might fail if they already rated
+                                                    if (error.code !== '23505') throw error;
+                                                }
+                                                setRating(star);
+                                                toast.success("Thank you for rating!");
+                                                sessionStorage.setItem('dismissedRatingOrderId', order.id); // dismiss popup
+                                            } catch (e) {
+                                                console.error('Rating error:', e);
+                                                toast.error("Failed to submit rating");
+                                            } finally {
+                                                setIsSubmittingRating(false);
+                                            }
+                                        }}
+                                        onMouseEnter={() => setHoverRating(star)}
+                                        onMouseLeave={() => setHoverRating(0)}
+                                        className={`p-1 transition-all ${rating === 0 && !isSubmittingRating ? 'hover:scale-110 active:scale-90 cursor-pointer' : 'cursor-default'}`}
+                                    >
+                                        <Star
+                                            size={28}
+                                            className={`transition-colors ${
+                                                star <= (hoverRating || rating)
+                                                    ? 'fill-amber-400 text-amber-400'
+                                                    : isDark ? 'text-white/10' : 'text-slate-200'
+                                            }`}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
                 {/* Items List */}
                 <motion.div
                     initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}
@@ -440,9 +509,11 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                                         try {
                                             const { data, error } = await supabase.rpc('update_order_delivery_v3', {
                                                 p_order_id: order.id,
+                                                p_new_status: order.delivery_status,
+                                                p_tracking_number: order.tracking_number || null,
                                                 p_estimated_at: rescheduleDate,
+                                                p_status_notes: 'Customer requested reschedule',
                                                 p_is_customer: true,
-                                                p_reason: 'Customer requested reschedule'
                                             });
                                             if (error) throw error;
                                             if (!data?.success) throw new Error(data?.message || 'Update failed');

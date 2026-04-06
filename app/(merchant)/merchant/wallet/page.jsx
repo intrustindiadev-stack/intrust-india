@@ -188,7 +188,7 @@ export default function WalletPage() {
                                         {balanceRevealed ? (
                                             <motion.h2
                                                 key="amount"
-                                                className="text-5xl sm:text-6xl font-display font-bold text-slate-800 dark:text-slate-100 tracking-tight"
+                                                className="text-5xl sm:text-6xl font-sans font-bold text-slate-800 dark:text-slate-100 tracking-tight"
                                                 initial={{ y: 20, opacity: 0, filter: 'blur(4px)' }}
                                                 animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
                                                 exit={{ y: -20, opacity: 0, filter: 'blur(4px)' }}
@@ -199,7 +199,7 @@ export default function WalletPage() {
                                         ) : (
                                             <motion.h2
                                                 key="dots"
-                                                className="text-5xl sm:text-6xl font-display font-bold text-slate-800/50 dark:text-slate-100/40 tracking-[0.25em]"
+                                                className="text-5xl sm:text-6xl font-sans font-bold text-slate-800/50 dark:text-slate-100/40 tracking-[0.25em]"
                                                 initial={{ y: 20, opacity: 0, filter: 'blur(4px)' }}
                                                 animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
                                                 exit={{ y: -20, opacity: 0, filter: 'blur(4px)' }}

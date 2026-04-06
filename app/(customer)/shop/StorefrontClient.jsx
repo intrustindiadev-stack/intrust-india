@@ -214,10 +214,7 @@ export default function StorefrontClient({ initialInventory, customer }) {
                                                 <p className="text-sm font-bold text-slate-500 truncate">{merchant.business_name}</p>
                                             </div>
                                             <div className="text-right">
-                                                <div className="flex items-center gap-1 text-amber-500 mb-0.5 justify-end">
-                                                    <Star size={10} fill="currentColor" />
-                                                    <span className="text-[10px] font-black leading-none">{merchant.rating || 'New'}</span>
-                                                </div>
+                                                <div className="flex items-center justify-end mb-0.5" />
                                                 <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1 justify-end">
                                                     <MapPin size={8} /> Local
                                                 </p>

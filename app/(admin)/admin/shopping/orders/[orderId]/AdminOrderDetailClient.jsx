@@ -10,6 +10,8 @@ import {
 import Link from "next/link";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
+import { generateOrderInvoice } from "@/lib/invoiceGenerator";
+import { PLATFORM_CONFIG } from "@/lib/config/platform";
 
 const STATUS_CONFIG = {
     pending:   { label: "Pending",   color: "text-amber-600",  bg: "bg-amber-50",  border: "border-amber-200",  icon: Clock },
@@ -27,10 +29,11 @@ const STEPS = [
     { key: "delivered", label: "Delivered",     icon: CheckCircle2 },
 ];
 
-export default function AdminOrderDetailClient({ order: initialOrder }) {
+export default function AdminOrderDetailClient({ order: initialOrder, sellerDetails }) {
     const supabase = createClient();
     const [order, setOrder] = useState(initialOrder);
     const [updating, setUpdating] = useState(false);
+    const [downloadingPdf, setDownloadingPdf] = useState(false);
     const [error, setError] = useState(null);
     const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || "");
     const [estimatedDeliveryAt, setEstimatedDeliveryAt] = useState(
@@ -39,6 +42,25 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
             : ""
     );
     const [statusNotes, setStatusNotes] = useState(order.status_notes || "");
+
+    const handleDownloadInvoice = () => {
+        setDownloadingPdf(true);
+        try {
+            const resolvedSeller = sellerDetails || PLATFORM_CONFIG.business;
+            generateOrderInvoice({
+                order,
+                items: order.items || [],
+                seller: resolvedSeller,
+                type: "shopping",
+            });
+            toast.success("Invoice downloaded");
+        } catch (err) {
+            console.error("Invoice generation failed:", err);
+            toast.error("Failed to generate invoice");
+        } finally {
+            setDownloadingPdf(false);
+        }
+    };
 
     const cfg = STATUS_CONFIG[order.delivery_status] || STATUS_CONFIG.pending;
     const StatusIcon = cfg.icon;
@@ -403,13 +425,13 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
                 </div>
 
                 <div className="mt-6 flex gap-3">
-                    <Link
-                        href={`/admin/shopping/orders/${order.id}/invoice`}
-                        target="_blank"
-                        className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black flex items-center justify-center gap-2 transition-all"
+                    <button
+                        onClick={handleDownloadInvoice}
+                        disabled={downloadingPdf}
+                        className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-black flex items-center justify-center gap-2 transition-all"
                     >
-                        <Download size={14} /> Customer Invoice
-                    </Link>
+                        <Download size={14} /> {downloadingPdf ? "Generating..." : "Download Invoice"}
+                    </button>
                 </div>
             </div>
         </div>

@@ -15,6 +15,7 @@ export default async function OrderDetailsPage({ params }) {
         .from("shopping_order_groups")
         .select(`
             *,
+            merchant_ratings (rating_value),
             shopping_order_items (
                 *,
                 shopping_products (title, product_images, mrp_paise, suggested_retail_price_paise, gst_percentage, hsn_code),

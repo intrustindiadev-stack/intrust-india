@@ -88,7 +88,7 @@ BEGIN
     -- Basic Authorization Checks
     IF p_is_admin THEN
         -- Admin checks (e.g., must be in app_admins)
-        IF NOT EXISTS (SELECT 1 FROM public.app_admins WHERE id = v_user_id) THEN
+        IF NOT EXISTS (SELECT 1 FROM public.app_admins WHERE user_id = v_user_id) THEN
             RETURN json_build_object('success', false, 'message', 'Unauthorized: Admin access required');
         END IF;
     ELSIF p_is_merchant THEN
