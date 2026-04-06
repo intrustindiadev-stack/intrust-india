@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { motion } from 'framer-motion';
+import { PLATFORM_CONFIG } from '@/lib/config/platform';
 
 export default function MerchantSuspendedPage() {
     const router = useRouter();
@@ -107,9 +108,9 @@ export default function MerchantSuspendedPage() {
                             <p className="text-slate-700 dark:text-blue-300/80 text-sm mb-4 font-medium">
                                 Our support team is here to assist you in resolving this issue. Please reach out with your account details.
                             </p>
-                            <a href="mailto:support@intrust.com" className="inline-flex items-center text-blue-600 dark:text-blue-400 font-bold text-sm hover:underline transition-all">
+                            <a href={`mailto:${PLATFORM_CONFIG.business.email}`} className="inline-flex items-center text-blue-600 dark:text-blue-400 font-bold text-sm hover:underline transition-all">
                                 <span className="material-icons-round text-sm mr-2">email</span>
-                                support@intrust.com
+                                {PLATFORM_CONFIG.business.email}
                             </a>
                         </div>
                     </div>
@@ -118,7 +119,7 @@ export default function MerchantSuspendedPage() {
                     <div className="px-8 pb-8 pt-4 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
                         <div className="flex flex-col sm:flex-row gap-4">
                             <button
-                                onClick={() => window.location.href = 'mailto:support@intrust.com?subject=Merchant Account Suspended'}
+                                onClick={() => window.location.href = `mailto:${PLATFORM_CONFIG.business.email}?subject=Merchant Account Suspended`}
                                 className="flex-1 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl shadow-lg shadow-[#D4AF37]/20 hover:bg-opacity-90 transition-all flex items-center justify-center gap-2 gold-glow"
                             >
                                 <span className="material-icons-round text-sm">support_agent</span>

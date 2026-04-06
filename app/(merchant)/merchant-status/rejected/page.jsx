@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { XCircle, Mail, Home, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { PLATFORM_CONFIG } from '@/lib/config/platform';
 
 export default function MerchantRejectedPage() {
     const router = useRouter();
@@ -130,7 +131,7 @@ export default function MerchantRejectedPage() {
                                 </button>
                             ) : (
                                 <button
-                                    onClick={() => window.location.href = 'mailto:support@intrust.com'}
+                                    onClick={() => window.location.href = `mailto:${PLATFORM_CONFIG.business.email}`}
                                     className="flex-1 py-4 bg-[#D4AF37] text-white dark:text-[#020617] font-bold rounded-xl shadow-lg shadow-[#D4AF37]/20 hover:bg-opacity-90 transition-all flex items-center justify-center gap-2 gold-glow"
                                 >
                                     <Mail size={20} />

@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import { format } from "date-fns";
+import { PLATFORM_CONFIG } from "@/lib/config/platform";
 
 const InvoiceClient = ({ order, items, sellerDetails }) => {
     
@@ -15,12 +16,16 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
     }, []);
 
     // Helper for currency formatting
+    // Use safe fallbacks for order data to prevent crashes
+    const safeOrderId = order?.id || "unknown";
+    const safeCreatedAt = order?.created_at ? new Date(order.created_at) : new Date();
+    
+    const invoiceNumber = `INV-${safeCreatedAt.getFullYear()}-${safeOrderId.slice(0, 8).toUpperCase()}`;
+    const invoiceDate = format(safeCreatedAt, "dd MMM, yyyy");
+
     const formatCurrency = (paise) => {
         return (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
-
-    const invoiceNumber = `INV-${new Date(order.created_at).getFullYear()}-${order.id.slice(0, 8).toUpperCase()}`;
-    const invoiceDate = format(new Date(order.created_at), "dd MMM, yyyy");
 
     // Perform tax calculations assuming prices are INCLUSIVE of GST
     let totalTaxableValue = 0;
@@ -29,10 +34,13 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
     let grandTotal = 0;
 
     const processedItems = items.map((item, index) => {
+        if (item.shopping_products?.gst_percentage === undefined || item.shopping_products?.gst_percentage === null) {
+            console.warn('GST percentage missing for item:', item);
+        }
         const gstRate = item.shopping_products?.gst_percentage || 0;
         const hsnCode = item.shopping_products?.hsn_code || "-";
-        const quantity = item.quantity;
-        const totalAmountInclusive = item.total_price_paise; // selling price * qty
+        const quantity = item.quantity || 1;
+        const totalAmountInclusive = (item.unit_price_paise || 0) * quantity; // unit price * qty
         
         // Reverse calculate base price: Base = Total / (1 + (GST / 100))
         const divisor = 1 + (gstRate / 100);
@@ -62,7 +70,7 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
         };
     });
 
-    const deliveryFee = order.delivery_fee_paise || 5000;
+    const deliveryFee = order.delivery_fee_paise ?? 0;
     grandTotal += deliveryFee;
 
     return (
@@ -77,8 +85,8 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
                         <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Original for Recipient</p>
                     </div>
                     <div className="text-right">
-                        <div className="text-2xl font-black text-emerald-600 mb-1">InTrust App</div>
-                        <p className="text-xs text-slate-500 font-medium">www.intrust.com.in</p>
+                        <div className="text-2xl font-black text-emerald-600 mb-1">InTrust India</div>
+                        <p className="text-xs text-slate-500 font-medium">{PLATFORM_CONFIG.business.website}</p>
                     </div>
                 </div>
 
@@ -126,7 +134,7 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
                                 <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider rounded-tl-lg">S.No</th>
                                 <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider">Description</th>
                                 <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider">HSN/SAC</th>
-                                <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-widertext-right">Qty</th>
+                                <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-right">Qty</th>
                                 <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-right">Taxable Value</th>
                                 <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-right">CGST</th>
                                 <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-right">SGST</th>

@@ -74,7 +74,18 @@ export async function GET(request) {
             };
         });
 
-        return NextResponse.json({ merchants: enriched });
+        // Calculate total subscription revenue from merchant_transactions
+        const { data: subscriptionStats, error: statsError } = await admin
+            .from('merchant_transactions')
+            .select('amount_paise')
+            .eq('transaction_type', 'subscription');
+
+        const totalSubscriptionRevenuePaise = (subscriptionStats || []).reduce((acc, curr) => acc + Math.abs(curr.amount_paise), 0);
+
+        return NextResponse.json({ 
+            merchants: enriched,
+            totalSubscriptionRevenuePaise
+        });
     } catch (err) {
         console.error('[API] Admin Merchants GET Error:', err);
         return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });

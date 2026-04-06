@@ -17,7 +17,7 @@ export default async function OrderDetailsPage({ params }) {
             *,
             shopping_order_items (
                 *,
-                shopping_products (title, product_images, mrp_paise, suggested_retail_price_paise),
+                shopping_products (title, product_images, mrp_paise, suggested_retail_price_paise, gst_percentage, hsn_code),
                 merchants (business_name, business_address, business_phone, gst_number)
             )
         `)

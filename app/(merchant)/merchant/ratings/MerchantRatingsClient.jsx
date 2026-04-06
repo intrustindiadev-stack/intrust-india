@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Star, MessageSquare, User } from 'lucide-react';
+import { Star, MessageSquare, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createClient } from '@/lib/supabaseClient';
 
 function StarRow({ star, count, total }) {
     const pct = total > 0 ? Math.round((count / total) * 100) : 0;
@@ -70,10 +71,10 @@ function RatingCard({ rating }) {
                         </p>
                     )}
 
-                    {/* Phone (private, visible only to merchant) */}
+                    {/* Masked Phone (private, visible only to merchant) */}
                     {profile?.phone && (
                         <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-600 mt-2">
-                            📞 {profile.phone}
+                            📞 ****{profile.phone.slice(-4)}
                         </p>
                     )}
                 </div>
@@ -82,10 +83,49 @@ function RatingCard({ rating }) {
     );
 }
 
-export default function MerchantRatingsClient({ ratings, avgRating, totalRatings, distribution }) {
+export default function MerchantRatingsClient({ initialRatings, avgRating, totalRatings, distribution, merchantId }) {
+    const [ratings, setRatings] = useState(initialRatings);
     const [filter, setFilter] = useState(0); // 0 = all
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(initialRatings.length === 50);
+    const supabase = createClient();
 
     const filtered = filter === 0 ? ratings : ratings.filter(r => r.rating_value === filter);
+
+    const loadMore = async () => {
+        if (loadingMore || !hasMore) return;
+        setLoadingMore(true);
+
+        try {
+            const { data, error } = await supabase
+                .from('merchant_ratings')
+                .select(`
+                    id,
+                    rating_value,
+                    feedback_text,
+                    created_at,
+                    shopping_order_group_id,
+                    customer_id,
+                    user_profiles:customer_id (full_name, avatar_url)
+                `)
+                .eq('merchant_id', merchantId)
+                .order('created_at', { ascending: false })
+                .range(ratings.length, ratings.length + 49);
+
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                setRatings(prev => [...prev, ...data]);
+                if (data.length < 50) setHasMore(false);
+            } else {
+                setHasMore(false);
+            }
+        } catch (err) {
+            console.error('Error loading more ratings:', err);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#09090b] p-4 md:p-8">
@@ -99,10 +139,10 @@ export default function MerchantRatingsClient({ ratings, avgRating, totalRatings
 
                 {/* Summary Card */}
                 <div className="bg-white dark:bg-[#13161f] rounded-2xl p-5 border border-slate-100 dark:border-white/[0.05] shadow-sm">
-                    {avgRating ? (
+                    {totalRatings > 0 ? (
                         <div className="flex gap-6 items-center">
                             <div className="text-center shrink-0">
-                                <p className="text-5xl font-black text-slate-900 dark:text-white">{avgRating}</p>
+                                <p className="text-5xl font-black text-slate-900 dark:text-white">{parseFloat(avgRating).toFixed(1)}</p>
                                 <div className="flex justify-center gap-0.5 mt-1">
                                     {[1, 2, 3, 4, 5].map(s => (
                                         <Star
@@ -149,7 +189,7 @@ export default function MerchantRatingsClient({ ratings, avgRating, totalRatings
                 )}
 
                 {/* Ratings List */}
-                <div className="space-y-3">
+                <div className="space-y-4">
                     <AnimatePresence mode="popLayout">
                         {filtered.length > 0 ? (
                             filtered.map(r => <RatingCard key={r.id} rating={r} />)
@@ -164,6 +204,26 @@ export default function MerchantRatingsClient({ ratings, avgRating, totalRatings
                             </motion.div>
                         )}
                     </AnimatePresence>
+
+                    {/* Pagination */}
+                    {hasMore && filter === 0 && (
+                        <div className="flex justify-center pt-2">
+                            <button
+                                onClick={loadMore}
+                                disabled={loadingMore}
+                                className="px-6 py-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-xs font-black text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/10 transition-all flex items-center gap-2 shadow-sm"
+                            >
+                                {loadingMore ? (
+                                    <>
+                                        <Loader2 size={14} className="animate-spin" />
+                                        Loading...
+                                    </>
+                                ) : (
+                                    'Load More Ratings'
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </div>
 
             </div>

@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 const STATUS_CONFIG = {
     pending:   { label: "Pending",   color: "text-amber-600",  bg: "bg-amber-50",  border: "border-amber-200",  icon: Clock },
@@ -29,13 +29,16 @@ const STEPS = [
 
 export default function AdminOrderDetailClient({ order: initialOrder }) {
     const supabase = createClient();
-    const router = useRouter();
     const [order, setOrder] = useState(initialOrder);
     const [updating, setUpdating] = useState(false);
     const [error, setError] = useState(null);
     const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || "");
-    const [estimatedDeliveryAt, setEstimatedDeliveryAt] = useState("");
-    const [statusNotes, setStatusNotes] = useState("");
+    const [estimatedDeliveryAt, setEstimatedDeliveryAt] = useState(
+        order.estimated_delivery_at 
+            ? format(new Date(order.estimated_delivery_at), "yyyy-MM-dd'T'HH:mm") 
+            : ""
+    );
+    const [statusNotes, setStatusNotes] = useState(order.status_notes || "");
 
     const cfg = STATUS_CONFIG[order.delivery_status] || STATUS_CONFIG.pending;
     const StatusIcon = cfg.icon;
@@ -45,7 +48,7 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
 
     // Financial calculations
     const itemsTotal = (order.items || []).reduce((sum, i) => sum + (i.total_price_paise || 0), 0);
-    const deliveryFee = order.delivery_fee_paise || 5000;
+    const deliveryFee = order.delivery_fee_paise ?? 0;
     const grandTotal = itemsTotal + deliveryFee;
     const totalProfit = (order.items || []).reduce((sum, i) => sum + (i.profit_paise || 0), 0);
 
@@ -56,7 +59,7 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
             const { data, error: rpcError } = await supabase.rpc("update_order_delivery_v3", {
                 p_order_id: order.id,
                 p_new_status: newStatus,
-                p_tracking_number: newStatus === 'shipped' ? trackingNumber : order.tracking_number,
+                p_tracking_number: trackingNumber,
                 p_estimated_at: estimatedDeliveryAt || null,
                 p_status_notes: statusNotes || null,
                 p_is_admin: true
@@ -67,11 +70,12 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
             setOrder(prev => ({ 
                 ...prev, 
                 delivery_status: newStatus,
-                tracking_number: newStatus === 'shipped' ? trackingNumber : prev.tracking_number,
+                tracking_number: trackingNumber,
                 estimated_delivery_at: estimatedDeliveryAt || prev.estimated_delivery_at,
                 status_notes: statusNotes || prev.status_notes
             }));
             
+            toast.success(newStatus === order.delivery_status ? "Delivery info saved" : `Status updated to ${newStatus}`);
             setStatusNotes(""); // Clear notes after update
         } catch (err) {
             console.error("Update error:", err);
@@ -400,7 +404,7 @@ export default function AdminOrderDetailClient({ order: initialOrder }) {
 
                 <div className="mt-6 flex gap-3">
                     <Link
-                        href={`/orders/${order.id}/invoice`}
+                        href={`/admin/shopping/orders/${order.id}/invoice`}
                         target="_blank"
                         className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black flex items-center justify-center gap-2 transition-all"
                     >

@@ -14,6 +14,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import StoreCreditRequestsTab from "./StoreCreditRequestsTab";
 import { generateOrderInvoice } from "@/lib/invoiceGenerator";
+import { toast } from "react-hot-toast";
 
 const STATUS_CONFIG = {
     pending: { label: "Pending", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20 dark:border-amber-500/30", icon: Clock },

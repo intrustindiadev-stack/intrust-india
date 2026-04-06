@@ -1,4 +1,5 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
+import { getAmountPaise, COMPLETED_STATUSES } from '@/lib/utils/transactionHelpers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import AdminClock from './AdminClock';
@@ -44,13 +45,13 @@ export default async function AdminDashboard() {
         // 1. Total Revenue (from transactions table + shopping_order_groups)
         Promise.all([
             supabase.from('transactions')
-                .select('total_paid_paise')
-                .in('status', ['completed', 'SUCCESS']),
+                .select('total_paid_paise, amount')
+                .in('status', COMPLETED_STATUSES),
             supabase.from('shopping_order_groups')
                 .select('total_amount_paise')
                 .eq('status', 'completed')
         ]).then(([txns, groups]) => {
-            const txnRev = (txns.data || []).reduce((sum, tx) => sum + (Number(tx.total_paid_paise) || 0), 0);
+            const txnRev = (txns.data || []).reduce((sum, tx) => sum + getAmountPaise(tx), 0);
             const groupRev = (groups.data || []).reduce((sum, g) => sum + (Number(g.total_amount_paise) || 0), 0);
             return txnRev + groupRev;
         }),
@@ -76,7 +77,7 @@ export default async function AdminDashboard() {
         Promise.all([
             supabase.from('transactions')
                 .select('id')
-                .in('status', ['completed', 'SUCCESS'])
+                .in('status', COMPLETED_STATUSES)
                 .gte('created_at', new Date().toISOString().split('T')[0]),
             supabase.from('shopping_order_groups')
                 .select('id')
@@ -89,7 +90,7 @@ export default async function AdminDashboard() {
             // Gift Card Transactions
             supabase.from('transactions')
                 .select('id, user_id, coupon_id, total_paid_paise, amount, created_at, status')
-                .in('status', ['completed', 'SUCCESS'])
+                .in('status', COMPLETED_STATUSES)
                 .order('created_at', { ascending: false })
                 .limit(10),
             // Shop Orders
@@ -106,7 +107,7 @@ export default async function AdminDashboard() {
             const formattedTxns = txns.map(t => ({
                 id: t.id,
                 user_id: t.user_id,
-                amount: t.total_paid_paise || t.amount,
+                amount: getAmountPaise(t),
                 created_at: t.created_at,
                 type: 'GIFT_CARD',
                 coupon_id: t.coupon_id

@@ -1,5 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
 import { notFound } from "next/navigation";
+import { PLATFORM_CONFIG } from "@/lib/config/platform";
+import { getPlatformConfig } from "@/lib/config/platform-server";
 import InvoiceClient from "./InvoiceClient";
 
 export default async function InvoicePage({ params }) {
@@ -25,9 +27,9 @@ export default async function InvoicePage({ params }) {
                 ),
                 merchants (
                     business_name, 
-                     ব্যবসা_address, 
+                    business_address, 
                     business_phone, 
-                    gstin
+                    gst_number
                 )
             )
         `)
@@ -43,14 +45,9 @@ export default async function InvoicePage({ params }) {
     // Determine the seller details
     let sellerDetails = null;
     if (order.is_platform_order) {
-        // Platform products - Company details
-        sellerDetails = {
-            name: "InTrust Official",
-            address: "123 Business Avenue, Tech Park, City, 400001",
-            phone: "+91 9876543210",
-            gstin: "22AAAAA0000A1Z5", // Example Company GSTIN
-            pan: "AAAAA0000A"
-        };
+        // Platform products - Dynamic details from database
+        const platformConfig = await getPlatformConfig();
+        sellerDetails = platformConfig.business;
     } else {
         // Merchant Products
         const merchant = order.shopping_order_items?.[0]?.merchants;
@@ -59,7 +56,7 @@ export default async function InvoicePage({ params }) {
                 name: merchant.business_name || "Merchant",
                 address: merchant.business_address || "Address not provided",
                 phone: merchant.business_phone || "",
-                gstin: merchant.gstin || "Unregistered",
+                gstin: merchant.gst_number || "Unregistered",
             };
         }
     }

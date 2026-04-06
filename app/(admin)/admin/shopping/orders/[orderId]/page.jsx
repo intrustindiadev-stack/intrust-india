@@ -14,9 +14,19 @@ export default async function AdminOrderDetailPage({ params }) {
         p_order_id: orderId
     });
 
-    if (error || !data?.success) {
-        console.error('Error fetching order detail:', error || data?.error);
-        notFound();
+    if (error) {
+        console.error('RPC Error fetching order detail:', error);
+        throw new Error('Failed to fetch order details from database.');
+    }
+
+    if (!data?.success) {
+        if (data?.message === 'Order not found') {
+            console.warn('Order not found:', orderId);
+            notFound();
+        } else {
+            console.error('Logic error fetching order detail:', data?.message);
+            throw new Error(data?.message || 'Failed to fetch order details.');
+        }
     }
 
     return <AdminOrderDetailClient order={data.order} />;

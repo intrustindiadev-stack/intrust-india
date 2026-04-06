@@ -17,7 +17,25 @@ export default async function MerchantRatingsPage() {
 
     if (!merchant) redirect('/merchant/dashboard');
 
-    // Fetch all ratings for this merchant with customer info
+    // 1. Fetch pre-computed stats from view
+    const { data: stats } = await supabase
+        .from('merchant_rating_stats')
+        .select('avg_rating, total_ratings')
+        .eq('merchant_id', merchant.id)
+        .single();
+
+    // 2. Fetch star distribution separately (since view doesn't have it)
+    const { data: distributionData } = await supabase
+        .from('merchant_ratings')
+        .select('rating_value')
+        .eq('merchant_id', merchant.id);
+    
+    const distribution = [5, 4, 3, 2, 1].map(star => ({
+        star,
+        count: (distributionData || []).filter(r => r.rating_value === star).length,
+    }));
+
+    // 3. Fetch first 50 ratings
     const { data: ratings } = await supabase
         .from('merchant_ratings')
         .select(`
@@ -27,28 +45,19 @@ export default async function MerchantRatingsPage() {
             created_at,
             shopping_order_group_id,
             customer_id,
-            user_profiles:customer_id (full_name, avatar_url, phone)
+            user_profiles:customer_id (full_name, avatar_url)
         `)
         .eq('merchant_id', merchant.id)
-        .order('created_at', { ascending: false });
-
-    // Summary
-    const totalRatings = (ratings || []).length;
-    const avgRating = totalRatings
-        ? (ratings.reduce((acc, r) => acc + r.rating_value, 0) / totalRatings).toFixed(1)
-        : null;
-    
-    const distribution = [5, 4, 3, 2, 1].map(star => ({
-        star,
-        count: (ratings || []).filter(r => r.rating_value === star).length,
-    }));
+        .order('created_at', { ascending: false })
+        .limit(50);
 
     return (
         <MerchantRatingsClient
-            ratings={ratings || []}
-            avgRating={avgRating}
-            totalRatings={totalRatings}
+            initialRatings={ratings || []}
+            avgRating={stats?.avg_rating || 0}
+            totalRatings={stats?.total_ratings || 0}
             distribution={distribution}
+            merchantId={merchant.id}
         />
     );
 }

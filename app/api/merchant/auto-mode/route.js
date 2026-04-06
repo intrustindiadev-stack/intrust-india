@@ -1,34 +1,31 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
     try {
-        const cookieStore = await cookies();
-        
-        // Use anon key for getting Auth Session securely
-        const supabaseAuth = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-            {
-                cookies: { get(name) { return cookieStore.get(name)?.value; } }
-            }
-        );
+        const authHeader = request.headers.get('Authorization');
+        const token = authHeader?.replace('Bearer ', '');
 
-        const { data: { session } } = await supabaseAuth.auth.getSession();
-        
-        if (!session) {
+        let user = null;
+
+        if (token) {
+            const admin = createAdminClient();
+            const { data: { user: tokenUser }, error: tokenError } = await admin.auth.getUser(token);
+            if (!tokenError) user = tokenUser;
+        }
+
+        if (!user) {
+            const supabaseAuth = await createServerSupabaseClient();
+            const { data: { user: cookieUser } } = await supabaseAuth.auth.getUser();
+            user = cookieUser;
+        }
+
+        if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Use service role for database writes to bypass RLS restrictions
-        const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY,
-            {
-                cookies: { get(name) { return cookieStore.get(name)?.value; } }
-            }
-        );
+        // Use admin client for database writes safely
+        const supabase = createAdminClient();
 
         const reqData = await request.json();
         const { action } = reqData; // 'activate' or 'deactivate'
@@ -37,7 +34,7 @@ export async function POST(request) {
         const { data: merchant, error: merchantError } = await supabase
             .from('merchants')
             .select('id, auto_mode_status, auto_mode_months_paid, wallet_balance_paise')
-            .eq('user_id', session.user.id)
+            .eq('user_id', user.id)
             .single();
 
         if (merchantError) {
@@ -62,55 +59,30 @@ export async function POST(request) {
             const isFirstMonth = (merchant.auto_mode_months_paid || 0) === 0;
             const subscriptionPrice = isFirstMonth ? 999 : 1999;
             const pricePaise = subscriptionPrice * 100;
-            
-            if ((merchant.wallet_balance_paise || 0) < pricePaise) {
-                return NextResponse.json({ error: `Insufficient wallet balance. Need ₹${subscriptionPrice}` }, { status: 400 });
+
+            // Call atomic RPC for balance check, deduction, status update, and transaction logging
+            const { data: rpcData, error: rpcError } = await supabase.rpc('merchant_activate_auto_mode', {
+                p_merchant_id: merchant.id,
+                p_price_paise: pricePaise,
+                p_description: `Auto Mode Subscription (${isFirstMonth ? '1st Month' : 'Renewal'})`,
+                p_metadata: { reference_id: `AUTO_${Date.now()}` }
+            });
+
+            if (rpcError) {
+                console.error('RPC Error:', rpcError);
+                return NextResponse.json({ error: 'Failed to process subscription' }, { status: 500 });
             }
 
-            const newBalancePaise = merchant.wallet_balance_paise - pricePaise;
-            
-            const validUntil = new Date();
-            validUntil.setDate(validUntil.getDate() + 30);
-
-            // Using direct sequence of updates. For perfect atomicity, an RPC is optimal, 
-            // but this backend logic ensures service-role privileges handle it synchronously.
-            
-            // Deduct & update status
-            const { error: updateError } = await supabase
-                .from('merchants')
-                .update({
-                    wallet_balance_paise: newBalancePaise,
-                    auto_mode_status: 'active',
-                    auto_mode_months_paid: (merchant.auto_mode_months_paid || 0) + 1,
-                    auto_mode_valid_until: validUntil.toISOString()
-                })
-                .eq('id', merchant.id);
-
-            if (updateError) throw updateError;
-
-            // Log Transaction
-            const { error: txError } = await supabase
-                .from('merchant_transactions')
-                .insert({
-                    merchant_id: merchant.id,
-                    amount_paise: -pricePaise,
-                    transaction_type: 'subscription',
-                    description: `Auto Mode Subscription (${isFirstMonth ? '1st Month' : 'Renewal'})`,
-                    balance_after_paise: newBalancePaise,
-                    metadata: { reference_id: `AUTO_${Date.now()}` }
-                });
-
-            if (txError) {
-                console.error('Failed to log tx in API:', txError);
-                // Non-fatal if the update succeeded, but bad for ledger.
+            if (!rpcData.success) {
+                return NextResponse.json({ error: rpcData.message }, { status: 400 });
             }
 
             return NextResponse.json({ 
                 success: true, 
-                message: 'Auto Mode activated successfully',
-                newBalance: newBalancePaise / 100,
-                validUntil: validUntil.toISOString(),
-                months_paid: (merchant.auto_mode_months_paid || 0) + 1
+                message: rpcData.message,
+                newBalance: rpcData.new_balance / 100,
+                validUntil: rpcData.valid_until,
+                months_paid: rpcData.months_paid
             });
         }
 

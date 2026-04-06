@@ -85,12 +85,13 @@ export default function AdminOrdersClient({ orders: initialOrders, stats: initia
             console.log('Updating order status:', { orderId, newStatus, tracking, estAt, notes });
             
             // Standard status update
-            const { data, error } = await supabase.rpc("update_order_status_v2", {
+            const { data, error } = await supabase.rpc("update_order_delivery_v3", {
                 p_order_id: orderId,
-                p_delivery_status: newStatus,
+                p_new_status: newStatus,
                 p_tracking_number: tracking,
-                p_estimated_delivery_at: estAt,
-                p_status_notes: notes
+                p_estimated_at: estAt,
+                p_status_notes: notes,
+                p_is_admin: true
             });
 
             if (error) {

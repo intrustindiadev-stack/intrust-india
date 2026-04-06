@@ -20,48 +20,41 @@ export default function RatingPromptModal() {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session?.user) return;
 
-            // Fetch the latest delivered order that doesn't have a rating linked to its group
-            // and where the user hasn't rated this merchant in the last 7 days.
-            // Using a single query with NOT EXISTS is cleaner, but we can do a robust client-side check.
-
-            const { data: recentOrders, error } = await supabase
+            const { data: orders, error } = await supabase
                 .from('shopping_order_groups')
                 .select(`
                     id, 
                     merchant_id, 
-                    total_amount_paise,
                     delivered_at,
-                    merchants:merchant_id(business_name)
+                    merchants:merchant_id(business_name),
+                    merchant_ratings(id)
                 `)
                 .eq('customer_id', session.user.id)
                 .eq('delivery_status', 'delivered')
                 .order('delivered_at', { ascending: false })
                 .limit(5);
 
-            if (error || !recentOrders || recentOrders.length === 0) return;
+            if (error || !orders || orders.length === 0) return;
 
-            // Show prompt for the first unrated delivered order
-            for (const order of recentOrders) {
-                // Check if this specific order is already rated
-                const { data: orderRated } = await supabase
-                    .from('merchant_ratings')
-                    .select('id')
-                    .eq('shopping_order_group_id', order.id)
-                    .single();
-                
-                if (orderRated) continue;
+            const dismissedOrderId = sessionStorage.getItem('dismissedRatingOrderId');
+            
+            const pendingOrder = orders.find(order => 
+                order.id !== dismissedOrderId && (!order.merchant_ratings || order.merchant_ratings.length === 0)
+            );
 
-                // This order hasn't been rated yet — prompt the user
-                setPendingRatingOrder(order);
+            if (pendingOrder) {
+                setPendingRatingOrder(pendingOrder);
                 setIsVisible(true);
-                break;
             }
         };
 
         checkPendingRatings();
-    }, [supabase]);
+    }, []);
 
     const handleDismiss = () => {
+        if (pendingRatingOrder) {
+            sessionStorage.setItem('dismissedRatingOrderId', pendingRatingOrder.id);
+        }
         setIsVisible(false);
     };
 
@@ -119,6 +112,9 @@ export default function RatingPromptModal() {
                     <h3 className="font-bold text-gray-900 dark:text-white text-lg">Rate your experience</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         How was your recent order from <span className="font-semibold text-gray-800 dark:text-gray-200">{pendingRatingOrder.merchants?.business_name || 'the merchant'}</span>?
+                    </p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 italic">
+                        Note: Your contact info may be shared with the merchant for feedback follow-up.
                     </p>
 
                     <div className="flex gap-2 justify-center mt-5 mb-4">

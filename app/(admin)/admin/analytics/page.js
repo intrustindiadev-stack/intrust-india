@@ -4,6 +4,7 @@ import AnalyticsPieCharts from "./AnalyticsPieCharts";
 import AdminShoppingAnalytics from "./AdminShoppingAnalytics";
 import AdminActivityFeed from "./AdminActivityFeed";
 import { createAdminClient } from '@/lib/supabaseServer';
+import { getAmountPaise, COMPLETED_STATUSES } from '@/lib/utils/transactionHelpers';
 
 
 export const dynamic = 'force-dynamic';
@@ -45,18 +46,18 @@ export default async function AnalyticsPage() {
 
 
     // Valid transactions (successful payments)
-    const validTransactions = transactions.filter(t => t.status === 'completed' || t.status === 'SUCCESS');
+    const validTransactions = transactions.filter(t => COMPLETED_STATUSES.includes(t.status));
 
     // Quick Stats Calculation
-    // NOTE: `amount` is stored in rupees (e.g. 500.00), total_paid_paise is null for most rows
-    const totalRevenue = validTransactions.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const totalRevenue = validTransactions.reduce((acc, curr) => acc + getAmountPaise(curr), 0);
     const totalUsers = (users || []).filter(u => !['admin', 'super_admin'].includes(u.role)).length;
     const activeMerchants = (merchants || []).filter(m => m.status === 'approved' || m.status === 'verified').length;
     const totalTransactions = validTransactions.length;
 
 
     // Formatting Helpers
-    const formatCurrency = (amount) => {
+    const formatCurrency = (amountPaise) => {
+        const amount = amountPaise / 100;
         if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(2)}Cr`;
         if (amount >= 100000) return `₹${(amount / 100000).toFixed(2)}L`;
         if (amount >= 1000) return `₹${(amount / 1000).toFixed(2)}K`;
@@ -108,7 +109,7 @@ export default async function AnalyticsPage() {
         { title: "Total Users", value: totalUsers.toLocaleString('en-IN'), change: "Live", trend: "up", icon: Users, color: "text-blue-600", bg: "bg-blue-100" },
         { title: "Active Merchants", value: activeMerchants.toLocaleString('en-IN'), change: "Live", trend: "up", icon: Store, color: "text-purple-600", bg: "bg-purple-100" },
         { title: "Transactions", value: totalTransactions.toLocaleString('en-IN'), change: "Live", trend: "up", icon: Activity, color: "text-orange-600", bg: "bg-orange-100" },
-        { title: "Shopping Revenue", value: formatCurrency(totalShoppingRevenue / 100), change: "Live", trend: "up", icon: ShoppingBag, color: "text-amber-600", bg: "bg-amber-100" },
+        { title: "Shopping Revenue", value: formatCurrency(totalShoppingRevenue), change: "Live", trend: "up", icon: ShoppingBag, color: "text-amber-600", bg: "bg-amber-100" },
     ];
 
     // User Growth Data (Last 14 days)
@@ -117,15 +118,15 @@ export default async function AnalyticsPage() {
         return { date: day.display, users: count + 1 };
     });
 
-    // Revenue Streams — amount is in rupees; shopping revenue is in paise → convert
-    const gcSales = validTransactions.filter(t => t.coupon_id).reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
-    const otherSales = validTransactions.filter(t => !t.coupon_id).reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
-    const shoppingRev = Math.round(totalShoppingRevenue / 100); // paise → rupees
+    // Revenue Streams — all values converted to rupees for charting if necessary, but consistent units preferred
+    const gcSales = validTransactions.filter(t => t.coupon_id).reduce((acc, t) => acc + getAmountPaise(t), 0);
+    const otherSales = validTransactions.filter(t => !t.coupon_id).reduce((acc, t) => acc + getAmountPaise(t), 0);
+    const shoppingRev = totalShoppingRevenue;
 
     const revenueSourceData = [
-        { name: 'Gift Card Sales', value: Math.round(gcSales) || 500 },
-        { name: 'Other Sales', value: Math.round(otherSales) || 500 },
-        { name: 'Shopping Revenue', value: shoppingRev || 500 },
+        { name: 'Gift Card Sales', value: Math.round(gcSales / 100) || 500 },
+        { name: 'Other Sales', value: Math.round(otherSales / 100) || 500 },
+        { name: 'Shopping Revenue', value: Math.round(shoppingRev / 100) || 500 },
     ];
 
 
@@ -140,9 +141,9 @@ export default async function AnalyticsPage() {
     ];
 
     // 2. Transaction Status Distribution (from transactions table)
-    const successTx = transactions.filter(t => t.status === 'completed' || t.status === 'SUCCESS').length;
+    const successTx = transactions.filter(t => COMPLETED_STATUSES.includes(t.status)).length;
     const failedTx = transactions.filter(t => t.status === 'failed' || t.status === 'FAILED' || t.status === 'ABORTED').length;
-    const pendingTx = transactions.filter(t => !['completed', 'SUCCESS', 'failed', 'FAILED', 'ABORTED'].includes(t.status)).length;
+    const pendingTx = transactions.filter(t => ![...COMPLETED_STATUSES, 'failed', 'FAILED', 'ABORTED'].includes(t.status)).length;
     const orderStatusData = [
         { name: 'Success', value: successTx || 1 },
         { name: 'Failed', value: failedTx || 1 },
@@ -170,9 +171,9 @@ export default async function AnalyticsPage() {
             id: tx.id,
             user: user?.full_name || user?.email || 'Unknown User',
             time: new Date(tx.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-            // amount is in rupees already (e.g. "500.00")
-            amount: `₹${Number(tx.amount || 0).toLocaleString('en-IN')}`,
-            status: (tx.status === 'completed' || tx.status === 'SUCCESS') ? 'success' : (tx.status === 'failed' || tx.status === 'FAILED') ? 'error' : 'info'
+            // amount stored in paise now
+            amount: `₹${(getAmountPaise(tx) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+            status: COMPLETED_STATUSES.includes(tx.status) ? 'success' : (tx.status === 'failed' || tx.status === 'FAILED') ? 'error' : 'info'
         };
     });
 

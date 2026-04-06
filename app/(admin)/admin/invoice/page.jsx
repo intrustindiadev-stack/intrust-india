@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { generateManualInvoice } from '@/lib/invoiceGenerator';
+import { PLATFORM_CONFIG } from '@/lib/config/platform';
 
 const EMPTY_ITEM = {
     name: '',
@@ -34,11 +35,11 @@ export default function ManualInvoiceGeneratorPage() {
 
     // Seller Info
     const [seller, setSeller] = useState({
-        company_name: 'Intrust Financial Services (India) Pvt. Ltd.',
-        company_address: 'TF-312/MM09, Ashima Mall, Narmadapuram Rd, Danish Naga, Bhopal, MP 462026',
-        company_phone: '18002030052',
-        company_email: 'support@intrust.com.in',
-        gst_number: '23AAFC14866A1ZV',
+        company_name: PLATFORM_CONFIG.business.name,
+        company_address: PLATFORM_CONFIG.business.address,
+        company_phone: PLATFORM_CONFIG.business.phone,
+        company_email: PLATFORM_CONFIG.business.email,
+        gst_number: PLATFORM_CONFIG.business.gstin,
     });
 
     // Customer Info

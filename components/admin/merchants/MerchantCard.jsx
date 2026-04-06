@@ -101,7 +101,7 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                     </span>
 
                     {/* Pending Actions */}
-                    {isPending && (
+                    {isPending && onApprove && onReject && (
                         <div className="flex items-center gap-1.5 ml-2">
                             <button
                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReject(merchant.id, merchant.userId); }}
@@ -127,9 +127,9 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                             </button>
                         </div>
                     )}
-
+ 
                     {/* Suspend/Unsuspend Action */}
-                    {(isApproved || isSuspended) && (
+                    {(isApproved || isSuspended) && onToggleSuspend && (
                         <button
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSuspend(merchant.id, merchant.userId, merchant.status); }}
                             disabled={isTogglingSuspend === merchant.id}
@@ -146,9 +146,9 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                             {isSuspended ? 'Unsuspend' : 'Suspend'}
                         </button>
                     )}
-
+ 
                     {/* Bank Verification */}
-                    {isApproved && merchant.hasBankData && !merchant.bankVerified && (
+                    {isApproved && merchant.hasBankData && !merchant.bankVerified && onVerifyBank && (
                         <button
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onVerifyBank(merchant.id); }}
                             disabled={isVerifyingBank === merchant.id}
@@ -160,7 +160,7 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                             Verify Bank
                         </button>
                     )}
-
+ 
                     {isApproved && merchant.bankVerified && (
                         <span className="flex items-center gap-1.5 ml-2 text-[10px] font-extrabold text-emerald-600 px-2 py-1 bg-emerald-50 rounded-lg border border-emerald-100 shadow-inner">
                             <CheckCircle size={10} strokeWidth={3} /> Verified

@@ -14,6 +14,8 @@ export default function AutoModeAdminDashboard() {
         fetchMerchants();
     }, []);
 
+    const [totalRevenue, setTotalRevenue] = useState(0);
+
     const fetchMerchants = async () => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -59,6 +61,7 @@ export default function AutoModeAdminDashboard() {
             }));
 
             setMerchants(transformed);
+            setTotalRevenue((data.totalSubscriptionRevenuePaise || 0) / 100);
         } catch (error) {
             console.error('Error fetching merchants:', error);
         } finally {
@@ -94,10 +97,10 @@ export default function AutoModeAdminDashboard() {
                         <div className="text-3xl font-black text-white">{loading ? '-' : merchants.length}</div>
                     </div>
                     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 min-w-[140px]">
-                        <div className="text-indigo-200 text-xs font-bold uppercase tracking-wider mb-1">Total Revenue</div>
+                        <div className="text-indigo-200 text-xs font-bold uppercase tracking-wider mb-1">Actual Revenue <span className="opacity-40 text-[9px] ml-1">(Subscription)</span></div>
                         <div className="text-3xl font-black text-white flex items-baseline gap-1">
                             <span className="text-lg">₹</span>
-                            {loading ? '-' : (merchants.length * 1999).toLocaleString('en-IN')}
+                            {loading ? '-' : totalRevenue.toLocaleString('en-IN')}
                         </div>
                     </div>
                 </div>
