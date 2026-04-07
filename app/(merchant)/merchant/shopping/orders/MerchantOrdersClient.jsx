@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabaseClient";
 import {
     Package, Search, Clock, CheckCircle2, Truck,
@@ -275,6 +275,26 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
         status_notes: ''
     });
 
+    const [pendingCreditsCount, setPendingCreditsCount] = useState(0);
+
+    useEffect(() => {
+        const fetchPendingCreditsCount = async () => {
+            if (!merchantId) return;
+            const { count, error } = await supabase
+                .from('udhari_requests')
+                .select('*', { count: 'exact', head: true })
+                .eq('merchant_id', merchantId)
+                .eq('status', 'pending')
+                .eq('source_type', 'shop_order');
+                
+            if (!error && count !== null) {
+                setPendingCreditsCount(count);
+            }
+        };
+
+        fetchPendingCreditsCount();
+    }, [merchantId, supabase]);
+
     const filtered = orders.filter(o => {
         const matchesFilter = filter === "all" || o.delivery_status === filter;
         const matchesSearch = !search ||
@@ -421,10 +441,16 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                 </button>
                 <button
                     onClick={() => setActiveView("credits")}
-                    className={`px-6 py-2 rounded-lg text-sm font-black tracking-tight transition-all ${activeView === "credits" ? "bg-white dark:bg-black text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    className={`relative px-6 py-2 rounded-lg text-sm font-black tracking-tight transition-all ${activeView === "credits" ? "bg-white dark:bg-black text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
                         }`}
                 >
                     Store Credit Requests
+                    {pendingCreditsCount > 0 && (
+                        <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                        </span>
+                    )}
                 </button>
             </div>
 

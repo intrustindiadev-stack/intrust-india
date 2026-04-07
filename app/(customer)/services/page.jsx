@@ -28,28 +28,28 @@ export default function ServicesPage() {
 
     const allServices = [
         // Bills
-        { id: 'mobile', category: 'bills', title: "Mobile Recharge", subtitle: "Prepaid & Postpaid", icon: Smartphone, href: "/recharge/mobile" },
-        { id: 'dth', category: 'bills', title: "DTH", subtitle: "Direct to Home", icon: Tv, href: "/recharge/dth" },
-        { id: 'electricity', category: 'bills', title: "Electricity", subtitle: "Pay Bills", icon: Zap, href: "/bills/electricity", highlight: true },
-        { id: 'fastag', category: 'bills', title: "FASTag", subtitle: "Toll Payment", icon: Car, href: "/recharge/fastag" },
-        { id: 'gas', category: 'bills', title: "Gas Booking", subtitle: "Cylinder Delivery", icon: Flame, href: "/bills/gas" },
+        { id: 'mobile', category: 'bills', title: "Mobile Recharge", subtitle: "Prepaid & Postpaid", icon: Smartphone, href: "/coming-soon" },
+        { id: 'dth', category: 'bills', title: "DTH", subtitle: "Direct to Home", icon: Tv, href: "/coming-soon" },
+        { id: 'electricity', category: 'bills', title: "Electricity", subtitle: "Pay Bills", icon: Zap, href: "/coming-soon", highlight: true },
+        { id: 'fastag', category: 'bills', title: "FASTag", subtitle: "Toll Payment", icon: Car, href: "/coming-soon" },
+        { id: 'gas', category: 'bills', title: "Gas Booking", subtitle: "Cylinder Delivery", icon: Flame, href: "/coming-soon" },
 
         // Finance
-        { id: 'loans', category: 'finance', title: "Instant Loans", subtitle: "Get funds instantly", icon: Banknote, href: "/loans/personal", badge: "Fast" },
-        { id: 'business', category: 'finance', title: "Business Loans", subtitle: "Grow your business", icon: Landmark, href: "/loans/business" },
+        { id: 'loans', category: 'finance', title: "Instant Loans", subtitle: "Get funds instantly", icon: Banknote, href: "/coming-soon", badge: "Soon" },
+        { id: 'business', category: 'finance', title: "Business Loans", subtitle: "Grow your business", icon: Landmark, href: "/coming-soon" },
         { id: 'wallet', category: 'finance', title: "My Wallet", subtitle: "Add Money", icon: Wallet, href: "/wallet" },
-        { id: 'cards', category: 'finance', title: "Credit Cards", subtitle: "Apply for a card", icon: CreditCard, href: "/cards" },
+        { id: 'cards', category: 'finance', title: "Credit Cards", subtitle: "Apply for a card", icon: CreditCard, href: "/coming-soon" },
 
         // Shopping
         { id: 'nfc', category: 'shopping', title: "NFC Smart Card", subtitle: "Nexus 2040 Edition", icon: Smartphone, href: "/nfc-service", highlight: true, badge: "Elite" },
         { id: 'gift', category: 'shopping', title: "Gift Cards", subtitle: "For your loved ones", icon: Gift, href: "/gift-cards" },
         { id: 'store', category: 'shopping', title: "Online Store", subtitle: "Exclusive Deals", icon: ShoppingBag, href: "/shop", badge: "New" },
         { id: 'coupons', category: 'shopping', title: "My Coupons", subtitle: "Rewards & Codes", icon: FileText, href: "/my-giftcards" },
-        { id: 'rewards', category: 'shopping', title: "Redeem Points", subtitle: "Use your points", icon: Heart, href: "/rewards" },
+        { id: 'rewards', category: 'shopping', title: "Redeem Points", subtitle: "Use your points", icon: Heart, href: "/coming-soon" },
 
         // Support
-        { id: 'chat', category: 'support', title: "Live Chat", subtitle: "Talk to us", icon: Headphones, href: "/support" },
-        { id: 'faq', category: 'support', title: "FAQs", subtitle: "Usually asked", icon: HelpCircle, href: "/faqs" },
+        { id: 'chat', category: 'support', title: "Live Chat", subtitle: "Talk to us", icon: Headphones, href: "/coming-soon" },
+        { id: 'faq', category: 'support', title: "FAQs", subtitle: "Usually asked", icon: HelpCircle, href: "/coming-soon" },
     ];
 
     const filteredServices = allServices.filter(service => {

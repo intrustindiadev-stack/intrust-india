@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabaseClient';
 import dynamic from 'next/dynamic';
@@ -176,35 +177,51 @@ const SuccessPage = () => {
 
     if (verificationState === 'loading') {
         return (
-            <PaymentStatusLayout variant="blue">
-                <StatusHeader title="VERIFYING PAYMENT" isLoading={true} />
-                <div className="px-8 pb-10 text-center">
-                    <p className="text-gray-400 text-sm mb-8 leading-relaxed">
-                        Hold on a second while we securely verify your transaction with the bank...
-                    </p>
-                </div>
-            </PaymentStatusLayout>
+            <>
+                <Head>
+                    <title>Verifying Payment — InTrust India</title>
+                    <meta name="description" content="Please wait while we verify your payment with InTrust India." />
+                    <meta name="robots" content="noindex, nofollow" />
+                    <link rel="canonical" href="https://www.intrustindia.com/payment/success" />
+                </Head>
+                <PaymentStatusLayout variant="blue">
+                    <StatusHeader title="VERIFYING PAYMENT" isLoading={true} />
+                    <div className="px-8 pb-10 text-center">
+                        <p className="text-gray-400 text-sm mb-8 leading-relaxed">
+                            Hold on a second while we securely verify your transaction with the bank...
+                        </p>
+                    </div>
+                </PaymentStatusLayout>
+            </>
         );
     }
 
     if (verificationState === 'error') {
         return (
-            <PaymentStatusLayout variant="red">
-                <StatusHeader
-                    title="VERIFICATION ERROR"
-                    variant="red"
-                    icon={
-                        <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    }
-                />
-                <div className="px-8 pb-10 text-center">
-                    <p className="text-gray-400 text-sm mb-8 leading-relaxed">
-                        We encountered an issue looking up your transaction. Redirecting...
-                    </p>
-                </div>
-            </PaymentStatusLayout>
+            <>
+                <Head>
+                    <title>Verification Error — InTrust India</title>
+                    <meta name="description" content="There was an issue verifying your payment. Please contact InTrust India support." />
+                    <meta name="robots" content="noindex, nofollow" />
+                    <link rel="canonical" href="https://www.intrustindia.com/payment/success" />
+                </Head>
+                <PaymentStatusLayout variant="red">
+                    <StatusHeader
+                        title="VERIFICATION ERROR"
+                        variant="red"
+                        icon={
+                            <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        }
+                    />
+                    <div className="px-8 pb-10 text-center">
+                        <p className="text-gray-400 text-sm mb-8 leading-relaxed">
+                            We encountered an issue looking up your transaction. Redirecting...
+                        </p>
+                    </div>
+                </PaymentStatusLayout>
+            </>
         );
     }
 
@@ -220,6 +237,13 @@ const SuccessPage = () => {
             : undefined;
 
     return (
+        <>
+        <Head>
+            <title>{config.title.replace(/_/g, ' ')} — InTrust India Payment</title>
+            <meta name="description" content={config.description} />
+            <meta name="robots" content="noindex, nofollow" />
+            <link rel="canonical" href="https://www.intrustindia.com/payment/success" />
+        </Head>
         <PaymentStatusLayout variant={config.variant}>
             {showConfetti && !shouldReduceMotion && (
                 <div className="fixed inset-0 pointer-events-none z-50">
@@ -280,6 +304,7 @@ const SuccessPage = () => {
                 <ActionRow {...config} />
             </div>
         </PaymentStatusLayout>
+        </>
     );
 };
 

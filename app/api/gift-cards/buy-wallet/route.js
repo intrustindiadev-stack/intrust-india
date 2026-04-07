@@ -202,6 +202,39 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Failed to record transaction history. Purchase reversed successfully.', correlationId }, { status: 500 });
         }
 
+        // 7. Send Notifications
+        try {
+            // Customer Notification
+            await supabaseAdmin.from('notifications').insert({
+                user_id: user.id,
+                title: 'Gift Card Purchased ✅',
+                body: `You successfully purchased a gift card worth ₹${purchaseAmount}.`,
+                type: 'success',
+                reference_id: orderData.id,
+                reference_type: 'gift_card_purchase'
+            });
+
+            // Merchant Notification
+            const { data: merchantDetails } = await supabaseAdmin
+                .from('merchants')
+                .select('user_id')
+                .eq('id', coupon.merchant_id)
+                .single();
+
+            if (merchantDetails?.user_id) {
+                await supabaseAdmin.from('notifications').insert({
+                    user_id: merchantDetails.user_id,
+                    title: 'Gift Card Sold 💳',
+                    body: `A customer purchased a gift card worth ₹${purchaseAmount}.`,
+                    type: 'success',
+                    reference_id: orderData.id,
+                    reference_type: 'gift_card_purchase'
+                });
+            }
+        } catch (notificationError) {
+            console.error('[Buy-Wallet] Gift card notifications failed:', notificationError.message);
+        }
+
         const newBalanceRupees = (newBalancePaise / 100).toFixed(2);
         return NextResponse.json({ success: true, message: 'Gift card purchased successfully', newBalance: newBalanceRupees });
 

@@ -413,7 +413,7 @@ export async function POST(request) {
                         if (!updateCouponError && updatedCoupon) {
                             // Step B: Create order record
                             const amountPaise = Math.round(parseFloat(amount) * 100);
-                            const { error: orderError } = await supabaseAdmin
+                            const { data: newOrder, error: orderError } = await supabaseAdmin
                                 .from('orders')
                                 .insert({
                                     user_id: existingTxn.user_id,
@@ -422,7 +422,9 @@ export async function POST(request) {
                                     amount: amountPaise,
                                     payment_status: 'paid',
                                     created_at: new Date().toISOString()
-                                });
+                                })
+                                .select('id')
+                                .single();
 
                             if (orderError) {
                                 console.error('[Callback] Order insert failed, rolling back coupon:', orderError.message);
@@ -434,6 +436,38 @@ export async function POST(request) {
                                 fulfillmentFailed = true;
                                 internalStatus = 'FAILED';
                                 result.transMsg = 'Order creation failed. Payment will be refunded.';
+                            } else {
+                                try {
+                                    // Customer Notification
+                                    await supabaseAdmin.from('notifications').insert({
+                                        user_id: existingTxn.user_id,
+                                        title: 'Gift Card Purchased ✅',
+                                        body: `You successfully purchased a gift card worth ₹${amount}.`,
+                                        type: 'success',
+                                        reference_id: newOrder.id,
+                                        reference_type: 'gift_card_purchase'
+                                    });
+
+                                    // Merchant Notification
+                                    const { data: merchantDetails } = await supabaseAdmin
+                                        .from('merchants')
+                                        .select('user_id')
+                                        .eq('id', updatedCoupon.merchant_id)
+                                        .single();
+                                    
+                                    if (merchantDetails?.user_id) {
+                                        await supabaseAdmin.from('notifications').insert({
+                                            user_id: merchantDetails.user_id,
+                                            title: 'Gift Card Sold 💳',
+                                            body: `A customer purchased a gift card worth ₹${amount}.`,
+                                            type: 'success',
+                                            reference_id: newOrder.id,
+                                            reference_type: 'gift_card_purchase'
+                                        });
+                                    }
+                                } catch (notificationError) {
+                                    console.error('[Callback] Gift card notifications failed:', notificationError.message);
+                                }
                             }
                         } else {
                             console.error('[Callback] Coupon mark-as-sold failed or already sold');

@@ -94,7 +94,7 @@ BEGIN
     balance_after_paise, description, metadata
   ) VALUES (
     v_udhari.merchant_id,
-    'udhari_gateway_payment',
+    'udhari_payment',
     p_amount_paise,
     0,
     v_merchant_new_balance,

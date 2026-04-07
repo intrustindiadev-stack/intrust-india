@@ -5,6 +5,7 @@
  * test-style checkout interface.
  */
 import { useEffect } from 'react';
+import Head from 'next/head';
 import { useRouter } from 'next/router';
 
 const CheckoutPage = () => {
@@ -16,9 +17,16 @@ const CheckoutPage = () => {
     }, [router]);
 
     return (
-        <div className="min-h-screen flex items-center justify-center text-gray-500">
-            Redirecting…
-        </div>
+        <>
+            <Head>
+                <title>Checkout — InTrust India</title>
+                <meta name="robots" content="noindex, nofollow" />
+                <link rel="canonical" href="https://www.intrustindia.com/payment/checkout" />
+            </Head>
+            <div className="min-h-screen flex items-center justify-center text-gray-500">
+                Redirecting…
+            </div>
+        </>
     );
 };
 

@@ -1,3 +1,5 @@
+import Head from 'next/head';
+
 export async function getServerSideProps() {
     return {
         redirect: {
@@ -7,4 +9,15 @@ export async function getServerSideProps() {
     }
 }
 
-export default function TransactionsDashboard() { return null; }
+export default function TransactionsDashboard() {
+    return (
+        <>
+            <Head>
+                <title>Transactions — InTrust India</title>
+                <meta name="robots" content="noindex, nofollow" />
+                <link rel="canonical" href="https://www.intrustindia.com/transactions" />
+            </Head>
+            <div />
+        </>
+    );
+}

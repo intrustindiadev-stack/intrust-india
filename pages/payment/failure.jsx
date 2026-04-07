@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabaseClient';
 import { PaymentStatusLayout, StatusHeader, ReferenceBlock, ActionRow } from '@/components/payment/PaymentStatus';
@@ -85,7 +86,7 @@ const FailurePage = () => {
 
         // Gold subscription
         if (transaction?.udf1 === 'GOLD_SUBSCRIPTION') {
-            router.push('/gold');
+            router.push('/wallet');
             return;
         }
 
@@ -94,6 +95,13 @@ const FailurePage = () => {
     };
 
     return (
+        <>
+        <Head>
+            <title>Payment Failed — InTrust India</title>
+            <meta name="description" content="Your payment could not be processed. Please retry or contact InTrust India support for assistance." />
+            <meta name="robots" content="noindex, nofollow" />
+            <link rel="canonical" href="https://www.intrustindia.com/payment/failure" />
+        </Head>
         <PaymentStatusLayout variant="red" animateBg={false}>
             <StatusHeader
                 title="PAYMENT FAILED"
@@ -131,6 +139,7 @@ const FailurePage = () => {
                 />
             </div>
         </PaymentStatusLayout>
+        </>
     );
 };
 

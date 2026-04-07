@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabaseClient';
 import { PaymentStatusLayout, StatusHeader, ActionRow, ReferenceBlock } from '@/components/payment/PaymentStatus';
@@ -65,6 +66,13 @@ const ProcessingPage = () => {
     };
 
     return (
+        <>
+        <Head>
+            <title>Processing Payment — InTrust India</title>
+            <meta name="description" content="Your payment is being processed by InTrust India. Please do not close this window." />
+            <meta name="robots" content="noindex, nofollow" />
+            <link rel="canonical" href="https://www.intrustindia.com/payment/processing" />
+        </Head>
         <PaymentStatusLayout variant="indigo" animateBg={!timedOut}>
             {!timedOut ? (
                 <>
@@ -113,6 +121,7 @@ const ProcessingPage = () => {
                 </>
             )}
         </PaymentStatusLayout>
+        </>
     );
 };
 

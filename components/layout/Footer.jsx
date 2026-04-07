@@ -25,7 +25,7 @@ export default function Footer() {
             { label: 'Partner with Us', href: '/merchant-apply' },
             { label: 'Careers', href: '#careers' },
             { label: 'Press & Media', href: '#press' },
-            { label: 'Contact Support', href: '/support' },
+            { label: 'Contact Support', href: '/coming-soon' },
         ],
         legal: [
             { label: 'Privacy Policy', href: '/legal' },

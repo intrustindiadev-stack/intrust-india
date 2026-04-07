@@ -100,14 +100,14 @@ export const StatusHeader = ({
                 </motion.div>
             )}
 
-            <motion.h2
+            <motion.h1
                 initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
                 className={`text-3xl md:text-5xl lg:text-6xl font-black italic tracking-tighter mb-2 text-center px-4 ${colorScheme.text}`}
             >
                 {title}
-            </motion.h2>
+            </motion.h1>
 
             {description && (
                 <motion.p
