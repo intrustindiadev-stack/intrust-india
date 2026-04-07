@@ -5,6 +5,7 @@ import StatsCards from '@/components/merchant/StatsCards';
 import TransactionsTable from '@/components/merchant/TransactionsTable';
 import MerchantAdBannerCarousel from '@/components/merchant/MerchantAdBannerCarousel';
 import LiveButton from '@/components/merchant/LiveButton';
+import AutoModePromo from '@/components/merchant/AutoModePromo';
 
 export const dynamic = 'force-dynamic';
 
@@ -136,8 +137,12 @@ export default async function MerchantDashboardPage() {
             <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
 
             <MerchantAdBannerCarousel />
+            
+            <div className="mt-8">
+                <AutoModePromo />
+            </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 mt-6">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 mt-2">
                 <div>
                     <h2 className="font-display text-4xl font-bold mb-2 text-slate-800 dark:text-slate-100">Merchant Dashboard</h2>
                     <div className="flex flex-col gap-2">

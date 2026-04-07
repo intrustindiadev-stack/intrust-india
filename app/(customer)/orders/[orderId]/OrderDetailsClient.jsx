@@ -91,6 +91,99 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                     </div>
                 </div>
 
+                {/* Hero Status Animation & ETA */}
+                <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className={`rounded-[2rem] p-8 mb-6 flex flex-col items-center justify-center text-center overflow-hidden relative ${isDark ? 'bg-gradient-to-b from-[#12151c] to-[#0c0e16] border border-white/[0.06]' : 'bg-gradient-to-b from-white to-slate-50 shadow-sm border border-slate-100'}`}
+                >
+                    {isCancelled ? (
+                         <motion.div
+                            animate={{ scale: [1, 1.1, 1] }} 
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="w-24 h-24 mb-4 rounded-[2rem] bg-red-100 dark:bg-red-500/10 flex items-center justify-center text-red-500 shadow-inner"
+                        >
+                            <AlertCircle size={48} strokeWidth={1.5} />
+                        </motion.div>
+                    ) : status === 'pending' ? (
+                        <motion.div
+                            animate={{ y: [0, -10, 0] }} 
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            className="w-24 h-24 mb-4 rounded-[2rem] bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-inner"
+                        >
+                            <ShoppingBag size={48} strokeWidth={1.5} />
+                        </motion.div>
+                    ) : status === 'packed' ? (
+                        <motion.div
+                            animate={{ rotate: [-5, 5, -5] }} 
+                            transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut" }}
+                            className="w-24 h-24 mb-4 rounded-[2rem] bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 shadow-inner"
+                        >
+                            <Package size={48} strokeWidth={1.5} />
+                        </motion.div>
+                    ) : status === 'shipped' ? (
+                        <div className="relative w-full max-w-[200px] h-24 mb-4 overflow-hidden rounded-[2rem] bg-indigo-50 dark:bg-indigo-500/5 shadow-inner">
+                            <motion.div
+                                animate={{ x: [-100, 240] }} 
+                                transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                                className="absolute top-1/2 -translate-y-1/2 text-indigo-500"
+                            >
+                                <Truck size={40} strokeWidth={1.5} />
+                            </motion.div>
+                        </div>
+                    ) : status === 'delivered' ? (
+                        <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                            className="w-24 h-24 mb-4 rounded-[2rem] bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500 shadow-inner"
+                        >
+                            <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }}>
+                                <CheckCircle2 size={48} strokeWidth={1.5} />
+                            </motion.div>
+                        </motion.div>
+                    ) : null}
+
+                    <h2 className="text-2xl md:text-3xl font-black mb-2 capitalize tracking-tight">
+                        {status === 'pending' ? 'Order Received' : status}
+                    </h2>
+                    
+                    {isCancelled ? (
+                         <p className={`text-sm font-bold text-red-500 mb-1`}>
+                            This order has been cancelled
+                        </p>
+                    ) : status === 'delivered' ? (
+                        <div>
+                             <p className={`text-sm font-bold text-emerald-500 mb-1`}>
+                                Delivered safely
+                            </p>
+                            {(order.estimated_delivery_at || order.estimated_delivery_date) && (
+                                <p className={`text-xs font-medium ${isDark ? 'text-white/40' : 'text-slate-400'}`}>
+                                    Delivered at {format(new Date(order.estimated_delivery_at || order.estimated_delivery_date), "h:mm a, do MMM")}
+                                </p>
+                            )}
+                        </div>
+                    ) : (order.estimated_delivery_at || order.estimated_delivery_date) ? (
+                        <div className="flex flex-col items-center">
+                            <p className={`text-sm md:text-base font-bold ${isDark ? 'text-white/70' : 'text-slate-600'}`}>
+                                Arriving by <span className="text-emerald-500 font-black">{format(new Date(order.estimated_delivery_at || order.estimated_delivery_date), "h:mm a, do MMM")}</span>
+                            </p>
+                            {/* Animated line underneath */}
+                            <div className="w-16 h-1 bg-emerald-500/20 rounded-full mt-3 overflow-hidden relative">
+                                <motion.div 
+                                    className="absolute inset-y-0 left-0 w-1/3 bg-emerald-500 rounded-full" 
+                                    animate={{ left: ['-100%', '200%'] }} 
+                                    transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }} 
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <p className={`text-sm font-medium ${isDark ? 'text-white/50' : 'text-slate-500'}`}>
+                            Processing delivery estimate...
+                        </p>
+                    )}
+                </motion.div>
+
                 {/* Status Tracker */}
                 <motion.div
                     initial={{ y: 20, opacity: 0 }}
@@ -239,14 +332,7 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                                 </p>
                             )}
                             <div className="flex gap-2">
-                                {items[0]?.merchants?.business_phone && (
-                                    <a
-                                        href={`tel:${items[0].merchants.business_phone}`}
-                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 transition-all ${isDark ? 'bg-white/[0.04] text-white/50 hover:bg-white/[0.08]' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
-                                    >
-                                        <Phone size={10} /> {items[0].merchants.business_phone}
-                                    </a>
-                                )}
+                                {/* Merchant phone number intentionally hidden */}
                             </div>
                         </div>
                     </motion.div>

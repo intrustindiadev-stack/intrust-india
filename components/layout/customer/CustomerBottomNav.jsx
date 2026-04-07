@@ -2,17 +2,16 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, LayoutGrid, ShoppingBag, User, ShoppingCart } from 'lucide-react';
+import { Home, LayoutGrid, ShoppingBag, User, ShoppingCart, ScanFace, Gift, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ActiveOrdersOverlay from './ActiveOrdersOverlay';
 import RatingPromptModal from './RatingPromptModal';
 
-
 const navItems = [
     { icon: Home, label: 'Home', href: '/dashboard' },
-    { icon: LayoutGrid, label: 'Services', href: '/services' },
     { icon: ShoppingCart, label: 'Shop', href: '/shop' },
-    { icon: ShoppingBag, label: 'My Cards', href: '/my-giftcards' },
+    { icon: ScanFace, label: 'NFC Pass', href: '/nfc-service' },
+    { icon: Gift, label: 'Gift Cards', href: '/gift-cards' },
     { icon: User, label: 'Profile', href: '/profile' },
 ];
 

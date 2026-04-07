@@ -123,57 +123,56 @@ export default function WalletPage() {
             <div className="fixed top-[-10%] left-[-5%] w-[40%] h-[40%] bg-[#D4AF37]/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
             <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
 
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 mt-6 gap-4">
+            <div className="flex items-center justify-between mt-4 mb-6 sticky top-0 bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-xl z-30 p-4 -mx-4 sm:mx-0 sm:p-0 rounded-b-3xl sm:rounded-none border-b border-black/5 dark:border-white/5 sm:border-none shadow-sm sm:shadow-none">
                 <div>
-                    <h1 className="font-display text-4xl font-bold text-slate-800 dark:text-slate-100 mb-2">My Wallet</h1>
-                    <p className="text-slate-600 dark:text-slate-400 font-medium">Manage your balance and view transaction history</p>
+                    <h1 className="font-display text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">InTrust Wallet</h1>
+                    <p className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-widest font-bold mt-1">Premium Balance Manager</p>
                 </div>
                 <button
                     onClick={fetchWalletData}
                     disabled={loading}
-                    className="p-3 bg-white/40 dark:bg-white/5 merchant-glass hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors border border-black/5 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white group flex items-center shadow-sm"
+                    className="w-10 h-10 flex items-center justify-center bg-white/60 dark:bg-white/5 backdrop-blur-md rounded-full border border-black/5 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-[#D4AF37] transition-all shadow-sm active:scale-95"
                     title="Refresh"
                 >
-                    <span className={`material-icons-round text-lg ${loading ? 'animate-spin text-[#D4AF37]' : 'group-hover:text-[#D4AF37] transition-colors'}`}>refresh</span>
+                    <span className={`material-icons-round text-sm ${loading ? 'animate-spin text-[#D4AF37]' : ''}`}>refresh</span>
                 </button>
             </div>
 
             {/* Error */}
             {error && (
-                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-sm flex items-center space-x-2 font-bold shadow-sm">
-                    <span className="material-icons-round">error_outline</span>
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-2xl text-[11px] sm:text-xs flex items-center space-x-3 font-bold shadow-sm">
+                    <span className="material-icons-round text-lg">error_outline</span>
                     <span>{error}</span>
-                </div>
+                </motion.div>
             )}
 
-            {/* Balance Card */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-[#D4AF37]/10 to-transparent dark:from-[#D4AF37]/20 dark:to-transparent border border-[#D4AF37]/20 rounded-3xl p-8 mb-8 shadow-xl">
-                <div className="absolute -right-4 -top-4 w-32 h-32 bg-[#D4AF37]/20 rounded-full blur-2xl pointer-events-none"></div>
-                <div className="absolute -left-4 -bottom-4 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none dark:opacity-20"></div>
+            {/* Balance Card - Premium QuickCommerce Style */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1c23] via-[#0f111a] to-[#1a1c23] border border-[#D4AF37]/30 rounded-[2.5rem] p-6 sm:p-10 mb-8 shadow-2xl shadow-[#D4AF37]/5 group">
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#D4AF37]/10 via-transparent to-transparent opacity-50 pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
+                <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center relative z-10 gap-6">
+                <div className="flex flex-col relative z-10 gap-8">
                     <div>
-                        {/* Label row */}
-                        <div className="flex items-center gap-2 text-[#D4AF37] mb-2">
-                            <span className="material-icons-round text-xl">account_balance_wallet</span>
-                            <span className="font-bold uppercase tracking-widest text-[10px]">Available Balance</span>
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="w-8 h-8 rounded-full bg-[#D4AF37]/10 flex items-center justify-center border border-[#D4AF37]/20">
+                                <span className="material-icons-round text-sm text-[#D4AF37]">account_balance_wallet</span>
+                            </div>
+                            <span className="font-black uppercase tracking-widest text-[10px] text-slate-400">Total Balance</span>
                         </div>
 
-                        {/* Balance tile — tap to reveal */}
                         <motion.button
                             onClick={handleBalanceTap}
-                            whileTap={{ scale: 0.97 }}
-                            className="relative flex items-end gap-3 cursor-pointer select-none group/bal"
+                            whileTap={{ scale: 0.98 }}
+                            className="relative flex items-end gap-3 cursor-pointer select-none group/bal w-auto inline-flex"
                             aria-label={balanceRevealed ? 'Hide balance' : 'Reveal balance'}
                         >
-                            {/* Ripple */}
                             <AnimatePresence>
                                 {tapping && (
                                     <motion.span
                                         key="ripple"
-                                        className="absolute inset-0 rounded-2xl bg-[#D4AF37]/20 pointer-events-none"
-                                        initial={{ opacity: 0.7, scale: 0.85 }}
-                                        animate={{ opacity: 0, scale: 1.4 }}
+                                        className="absolute inset-[-10px] rounded-2xl bg-[#D4AF37]/10 pointer-events-none"
+                                        initial={{ opacity: 0.8, scale: 0.9 }}
+                                        animate={{ opacity: 0, scale: 1.2 }}
                                         exit={{ opacity: 0 }}
                                         transition={{ duration: 0.5, ease: 'easeOut' }}
                                     />
@@ -181,14 +180,14 @@ export default function WalletPage() {
                             </AnimatePresence>
 
                             {loading ? (
-                                <div className="h-14 w-48 bg-black/5 dark:bg-white/10 animate-pulse rounded-xl" />
+                                <div className="h-12 w-32 bg-white/5 animate-pulse rounded-2xl" />
                             ) : (
                                 <div className="relative overflow-hidden">
                                     <AnimatePresence mode="wait" initial={false}>
                                         {balanceRevealed ? (
                                             <motion.h2
                                                 key="amount"
-                                                className="text-5xl sm:text-6xl font-sans font-bold text-slate-800 dark:text-slate-100 tracking-tight"
+                                                className="text-5xl sm:text-7xl font-sans font-black text-white tracking-tighter"
                                                 initial={{ y: 20, opacity: 0, filter: 'blur(4px)' }}
                                                 animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
                                                 exit={{ y: -20, opacity: 0, filter: 'blur(4px)' }}
@@ -199,7 +198,7 @@ export default function WalletPage() {
                                         ) : (
                                             <motion.h2
                                                 key="dots"
-                                                className="text-5xl sm:text-6xl font-sans font-bold text-slate-800/50 dark:text-slate-100/40 tracking-[0.25em]"
+                                                className="text-5xl sm:text-7xl font-sans font-black text-slate-500 tracking-[0.2em] pt-2"
                                                 initial={{ y: 20, opacity: 0, filter: 'blur(4px)' }}
                                                 animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
                                                 exit={{ y: -20, opacity: 0, filter: 'blur(4px)' }}
@@ -212,34 +211,33 @@ export default function WalletPage() {
                                 </div>
                             )}
 
-                            {/* Eye icon */}
                             {!loading && (
-                                <span className="mb-1.5 text-[#D4AF37]/60 group-hover/bal:text-[#D4AF37] transition-colors">
-                                    {balanceRevealed ? <EyeOff size={18} /> : <Eye size={18} />}
+                                <span className="mb-2 text-slate-500 group-hover/bal:text-[#D4AF37] transition-colors">
+                                    {balanceRevealed ? <EyeOff size={20} /> : <Eye size={20} />}
                                 </span>
                             )}
                         </motion.button>
-
-                        {/* Hint text */}
+                        
                         {!loading && (
-                            <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 mt-2 tracking-wide">
-                                {balanceRevealed ? 'Tap to hide' : 'Tap to reveal balance'}
+                            <p className="text-[10px] font-bold text-[#D4AF37]/50 mt-3 tracking-widest uppercase">
+                                {balanceRevealed ? 'Tap to hide securely' : 'Tap to decrypt balance'}
                             </p>
                         )}
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                    
+                    <div className="flex flex-row gap-3 w-full">
                         <button
                             onClick={() => { setShowTopup(true); setShowWithdrawal(false); }}
-                            className="w-full sm:w-auto px-8 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl shadow-lg shadow-[#D4AF37]/20 hover:bg-opacity-90 transition-all flex items-center justify-center gap-2 gold-glow"
+                            className="flex-1 px-4 py-4 bg-gradient-to-r from-[#D4AF37] to-[#e6cf73] hover:to-[#D4AF37] text-black font-black uppercase text-[11px] tracking-widest rounded-2xl shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all flex flex-col items-center justify-center gap-1 active:scale-95"
                         >
-                            <span className="material-icons-round text-lg">add_circle</span>
+                            <span className="material-icons-round text-xl mb-1 stroke-2">add_circle_outline</span>
                             Add Money
                         </button>
                         <button
                             onClick={() => { setShowWithdrawal(true); setShowTopup(false); }}
-                            className="w-full sm:w-auto px-8 py-4 bg-white/30 dark:bg-white/5 backdrop-blur-sm border border-[#D4AF37]/40 hover:border-[#D4AF37]/80 hover:bg-[#D4AF37]/10 text-slate-800 dark:text-slate-100 font-bold rounded-xl shadow-lg shadow-[#D4AF37]/10 transition-all flex items-center justify-center gap-2 group"
+                            className="flex-1 px-4 py-4 bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-[#D4AF37]/50 text-white font-black uppercase text-[11px] tracking-widest rounded-2xl shadow-lg transition-all flex flex-col items-center justify-center gap-1 active:scale-95 group/btn"
                         >
-                            <span className="material-icons-round text-lg text-[#D4AF37] group-hover:scale-110 transition-transform">savings</span>
+                            <span className="material-icons-round text-xl mb-1 text-slate-400 group-hover/btn:text-[#D4AF37] transition-colors">account_balance</span>
                             Withdraw
                         </button>
                     </div>
@@ -306,76 +304,57 @@ export default function WalletPage() {
                 </div>
             )}
 
-            {/* Transactions */}
-            <div className="merchant-glass rounded-3xl border border-black/5 dark:border-white/5 overflow-hidden shadow-sm">
-                <div className="p-6 border-b border-black/5 dark:border-white/5 flex items-center justify-between bg-black/[0.02] dark:bg-white/[0.02]">
-                    <h3 className="font-display text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center">
-                        <span className="material-icons-round text-[#D4AF37] mr-3">history</span>
-                        Recent Transactions
+            {/* Transactions Feed - Mobile First UI */}
+            <div className="mt-4 mb-20">
+                <div className="flex items-center justify-between mb-6 px-1">
+                    <h3 className="font-display text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                        <span className="w-2 h-6 bg-[#D4AF37] rounded-full"></span>
+                        Recent Activity
                     </h3>
-                    {loading && <span className="material-icons-round animate-spin text-slate-400 dark:text-slate-500">autorenew</span>}
+                    {loading && <span className="material-icons-round animate-spin text-slate-400 dark:text-slate-500 text-sm">autorenew</span>}
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left min-w-[600px]">
-                        <thead>
-                            <tr className="text-[11px] uppercase tracking-widest text-slate-500 font-bold border-b border-black/5 dark:border-white/5">
-                                <th className="px-8 py-5">Type</th>
-                                <th className="px-8 py-5">Description</th>
-                                <th className="px-8 py-5">Date</th>
-                                <th className="px-8 py-5 text-right flex-1">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                            {transactions.map((tx) => (
-                                <tr
-                                    key={tx.id}
-                                    onClick={() => router.push(`/merchant/wallet/transactions/${tx.id}?source=${tx.source}`)}
-                                    className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer group/row"
-                                >
-                                    <td className="px-8 py-5">
-                                        <div className={`flex items-center space-x-2 font-bold ${tx.transaction_type === 'CREDIT' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${tx.transaction_type === 'CREDIT' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'} border`}>
-                                                <span className="material-icons-round text-sm">{tx.transaction_type === 'CREDIT' ? 'south_west' : 'north_east'}</span>
-                                            </div>
-                                            <span>{tx.transaction_type === 'CREDIT' ? 'Credit' : 'Debit'}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <div className="text-slate-700 dark:text-slate-200 font-semibold group-hover/row:text-blue-600 dark:group-hover/row:text-blue-400 transition-colors">
-                                            {tx.description || tx.reference_type || 'Wallet Transaction'}
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <div className="text-slate-500 dark:text-slate-400 text-sm font-medium">
-                                            {new Date(tx.created_at).toLocaleDateString('en-IN', {
-                                                day: '2-digit', month: 'short', year: 'numeric'
-                                            })}
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center justify-end space-x-4">
-                                            <div className={`text-right font-bold text-lg ${tx.transaction_type === 'CREDIT' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                                                {tx.transaction_type === 'CREDIT' ? '+' : '-'}₹{Number(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                            </div>
-                                            <span className="material-icons-round text-slate-300 dark:text-slate-600 group-hover/row:text-blue-500 transition-colors">chevron_right</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {!loading && transactions.length === 0 && (
-                                <tr>
-                                    <td colSpan="4" className="px-8 py-16 text-center">
-                                        <div className="w-16 h-16 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <span className="material-icons-round text-slate-400 dark:text-slate-500 text-3xl">account_balance_wallet</span>
-                                        </div>
-                                        <p className="text-slate-800 dark:text-slate-300 font-bold mb-1">No transactions yet</p>
-                                        <p className="text-sm text-slate-500 dark:text-slate-500">Add money to get started</p>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                <div className="flex flex-col gap-3">
+                    {transactions.map((tx) => (
+                        <div
+                            key={tx.id}
+                            onClick={() => router.push(`/merchant/wallet/transactions/${tx.id}?source=${tx.source}`)}
+                            className="bg-white/60 dark:bg-[#1a1c23]/80 backdrop-blur-md p-4 flex items-center border border-black/5 dark:border-white/5 rounded-2xl active:scale-95 transition-transform cursor-pointer shadow-sm relative overflow-hidden group"
+                        >
+                            {/* Hover accent */}
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            
+                            <div className={`w-12 h-12 rounded-[1rem] flex items-center justify-center shrink-0 border ${tx.transaction_type === 'CREDIT' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+                                <span className="material-icons-round text-xl">{tx.transaction_type === 'CREDIT' ? 'south_west' : 'north_east'}</span>
+                            </div>
+                            
+                            <div className="ml-4 flex-1 min-w-0">
+                                <h4 className="text-[13px] font-black text-slate-800 dark:text-slate-100 truncate flex items-center justify-between">
+                                    <span className="truncate">{tx.description || tx.reference_type || 'Wallet Transfer'}</span>
+                                    <div className={`text-sm tracking-tight ${tx.transaction_type === 'CREDIT' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-white'}`}>
+                                        {tx.transaction_type === 'CREDIT' ? '+' : '-'}₹{Number(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    </div>
+                                </h4>
+                                <div className="flex items-center justify-between mt-1">
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                                        {new Date(tx.created_at).toLocaleDateString('en-IN', {
+                                            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                                        })}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+
+                    {!loading && transactions.length === 0 && (
+                        <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-black/5 dark:border-white/5 rounded-3xl p-10 mt-4 flex flex-col items-center text-center">
+                            <div className="w-20 h-20 bg-black/5 dark:bg-white/5 rounded-[2rem] flex items-center justify-center mb-4">
+                                <span className="material-icons-round text-slate-400 dark:text-slate-500 text-4xl">receipt_long</span>
+                            </div>
+                            <p className="text-slate-800 dark:text-white font-black text-[15px] mb-1">No Activity Found</p>
+                            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest max-w-[200px]">Top up your wallet to start making transactions</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

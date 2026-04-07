@@ -5,6 +5,7 @@ import { Search, Store, X, Sparkles, ChevronRight, BadgeCheck, Star } from 'luci
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
+import HeroIllustrativeAd from '@/components/customer/shop/HeroIllustrativeAd';
 
 // ── Accent palette ──────────────────────────────────────────────────────────
 const ACCENTS = [
@@ -238,6 +239,21 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* ── Illustrative Ad Component ──────────────────────── */}
+            <AnimatePresence>
+                {!searchQuery && (
+                    <motion.div
+                        key="categories"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                        transition={{ duration: 0.25 }}
+                    >
+                        <HeroIllustrativeAd />
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* ── Banner Carousel ────────────────────────────── */}
             <AnimatePresence>

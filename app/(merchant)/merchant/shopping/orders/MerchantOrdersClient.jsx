@@ -7,7 +7,7 @@ import {
     TrendingUp, TrendingDown, DollarSign, ShoppingBag,
     ChevronDown, ChevronUp, MapPin, ArrowUpRight, AlertTriangle,
     RotateCcw, Receipt, Store, Filter, Calendar, ExternalLink,
-    MoreVertical, Download, X
+    MoreVertical, Download, X, Sparkles
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -398,6 +398,23 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                     </div>
                 </div>
             </div>
+
+            {merchantInfo?.auto_mode_status === 'active' && (
+                <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-[#0a1f16] border border-emerald-500/30 rounded-[2rem] p-5 md:p-6 relative overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)] group flex items-center gap-4"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/20 to-transparent opacity-50 blur-xl pointer-events-none"></div>
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20 relative z-10">
+                        <Sparkles className="text-emerald-400" size={24} />
+                    </div>
+                    <div className="relative z-10">
+                        <h3 className="text-emerald-400 font-black text-sm uppercase tracking-widest mb-1 drop-shadow-md">Auto Mode Active</h3>
+                        <p className="text-emerald-100/70 text-xs md:text-sm font-medium tracking-tight leading-relaxed max-w-xl">Focus on your business. Intrust AI is automatically evaluating and processing incoming orders.</p>
+                    </div>
+                </motion.div>
+            )}
 
             {/* Performance KPIs */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

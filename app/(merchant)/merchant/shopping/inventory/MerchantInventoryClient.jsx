@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Tag, Box, ShoppingBag, ArrowRight, Store, Lock, Package, Plus, Minus } from 'lucide-react';
+import { Search, Tag, Box, ShoppingBag, ArrowRight, Store, Lock, Package, Plus, Minus, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -118,6 +118,23 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
 
     return (
         <div className="space-y-6">
+            {merchant?.auto_mode_status === 'active' && (
+                <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-[#0a1f16] border border-emerald-500/30 rounded-[2rem] p-5 md:p-6 mb-2 relative overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)] group flex items-center gap-4"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/20 to-transparent opacity-50 blur-xl pointer-events-none"></div>
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20 relative z-10">
+                        <Sparkles className="text-emerald-400" size={24} />
+                    </div>
+                    <div className="relative z-10">
+                        <h3 className="text-emerald-400 font-black text-sm uppercase tracking-widest mb-1 drop-shadow-md">Auto Mode Active</h3>
+                        <p className="text-emerald-100/70 text-xs md:text-sm font-medium tracking-tight leading-relaxed max-w-xl">Your shop is running on autopilot. Intrust AI automatically restocks low inventory and updates pricing.</p>
+                    </div>
+                </motion.div>
+            )}
+
             {/* Filters Bar */}
             <div className="flex flex-col sm:flex-row gap-3">
                 {/* Search */}

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import Link from 'next/link';
-import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
+import HeroIllustrativeAd from '@/components/customer/shop/HeroIllustrativeAd';
 import {
     Zap, Banknote, ShoppingBag, Headphones,
     Smartphone, Tv, Car, Flame, Wallet, CreditCard,
@@ -20,36 +20,13 @@ export default function ServicesPage() {
 
     const tabs = [
         { id: 'all', label: 'All', icon: LayoutGrid },
-        { id: 'bills', label: 'Bills', icon: Zap },
-        { id: 'finance', label: 'Finance', icon: Banknote },
         { id: 'shopping', label: 'Shopping', icon: ShoppingBag },
-        { id: 'support', label: 'Help', icon: HelpCircle },
     ];
 
     const allServices = [
-        // Bills
-        { id: 'mobile', category: 'bills', title: "Mobile Recharge", subtitle: "Prepaid & Postpaid", icon: Smartphone, href: "/coming-soon" },
-        { id: 'dth', category: 'bills', title: "DTH", subtitle: "Direct to Home", icon: Tv, href: "/coming-soon" },
-        { id: 'electricity', category: 'bills', title: "Electricity", subtitle: "Pay Bills", icon: Zap, href: "/coming-soon", highlight: true },
-        { id: 'fastag', category: 'bills', title: "FASTag", subtitle: "Toll Payment", icon: Car, href: "/coming-soon" },
-        { id: 'gas', category: 'bills', title: "Gas Booking", subtitle: "Cylinder Delivery", icon: Flame, href: "/coming-soon" },
-
-        // Finance
-        { id: 'loans', category: 'finance', title: "Instant Loans", subtitle: "Get funds instantly", icon: Banknote, href: "/coming-soon", badge: "Soon" },
-        { id: 'business', category: 'finance', title: "Business Loans", subtitle: "Grow your business", icon: Landmark, href: "/coming-soon" },
-        { id: 'wallet', category: 'finance', title: "My Wallet", subtitle: "Add Money", icon: Wallet, href: "/wallet" },
-        { id: 'cards', category: 'finance', title: "Credit Cards", subtitle: "Apply for a card", icon: CreditCard, href: "/coming-soon" },
-
-        // Shopping
+        { id: 'store', category: 'shopping', title: "Online Store", subtitle: "Exclusive Deals", icon: ShoppingBag, href: "/shop", badge: "New" },
         { id: 'nfc', category: 'shopping', title: "NFC Smart Card", subtitle: "Nexus 2040 Edition", icon: Smartphone, href: "/nfc-service", highlight: true, badge: "Elite" },
         { id: 'gift', category: 'shopping', title: "Gift Cards", subtitle: "For your loved ones", icon: Gift, href: "/gift-cards" },
-        { id: 'store', category: 'shopping', title: "Online Store", subtitle: "Exclusive Deals", icon: ShoppingBag, href: "/shop", badge: "New" },
-        { id: 'coupons', category: 'shopping', title: "My Coupons", subtitle: "Rewards & Codes", icon: FileText, href: "/my-giftcards" },
-        { id: 'rewards', category: 'shopping', title: "Redeem Points", subtitle: "Use your points", icon: Heart, href: "/coming-soon" },
-
-        // Support
-        { id: 'chat', category: 'support', title: "Live Chat", subtitle: "Talk to us", icon: Headphones, href: "/coming-soon" },
-        { id: 'faq', category: 'support', title: "FAQs", subtitle: "Usually asked", icon: HelpCircle, href: "/coming-soon" },
     ];
 
     const filteredServices = allServices.filter(service => {
@@ -73,9 +50,9 @@ export default function ServicesPage() {
                         Everything you need to manage your payments and finances.
                     </p>
 
-                    {/* Ad Banner Carousel */}
+                    {/* Ad Banner */}
                     <div className="mb-8">
-                        <AdBannerCarousel />
+                        <HeroIllustrativeAd />
                     </div>
 
                     {/* Premium Search Bar */}

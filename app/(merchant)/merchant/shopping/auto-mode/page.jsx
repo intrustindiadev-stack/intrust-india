@@ -12,6 +12,7 @@ export default function AutoModePage() {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const [walletBalance, setWalletBalance] = useState(0);
+    const [timeLeft, setTimeLeft] = useState('');
 
     // UI states
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -54,6 +55,28 @@ export default function AutoModePage() {
     useEffect(() => {
         fetchMerchantData();
     }, []);
+
+    useEffect(() => {
+        if (!merchant?.auto_mode_valid_until || merchant?.auto_mode_status !== 'active') return;
+
+        const calculateTimeLeft = () => {
+            const difference = new Date(merchant.auto_mode_valid_until) - new Date();
+            if (difference > 0) {
+                const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+                const minutes = Math.floor((difference / 1000 / 60) % 60);
+                const seconds = Math.floor((difference / 1000) % 60);
+                setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+            } else {
+                setTimeLeft('Expired');
+            }
+        };
+
+        calculateTimeLeft();
+        const timer = setInterval(calculateTimeLeft, 1000);
+
+        return () => clearInterval(timer);
+    }, [merchant?.auto_mode_valid_until, merchant?.auto_mode_status]);
 
     const isAutoModeActive = merchant?.auto_mode_status === 'active';
     const isFirstMonth = (merchant?.auto_mode_months_paid || 0) === 0;
@@ -217,9 +240,21 @@ export default function AutoModePage() {
                     </p>
 
                     {isAutoModeActive && merchant?.auto_mode_valid_until && (
-                        <p className="mt-4 text-emerald-400/80 text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
-                            Active Until: {new Date(merchant.auto_mode_valid_until).toLocaleDateString()}
-                        </p>
+                        <div className="mt-4 flex flex-col items-center gap-1.5">
+                            <p className="text-emerald-400/80 text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
+                                Active Until: {new Date(merchant.auto_mode_valid_until).toLocaleDateString()}
+                            </p>
+                            {timeLeft && timeLeft !== 'Expired' && (
+                                <p className="text-emerald-300 font-mono text-[11px] bg-[#0a1f16]/80 px-4 py-1 rounded shadow-[0_0_10px_rgba(16,185,129,0.2)] border border-emerald-500/30">
+                                    Time Left: {timeLeft}
+                                </p>
+                            )}
+                            {timeLeft === 'Expired' && (
+                                <p className="text-red-400 font-bold text-[11px] bg-red-500/10 px-3 py-1 rounded border border-red-500/30">
+                                    Subscription Expired
+                                </p>
+                            )}
+                        </div>
                     )}
                 </div>
 

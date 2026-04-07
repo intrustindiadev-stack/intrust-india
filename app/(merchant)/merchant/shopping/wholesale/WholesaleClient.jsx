@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Package, Plus, Minus, Sparkles } from 'lucide-react';
+import { Package, Plus, Minus, Sparkles, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MerchantFloatingCart from '@/components/merchant/shopping/MerchantFloatingCart';
 import SuccessAnimation from '@/components/ui/SuccessAnimation';
+import WholesaleProductModal from '@/components/merchant/shopping/WholesaleProductModal';
 
 export default function WholesaleClient({ products = [], merchant, categories = [] }) {
     const router = useRouter();
@@ -16,18 +17,57 @@ export default function WholesaleClient({ products = [], merchant, categories = 
     const [isPurchasing, setIsPurchasing] = useState(false);
     const [isProcessingGateway, setIsProcessingGateway] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('All');
+    const [searchTerm, setSearchTerm] = useState('');
     const [showSuccess, setShowSuccess] = useState(false);
     const [successStats, setSuccessStats] = useState(null);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [flyingItems, setFlyingItems] = useState([]);
 
-    const updateQuantity = (productId, delta, maxStock) => {
+    const updateQuantity = (e, product, delta) => {
+        const productId = product.id;
+        const maxStock = product.admin_stock;
+        
+        // Resolve bounding rect synchronously to avoid React event pooling/nullification issues
+        const rect = e?.currentTarget?.getBoundingClientRect();
+        const currentQty = cart[productId] || 0;
+
+            // Fly animation on Add
+            if (delta > 0 && currentQty < maxStock && rect) {
+                const animId = Date.now() + Math.random();
+                
+                // Get destination coordinates if cart button is present
+                let destX = typeof window !== 'undefined' ? window.innerWidth / 2 : 0;
+                let destY = typeof window !== 'undefined' ? window.innerHeight - 50 : 0;
+                const cartBtn = document.getElementById('merchant-floating-cart-btn');
+                if (cartBtn) {
+                    const btnRect = cartBtn.getBoundingClientRect();
+                    destX = btnRect.left + btnRect.width / 2 - 24; // center the 48px flying icon
+                    destY = btnRect.top + btnRect.height / 2 - 24;
+                }
+
+                setFlyingItems(items => [...items, {
+                    id: animId,
+                    x: rect.left + rect.width / 2 - 24, // start from center of product image/button
+                    y: rect.top + rect.height / 2 - 24,
+                    destX,
+                    destY,
+                    image: product.product_images?.[0]
+                }]);
+                
+                setTimeout(() => {
+                    setFlyingItems(items => items.filter(item => item.id !== animId));
+                }, 1200);
+            }
+
         setCart(prev => {
-            const currentQty = prev[productId] || 0;
-            const newQty = Math.max(0, Math.min(maxStock, currentQty + delta));
+            const currentQtyInner = prev[productId] || 0;
+            const newQty = Math.max(0, Math.min(maxStock, currentQtyInner + delta));
 
             if (newQty === 0) {
                 const { [productId]: _, ...rest } = prev;
                 return rest;
             }
+
             return { ...prev, [productId]: newQty };
         });
     };
@@ -171,12 +211,59 @@ export default function WholesaleClient({ products = [], merchant, categories = 
         }
     };
 
-    const filteredProducts = selectedCategory === 'All'
-        ? products
-        : products.filter(p => p.category === selectedCategory);
+    const filteredProducts = products.filter(p => {
+        const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
+        const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
+        return matchesCategory && matchesSearch;
+    });
+
+    const isAutoModeActive = merchant?.auto_mode_status === 'active';
 
     return (
         <>
+            <WholesaleProductModal 
+                product={selectedProduct} 
+                isOpen={!!selectedProduct} 
+                onClose={() => setSelectedProduct(null)} 
+            />
+
+            {/* Fly to Cart Animation Elements */}
+            {flyingItems.map(item => (
+                <motion.div
+                    key={item.id}
+                    initial={{ x: item.x, y: item.y, scale: 0.8, opacity: 1, rotate: 0 }}
+                    animate={{ 
+                        x: item.destX, 
+                        y: item.destY, 
+                        scale: 0.3, 
+                        opacity: 0,
+                        rotate: 360
+                    }}
+                    transition={{ 
+                        x: { duration: 1.2, ease: "easeOut" },
+                        y: { duration: 1.2, ease: "easeIn" },
+                        scale: { duration: 1.2, ease: "easeInOut" },
+                        opacity: { duration: 1.2, ease: "circIn" },
+                        rotate: { duration: 1.2, ease: "linear" }
+                    }}
+                    className="fixed z-[9999] w-12 h-12 rounded-full overflow-hidden shadow-[0_10px_30px_rgba(16,185,129,0.5)] border-[3px] border-emerald-400 bg-white pointer-events-none flex items-center justify-center p-1"
+                    style={{ left: 0, top: 0 }}
+                >
+                    {item.image ? (
+                        <div className="w-full h-full relative rounded-full overflow-hidden">
+                             <img src={item.image} className="w-full h-full object-cover" alt="Flying item" />
+                             {/* Premium Overlay inside the image flying orb */}
+                             <div className="absolute inset-0 bg-emerald-500/20 mix-blend-overlay"></div>
+                        </div>
+                    ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-white shadow-inner">
+                            <Package size={18} strokeWidth={2.5}/>
+                        </div>
+                    )}
+                </motion.div>
+            ))}
+
             <SuccessAnimation
                 isVisible={showSuccess}
                 onClose={() => setShowSuccess(false)}
@@ -190,14 +277,48 @@ export default function WholesaleClient({ products = [], merchant, categories = 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 {/* Products Area */}
                 <div className="xl:col-span-2 space-y-6">
+                    {/* Auto Mode Indicator */}
+                    {isAutoModeActive && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-[#0a1f16]/90 border border-emerald-500/30 rounded-3xl p-5 md:p-6 mb-6 relative overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)] group flex items-center gap-4"
+                        >
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/20 to-transparent opacity-50 blur-xl"></div>
+                            <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20 relative z-10">
+                                <Sparkles className="text-emerald-400" size={24} />
+                            </div>
+                            <div className="relative z-10">
+                                <h3 className="text-emerald-400 font-black text-sm uppercase tracking-widest mb-1 drop-shadow-md">Auto Mode Active</h3>
+                                <p className="text-emerald-100/70 text-xs md:text-sm font-medium tracking-tight">Focus on your business. Intrust AI is automatically managing your wholesale inventory & restocking when low.</p>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Premium Sticky Search Bar */}
+                    <div className="sticky top-[80px] pt-4 sm:pt-8 pb-4 z-[40] bg-[#f8f9fb]/90 dark:bg-[#0b0e14]/90 backdrop-blur-2xl -mx-4 px-4 sm:-mx-8 sm:px-8 transition-all">
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <Search className="text-slate-400" size={20} />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search inventory..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl py-4 pl-12 pr-4 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 shadow-sm transition-all"
+                            />
+                        </div>
+                    </div>
+
                     {/* Tab Bar */}
-                    <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-3 flex-wrap mt-2">
                         <span className="px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest bg-slate-900 text-white shadow-lg shadow-slate-900/20">
                             Buy Stock
                         </span>
                         <Link
                             href="/merchant/shopping/wholesale/history"
-                            className="px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all"
+                            className="px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest bg-white dark:bg-white/5 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all"
                         >
                             Purchase History
                         </Link>
@@ -205,12 +326,12 @@ export default function WholesaleClient({ products = [], merchant, categories = 
 
                     {/* Category Filters */}
                     {categories.length > 0 && (
-                        <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                        <div className="flex items-center gap-2 overflow-x-auto py-4 custom-scrollbar">
                             <button
                                 onClick={() => setSelectedCategory('All')}
                                 className={`whitespace-nowrap px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex-shrink-0 ${selectedCategory === 'All'
-                                    ? 'bg-slate-900 text-white shadow-lg'
-                                    : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-900'
+                                    ? 'bg-slate-900 dark:bg-white text-white dark:text-black shadow-lg shadow-slate-900/20 dark:shadow-white/20'
+                                    : 'bg-white dark:bg-white/5 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
                                     }`}
                             >
                                 All
@@ -220,8 +341,8 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                                     key={cat.id}
                                     onClick={() => setSelectedCategory(cat.name)}
                                     className={`whitespace-nowrap px-5 py-2.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2 flex-shrink-0 ${selectedCategory === cat.name
-                                        ? 'bg-white text-slate-900 shadow-lg ring-2 ring-slate-900 ring-offset-2 ring-offset-[#f8f9fb]'
-                                        : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-900'
+                                        ? 'bg-white dark:bg-black text-slate-900 dark:text-white shadow-lg ring-2 ring-slate-900 dark:ring-white ring-offset-2 ring-offset-[#f8f9fb] dark:ring-offset-[#0b0e14]'
+                                        : 'bg-white dark:bg-white/5 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
                                         }`}
                                 >
                                     <span className={`w-2 h-2 rounded-full bg-gradient-to-br ${cat.color_gradient}`} />
@@ -252,7 +373,10 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                                         className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-600/8 transition-all duration-500 flex flex-col group overflow-hidden"
                                     >
                                         {/* Product Image */}
-                                        <div className={`aspect-[4/3] relative bg-gradient-to-br ${gradientClass} p-1`}>
+                                        <div 
+                                            className={`aspect-[4/3] relative bg-gradient-to-br ${gradientClass} p-1 cursor-pointer`}
+                                            onClick={() => setSelectedProduct(product)}
+                                        >
                                             <div className="w-full h-full bg-white rounded-[1.7rem] overflow-hidden">
                                                 {product.product_images?.[0] ? (
                                                     <img
@@ -312,7 +436,7 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                                             {/* Qty controls */}
                                             <div className="flex items-center bg-[#1e3a5f] rounded-2xl p-1 shadow-lg shadow-blue-900/15">
                                                 <button
-                                                    onClick={() => updateQuantity(product.id, -1, product.admin_stock)}
+                                                    onClick={(e) => updateQuantity(e, product, -1)}
                                                     className="flex-1 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 text-white transition-colors"
                                                 >
                                                     <Minus size={16} />
@@ -321,7 +445,7 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                                                     {qty}
                                                 </span>
                                                 <button
-                                                    onClick={() => updateQuantity(product.id, 1, product.admin_stock)}
+                                                    onClick={(e) => updateQuantity(e, product, 1)}
                                                     className="flex-1 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 text-white transition-colors"
                                                 >
                                                     <Plus size={16} />

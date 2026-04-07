@@ -9,6 +9,7 @@ import { useTheme } from '@/lib/contexts/ThemeContext';
 import ProductCardV2 from './ProductCardV2';
 import FloatingCart from './FloatingCart';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function StorefrontV2Client({ merchant, initialInventory, customer }) {
@@ -303,6 +304,11 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                         </div>
                     )}
                 </header>
+            </div>
+
+            {/* ====== AD BANNER ====== */}
+            <div className="max-w-7xl mx-auto w-full relative z-10 pt-2 -mb-2">
+                <AdBannerCarousel />
             </div>
 
             {/* ====== PRODUCT GRID ====== */}

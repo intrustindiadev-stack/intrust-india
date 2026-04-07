@@ -11,7 +11,7 @@ export default async function MerchantOrdersPage() {
 
   const { data: merchant } = await supabase
     .from("merchants")
-    .select("id, business_name, business_address, business_phone, gst_number, status")
+    .select("id, business_name, business_address, business_phone, gst_number, status, auto_mode_status")
     .eq("user_id", user.id)
     .single();
 
