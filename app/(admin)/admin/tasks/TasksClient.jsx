@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabaseClient';
 import TaskCard from '@/components/admin/tasks/TaskCard';
 import TaskFormModal from '@/components/admin/tasks/TaskFormModal';
 import TaskViewModal from '@/components/admin/tasks/TaskViewModal';
+import TaskAnalyticsCharts from '@/components/admin/tasks/TaskAnalyticsCharts';
 import {
     ClipboardList,
     Plus,
@@ -121,7 +122,7 @@ export default function TasksClient({ currentUserId, currentUserRole }) {
                     {isSuperAdmin && (
                         <button
                             onClick={openCreate}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-colors shadow-lg shadow-red-500/20"
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-900 text-white font-semibold text-sm hover:bg-indigo-950 transition-colors shadow-lg shadow-blue-900/20"
                         >
                             <Plus size={16} />
                             Assign Task
@@ -144,6 +145,9 @@ export default function TasksClient({ currentUserId, currentUserRole }) {
                     </div>
                 ))}
             </div>
+
+            {/* Task Analytics */}
+            {isSuperAdmin && tasks.length > 0 && <TaskAnalyticsCharts tasks={tasks} />}
 
             {/* Filter Tabs */}
             <div className="flex items-center gap-2 flex-wrap mb-6">

@@ -43,9 +43,11 @@ export default function CustomerBottomNav() {
                 </div>
 
                 {/* Active Orders Overlay Modal */}
-                <div className="pointer-events-auto w-full px-4 mb-4">
-                    <ActiveOrdersOverlay />
-                </div>
+                {!pathname?.startsWith('/shop') && (
+                    <div className="pointer-events-auto w-full px-4 mb-4">
+                        <ActiveOrdersOverlay />
+                    </div>
+                )}
 
                 {/* Glass Container */}
                 <div className="mx-4 mb-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2rem] p-2 pointer-events-auto">

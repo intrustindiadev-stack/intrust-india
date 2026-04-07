@@ -173,22 +173,13 @@ function MerchantCard({ merchant, idx, rating }) {
 
                     {/* Highly Subtle Footer Tags */}
                     <div className="mt-5 pt-4 border-t border-dashed border-slate-200 dark:border-white/[0.08] flex items-center gap-3">
-                        {rating ? (
-                            <>
-                                <span className="flex items-center gap-1 text-[11px] font-bold text-amber-500">
-                                    <Star size={12} className="fill-amber-400 text-amber-400" />
-                                    {parseFloat(rating.avg_rating).toFixed(1)}
-                                </span>
-                                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                                    {rating.total_ratings} {rating.total_ratings === 1 ? 'rating' : 'ratings'}
-                                </span>
-                            </>
-                        ) : (
-                            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                                <Sparkles size={11} className="text-amber-500" />
-                                Premium Store
-                            </span>
-                        )}
+                        <span className="flex items-center gap-1 text-[11px] font-bold text-amber-500">
+                            <Star size={12} className={rating && rating.total_ratings > 0 ? "fill-amber-400 text-amber-400" : "text-amber-400"} />
+                            {rating && rating.total_ratings > 0 ? parseFloat(rating.avg_rating).toFixed(1) : "0.0"}
+                        </span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                            {rating && rating.total_ratings > 0 ? rating.total_ratings : "0"} {(rating && rating.total_ratings === 1) ? 'rating' : 'ratings'}
+                        </span>
                         <div className="w-[1px] h-3 bg-slate-200 dark:bg-slate-700" />
                         <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                             Tap to shop

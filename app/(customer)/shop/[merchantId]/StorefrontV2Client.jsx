@@ -214,88 +214,96 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
             </div>
 
             {/* ====== STICKY HEADER — FROSTED GLASS ====== */}
-            <header
-                className={`sticky top-20 md:top-24 z-30 w-full backdrop-blur-2xl border-b transition-all ${isDark ? 'bg-[#080a10]/70 border-white/[0.06] shadow-[0_1px_30px_rgba(0,0,0,0.3)]' : 'bg-white/80 border-slate-200/80 shadow-sm'
-                    }`}
-            >
-                {/* Top Row */}
-                <div className="flex items-center gap-3 px-4 py-3 md:px-6">
-                    <button
-                        onClick={() => router.push('/shop')}
-                        className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-all ${isDark ? 'hover:bg-white/5 text-white/60' : 'hover:bg-slate-100 text-slate-600'}`}
-                    >
-                        <ArrowLeft size={20} />
-                    </button>
+            <div className="sticky top-[76px] md:top-[92px] z-30 px-2 sm:px-4 md:px-6 max-w-7xl mx-auto w-full mb-4 pointer-events-none">
+                <header
+                    className={`pointer-events-auto backdrop-blur-xl rounded-2xl md:rounded-[2rem] border transition-all overflow-hidden flex flex-col ${isDark ? 'bg-[#080a10]/85 border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.3)]' : 'bg-white/95 border-slate-200/80 shadow-lg'
+                        }`}
+                >
+                    {/* Top Row */}
+                    <div className="flex items-center gap-3 px-4 py-3 md:px-5">
+                        <button
+                            onClick={() => router.push('/shop')}
+                            className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-all ${isDark ? 'hover:bg-white/5 text-white/60' : 'hover:bg-slate-100 text-slate-600'}`}
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
 
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-black overflow-hidden bg-blue-500 shrink-0 shadow-sm">
-                        {avatarUrl ? (
-                            <img src={avatarUrl} alt={merchant?.business_name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        ) : (
-                            <span>{merchant?.business_name?.substring(0, 2).toUpperCase()}</span>
-                        )}
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-black overflow-hidden bg-blue-500 shrink-0 shadow-sm border-2 border-white dark:border-white/10">
+                            {avatarUrl ? (
+                                <img src={avatarUrl} alt={merchant?.business_name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            ) : (
+                                <span>{merchant?.business_name?.substring(0, 2).toUpperCase()}</span>
+                            )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <h1 className={`text-lg md:text-xl font-black capitalize leading-tight truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                {merchant?.business_name}
+                            </h1>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] truncate" style={{ color: primaryColor }}>
+                                {initialInventory.length} Items Available
+                            </p>
+                        </div>
+
+                        {/* Search - Desktop */}
+                        <div className="flex-1 max-w-sm hidden sm:block relative">
+                            <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/40' : 'text-slate-400'}`} />
+                            <input
+                                type="text"
+                                placeholder={`Search store...`}
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className={`w-full pl-10 pr-4 py-2 md:py-2.5 rounded-full text-sm font-medium outline-none transition-all border ${
+                                    isDark 
+                                        ? 'bg-[#0a0c14]/50 text-white placeholder:text-white/30 border-white/[0.08] focus:bg-[#0a0c14] focus:border-white/20' 
+                                        : 'bg-white/50 text-slate-900 placeholder:text-slate-400 border-slate-200 hover:border-slate-300 hover:bg-white focus:border-blue-500 focus:bg-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]'
+                                    }`}
+                            />
+                        </div>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                        <h1 className={`text-lg md:text-xl font-black capitalize leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                            {merchant?.business_name}
-                        </h1>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: primaryColor }}>
-                            {initialInventory.length} Items Available
-                        </p>
+                    {/* Mobile Search */}
+                    <div className="px-4 pb-3 sm:hidden">
+                        <div className="relative">
+                            <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/40' : 'text-slate-400'}`} />
+                            <input
+                                type="text"
+                                placeholder={`Search store...`}
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className={`w-full pl-10 pr-4 py-2 rounded-full text-sm font-medium outline-none transition-all border ${
+                                    isDark 
+                                        ? 'bg-[#0a0c14]/50 text-white placeholder:text-white/30 border-white/[0.08] focus:bg-[#0a0c14] focus:border-white/20' 
+                                        : 'bg-white/50 text-slate-900 placeholder:text-slate-400 border-slate-200 hover:border-slate-300 hover:bg-white focus:border-blue-500 focus:bg-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]'
+                                    }`}
+                            />
+                        </div>
                     </div>
 
-                    {/* Search - Desktop */}
-                    <div className="flex-1 max-w-sm hidden sm:block relative">
-                        <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/30' : 'text-slate-400'}`} />
-                        <input
-                            type="text"
-                            placeholder={`Search store...`}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className={`w-full pl-9 pr-4 py-2.5 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-white/[0.06] text-white placeholder:text-white/25 focus:bg-white/[0.10] border border-white/[0.06] focus:border-white/10' : 'bg-slate-100 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-200'
-                                }`}
-                        />
-                    </div>
-                </div>
-
-                {/* Mobile Search */}
-                <div className="px-4 pb-3 sm:hidden">
-                    <div className="relative">
-                        <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/30' : 'text-slate-400'}`} />
-                        <input
-                            type="text"
-                            placeholder={`Search store...`}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className={`w-full pl-9 pr-4 py-2.5 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-white/[0.06] text-white placeholder:text-white/25 border border-white/[0.06]' : 'bg-slate-100 text-slate-900 placeholder:text-slate-400'
-                                }`}
-                        />
-                    </div>
-                </div>
-
-                {/* Subcategory Pills */}
-                {merchantCategories.length > 1 && (
-                    <div className={`flex items-center gap-2 px-4 py-2.5 overflow-x-auto no-scrollbar border-t ${isDark ? 'border-white/[0.04]' : 'border-slate-100'}`}>
-                        {merchantCategories.map(sub => {
-                            const isActive = activeSubCategory === sub;
-                            return (
-                                <button
-                                    key={sub}
-                                    onClick={() => setActiveSubCategory(sub)}
-                                    className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border outline-none ${isActive
-                                            ? 'text-white border-transparent shadow-lg bg-blue-500'
-                                            : isDark
-                                                ? 'bg-transparent text-white/40 border-white/[0.06] hover:border-white/10 hover:text-white/60'
-                                                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-700'
-                                        }`}
-                                >
-                                    {sub}
-                                </button>
-                            );
-                        })}
-                    </div>
-                )}
-            </header>
+                    {/* Subcategory Pills */}
+                    {merchantCategories.length > 1 && (
+                        <div className={`flex items-center gap-2 px-4 md:px-5 py-2.5 overflow-x-auto no-scrollbar border-t ${isDark ? 'border-white/[0.04]' : 'border-slate-100'}`}>
+                            {merchantCategories.map(sub => {
+                                const isActive = activeSubCategory === sub;
+                                return (
+                                    <button
+                                        key={sub}
+                                        onClick={() => setActiveSubCategory(sub)}
+                                        className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border outline-none ${isActive
+                                                ? 'text-white border-transparent shadow-lg bg-blue-500'
+                                                : isDark
+                                                    ? 'bg-transparent text-white/40 border-white/[0.06] hover:border-white/10 hover:text-white/60'
+                                                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-700'
+                                            }`}
+                                    >
+                                        {sub}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </header>
+            </div>
 
             {/* ====== PRODUCT GRID ====== */}
             <main className="w-full px-2 sm:px-4 md:px-6 flex-1 py-4 md:py-6 relative z-10">

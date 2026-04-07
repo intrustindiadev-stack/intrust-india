@@ -117,7 +117,12 @@ export default async function AnalyticsPage() {
     // Revenue calculations
     const shoppingRevenue = shoppingOrders
         .filter(o => o.seller_id === merchant.id)
-        .reduce((sum, o) => sum + (Number(o.total_price_paise) || 0), 0) / 100;
+        .reduce((sum, o) => {
+            const gross = Number(o.total_price_paise) || 0;
+            // Retail orders are subject to 5% platform commission; wholesale are not
+            const net = o.order_type === 'retail' ? gross * 0.95 : gross;
+            return sum + net;
+        }, 0) / 100;
         
     const shoppingSpend = shoppingOrders
         .filter(o => o.buyer_id === merchant.id)
@@ -317,7 +322,7 @@ export default async function AnalyticsPage() {
                         <div className="relative z-10">
                             <h3 className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-4">Retail Earnings</h3>
                             <p className="text-4xl font-bold text-slate-900 dark:text-slate-100">₹{shoppingRevenue.toLocaleString('en-IN')}</p>
-                            <p className="text-xs font-semibold text-slate-500 mt-2">Revenue from products sold directly to customers</p>
+                            <p className="text-xs font-semibold text-slate-500 mt-2">Net earnings after 5% platform commission</p>
                         </div>
                     </div>
                     

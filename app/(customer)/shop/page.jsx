@@ -71,41 +71,41 @@ export default async function MerchantHubPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#080a10] relative pb-20 transition-colors">
+        <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#080a10] relative pb-32 transition-colors">
             <Navbar />
 
-            <main className="pt-20 md:pt-24">
+            <main className="pt-[88px] md:pt-[104px]">
 
                 {/* ── Top Header Bar ── */}
-                <div className="bg-white dark:bg-[#0c0e16] sticky top-[64px] md:top-[72px] z-20 border-b border-slate-100 dark:border-white/[0.04] shadow-sm">
-                    <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between gap-3">
+                <div className="sticky top-[76px] md:top-[92px] z-30 px-4 md:px-8 max-w-7xl mx-auto w-full mb-6 pointer-events-none">
+                    <div className="bg-white/95 dark:bg-[#0c0e16]/95 backdrop-blur-2xl rounded-2xl md:rounded-[2rem] border border-slate-200/80 dark:border-white/[0.08] shadow-lg py-3 px-4 md:px-5 flex items-center justify-between gap-3 pointer-events-auto transition-shadow hover:shadow-xl">
 
                         {/* Title */}
                         <div className="flex items-center gap-2.5">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-md shadow-indigo-500/25 shrink-0">
-                                <ShoppingBag size={15} className="text-white" />
+                            <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-md shadow-indigo-500/25 shrink-0">
+                                <ShoppingBag size={16} className="text-white" />
                             </span>
                             <div>
-                                <h1 className="text-base md:text-lg font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                                <h1 className="text-lg md:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
                                     Intrust Mart
                                 </h1>
-                                <p className="text-[10px] text-slate-400 dark:text-white/30 font-medium leading-none mt-0.5 hidden sm:block">
+                                <p className="text-[10px] md:text-xs text-slate-500 dark:text-white/40 font-bold leading-none mt-1">
                                     {allMerchants.length} stores near you
                                 </p>
                             </div>
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 md:gap-3">
                             {user && (
                                 <>
                                     <Link
                                         href="/wishlist"
-                                        className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-500/10 text-pink-500 border border-pink-100 dark:border-pink-500/20 hover:bg-pink-100 dark:hover:bg-pink-500/20 transition-colors"
+                                        className="relative flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-xl bg-pink-50 dark:bg-pink-500/10 text-pink-500 border border-pink-100 dark:border-pink-500/20 hover:bg-pink-100 dark:hover:bg-pink-500/30 transition-colors"
                                     >
-                                        <Heart size={17} className={wishlistCount > 0 ? 'fill-current' : ''} />
+                                        <Heart size={18} className={wishlistCount > 0 ? 'fill-current' : ''} />
                                         {wishlistCount > 0 && (
-                                            <span className="absolute -top-1.5 -right-1.5 bg-pink-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white dark:border-[#0c0e16]">
+                                            <span className="absolute -top-1.5 -right-1.5 bg-pink-500 text-white text-[10px] font-black w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-[#0c0e16]">
                                                 {wishlistCount}
                                             </span>
                                         )}
@@ -113,11 +113,11 @@ export default async function MerchantHubPage() {
 
                                     <Link
                                         href="/shop/cart"
-                                        className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 border border-indigo-100 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
+                                        className="relative flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/30 transition-colors"
                                     >
-                                        <ShoppingBag size={17} className={cartCount > 0 ? 'fill-current' : ''} />
+                                        <ShoppingBag size={18} className={cartCount > 0 ? 'fill-current' : ''} />
                                         {cartCount > 0 && (
-                                            <span className="absolute -top-1.5 -right-1.5 bg-indigo-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white dark:border-[#0c0e16]">
+                                            <span className="absolute -top-1.5 -right-1.5 bg-indigo-600 text-white text-[10px] font-black w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-[#0c0e16]">
                                                 {cartCount}
                                             </span>
                                         )}
@@ -125,9 +125,9 @@ export default async function MerchantHubPage() {
 
                                     <Link
                                         href="/orders"
-                                        className="flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 border border-emerald-100 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors"
+                                        className="flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/30 transition-colors"
                                     >
-                                        <Package size={17} />
+                                        <Package size={18} />
                                     </Link>
                                 </>
                             )}
@@ -136,12 +136,12 @@ export default async function MerchantHubPage() {
                             {customerProfile && (
                                 <Link
                                     href="/wallet"
-                                    className="hidden sm:flex items-center gap-2 bg-slate-900 dark:bg-white/[0.06] rounded-xl px-3 py-2 border border-transparent hover:border-slate-700 dark:hover:border-white/10 transition-all"
+                                    className="hidden sm:flex items-center gap-2.5 bg-slate-900 dark:bg-white/[0.06] rounded-xl px-4 py-2 border border-transparent hover:border-slate-700 dark:hover:border-white/10 transition-all border-slate-800"
                                 >
-                                    <Wallet size={14} className="text-[#D4AF37]" />
+                                    <Wallet size={16} className="text-[#FDB931]" />
                                     <div>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Balance</p>
-                                        <p className="text-sm font-black text-white dark:text-white leading-none mt-0.5">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Balance</p>
+                                        <p className="text-sm font-black text-white dark:text-white leading-none">
                                             ₹{(customerProfile.wallet_balance_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
                                         </p>
                                     </div>

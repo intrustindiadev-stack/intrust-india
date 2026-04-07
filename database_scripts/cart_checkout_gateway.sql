@@ -157,6 +157,8 @@ DECLARE
     v_item_total BIGINT;
     v_commission_paise BIGINT;
     v_merchant_credit BIGINT;
+    v_product_cost BIGINT;
+    v_merchant_profit BIGINT;
 BEGIN
     SELECT * INTO v_group FROM public.shopping_order_groups WHERE id = p_group_id AND customer_id = p_customer_id AND status = 'pending';
     
@@ -195,11 +197,19 @@ BEGIN
                 updated_at = now()
             WHERE id = v_item.inventory_id;
 
+            -- Fetch wholesale cost for accurate profit calculation
+            SELECT wholesale_price_paise INTO v_product_cost
+            FROM public.shopping_products
+            WHERE id = v_item.product_id;
+
+            -- profit_paise = actual merchant margin (credit after commission minus wholesale cost)
+            v_merchant_profit := v_merchant_credit - (v_product_cost * v_item.quantity);
+
             UPDATE public.shopping_order_items
-            -- profit_paise = merchant's net credit (after commission deduction)
+            -- profit_paise = actual net profit (margin minus platform fee)
             -- commission_amount_paise = platform fee taken (5%)
-            SET cost_price_paise = (SELECT wholesale_price_paise FROM public.shopping_products WHERE id = v_item.product_id),
-                profit_paise = v_merchant_credit,
+            SET cost_price_paise = v_product_cost,
+                profit_paise = v_merchant_profit,
                 commission_amount_paise = v_commission_paise
             WHERE id = v_item.id;
 

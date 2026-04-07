@@ -39,7 +39,7 @@ export async function GET() {
             adminClient.from('transactions').select('id, status, total_paid_paise, coupon_id, created_at'),
             adminClient.from('merchants').select('id, status'),
             adminClient.from('shopping_order_groups').select('id, total_amount_paise, delivery_status, is_platform_order, created_at'),
-            adminClient.from('shopping_order_items').select('group_id, product_id, quantity, unit_price_paise, profit_paise'),
+            adminClient.from('shopping_order_items').select('group_id, product_id, quantity, unit_price_paise, profit_paise, commission_amount_paise'),
             adminClient.from('shopping_products').select('id, title, is_active'),
         ]);
 
@@ -86,7 +86,8 @@ export async function GET() {
         const totalProducts = shoppingProducts.length;
         const activeProducts = shoppingProducts.filter(p => p.is_active).length;
         const platformRevenue = shoppingOrders.filter(o => o.is_platform_order).reduce((acc, o) => acc + (Number(o.total_amount_paise) || 0), 0);
-        const merchantCommissionRevenue = shoppingItems.reduce((acc, i) => acc + (Number(i.profit_paise) || 0), 0);
+        const merchantNetProfit = shoppingItems.reduce((acc, i) => acc + (Number(i.profit_paise) || 0), 0);
+        const platformCommissionRevenue = shoppingItems.reduce((acc, i) => acc + (Number(i.commission_amount_paise) || 0), 0);
 
         // Shopping orders trend (last 14 days)
         const last14Days = [...Array(14)].map((_, i) => {
@@ -130,7 +131,8 @@ export async function GET() {
                 totalProducts,
                 activeProducts,
                 platformRevenue,
-                merchantCommissionRevenue,
+                merchantNetProfit,
+                platformCommissionRevenue,
             },
             top5Products,
             shoppingOrdersChartData,
