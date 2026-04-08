@@ -110,8 +110,8 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                     {(order.items || []).map(item => {
                                         const gstRate = item.gst_percentage || 0;
                                         const totalPaise = item.total_price_paise || 0;
-                                        const baseTaxable = totalPaise / (1 + gstRate / 100);
-                                        const gstAmount = totalPaise - baseTaxable;
+                                        const baseTaxable = totalPaise;
+                                        const gstAmount = Math.round(totalPaise * gstRate / 100);
 
                                         return (
                                             <div key={item.id} className="relative group/item flex gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/[0.05] hover:border-emerald-500/20 dark:hover:border-white/10 transition-all">

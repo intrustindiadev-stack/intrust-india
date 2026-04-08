@@ -56,6 +56,26 @@ export async function POST(request) {
                 return NextResponse.json({ error: 'Auto Mode is already active' }, { status: 400 });
             }
 
+            // Check if subscription was turned off but hasn't expired yet
+            const isCurrentlyValid = merchant.auto_mode_valid_until && new Date(merchant.auto_mode_valid_until) > new Date();
+
+            if (isCurrentlyValid) {
+                const { error: updateError } = await supabase
+                    .from('merchants')
+                    .update({ auto_mode_status: 'active' })
+                    .eq('id', merchant.id);
+
+                if (updateError) throw updateError;
+
+                return NextResponse.json({ 
+                    success: true, 
+                    message: 'Auto Mode reactivated successfully (Current billing cycle reused)',
+                    newBalance: merchant.wallet_balance_paise / 100, // wallet doesn't change
+                    validUntil: merchant.auto_mode_valid_until,
+                    months_paid: merchant.auto_mode_months_paid
+                });
+            }
+
             const isFirstMonth = (merchant.auto_mode_months_paid || 0) === 0;
             const subscriptionPrice = isFirstMonth ? 999 : 1999;
             const pricePaise = subscriptionPrice * 100;

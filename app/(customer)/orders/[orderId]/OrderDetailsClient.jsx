@@ -62,14 +62,18 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
     // Bill summary
     const billDetails = items.reduce((acc, item) => {
         const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || item.unit_price_paise;
+        const gstRate = item.shopping_products?.gst_percentage || 0;
+        const gstAmount = item.gst_amount_paise || Math.round((item.unit_price_paise * item.quantity) * gstRate / 100);
+        
         acc.mrpTotal += (mrp * item.quantity);
         acc.sellingTotal += (item.unit_price_paise * item.quantity);
+        acc.gstTotal += gstAmount;
         return acc;
-    }, { mrpTotal: 0, sellingTotal: 0 });
+    }, { mrpTotal: 0, sellingTotal: 0, gstTotal: 0 });
 
     const totalDiscount = billDetails.mrpTotal > billDetails.sellingTotal ? billDetails.mrpTotal - billDetails.sellingTotal : 0;
     const deliveryFee = order.delivery_fee_paise || 5000;
-    const finalPayable = billDetails.sellingTotal + deliveryFee;
+    const finalPayable = billDetails.sellingTotal + billDetails.gstTotal + deliveryFee;
 
     return (
         <div className={`min-h-screen pb-24 pt-[12vh] sm:pt-[15vh] ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
@@ -456,6 +460,11 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                                 <span className="font-bold">- ₹{(totalDiscount / 100).toLocaleString('en-IN')}</span>
                             </div>
                         )}
+
+                        <div className="flex justify-between items-center">
+                            <span className={isDark ? 'text-white/40' : 'text-slate-500'}>GST (Calculated)</span>
+                            <span>₹{(billDetails.gstTotal / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        </div>
 
                         <div className="flex justify-between items-center">
                             <span className={isDark ? 'text-white/40' : 'text-slate-500'}>Delivery Charges</span>

@@ -50,17 +50,16 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
         const gstRate = item.shopping_products?.gst_percentage || 0;
         const hsnCode = item.shopping_products?.hsn_code || "-";
         const quantity = item.quantity || 1;
-        const totalAmountInclusive = (item.unit_price_paise || 0) * quantity;
-        const divisor = 1 + gstRate / 100;
-        const taxableAmount = totalAmountInclusive / divisor;
-        const totalTaxAmount = totalAmountInclusive - taxableAmount;
+        const taxableAmount = (item.unit_price_paise || 0) * quantity;
+        const totalTaxAmount = Math.round(taxableAmount * gstRate / 100);
         const cgstAmount = totalTaxAmount / 2;
         const sgstAmount = totalTaxAmount / 2;
+        const totalAmount = taxableAmount + totalTaxAmount;
 
         totalTaxableValue += taxableAmount;
         totalCgst += cgstAmount;
         totalSgst += sgstAmount;
-        grandTotal += totalAmountInclusive;
+        grandTotal += totalAmount;
 
         return {
             sNo: index + 1,
@@ -71,7 +70,7 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
             gstRate,
             cgstAmount,
             sgstAmount,
-            totalAmount: totalAmountInclusive,
+            totalAmount,
         };
     });
 
@@ -167,11 +166,11 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
                                         <td className="py-3 px-3 font-bold text-center">{row.sNo}</td>
                                         <td className="py-3 px-3">
                                             <p className="font-bold text-slate-900">{row.description}</p>
-                                            <p className="text-[9px] text-slate-400">Incl. {row.gstRate}% GST</p>
+                                            <p className="text-[9px] text-slate-400">GST: {row.gstRate}%</p>
                                         </td>
                                         <td className="py-3 px-3 text-center">{row.hsnCode}</td>
                                         <td className="py-3 px-3 text-right">{row.qty}</td>
-                                        <td className="py-3 px-3 text-right font-bold">Rs. {formatCurrency(row.totalAmount / row.qty)}</td>
+                                        <td className="py-3 px-3 text-right font-bold">Rs. {formatCurrency((row.taxableAmount) / row.qty)}</td>
                                         <td className="py-3 px-3 text-center">{row.gstRate}%</td>
                                         <td className="py-3 px-3 text-right">Rs. {formatCurrency(row.cgstAmount + row.sgstAmount)}</td>
                                         <td className="py-3 px-3 text-right font-bold text-slate-900">Rs. {formatCurrency(row.totalAmount)}</td>

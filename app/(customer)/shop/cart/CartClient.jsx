@@ -80,7 +80,8 @@ const CartClient = ({ userId }) => {
             product_images,
             mrp_paise,
             suggested_retail_price_paise,
-            category
+            category,
+            gst_percentage
           )
         `)
         .eq("customer_id", userId);
@@ -348,14 +349,17 @@ const CartClient = ({ userId }) => {
     
     const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
     const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;
+    const gstRate = item.shopping_products?.gst_percentage || 0;
+    const gstAmount = Math.round(sellingPrice * item.quantity * gstRate / 100);
     acc.mrpTotal += (finalMrp * item.quantity);
     acc.sellingTotal += (sellingPrice * item.quantity);
+    acc.gstTotal += gstAmount;
     return acc;
-  }, { mrpTotal: 0, sellingTotal: 0 });
+  }, { mrpTotal: 0, sellingTotal: 0, gstTotal: 0 });
 
   const totalDiscount = billDetails.mrpTotal > billDetails.sellingTotal ? billDetails.mrpTotal - billDetails.sellingTotal : 0;
   const deliveryFee = 9900; // Fixed ₹99 delivery fee
-  const finalPayable = billDetails.sellingTotal > 0 ? billDetails.sellingTotal + deliveryFee : 0;
+  const finalPayable = billDetails.sellingTotal > 0 ? billDetails.sellingTotal + billDetails.gstTotal + deliveryFee : 0;
   const itemCount = cartItems.reduce((a, i) => a + i.quantity, 0);
   const hasStockIssues = stockWarnings.size > 0;
   const hasValidAddress = profile && profile.address && profile.phone;
@@ -733,6 +737,10 @@ const CartClient = ({ userId }) => {
                       <span>- ₹{(totalDiscount / 100).toLocaleString('en-IN')}</span>
                     </div>
                   )}
+                  <div className="flex justify-between">
+                    <span>GST (Calculated)</span>
+                    <span>₹{(billDetails.gstTotal / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
                   <div className="flex justify-between">
                     <span>Delivery Fee</span>
                     <span>₹{(deliveryFee / 100).toLocaleString('en-IN')}</span>

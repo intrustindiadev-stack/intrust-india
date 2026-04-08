@@ -69,9 +69,10 @@ export default function AdminOrderDetailClient({ order: initialOrder, sellerDeta
     const isCancelled = order.delivery_status === "cancelled";
 
     // Financial calculations
-    const itemsTotal = (order.items || []).reduce((sum, i) => sum + (i.total_price_paise || 0), 0);
+    const itemsTotal = (order.items || []).reduce((sum, i) => sum + (i.total_price_paise || (i.unit_price_paise * i.quantity)), 0);
+    const totalGst = (order.items || []).reduce((sum, i) => sum + (i.gst_amount_paise || Math.round((i.total_price_paise || (i.unit_price_paise * i.quantity)) * (i.gst_percentage || 0) / 100)), 0);
     const deliveryFee = order.delivery_fee_paise ?? 0;
-    const grandTotal = itemsTotal + deliveryFee;
+    const grandTotal = order.total_amount_paise || (itemsTotal + totalGst + deliveryFee);
     const totalProfit = (order.items || []).reduce((sum, i) => sum + (i.profit_paise || 0), 0);
 
     const updateStatus = async (newStatus) => {
@@ -351,8 +352,8 @@ export default function AdminOrderDetailClient({ order: initialOrder, sellerDeta
                     {(order.items || []).map((item) => {
                         const gstRate = item.gst_percentage || 0;
                         const subtotal = item.total_price_paise;
-                        const baseTaxable = subtotal / (1 + gstRate / 100);
-                        const gstAmount = subtotal - baseTaxable;
+                        const baseTaxable = subtotal;
+                        const gstAmount = Math.round(subtotal * gstRate / 100);
                         return (
                             <div key={item.id} className="flex gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
                                 <div className="w-14 h-14 rounded-xl bg-white border border-slate-200 flex items-center justify-center flex-shrink-0 overflow-hidden p-1">
@@ -409,6 +410,10 @@ export default function AdminOrderDetailClient({ order: initialOrder, sellerDeta
                     <div className="flex justify-between text-sm">
                         <span className="text-slate-500 font-medium">Delivery Fee</span>
                         <span className="font-bold text-slate-900">₹{(deliveryFee / 100).toLocaleString("en-IN")}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                        <span className="text-slate-500 font-medium">GST (Calculated)</span>
+                        <span className="font-bold text-slate-900">₹{(totalGst / 100).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="pt-3 border-t border-dashed border-slate-200 flex justify-between">
                         <span className="font-black text-slate-900">Grand Total</span>

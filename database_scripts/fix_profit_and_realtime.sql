@@ -67,13 +67,15 @@ BEGIN
             COALESCE(mi.retail_price_paise, p.suggested_retail_price_paise) as effective_price,
             mi.stock_quantity as merchant_stock,
             p.admin_stock as platform_stock,
-            p.title as product_title
+            p.title as product_title,
+            p.gst_percentage as gst_pct
         FROM public.shopping_cart c
         LEFT JOIN public.merchant_inventory mi ON c.inventory_id = mi.id
         JOIN public.shopping_products p ON c.product_id = p.id
         WHERE c.customer_id = p_customer_id
     LOOP
-        v_total_paise := v_total_paise + (v_cart_items.effective_price * v_cart_items.quantity);
+        v_total_paise := v_total_paise + (v_cart_items.effective_price * v_cart_items.quantity)
+                       + ROUND(v_cart_items.effective_price * v_cart_items.quantity * COALESCE(v_cart_items.gst_pct, 0) / 100);
         
         IF v_cart_items.is_platform_item THEN
             IF v_cart_items.platform_stock < v_cart_items.quantity THEN
@@ -105,7 +107,8 @@ BEGIN
             c.*, 
             COALESCE(mi.retail_price_paise, p.suggested_retail_price_paise) as effective_price,
             mi.merchant_id,
-            p.wholesale_price_paise as platform_cost
+            p.wholesale_price_paise as platform_cost,
+            p.gst_percentage as gst_pct
         FROM public.shopping_cart c
         LEFT JOIN public.merchant_inventory mi ON c.inventory_id = mi.id
         JOIN public.shopping_products p ON c.product_id = p.id
@@ -113,16 +116,18 @@ BEGIN
     LOOP
         IF v_item.is_platform_item THEN
             INSERT INTO public.shopping_order_items (
-                group_id, seller_id, product_id, inventory_id, quantity, unit_price_paise, cost_price_paise, profit_paise
+                group_id, seller_id, product_id, inventory_id, quantity, unit_price_paise, cost_price_paise, profit_paise, gst_amount_paise
             ) VALUES (
                 v_group_id, NULL, v_item.product_id, NULL, v_item.quantity, v_item.effective_price, v_item.platform_cost, 
-                (v_item.effective_price - v_item.platform_cost) * v_item.quantity
+                (v_item.effective_price - v_item.platform_cost) * v_item.quantity,
+                ROUND(v_item.effective_price * v_item.quantity * COALESCE(v_item.gst_pct, 0) / 100)
             );
         ELSE
             INSERT INTO public.shopping_order_items (
-                group_id, seller_id, product_id, inventory_id, quantity, unit_price_paise, cost_price_paise, profit_paise
+                group_id, seller_id, product_id, inventory_id, quantity, unit_price_paise, cost_price_paise, profit_paise, gst_amount_paise
             ) VALUES (
-                v_group_id, v_item.merchant_id, v_item.product_id, v_item.inventory_id, v_item.quantity, v_item.effective_price, 0, 0
+                v_group_id, v_item.merchant_id, v_item.product_id, v_item.inventory_id, v_item.quantity, v_item.effective_price, 0, 0,
+                ROUND(v_item.effective_price * v_item.quantity * COALESCE(v_item.gst_pct, 0) / 100)
             );
         END IF;
     END LOOP;
