@@ -258,13 +258,26 @@ export default async function handler(req, res) {
             }
         }
 
-        // 8. Redirect User based on Status
+        // 8. Redirect User based on Status and Transaction Type
         if (internalStatus === 'SUCCESS') {
-            res.redirect(`/payment/success?txnId=${clientTxnId}`);
+            // Merchant-specific redirects for immediate dashboard access
+            if (existingTxn?.udf1 === 'MERCHANT_SUBSCRIPTION') {
+                res.redirect(`/merchant/dashboard?welcome=true&txnId=${clientTxnId}`);
+            } else if (existingTxn?.udf1 === 'MERCHANT_TOPUP') {
+                res.redirect(`/merchant/wallet?success=true&txnId=${clientTxnId}`);
+            } else if (existingTxn?.udf1 === 'WHOLESALE_PURCHASE') {
+                res.redirect(`/merchant/inventory?success=true&txnId=${clientTxnId}`);
+            } else {
+                // Default success page for customer transactions
+                res.redirect(`/payment/success?txnId=${clientTxnId}`);
+            }
         } else if (internalStatus === 'PENDING') {
             res.redirect(`/payment/processing?txnId=${clientTxnId}`);
-        } else {
+        } else if (internalStatus === 'FAILED' || internalStatus === 'ABORTED') {
             res.redirect(`/payment/failure?txnId=${clientTxnId}&msg=${encodeURIComponent(transMsg || 'Payment Failed')}`);
+        } else {
+            // Timeout or unknown status - redirect to processing page
+            res.redirect(`/payment/processing?txnId=${clientTxnId}&status=timeout`);
         }
 
     } catch (error) {

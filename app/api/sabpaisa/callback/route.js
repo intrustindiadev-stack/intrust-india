@@ -36,7 +36,7 @@ export async function POST(request) {
             // Respect ngrok/proxy headers if available
             const protocol = request.headers.get('x-forwarded-proto') || (request.url.startsWith('https') ? 'https' : 'http');
             const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
-            
+
             try {
                 const base = `${protocol}://${host}`;
                 return new URL(path, base);
@@ -454,7 +454,7 @@ export async function POST(request) {
                                         .select('user_id')
                                         .eq('id', updatedCoupon.merchant_id)
                                         .single();
-                                    
+
                                     if (merchantDetails?.user_id) {
                                         await supabaseAdmin.from('notifications').insert({
                                             user_id: merchantDetails.user_id,
@@ -684,16 +684,37 @@ export async function POST(request) {
             }
         }
 
-        // 8. Redirect User based on Status
+        // 8. Redirect User based on Status and Transaction Type
         let redirectPath = '/payment/failure';
         let redirectQuery = `?txnId=${clientTxnId}&msg=${encodeURIComponent(result.transMsg || 'Payment Failed')}`;
 
         if (internalStatus === 'SUCCESS') {
-            redirectPath = '/payment/success';
-            redirectQuery = `?txnId=${clientTxnId}`;
+            // Merchant-specific redirects for immediate dashboard access
+            if (existingTxn?.udf1 === 'MERCHANT_SUBSCRIPTION') {
+                redirectPath = '/merchant/dashboard';
+                redirectQuery = `?welcome=true&txnId=${clientTxnId}`;
+            } else if (existingTxn?.udf1 === 'MERCHANT_TOPUP') {
+                redirectPath = '/merchant/wallet';
+                redirectQuery = `?success=true&txnId=${clientTxnId}`;
+            } else if (existingTxn?.udf1 === 'WHOLESALE_PURCHASE') {
+                redirectPath = '/merchant/inventory';
+                redirectQuery = `?success=true&txnId=${clientTxnId}`;
+            } else {
+                // Default success page for customer transactions
+                redirectPath = '/payment/success';
+                redirectQuery = `?txnId=${clientTxnId}`;
+            }
         } else if (internalStatus === 'PENDING') {
             redirectPath = '/payment/processing';
             redirectQuery = `?txnId=${clientTxnId}`;
+        } else if (internalStatus === 'FAILED' || internalStatus === 'ABORTED') {
+            // Handle failed/aborted payments with appropriate messaging
+            redirectPath = '/payment/failure';
+            redirectQuery = `?txnId=${clientTxnId}&msg=${encodeURIComponent(result.transMsg || 'Payment Failed')}`;
+        } else {
+            // Timeout or unknown status - redirect to processing page
+            redirectPath = '/payment/processing';
+            redirectQuery = `?txnId=${clientTxnId}&status=timeout`;
         }
 
         return NextResponse.redirect(buildRedirectUrl(redirectPath + redirectQuery), 303);

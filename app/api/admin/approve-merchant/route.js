@@ -84,7 +84,27 @@ export async function POST(request) {
             );
         }
 
-        // 6. Notify User to complete subscription
+        // 6. Assign 'merchant' role in user_profiles
+        const { error: roleError } = await adminSupabase
+            .from('user_profiles')
+            .update({ role: 'merchant' })
+            .eq('id', targetUserId);
+
+        if (roleError) {
+            console.error('Error assigning merchant role:', roleError);
+            // Rollback merchant status
+            await adminSupabase
+                .from('merchants')
+                .update({ status: existingMerchant.status, subscription_status: existingMerchant.subscription_status })
+                .eq('id', existingMerchant.id);
+
+            return NextResponse.json(
+                { error: 'Failed to assign merchant role.' },
+                { status: 500 }
+            );
+        }
+
+        // 7. Notify User to complete subscription
         await adminSupabase.from('notifications').insert({
             user_id: targetUserId,
             title: 'Merchant Application Approved 🎉',
@@ -94,7 +114,7 @@ export async function POST(request) {
             read: false
         });
 
-        // 7. Log Action
+        // 8. Log Action
         const { error: auditError } = await adminSupabase.from('audit_logs').insert([
             {
                 actor_id: user.id,
@@ -108,7 +128,8 @@ export async function POST(request) {
                     previous_status: existingMerchant.status,
                     new_status: 'approved',
                     subscription_status: 'unpaid',
-                    target_user_id: targetUserId
+                    target_user_id: targetUserId,
+                    role_assigned: 'merchant'
                 }
             }
         ]);

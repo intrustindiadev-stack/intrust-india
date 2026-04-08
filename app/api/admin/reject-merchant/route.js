@@ -99,7 +99,7 @@ export async function POST(request) {
         if (prevRole === 'merchant') {
             const { error: roleError } = await adminSupabase
                 .from('user_profiles')
-                .update({ role: 'customer' })
+                .update({ role: 'user' })
                 .eq('id', targetUserId);
 
             if (roleError) {
