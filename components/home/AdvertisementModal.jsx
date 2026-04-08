@@ -9,36 +9,47 @@ import { useRouter } from 'next/navigation';
 const ADS = [
     {
         id: 1,
-        title: "InTrust Smart NFC",
-        subtitle: "Tap into the Future of Payments",
-        image: "/images/ads/adv_smart_nfc_card.png",
-        btnText: "Claim Your Card",
-        href: "/nfc-service",
-        icon: CreditCard,
-        gradient: "from-cyan-400 to-blue-600",
-        shadow: "shadow-cyan-500/40",
+        title: "Groceries",
+        subtitle: "Get your Groceries at lower prices",
+        image: "/images/ads/adv_groceries.png",
+        btnText: "Shop Now",
+        href: "/shop",
+        icon: ShieldCheck,
+        gradient: "from-green-400 to-emerald-600",
+        shadow: "shadow-emerald-500/40",
     },
     {
         id: 2,
-        title: "Premium Gift Voucher",
-        subtitle: "Unlock 50% Bonus on Brands",
-        image: "/images/ads/adv_digital_gift_cards.png",
-        btnText: "Redeem Gift",
-        href: "/gift-cards",
-        icon: Gift,
-        gradient: "from-fuchsia-500 to-rose-600",
-        shadow: "shadow-fuchsia-500/40",
+        title: "NFC Card",
+        subtitle: "One Tap, Endless Connections",
+        image: "/images/ads/adv_nfc_card.png",
+        btnText: "Get Your Card",
+        href: "/nfc-service",
+        icon: CreditCard,
+        gradient: "from-blue-400 to-indigo-600",
+        shadow: "shadow-blue-500/40",
     },
     {
         id: 3,
-        title: "InTrust Ecosystem",
-        subtitle: "Join the B2B Elite Network",
-        image: "/images/ads/adv_intrust_ecosystem.png",
-        btnText: "Enter the Hub",
-        href: "/services",
+        title: "Gift Card",
+        subtitle: "Gift yourself the power of choice",
+        image: "/images/ads/adv_gift_cards.png",
+        btnText: "Browse Gifts",
+        href: "/gift-cards",
+        icon: Gift,
+        gradient: "from-rose-400 to-pink-600",
+        shadow: "shadow-rose-500/40",
+    },
+    {
+        id: 4,
+        title: "Smart Tech",
+        subtitle: "High tech. Low prices. Best experience",
+        image: "/images/ads/adv_smart_tech.png",
+        btnText: "Explore Tech",
+        href: "/shop",
         icon: ShieldCheck,
-        gradient: "from-indigo-400 to-purple-600",
-        shadow: "shadow-indigo-500/40",
+        gradient: "from-amber-400 to-orange-600",
+        shadow: "shadow-amber-500/40",
     }
 ];
 
@@ -111,7 +122,7 @@ export default function AdvertisementModal() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.4 }}
-                    className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 sm:backdrop-blur-xl sm:p-6 pb-0"
+                    className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/95 sm:backdrop-blur-2xl sm:p-6 pb-0"
                 >
                     {/* Background Glow */}
                     <motion.div
@@ -137,15 +148,15 @@ export default function AdvertisementModal() {
                         {/* Close Button */}
                         <button
                             onClick={() => setIsOpen(false)}
-                            className="absolute top-4 sm:top-5 right-4 sm:right-5 z-50 p-2.5 sm:p-3 bg-black/30 hover:bg-black/50 backdrop-blur-xl border border-white/20 rounded-full text-white transition-all active:scale-90"
+                            className="absolute top-4 sm:top-5 right-4 sm:right-5 z-50 p-2.5 sm:p-3 bg-white/10 hover:bg-white/20 backdrop-blur-2xl border border-white/10 rounded-full text-white transition-all active:scale-90"
                         >
-                            <X size={20} strokeWidth={2.5} />
+                            <X size={20} strokeWidth={2} />
                         </button>
 
                         {/* Story Progress Indicators */}
                         <div className="absolute top-5 sm:top-6 inset-x-4 sm:inset-x-6 z-40 flex gap-1.5 pointer-events-none">
                             {ADS.map((_, idx) => (
-                                <div key={idx} className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+                                <div key={idx} className="h-0.5 flex-1 bg-white/10 rounded-full overflow-hidden backdrop-blur-sm">
                                     <motion.div
                                         initial={{ width: imageIndex > idx ? "100%" : "0%" }}
                                         animate={{ width: imageIndex === idx ? "100%" : (imageIndex > idx ? "100%" : "0%") }}

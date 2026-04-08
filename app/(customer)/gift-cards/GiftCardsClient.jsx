@@ -14,6 +14,7 @@ import HeroSection from './components/HeroSection';
 import TrustBadges from './components/TrustBadges';
 import StatsBar from './components/StatsBar';
 import Footer from '../../../components/layout/Footer';
+import CustomerBottomNav from '../../../components/layout/customer/CustomerBottomNav';
 
 // Transform Supabase data to match UI expectations
 const transformCouponData = (coupon) => {
@@ -321,6 +322,7 @@ export default function GiftCardsClient({ initialCoupons }) {
                 </div>
             </div>
             <Footer />
+            <CustomerBottomNav />
         </div>
     );
 }

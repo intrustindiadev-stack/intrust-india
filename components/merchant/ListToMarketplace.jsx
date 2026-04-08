@@ -27,10 +27,10 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess }) {
     const merchantProfit = sellingPriceNum - purchasePrice - commission;
     const customerDiscount = ((faceValue - sellingPriceNum) / faceValue) * 100;
 
-    // Profit markup %
-    const markup = purchasePrice > 0
-        ? ((merchantProfit / purchasePrice) * 100)
-        : 100; // If purchase price is 0 (shouldn't happen), assume 100% markup
+    // Profit Margin % (Profit / Selling Price)
+    const profitMargin = sellingPriceNum > 0
+        ? ((merchantProfit / sellingPriceNum) * 100)
+        : 0;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -40,8 +40,8 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess }) {
             return;
         }
 
-        if (markup > 20) {
-            setError('Selling price cannot exceed a 20% profit markup.');
+        if (profitMargin > 10.01) { 
+            setError('Platform policy restricts profit margin to a maximum of 10%.');
             return;
         }
 
@@ -130,16 +130,23 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess }) {
                                 Customers pay this + 3% buyer fee.
                             </p>
                             <div className="flex gap-2">
-                                {[5, 10, 20].map(percent => (
+                                {[2, 5, 10].map(percent => (
                                     <button
                                         key={percent}
                                         type="button"
                                         onClick={() => {
-                                            const profit = purchasePrice * (percent / 100);
-                                            setSellingPrice((purchasePrice + commission + profit).toFixed(2));
+                                            // Goal: Profit / SellingPrice = percent/100
+                                            // (SellingPrice - (purchasePrice + commission)) / SellingPrice = P
+                                            // 1 - (Cost/SellingPrice) = P
+                                            // 1 - P = Cost/SellingPrice
+                                            // SellingPrice = Cost / (1 - P)
+                                            const targetMargin = percent / 100;
+                                            const cost = purchasePrice + commission;
+                                            const targetPrice = cost / (1 - targetMargin);
+                                            setSellingPrice(targetPrice.toFixed(2));
                                             setError(null);
                                         }}
-                                        className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border transition-colors ${Math.abs(parseFloat(sellingPrice) - (purchasePrice + commission + purchasePrice * (percent / 100))) < 0.1
+                                        className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border transition-colors ${Math.abs(profitMargin - percent) < 0.1
                                                 ? 'bg-[#D4AF37]/20 border-[#D4AF37]/50 text-[#D4AF37]'
                                                 : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
                                             }`}
@@ -182,7 +189,7 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess }) {
                                     </div>
                                     <div className={`pt-3 mt-1 border-t items-center flex justify-between ${merchantProfit >= 0 ? 'border-emerald-500/20 text-emerald-300' : 'border-red-500/20 text-red-300'}`}>
                                         <span className="font-bold uppercase tracking-wider text-[11px]">= Net {merchantProfit >= 0 ? 'Profit' : 'Loss'}</span>
-                                        <span className="font-bold">₹{merchantProfit.toFixed(2)} ({markup.toFixed(1)}%)</span>
+                                        <span className="font-bold">₹{merchantProfit.toFixed(2)} ({profitMargin.toFixed(1)}%)</span>
                                     </div>
                                 </div>
                             </div>
@@ -200,14 +207,14 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess }) {
                                 </div>
                             )}
 
-                            {/* Warning if markup > 20% */}
-                            {markup > 20 && (
+                            {/* Warning if Margin > 10% */}
+                            {profitMargin > 10 && (
                                 <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-start gap-3">
                                     <span className="material-icons-round text-red-500 mt-0.5">gavel</span>
                                     <div>
-                                        <h5 className="font-bold text-red-500">Markup Limit Exceeded</h5>
+                                        <h5 className="font-bold text-red-500">Margin Limit Exceeded</h5>
                                         <p className="text-sm text-red-400/80 mt-1">
-                                            Platform policy restricts profit markup to a maximum of <span className="font-bold text-red-400">20%</span>. Your current markup is <span className="font-bold">{markup.toFixed(1)}%</span>. Please lower your selling price.
+                                            Platform policy restricts profit margin to a maximum of <span className="font-bold text-red-400">10%</span>. Your current margin is <span className="font-bold">{profitMargin.toFixed(1)}%</span>. Please lower your selling price.
                                         </p>
                                     </div>
                                 </div>
@@ -270,7 +277,7 @@ export default function ListToMarketplace({ coupon, onClose, onSuccess }) {
                         </button>
                         <button
                             type="submit"
-                            disabled={loading || sellingPriceNum <= 0 || markup > 20}
+                            disabled={loading || sellingPriceNum <= 0 || profitMargin > 10.01}
                             className="flex-1 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl shadow-lg shadow-[#D4AF37]/20 hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 gold-glow"
                         >
                             {loading ? (

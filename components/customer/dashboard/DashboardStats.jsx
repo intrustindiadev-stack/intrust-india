@@ -32,7 +32,9 @@ export default function DashboardStats({ stats }) {
 
                         <div className="mt-4 sm:mt-5 relative z-10">
                             <div className="text-[10px] sm:text-sm font-semibold text-slate-500 dark:text-gray-400 mb-0.5">{stat.label}</div>
-                            <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-gray-100 tracking-tight">{stat.value}</div>
+                            <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-gray-100 tracking-tight">
+                                {stat.label === 'Wallet Balance' ? '••••••' : stat.value}
+                            </div>
                         </div>
                     </div>
                 );

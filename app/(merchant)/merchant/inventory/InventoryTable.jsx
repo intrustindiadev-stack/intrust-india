@@ -4,6 +4,17 @@ import { useState } from 'react';
 import Image from 'next/image';
 import ListToMarketplace from '@/components/merchant/ListToMarketplace';
 import { supabase } from '@/lib/supabaseClient';
+import { 
+    Store, 
+    Edit3, 
+    EyeOff, 
+    TrendingUp, 
+    TrendingDown, 
+    DollarSign, 
+    Tag,
+    ChevronRight,
+    ArrowUpRight
+} from 'lucide-react';
 
 export default function InventoryTable({ initialCoupons }) {
     const [selectedCoupon, setSelectedCoupon] = useState(null);
@@ -30,103 +41,123 @@ export default function InventoryTable({ initialCoupons }) {
     };
 
     return (
-        <>
-            {/* Mobile View (Cards) */}
-            <div className="md:hidden flex flex-col divide-y divide-black/5 dark:divide-white/5">
-                {initialCoupons.map((coupon) => {
+        <div className="space-y-6">
+            {/* Mobile View (Premium Cards) */}
+            <div className="md:hidden space-y-4">
+                {initialCoupons.map((coupon, index) => {
                     const rawPurchasePrice = coupon.purchase_price ?? ((coupon.merchant_purchase_price_paise || 0) / 100);
                     const purchasePrice = Math.abs(rawPurchasePrice);
                     const sellingPrice = (coupon.merchant_selling_price_paise || 0) / 100;
                     const profit = sellingPrice - purchasePrice;
+                    const isProfit = profit > 0;
 
                     return (
-                        <div key={coupon.id} className="p-4 flex flex-col gap-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
-                            {/* Header: Brand & Status */}
-                            <div className="flex justify-between items-start">
-                                <div className="flex items-center space-x-3">
-                                    <div className="relative w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-500/10 flex items-center justify-center border border-black/5 dark:border-slate-500/20 shadow-sm overflow-hidden shrink-0">
-                                        {coupon.image_url ? (
-                                            <Image src={coupon.image_url} alt={coupon.brand} fill className="object-cover rounded-xl" />
-                                        ) : (
-                                            <span className="font-bold text-[#D4AF37] text-lg">{coupon.brand.charAt(0)}</span>
-                                        )}
+                        <div 
+                            key={coupon.id} 
+                            style={{ animationDelay: `${index * 100}ms` }}
+                            className="animate-in fade-in slide-in-from-bottom-4 duration-500 bg-white/70 dark:bg-gray-800/40 backdrop-blur-xl rounded-2xl border border-white dark:border-white/5 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden"
+                        >
+                            {/* Status Ribbon */}
+                            <div className={`absolute top-3 right-3 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                coupon.listed_on_marketplace 
+                                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
+                                : 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                            }`}>
+                                {coupon.listed_on_marketplace ? 'Active' : 'Draft'}
+                            </div>
+
+                            {/* Brand Header */}
+                            <div className="flex items-center gap-4 mb-5">
+                                <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center border border-black/5 dark:border-white/5 shadow-sm overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+                                    {coupon.image_url ? (
+                                        <Image src={coupon.image_url} alt={coupon.brand} fill className="object-cover" />
+                                    ) : (
+                                        <span className="font-black text-[#D4AF37] text-xl">{coupon.brand.charAt(0)}</span>
+                                    )}
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-slate-900 dark:text-gray-100 text-lg leading-tight uppercase tracking-tight">{coupon.brand}</h3>
+                                    <div className="flex items-center gap-1.5 mt-1">
+                                        <Tag size={10} className="text-[#D4AF37]" />
+                                        <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold uppercase tracking-wider">{coupon.category || "General"}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Value Grid */}
+                            <div className="grid grid-cols-2 gap-3 mb-5">
+                                <div className="bg-black/5 dark:bg-white/5 p-3 rounded-xl border border-black/5 dark:border-white/5">
+                                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-tighter mb-1">Face Value</p>
+                                    <p className="text-base font-black text-slate-900 dark:text-gray-100">₹{(coupon.face_value_paise / 100).toLocaleString('en-IN')}</p>
+                                </div>
+                                <div className="bg-black/5 dark:bg-white/5 p-3 rounded-xl border border-black/5 dark:border-white/5">
+                                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-tighter mb-1">Selling At</p>
+                                    {coupon.listed_on_marketplace ? (
+                                        <p className="text-base font-black text-blue-600 dark:text-blue-400">₹{sellingPrice.toLocaleString('en-IN')}</p>
+                                    ) : (
+                                        <p className="text-xs font-bold text-slate-400 italic mt-1">Not Listed</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Profit / Stats Banner */}
+                            <div className={`p-4 rounded-xl border mb-5 flex items-center justify-between ${
+                                isProfit ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-slate-500/5 border-slate-500/10'
+                            }`}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${
+                                        isProfit ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-slate-400 shadow-slate-400/20'
+                                    }`}>
+                                        {isProfit ? <TrendingUp size={18} className="text-white" /> : <TrendingDown size={18} className="text-white" />}
                                     </div>
                                     <div>
-                                        <div className="font-bold text-slate-800 dark:text-slate-200">{coupon.brand}</div>
-                                        <div className="text-[10px] text-slate-500 font-semibold">{coupon.category || "Gift Card"}</div>
-                                    </div>
-                                </div>
-                                <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${coupon.listed_on_marketplace
-                                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-                                    : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-black/5 dark:border-white/5'
-                                    }`}>
-                                    {coupon.listed_on_marketplace ? 'Listed' : 'Unlisted'}
-                                </span>
-                            </div>
-
-                            {/* Pricing Grid */}
-                            <div className="grid grid-cols-2 gap-2 bg-black/5 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5">
-                                <div>
-                                    <p className="text-[9px] text-slate-500 uppercase tracking-tight font-bold">Face Value</p>
-                                    <p className="text-sm text-slate-700 dark:text-slate-300 font-bold">₹{(coupon.face_value_paise / 100).toLocaleString('en-IN')}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[9px] text-slate-500 uppercase tracking-tight font-bold">Investment</p>
-                                    <p className="text-sm text-slate-800 dark:text-slate-100 font-bold">₹{purchasePrice.toLocaleString('en-IN')}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[9px] text-slate-500 uppercase tracking-tight font-bold">Selling Price</p>
-                                    {coupon.listed_on_marketplace ? (
-                                        <p className="text-sm text-blue-600 dark:text-blue-400 font-bold">₹{sellingPrice.toLocaleString('en-IN')}</p>
-                                    ) : (
-                                        <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold italic">Not listed</p>
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="text-[9px] text-slate-500 uppercase tracking-tight font-bold">Profit</p>
-                                    {coupon.listed_on_marketplace ? (
-                                        <p className={`text-sm font-bold ${profit > 0 ? 'text-emerald-600 dark:text-emerald-400' : profit < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Net Profit</p>
+                                        <p className={`text-sm font-black ${isProfit ? 'text-emerald-600' : 'text-slate-600'}`}>
                                             ₹{profit.toFixed(2)}
                                         </p>
-                                    ) : (
-                                        <p className="text-sm text-slate-400 dark:text-slate-500">-</p>
-                                    )}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Margin</p>
+                                    <p className={`text-sm font-black ${isProfit ? 'text-emerald-600' : 'text-slate-600'}`}>
+                                        {((profit/purchasePrice)*100).toFixed(1)}%
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Actions */}
-                            <div className="flex items-center justify-end space-x-2 mt-1">
+                            {/* Footer Actions */}
+                            <div className="flex gap-2">
                                 {!coupon.listed_on_marketplace ? (
                                     <button
                                         onClick={() => {
                                             setSelectedCoupon(coupon);
                                             setShowListModal(true);
                                         }}
-                                        className="flex-1 h-10 flex items-center justify-center bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30 rounded-xl transition-all shadow-sm"
+                                        className="flex-1 py-3.5 bg-[#D4AF37] text-white font-black rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#D4AF37]/20"
                                     >
-                                        <span className="material-icons-round text-sm mr-1.5">storefront</span>
-                                        <span className="text-xs font-bold uppercase tracking-wider">List on Market</span>
+                                        <Store size={18} />
+                                        <span className="text-[11px] uppercase tracking-widest">List to Market</span>
                                     </button>
                                 ) : (
-                                    <div className="flex gap-2 w-full">
+                                    <>
                                         <button
                                             onClick={() => {
                                                 setSelectedCoupon(coupon);
                                                 setShowListModal(true);
                                             }}
-                                            className="flex-1 h-10 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded-xl transition-all shadow-sm"
+                                            className="flex-1 py-3.5 bg-blue-600 text-white font-black rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/20"
                                         >
-                                            <span className="material-icons-round text-sm mr-1.5">edit</span>
-                                            <span className="text-xs font-bold uppercase tracking-wider">Edit</span>
+                                            <Edit3 size={16} />
+                                            <span className="text-[11px] uppercase tracking-widest">Edit</span>
                                         </button>
                                         <button
                                             onClick={() => handleUnlist(coupon.id)}
-                                            className="flex-1 h-10 flex items-center justify-center bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 rounded-xl transition-all shadow-sm"
+                                            className="flex-1 py-3.5 bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-400 font-black rounded-xl flex items-center justify-center gap-2 hover:bg-slate-200 dark:hover:bg-gray-700 active:scale-95 transition-all border border-black/5 dark:border-white/5"
                                         >
-                                            <span className="material-icons-round text-sm mr-1.5">visibility_off</span>
-                                            <span className="text-xs font-bold uppercase tracking-wider">Unlist</span>
+                                            <EyeOff size={16} />
+                                            <span className="text-[11px] uppercase tracking-widest">Unlist</span>
                                         </button>
-                                    </div>
+                                    </>
                                 )}
                             </div>
                         </div>
@@ -134,91 +165,100 @@ export default function InventoryTable({ initialCoupons }) {
                 })}
             </div>
 
-            {/* Desktop View (Table) */}
-            <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left min-w-[800px]">
+            {/* Desktop View (Premium Table) */}
+            <div className="hidden md:block bg-white/70 dark:bg-gray-800/40 backdrop-blur-xl rounded-3xl border border-white dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                <table className="w-full text-left">
                     <thead>
-                        <tr className="text-[11px] uppercase tracking-widest text-slate-500 font-bold border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
-                            <th className="px-8 py-5">Brand</th>
-                            <th className="px-8 py-5">Face Value</th>
-                            <th className="px-8 py-5">Purchase Price</th>
-                            <th className="px-8 py-5">Selling Price</th>
-                            <th className="px-8 py-5">Profit</th>
-                            <th className="px-8 py-5">Status</th>
-                            <th className="px-8 py-5 text-right">Actions</th>
+                        <tr className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-black border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
+                            <th className="px-8 py-6">Asset / Brand</th>
+                            <th className="px-8 py-6">Valuation</th>
+                            <th className="px-8 py-6">Market Price</th>
+                            <th className="px-8 py-6">Performance</th>
+                            <th className="px-8 py-6">Status</th>
+                            <th className="px-8 py-6 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                         {initialCoupons.map((coupon) => {
                             const rawPurchasePrice = coupon.purchase_price ?? ((coupon.merchant_purchase_price_paise || 0) / 100);
-
-                            // Ensure purchase price is treated as a positive number (Total Investment)
                             const purchasePrice = Math.abs(rawPurchasePrice);
                             const sellingPrice = (coupon.merchant_selling_price_paise || 0) / 100;
-
-                            // Profit = Selling Price - Total Investment (which includes fee)
                             const profit = sellingPrice - purchasePrice;
+                            const isProfit = profit > 0;
 
                             return (
                                 <tr key={coupon.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors group">
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center space-x-3">
-                                            <div className="relative w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-500/10 flex items-center justify-center border border-black/5 dark:border-slate-500/20 overflow-hidden shrink-0">
+                                    <td className="px-8 py-6">
+                                        <div className="flex items-center gap-4">
+                                            <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center border border-black/5 dark:border-white/5 shadow-sm overflow-hidden shrink-0 transition-transform group-hover:scale-110">
                                                 {coupon.image_url ? (
-                                                    <Image src={coupon.image_url} alt={coupon.brand} fill className="object-cover rounded-xl" />
+                                                    <Image src={coupon.image_url} alt={coupon.brand} fill className="object-cover" />
                                                 ) : (
-                                                    <span className="font-bold text-[#D4AF37] text-lg">{coupon.brand.charAt(0)}</span>
+                                                    <span className="font-black text-[#D4AF37] text-xl">{coupon.brand.charAt(0)}</span>
                                                 )}
                                             </div>
                                             <div>
-                                                <div className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{coupon.brand}</div>
-                                                <div className="text-[10px] text-slate-500 font-semibold">{coupon.category || "Gift Card"}</div>
+                                                <div className="font-black text-slate-900 dark:text-gray-100 uppercase tracking-tight">{coupon.brand}</div>
+                                                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">{coupon.category || "General"}</div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-5">
-                                        <div className="text-slate-700 dark:text-slate-300 font-bold">₹{(coupon.face_value_paise / 100).toLocaleString('en-IN')}</div>
+                                    <td className="px-8 py-6">
+                                        <div className="flex flex-col">
+                                            <span className="font-black text-slate-800 dark:text-gray-200">₹{(coupon.face_value_paise / 100).toLocaleString('en-IN')}</span>
+                                            <span className="text-[9px] uppercase tracking-widest text-slate-400 font-bold mt-1">Face Value</span>
+                                        </div>
                                     </td>
-                                    <td className="px-8 py-5">
-                                        <div className="font-bold text-slate-800 dark:text-slate-100">₹{purchasePrice.toLocaleString('en-IN')}</div>
-                                        <div className="text-[10px] text-slate-500 uppercase tracking-tight">Total Investment</div>
-                                    </td>
-                                    <td className="px-8 py-5">
+                                    <td className="px-8 py-6">
                                         {coupon.listed_on_marketplace ? (
-                                            <div className="text-blue-600 dark:text-blue-400 font-bold">₹{sellingPrice.toLocaleString('en-IN')}</div>
-                                        ) : (
-                                            <div className="text-slate-400 dark:text-slate-500 text-sm font-semibold italic">Not listed</div>
-                                        )}
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        {coupon.listed_on_marketplace ? (
-                                            <div className={`font-bold ${profit > 0 ? 'text-emerald-600 dark:text-emerald-400' : profit < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                                                ₹{profit.toFixed(2)}
+                                            <div className="flex flex-col">
+                                                <span className="font-black text-blue-600 dark:text-blue-400 text-lg">₹{sellingPrice.toLocaleString('en-IN')}</span>
+                                                <div className="flex items-center gap-1.5 mt-1">
+                                                    <Store size={10} className="text-blue-500" />
+                                                    <span className="text-[9px] uppercase tracking-widest text-blue-500 font-bold">Active Listing</span>
+                                                </div>
                                             </div>
                                         ) : (
-                                            <div className="text-slate-400 dark:text-slate-500">-</div>
+                                            <span className="text-slate-400 text-sm font-bold italic opacity-60">Off Market</span>
                                         )}
                                     </td>
-                                    <td className="px-8 py-5">
-                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${coupon.listed_on_marketplace
-                                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-                                            : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-black/5 dark:border-white/5'
-                                            }`}>
-                                            {coupon.listed_on_marketplace ? 'Listed' : 'Unlisted'}
-                                        </span>
+                                    <td className="px-8 py-6">
+                                        {coupon.listed_on_marketplace ? (
+                                            <div className="flex flex-col">
+                                                <div className={`flex items-center gap-2 font-black ${isProfit ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                    {isProfit ? <ArrowUpRight size={14} /> : <TrendingDown size={14} />}
+                                                    ₹{profit.toFixed(2)}
+                                                </div>
+                                                <span className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${isProfit ? 'text-emerald-500/80' : 'text-red-500/80'}`}>
+                                                    {((profit/purchasePrice)*100).toFixed(1)}% ROE
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-slate-400 font-bold opacity-30">—</span>
+                                        )}
                                     </td>
-                                    <td className="px-8 py-5 text-right">
-                                        <div className="flex items-center justify-end space-x-2">
+                                    <td className="px-8 py-6">
+                                        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border ${
+                                            coupon.listed_on_marketplace 
+                                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
+                                            : 'bg-slate-500/10 text-slate-500 border-slate-500/10'
+                                        }`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full ${coupon.listed_on_marketplace ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                                            {coupon.listed_on_marketplace ? 'Live' : 'Draft'}
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-6 text-right">
+                                        <div className="flex items-center justify-end gap-2">
                                             {!coupon.listed_on_marketplace ? (
                                                 <button
                                                     onClick={() => {
                                                         setSelectedCoupon(coupon);
                                                         setShowListModal(true);
                                                     }}
-                                                    className="w-10 h-10 flex items-center justify-center bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30 rounded-xl transition-all shadow-sm"
-                                                    title="List to Marketplace"
+                                                    className="h-10 px-4 bg-[#D4AF37] text-white font-black rounded-xl flex items-center gap-2 hover:opacity-90 transition-all shadow-md shadow-[#D4AF37]/20 group/btn"
                                                 >
-                                                    <span className="material-icons-round text-sm">storefront</span>
+                                                    <span className="text-[10px] uppercase tracking-widest">List Asset</span>
+                                                    <ChevronRight size={14} className="group-hover/btn:translate-x-0.5 transition-transform" />
                                                 </button>
                                             ) : (
                                                 <>
@@ -227,17 +267,17 @@ export default function InventoryTable({ initialCoupons }) {
                                                             setSelectedCoupon(coupon);
                                                             setShowListModal(true);
                                                         }}
-                                                        className="w-10 h-10 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded-xl transition-all shadow-sm"
+                                                        className="w-10 h-10 flex items-center justify-center bg-blue-600/10 text-blue-600 border border-blue-600/20 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm group/edit"
                                                         title="Edit Listing"
                                                     >
-                                                        <span className="material-icons-round text-sm">edit</span>
+                                                        <Edit3 size={16} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleUnlist(coupon.id)}
-                                                        className="w-10 h-10 flex items-center justify-center bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 rounded-xl transition-all shadow-sm"
-                                                        title="Remove from Marketplace"
+                                                        className="w-10 h-10 flex items-center justify-center bg-red-600/10 text-red-600 border border-red-600/20 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm group/unlist"
+                                                        title="Remove from Market"
                                                     >
-                                                        <span className="material-icons-round text-sm">visibility_off</span>
+                                                        <EyeOff size={16} />
                                                     </button>
                                                 </>
                                             )}
@@ -260,6 +300,6 @@ export default function InventoryTable({ initialCoupons }) {
                     onSuccess={handleListSuccess}
                 />
             )}
-        </>
+        </div>
     );
 }

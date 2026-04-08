@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+import BalanceReveal from '@/components/ui/BalanceReveal';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { usePayment } from '@/hooks/usePayment';
 import { supabase } from '@/lib/supabaseClient';
@@ -156,7 +157,10 @@ export default function CustomerWalletPage() {
                                     Total Balance
                                 </span>
                                 <div className="mt-2 flex items-baseline gap-2">
-                                    <span className="text-5xl font-black tabular-nums">₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    <BalanceReveal 
+                                        value={`₹${balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`} 
+                                        className="text-5xl font-black tabular-nums"
+                                    />
                                 </div>
 
                                 <div className="mt-10 flex gap-4">

@@ -1,13 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronRight, Moon, Sun, Gift, Sparkles } from 'lucide-react';
+import { X, ChevronRight, Moon, Sun, Gift, Sparkles, History, ShoppingBag, CreditCard, ScanFace, ChevronDown } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, user, theme, toggleTheme, handleSignOut, menuItems, apiPath }) {
     const router = useRouter();
+    const [orderHistoryOpen, setOrderHistoryOpen] = useState(false);
 
     // Menu Item Variants for Staggered Animation
     const itemVariants = {
@@ -106,6 +108,70 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                         />
                                     </motion.a>
                                 ))}
+                            </div>
+
+                            {/* Order History Dropdown */}
+                            {isAuthenticated && (
+                                <div className="mt-4">
+                                    <button
+                                        onClick={() => setOrderHistoryOpen(!orderHistoryOpen)}
+                                        className="
+                                            w-full group flex items-center justify-between 
+                                            px-4 py-4 text-[#171A21] dark:text-gray-100
+                                            active:bg-gray-50 dark:active:bg-gray-800
+                                            rounded-2xl font-medium text-[16px]
+                                            transition-colors duration-200
+                                        "
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <History size={20} className="text-[#92BCEA]" />
+                                            <span>Order History</span>
+                                        </div>
+                                        <motion.div
+                                            animate={{ rotate: orderHistoryOpen ? 180 : 0 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            <ChevronDown size={18} className="text-gray-400" />
+                                        </motion.div>
+                                    </button>
+
+                                    <AnimatePresence>
+                                        {orderHistoryOpen && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                transition={{ duration: 0.3 }}
+                                                className="overflow-hidden pl-11 space-y-1"
+                                            >
+                                                <button
+                                                    onClick={() => { router.push('/nfc-service'); onClose(); }}
+                                                    className="w-full flex items-center gap-3 py-3 px-2 text-sm text-gray-600 dark:text-gray-400 hover:text-[#92BCEA] transition-colors"
+                                                >
+                                                    <ScanFace size={16} />
+                                                    <span>NFC Orders</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => { router.push('/my-giftcards'); onClose(); }}
+                                                    className="w-full flex items-center gap-3 py-3 px-2 text-sm text-gray-600 dark:text-gray-400 hover:text-[#92BCEA] transition-colors"
+                                                >
+                                                    <CreditCard size={16} />
+                                                    <span>Gift Cards</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => { router.push('/orders'); onClose(); }}
+                                                    className="w-full flex items-center gap-3 py-3 px-2 text-sm text-gray-600 dark:text-gray-400 hover:text-[#92BCEA] transition-colors"
+                                                >
+                                                    <ShoppingBag size={16} />
+                                                    <span>Shopping</span>
+                                                </button>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
 
                                 {/* Genz Sidebar CTA */}
                                 {isAuthenticated && (
