@@ -3,10 +3,11 @@
 import { CheckCircle, XCircle, Clock, Building2, Phone, Mail, FileText, AlertCircle, Eye, ShieldOff, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
-export default function MerchantCard({ merchant, udhariEnabled, onApprove, onReject, onVerifyBank, onToggleSuspend, isApproving, isVerifyingBank, isRejecting, isTogglingSuspend }) {
+export default function MerchantCard({ merchant, udhariEnabled, onApprove, onReject, onVerifyBank, onToggleSuspend, isApproving, isVerifyingBank, isRejecting, isTogglingSuspend, href }) {
     const isPending = merchant.status === 'pending';
     const isApproved = merchant.status === 'approved';
     const isSuspended = merchant.status === 'suspended';
+    const { autoModeStatus, autoModeValidUntil } = merchant;
 
     return (
         <div className={`group bg-white rounded-3xl border shadow-sm transition-all hover:-translate-y-1 relative overflow-hidden flex flex-col h-full ${isPending ? 'border-amber-200 hover:shadow-xl hover:shadow-amber-200/50' : isSuspended ? 'border-orange-200 hover:shadow-xl hover:shadow-orange-200/50' : isApproved ? 'border-slate-200 hover:shadow-xl hover:shadow-slate-200/50' : 'border-slate-200 hover:shadow-xl hover:shadow-slate-200/50'}`}>
@@ -14,12 +15,20 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
             <div className={`absolute top-0 left-0 w-full h-1.5 ${isPending ? 'bg-amber-500' : isApproved ? 'bg-emerald-500' : isSuspended ? 'bg-orange-500' : 'bg-red-500'}`} />
 
             {/* Link wrapper for the clickable body */}
-            <Link href={`/admin/merchants/${merchant.id}`} className="p-6 flex-1 flex flex-col cursor-pointer">
+            <Link href={href || `/admin/merchants/${merchant.id}`} className="p-6 flex-1 flex flex-col cursor-pointer">
                 <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-4">
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-extrabold text-xl shadow-sm ${isPending ? 'bg-amber-50 text-amber-600 border border-amber-100' : isSuspended ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
-                            {merchant.businessName.charAt(0).toUpperCase()}
-                        </div>
+                        {merchant.avatarUrl ? (
+                            <img
+                                src={merchant.avatarUrl}
+                                alt={merchant.businessName}
+                                className={`w-14 h-14 rounded-2xl object-cover shadow-sm ${isPending ? 'border border-amber-200' : isSuspended ? 'border border-orange-200' : 'border border-blue-200'}`}
+                            />
+                        ) : (
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-extrabold text-xl shadow-sm ${isPending ? 'bg-amber-50 text-amber-600 border border-amber-100' : isSuspended ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                                {merchant.businessName.charAt(0).toUpperCase()}
+                            </div>
+                        )}
                         <div className="flex-1 min-w-0">
                             <h3 className="font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors truncate max-w-[150px] sm:max-w-[200px]">
                                 {merchant.businessName}
@@ -37,9 +46,19 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                             </div>
                         )}
                         {merchant.autoModeStatus === 'active' && (
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-md">
-                                <AlertCircle size={10} strokeWidth={3} className="text-indigo-600" />
-                                <span className="text-[9px] font-extrabold uppercase tracking-widest">Auto Mode</span>
+                            <div className="flex flex-col items-end gap-1">
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg shadow-sm shadow-emerald-100">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                                    </span>
+                                    <span className="text-[9px] font-extrabold uppercase tracking-widest">⚡ Auto Mode ON</span>
+                                </div>
+                                {merchant.autoModeValidUntil && (
+                                    <span className="text-[8px] font-bold text-emerald-600 ml-1">
+                                        Until {new Date(merchant.autoModeValidUntil).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                    </span>
+                                )}
                             </div>
                         )}
                         {isApproved && (
@@ -127,7 +146,7 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                             </button>
                         </div>
                     )}
- 
+
                     {/* Suspend/Unsuspend Action */}
                     {(isApproved || isSuspended) && onToggleSuspend && (
                         <button
@@ -146,7 +165,7 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                             {isSuspended ? 'Unsuspend' : 'Suspend'}
                         </button>
                     )}
- 
+
                     {/* Bank Verification */}
                     {isApproved && merchant.hasBankData && !merchant.bankVerified && onVerifyBank && (
                         <button
@@ -160,7 +179,7 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                             Verify Bank
                         </button>
                     )}
- 
+
                     {isApproved && merchant.bankVerified && (
                         <span className="flex items-center gap-1.5 ml-2 text-[10px] font-extrabold text-emerald-600 px-2 py-1 bg-emerald-50 rounded-lg border border-emerald-100 shadow-inner">
                             <CheckCircle size={10} strokeWidth={3} /> Verified

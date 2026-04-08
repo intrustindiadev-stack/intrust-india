@@ -37,6 +37,7 @@ export default function AdminMerchantsPage() {
                 userId: m.user_id,
                 businessName: m.business_name || 'N/A',
                 ownerName: m.user_profiles?.full_name || 'Unknown',
+                avatarUrl: m.user_profiles?.avatar_url || null,
                 phone: m.user_profiles?.phone || 'N/A',
                 email: m.user_profiles?.email || 'N/A',
                 gstNumber: m.gst_number || 'N/A',
@@ -53,7 +54,8 @@ export default function AdminMerchantsPage() {
                 }),
                 documents: 0,
                 udhariEnabled: m.udhari_enabled,
-                autoModeStatus: m.auto_mode_status || 'inactive'
+                autoModeStatus: m.auto_mode_status || 'inactive',
+                autoModeValidUntil: m.auto_mode_valid_until || null
             }));
 
             setMerchants(transformed);

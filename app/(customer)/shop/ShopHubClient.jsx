@@ -32,32 +32,52 @@ const fadeUp = {
 
 // ── Featured Card (Intrust Official) – full-width ─────────────────────────
 function FeaturedCard({ merchant }) {
+    const liveUsers = 105; // High deterministic number for the main store
     return (
         <motion.div variants={fadeUp} className="col-span-full mb-1">
-            <Link href="/shop/official" className="group block">
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-blue-600 to-violet-600 p-5 md:p-7 shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-shadow duration-400">
-                    {/* Decorative rings */}
-                    <div className="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-white/10 pointer-events-none" />
-                    <div className="absolute right-10 -bottom-10 w-32 h-32 rounded-full bg-white/5 pointer-events-none" />
+            <Link href="/shop/official" className="group block focus-visible:outline-none">
+                <div className="relative overflow-hidden rounded-[2rem] bg-indigo-950 p-6 md:p-8 shadow-[0_8px_30px_rgba(99,102,241,0.2)] hover:shadow-[0_20px_40px_rgba(99,102,241,0.4)] dark:shadow-[0_8px_30px_rgba(99,102,241,0.4)] dark:hover:shadow-[0_20px_40px_rgba(99,102,241,0.6)] hover:-translate-y-1.5 transition-all duration-500 min-h-[220px] flex flex-col justify-end">
 
-                    <div className="relative z-10 flex items-center gap-4">
-                        {/* Logo */}
-                        <div className="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white shadow-xl overflow-hidden flex items-center justify-center ring-2 ring-white/30">
-                            {merchant.user_profiles?.avatar_url ? (
-                                <img src={merchant.user_profiles.avatar_url} alt="Intrust Official" className="w-full h-full object-contain p-1" referrerPolicy="no-referrer" />
-                            ) : (
-                                <span className="text-indigo-600 text-2xl font-black">IN</span>
-                            )}
-                        </div>
+                    {/* Premium Background Image */}
+                    <img
+                        src="/images/intrust_mart_bg.png"
+                        alt="Intrust Mart Background"
+                        className="absolute inset-0 w-full h-full object-cover scale-100 group-hover:scale-105 transition-transform duration-1000 z-[1] opacity-70 mix-blend-screen"
+                    />
 
-                        {/* Text */}
-                        <div className="flex-1 min-w-0">
-                            <span className="text-[9px] font-black uppercase tracking-[0.18em] text-indigo-200">✦ Featured · Platform Store</span>
-                            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight mt-0.5 mb-1">{merchant.business_name}</h2>
-                            <p className="text-indigo-200 text-xs font-medium mb-3 line-clamp-1">Exclusive pricing & platform-wide inventory</p>
-                            <span className="inline-flex items-center gap-1.5 bg-white text-indigo-600 text-xs font-black px-3.5 py-1.5 rounded-full shadow-md group-hover:bg-indigo-50 transition-colors">
-                                Shop Now <ChevronRight size={12} strokeWidth={3} className="group-hover:translate-x-0.5 transition-transform" />
+                    {/* Rich Gradients and Vignette for cinematic feel */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-indigo-950/90 via-indigo-950/40 to-transparent z-[2]" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/20 to-transparent z-[2]" />
+
+                    {/* Live users indicator */}
+                    <div className="absolute top-5 right-5 z-20 flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/20 text-white px-3.5 py-1.5 rounded-full shadow-lg">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/90">LIVE</span>
+                    </div>
+
+                    <div className="relative z-10 flex flex-col gap-2 mt-auto">
+                        <div className="flex items-center gap-3 mb-1">
+                            <div className="shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl flex items-center justify-center">
+                                {merchant.user_profiles?.avatar_url ? (
+                                    <img src={merchant.user_profiles.avatar_url} alt="Intrust Mart" className="w-full h-full object-contain p-1 rounded-xl" referrerPolicy="no-referrer" />
+                                ) : (
+                                    <Sparkles className="text-white w-6 h-6 drop-shadow-lg" />
+                                )}
+                            </div>
+                            <span className="bg-white/20 backdrop-blur-sm border border-white/30 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-[0.2em] shadow-lg">
+                                Premium Delivery
                             </span>
+                        </div>
+                        <h2 className="text-3xl md:text-5xl font-[family-name:var(--font-manrope)] font-black text-white tracking-tighter drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">Intrust Mart</h2>
+                        <p className="text-white/80 text-sm md:text-base font-medium max-w-sm leading-relaxed drop-shadow-md">Curated daily essentials, electronics and more delivered at platform speed.</p>
+
+                        <div className="flex items-center gap-2 mt-4">
+                            <div className="inline-flex items-center gap-2 bg-white text-indigo-950 text-sm font-black px-5 py-2.5 rounded-full shadow-[0_0_30px_rgba(255,255,255,0.4)] group-hover:px-6 transition-all">
+                                Explore Store <ChevronRight size={16} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -78,9 +98,11 @@ function MerchantCard({ merchant, idx, rating }) {
     const initials = merchant.business_name.substring(0, 2).toUpperCase();
     const rawAddress = merchant.business_address || '';
     const addressLine = rawAddress ? rawAddress.split(',')[0]?.trim() : 'Premium Hub';
-    
+
     // Use uploaded banner if it exists, otherwise fall back to the premium default banner
     const bannerImage = merchant.shopping_banner_url || '/images/default_merchant_banner.png';
+    // Calculate a stable deterministic random number based on merchant ID for live viewers
+    const liveCount = merchant.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 35 + 5;
 
     return (
         <motion.div variants={fadeUp} className="h-full">
@@ -90,11 +112,11 @@ function MerchantCard({ merchant, idx, rating }) {
             >
                 {/* ── Top Cover Image Area ── */}
                 <div className="relative w-full h-[140px] sm:h-[160px] transition-transform duration-700 group-hover:scale-105 origin-top bg-slate-100 dark:bg-[#13161f]">
-                    
+
                     {/* Render the shopping banner (Custom or Default) */}
-                    <img 
-                        src={bannerImage} 
-                        alt={`${merchant.business_name} Banner`} 
+                    <img
+                        src={bannerImage}
+                        alt={`${merchant.business_name} Banner`}
                         className="absolute inset-0 w-full h-full object-cover z-0"
                     />
 
@@ -117,8 +139,12 @@ function MerchantCard({ merchant, idx, rating }) {
                     </div>
 
                     {/* Dynamic 'Live' Indicator for Store Activity */}
-                    <div className="absolute top-4 right-4 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white/20 backdrop-blur-md border border-white/30 shadow-lg group-hover:bg-white/30 transition-colors">
-                        <Store size={12} className="text-white" />
+                    <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/30 text-white px-3 py-1.5 rounded-full shadow-lg group-hover:bg-black/60 transition-colors">
+                        <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        </span>
+                        <span className="text-[9px] font-black uppercase tracking-widest leading-none mt-[1px]">LIVE</span>
                     </div>
 
                     {/* ── Overlapping Avatar (Stretching into the body) ── */}
@@ -151,7 +177,7 @@ function MerchantCard({ merchant, idx, rating }) {
 
                 {/* ── Store Body & Details ── */}
                 <div className="relative flex flex-col flex-1 px-5 pt-11 pb-5 bg-white dark:bg-[#0c0e16] z-10">
-                    
+
                     {/* Primary Info */}
                     <div className="flex justify-between items-start gap-4">
                         <div>
@@ -163,7 +189,7 @@ function MerchantCard({ merchant, idx, rating }) {
                                 {addressLine}
                             </p>
                         </div>
-                        
+
                         {/* Rating / Explore node */}
                         <div className="shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-800/50 group-hover:bg-amber-500 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all duration-300">
                             <ChevronRight size={18} strokeWidth={2.5} className="text-slate-400 dark:text-slate-500 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
@@ -210,36 +236,6 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
     return (
         <div className="space-y-5">
 
-            {/* ── Search bar ─────────────────────────────────── */}
-            <div className="relative group">
-                <div className="absolute inset-0 rounded-2xl bg-blue-500/5 dark:bg-blue-500/10 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
-                <Search
-                    size={17}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/25 z-10 pointer-events-none group-focus-within:text-blue-500 transition-colors"
-                />
-                <input
-                    ref={inputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search stores and brands…"
-                    className="w-full pl-10 pr-10 py-3.5 rounded-2xl bg-white dark:bg-[#13161f] border border-slate-200 dark:border-white/[0.06] shadow-sm focus:shadow-md focus:shadow-blue-500/5 focus:border-blue-400/50 dark:focus:border-blue-500/30 outline-none font-semibold text-sm placeholder:text-slate-400 dark:placeholder:text-white/20 text-slate-900 dark:text-white transition-all"
-                />
-                <AnimatePresence>
-                    {searchQuery && (
-                        <motion.button
-                            initial={{ opacity: 0, scale: 0.7 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.7 }}
-                            onClick={() => { setSearchQuery(''); inputRef.current?.focus(); }}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 z-10 w-5 h-5 rounded-full bg-slate-200 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/50 hover:bg-slate-300 dark:hover:bg-white/20 transition-colors"
-                        >
-                            <X size={11} />
-                        </motion.button>
-                    )}
-                </AnimatePresence>
-            </div>
-
             {/* ── Illustrative Ad Component ──────────────────────── */}
             <AnimatePresence>
                 {!searchQuery && (
@@ -269,6 +265,38 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* ── Sticky Search bar ─────────────────────────── */}
+            <div className="sticky top-[148px] md:top-[164px] z-30 pt-2 pb-4 -mx-4 px-4 md:-mx-8 md:px-8 bg-[#f7f8fa] dark:bg-[#080a10]">
+                <div className="relative group">
+                    <div className="absolute inset-0 rounded-2xl bg-blue-500/5 dark:bg-blue-500/10 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
+                    <Search
+                        size={17}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/25 z-10 pointer-events-none group-focus-within:text-blue-500 transition-colors"
+                    />
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="Search stores and brands…"
+                        className="w-full pl-10 pr-10 py-3.5 rounded-2xl bg-white dark:bg-[#13161f] border border-slate-200 dark:border-white/[0.06] shadow-sm focus:shadow-md focus:shadow-blue-500/5 focus:border-blue-400/50 dark:focus:border-blue-500/30 outline-none font-semibold text-sm placeholder:text-slate-400 dark:placeholder:text-white/20 text-slate-900 dark:text-white transition-all backdrop-blur-md"
+                    />
+                    <AnimatePresence>
+                        {searchQuery && (
+                            <motion.button
+                                initial={{ opacity: 0, scale: 0.7 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.7 }}
+                                onClick={() => { setSearchQuery(''); inputRef.current?.focus(); }}
+                                className="absolute right-3.5 top-1/2 -translate-y-1/2 z-10 w-5 h-5 rounded-full bg-slate-200 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/50 hover:bg-slate-300 dark:hover:bg-white/20 transition-colors"
+                            >
+                                <X size={11} />
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </div>
 
             {/* ── Section header ─────────────────────────────── */}
             <div className="flex items-center justify-between">

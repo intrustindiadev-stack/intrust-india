@@ -87,10 +87,10 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                     </button>
                 </div>
 
-                <div className="px-6 mb-8 shrink-0">
-                    <div className="bg-white/60 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-[#D4AF37]/30 shadow-sm relative overflow-hidden backdrop-blur-md">
+                <div className="px-5 mb-5 shrink-0">
+                    <div className="bg-white/50 dark:bg-white/5 p-3 rounded-2xl border border-black/5 dark:border-[#D4AF37]/20 shadow-sm relative overflow-hidden backdrop-blur-md">
                         <KycStatusCard />
-                        <WalletCard />
+                        <WalletCard setIsOpen={setIsOpen} />
                     </div>
                 </div>
 
@@ -143,8 +143,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 </nav>
 
                 <div className="p-4 mt-auto shrink-0 relative z-10">
-                    <div className="bg-white/80 dark:bg-[#1a1c23]/90 p-3 rounded-2xl flex items-center space-x-3 mb-4 shadow-sm border border-black/5 dark:border-white/5 backdrop-blur-md transition-all hover:shadow-md">
-                        <div className="w-12 h-12 rounded-full border-[3px] border-white dark:border-[#2a2c33] shadow-[0_0_15px_rgba(0,0,0,0.1)] overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 relative group">
+                    <div className="bg-white/50 dark:bg-[#1a1c23]/60 p-2.5 rounded-2xl flex items-center space-x-3 mb-3 shadow-sm border border-black/5 dark:border-white/5 backdrop-blur-md transition-all hover:shadow-md">
+                        <div className="w-10 h-10 rounded-full border-2 border-white dark:border-[#2a2c33] shadow-sm overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 relative group">
                             {merchant?.user_profiles?.avatar_url ? (
                                 <img 
                                     src={merchant.user_profiles.avatar_url} 
@@ -152,14 +152,14 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                 />
                             ) : (
-                                <span className="material-icons-round text-slate-400 text-3xl">storefront</span>
+                                <span className="material-icons-round text-slate-400 text-2xl">storefront</span>
                             )}
                         </div>
                         <div className="overflow-hidden flex-1">
-                            <p className="text-sm font-black truncate text-slate-800 dark:text-white uppercase tracking-tighter">
+                            <p className="text-[12px] font-black truncate text-slate-800 dark:text-white uppercase tracking-tighter">
                                 {merchant?.business_name || "Merchant"}
                             </p>
-                            <Link href="/merchant/profile" className="text-[10px] text-slate-500 dark:text-slate-400 truncate block hover:text-slate-900 dark:hover:text-white font-bold transition-colors uppercase tracking-widest mt-0.5">
+                            <Link href="/merchant/profile" className="text-[9px] text-slate-500 dark:text-slate-400 truncate block hover:text-slate-900 dark:hover:text-white font-bold transition-colors uppercase tracking-widest mt-0.5">
                                 View Profile
                             </Link>
                         </div>
@@ -167,9 +167,9 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                     <button
                         onClick={handleLogout}
                         disabled={isLoggingOut}
-                        className="w-full flex items-center justify-center space-x-2 py-3 rounded-xl border border-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-500/10 transition-all text-[13px] font-bold disabled:opacity-50"
+                        className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-xl border border-red-500/10 text-red-500/80 dark:text-red-400/80 hover:bg-red-500/5 hover:text-red-500 transition-all text-[12px] font-bold disabled:opacity-50"
                     >
-                        <span className="material-icons-round text-[18px]">logout</span>
+                        <span className="material-icons-round text-[16px]">logout</span>
                         <span>{isLoggingOut ? 'Logging out...' : 'Log out'}</span>
                     </button>
                 </div>

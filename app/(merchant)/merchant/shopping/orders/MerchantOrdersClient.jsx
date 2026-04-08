@@ -84,6 +84,15 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                     </div>
                 </div>
             </div>
+            {/* View Details quick link */}
+            <div className="px-5 pb-3 -mt-1 flex justify-end" onClick={e => e.stopPropagation()}>
+                <Link
+                    href={`/merchant/shopping/orders/${order.id}`}
+                    className="inline-flex items-center gap-1.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors uppercase tracking-widest"
+                >
+                    <ExternalLink size={10} /> View Full Detail
+                </Link>
+            </div>
 
             {/* Expanded Content */}
             <AnimatePresence>

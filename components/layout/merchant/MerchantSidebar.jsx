@@ -149,19 +149,36 @@ export default function MerchantSidebar({ isOpen, setIsOpen }) {
                             <div className="bg-[#2c5282]/50 rounded-xl p-3 border border-[#3d5a7f]">
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-xs text-gray-400 font-semibold">Status</span>
-                                    <div className="flex items-center gap-1.5">
-                                        <div className={`w-2 h-2 rounded-full ${getStatusColor(merchantProfile.status)}`} />
-                                        <span className="text-xs text-white font-semibold capitalize">
-                                            {merchantProfile.status}
-                                        </span>
+                                    <div className="flex items-center gap-2">
+                                        {merchantProfile.auto_mode_status === 'active' && (
+                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/50 rounded-full">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                <span className="text-[9px] text-emerald-400 font-black uppercase tracking-widest">Auto LIVE</span>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-1.5">
+                                            <div className={`w-2 h-2 rounded-full ${getStatusColor(merchantProfile.status)}`} />
+                                            <span className="text-xs text-white font-semibold capitalize">
+                                                {merchantProfile.status}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="text-sm text-gray-300">
-                                    <span className="text-xs text-gray-400">Balance: </span>
-                                    <span className="font-bold text-[#92BCEA]">
-                                        ₹{((merchantProfile.wallet_balance_paise || 0) / 100).toLocaleString()}
-                                    </span>
-                                </div>
+                                <Link 
+                                    href="/merchant/wallet" 
+                                    onClick={() => setIsOpen(false)}
+                                    className="block mt-1 group-hover:bg-[#3d5a7f]/50 p-2 -mx-2 rounded-lg transition-colors cursor-pointer"
+                                >
+                                    <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Balance: </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-xl text-white tracking-widest">
+                                            ₹ ****
+                                        </span>
+                                        <span className="text-[9px] text-[#92BCEA] font-bold px-2 py-0.5 bg-[#92BCEA]/10 rounded border border-[#92BCEA]/20 hover:bg-[#92BCEA]/20 transition-colors">
+                                            Tap to View
+                                        </span>
+                                    </div>
+                                </Link>
                             </div>
                         </div>
                     )}

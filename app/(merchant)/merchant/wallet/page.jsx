@@ -19,6 +19,7 @@ export default function WalletPage() {
     const [balanceRevealed, setBalanceRevealed] = useState(false);
     const [tapping, setTapping] = useState(false);
     const [displayBalance, setDisplayBalance] = useState(0);
+    const [txFilter, setTxFilter] = useState('ALL');
     const animFrameRef = useRef(null);
     
     const balance = wallet?.balance ?? 0;
@@ -116,6 +117,8 @@ export default function WalletPage() {
             fetchWalletData();
         }
     }, [searchParams, fetchWalletData]);
+
+    const filteredTransactions = transactions.filter(tx => txFilter === 'ALL' || tx.transaction_type === txFilter);
 
     return (
         <div className="relative">
@@ -311,11 +314,22 @@ export default function WalletPage() {
                         <span className="w-2 h-6 bg-[#D4AF37] rounded-full"></span>
                         Recent Activity
                     </h3>
+                    <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-xl">
+                        {['ALL', 'CREDIT', 'DEBIT'].map(f => (
+                            <button
+                                key={f}
+                                onClick={() => setTxFilter(f)}
+                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${txFilter === f ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                            >
+                                {f}
+                            </button>
+                        ))}
+                    </div>
                     {loading && <span className="material-icons-round animate-spin text-slate-400 dark:text-slate-500 text-sm">autorenew</span>}
                 </div>
 
                 <div className="flex flex-col gap-3">
-                    {transactions.map((tx) => (
+                    {filteredTransactions.map((tx) => (
                         <div
                             key={tx.id}
                             onClick={() => router.push(`/merchant/wallet/transactions/${tx.id}?source=${tx.source}`)}
@@ -346,7 +360,7 @@ export default function WalletPage() {
                         </div>
                     ))}
 
-                    {!loading && transactions.length === 0 && (
+                    {!loading && filteredTransactions.length === 0 && (
                         <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-black/5 dark:border-white/5 rounded-3xl p-10 mt-4 flex flex-col items-center text-center">
                             <div className="w-20 h-20 bg-black/5 dark:bg-white/5 rounded-[2rem] flex items-center justify-center mb-4">
                                 <span className="material-icons-round text-slate-400 dark:text-slate-500 text-4xl">receipt_long</span>

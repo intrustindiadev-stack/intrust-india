@@ -9,6 +9,8 @@ import Navbar from '@/components/layout/Navbar';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import KYCStatus from '@/components/kyc/KYCStatus';
+import KYCPopup from '@/components/kyc/KYCPopup';
+import { useKYCPopup } from '@/hooks/useKYCPopup';
 import ParticleBackground from '@/components/ui/ParticleBackground';
 
 // ── Modular Profile Components ──
@@ -17,6 +19,7 @@ import ProfileStats from '@/components/customer/profile/ProfileStats';
 import PersonalInfoForm from '@/components/customer/profile/PersonalInfoForm';
 import AddressSection from '@/components/customer/profile/AddressSection';
 import RecentShoppingOrders from '@/components/customer/RecentShoppingOrders';
+import AccountSummaryCard from '@/components/customer/profile/AccountSummaryCard';
 
 // ── Icons & Utils ──
 import { Check, X, Star } from 'lucide-react';
@@ -82,6 +85,7 @@ export default function CustomerProfilePage() {
     const [udhariPaise, setUdhariPaise] = useState(0);
     const [purchaseCount, setPurchaseCount] = useState(0);
     const [totalSavedPaise, setTotalSavedPaise] = useState(0);
+    const [graphData, setGraphData] = useState([]);
     const [profileLoading, setProfileLoading] = useState(true);
     const [toast, setToast] = useState({ msg: '', type: 'success' });
 
@@ -144,11 +148,57 @@ export default function CustomerProfilePage() {
                         setUdhariPaise(totalUdhari);
                     }
 
-                    const { data: couponsData } = await supabase.from('coupons').select('face_value_paise, selling_price_paise').eq('purchased_by', authUser.id).eq('status', 'sold');
-                    if (!cancelled && couponsData) {
-                        setPurchaseCount(couponsData.length);
-                        const saved = couponsData.reduce((sum, coupon) => sum + Math.max(0, coupon.face_value_paise - coupon.selling_price_paise), 0);
-                        setTotalSavedPaise(saved);
+                    // Count both coupon purchases AND shop orders
+                    const [{ data: couponsData }, { data: shopOrdersData }] = await Promise.all([
+                        supabase.from('coupons').select('face_value_paise, selling_price_paise, purchased_at').eq('purchased_by', authUser.id).eq('status', 'sold'),
+                        supabase.from('shopping_orders').select('id, total_amount_paise, created_at').eq('customer_id', authUser.id).neq('delivery_status', 'cancelled')
+                    ]);
+                    if (!cancelled) {
+                        const couponCount = couponsData?.length || 0;
+                        const shopOrderCount = shopOrdersData?.length || 0;
+                        setPurchaseCount(couponCount + shopOrderCount);
+                        const couponSaved = (couponsData || []).reduce((sum, c) => sum + Math.max(0, (c.face_value_paise || 0) - (c.selling_price_paise || 0)), 0);
+                        setTotalSavedPaise(couponSaved);
+
+                        // Generate graph data (last 6 months aggregate of savings + orders)
+                        const now = new Date();
+                        const months = [];
+                        for (let i = 5; i >= 0; i--) {
+                            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                            months.push(d);
+                        }
+                        
+                        const newGraphData = months.map(date => {
+                            const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+                            const year = date.getFullYear();
+                            const monthIndex = date.getMonth();
+                            
+                            // Calculate savings for this month
+                            const savingsThisMonth = (couponsData || []).reduce((sum, c) => {
+                                if (!c.purchased_at) return sum;
+                                const d = new Date(c.purchased_at);
+                                if (d.getMonth() === monthIndex && d.getFullYear() === year) {
+                                    return sum + Math.max(0, ((c.face_value_paise || 0) - (c.selling_price_paise || 0)) / 100);
+                                }
+                                return sum;
+                            }, 0);
+
+                            // Calculate order values for this month
+                            const ordersThisMonth = (shopOrdersData || []).reduce((sum, o) => {
+                                if (!o.created_at) return sum;
+                                const d = new Date(o.created_at);
+                                if (d.getMonth() === monthIndex && d.getFullYear() === year) {
+                                    return sum + ((o.total_amount_paise || 0) / 100);
+                                }
+                                return sum;
+                            }, 0);
+
+                            return {
+                                name: monthName,
+                                value: Math.round(savingsThisMonth + ordersThisMonth) // Combined value metric
+                            };
+                        });
+                        setGraphData(newGraphData);
                     }
                 }
             } catch (error) {
@@ -173,6 +223,14 @@ export default function CustomerProfilePage() {
         return true;
     }, [authUser, refreshProfile, showToast]);
 
+    const kycStatus = profile?.kyc_status || 'not_started';
+
+    // KYC popup – auto-triggers 5–10s after login if not verified
+    const { isOpen: kycPopupOpen, closeKYC } = useKYCPopup({
+        kycStatus,
+        enabled: !profileLoading && !!authUser
+    });
+
     useEffect(() => {
         if (!authLoading && !authUser) router.push('/login');
     }, [authUser, authLoading, router]);
@@ -181,13 +239,22 @@ export default function CustomerProfilePage() {
     if (!authUser) return null;
 
     const isGold = !!profile?.is_gold_verified;
-    const kycStatus = profile?.kyc_status || 'not_started';
 
     return (
         <div className="min-h-screen relative bg-gray-50 dark:bg-gray-950 transition-colors duration-700 selection:bg-blue-500/20 font-[family-name:var(--font-outfit)]">
             <ParticleBackground />
             <Navbar />
             <Toast msg={toast.msg} type={toast.type} />
+
+            {/* KYC auto-popup */}
+            <KYCPopup
+                isOpen={kycPopupOpen}
+                onClose={closeKYC}
+                onSubmitSuccess={async () => {
+                    closeKYC();
+                    router.push('/profile/kyc');
+                }}
+            />
 
             {/* Header Shade */}
             <div className="absolute top-0 left-0 right-0 h-[40vh] overflow-hidden pointer-events-none z-0">
@@ -256,33 +323,11 @@ export default function CustomerProfilePage() {
                             </motion.div>
 
                             {/* Stats Summary */}
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.3 }}
-                                className="bg-white dark:bg-[#0f172a]/50 backdrop-blur-xl rounded-[2rem] border border-gray-100 dark:border-white/5 p-6 shadow-xl relative group"
-                            >
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-6 flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                    Account Summary
-                                </h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 rounded-3xl bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-white/5">
-                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Purchases</p>
-                                        <p className="text-xl font-black text-gray-900 dark:text-white">{purchaseCount}</p>
-                                    </div>
-                                    <div className="p-4 rounded-3xl bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-white/5">
-                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Saved</p>
-                                        <p className="text-xl font-black text-green-500">₹{(totalSavedPaise / 100).toFixed(0)}</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => router.push('/dashboard')}
-                                    className="w-full mt-6 py-3.5 bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 shadow-xl"
-                                >
-                                    Go to Dashboard
-                                </button>
-                            </motion.div>
+                            <AccountSummaryCard 
+                                purchaseCount={purchaseCount} 
+                                totalSavedPaise={totalSavedPaise} 
+                                graphData={graphData}
+                            />
                         </div>
 
                         {/* ══ MAIN CONTENT ════════════════════════════════════════ */}

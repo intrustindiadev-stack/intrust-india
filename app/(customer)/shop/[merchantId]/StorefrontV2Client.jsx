@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart, Zap, Shirt, Pill, Home, Utensils, Grid } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
@@ -170,7 +170,22 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
         }
     };
 
-    const merchantCategories = ['All', ...new Set(initialInventory.map(item => item.shopping_products?.category || 'Other'))];
+    const merchantCategories = useMemo(() => {
+        return ['All', ...new Set(initialInventory.map(item => item.shopping_products?.category || 'Other'))];
+    }, [initialInventory]);
+
+    const getCategoryIcon = (category) => {
+        const cat = category.toLowerCase();
+        if (cat === 'all') return <Grid size={14} />;
+        if (cat.includes('grocer') || cat.includes('fmcg') || cat.includes('mart')) return <ShoppingCart size={14} />;
+        if (cat.includes('food') || cat.includes('restaurant')) return <Utensils size={14} />;
+        if (cat.includes('electronic') || cat.includes('mobile')) return <Zap size={14} />;
+        if (cat.includes('cloth') || cat.includes('fashion') || cat.includes('apparel')) return <Shirt size={14} />;
+        if (cat.includes('pharma') || cat.includes('med')) return <Pill size={14} />;
+        if (cat.includes('beauty') || cat.includes('cosmetic')) return <Sparkles size={14} />;
+        if (cat.includes('home') || cat.includes('kitchen') || cat.includes('decor')) return <Home size={14} />;
+        return <Package size={14} />;
+    };
 
     const filteredItems = initialInventory.filter(item => {
         const titleMatch = item.shopping_products?.title?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -193,7 +208,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
 
     const primaryColor = '#3b82f6'; // Light Blue (tailwind blue-500)
     const secondaryColor = '#60a5fa'; // Blue-400
-    const avatarUrl = merchant?.user_profiles?.avatar_url;
+    const avatarUrl = merchant?.user_profiles?.avatar_url || (Array.isArray(merchant?.user_profiles) ? merchant?.user_profiles[0]?.avatar_url : null);
 
     return (
         <div className="relative min-h-screen flex flex-col">
@@ -281,23 +296,32 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                         </div>
                     </div>
 
-                    {/* Subcategory Pills */}
+                    {/* Animated Subcategory Pills */}
                     {merchantCategories.length > 1 && (
-                        <div className={`flex items-center gap-2 px-4 md:px-5 py-2.5 overflow-x-auto no-scrollbar border-t ${isDark ? 'border-white/[0.04]' : 'border-slate-100'}`}>
+                        <div className={`relative flex items-center gap-2 px-4 md:px-5 py-3 overflow-x-auto no-scrollbar border-t ${isDark ? 'border-white/[0.04]' : 'border-slate-100'}`}>
                             {merchantCategories.map(sub => {
                                 const isActive = activeSubCategory === sub;
                                 return (
                                     <button
                                         key={sub}
                                         onClick={() => setActiveSubCategory(sub)}
-                                        className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border outline-none ${isActive
-                                                ? 'text-white border-transparent shadow-lg bg-blue-500'
-                                                : isDark
-                                                    ? 'bg-transparent text-white/40 border-white/[0.06] hover:border-white/10 hover:text-white/60'
-                                                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-700'
-                                            }`}
+                                        className={`relative px-4 py-2 flex items-center gap-2 rounded-full text-xs font-bold whitespace-nowrap outline-none transition-colors ${
+                                            isActive 
+                                                ? 'text-white' 
+                                                : isDark ? 'text-white/40 hover:text-white/80' : 'text-slate-500 hover:text-slate-900'
+                                        }`}
                                     >
-                                        {sub}
+                                        {isActive && (
+                                            <motion.div
+                                                layoutId="activeCategoryPill"
+                                                className="absolute inset-0 bg-blue-500 rounded-full shadow-lg shadow-blue-500/20"
+                                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                            />
+                                        )}
+                                        <div className="relative z-10 flex items-center gap-1.5">
+                                            <span className={isActive ? 'text-white' : ''}>{getCategoryIcon(sub)}</span>
+                                            {sub}
+                                        </div>
                                     </button>
                                 );
                             })}

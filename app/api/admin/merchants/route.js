@@ -57,7 +57,7 @@ export async function GET(request) {
         const userIds = merchants.map(m => m.user_id).filter(Boolean);
         const { data: profiles } = await admin
             .from('user_profiles')
-            .select('id, full_name, phone, email')
+            .select('id, full_name, phone, email, avatar_url')
             .in('id', userIds);
 
         const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));

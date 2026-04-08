@@ -10,17 +10,17 @@ export default function HeroIllustrativeAd() {
             {/* Background Abstract Shapes */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-indigo-200/50 to-transparent dark:from-indigo-500/10 rounded-bl-full pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-violet-200/50 to-transparent dark:from-violet-500/10 rounded-tr-full pointer-events-none" />
-            
+
             {/* Decorative Stars */}
-            <motion.div 
-                animate={{ rotate: 360, scale: [1, 1.2, 1] }} 
+            <motion.div
+                animate={{ rotate: 360, scale: [1, 1.2, 1] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
                 className="absolute top-6 right-10 text-amber-400 opacity-60 pointer-events-none"
             >
                 <Star size={16} fill="currentColor" />
             </motion.div>
-            <motion.div 
-                animate={{ rotate: -360, scale: [1, 1.5, 1] }} 
+            <motion.div
+                animate={{ rotate: -360, scale: [1, 1.5, 1] }}
                 transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
                 className="absolute bottom-8 left-1/2 text-emerald-400 opacity-40 pointer-events-none"
             >
@@ -28,17 +28,17 @@ export default function HeroIllustrativeAd() {
             </motion.div>
 
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between p-6 md:p-8 gap-6">
-                
+
                 {/* Left Content Area */}
                 <div className="flex-1 space-y-4 z-10">
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-white/10 shadow-sm border border-slate-100 dark:border-white/5 backdrop-blur-sm shadow-indigo-500/10">
                         <ShoppingCart size={12} className="text-indigo-500" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-300">Premium Shopping</span>
                     </div>
-                    
+
                     <div>
                         <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-                            Discover Top Brands. <br className="hidden md:block"/>
+                            Discover Top Brands. <br className="hidden md:block" />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">
                                 Delivered with Care.
                             </span>
@@ -61,14 +61,14 @@ export default function HeroIllustrativeAd() {
                             </div>
                         </div>
                         <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 leading-tight">
-                            Guaranteed Authenticity<br/>& Secure Checkout
+                            Guaranteed Authenticity<br />& Secure Checkout
                         </p>
                     </div>
                 </div>
 
                 {/* Right Illustration Area - Image instead of SVG icons */}
                 <div className="w-full md:w-[40%] h-48 md:h-auto min-h-[160px] relative mt-4 md:mt-0 flex justify-end">
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.6, type: "spring" }}
@@ -77,10 +77,10 @@ export default function HeroIllustrativeAd() {
                         {/* 
                             This references the AI generated image stored in public/images/ecommerce_shopping_ad.png 
                         */}
-                        <img 
-                            src="/images/ecommerce_shopping_ad.png" 
-                            alt="Premium E-Commerce Platform" 
-                            className="w-full h-full object-cover" 
+                        <img
+                            src="/images/ecommerce_shopping_ad.png"
+                            alt="Premium E-Commerce Platform"
+                            className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-transparent pointer-events-none" />
                     </motion.div>
