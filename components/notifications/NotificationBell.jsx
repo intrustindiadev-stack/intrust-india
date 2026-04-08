@@ -242,6 +242,7 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                 break;
 
             // ── Gift cards ───────────────────────────────────────────────────
+            case 'gift_card_purchase':
             case 'GIFT_CARD_PURCHASE':
                 router.push('/my-giftcards');
                 break;
