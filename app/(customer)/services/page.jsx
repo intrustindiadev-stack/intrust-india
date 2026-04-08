@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export default function ServicesPage() {
-    const [activeTab, setActiveTab] = useState('bills');
+    const [activeTab, setActiveTab] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const tabsContainerRef = useRef(null);
 

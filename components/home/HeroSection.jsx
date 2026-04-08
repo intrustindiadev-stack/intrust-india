@@ -98,6 +98,7 @@ export default function HeroSection() {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                        className="flex flex-col items-center"
                     >
                         <h1 className="text-7xl sm:text-7xl md:text-7xl font-extrabold leading-tight tracking-tight font-[family-name:var(--font-poppins)]">
 
@@ -109,6 +110,9 @@ export default function HeroSection() {
                             <span className="letter-s">S</span>
                             <span className="letter-t2">T</span>
                         </h1>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 font-medium tracking-wide">
+                            Powered by Intrust Finance India Private Limited.
+                        </p>
                     </motion.div>
 
                     {/* Premium Search Bar */}
@@ -116,7 +120,7 @@ export default function HeroSection() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                        className="w-full max-w-2xl mx-auto mt-2 md:mt-4"
+                        className="w-full max-w-2xl mx-auto -mt-2 md:-mt-4"
                     >
                         <SearchBar />
                     </motion.div>
