@@ -172,7 +172,11 @@ export default function NFCOrderForm({ onPreviewUpdate, setIsSuccess }) {
                     })}
                 </div>
 
-                <form onSubmit={handleFormSubmit} className="relative z-10">
+                <form
+                    onSubmit={handleFormSubmit}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && step !== 4) e.preventDefault(); }}
+                    className="relative z-10"
+                >
                     <AnimatePresence mode="wait">
                         {/* Step 1 — Name */}
                         {step === 1 && (
@@ -365,6 +369,23 @@ export default function NFCOrderForm({ onPreviewUpdate, setIsSuccess }) {
                         )}
                     </AnimatePresence>
                 </form>
+
+                {/* Delivery Timeline Notice */}
+                <div className={`mt-6 flex items-start gap-3 px-4 py-3.5 rounded-xl border ${
+                    isDark
+                        ? 'bg-amber-500/[0.05] border-amber-500/20 text-amber-400/80'
+                        : 'bg-amber-50 border-amber-200 text-amber-700'
+                }`}>
+                    <Truck size={15} className={`mt-0.5 shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+                    <p className="text-[11px] font-bold leading-relaxed tracking-wide">
+                        <span className={`font-black uppercase tracking-widest ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
+                            Estimated Delivery:&nbsp;
+                        </span>
+                        Your InTrust NFC card will be dispatched within 3–5 business days and is expected to arrive at your registered delivery address within{' '}
+                        <span className={`font-black ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>25 working days</span>{' '}
+                        from the date of order confirmation. Delivery timelines may vary based on your location.
+                    </p>
+                </div>
 
                 {/* Payment Modal */}
                 {user && (

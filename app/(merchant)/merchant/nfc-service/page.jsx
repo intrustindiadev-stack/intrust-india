@@ -228,7 +228,10 @@ export default function MerchantNFCServicePage() {
                         })}
                     </div>
 
-                    <form onSubmit={handleFormSubmit}>
+                    <form
+                        onSubmit={handleFormSubmit}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && step !== 4) e.preventDefault(); }}
+                    >
                         <AnimatePresence mode="wait">
                             {/* Step 1: Configure */}
                             {step === 1 && (
@@ -402,6 +405,23 @@ export default function MerchantNFCServicePage() {
                         </AnimatePresence>
                     </form>
                 </div>
+            </div>
+
+            {/* Delivery Timeline Notice */}
+            <div className={`mt-6 flex items-start gap-3 px-4 py-3.5 rounded-xl border ${
+                isDark
+                    ? 'bg-amber-500/[0.05] border-amber-500/20'
+                    : 'bg-amber-50 border-amber-200'
+            }`}>
+                <span className={`material-icons-round text-sm mt-0.5 shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>local_shipping</span>
+                <p className={`text-[11px] font-bold leading-relaxed tracking-wide ${isDark ? 'text-amber-400/80' : 'text-amber-700'}`}>
+                    <span className={`font-black uppercase tracking-widest ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
+                        Estimated Delivery:&nbsp;
+                    </span>
+                    Your InTrust NFC card will be dispatched within 3–5 business days and is expected to arrive at your registered delivery address within{' '}
+                    <span className={`font-black ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>25 working days</span>{' '}
+                    from the date of order confirmation. Delivery timelines may vary based on your location.
+                </p>
             </div>
 
             {/* Payment Modal */}

@@ -49,11 +49,11 @@ export default function PartnerLoop({ className = "", showBorder = true }) {
                         }}
                     >
                         {marqueePartners.map((p, i) => (
-                            <div key={i} className="flex items-center gap-3 opacity-40 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0 cursor-pointer group">
-                                <div className="p-3 rounded-xl bg-slate-50 group-hover:bg-[#92BCEA]/10 transition-colors">
-                                    <p.icon size={28} className="text-slate-600 group-hover:text-[#6A85B6]" strokeWidth={1.5} />
+                            <div key={i} className="flex items-center gap-3 opacity-70 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0 cursor-pointer group">
+                                <div className="p-3 rounded-xl bg-slate-100 group-hover:bg-[#92BCEA]/10 transition-colors">
+                                    <p.icon size={28} className="text-slate-700 group-hover:text-[#6A85B6]" strokeWidth={1.5} />
                                 </div>
-                                <span className="text-lg font-bold text-slate-600 group-hover:text-slate-900">{p.name}</span>
+                                <span className="text-lg font-bold text-slate-700 group-hover:text-slate-900">{p.name}</span>
                             </div>
                         ))}
                     </motion.div>
