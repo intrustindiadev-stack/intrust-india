@@ -27,16 +27,15 @@ export default function MerchantFloatingCart({
 }) {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const commission = showCommission ? subtotalInRupees * commissionRate : 0;
-    const total = subtotalInRupees + commission;
-    const isInsufficient = total > merchantBalance;
-    const itemCount = cartItems.length;
-
     // GST breakdown (weighted avg across items)
     const gstTotal = cartItems.reduce((sum, item) => {
-        const itemTotal = (item.buying_price_rupees || item.price_rupees || 0) * (item.quantity || 1);
+        const itemTotal = (item.unit_price || 0) * (item.quantity || 1);
         const gstRate = (item.gst_percentage || 0) / 100;
         return sum + itemTotal * gstRate;
     }, 0);
+    const total = subtotalInRupees + commission + gstTotal;
+    const isInsufficient = total > merchantBalance;
+    const itemCount = cartItems.length;
     const baseSubtotal = subtotalInRupees - gstTotal;
     const grossProfit = showCommission
         ? Math.max(0, (subtotalInRupees - commission) * 0.08)  // estimate
@@ -124,6 +123,12 @@ export default function MerchantFloatingCart({
                                 <span>Wholesale Cost</span>
                                 <span>₹{subtotalInRupees.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                             </div>
+                            {gstTotal > 0 && (
+                                <div className="flex justify-between text-teal-300/80 font-medium">
+                                    <span>GST</span>
+                                    <span>₹{gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between text-blue-300/70 font-medium">
                                 <span>Est. Retail Value (MSRP)</span>
                                 <span>₹{totalRetailValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>

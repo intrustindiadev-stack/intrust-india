@@ -89,15 +89,20 @@ export default function WholesaleClient({ products = [], merchant, categories = 
             wholesale_price: product.wholesale_price_paise / 100,
             retail_price: (product.suggested_retail_price_paise || 0) / 100,
             quantity: qty,
+            gst_percentage: product.gst_percentage || 0,
         };
     });
 
     const subtotal = cartItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
+    const gstAmount = cartItems.reduce((sum, item) => {
+        return sum + (item.unit_price * (item.quantity || 1) * (item.gst_percentage || 0) / 100);
+    }, 0);
+    const totalWithGst = subtotal + gstAmount;
     const merchantBalance = merchant.wallet_balance_paise / 100;
 
     const handlePurchaseWallet = async () => {
         if (cartItems.length === 0) return;
-        if (subtotal > merchantBalance) {
+        if (totalWithGst > merchantBalance) {
             toast.error('Insufficient balance in your wallet');
             return;
         }
@@ -120,7 +125,7 @@ export default function WholesaleClient({ products = [], merchant, categories = 
             // Show success animation
             setSuccessStats([
                 { label: 'Items Purchased', value: cartItems.reduce((s, i) => s + i.quantity, 0) },
-                { label: 'Total Paid', value: `₹${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` },
+                { label: 'Total Paid', value: `₹${totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` },
             ]);
             setCart({});
             setShowSuccess(true);

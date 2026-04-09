@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
 import { hashOTP, validatePhoneNumber } from '@/lib/otpUtils';
 import crypto from 'crypto';
-import { createClient } from '@supabase/supabase-js'; // Import here instead of require inside
+import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
 
 export async function POST(request) {
     console.log('[VERIFY-OTP] Request received');
@@ -147,15 +148,49 @@ export async function POST(request) {
 
         if (signInError || !signInData.session) {
             console.log('[VERIFY-OTP] Sign in failed:', signInError);
-            return NextResponse.json({ success: false, error: `Sign in failed: ${signInError.message}` }, { status: 500 });
+            return NextResponse.json({ success: false, error: `Sign in failed: ${signInError?.message}` }, { status: 500 });
         }
 
         console.log('[VERIFY-OTP] Success! User:', userId);
-        return NextResponse.json({
+
+        // Build the response object first, then wire a createServerClient to it
+        // so Supabase writes sb-*-auth-token cookies directly onto the response.
+        const response = NextResponse.json({
             success: true,
-            session: signInData.session,
-            user: signInData.user
+            user: signInData.user   // session intentionally omitted — lives in cookie
         });
+
+        const cookieServerClient = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            {
+                cookies: {
+                    getAll() {
+                        return request.cookies.getAll();
+                    },
+                    setAll(cookiesToSet) {
+                        cookiesToSet.forEach(({ name, value, options }) => {
+                            const isRefreshToken = name.includes('refresh-token');
+                            response.cookies.set(name, value, {
+                                httpOnly: true,
+                                secure: process.env.NODE_ENV === 'production',
+                                sameSite: 'lax',
+                                path: '/',
+                                // Give refresh tokens a long life; let Supabase
+                                // control the shorter access-token expiry via options.
+                                ...(isRefreshToken ? { maxAge: 60 * 60 * 24 * 365 } : {}),
+                                ...options,
+                            });
+                        });
+                    },
+                },
+            }
+        );
+
+        // This call triggers setAll above, writing the sb-*-auth-token cookies.
+        await cookieServerClient.auth.setSession(signInData.session);
+
+        return response;
 
     } catch (error) {
         console.error('[VERIFY-OTP] Unexpected error:', error);

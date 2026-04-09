@@ -63,7 +63,7 @@ export async function POST(request) {
         for (const item of items) {
             const { data: product, error: prodErr } = await supabaseAdmin
                 .from('shopping_products')
-                .select('id, admin_stock, wholesale_price_paise, title')
+                .select('id, admin_stock, wholesale_price_paise, title, gst_percentage')
                 .eq('id', item.product_id)
                 .single();
 
@@ -75,11 +75,14 @@ export async function POST(request) {
                 return NextResponse.json({ error: `Insufficient stock for ${product.title}` }, { status: 400 });
             }
 
-            totalPaise += (product.wholesale_price_paise * item.quantity);
+            const basePaise = product.wholesale_price_paise * item.quantity;
+            const gstPaise = Math.round(basePaise * (product.gst_percentage || 0) / 100);
+            totalPaise += basePaise + gstPaise;
             validatedItems.push({
                 product_id: product.id,
                 quantity: item.quantity,
-                unit_price_paise: product.wholesale_price_paise
+                unit_price_paise: product.wholesale_price_paise,
+                gst_amount_paise: gstPaise
             });
         }
 
