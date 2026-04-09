@@ -70,7 +70,7 @@ export const metadata = {
     siteName: "InTrust India",
     images: [
       {
-        url: "/og-image.png",
+        url: "/logo.png",
         width: 1200,
         height: 630,
         alt: "InTrust India - Gift Cards & NFC Solutions",
@@ -83,7 +83,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "InTrust India | Gift Cards & NFC",
     description: "Gift cards, NFC innovations, and premium e-commerce — all in one place with InTrust India.",
-    images: ["/og-image.png"],
+    images: ["/logo.png"],
   },
   manifest: "/manifest.json",
   appleWebApp: {
@@ -107,6 +107,9 @@ export const metadata = {
       "max-image-preview": "large",
       "max-snippet": -1,
     },
+  },
+  verification: {
+    google: "URKYF9Wrn34sDz_K6Zs4Z9_lO3J-Y-E4Sg-p-1w4",
   },
 };
 

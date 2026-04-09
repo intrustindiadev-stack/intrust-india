@@ -12,11 +12,11 @@ const organizationSchema = {
     "url": BASE_URL,
     "logo": {
         "@type": "ImageObject",
-        "url": `${BASE_URL}/icon.png`,
+        "url": `${BASE_URL}/logo.png`,
         "width": 512,
         "height": 512
     },
-    "image": `${BASE_URL}/og-image.png`,
+    "image": `${BASE_URL}/logo.png`,
     "description": "InTrust India provides gift cards, NFC smart cards, bill payments, and a curated e-commerce experience for customers across India.",
     "foundingDate": "2014",
     "address": {

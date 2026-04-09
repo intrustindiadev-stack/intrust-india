@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { ArrowUp, Twitter, Linkedin, Instagram, Facebook, MapPin, Mail } from 'lucide-react';
+import { ArrowUp, Twitter, Linkedin, Instagram, Facebook, MapPin, Mail, Phone } from 'lucide-react';
 
 export default function Footer() {
 
@@ -83,6 +83,18 @@ export default function Footer() {
                         <h4 className="text-[#171A21] dark:text-gray-100 font-semibold text-sm uppercase tracking-wider">
                             Contact Us
                         </h4>
+
+                        <a href="tel:+9118002030052" className="flex items-start gap-3 group">
+                            <div className="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-500/10 flex items-center justify-center border border-green-100 dark:border-green-500/20 shrink-0">
+                                <Phone size={14} className="text-green-500" />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Toll-Free</p>
+                                <p className="text-sm font-medium text-slate-600 dark:text-gray-400 group-hover:text-green-600 transition-colors">
+                                    +91 1800 203 0052
+                                </p>
+                            </div>
+                        </a>
 
                         <a href="mailto:info.intrustindia@gmail.com" className="flex items-start gap-3 group">
                             <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center border border-purple-100 dark:border-purple-500/20 shrink-0">
