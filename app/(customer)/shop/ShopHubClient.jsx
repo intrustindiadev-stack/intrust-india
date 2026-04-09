@@ -85,7 +85,7 @@ function MerchantCard({ merchant, idx, rating }) {
     return (
         <motion.div variants={fadeUp} className="h-full">
             <Link
-                href={`/shop/${merchant.id}`}
+                href={`/shop/${merchant.slug}`}
                 className="group flex flex-col h-full bg-white dark:bg-[#0c0e16] rounded-[2rem] overflow-hidden border border-slate-100/80 dark:border-white/[0.04] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.7)] hover:-translate-y-1.5 transition-all duration-500 focus-visible:outline-none"
             >
                 {/* ── Top Cover Image Area ── */}

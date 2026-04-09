@@ -76,6 +76,7 @@ const CartClient = ({ userId }) => {
           ),
           shopping_products (
             id,
+            slug,
             title,
             product_images,
             mrp_paise,
@@ -626,7 +627,7 @@ const CartClient = ({ userId }) => {
                       className={`flex gap-3 pb-4 mb-4 border-b last:border-b-0 last:pb-0 last:mb-0 ${isDark ? 'border-white/[0.03]' : 'border-slate-50'}`}
                     >
                       <Link 
-                        href={`/shop/product/${item.shopping_products?.id}`}
+                        href={`/shop/product/${item.shopping_products?.slug}`}
                         className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex-shrink-0 p-1.5 flex items-center justify-center ${isDark ? 'bg-[#0c0e14] border border-white/[0.04]' : 'bg-slate-50 border border-slate-100'}`}
                       >
                         {item.shopping_products?.product_images?.[0] ? (

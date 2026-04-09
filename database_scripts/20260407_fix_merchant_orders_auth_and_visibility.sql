@@ -14,9 +14,9 @@ DECLARE
     v_merchant_user UUID;
     v_result JSONB;
 BEGIN
-    -- Verify this user owns the merchant account
+    -- Verify this user owns the merchant account (Allow service_role bypass for Server Components)
     SELECT user_id INTO v_merchant_user FROM public.merchants WHERE id = p_merchant_id;
-    IF v_merchant_user IS DISTINCT FROM auth.uid() THEN
+    IF v_merchant_user IS DISTINCT FROM auth.uid() AND current_setting('role', true) != 'service_role' THEN
         RETURN jsonb_build_object('success', false, 'error', 'Unauthorized');
     END IF;
 
@@ -40,7 +40,7 @@ BEGIN
                     SELECT COALESCE(jsonb_agg(jsonb_build_object(
                         'id', oi.id,
                         'product_title', sp.title,
-                        'product_image', sp.image_url,
+                        'product_image', COALESCE(mi.custom_image_url, sp.product_images[1]),
                         'hsn_code', sp.hsn_code,
                         'gst_percentage', sp.gst_percentage,
                         'quantity', oi.quantity,
@@ -53,6 +53,7 @@ BEGIN
                     )), '[]'::jsonb)
                     FROM shopping_order_items oi
                     JOIN shopping_products sp ON sp.id = oi.product_id
+                    LEFT JOIN merchant_inventory mi ON mi.id = oi.inventory_id
                     WHERE oi.group_id = og.id AND oi.seller_id = p_merchant_id
                 )
             ) ORDER BY og.created_at DESC

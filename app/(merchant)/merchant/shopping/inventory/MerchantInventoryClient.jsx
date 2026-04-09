@@ -245,14 +245,16 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                                         {/* Overlay when inactive */}
                                         {!item.is_active && (
                                             <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px] flex items-center justify-center">
-                                                <span className="bg-white/90 dark:bg-black/60 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 shadow-sm">
-                                                    Draft
+                                                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${(!isPlatform && product?.approval_status === 'rejected') ? 'bg-red-500/90 text-white' : (!isPlatform && product?.approval_status === 'pending_approval') ? 'bg-amber-500/90 text-white' : 'bg-white/90 dark:bg-black/60 text-slate-600 dark:text-slate-300'}`}>
+                                                    {(!isPlatform && product?.approval_status === 'rejected') ? 'Rejected' 
+                                                     : (!isPlatform && product?.approval_status === 'pending_approval') ? 'Pending Approval' 
+                                                     : 'Draft'}
                                                 </span>
                                             </div>
                                         )}
 
                                         {/* Type badge */}
-                                        <div className="absolute top-3 left-3">
+                                        <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
                                             {isPlatform ? (
                                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-600/90 text-white text-[9px] font-black uppercase tracking-widest backdrop-blur-sm shadow-sm">
                                                     <Box size={10} /> Platform
@@ -260,6 +262,18 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                                             ) : (
                                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-600/90 text-white text-[9px] font-black uppercase tracking-widest backdrop-blur-sm shadow-sm">
                                                     <Tag size={10} /> Custom
+                                                </span>
+                                            )}
+                                            
+                                            {/* Approval Badge for Custom Products */}
+                                            {!isPlatform && product?.approval_status === 'pending_approval' && (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/90 text-white text-[9px] font-black uppercase tracking-widest backdrop-blur-sm shadow-sm">
+                                                    Pending
+                                                </span>
+                                            )}
+                                            {!isPlatform && product?.approval_status === 'rejected' && (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/90 text-white text-[9px] font-black uppercase tracking-widest backdrop-blur-sm shadow-sm">
+                                                    Rejected
                                                 </span>
                                             )}
                                         </div>
@@ -316,13 +330,14 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                                                     </p>
                                                 ) : (
                                                     <div className="flex items-center gap-1">
-                                                        <span className="text-xs font-black text-slate-500 dark:text-slate-400">₹</span>
+                                                        <span className={`text-xs font-black ${(!isPlatform && product?.approval_status && product?.approval_status !== 'live') ? 'text-slate-400 opacity-50' : 'text-slate-500 dark:text-slate-400'}`}>₹</span>
                                                         <input
                                                             type="number"
                                                             value={currentEditPrice !== undefined ? currentEditPrice : (retailPaise / 100)}
                                                             onChange={e => setEditPrices(prev => ({ ...prev, [item.id]: e.target.value }))}
                                                             onBlur={e => handleUpdatePrice(item.id, e.target.value)}
-                                                            className="w-full text-sm font-black text-slate-800 dark:text-slate-100 bg-transparent outline-none focus:text-blue-600 dark:focus:text-blue-400 transition-colors [appearance:textfield]"
+                                                            disabled={!isPlatform && product?.approval_status && product?.approval_status !== 'live'}
+                                                            className={`w-full text-sm font-black text-slate-800 dark:text-slate-100 bg-transparent outline-none focus:text-blue-600 dark:focus:text-blue-400 transition-colors [appearance:textfield] ${(!isPlatform && product?.approval_status && product?.approval_status !== 'live') ? 'opacity-50 cursor-not-allowed text-slate-400 dark:text-slate-500' : ''}`}
                                                         />
                                                     </div>
                                                 )}
@@ -391,10 +406,11 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                                             ) : (
                                                 <div className="flex items-center gap-2">
                                                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mr-1">Stock</p>
-                                                    <div className="flex items-center bg-slate-100 dark:bg-white/10 rounded-xl overflow-hidden flex-1">
+                                                    <div className={`flex items-center bg-slate-100 dark:bg-white/10 rounded-xl overflow-hidden flex-1 ${(!isPlatform && product?.approval_status && product?.approval_status !== 'live') ? 'opacity-50 pointer-events-none' : ''}`}>
                                                         <button
                                                             onClick={() => handleUpdateStock(item, Math.max(0, item.stock_quantity - 1))}
-                                                            className="px-3 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                                                            disabled={!isPlatform && product?.approval_status && product?.approval_status !== 'live'}
+                                                            className="px-3 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
                                                         >
                                                             <Minus size={13} />
                                                         </button>
@@ -402,11 +418,13 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                                                             type="number"
                                                             defaultValue={item.stock_quantity}
                                                             onBlur={e => handleUpdateStock(item, parseInt(e.target.value))}
-                                                            className="flex-1 text-center text-sm font-black text-slate-900 dark:text-slate-100 bg-transparent outline-none [appearance:textfield] py-2"
+                                                            disabled={!isPlatform && product?.approval_status && product?.approval_status !== 'live'}
+                                                            className="flex-1 text-center text-sm font-black text-slate-900 dark:text-slate-100 bg-transparent outline-none [appearance:textfield] py-2 disabled:text-slate-400 disabled:dark:text-slate-500"
                                                         />
                                                         <button
                                                             onClick={() => handleUpdateStock(item, item.stock_quantity + 1)}
-                                                            className="px-3 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                                                            disabled={!isPlatform && product?.approval_status && product?.approval_status !== 'live'}
+                                                            className="px-3 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
                                                         >
                                                             <Plus size={13} />
                                                         </button>
@@ -415,26 +433,39 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                                             )}
                                         </div>
 
-                                        {/* Publish / Depublish */}
-                                        <button
-                                            onClick={() => handleToggleActive(item.id, item.is_active)}
-                                            disabled={isUpdatingThis}
-                                            className={`w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${item.is_active
-                                                ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-100 dark:border-red-500/20'
-                                                : 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-500 ring-offset-1 dark:ring-offset-transparent'
-                                                }`}
-                                        >
-                                            {isUpdatingThis ? (
-                                                <>
-                                                    <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                                                    Saving...
-                                                </>
-                                            ) : item.is_active ? (
-                                                'Depublish'
-                                            ) : (
-                                                'Publish Live'
-                                            )}
-                                        </button>
+                                        {/* Publish / Depublish / Action Button */}
+                                        {(!isPlatform && product?.approval_status === 'rejected') ? (
+                                            <Link
+                                                href={`/merchant/shopping/inventory/edit/${item.product_id}`}
+                                                className="w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 flex items-center justify-center gap-2"
+                                            >
+                                                View Rejection & Edit
+                                            </Link>
+                                        ) : (!isPlatform && product?.approval_status === 'pending_approval') ? (
+                                            <button disabled className="w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all bg-slate-100 text-slate-400 border border-slate-200 dark:bg-white/5 dark:text-slate-500 dark:border-white/10 flex items-center justify-center gap-2 cursor-not-allowed">
+                                                Pending Admin Approval
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleToggleActive(item.id, item.is_active)}
+                                                disabled={isUpdatingThis}
+                                                className={`w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${item.is_active
+                                                    ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-100 dark:border-red-500/20'
+                                                    : 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-500 ring-offset-1 dark:ring-offset-transparent'
+                                                    }`}
+                                            >
+                                                {isUpdatingThis ? (
+                                                    <>
+                                                        <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                                                        Saving...
+                                                    </>
+                                                ) : item.is_active ? (
+                                                    'Depublish'
+                                                ) : (
+                                                    'Publish Live'
+                                                )}
+                                            </button>
+                                        )}
                                     </div>
                                 </motion.div>
                             );

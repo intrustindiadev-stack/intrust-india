@@ -1,8 +1,4 @@
--- Fix merchant_get_my_orders RPC to use stored values instead of recalculating
--- Bugs fixed:
---   1. gross_profit_paise was double-multiplied by quantity (profit_paise is already total)
---   2. commission_amount_paise was recalculated instead of reading stored column
---   3. net_profit_paise inherited both errors above
+-- Step 7 — Update merchant_get_my_orders RPC
 
 CREATE OR REPLACE FUNCTION public.merchant_get_my_orders(p_merchant_id uuid, p_status text DEFAULT NULL::text)
 RETURNS jsonb
@@ -14,9 +10,9 @@ DECLARE
     v_merchant_user UUID;
     v_result JSONB;
 BEGIN
-    -- Verify this user owns the merchant account
+    -- Verify this user owns the merchant account (Allow service_role bypass for Server Components)
     SELECT user_id INTO v_merchant_user FROM public.merchants WHERE id = p_merchant_id;
-    IF v_merchant_user != auth.uid() THEN
+    IF v_merchant_user IS DISTINCT FROM auth.uid() AND current_setting('role', true) != 'service_role' THEN
         RETURN jsonb_build_object('success', false, 'error', 'Unauthorized');
     END IF;
 
@@ -36,6 +32,12 @@ BEGIN
                 'estimated_delivery_at', og.estimated_delivery_at,
                 'status_notes', og.status_notes,
                 'created_at', og.created_at,
+                'commission_rate', og.commission_rate,
+                'platform_cut_paise', og.platform_cut_paise,
+                'merchant_profit_paise', og.merchant_profit_paise,
+                'settlement_status', og.settlement_status,
+                'assigned_to', og.assigned_to,
+                'admin_takeover_at', og.admin_takeover_at,
                 'items', (
                     SELECT COALESCE(jsonb_agg(jsonb_build_object(
                         'id', oi.id,

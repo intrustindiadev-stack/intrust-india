@@ -27,9 +27,13 @@ const STATUS_CONFIG = {
 const STATUS_FLOW = ["pending", "packed", "shipped", "delivered"];
 
 const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, onToggle, isCancelled, merchantInfo, setShippingModal, setShippingData }) => {
-    const orderGrossProfit = (order.items || []).reduce((s, i) => s + (i.gross_profit_paise || 0), 0);
-    const orderCommission = (order.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0);
-    const orderNetProfit = (order.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0);
+    const orderGrossProfit = (order.items || []).reduce((s, i) => s + (i.total_price_paise || 0), 0);
+    const orderCommission = order.platform_cut_paise ?? (order.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0);
+    const orderNetProfit = order.merchant_profit_paise ?? (order.items || []).reduce((s, i) => s + (i.profit_paise || 0), 0);
+    
+    // NEW: Cost and Pure Profit Logic
+    const orderTotalCost = (order.items || []).reduce((s, i) => s + ((i.cost_price_paise || 0) * i.quantity), 0);
+    const orderPureProfit = orderNetProfit - orderTotalCost;
     const StatusIcon = cfg.icon;
 
     return (
@@ -58,6 +62,11 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                 <span className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-black tracking-tighter border ${cfg.color} ${cfg.bg} ${cfg.border}`}>
                                     {cfg.label}
                                 </span>
+                                {order.settlement_status === 'admin_takeover' && (
+                                    <span className="text-[9px] px-2 py-0.5 rounded-full uppercase font-black tracking-tighter border text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/20">
+                                        Takeover
+                                    </span>
+                                )}
                             </div>
                             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-gray-400 font-medium">
                                 <Calendar size={12} className="opacity-50" />
@@ -161,13 +170,21 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                         <span className="font-bold text-slate-900 dark:text-white tracking-widest">₹{((order.total_amount_paise || 0) / 100).toLocaleString("en-IN")}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-xs">
-                                        <span className="text-slate-500 dark:text-gray-500 font-medium tracking-wide">Total Sales Profit</span>
-                                        <span className="font-bold text-blue-600 dark:text-blue-400">₹{(orderGrossProfit / 100).toLocaleString("en-IN")}</span>
+                                        <span className="text-slate-500 dark:text-gray-500 font-medium tracking-wide">Gross Sale Value</span>
+                                        <span className="font-bold text-slate-900 dark:text-white">₹{(orderGrossProfit / 100).toLocaleString("en-IN")}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-slate-500 dark:text-gray-500 font-medium tracking-wide">Product Inventory Cost</span>
+                                        <span className="font-bold text-red-600 dark:text-red-400">−₹{(orderTotalCost / 100).toLocaleString("en-IN")}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-xs">
                                         <div className="flex items-center gap-1.5">
                                             <span className="text-slate-500 dark:text-gray-500 font-medium tracking-wide">Platform Fee</span>
-                                            {orderGrossProfit > 0 && (
+                                            {order.commission_rate !== undefined ? (
+                                                <span className="text-[9px] px-1 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 font-black">
+                                                    {Math.round((1 - order.commission_rate) * 100)}%
+                                                </span>
+                                            ) : orderGrossProfit > 0 && (
                                                 <span className="text-[9px] px-1 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 font-black">
                                                     {((orderCommission / (orderGrossProfit + orderCommission)) * 100).toFixed(0)}%
                                                 </span>
@@ -178,14 +195,44 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                     <div className="pt-4 mt-2 border-t border-slate-100 dark:border-white/[0.05] flex justify-between items-center">
                                         <div>
                                             <p className="text-[10px] text-slate-400 dark:text-gray-500 font-black uppercase tracking-tight mb-0.5">Final Net Credit</p>
-                                            <p className="text-xs text-emerald-600 dark:text-emerald-500/70 font-medium">Settled to your wallet</p>
+                                            <p className="text-xs text-emerald-600 dark:text-emerald-500/70 font-medium italic">
+                                                {order.settlement_status === 'settled' ? 'Settled to your wallet' : 'Pending settlement'}
+                                            </p>
                                         </div>
                                         <div className="text-right">
-                                            <span className="block text-2xl font-black text-emerald-400 tracking-tighter">₹{(orderNetProfit / 100).toLocaleString("en-IN")}</span>
+                                            <p className="text-[10px] text-slate-400 dark:text-gray-500 font-black uppercase tracking-tight mb-0.5">Net Payout</p>
+                                            <span className="block text-xl font-black text-slate-900 dark:text-white tracking-tighter">₹{(orderNetProfit / 100).toLocaleString("en-IN")}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Pure Margin Highlight */}
+                                    <div className="mt-3 pt-3 border-t border-dashed border-emerald-500/20 bg-emerald-500/5 -mx-5 px-5 py-2">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-1.5">
+                                                <Sparkles size={12} className="text-emerald-500" />
+                                                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Pure Margin Profit</span>
+                                            </div>
+                                            <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                                                ₹{(orderPureProfit / 100).toLocaleString("en-IN")}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Settlement Status Badges */}
+                            {order.settlement_status === 'admin_takeover' && (
+                                <div className="mt-4 p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex items-center gap-2 text-xs font-bold text-red-600 dark:text-red-400">
+                                    <AlertTriangle size={14} />
+                                    ⚠️ Admin Takeover — 30% Commission (Reduced)
+                                </div>
+                            )}
+                            {order.settlement_status === 'pending' && order.delivery_status === 'pending' && (
+                                <div className="mt-4 p-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400">
+                                    <Clock size={14} />
+                                    ⏳ Pending Settlement — approve within 2 hours to keep 70%
+                                </div>
+                            )}
 
                             {/* Action Bar */}
                             {!isCancelled && (
@@ -236,7 +283,7 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                         >
                                             <Download size={14} /> PDF INVOICE
                                         </button>
-                                        {nextStatus && (
+                                        {nextStatus && order.settlement_status !== 'settled' && (
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();

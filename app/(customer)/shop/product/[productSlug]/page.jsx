@@ -3,18 +3,36 @@ import { redirect } from "next/navigation";
 import ProductDetailClient from "./ProductDetailClient";
 import Navbar from "@/components/layout/Navbar";
 
+// UUID pattern to detect legacy ID-based URLs
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+
 export default async function ProductDetailPage({ params }) {
-    const { productId } = await params;
+    const { productSlug } = await params;
     const supabase = await createServerSupabaseClient();
 
-    // 1. Fetch Product Details
+    // If the segment looks like a UUID, redirect to the slug-based URL
+    if (UUID_REGEX.test(productSlug)) {
+        const { data: legacyProduct } = await supabase
+            .from('shopping_products')
+            .select('slug')
+            .eq('id', productSlug)
+            .is('deleted_at', null)
+            .single();
+
+        if (legacyProduct?.slug) {
+            redirect(`/shop/product/${legacyProduct.slug}`);
+        }
+        redirect('/shop');
+    }
+
+    // 1. Fetch Product Details by slug
     const { data: product, error: productError } = await supabase
         .from('shopping_products')
         .select(`
             *,
             shopping_categories(name, color_primary, color_secondary)
         `)
-        .eq('id', productId)
+        .eq('slug', productSlug)
         .is('deleted_at', null)
         .single();
 
@@ -23,14 +41,14 @@ export default async function ProductDetailPage({ params }) {
         redirect("/shop");
     }
 
-    // 2. Fetch Inventory Info
+    // 2. Fetch Inventory Info (use product.id for relational queries)
     const { data: inventory } = await supabase
         .from('merchant_inventory')
         .select(`
             *,
             merchants(business_name, business_address)
         `)
-        .eq('product_id', productId)
+        .eq('product_id', product.id)
         .eq('is_active', true)
         .limit(5);
 
@@ -58,12 +76,12 @@ export default async function ProductDetailPage({ params }) {
                 product_id,
                 is_active,
                 merchants (business_name),
-                shopping_products!inner (id, title, product_images, category, suggested_retail_price_paise, mrp_paise)
+                shopping_products!inner (id, slug, title, product_images, category, suggested_retail_price_paise, mrp_paise)
             `)
             .eq('is_active', true)
             .gt('stock_quantity', 0)
             .ilike('shopping_products.category', product.category)
-            .neq('product_id', productId)
+            .neq('product_id', product.id)
             .limit(8);
 
         const { data: recPlatform } = await supabase
@@ -73,7 +91,7 @@ export default async function ProductDetailPage({ params }) {
             .gt('admin_stock', 0)
             .is('deleted_at', null)
             .ilike('category', product.category)
-            .neq('id', productId)
+            .neq('id', product.id)
             .limit(8);
 
         const platformMapped = (recPlatform || []).map(p => ({

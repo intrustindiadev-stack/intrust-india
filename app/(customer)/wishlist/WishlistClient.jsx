@@ -205,7 +205,7 @@ export default function WishlistClient({ userId, initialItems }) {
                       transition={{ delay: idx * 0.04 }}
                       className="flex gap-4 p-4 rounded-2xl mb-3 bg-white border border-slate-100 shadow-sm"
                     >
-                      <Link href={`/shop/product/${product?.id}`} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50 border border-slate-100">
+                      <Link href={`/shop/product/${product?.slug}`} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50 border border-slate-100">
                         {product?.product_images?.[0] ? (
                           <img src={product.product_images[0]} alt={product.title} className="w-full h-full object-contain" />
                         ) : (

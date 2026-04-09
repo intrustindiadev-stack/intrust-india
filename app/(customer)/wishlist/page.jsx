@@ -15,7 +15,7 @@ export default async function WishlistPage() {
     .from('user_wishlists')
     .select(`
       id, added_at, is_platform_item, inventory_id,
-      shopping_products ( id, title, product_images, category, suggested_retail_price_paise, mrp_paise ),
+      shopping_products ( id, slug, title, product_images, category, suggested_retail_price_paise, mrp_paise ),
       merchants ( id, business_name ),
       merchant_inventory ( retail_price_paise )
     `)

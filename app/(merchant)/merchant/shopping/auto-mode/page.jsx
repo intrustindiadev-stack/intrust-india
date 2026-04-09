@@ -26,7 +26,7 @@ export default function AutoModePage() {
 
             const { data: merchantData, error: merchantError } = await supabase
                 .from('merchants')
-                .select('*, auto_mode_status, auto_mode_months_paid, auto_mode_valid_until')
+                .select('*, auto_mode, auto_mode_months_paid, auto_mode_valid_until, subscription_expires_at')
                 .eq('user_id', session.user.id)
                 .single();
 
@@ -57,10 +57,10 @@ export default function AutoModePage() {
     }, []);
 
     useEffect(() => {
-        if (!merchant?.auto_mode_valid_until || merchant?.auto_mode_status !== 'active') return;
+        if (!merchant?.subscription_expires_at || merchant?.auto_mode !== true) return;
 
         const calculateTimeLeft = () => {
-            const difference = new Date(merchant.auto_mode_valid_until) - new Date();
+            const difference = new Date(merchant.subscription_expires_at) - new Date();
             if (difference > 0) {
                 const days = Math.floor(difference / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
@@ -76,9 +76,9 @@ export default function AutoModePage() {
         const timer = setInterval(calculateTimeLeft, 1000);
 
         return () => clearInterval(timer);
-    }, [merchant?.auto_mode_valid_until, merchant?.auto_mode_status]);
+    }, [merchant?.subscription_expires_at, merchant?.auto_mode]);
 
-    const isAutoModeActive = merchant?.auto_mode_status === 'active';
+    const isAutoModeActive = merchant?.auto_mode === true;
     const isFirstMonth = (merchant?.auto_mode_months_paid || 0) === 0;
     const subscriptionPrice = isFirstMonth ? 999 : 1999;
 
@@ -87,8 +87,8 @@ export default function AutoModePage() {
             // Turning OFF logic -> show warning modal first
             setShowWarningModal(true);
         } else {
-            // Turning ON -> show payment modal first
-            setShowPaymentModal(true);
+            // Turning ON -> skip payment modal since subscription handles it now, just confirm or turn on immediately
+            confirmActivation();
         }
     };
 
@@ -109,7 +109,7 @@ export default function AutoModePage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to update Auto Mode status');
 
-            setMerchant(prev => ({ ...prev, auto_mode_status: 'inactive' }));
+            setMerchant(prev => ({ ...prev, auto_mode: false }));
             setSuccess('Auto Mode has been deactivated.');
         } catch (err) {
             console.error('Deactivation error:', err);
@@ -121,12 +121,6 @@ export default function AutoModePage() {
     };
 
     const confirmActivation = async () => {
-        if (walletBalance < subscriptionPrice) {
-            setError(`Insufficient wallet balance. You need ₹${subscriptionPrice} to activate Auto Mode.`);
-            setTimeout(() => setError(null), 5000);
-            return;
-        }
-
         setProcessing(true);
         setError(null);
         setSuccess(null);
@@ -151,23 +145,19 @@ export default function AutoModePage() {
 
             if (isAutoModeActive) {
                 // Was turned off
-                setMerchant(prev => ({ ...prev, auto_mode_status: 'inactive' }));
+                setMerchant(prev => ({ ...prev, auto_mode: false }));
             } else {
                 // Was turned on
-                setWalletBalance(data.newBalance);
                 setMerchant(prev => ({
                     ...prev,
-                    auto_mode_status: 'active',
-                    auto_mode_months_paid: data.months_paid,
-                    auto_mode_valid_until: data.validUntil
+                    auto_mode: true
                 }));
                 setSuccess('Auto Mode activated successfully! Your storefront is now automated.');
-                setShowPaymentModal(false);
             }
 
         } catch (err) {
-            console.error('Checkout error:', err);
-            setError(err.message || 'Payment failed. Please try again.');
+            console.error('Activation error:', err);
+            setError(err.message || 'Failed to activate. Please try again.');
             setTimeout(() => setError(null), 5000);
         } finally {
             setProcessing(false);

@@ -6,7 +6,7 @@ import {
     ShoppingBag, Plus, Package, TrendingUp, DollarSign,
     ChevronRight, Tags, ClipboardList, Store, Edit,
     ToggleLeft, ToggleRight, Search, Filter, Clock,
-    CheckCircle2, AlertTriangle, Trash2
+    CheckCircle2, AlertTriangle, Trash2, ShieldCheck, RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
@@ -14,7 +14,7 @@ import { toast } from "react-hot-toast";
 const TAB_PLATFORM = "platform";
 const TAB_CUSTOM = "custom";
 
-export default function AdminShoppingClient({ products: initialProducts, stats: initialStats, initialOrders }) {
+export default function AdminShoppingClient({ products: initialProducts, stats: initialStats, initialOrders, pendingApprovals = 0 }) {
     const [localProducts, setLocalProducts] = useState(initialProducts);
     const [localOrders, setLocalOrders] = useState(initialOrders);
     const [activeTab, setActiveTab] = useState(TAB_PLATFORM);
@@ -178,6 +178,18 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                 </div>
                 <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
                     <Link
+                        href="/admin/shopping/approvals"
+                        className="group flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-4 sm:pl-5 sm:pr-4 py-3 sm:py-3.5 rounded-2xl sm:rounded-[1.5rem] font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                    >
+                        <ShieldCheck size={16} className={pendingApprovals > 0 ? "text-amber-500" : "text-slate-400"} />
+                        <span>Approvals</span>
+                        {pendingApprovals > 0 && (
+                            <span className="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[8px] font-black animate-pulse">
+                                {pendingApprovals}
+                            </span>
+                        )}
+                    </Link>
+                    <Link
                         href="/admin/shopping/orders"
                         className="group flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-4 sm:pl-5 sm:pr-4 py-3 sm:py-3.5 rounded-2xl sm:rounded-[1.5rem] font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all shadow-sm active:scale-95"
                     >
@@ -327,9 +339,24 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                                 {/* Details */}
                                 <div className="flex-1 min-w-0 py-1">
                                     <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-                                        <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border ${product.is_active ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-400 border-slate-100"}`}>
-                                            {product.is_active ? "Active" : "Draft"}
-                                        </span>
+                                        {isMerchantProduct && product.approval_status === 'pending_approval' ? (
+                                            <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border bg-amber-50 text-amber-600 border-amber-100">
+                                                Pending Admin
+                                            </span>
+                                        ) : isMerchantProduct && product.approval_status === 'rejected' ? (
+                                            <div className="group relative">
+                                                <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border bg-red-50 text-red-600 border-red-100 cursor-help">
+                                                    Rejected
+                                                </span>
+                                                <div className="absolute hidden group-hover:block bottom-full left-0 mb-2 w-48 bg-slate-950 text-white text-[10px] p-2 rounded-xl z-20 shadow-xl border border-slate-800">
+                                                    {product.rejection_reason || "No reason specified"}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border ${product.is_active ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-400 border-slate-100"}`}>
+                                                {product.is_active ? "Active" : "Draft"}
+                                            </span>
+                                        )}
                                         <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{categoryName}</span>
                                         {isMerchantProduct && (
                                             <span className="text-[8px] font-black text-violet-500 bg-violet-50 px-2 py-0.5 rounded-lg border border-violet-100 uppercase tracking-wider">

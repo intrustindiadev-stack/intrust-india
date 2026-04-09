@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
@@ -26,6 +26,7 @@ import {
     FileText,
     ShoppingBag,
     Image as ImageIcon,
+    AlertCircle,
     ClipboardList,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
@@ -50,6 +51,7 @@ const navigationGroups = [
         title: 'Premium Services',
         items: [
             { name: 'Shopping Service', href: '/admin/shopping', icon: ShoppingBag },
+            { name: 'Priority Takeovers', href: '/admin/shopping/orders/takeover', icon: AlertCircle },
             { name: 'Auto Mode', href: '/admin/auto-mode', icon: Sparkles },
             { name: 'NFC Service', href: '/admin/nfc', icon: Smartphone },
             { name: 'Gift Cards', href: '/admin/giftcards', icon: Gift },
@@ -77,10 +79,36 @@ const navigationGroups = [
 export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
     const pathname = usePathname();
     const router = useRouter();
+    const [takeoverCount, setTakeoverCount] = useState(0);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
-
     const isSuperAdmin = adminProfile?.role === 'super_admin';
+
+    // REALTIME TAKEOVER COUNT
+    useEffect(() => {
+        const supabase = createClient();
+        
+        async function fetchCount() {
+            const { count, error } = await supabase
+                .from('shopping_order_groups')
+                .select('*', { count: 'exact', head: true })
+                .eq('settlement_status', 'admin_takeover');
+            
+            if (!error) setTakeoverCount(count || 0);
+        }
+
+        fetchCount();
+
+        const channel = supabase
+            .channel('takeover-count-sync')
+            .on('postgres_changes', 
+                { event: '*', schema: 'public', table: 'shopping_order_groups', filter: 'settlement_status=eq.admin_takeover' }, 
+                () => fetchCount()
+            )
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, []);
 
     // Static color maps — Tailwind v4 purges dynamic class names, so use full class strings
     const logoGradient = isSuperAdmin
@@ -181,7 +209,9 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                                             ? (pathname === '/admin/merchants' || (pathname?.startsWith('/admin/merchants/') && !pathname?.startsWith('/admin/merchants/udhari'))) && !isNestedUdhariRoute
                                             : item.href === '/admin/merchants/udhari'
                                                 ? pathname === item.href || pathname?.startsWith(item.href + '/') || isNestedUdhariRoute
-                                                : pathname === item.href || pathname?.startsWith(item.href + '/');
+                                                : item.href === '/admin/shopping'
+                                                    ? pathname === '/admin/shopping' || (pathname?.startsWith('/admin/shopping/') && !pathname?.startsWith('/admin/shopping/orders/takeover'))
+                                                    : pathname === item.href || pathname?.startsWith(item.href + '/');
 
                                     return (
                                         <Link
@@ -197,7 +227,12 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                                                 <div className={activeBar} />
                                             )}
                                             <Icon size={18} className={`transition-colors ${isActive ? activeIcon : 'text-slate-400 group-hover:text-slate-700'}`} />
-                                            <span className="font-bold text-sm tracking-tight">{item.name}</span>
+                                            <span className="font-bold text-sm tracking-tight flex-1">{item.name}</span>
+                                            {item.name === 'Priority Takeovers' && takeoverCount > 0 && (
+                                                <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-sm animate-pulse">
+                                                    {takeoverCount}
+                                                </span>
+                                            )}
                                         </Link>
                                     );
                                 })}

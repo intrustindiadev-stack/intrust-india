@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import StorefrontV2Client from './StorefrontV2Client';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -7,8 +7,11 @@ import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 
 export const dynamic = 'force-dynamic';
 
+// UUID pattern to detect legacy ID-based URLs
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+
 export default async function MerchantStorefrontPage({ params }) {
-    const { merchantId } = await params;
+    const { merchantSlug } = await params;
     const supabase = await createServerSupabaseClient();
     
     const { data: { user } } = await supabase.auth.getUser();
@@ -16,9 +19,10 @@ export default async function MerchantStorefrontPage({ params }) {
     let merchant = null;
     let mergedInventory = [];
 
-    if (merchantId === 'official') {
+    if (merchantSlug === 'official') {
         merchant = {
             id: 'official',
+            slug: 'official',
             business_name: 'Intrust Official',
             user_profiles: { avatar_url: '/icons/intrustLogo.png' }
         };
@@ -42,14 +46,29 @@ export default async function MerchantStorefrontPage({ params }) {
             shopping_products: p
         }));
     } else {
+        // If the segment looks like a UUID, this is a legacy URL — redirect to slug-based URL
+        if (UUID_REGEX.test(merchantSlug)) {
+            const { data: legacyMerchant } = await supabase
+                .from('merchants')
+                .select('slug')
+                .eq('id', merchantSlug)
+                .single();
+
+            if (legacyMerchant?.slug) {
+                redirect(`/shop/${legacyMerchant.slug}`);
+            }
+            return notFound();
+        }
+
         const { data: fetchedMerchant, error: merchantError } = await supabase
             .from('merchants')
             .select(`
                 id,
+                slug,
                 business_name,
                 user_profiles!left (avatar_url)
             `)
-            .eq('id', merchantId)
+            .eq('slug', merchantSlug)
             .eq('status', 'approved')
             .single();
 
@@ -57,7 +76,7 @@ export default async function MerchantStorefrontPage({ params }) {
             return (
                 <div className="p-20 text-center">
                     <h1 className="text-3xl font-bold text-red-500">Merchant Not Found</h1>
-                    <p className="mt-4">ID: {merchantId}</p>
+                    <p className="mt-4">Slug: {merchantSlug}</p>
                     <p className="mt-2 text-red-400">{merchantError?.message || 'No merchant row returned (possible RLS issue or unapproved)'}</p>
                 </div>
             );
@@ -75,9 +94,9 @@ export default async function MerchantStorefrontPage({ params }) {
                 is_active,
                 custom_title,
                 custom_description,
-                shopping_products!inner (id, title, description, product_images, category, mrp_paise, suggested_retail_price_paise)
+                shopping_products!inner (id, slug, title, description, product_images, category, mrp_paise, suggested_retail_price_paise)
             `)
-            .eq('merchant_id', merchantId)
+            .eq('merchant_id', merchant.id)
             .eq('is_active', true)
             .gt('stock_quantity', 0);
 

@@ -35,7 +35,9 @@ export default async function MerchantShopPage() {
                 product_images,
                 category,
                 suggested_retail_price_paise,
-                wholesale_price_paise
+                wholesale_price_paise,
+                approval_status,
+                rejection_reason
             )
         `)
         .eq('merchant_id', merchant.id)

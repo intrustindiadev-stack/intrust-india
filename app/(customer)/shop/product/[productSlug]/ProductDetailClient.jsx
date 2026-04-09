@@ -527,7 +527,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                 return (
                                     <Link
                                         key={item.id}
-                                        href={`/shop/product/${item.product_id}`}
+                                        href={`/shop/product/${item.shopping_products?.slug}`}
                                         className={`flex-shrink-0 w-[140px] sm:w-[160px] rounded-xl overflow-hidden transition-all hover:shadow-md group ${isDark ? 'bg-[#12151c] border' : 'bg-white border border-slate-100 shadow-sm'
                                             }`}
                                         style={isDark ? { borderColor: `${primaryColor}10` } : {}}

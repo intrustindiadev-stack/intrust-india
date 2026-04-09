@@ -46,6 +46,8 @@ export default async function AdminShoppingPage() {
         totalRevenue: orderStats?.reduce((sum, o) => sum + (o.total_amount_paise || 0), 0) || 0,
     };
 
-    return <AdminShoppingClient products={products || []} stats={stats} initialOrders={orderStats || []} />;
+    const pendingApprovals = products?.filter(p => p.approval_status === 'pending_approval').length || 0;
+
+    return <AdminShoppingClient products={products || []} stats={stats} initialOrders={orderStats || []} pendingApprovals={pendingApprovals} />;
 }
 

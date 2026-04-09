@@ -33,7 +33,7 @@ export async function POST(request) {
         // 1. Get current merchant data
         const { data: merchant, error: merchantError } = await supabase
             .from('merchants')
-            .select('id, auto_mode_status, auto_mode_months_paid, wallet_balance_paise')
+            .select('id, auto_mode, subscription_status, subscription_expires_at')
             .eq('user_id', user.id)
             .single();
 
@@ -44,7 +44,7 @@ export async function POST(request) {
         if (action === 'deactivate') {
             const { error: updateError } = await supabase
                 .from('merchants')
-                .update({ auto_mode_status: 'inactive' })
+                .update({ auto_mode: false })
                 .eq('id', merchant.id);
 
             if (updateError) throw updateError;
@@ -52,57 +52,20 @@ export async function POST(request) {
         }
 
         if (action === 'activate') {
-            if (merchant.auto_mode_status === 'active') {
+            if (merchant.auto_mode === true) {
                 return NextResponse.json({ error: 'Auto Mode is already active' }, { status: 400 });
             }
 
-            // Check if subscription was turned off but hasn't expired yet
-            const isCurrentlyValid = merchant.auto_mode_valid_until && new Date(merchant.auto_mode_valid_until) > new Date();
+            const { error: updateError } = await supabase
+                .from('merchants')
+                .update({ auto_mode: true })
+                .eq('id', merchant.id);
 
-            if (isCurrentlyValid) {
-                const { error: updateError } = await supabase
-                    .from('merchants')
-                    .update({ auto_mode_status: 'active' })
-                    .eq('id', merchant.id);
-
-                if (updateError) throw updateError;
-
-                return NextResponse.json({ 
-                    success: true, 
-                    message: 'Auto Mode reactivated successfully (Current billing cycle reused)',
-                    newBalance: merchant.wallet_balance_paise / 100, // wallet doesn't change
-                    validUntil: merchant.auto_mode_valid_until,
-                    months_paid: merchant.auto_mode_months_paid
-                });
-            }
-
-            const isFirstMonth = (merchant.auto_mode_months_paid || 0) === 0;
-            const subscriptionPrice = isFirstMonth ? 999 : 1999;
-            const pricePaise = subscriptionPrice * 100;
-
-            // Call atomic RPC for balance check, deduction, status update, and transaction logging
-            const { data: rpcData, error: rpcError } = await supabase.rpc('merchant_activate_auto_mode', {
-                p_merchant_id: merchant.id,
-                p_price_paise: pricePaise,
-                p_description: `Auto Mode Subscription (${isFirstMonth ? '1st Month' : 'Renewal'})`,
-                p_metadata: { reference_id: `AUTO_${Date.now()}` }
-            });
-
-            if (rpcError) {
-                console.error('RPC Error:', rpcError);
-                return NextResponse.json({ error: 'Failed to process subscription' }, { status: 500 });
-            }
-
-            if (!rpcData.success) {
-                return NextResponse.json({ error: rpcData.message }, { status: 400 });
-            }
+            if (updateError) throw updateError;
 
             return NextResponse.json({ 
                 success: true, 
-                message: rpcData.message,
-                newBalance: rpcData.new_balance / 100,
-                validUntil: rpcData.valid_until,
-                months_paid: rpcData.months_paid
+                message: 'Auto Mode activated successfully'
             });
         }
 

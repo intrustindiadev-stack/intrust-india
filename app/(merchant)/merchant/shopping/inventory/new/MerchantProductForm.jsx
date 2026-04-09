@@ -8,12 +8,23 @@ import { Loader2, Save, X, Upload, Package, Tag, DollarSign, Box, Info } from 'l
 import MultiImageUploader from '@/components/shared/MultiImageUploader';
 import { uploadProductImage } from '@/app/(admin)/admin/shopping/upload-product-image';
 
-export default function MerchantProductForm({ merchantId }) {
+export default function MerchantProductForm({ merchantId, editMode = false, existingProduct = null }) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState([]);
     const [fullCategories, setFullCategories] = useState([]);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState(existingProduct ? {
+        title: existingProduct.title || '',
+        description: existingProduct.description || '',
+        category: existingProduct.category || '',
+        retail_price_paise: existingProduct.suggested_retail_price_paise ? (existingProduct.suggested_retail_price_paise / 100).toString() : '',
+        mrp_paise: existingProduct.mrp_paise ? (existingProduct.mrp_paise / 100).toString() : '',
+        gst_percentage: existingProduct.gst_percentage ? existingProduct.gst_percentage.toString() : '0',
+        hsn_code: existingProduct.hsn_code || '9971',
+        stock_quantity: existingProduct.merchant_inventory && existingProduct.merchant_inventory.length > 0 ? existingProduct.merchant_inventory[0].stock_quantity?.toString() : '0',
+        wholesale_price_paise: existingProduct.wholesale_price_paise ? (existingProduct.wholesale_price_paise / 100).toString() : '',
+        product_images: existingProduct.product_images || [],
+    } : {
         title: '',
         description: '',
         category: '',
@@ -55,47 +66,42 @@ export default function MerchantProductForm({ merchantId }) {
             const mrpPaise = formData.mrp_paise ? Math.round(parseFloat(formData.mrp_paise) * 100) : retailPricePaise;
             const wholesalePricePaise = formData.wholesale_price_paise ? Math.round(parseFloat(formData.wholesale_price_paise) * 100) : 0;
 
-            // Find the category object to get its ID
             const selectedCategory = fullCategories.find(c => c.name === formData.category);
 
-            // 1. Create product in shopping_products
-            const { data: product, error: productError } = await supabase
-                .from('shopping_products')
-                .insert([{
+            // Preparation for API
+            const submissionData = {
+                merchantId,
+                editMode,
+                productId: existingProduct?.id,
+                formData: {
                     title: formData.title,
                     description: formData.description,
                     category: formData.category,
                     category_id: selectedCategory ? selectedCategory.id : null,
                     product_images: formData.product_images,
-                    wholesale_price_paise: wholesalePricePaise, // Used to store Custom Product Cost Price
-                    suggested_retail_price_paise: retailPricePaise,
+                    wholesale_price_paise: wholesalePricePaise,
+                    retail_price_paise: retailPricePaise,
                     mrp_paise: mrpPaise,
-                    admin_stock: 0, // Not applicable
                     gst_percentage: parseInt(formData.gst_percentage || 0),
                     hsn_code: formData.hsn_code || null,
-                }])
-                .select()
-                .single();
+                    stock_quantity: parseInt(formData.stock_quantity || 0)
+                }
+            };
 
-            if (productError) throw productError;
+            const response = await fetch('/api/merchant/shopping/submit-product', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(submissionData)
+            });
 
-            // 2. Create entry in merchant_inventory
-            const { error: invError } = await supabase
-                .from('merchant_inventory')
-                .insert([{
-                    merchant_id: merchantId,
-                    product_id: product.id,
-                    custom_title: formData.title,
-                    custom_description: formData.description,
-                    retail_price_paise: retailPricePaise,
-                    stock_quantity: parseInt(formData.stock_quantity),
-                    is_platform_product: false,
-                    is_active: true
-                }]);
+            const result = await response.json();
 
-            if (invError) throw invError;
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to submit product');
+            }
 
-            toast.success('Product added to your shop!');
+            toast.success(editMode ? 'Product updated and submitted for approval!' : 'Product submitted for approval!');
+
             router.push('/merchant/shopping/inventory');
             router.refresh();
         } catch (error) {

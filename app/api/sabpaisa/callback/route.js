@@ -10,6 +10,7 @@ import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } f
 import { CustomerWalletService } from '@/lib/wallet/customerWalletService';
 import { mapStatusToInternal } from '@/lib/sabpaisa/utils';
 import { sabpaisaConfig } from '@/lib/sabpaisa/config';
+import { MERCHANT_SUBSCRIPTION_PLANS } from '@/lib/constants';
 
 const ALLOWED_IPS = (process.env.SABPAISA_ALLOWED_IPS || '').split(',').map(ip => ip.trim()).filter(Boolean);
 
@@ -592,8 +593,15 @@ export async function POST(request) {
 
                 const merchantId = existingTxn.udf2;
 
-                // Compute new expiry: 30 days from now
-                const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+                // Resolve plan duration from udf3 (e.g. "MSUB_6M").
+                // Fall back to 30 days for any legacy ₹149 transactions with no plan key.
+                const planKey = existingTxn.udf3 || null;
+                const plan = MERCHANT_SUBSCRIPTION_PLANS.find(p => p.key === planKey);
+                const durationDays = plan ? plan.durationDays : 30;
+                const planLabel = plan ? plan.label : '1 Month (legacy)';
+
+                // Compute new expiry based on plan duration
+                const newExpiry = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
                 const expiryFormatted = new Date(newExpiry).toLocaleDateString('en-IN', {
                     day: 'numeric', month: 'short', year: 'numeric'
                 });
@@ -633,8 +641,8 @@ export async function POST(request) {
                     user_id: existingTxn.user_id,
                     title: isRenewal ? 'Subscription Renewed! ✅' : 'Store Activated! 🎉',
                     body: isRenewal
-                        ? `Your monthly subscription has been renewed. Next renewal due: ${expiryFormatted}.`
-                        : `Your ₹149 subscription is active. Next renewal due: ${expiryFormatted}. You now have full access to the Merchant Dashboard.`,
+                        ? `Your ${planLabel} subscription has been renewed. Access valid until: ${expiryFormatted}.`
+                        : `Your ${planLabel} subscription is active. Access valid until: ${expiryFormatted}. You now have full access to the Merchant Dashboard.`,
                     type: 'success',
                     reference_type: 'merchant_subscription'
                 });
@@ -646,11 +654,11 @@ export async function POST(request) {
                     action: isRenewal ? 'merchant_subscription_renewed' : 'merchant_subscription_paid',
                     entity_type: 'merchant',
                     entity_id: merchantId,
-                    description: `Merchant subscription ${isRenewal ? 'renewed' : 'activated'} via SabPaisa (${clientTxnId}). Expires: ${expiryFormatted}`,
-                    metadata: { amount, clientTxnId, newExpiry }
+                    description: `Merchant subscription ${isRenewal ? 'renewed' : 'activated'} via SabPaisa (${clientTxnId}). Plan: ${planKey || 'legacy'} (${durationDays}d). Expires: ${expiryFormatted}`,
+                    metadata: { amount, clientTxnId, planKey, durationDays, newExpiry }
                 }]);
 
-                console.log(`[Callback] Merchant Subscription ${isRenewal ? 'renewed' : 'activated'} for txn ${clientTxnId}. Expires: ${newExpiry}`);
+                console.log(`[Callback] Merchant Subscription ${isRenewal ? 'renewed' : 'activated'} for txn ${clientTxnId}. Plan: ${planKey || 'legacy'} (${durationDays}d). Expires: ${newExpiry}`);
             } catch (subError) {
                 console.error('[Callback] Merchant Subscription fulfillment error:', subError.message);
                 fulfillmentFailed = true;

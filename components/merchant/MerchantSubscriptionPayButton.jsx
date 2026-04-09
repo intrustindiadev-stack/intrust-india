@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { MERCHANT_SUBSCRIPTION_PLANS } from '@/lib/constants';
 
 export default function MerchantSubscriptionPayButton({
     merchantId,
@@ -14,12 +15,10 @@ export default function MerchantSubscriptionPayButton({
 }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [selectedPlan, setSelectedPlan] = useState(MERCHANT_SUBSCRIPTION_PLANS[0]);
 
     const currentExpiry = subscriptionExpiresAt ? new Date(subscriptionExpiresAt) : null;
     const isExpired = currentExpiry && currentExpiry < new Date();
-    const nextBillingDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
-        day: 'numeric', month: 'short', year: 'numeric'
-    });
     const expiryFormatted = currentExpiry
         ? currentExpiry.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
         : null;
@@ -37,7 +36,7 @@ export default function MerchantSubscriptionPayButton({
             // Generate a unique transaction ID starting with MSUB_
             const clientTxnId = `MSUB_${Date.now()}_${merchantId.slice(0, 8)}`;
 
-            // Call SabPaisa Initiate API
+            // Call SabPaisa Initiate API — pass selected plan amount and key via udf3
             const res = await fetch('/api/sabpaisa/initiate', {
                 method: 'POST',
                 headers: {
@@ -45,13 +44,14 @@ export default function MerchantSubscriptionPayButton({
                     'Authorization': `Bearer ${session.access_token}`,
                 },
                 body: JSON.stringify({
-                    amount: '149.00',
+                    amount: selectedPlan.priceFormatted,
                     clientTxnId,
                     payerName,
                     payerEmail,
                     payerMobile,
                     udf1: 'MERCHANT_SUBSCRIPTION',
                     udf2: merchantId,
+                    udf3: selectedPlan.key,
                 }),
             });
 
@@ -84,7 +84,7 @@ export default function MerchantSubscriptionPayButton({
 
             document.body.appendChild(form);
 
-            console.log('Redirecting to SabPaisa Secure Gateway for Merchant Subscription...');
+            console.log(`Redirecting to SabPaisa for Merchant Subscription (${selectedPlan.key} @ ₹${selectedPlan.price})...`);
             form.submit();
         } catch (err) {
             console.error('Subscription Payment Error:', err);
@@ -93,58 +93,87 @@ export default function MerchantSubscriptionPayButton({
         }
     };
 
+    const headingText = isRenewal && !isExpired
+        ? 'Renew Your Subscription'
+        : isExpired
+        ? 'Subscription Expired'
+        : 'Activate Your Store';
+
+    const subtitleText = isExpired
+        ? `${businessName} — Your subscription expired on ${expiryFormatted}. Renew now to restore access.`
+        : isRenewal
+        ? `${businessName} — Your subscription expires on ${expiryFormatted}. Renew now to keep your store live.`
+        : `${businessName} — Complete platform access fee to take your store live.`;
+
     return (
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-lg">
             {/* Premium glassmorphic card */}
             <div className="relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl overflow-hidden">
-                {/* Gold accent glow behind */}
+                {/* Gold accent glow */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/20 to-transparent pointer-events-none opacity-50" />
-                
-                {/* Decorative circle */}
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-[#D4AF37]/20 rounded-full blur-3xl pointer-events-none" />
 
                 <div className="relative z-10">
-                    {/* Logo / Icon */}
+                    {/* Icon */}
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#D4AF37] to-amber-600 flex items-center justify-center mb-6 shadow-lg">
                         <span className="material-icons-round text-white text-3xl">storefront</span>
                     </div>
 
-                    <h1 className="text-2xl font-extrabold text-white mb-2">
-                        {isRenewal && !isExpired ? 'Renew Your Subscription' : isExpired ? 'Subscription Expired' : 'Activate Your Store'}
-                    </h1>
-                    <p className="text-white/70 text-sm mb-6 pb-6 border-b border-white/10">
-                        {isExpired
-                            ? `${businessName} — Your subscription expired on ${expiryFormatted}. Renew now to restore access.`
-                            : isRenewal
-                            ? `${businessName} — Your subscription expires on ${expiryFormatted}. Renew now to keep your store live.`
-                            : `${businessName} — Complete your monthly platform access fee to take your store live.`}
-                    </p>
+                    <h1 className="text-2xl font-extrabold text-white mb-2">{headingText}</h1>
+                    <p className="text-white/70 text-sm mb-6 pb-6 border-b border-white/10">{subtitleText}</p>
 
-                    {/* Pricing Breakdown */}
-                    <div className="bg-white/5 rounded-2xl p-5 mb-8 border border-[#D4AF37]/30 shadow-inner">
-                        <div className="flex items-center justify-between mb-4">
-                            <span className="text-white/80 font-medium">{isRenewal || isExpired ? 'Monthly Renewal Fee' : 'Platform Access Fee'}</span>
-                            <span className="text-[#D4AF37] font-bold text-2xl">₹149<span className="text-sm font-medium text-white/50">/mo</span></span>
-                        </div>
-                        {(isRenewal || isExpired) && (
-                            <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/10 text-xs">
-                                <span className="text-white/60">Next billing date</span>
-                                <span className="text-[#D4AF37] font-bold">{nextBillingDate}</span>
+                    {/* ── Plan Selector ── */}
+                    <div className="grid grid-cols-3 gap-3 mb-6">
+                        {MERCHANT_SUBSCRIPTION_PLANS.map((plan) => {
+                            const isActive = selectedPlan.key === plan.key;
+                            return (
+                                <button
+                                    key={plan.key}
+                                    type="button"
+                                    onClick={() => setSelectedPlan(plan)}
+                                    className={[
+                                        'relative flex flex-col items-center rounded-2xl p-4 border transition-all duration-200 cursor-pointer focus:outline-none',
+                                        isActive
+                                            ? 'bg-[#D4AF37]/20 border-[#D4AF37] shadow-[0_0_16px_rgba(212,175,55,0.25)]'
+                                            : 'bg-white/5 border-white/10 hover:border-white/30 hover:bg-white/10',
+                                    ].join(' ')}
+                                >
+                                    {/* Badge */}
+                                    {plan.description && (
+                                        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-[#D4AF37] text-slate-900 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                            {plan.description}
+                                        </span>
+                                    )}
+
+                                    <span className={`text-xs font-semibold mb-1 ${isActive ? 'text-[#D4AF37]' : 'text-white/60'}`}>
+                                        {plan.label}
+                                    </span>
+                                    <span className={`text-xl font-extrabold leading-none ${isActive ? 'text-[#D4AF37]' : 'text-white'}`}>
+                                        ₹{plan.price.toLocaleString('en-IN')}
+                                    </span>
+
+                                    {/* Selected checkmark */}
+                                    {isActive && (
+                                        <span className="material-icons-round text-[#D4AF37] text-base mt-2 leading-none">check_circle</span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* ── Feature List ── */}
+                    <div className="bg-white/5 rounded-2xl p-5 mb-8 border border-[#D4AF37]/30 shadow-inner space-y-3">
+                        {[
+                            'Full Merchant Dashboard Access',
+                            'Inventory & Product Listing',
+                            'Order & Delivery Management',
+                            'Store Front Customization',
+                        ].map((feature, idx) => (
+                            <div key={idx} className="flex items-center gap-3 text-white/80 text-sm">
+                                <span className="material-icons-round text-[#D4AF37] text-base">check_circle</span>
+                                {feature}
                             </div>
-                        )}
-                        <div className="space-y-3">
-                            {[
-                                'Full Merchant Dashboard Access',
-                                'Inventory & Product Listing',
-                                'Order & Delivery Management',
-                                'Store Front Customization'
-                            ].map((feature, idx) => (
-                                <div key={idx} className="flex items-center gap-3 text-white/80 text-sm">
-                                    <span className="material-icons-round text-[#D4AF37] text-base">check_circle</span>
-                                    {feature}
-                                </div>
-                            ))}
-                        </div>
+                        ))}
                     </div>
 
                     {/* Error Prompt */}
@@ -163,7 +192,7 @@ export default function MerchantSubscriptionPayButton({
                     >
                         {/* Button hover gleam */}
                         <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
-                        
+
                         {loading ? (
                             <>
                                 <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -175,7 +204,9 @@ export default function MerchantSubscriptionPayButton({
                         ) : (
                             <>
                                 <span className="material-icons-round text-xl">lock</span>
-                                <span>{isRenewal || isExpired ? 'Renew ₹149 / Month' : 'Pay ₹149 to Activate'}</span>
+                                <span>
+                                    Pay ₹{selectedPlan.price.toLocaleString('en-IN')} — {selectedPlan.label}
+                                </span>
                             </>
                         )}
                     </button>
@@ -186,13 +217,10 @@ export default function MerchantSubscriptionPayButton({
                     </div>
                 </div>
             </div>
-            
-            {/* Shimmer animation defined in globals.css or inline */}
+
             <style jsx global>{`
                 @keyframes shimmer {
-                    100% {
-                        transform: translateX(100%);
-                    }
+                    100% { transform: translateX(100%); }
                 }
                 .animate-shimmer {
                     animation: shimmer 1.5s infinite;

@@ -49,7 +49,7 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                 </div>
 
             <div
-                onClick={() => router.push(`/shop/product/${item.product_id}`)}
+                onClick={() => router.push(`/shop/product/${product.slug}`)}
                 className="relative cursor-pointer flex flex-col flex-1 p-2 md:p-3"
             >
                 {/* Product Image — subtle category-colored inner glow in dark mode */}

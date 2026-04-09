@@ -24,7 +24,7 @@ const STATUS_CONFIG = {
 
 const STATUS_FLOW = ["pending", "packed", "shipped", "delivered"];
 
-export default function AdminOrdersClient({ orders: initialOrders, stats: initialStats }) {
+export default function TakeoverClient({ orders: initialOrders, stats: initialStats }) {
     const supabase = createClient();
     const router = useRouter();
     const [orders, setOrders] = useState(initialOrders);
@@ -157,25 +157,19 @@ export default function AdminOrdersClient({ orders: initialOrders, stats: initia
                     <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest border border-blue-500/20"
+                        className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest border border-red-500/20"
                     >
-                        <ShoppingBag size={12} /> Platform Oversight
+                        <AlertCircle size={12} /> Priority Takeovers
                     </motion.div>
                     <h1 className="text-5xl font-black text-slate-950 dark:text-white tracking-tight leading-none">
-                        Omni <span className="text-blue-600">Orders</span>
+                        Escalated <span className="text-red-600">Orders</span>
                     </h1>
-                    <p className="text-slate-400 dark:text-gray-500 font-medium text-lg">Central hub for platform and merchant commerce</p>
+                    <p className="text-slate-400 dark:text-gray-500 font-medium text-lg">Manage unfulfilled merchant orders that lapsed</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Link href="/admin/shopping/orders/takeover" className="group flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm hover:bg-red-100 dark:hover:bg-red-500/20 transition-all shadow-sm">
-                        <AlertCircle size={16} />
-                        Priority Takeovers
-                    </Link>
-                    <Link href="/admin/shopping" className="group flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 font-bold text-sm hover:bg-slate-50 dark:hover:bg-white/10 transition-all shadow-sm">
-                        <RotateCcw size={16} className="group-hover:-rotate-45 transition-transform" />
-                        Back to Hub
-                    </Link>
-                </div>
+                <Link href="/admin/shopping/orders" className="group flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 font-bold text-sm hover:bg-slate-50 dark:hover:bg-white/10 transition-all shadow-sm">
+                    <RotateCcw size={16} className="group-hover:-rotate-45 transition-transform" />
+                    Back to All Orders
+                </Link>
             </header>
 
             {/* Stats Grid - Mobile Horizontal Scroll */}
@@ -300,13 +294,13 @@ export default function AdminOrdersClient({ orders: initialOrders, stats: initia
                                                     </span>
                                                 </div>
                                                 <h3 className="text-lg font-black text-slate-950 dark:text-white tracking-tight truncate">{order.customer_name || "Guest User"}</h3>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <p className="text-[9px] sm:text-[10px] font-black text-slate-900 dark:text-white">₹{((order.total_amount_paise || 0) / 100).toLocaleString("en-IN")}</p>
-                                                    <span className="text-slate-300 dark:text-gray-700">•</span>
-                                                    <p className="text-[9px] font-bold text-slate-500">
-                                                        {order.created_at ? format(new Date(order.created_at), "dd MMM") : "—"}
-                                                    </p>
-                                                </div>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <p className="text-[9px] sm:text-[10px] font-black text-slate-900 dark:text-white">₹{((order.total_amount_paise || 0) / 100).toLocaleString("en-IN")}</p>
+                                                        <span className="text-slate-300 dark:text-gray-700">•</span>
+                                                        <p className="text-[9px] font-bold text-red-500 flex items-center gap-1">
+                                                            <Clock size={10} /> Esc: {order.admin_takeover_at ? format(new Date(order.admin_takeover_at), "dd MMM HH:mm") : "—"}
+                                                        </p>
+                                                    </div>
                                             </div>
                                         </div>
 
@@ -396,8 +390,8 @@ export default function AdminOrdersClient({ orders: initialOrders, stats: initia
                                                                 <span className="font-black text-slate-950 dark:text-white">₹{((order.total_amount_paise || 0) / 100).toLocaleString("en-IN")}</span>
                                                             </div>
                                                             <div className="flex justify-between items-center text-[10px]">
-                                                                <span className="text-slate-500 dark:text-gray-400 font-black uppercase tracking-tighter">Platform Commission (5%)</span>
-                                                                <span className="font-black text-amber-600">₹{(((order.total_amount_paise || 0) * 0.05) / 100).toLocaleString("en-IN")}</span>
+                                                                <span className="text-slate-500 dark:text-gray-400 font-black uppercase tracking-tighter">Penalty Platform Commission (70%)</span>
+                                                                <span className="font-black text-amber-600">₹{(((order.platform_cut_paise || 0)) / 100).toLocaleString("en-IN")}</span>
                                                             </div>
                                                             <div className="pt-4 border-t border-slate-100 dark:border-white/[0.05] flex justify-between items-center">
                                                                 <div>
@@ -446,16 +440,6 @@ export default function AdminOrdersClient({ orders: initialOrders, stats: initia
                                                                 </button>
                                                             )}
                                                         </div>
-                                                        {order.delivery_status === 'pending' && order.settlement_status === 'pending' && differenceInHours(new Date(), new Date(order.created_at)) >= 2 && (
-                                                            <button
-                                                                onClick={() => handleTakeover(order.id)}
-                                                                disabled={isUpdating}
-                                                                className="w-full mt-1 py-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-600 border border-amber-500/20 font-black text-[9px] sm:text-[10px] uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2"
-                                                            >
-                                                                <AlertCircle size={14} />
-                                                                Force Admin Takeover
-                                                            </button>
-                                                        )}
                                                     </div>
                                                 </div>
                                             </div>

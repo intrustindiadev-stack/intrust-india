@@ -210,6 +210,7 @@ DECLARE
     v_new_merchant_balance BIGINT;
     v_commission_paise BIGINT;
     v_merchant_credit BIGINT;
+    v_product_cost BIGINT;
 BEGIN
     IF p_quantity <= 0 THEN
         RETURN jsonb_build_object('success', false, 'message', 'Quantity must be greater than zero');
@@ -232,8 +233,11 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'message', 'Insufficient wallet balance');
     END IF;
 
-    -- 3. Calculate Commission (5%) and Credit
-    v_commission_paise := (v_total_cost * 5) / 100;
+    -- 3. Calculate Commission (5% on PROFIT margin, not gross)
+    -- profit_per_unit = MAX(0, retail_price - wholesale_price)
+    SELECT wholesale_price_paise INTO v_product_cost
+    FROM public.shopping_products WHERE id = v_inventory.product_id;
+    v_commission_paise := GREATEST(0, (v_inventory.retail_price_paise - COALESCE(v_product_cost, 0))) * p_quantity * 5 / 100;
     v_merchant_credit := v_total_cost - v_commission_paise;
 
     -- 4. Update balances and stock
@@ -255,7 +259,7 @@ BEGIN
 
     -- 5. Log Merchant Transaction (With credit amount after fee)
     INSERT INTO public.merchant_transactions (merchant_id, transaction_type, amount_paise, balance_after_paise, description, metadata)
-    VALUES (v_inventory.merchant_id, 'sale_earnings', v_merchant_credit, v_new_merchant_balance, 'Product sale (5% fee deducted)', jsonb_build_object('buyer_id', p_customer_id, 'product_id', v_inventory.product_id, 'commission_paise', v_commission_paise));
+    VALUES (v_inventory.merchant_id, 'sale_earnings', v_merchant_credit, v_new_merchant_balance, 'Product sale (5% profit-based commission deducted)', jsonb_build_object('buyer_id', p_customer_id, 'product_id', v_inventory.product_id, 'commission_paise', v_commission_paise));
 
     RETURN jsonb_build_object('success', true, 'message', 'Order placed successfully');
 END;
@@ -328,8 +332,11 @@ BEGIN
             SELECT * INTO v_inventory FROM public.merchant_inventory WHERE id = (v_item->>'inventory_id')::UUID FOR UPDATE;
             v_item_cost := v_inventory.retail_price_paise * (v_item->>'quantity')::INTEGER;
             
-            -- Calculate 5% Commission for merchant items
-            v_commission_paise := (v_item_cost * 5) / 100;
+            -- Calculate 5% Commission on PROFIT margin (not gross)
+            -- profit_per_unit = MAX(0, retail - wholesale)
+            v_commission_paise := GREATEST(0, (v_inventory.retail_price_paise - COALESCE((
+                SELECT wholesale_price_paise FROM public.shopping_products WHERE id = v_inventory.product_id
+            ), 0))) * (v_item->>'quantity')::INTEGER * 5 / 100;
             v_merchant_credit := v_item_cost - v_commission_paise;
 
             UPDATE public.merchant_inventory SET stock_quantity = stock_quantity - (v_item->>'quantity')::INTEGER WHERE id = v_inventory.id;
@@ -345,7 +352,7 @@ BEGIN
             VALUES (p_customer_id, 'customer', v_inventory.merchant_id, 'merchant', v_inventory.product_id, (v_item->>'quantity')::INTEGER, v_inventory.retail_price_paise, v_item_cost, 'retail');
             
             INSERT INTO public.merchant_transactions (merchant_id, transaction_type, amount_paise, balance_after_paise, description, metadata)
-            VALUES (v_inventory.merchant_id, 'sale_earnings', v_merchant_credit, v_merchant_balance, 'Bulk sale (5% fee deducted)', jsonb_build_object('buyer_id', p_customer_id, 'product_id', v_inventory.product_id, 'commission_paise', v_commission_paise));
+            VALUES (v_inventory.merchant_id, 'sale_earnings', v_merchant_credit, v_merchant_balance, 'Bulk sale (5% profit-based commission deducted)', jsonb_build_object('buyer_id', p_customer_id, 'product_id', v_inventory.product_id, 'commission_paise', v_commission_paise));
         END IF;
     END LOOP;
 

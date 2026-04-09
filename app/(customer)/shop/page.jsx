@@ -18,6 +18,7 @@ export default async function MerchantHubPage() {
         .from('merchants')
         .select(`
             id,
+            slug,
             business_name,
             business_address,
             shopping_banner_url,
@@ -38,6 +39,7 @@ export default async function MerchantHubPage() {
     const allMerchants = [
         {
             id: 'official',
+            slug: 'official',
             business_name: 'Intrust Official',
             business_address: null,
             user_profiles: { avatar_url: '/icons/intrustLogo.png', full_name: null }

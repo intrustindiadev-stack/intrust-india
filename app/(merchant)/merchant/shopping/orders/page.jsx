@@ -52,7 +52,7 @@ export default async function MerchantOrdersPage() {
       items: (order.items || []).map(item => ({
         id: item.id,
         product_title: item.product_title || "Unknown Product",
-        product_image: item.image_url || null,
+        product_image: item.product_image || null,
         quantity: item.quantity,
         unit_price_paise: item.unit_price_paise,
         total_price_paise: (item.unit_price_paise || 0) * (item.quantity || 1),
@@ -76,9 +76,9 @@ export default async function MerchantOrdersPage() {
     totalGrossProfit: orders.reduce((sum, o) =>
       sum + (o.items || []).reduce((s, i) => s + (i.gross_profit_paise || 0), 0), 0),
     totalCommission: orders.reduce((sum, o) =>
-      sum + (o.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0), 0),
+      sum + (o.platform_cut_paise ?? (o.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0)), 0),
     totalNetProfit: orders.reduce((sum, o) =>
-      sum + (o.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0), 0),
+      sum + (o.merchant_profit_paise ?? (o.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0)), 0),
   };
 
   return (

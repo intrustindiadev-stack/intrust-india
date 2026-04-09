@@ -247,6 +247,16 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                 router.push('/my-giftcards');
                 break;
 
+            // ── Custom Product Approval ─────────────────────────────────────
+            case 'custom_product_submission':
+                if (isAdmin) router.push('/admin/shopping?tab=custom');
+                break;
+            
+            case 'product_approved':
+            case 'product_rejected':
+                if (isMerchant) router.push('/merchant/shopping/inventory');
+                break;
+
             // ── Admin Tasks ──────────────────────────────────────────────────
             case 'admin_task':
                 if (n.reference_id) {

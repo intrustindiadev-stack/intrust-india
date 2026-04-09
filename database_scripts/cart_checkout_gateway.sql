@@ -189,7 +189,12 @@ BEGIN
                 updated_at = now()
             WHERE id = v_item.product_id;
         ELSE
-            v_commission_paise := (v_item_total * 5) / 100;
+            -- CORRECT FORMULA: Commission is on profit margin, not gross sale
+            -- profit_per_unit = MAX(0, retail - cost), commission = profit * rate
+            v_product_cost := 0;
+            SELECT wholesale_price_paise INTO v_product_cost
+            FROM public.shopping_products WHERE id = v_item.product_id;
+            v_commission_paise := GREATEST(0, (v_item.unit_price_paise - COALESCE(v_product_cost, 0))) * v_item.quantity * 5 / 100;
             v_merchant_credit := v_item_total - v_commission_paise;
 
             UPDATE public.merchant_inventory 
@@ -197,12 +202,7 @@ BEGIN
                 updated_at = now()
             WHERE id = v_item.inventory_id;
 
-            -- Fetch wholesale cost for accurate profit calculation
-            SELECT wholesale_price_paise INTO v_product_cost
-            FROM public.shopping_products
-            WHERE id = v_item.product_id;
-
-            -- profit_paise = actual merchant margin (credit after commission minus wholesale cost)
+            -- profit_paise = merchant credit minus raw inventory cost
             v_merchant_profit := v_merchant_credit - (v_product_cost * v_item.quantity);
 
             UPDATE public.shopping_order_items
@@ -224,7 +224,7 @@ BEGIN
             ) VALUES (
                 v_item.seller_id, 'sale', v_merchant_credit,
                 (SELECT wallet_balance_paise FROM public.merchants WHERE id = v_item.seller_id),
-                'Sale profit after 5% commission deduction (Gateway Checkout)'
+                'Sale credit after 5% profit-based commission deduction (Gateway Checkout)'
             );
 
             INSERT INTO public.notifications (user_id, title, body, type, reference_id, reference_type)
