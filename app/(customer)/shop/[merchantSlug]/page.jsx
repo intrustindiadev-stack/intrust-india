@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { notFound, redirect } from 'next/navigation';
 import StorefrontV2Client from './StorefrontV2Client';
 import Navbar from '@/components/layout/Navbar';
@@ -65,12 +65,28 @@ export default async function MerchantStorefrontPage({ params }) {
             .select(`
                 id,
                 slug,
+                user_id,
                 business_name,
-                user_profiles!left (avatar_url)
+                shopping_banner_url
             `)
             .eq('slug', merchantSlug)
             .eq('status', 'approved')
             .single();
+
+        let avatarUrl = null;
+        if (fetchedMerchant?.user_id) {
+            const adminClient = createAdminClient();
+            const { data: profile } = await adminClient
+                .from('user_profiles')
+                .select('avatar_url')
+                .eq('id', fetchedMerchant.user_id)
+                .single();
+            if (profile) avatarUrl = profile.avatar_url;
+        }
+
+        if (fetchedMerchant) {
+            fetchedMerchant.user_profiles = { avatar_url: avatarUrl };
+        }
 
         if (merchantError || !fetchedMerchant) {
             return (

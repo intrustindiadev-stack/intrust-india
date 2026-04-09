@@ -59,10 +59,10 @@ export default function TransactionCard({ txn }) {
                         {isCredit ? <ArrowDownLeft size={24} strokeWidth={2.5} /> : <ArrowUpRight size={24} strokeWidth={2.5} />}
                     </div>
                     <div>
-                        <h3 className="font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors text-lg truncate max-w-[130px] sm:max-w-[170px]">
+                        <h3 className="font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors text-base sm:text-lg truncate max-w-[110px] sm:max-w-[170px]">
                             {txn.amount}
                         </h3>
-                        <p className="text-xs font-semibold text-slate-500">
+                        <p className="text-[10px] sm:text-xs font-semibold text-slate-500">
                             {isCredit ? 'Received' : 'Sent'}
                         </p>
                     </div>
@@ -106,9 +106,9 @@ export default function TransactionCard({ txn }) {
                     <p className="font-medium text-sm text-slate-900 truncate">{txn.user}</p>
                     <p className="text-[11px] text-slate-500 truncate">{txn.email}</p>
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
-                    <Clock size={12} className="text-slate-400" />
-                    {txn.date}
+                <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-slate-500">
+                    <Clock size={12} className="text-slate-400 shrink-0" />
+                    <span className="truncate">{txn.date}</span>
                 </div>
             </div>
 

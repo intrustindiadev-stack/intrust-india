@@ -21,8 +21,8 @@ export default function ContactPage() {
             icon: Mail,
             title: "Contact Support",
             details: ["Sometimes you need a little help. Don't worry, we're here for you. Shoot us an email anytime."],
-            linkText: "info@intrustfinancialindia.com",
-            action: "mailto:info@intrustfinancialindia.com",
+            linkText: "info.intrustindia@gmail.com",
+            action: "mailto:info.intrustindia@gmail.com",
             color: "bg-purple-50 text-purple-600"
         },
         {
@@ -30,7 +30,7 @@ export default function ContactPage() {
             title: "Visit Headquarters",
             details: ["Come say hello at our HQ. TF-312/MM09, Ashima Mall, Narmadapuram Rd, Danish Nagar, Bhopal, MP 462026."],
             linkText: "View on Google Maps",
-            action: "https://maps.google.com",
+            action: "https://maps.app.goo.gl/intrustbhopal",
             color: "bg-amber-50 text-amber-600"
         }
     ];
@@ -86,12 +86,13 @@ export default function ContactPage() {
                         >
                             <div className="rounded-xl overflow-hidden h-64 relative group">
                                 <iframe
-                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d117361.64413155707!2d77.30403759021875!3d23.185966524940003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x397c414d7c0733d1%3A0x889c2596ab5901dc!2sINTRUST%20FINANCIAL%20SERVICE(INDIA)%20PRIVATE%20LIMITED!5e0!3m2!1sen!2smy!4v1700000000000!5m2!1sen!2smy"
+                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d29341.251502878356!2d77.4181652069092!3d23.182736102755452!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x397c43970668176f%3A0x6e33b64a351a4ed9!2sINTRUST%20FINANCIAL%20SERVICES%20(INDIA)%20PVT%20LTD!5e0!3m2!1sen!2sin!4v1775679291628!5m2!1sen!2sin"
                                     width="100%"
                                     height="100%"
-                                    style={{ border: 0, filter: 'grayscale(0%)' }}
+                                    style={{ border: 0 }}
                                     allowFullScreen=""
                                     loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
                                     className="group-hover:scale-105 transition-transform duration-700"
                                 ></iframe>
 

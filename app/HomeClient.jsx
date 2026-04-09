@@ -9,12 +9,15 @@ import StatsSection from '@/components/home/StatsSection';
 import CTASection from '@/components/home/CTASection';
 import { SlowProgressLoader } from '@/components/ui/InTrustProgressLoader';
 import { TrendingUp, Sparkles, Star } from 'lucide-react';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 
 import { useTheme } from '@/lib/contexts/ThemeContext';
 
 export default function HomeClient() {
 
     const { theme } = useTheme();
+    const { isAuthenticated } = useAuth();
     const [showLoader, setShowLoader] = useState(false);
 
     useEffect(() => {
@@ -47,6 +50,7 @@ export default function HomeClient() {
                     <StatsSection stats={stats} />
                     <CTASection />
                     <Footer />
+                    {isAuthenticated && <CustomerBottomNav />}
                 </div>
             )}
         </>

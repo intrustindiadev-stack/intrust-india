@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { Wallet, Heart, ShoppingBag, Package } from 'lucide-react';
 import Link from 'next/link';
 import Navbar from '@/components/layout/Navbar';
@@ -13,19 +13,37 @@ export default async function MerchantHubPage() {
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Fetch active merchants with profile image + more fields
-    const { data: merchants } = await supabase
+    // Fetch active merchants
+    const { data: merchantsArray } = await supabase
         .from('merchants')
         .select(`
             id,
             slug,
+            user_id,
             business_name,
             business_address,
-            shopping_banner_url,
-            user_profiles!left (avatar_url, full_name)
+            shopping_banner_url
         `)
         .eq('status', 'approved')
         .order('business_name', { ascending: true });
+
+    let merchants = merchantsArray || [];
+
+    // Manually fetch avatars to bypass dynamic relation limitations & RLS
+    const userIds = merchants.map(m => m.user_id).filter(Boolean);
+    if (userIds.length > 0) {
+        const adminClient = createAdminClient();
+        const { data: profiles } = await adminClient
+            .from('user_profiles')
+            .select('id, avatar_url, full_name')
+            .in('id', userIds);
+        
+        const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+        merchants = merchants.map(m => ({
+            ...m,
+            user_profiles: profileMap[m.user_id] || { avatar_url: null, full_name: null }
+        }));
+    }
 
     // Fetch aggregate ratings for all merchants
     const { data: ratingStats } = await supabase

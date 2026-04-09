@@ -31,6 +31,17 @@ export default function MerchantFloatingCart({
     const isInsufficient = total > merchantBalance;
     const itemCount = cartItems.length;
 
+    // GST breakdown (weighted avg across items)
+    const gstTotal = cartItems.reduce((sum, item) => {
+        const itemTotal = (item.buying_price_rupees || item.price_rupees || 0) * (item.quantity || 1);
+        const gstRate = (item.gst_percentage || 0) / 100;
+        return sum + itemTotal * gstRate;
+    }, 0);
+    const baseSubtotal = subtotalInRupees - gstTotal;
+    const grossProfit = showCommission
+        ? Math.max(0, (subtotalInRupees - commission) * 0.08)  // estimate
+        : 0;
+
     const toggleDrawer = () => setDrawerOpen(prev => !prev);
 
     const drawerVariants = {
@@ -105,12 +116,22 @@ export default function MerchantFloatingCart({
                     {showCommission && (
                         <div className="space-y-1.5 text-xs">
                             <div className="flex justify-between text-blue-300/70 font-medium">
-                                <span>Subtotal</span>
-                                <span>₹{subtotalInRupees.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                <span>Base Price (excl. GST)</span>
+                                <span>₹{baseSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                             </div>
+                            {gstTotal > 0 && (
+                                <div className="flex justify-between text-teal-300/80 font-medium">
+                                    <span>GST (avg {((gstTotal / subtotalInRupees) * 100).toFixed(1)}%)</span>
+                                    <span>₹{gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between text-blue-300/70 font-medium">
                                 <span>Platform Fee ({(commissionRate * 100).toFixed(0)}%)</span>
-                                <span>₹{commission.toFixed(2)}</span>
+                                <span className="text-amber-300/80">₹{commission.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-emerald-300/90 font-black border-t border-white/10 pt-1.5">
+                                <span>Est. Net Credit</span>
+                                <span>₹{Math.max(0, subtotalInRupees - commission).toFixed(2)}</span>
                             </div>
                         </div>
                     )}

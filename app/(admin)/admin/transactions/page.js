@@ -281,14 +281,14 @@ export default async function TransactionsPage({ searchParams }) {
                         <Activity className="text-blue-500 w-10 h-10" />
                         Transactions
                     </h1>
-                    <p className="text-slate-500 font-medium">
+                    <p className="text-slate-500 font-medium text-sm sm:text-base">
                         Monitor all platform payments, orders, and wallet activity.
                     </p>
                 </div>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group">
                     <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
                     <div className="relative">
@@ -338,35 +338,37 @@ export default async function TransactionsPage({ searchParams }) {
                     {statusFilter && <input type="hidden" name="status" value={statusFilter} />}
                     {sourceFilter && <input type="hidden" name="source" value={sourceFilter} />}
                 </form>
-                <div className="flex gap-2 flex-wrap">
-                    {/* Status filter pills */}
-                    {['', 'Success', 'Failed', 'Processing'].map(s => (
-                        <Link
-                            key={`status-${s}`}
-                            href={buildUrl({ status: s, page: 1 })}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${statusFilter === s
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                                : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-600'
+                <div className="w-full overflow-x-auto no-scrollbar pb-2">
+                    <div className="flex gap-2 min-w-max">
+                        {/* Status filter pills */}
+                        {['', 'Success', 'Failed', 'Processing'].map(s => (
+                            <Link
+                                key={`status-${s}`}
+                                href={buildUrl({ status: s, page: 1 })}
+                                className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider border transition-all whitespace-nowrap ${statusFilter === s
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-600'
+                                    }`}
+                            >
+                                {s || 'All Status'}
+                            </Link>
+                        ))}
+                        <span className="text-slate-200 self-center px-1">|</span>
+                        {/* Source filter pills */}
+                        {['', 'Payment Gateway', 'Gift Card Order', 'Wallet', 'Merchant Wallet', 'Wallet Adjustment'].map(s => (
+                            <Link
+                                key={`source-${s}`}
+                                href={buildUrl({ source: s, page: 1 })}
+                                className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider border transition-all whitespace-nowrap ${
+                                    sourceFilter === s
+                                    ? (s === 'Wallet Adjustment' ? 'bg-violet-700 text-white border-violet-700 shadow-md' : 'bg-slate-900 text-white border-slate-900 shadow-md')
+                                    : (s === 'Wallet Adjustment' ? 'bg-violet-50 text-violet-700 border-violet-100 hover:border-violet-400' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800')
                                 }`}
-                        >
-                            {s || 'All'}
-                        </Link>
-                    ))}
-                    <span className="text-slate-300 self-center">|</span>
-                    {/* Source filter pills */}
-                    {['', 'Payment Gateway', 'Gift Card Order', 'Wallet', 'Merchant Wallet', 'Wallet Adjustment'].map(s => (
-                        <Link
-                            key={`source-${s}`}
-                            href={buildUrl({ source: s, page: 1 })}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${
-                                sourceFilter === s
-                                ? (s === 'Wallet Adjustment' ? 'bg-violet-700 text-white border-violet-700 shadow-md' : 'bg-slate-900 text-white border-slate-900 shadow-md')
-                                : (s === 'Wallet Adjustment' ? 'bg-violet-50 text-violet-700 border-violet-100 hover:border-violet-400' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800')
-                            }`}
-                        >
-                            {s || 'All Sources'}
-                        </Link>
-                    ))}
+                            >
+                                {s || 'All Sources'}
+                            </Link>
+                        ))}
+                    </div>
                 </div>
             </div>
 

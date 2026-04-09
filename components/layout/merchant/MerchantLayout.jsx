@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Sidebar from '@/components/merchant/Sidebar';
 import Header from '@/components/merchant/Header';
+import BannerPromptModal from '@/components/merchant/BannerPromptModal';
 
 export default function MerchantLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -17,6 +18,8 @@ export default function MerchantLayout({ children }) {
                     {children}
                 </main>
             </div>
+            
+            <BannerPromptModal />
         </div>
     );
 }

@@ -19,7 +19,8 @@ import {
     AlertCircle,
     ChevronRight,
     Briefcase,
-    Globe
+    Globe,
+    Image as ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -87,10 +88,12 @@ export default function ProfilePage() {
         business_phone: '',
         business_email: '',
         business_address: '',
-        avatar_url: ''
+        avatar_url: '',
+        shopping_banner_url: ''
     });
 
     const [saving, setSaving] = useState(false);
+    const [uploadingBanner, setUploadingBanner] = useState(false);
     const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error'
     const [errorMessage, setErrorMessage] = useState('');
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -104,10 +107,50 @@ export default function ProfilePage() {
                 business_phone: merchant.business_phone || merchant.user_profiles?.phone || '',
                 business_email: merchant.business_email || merchant.user_profiles?.email || '',
                 business_address: merchant.business_address || '',
-                avatar_url: merchant.user_profiles?.avatar_url || ''
+                avatar_url: merchant.user_profiles?.avatar_url || '',
+                shopping_banner_url: merchant.shopping_banner_url || ''
             });
         }
     }, [merchant]);
+
+    const handleBannerUpload = async (event) => {
+        try {
+            if (!event.target.files || event.target.files.length === 0) return;
+            const file = event.target.files[0];
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${merchant.user_id}-${Date.now()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            setUploadingBanner(true);
+            setSaveStatus(null);
+            setErrorMessage('');
+            
+            const { error: uploadError } = await supabase.storage
+                .from('merchant_banners')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+            
+            const { data: { publicUrl } } = supabase.storage
+                .from('merchant_banners')
+                .getPublicUrl(filePath);
+
+            setFormData(prev => ({ ...prev, shopping_banner_url: publicUrl }));
+            
+            await supabase.from('merchants')
+                .update({ shopping_banner_url: publicUrl })
+                .eq('user_id', merchant.user_id);
+                
+            setSaveStatus('success');
+            setTimeout(() => setSaveStatus(null), 3000);
+        } catch (error) {
+            console.error('Error uploading banner:', error);
+            setSaveStatus('error');
+            setErrorMessage(error.message || 'Failed to upload banner');
+        } finally {
+            setUploadingBanner(false);
+        }
+    };
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -133,7 +176,8 @@ export default function ProfilePage() {
                     owner_name: formData.owner_name,
                     business_phone: formData.business_phone,
                     business_email: formData.business_email,
-                    business_address: formData.business_address
+                    business_address: formData.business_address,
+                    shopping_banner_url: formData.shopping_banner_url
                 })
                 .eq('id', merchant.id);
 
@@ -186,9 +230,17 @@ export default function ProfilePage() {
                 className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12"
             >
                 <div className="space-y-2">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-900/5 text-blue-600 text-[10px] font-black uppercase tracking-widest">
-                        <User size={12} />
-                        Merchant Account
+                    <div className="flex items-center gap-3">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-900/5 text-blue-600 text-[10px] font-black uppercase tracking-widest">
+                            <User size={12} />
+                            Merchant Account
+                        </div>
+                        {merchant?.auto_mode_status === 'active' && (
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">Auto LIVE</span>
+                            </div>
+                        )}
                     </div>
                     <h1 className="text-4xl sm:text-5xl font-black text-slate-950 dark:text-slate-100 tracking-tight leading-none font-[family-name:var(--font-outfit)]">
                         My <span className="text-blue-600">Profile</span>
@@ -272,6 +324,41 @@ export default function ProfilePage() {
                                 <Store size={14} className="text-blue-500" />
                                 Business Details
                             </h3>
+
+                            <div className="mb-8 p-6 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl relative group overflow-hidden">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Storefront Banner</label>
+                                <div className="relative w-full h-32 sm:h-48 rounded-xl border-2 border-dashed border-slate-200 dark:border-white/10 flex flex-col items-center justify-center overflow-hidden transition-all group-hover:border-blue-500/50 bg-white/50 dark:bg-black/20">
+                                    {formData.shopping_banner_url ? (
+                                        <>
+                                            <img 
+                                                src={formData.shopping_banner_url} 
+                                                alt="Store Banner" 
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <span className="text-white font-black text-sm px-4 py-2 rounded-xl backdrop-blur-sm bg-black/50 border border-white/10">Change Banner</span>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="text-center p-4">
+                                            <ImageIcon className="mx-auto text-slate-300 dark:text-slate-600 mb-2" size={32} />
+                                            <p className="text-xs font-bold text-slate-400 max-w-[200px] leading-relaxed">Upload a 16:9 landscape banner to attract customers</p>
+                                        </div>
+                                    )}
+                                    {uploadingBanner && (
+                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm z-10">
+                                            <Loader2 size={32} className="text-white animate-spin" />
+                                        </div>
+                                    )}
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleBannerUpload}
+                                        disabled={uploadingBanner || saving}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-20"
+                                    />
+                                </div>
+                            </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-1.5">
