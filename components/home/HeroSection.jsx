@@ -111,7 +111,7 @@ export default function HeroSection() {
                             <span className="letter-t2">T</span>
                         </h1>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 font-medium tracking-wide">
-                            Powered by Intrust India
+                            Powered INTRUST FINANCIAL SERVICES (INDIA) PVT LTD.
                         </p>
                     </motion.div>
 

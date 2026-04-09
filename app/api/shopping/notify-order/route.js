@@ -72,6 +72,38 @@ export async function POST(request) {
             }
         }
 
+        // Notify Merchants involved in this order
+        const { data: orderItems, error: orderItemsError } = await admin
+            .from('shopping_order_items')
+            .select('seller_id')
+            .eq('group_id', group_id)
+            .not('seller_id', 'is', null);
+
+        if (!orderItemsError && orderItems && orderItems.length > 0) {
+            const merchantIds = [...new Set(orderItems.map(i => i.seller_id))];
+            
+            const { data: merchants } = await admin
+                .from('merchants')
+                .select('user_id')
+                .in('id', merchantIds);
+
+            if (merchants && merchants.length > 0) {
+                const merchantNotifs = merchants.map(m => ({
+                    user_id: m.user_id,
+                    title: 'New Order Received 🛒',
+                    body: `A customer placed an order (ID: ${group_id.slice(0, 8).toUpperCase()}). Check your orders page.`,
+                    type: 'success',
+                    reference_id: group_id,
+                    reference_type: 'shopping_order'
+                }));
+
+                const { error: merchantNotifyErr } = await admin.from('notifications').insert(merchantNotifs);
+                if (merchantNotifyErr) {
+                    console.error('[Notify Order] Failed to notify merchants:', merchantNotifyErr.message);
+                }
+            }
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('[Notify Order] Server Error:', error);

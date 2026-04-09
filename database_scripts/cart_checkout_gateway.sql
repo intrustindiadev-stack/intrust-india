@@ -194,7 +194,7 @@ BEGIN
             v_product_cost := 0;
             SELECT wholesale_price_paise INTO v_product_cost
             FROM public.shopping_products WHERE id = v_item.product_id;
-            v_commission_paise := GREATEST(0, (v_item.unit_price_paise - COALESCE(v_product_cost, 0))) * v_item.quantity * 5 / 100;
+            v_commission_paise := GREATEST(0, (v_item.unit_price_paise - COALESCE(v_product_cost, 0))) * v_item.quantity * 30 / 100;
             v_merchant_credit := v_item_total - v_commission_paise;
 
             UPDATE public.merchant_inventory 
@@ -224,7 +224,7 @@ BEGIN
             ) VALUES (
                 v_item.seller_id, 'sale', v_merchant_credit,
                 (SELECT wallet_balance_paise FROM public.merchants WHERE id = v_item.seller_id),
-                'Sale credit after 5% profit-based commission deduction (Gateway Checkout)'
+                'Sale credit after 30% profit-based commission deduction (Gateway Checkout)'
             );
 
             INSERT INTO public.notifications (user_id, title, body, type, reference_id, reference_type)

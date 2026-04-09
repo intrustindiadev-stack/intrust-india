@@ -42,6 +42,11 @@ export default function MerchantFloatingCart({
         ? Math.max(0, (subtotalInRupees - commission) * 0.08)  // estimate
         : 0;
 
+    // Wholesale Breakdown
+    const totalRetailValue = cartItems.reduce((sum, item) => sum + ((item.retail_price || item.unit_price || 0) * (item.quantity || 1)), 0);
+    const estProfit = Math.max(0, totalRetailValue - subtotalInRupees);
+    const profitMarginPercent = subtotalInRupees > 0 ? (estProfit / subtotalInRupees) * 100 : 0;
+
     const toggleDrawer = () => setDrawerOpen(prev => !prev);
 
     const drawerVariants = {
@@ -113,6 +118,22 @@ export default function MerchantFloatingCart({
             {/* Summary */}
             {itemCount > 0 && (
                 <div className="pt-4 border-t border-white/10 space-y-4 shrink-0 pb-2">
+                    {!showCommission && subtotalInRupees > 0 && (
+                        <div className="space-y-1.5 text-xs px-1">
+                            <div className="flex justify-between text-blue-300/70 font-medium">
+                                <span>Wholesale Cost</span>
+                                <span>₹{subtotalInRupees.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between text-blue-300/70 font-medium">
+                                <span>Est. Retail Value (MSRP)</span>
+                                <span>₹{totalRetailValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between text-emerald-400 font-bold border-t border-white/10 pt-1.5 mt-1">
+                                <span className="flex items-center gap-1.5">Est. Margin <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9px] uppercase tracking-widest">{profitMarginPercent.toFixed(1)}%</span></span>
+                                <span>+₹{estProfit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                        </div>
+                    )}
                     {showCommission && (
                         <div className="space-y-1.5 text-xs">
                             <div className="flex justify-between text-blue-300/70 font-medium">

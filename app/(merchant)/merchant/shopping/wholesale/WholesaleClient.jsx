@@ -86,6 +86,8 @@ export default function WholesaleClient({ products = [], merchant, categories = 
             id: product.id,
             title: product.title,
             unit_price: product.wholesale_price_paise / 100,
+            wholesale_price: product.wholesale_price_paise / 100,
+            retail_price: (product.suggested_retail_price_paise || 0) / 100,
             quantity: qty,
         };
     });

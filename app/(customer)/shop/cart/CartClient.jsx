@@ -366,7 +366,7 @@ const CartClient = ({ userId }) => {
   const hasValidAddress = profile && profile.address && profile.phone;
   
   const MIN_ORDER_VALUE = 49900;
-  const isMinOrderMet = billDetails.sellingTotal >= MIN_ORDER_VALUE;
+  const isMinOrderMet = finalPayable >= MIN_ORDER_VALUE;
 
   const hasSufficientBalance = paymentMode === 'wallet' ? walletBalance >= finalPayable : true;
   const canPay = (
@@ -769,7 +769,7 @@ const CartClient = ({ userId }) => {
                     className={`mt-3 flex items-start gap-2 text-[11px] font-bold rounded-lg p-3 ${isDark ? 'bg-amber-900/10 text-amber-500 border border-amber-800/20' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}
                   >
                     <AlertCircle size={14} className="shrink-0 mt-0.5" />
-                    <p>Minimum order value is <strong>₹499</strong>. Please add items worth ₹{((MIN_ORDER_VALUE - billDetails.sellingTotal)/100).toLocaleString('en-IN')} more to checkout.</p>
+                    <p>Minimum order value is <strong>₹499</strong>. Please add items worth ₹{((MIN_ORDER_VALUE - finalPayable)/100).toLocaleString('en-IN')} more to checkout.</p>
                   </motion.div>
                 )}
 
