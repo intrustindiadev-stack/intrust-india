@@ -133,7 +133,7 @@ export default function BalanceReveal({ value, className = "" }) {
             )}
 
             {/* Accessibility Hint */}
-            <div className={`absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0`}>
+            <div className={`absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-500 transform translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0`}>
                 <ShieldCheck size={10} className="text-emerald-500" />
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter whitespace-nowrap">
                     {isRevealed ? 'Tap to Hide' : 'Tap to Reveal'}

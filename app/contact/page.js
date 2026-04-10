@@ -21,8 +21,8 @@ export default function ContactPage() {
             icon: Mail,
             title: "Contact Support",
             details: ["Sometimes you need a little help. Don't worry, we're here for you. Shoot us an email anytime."],
-            linkText: "info.intrustindia@gmail.com",
-            action: "mailto:info.intrustindia@gmail.com",
+            linkText: "info@intrustindia.com",
+            action: "mailto:info@intrustindia.com",
             color: "bg-purple-50 text-purple-600"
         },
         {

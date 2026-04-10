@@ -9,8 +9,8 @@ import RatingPromptModal from './RatingPromptModal';
 
 const navItems = [
     { icon: Home, label: 'Home', href: '/dashboard' },
-    { icon: ShoppingCart, label: 'Shop', href: '/shop' },
     { icon: ScanFace, label: 'NFC Pass', href: '/nfc-service' },
+    { icon: ShoppingCart, label: 'Shop', href: '/shop' },
     { icon: Gift, label: 'Gift Cards', href: '/gift-cards' },
     { icon: User, label: 'Profile', href: '/profile' },
 ];

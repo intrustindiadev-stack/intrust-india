@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart, Zap, Shirt, Pill, Home, Utensils, Grid } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart, Zap, Shirt, Pill, Home, Utensils, Grid, Star, MapPin } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
@@ -20,7 +20,6 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [activeSubCategory, setActiveSubCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
-    const [cartLoading, setCartLoading] = useState(false);
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingCartItem, setPendingCartItem] = useState(null);
     const supabase = createClient();
@@ -82,8 +81,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     };
 
     const syncCartFromDB = async () => {
-        setCartLoading(true);
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('shopping_cart')
             .select('*')
             .eq('customer_id', customer.id);
@@ -97,14 +95,22 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
             }).filter(i => i.id);
             setCart(mappedCart);
         }
-        setCartLoading(false);
     };
 
-    const addToCart = async (item) => {
+    const addToCart = useCallback(async (item) => {
         if (!customer?.id) {
             router.push('/login');
             return;
         }
+
+        // Optimistic update — instantly reflect in UI
+        setCart(prev => {
+            const existing = prev.find(i => i.id === item.id);
+            if (existing) {
+                return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+            }
+            return [...prev, { ...item, quantity: 1 }];
+        });
 
         try {
             const isPlatform = !!item.is_platform_direct;
@@ -119,17 +125,31 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
             if (error) throw error;
 
             if (data?.message === 'MIXED_SELLER_ERROR') {
+                // Revert optimistic update
+                setCart(prev => {
+                    const existing = prev.find(i => i.id === item.id);
+                    if (existing && existing.quantity > 1) {
+                        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity - 1 } : i);
+                    }
+                    return prev.filter(i => i.id !== item.id);
+                });
                 setPendingCartItem(item);
                 setConfirmModalOpen(true);
                 return;
             }
-
-            syncCartFromDB();
         } catch (err) {
+            // Revert optimistic update on error
+            setCart(prev => {
+                const existing = prev.find(i => i.id === item.id);
+                if (existing && existing.quantity > 1) {
+                    return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity - 1 } : i);
+                }
+                return prev.filter(i => i.id !== item.id);
+            });
             console.error('Error adding to cart:', err);
             toast.error("Failed to add to cart");
         }
-    };
+    }, [customer?.id, supabase, router]);
 
     const handleConfirmClearCart = async () => {
         if (!pendingCartItem) return;
@@ -148,9 +168,17 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
         setPendingCartItem(null);
     };
 
-    const removeFromCart = async (item) => {
+    const removeFromCart = useCallback(async (item) => {
         const cartItem = cart.find(i => i.id === item.id);
         if (!cartItem) return;
+
+        // Optimistic update — instantly reflect in UI
+        setCart(prev => {
+            if (cartItem.quantity > 1) {
+                return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity - 1 } : i);
+            }
+            return prev.filter(i => i.id !== item.id);
+        });
 
         try {
             if (cartItem.quantity > 1) {
@@ -164,11 +192,18 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                     .delete()
                     .eq('id', cartItem.cart_row_id);
             }
-            syncCartFromDB();
         } catch (err) {
+            // Revert optimistic update on error
+            setCart(prev => {
+                const existing = prev.find(i => i.id === item.id);
+                if (existing) {
+                    return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+                }
+                return [...prev, cartItem];
+            });
             console.error('Error removing from cart:', err);
         }
-    };
+    }, [cart, supabase]);
 
     const merchantCategories = useMemo(() => {
         return ['All', ...new Set(initialInventory.map(item => item.shopping_products?.category || 'Other'))];
@@ -256,9 +291,23 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                             <h1 className={`text-lg md:text-xl font-black capitalize leading-tight truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
                                 {merchant?.business_name}
                             </h1>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] truncate" style={{ color: primaryColor }}>
-                                {initialInventory.length} Items Available
-                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                                {merchant?.rating && (
+                                   <span className="flex items-center gap-0.5 text-[10px] font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                                       <Star size={10} className="fill-amber-500" />
+                                       {parseFloat(merchant.rating.avg_rating).toFixed(1)} ({merchant.rating.total_ratings})
+                                   </span>
+                                )}
+                                {merchant?.business_address && (
+                                   <span className="flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[120px]">
+                                       <MapPin size={10} className="shrink-0" />
+                                       <span className="truncate">{merchant.business_address.split(',')[0]}</span>
+                                   </span>
+                                )}
+                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] truncate hidden sm:inline border-l pl-2 ml-1" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', color: primaryColor }}>
+                                    {initialInventory.length} Items Available
+                                </span>
+                            </div>
                         </div>
 
                         {/* Search - Desktop */}
@@ -345,21 +394,19 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
-                            <AnimatePresence mode="popLayout">
-                                {filteredItems.map(item => (
-                                    <ProductCardV2
-                                        key={item.id}
-                                        item={item}
-                                        cartItem={cart.find(i => i.id === item.id)}
-                                        onAdd={() => addToCart(item)}
-                                        onRemove={() => removeFromCart(item)}
-                                        primaryColor={primaryColor}
-                                        secondaryColor={secondaryColor}
-                                        isWishlisted={wishlistIds.has(item.product_id)}
-                                        onWishlist={() => toggleWishlist(item)}
-                                    />
-                                ))}
-                            </AnimatePresence>
+                            {filteredItems.map(item => (
+                                <ProductCardV2
+                                    key={item.id}
+                                    item={item}
+                                    cartItem={cart.find(i => i.id === item.id)}
+                                    onAdd={() => addToCart(item)}
+                                    onRemove={() => removeFromCart(item)}
+                                    primaryColor={primaryColor}
+                                    secondaryColor={secondaryColor}
+                                    isWishlisted={wishlistIds.has(item.product_id)}
+                                    onWishlist={() => toggleWishlist(item)}
+                                />
+                            ))}
                         </div>
                     )}
                 </div>

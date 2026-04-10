@@ -249,6 +249,15 @@ export default async function TransactionsPage({ searchParams }) {
     // ──────────────── STATS (from full dataset before pagination) ────────────────
     const totalCredits = filtered.filter(t => t.type === 'Credit' && t.status === 'Success').reduce((s, t) => s + t.amountRaw, 0);
     const totalDebits = filtered.filter(t => t.type === 'Debit' && t.status === 'Success').reduce((s, t) => s + t.amountRaw, 0);
+    
+    // Today's Revenue Calculation
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todaysRevenue = filtered.filter(t => 
+        t.type === 'Credit' && 
+        t.status === 'Success' && 
+        (t.dateRaw || '').startsWith(todayStr)
+    ).reduce((s, t) => s + t.amountRaw, 0);
+
     const successCount = filtered.filter(t => t.status === 'Success').length;
     const failedCount = filtered.filter(t => t.status === 'Failed').length;
 
@@ -305,11 +314,10 @@ export default async function TransactionsPage({ searchParams }) {
                     </div>
                 </div>
                 <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group">
-                    <div className="absolute -right-6 -top-6 w-24 h-24 bg-red-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
+                    <div className="absolute -right-6 -top-6 w-24 h-24 bg-teal-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
                     <div className="relative">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Debits</p>
-                        <p className="text-2xl font-extrabold text-red-600">₹{totalDebits.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-                        <p className="text-xs font-bold text-red-500 mt-1">{failedCount} failed</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Today's Revenue</p>
+                        <p className="text-2xl font-extrabold text-teal-600">₹{todaysRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
                     </div>
                 </div>
                 <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group">

@@ -17,7 +17,7 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
         e.stopPropagation();
         setJustAdded(true);
         onAdd();
-        setTimeout(() => setJustAdded(false), 1000);
+        setTimeout(() => setJustAdded(false), 1800);
     };
 
     // Calculation of MRP and Selling Price
@@ -28,7 +28,6 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
 
     return (
         <motion.div
-            layout
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -132,23 +131,28 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                     {justAdded ? (
                         <motion.div
                             key="success"
-                            initial={{ scale: 0.8, opacity: 0, borderRadius: 20 }}
-                            animate={{ scale: 1, opacity: 1, borderRadius: 12 }}
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.8, opacity: 0 }}
-                            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                            className="flex items-center justify-center text-white shadow-sm h-9 md:h-10 w-full"
-                            style={{
-                                background: primaryColor,
-                                boxShadow: isDark ? `0 4px 16px ${primaryColor}40` : `0 4px 14px ${primaryColor}30`
-                            }}
+                            transition={{ type: 'spring', stiffness: 450, damping: 22 }}
+                            className="flex items-center justify-center gap-1.5 text-white shadow-sm h-9 md:h-10 w-full rounded-xl"
+                            style={{ background: 'linear-gradient(135deg, #10b981, #34d399)', boxShadow: '0 4px 16px rgba(16,185,129,0.40)' }}
                         >
                             <motion.div
                                 initial={{ scale: 0, rotate: -45 }}
                                 animate={{ scale: 1, rotate: 0 }}
-                                transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.1 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 18, delay: 0.08 }}
                             >
-                                <Check size={18} strokeWidth={3} />
+                                <Check size={16} strokeWidth={3} />
                             </motion.div>
+                            <motion.span
+                                initial={{ opacity: 0, x: -6 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.12 }}
+                                className="text-xs font-black"
+                            >
+                                Added!
+                            </motion.span>
                         </motion.div>
                     ) : cartItem ? (
                         <motion.div
@@ -190,31 +194,23 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            whileTap={{ scale: 0.95 }}
+                            whileTap={{ scale: 0.94 }}
+                            whileHover={{ scale: 1.02 }}
                             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                             onClick={handleAdd}
-                            className={`w-full h-9 md:h-10 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-all active:scale-95 ${isDark ? 'border' : 'border shadow-sm hover:shadow-md'}`}
+                            className={`w-full h-9 md:h-10 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-all active:scale-95 ${
+                                isDark
+                                    ? 'border text-white hover:bg-white/[0.08]'
+                                    : 'border shadow-sm hover:brightness-110 text-white'
+                            }`}
                             style={{
                                 borderColor: `${primaryColor}40`,
+                                backgroundColor: isDark ? 'transparent' : primaryColor,
                                 color: isDark ? primaryColor : 'white',
-                                backgroundColor: isDark ? 'transparent' : primaryColor
-                            }}
-                            onMouseEnter={(e) => { 
-                                if (isDark) { 
-                                    e.target.style.background = `${primaryColor}15`; 
-                                } else {
-                                    e.target.style.filter = 'brightness(1.1)';
-                                }
-                            }}
-                            onMouseLeave={(e) => { 
-                                if (isDark) { 
-                                    e.target.style.background = 'transparent'; 
-                                } else {
-                                    e.target.style.filter = 'none';
-                                }
                             }}
                         >
-                            ADD <Plus size={14} strokeWidth={2.5} />
+                            <span className="font-black tracking-wide">ADD</span>
+                            <Plus size={13} strokeWidth={3} />
                         </motion.button>
                     )}
                 </AnimatePresence>

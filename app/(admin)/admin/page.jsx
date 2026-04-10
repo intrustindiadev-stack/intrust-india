@@ -37,7 +37,7 @@ export default async function AdminDashboard() {
         revenueData,
         activeMerchantsCount,
         totalCouponsCount,
-        todaySalesCount,
+        todaySalesData,
         recentTransactions,
         pendingApprovals,
         shoppingStats
@@ -76,14 +76,19 @@ export default async function AdminDashboard() {
         // 4. Today Sales (from transactions table + shopping_order_groups)
         Promise.all([
             supabase.from('transactions')
-                .select('id')
+                .select('id, total_paid_paise, amount')
                 .in('status', COMPLETED_STATUSES)
                 .gte('created_at', new Date().toISOString().split('T')[0]),
             supabase.from('shopping_order_groups')
-                .select('id')
+                .select('id, total_amount_paise')
                 .eq('status', 'completed')
                 .gte('created_at', new Date().toISOString().split('T')[0])
-        ]).then(([txns, groups]) => (txns.data?.length || 0) + (groups.data?.length || 0)),
+        ]).then(([txns, groups]) => {
+            const count = (txns.data?.length || 0) + (groups.data?.length || 0);
+            const txnRev = (txns.data || []).reduce((sum, tx) => sum + getAmountPaise(tx), 0);
+            const groupRev = (groups.data || []).reduce((sum, g) => sum + (Number(g.total_amount_paise) || 0), 0);
+            return { count, revenue: txnRev + groupRev };
+        }),
 
         // 5. Recent Transactions - Merged from transactions and shopping_order_groups
         Promise.all([
@@ -202,7 +207,20 @@ export default async function AdminDashboard() {
                 </div>
 
                 {/* KPI Glass Cards - Mobile Horizontal Scroll */}
-                <div className="flex overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 hide-scrollbar snap-x snap-mandatory">
+                <div className="flex overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-6 gap-4 sm:gap-6 hide-scrollbar snap-x snap-mandatory">
+                    {/* Today's Revenue Card */}
+                    <Link href="/admin/transactions" className="snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            </div>
+                            <span className="text-[10px] font-black text-green-600 bg-green-50 px-2.5 py-1 rounded-full uppercase tracking-widest">Today</span>
+                        </div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Today's Revenue</p>
+                        <h3 className="text-2xl sm:text-3xl font-black text-gray-950 tracking-tighter">{formatPrice(todaySalesData.revenue)}</h3>
+                    </Link>
+
                     {/* Revenue Card */}
                     <Link href="/admin/transactions" className="snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
@@ -252,7 +270,7 @@ export default async function AdminDashboard() {
                             <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full uppercase tracking-widest">Live Orders</span>
                         </div>
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Orders Today</p>
-                        <h3 className="text-2xl sm:text-3xl font-black text-gray-950 tracking-tighter">{todaySalesCount}</h3>
+                        <h3 className="text-2xl sm:text-3xl font-black text-gray-950 tracking-tighter">{todaySalesData.count}</h3>
                     </Link>
                     {/* Shopping Revenue */}
                     <Link href="/admin/shopping/orders" className="snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
