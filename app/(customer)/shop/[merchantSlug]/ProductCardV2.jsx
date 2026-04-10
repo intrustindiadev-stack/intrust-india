@@ -62,6 +62,7 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                         <img
                             src={product.product_images[0]}
                             alt={product.title}
+                            loading="lazy"
                             className={`w-[85%] h-[85%] object-contain transition-transform duration-500 group-hover:scale-110 ${isDark ? '' : 'mix-blend-multiply'}`}
                         />
                     ) : (

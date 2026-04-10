@@ -29,29 +29,49 @@ export default async function MerchantHubPage() {
 
     let merchants = merchantsArray || [];
 
-    // Manually fetch avatars to bypass dynamic relation limitations & RLS
+    // Batch 2: run all remaining fetches in parallel
+    // profiles fetch requires userIds derived from merchants (Batch 1), so it belongs in Batch 2
     const userIds = merchants.map(m => m.user_id).filter(Boolean);
+    const adminClient = createAdminClient();
+
+    const [
+        profilesResult,
+        ratingsResult,
+        customerProfileResult,
+        wishlistCountResult,
+        cartCountResult,
+    ] = await Promise.all([
+        // Avatar profiles for all merchant users
+        userIds.length > 0
+            ? adminClient.from('user_profiles').select('id, avatar_url, full_name').in('id', userIds)
+            : Promise.resolve({ data: [] }),
+        // Aggregate ratings for all merchants
+        supabase.from('merchant_rating_stats').select('merchant_id, avg_rating, total_ratings'),
+        // Logged-in customer profile
+        user
+            ? supabase.from('user_profiles').select('wallet_balance_paise, full_name, avatar_url').eq('id', user.id).single()
+            : Promise.resolve({ data: null }),
+        // Wishlist count
+        user
+            ? supabase.from('user_wishlists').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
+            : Promise.resolve({ count: 0 }),
+        // Cart count
+        user
+            ? supabase.from('shopping_cart').select('*', { count: 'exact', head: true }).eq('customer_id', user.id)
+            : Promise.resolve({ count: 0 }),
+    ]);
+
+    // Merge avatar profiles into merchants
     if (userIds.length > 0) {
-        const adminClient = createAdminClient();
-        const { data: profiles } = await adminClient
-            .from('user_profiles')
-            .select('id, avatar_url, full_name')
-            .in('id', userIds);
-        
-        const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+        const profileMap = Object.fromEntries((profilesResult.data || []).map(p => [p.id, p]));
         merchants = merchants.map(m => ({
             ...m,
             user_profiles: profileMap[m.user_id] || { avatar_url: null, full_name: null }
         }));
     }
 
-    // Fetch aggregate ratings for all merchants
-    const { data: ratingStats } = await supabase
-        .from('merchant_rating_stats')
-        .select('merchant_id, avg_rating, total_ratings');
-
     const ratingsMap = Object.fromEntries(
-        (ratingStats || []).map(r => [r.merchant_id, r])
+        (ratingsResult.data || []).map(r => [r.merchant_id, r])
     );
 
     const allMerchants = [
@@ -65,30 +85,9 @@ export default async function MerchantHubPage() {
         ...(merchants || [])
     ];
 
-    let customerProfile = null;
-    let wishlistCount = 0;
-    let cartCount = 0;
-
-    if (user) {
-        const { data } = await supabase
-            .from('user_profiles')
-            .select('wallet_balance_paise, full_name, avatar_url')
-            .eq('id', user.id)
-            .single();
-        customerProfile = data;
-
-        const { count } = await supabase
-            .from('user_wishlists')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id);
-        wishlistCount = count || 0;
-
-        const { count: cartResCount } = await supabase
-            .from('shopping_cart')
-            .select('*', { count: 'exact', head: true })
-            .eq('customer_id', user.id);
-        cartCount = cartResCount || 0;
-    }
+    const customerProfile = customerProfileResult.data || null;
+    const wishlistCount = wishlistCountResult.count || 0;
+    const cartCount = cartCountResult.count || 0;
 
     return (
         <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#080a10] relative pb-32 transition-colors">

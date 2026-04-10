@@ -11,6 +11,7 @@ import FloatingCart from './FloatingCart';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 import { motion, AnimatePresence } from 'framer-motion';
+import ProductCardSkeleton from '@/components/customer/shop/ProductCardSkeleton';
 
 export default function StorefrontV2Client({ merchant, initialInventory, customer }) {
     const router = useRouter();
@@ -18,6 +19,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     const isDark = theme === 'dark';
     const [cart, setCart] = useState([]);
     const [wishlistIds, setWishlistIds] = useState(new Set());
+    const [isLoading, setIsLoading] = useState(true);
     const [activeSubCategory, setActiveSubCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -27,8 +29,9 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     // Preserve User's core sync logic
     useEffect(() => {
         if (customer?.id) {
-            syncCartFromDB();
-            syncWishlistFromDB();
+            Promise.all([syncCartFromDB(), syncWishlistFromDB()]).finally(() => setIsLoading(false));
+        } else {
+            setIsLoading(false);
         }
     }, [customer?.id]);
 
@@ -281,7 +284,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
 
                         <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-black overflow-hidden bg-blue-500 shrink-0 shadow-sm border-2 border-white dark:border-white/10">
                             {avatarUrl ? (
-                                <img src={avatarUrl} alt={merchant?.business_name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <img src={avatarUrl} alt={merchant?.business_name} loading="lazy" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                             ) : (
                                 <span>{merchant?.business_name?.substring(0, 2).toUpperCase()}</span>
                             )}
@@ -387,7 +390,13 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
             {/* ====== PRODUCT GRID ====== */}
             <main className="w-full px-2 sm:px-4 md:px-6 flex-1 py-4 md:py-6 relative z-10">
                 <div className="max-w-7xl mx-auto pb-32">
-                    {filteredItems.length === 0 ? (
+                    {isLoading ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
+                            {Array.from({ length: 10 }).map((_, i) => (
+                                <ProductCardSkeleton key={`psk-${i}`} />
+                            ))}
+                        </div>
+                    ) : filteredItems.length === 0 ? (
                         <div className={`py-20 text-center rounded-3xl mt-10 ${isDark ? 'bg-white/[0.03] border border-white/[0.05]' : 'bg-white shadow-sm border border-slate-100'}`}>
                             <Package className={isDark ? 'text-white/10 mx-auto mb-4' : 'text-slate-300 mx-auto mb-4'} size={48} />
                             <h3 className={`text-lg font-black uppercase tracking-widest ${isDark ? 'text-white/30' : 'text-slate-600'}`}>No items found</h3>

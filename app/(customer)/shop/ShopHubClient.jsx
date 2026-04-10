@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 import HeroIllustrativeAd from '@/components/customer/shop/HeroIllustrativeAd';
+import MerchantCardSkeleton from '@/components/customer/shop/MerchantCardSkeleton';
 
 // ── Accent palette ──────────────────────────────────────────────────────────
 const ACCENTS = [
@@ -42,6 +43,7 @@ function FeaturedCard({ merchant }) {
                     <img
                         src="/images/intrust_mart_bg.png"
                         alt="Intrust Mart Background"
+                        loading="eager"
                         className="absolute inset-0 w-full h-full object-cover scale-100 group-hover:scale-105 transition-transform duration-1000 z-[1] opacity-70 mix-blend-screen"
                     />
 
@@ -117,6 +119,7 @@ function MerchantCard({ merchant, idx, rating }) {
                     <img
                         src={bannerImage}
                         alt={`${merchant.business_name} Banner`}
+                        loading="lazy"
                         className="absolute inset-0 w-full h-full object-cover z-0"
                     />
 
@@ -155,6 +158,7 @@ function MerchantCard({ merchant, idx, rating }) {
                                     <img
                                         src={avatarUrl}
                                         alt={merchant.business_name}
+                                        loading="lazy"
                                         className="w-full h-full object-cover"
                                         referrerPolicy="no-referrer"
                                         onError={(e) => {
@@ -220,6 +224,7 @@ function MerchantCard({ merchant, idx, rating }) {
 
 // ── Main Export ──────────────────────────────────────────────────────────────
 export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
+    const [isGridLoaded, setIsGridLoaded] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const inputRef = useRef(null);
 
@@ -349,8 +354,14 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
                     variants={stagger}
                     initial="hidden"
                     animate="show"
+                    onAnimationComplete={() => setIsGridLoaded(true)}
                     className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5"
                 >
+                    {!isGridLoaded && !showFeatured && !searchQuery && (
+                        Array.from({ length: 4 }).map((_, i) => (
+                            <MerchantCardSkeleton key={`skel-${i}`} />
+                        ))
+                    )}
                     {showFeatured && <FeaturedCard merchant={official} />}
                     {filtered.map((merchant, idx) => (
                         <MerchantCard key={merchant.id} merchant={merchant} idx={idx} rating={ratingsMap[merchant.id]} />

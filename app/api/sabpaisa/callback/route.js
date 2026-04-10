@@ -101,6 +101,17 @@ export async function POST(request) {
         const existingTxn = await getTransactionByClientTxnId(clientTxnId);
         const wasAlreadySuccess = existingTxn && existingTxn.status === 'SUCCESS';
 
+        // Critical guard: if no DB record exists, log it prominently.
+        // This happens when: (a) initiate failed before INSERT, (b) service key misconfigured,
+        // or (c) Sabpaisa sent a callback for a transaction we never initiated.
+        if (!existingTxn) {
+            console.error(
+                `[Callback] CRITICAL — No transaction record found for clientTxnId="${clientTxnId}" ` +
+                `internalStatus=${internalStatus} amount=${amount}. ` +
+                `Fulfillment blocks will be skipped. Redirecting based on decrypted status.`
+            );
+        }
+
         let fulfillmentFailed = false;
 
         // 5. Handle Wallet Credit for WALLET_TOPUP safely
@@ -688,7 +699,7 @@ export async function POST(request) {
                     status_code: result.statusCode || status
                 });
             } catch (updateErr) {
-                console.error('[Callback] Failed to update transaction:', updateErr.message);
+                console.error(`[Callback] Failed to update transaction for clientTxnId="${clientTxnId}":`, updateErr.message, updateErr.code || '');
             }
         }
 

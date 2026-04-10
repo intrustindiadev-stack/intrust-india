@@ -18,6 +18,7 @@ export default async function MerchantStorefrontPage({ params }) {
 
     let merchant = null;
     let mergedInventory = [];
+    let customerResult = { data: null };
 
     if (merchantSlug === 'official') {
         merchant = {
@@ -29,12 +30,20 @@ export default async function MerchantStorefrontPage({ params }) {
             user_profiles: { avatar_url: '/icons/intrustLogo.png' }
         };
 
-        const { data: platformProducts, error: platformError } = await supabase
-            .from('shopping_products')
-            .select('*')
-            .eq('is_active', true)
-            .gt('admin_stock', 0);
+        const [platformProductsResult, officialCustomerResult] = await Promise.all([
+            supabase
+                .from('shopping_products')
+                .select('id, slug, title, description, product_images, category, mrp_paise, suggested_retail_price_paise, admin_stock, is_active')
+                .eq('is_active', true)
+                .gt('admin_stock', 0),
+            user
+                ? supabase.from('user_profiles').select('*').eq('id', user.id).single()
+                : Promise.resolve({ data: null }),
+        ]);
 
+        customerResult = officialCustomerResult;
+
+        const { data: platformProducts, error: platformError } = platformProductsResult;
         if (platformError) console.error('Error fetching platform products:', platformError);
 
         mergedInventory = (platformProducts || []).map(p => ({
@@ -139,16 +148,8 @@ export default async function MerchantStorefrontPage({ params }) {
         );
     }
 
-    // Official store path — run customer fetch in parallel with platform products above
-    let customerProfile = null;
-    if (user) {
-        const { data } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-        customerProfile = data;
-    }
+    // customerResult already resolved in Promise.all above; use it directly
+    const customerProfile = customerResult.data || null;
 
     return (
         <div className="min-h-screen">
