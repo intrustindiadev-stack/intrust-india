@@ -96,14 +96,14 @@ export default function Footer() {
                             </div>
                         </a>
 
-                        <a href="mailto:info.intrustindia@gmail.com" className="flex items-start gap-3 group">
+                        <a href="mailto:info@intrustindia.com" className="flex items-start gap-3 group">
                             <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center border border-purple-100 dark:border-purple-500/20 shrink-0">
                                 <Mail size={14} className="text-purple-500" />
                             </div>
                             <div>
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Email</p>
                                 <p className="text-sm font-medium text-slate-600 dark:text-gray-400 group-hover:text-purple-600 transition-colors break-all">
-                                    info.intrustindia@gmail.com
+                                    info@intrustindia.com
                                 </p>
                             </div>
                         </a>

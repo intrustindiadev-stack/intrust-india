@@ -24,6 +24,8 @@ export default async function MerchantStorefrontPage({ params }) {
             id: 'official',
             slug: 'official',
             business_name: 'Intrust Official',
+            business_address: 'Premium Hub',
+            rating: { avg_rating: 4.9, total_ratings: 50000 },
             user_profiles: { avatar_url: '/icons/intrustLogo.png' }
         };
 
@@ -67,26 +69,12 @@ export default async function MerchantStorefrontPage({ params }) {
                 slug,
                 user_id,
                 business_name,
+                business_address,
                 shopping_banner_url
             `)
             .eq('slug', merchantSlug)
             .eq('status', 'approved')
             .single();
-
-        let avatarUrl = null;
-        if (fetchedMerchant?.user_id) {
-            const adminClient = createAdminClient();
-            const { data: profile } = await adminClient
-                .from('user_profiles')
-                .select('avatar_url')
-                .eq('id', fetchedMerchant.user_id)
-                .single();
-            if (profile) avatarUrl = profile.avatar_url;
-        }
-
-        if (fetchedMerchant) {
-            fetchedMerchant.user_profiles = { avatar_url: avatarUrl };
-        }
 
         if (merchantError || !fetchedMerchant) {
             return (
@@ -99,32 +87,59 @@ export default async function MerchantStorefrontPage({ params }) {
         }
         merchant = fetchedMerchant;
 
-        const { data: inventory, error: inventoryError } = await supabase
-            .from('merchant_inventory')
-            .select(`
-                id,
-                retail_price_paise,
-                stock_quantity,
-                merchant_id,
-                product_id,
-                is_active,
-                custom_title,
-                custom_description,
-                shopping_products!inner (id, slug, title, description, product_images, category, mrp_paise, suggested_retail_price_paise)
-            `)
-            .eq('merchant_id', merchant.id)
-            .eq('is_active', true)
-            .gt('stock_quantity', 0);
+        // Run all remaining fetches in parallel
+        const adminClient = createAdminClient();
+        const [
+            profileResult,
+            ratingResult,
+            inventoryResult,
+            customerResult
+        ] = await Promise.all([
+            // Avatar
+            fetchedMerchant.user_id
+                ? adminClient.from('user_profiles').select('avatar_url').eq('id', fetchedMerchant.user_id).single()
+                : Promise.resolve({ data: null }),
+            // Rating
+            supabase.from('merchant_rating_stats').select('avg_rating, total_ratings').eq('merchant_id', fetchedMerchant.id).single(),
+            // Inventory
+            supabase
+                .from('merchant_inventory')
+                .select(`id, retail_price_paise, stock_quantity, merchant_id, product_id, is_active, custom_title, custom_description, shopping_products!inner (id, slug, title, description, product_images, category, mrp_paise, suggested_retail_price_paise)`)
+                .eq('merchant_id', fetchedMerchant.id)
+                .eq('is_active', true)
+                .gt('stock_quantity', 0),
+            // Customer profile
+            user
+                ? supabase.from('user_profiles').select('*').eq('id', user.id).single()
+                : Promise.resolve({ data: null }),
+        ]);
 
-        if (inventoryError) console.error('Error fetching merchant inventory:', inventoryError);
+        merchant.user_profiles = { avatar_url: profileResult.data?.avatar_url || null };
+        if (ratingResult.data) merchant.rating = ratingResult.data;
 
-        mergedInventory = (inventory || []).map(item => ({
+        if (inventoryResult.error) console.error('Error fetching merchant inventory:', inventoryResult.error);
+        mergedInventory = (inventoryResult.data || []).map(item => ({
             ...item,
             merchants: { business_name: merchant.business_name }
         }));
+
+        return (
+            <div className="min-h-screen">
+                <Navbar />
+                <main className="pt-20 md:pt-24">
+                    <StorefrontV2Client
+                        merchant={merchant}
+                        initialInventory={mergedInventory}
+                        customer={customerResult.data}
+                    />
+                </main>
+                <Footer />
+                <CustomerBottomNav />
+            </div>
+        );
     }
 
-    // Get customer profile for wallet balance & sync
+    // Official store path — run customer fetch in parallel with platform products above
     let customerProfile = null;
     if (user) {
         const { data } = await supabase

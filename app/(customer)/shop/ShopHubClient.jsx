@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Search, Store, X, Sparkles, ChevronRight, BadgeCheck, Star } from 'lucide-react';
+import { Search, Store, X, Sparkles, ChevronRight, BadgeCheck, Star, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
@@ -176,43 +176,42 @@ function MerchantCard({ merchant, idx, rating }) {
                 </div>
 
                 {/* ── Store Body & Details ── */}
-                <div className="relative flex flex-col flex-1 px-5 pt-11 pb-5 bg-white dark:bg-[#0c0e16] z-10">
-
+                <div className="relative flex flex-col flex-1 px-5 pt-11 pb-4 bg-white dark:bg-[#0c0e16] z-10 w-full overflow-hidden">
                     {/* Primary Info */}
-                    <div className="flex justify-between items-start gap-4">
-                        <div>
-                            <h3 className="text-xl sm:text-2xl font-[family-name:var(--font-manrope)] font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight line-clamp-1 group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors">
+                    <div className="flex justify-between items-start gap-3 w-full">
+                        <div className="flex-1 min-w-0 pr-2">
+                            <h3 className="text-lg sm:text-xl font-[family-name:var(--font-manrope)] font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                 {merchant.business_name}
                             </h3>
-                            <p className="text-xs sm:text-sm font-[family-name:var(--font-inter)] font-semibold text-slate-500 dark:text-slate-400 mt-1 line-clamp-1 flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
-                                {addressLine}
-                            </p>
+                            <div className="flex flex-wrap items-center gap-2 mt-2">
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-200 dark:border-amber-500/20 text-[10px] font-bold">
+                                    <Star size={10} className="fill-amber-500" />
+                                    {rating && rating.total_ratings > 0 ? parseFloat(rating.avg_rating).toFixed(1) : "New"}
+                                </span>
+                                {(rating && rating.total_ratings > 0) && (
+                                    <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">({rating.total_ratings})</span>
+                                )}
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-700 text-[10px] font-bold">
+                                    <MapPin size={10} className="shrink-0" />
+                                    <span className="truncate max-w-[80px] sm:max-w-[100px]">{addressLine}</span>
+                                </span>
+                            </div>
                         </div>
 
                         {/* Rating / Explore node */}
-                        <div className="shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-800/50 group-hover:bg-amber-500 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all duration-300">
+                        <div className="shrink-0 flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-50 dark:bg-slate-800/50 group-hover:bg-blue-500 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all duration-300">
                             <ChevronRight size={18} strokeWidth={2.5} className="text-slate-400 dark:text-slate-500 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
                         </div>
                     </div>
 
                     <div className="flex-1" />
 
-                    {/* Highly Subtle Footer Tags */}
-                    <div className="mt-5 pt-4 border-t border-dashed border-slate-200 dark:border-white/[0.08] flex items-center gap-3">
-                        <span className="flex items-center gap-1 text-[11px] font-bold text-amber-500">
-                            <Star size={12} className={rating && rating.total_ratings > 0 ? "fill-amber-400 text-amber-400" : "text-amber-400"} />
-                            {rating && rating.total_ratings > 0 ? parseFloat(rating.avg_rating).toFixed(1) : "0.0"}
-                        </span>
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                            {rating && rating.total_ratings > 0 ? rating.total_ratings : "0"} {(rating && rating.total_ratings === 1) ? 'rating' : 'ratings'}
-                        </span>
-                        <div className="w-[1px] h-3 bg-slate-200 dark:bg-slate-700" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                    <div className="mt-4 pt-3 border-t border-dashed border-slate-200 dark:border-white/[0.08] flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Store size={12} />
+                        <span className="text-[10px] font-black uppercase tracking-widest mt-0.5">
                             Tap to shop
                         </span>
                     </div>
-
                 </div>
             </Link>
         </motion.div>

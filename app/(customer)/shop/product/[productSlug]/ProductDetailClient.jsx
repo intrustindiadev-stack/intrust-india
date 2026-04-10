@@ -16,6 +16,7 @@ import {
     Zap,
     ArrowLeft,
     Heart,
+    CreditCard,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
@@ -31,6 +32,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const isDark = theme === 'dark';
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [buyNowLoading, setBuyNowLoading] = useState(false);
     const [addedToCart, setAddedToCart] = useState(false);
     const [isWishlisted, setIsWishlisted] = useState(false);
     const [wishlistLoading, setWishlistLoading] = useState(false);
@@ -137,13 +139,49 @@ export default function ProductDetailClient({ product, inventory, customer, reco
             }
 
             setAddedToCart(true);
-            toast.success('Added to cart!');
-            setTimeout(() => { setAddedToCart(false); router.refresh(); }, 1200);
+            toast.success('Added to cart! 🛒');
+            setTimeout(() => { setAddedToCart(false); }, 2000);
         } catch (err) {
             console.error('Add to cart error:', err);
             toast.error('Failed to add to cart');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const buyNow = async () => {
+        if (!customer) {
+            toast.error('Please login to purchase');
+            router.push('/login');
+            return;
+        }
+        setBuyNowLoading(true);
+        try {
+            const { data, error } = await supabase.rpc('add_to_shopping_cart', {
+                p_customer_id: customer.id,
+                p_inventory_id: selectedOffer.is_platform_direct ? null : selectedOffer.id,
+                p_product_id: product.id,
+                p_quantity: quantity,
+                p_is_platform: selectedOffer.is_platform_direct
+            });
+            if (error) throw error;
+            if (data?.message === 'MIXED_SELLER_ERROR') {
+                // Clear cart and add anyway for Buy Now
+                await supabase.from('shopping_cart').delete().eq('customer_id', customer.id);
+                await supabase.rpc('add_to_shopping_cart', {
+                    p_customer_id: customer.id,
+                    p_inventory_id: selectedOffer.is_platform_direct ? null : selectedOffer.id,
+                    p_product_id: product.id,
+                    p_quantity: quantity,
+                    p_is_platform: selectedOffer.is_platform_direct
+                });
+            }
+            router.push('/shop/cart');
+        } catch (err) {
+            console.error('Buy now error:', err);
+            toast.error('Failed to proceed. Try again.');
+        } finally {
+            setBuyNowLoading(false);
         }
     };
 
@@ -376,74 +414,90 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                 </div>
                             )}
 
-                            <p className={`text-[9px] sm:text-[10px] font-bold mt-2 uppercase tracking-widest ${isDark ? 'text-white/15' : 'text-slate-400'}`}>
-                                Inclusive of all taxes
-                            </p>
                         </div>
 
-                        {/* ====== DESKTOP ADD TO CART (hidden on mobile, shown on lg+) ====== */}
-                        <div className="hidden sm:flex items-center gap-3 mb-4">
-                            {/* Quantity */}
-                            <div
-                                className={`flex items-center p-1 rounded-xl flex-shrink-0 ${isDark ? 'bg-white/[0.04]' : 'bg-white shadow-sm'}`}
-                                style={{ border: isDark ? `1px solid ${primaryColor}15` : '1px solid #e2e8f0' }}
-                            >
-                                <button
-                                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                    className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:bg-slate-100'}`}
+                        {/* ====== DESKTOP ADD TO CART + BUY NOW (hidden on mobile) ====== */}
+                        <div className="hidden sm:block mb-4 space-y-3">
+                            {/* Quantity + Add to Cart row */}
+                            <div className="flex items-center gap-3">
+                                {/* Quantity stepper */}
+                                <div
+                                    className={`flex items-center p-1 rounded-xl flex-shrink-0 ${isDark ? 'bg-white/[0.04]' : 'bg-white shadow-sm'}`}
+                                    style={{ border: isDark ? `1px solid ${primaryColor}15` : '1px solid #e2e8f0' }}
                                 >
-                                    <Minus size={16} strokeWidth={3} />
-                                </button>
-                                <span className={`w-10 text-center font-black text-lg ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                                    {quantity}
-                                </span>
-                                <button
-                                    onClick={() => setQuantity(quantity + 1)}
-                                    className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:bg-slate-100'}`}
+                                    <button
+                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:bg-slate-100'}`}
+                                    >
+                                        <Minus size={16} strokeWidth={3} />
+                                    </button>
+                                    <span className={`w-10 text-center font-black text-lg ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                        {quantity}
+                                    </span>
+                                    <button
+                                        onClick={() => setQuantity(quantity + 1)}
+                                        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:bg-slate-100'}`}
+                                    >
+                                        <Plus size={16} strokeWidth={3} />
+                                    </button>
+                                </div>
+
+                                {/* Add to Cart */}
+                                <motion.button
+                                    whileTap={{ scale: 0.97 }}
+                                    whileHover={{ scale: 1.02 }}
+                                    onClick={addToCart}
+                                    disabled={loading || addedToCart}
+                                    className="flex-1 h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2.5 text-white transition-all disabled:opacity-80 overflow-hidden relative"
+                                    style={{
+                                        background: addedToCart
+                                            ? `linear-gradient(135deg, #10b981, #34d399)`
+                                            : `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                                        boxShadow: addedToCart
+                                            ? '0 0 22px rgba(16,185,129,0.45)'
+                                            : `0 8px 30px ${primaryColor}35`
+                                    }}
                                 >
-                                    <Plus size={16} strokeWidth={3} />
-                                </button>
+                                    <AnimatePresence mode="wait">
+                                        {loading ? (
+                                            <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="flex items-center gap-2">
+                                                <Loader2 className="animate-spin" size={20} />
+                                                <span>Adding...</span>
+                                            </motion.div>
+                                        ) : addedToCart ? (
+                                            <motion.div key="success" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ type: 'spring', stiffness: 400 }} className="flex items-center gap-2">
+                                                <motion.div initial={{ rotate: -20, scale: 0.5 }} animate={{ rotate: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 500, delay: 0.05 }}>
+                                                    <CheckCircle2 size={20} strokeWidth={2.5} />
+                                                </motion.div>
+                                                <span>Added to Cart!</span>
+                                            </motion.div>
+                                        ) : (
+                                            <motion.div key="default" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="flex items-center gap-2">
+                                                <ShoppingCart size={18} strokeWidth={2.5} />
+                                                <span>Add to Cart</span>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.button>
                             </div>
 
+                            {/* Buy Now */}
                             <motion.button
-                                whileTap={{ scale: 0.96 }}
-                                onClick={addToCart}
-                                disabled={loading || addedToCart}
-                                className={`flex-1 h-12 rounded-xl font-black text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all disabled:opacity-80 overflow-hidden relative ${
-                                    addedToCart 
-                                        ? 'text-white' 
-                                        : isDark 
-                                            ? 'text-white' 
-                                            : 'text-white hover:brightness-110'
+                                whileTap={{ scale: 0.97 }}
+                                whileHover={{ scale: 1.01 }}
+                                onClick={buyNow}
+                                disabled={buyNowLoading}
+                                className={`w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2.5 transition-all border-2 ${
+                                    isDark
+                                        ? 'bg-white/[0.06] text-white border-white/10 hover:bg-white/[0.1] hover:border-white/20'
+                                        : 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800'
                                 }`}
-                                style={{
-                                    background: addedToCart 
-                                        ? `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` 
-                                        : isDark 
-                                            ? `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
-                                            : primaryColor,
-                                    boxShadow: addedToCart 
-                                        ? `0 0 20px ${primaryColor}60` 
-                                        : `0 8px 30px ${primaryColor}30`
-                                }}
                             >
-                                <AnimatePresence mode="wait">
-                                    {loading ? (
-                                        <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="flex items-center gap-2">
-                                            <Loader2 className="animate-spin" size={20} />
-                                        </motion.div>
-                                    ) : addedToCart ? (
-                                        <motion.div key="success" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="flex items-center gap-2">
-                                            <CheckCircle2 size={20} strokeWidth={2.5} />
-                                            <span>Added to Cart</span>
-                                        </motion.div>
-                                    ) : (
-                                        <motion.div key="default" initial={{ opacity: 0, y: -15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 15 }} className="flex items-center gap-2">
-                                            <ShoppingCart size={18} strokeWidth={2.5} />
-                                            <span>Add to Cart</span>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
+                                {buyNowLoading ? (
+                                    <><Loader2 className="animate-spin" size={18} /><span>Processing...</span></>
+                                ) : (
+                                    <><CreditCard size={18} strokeWidth={2.5} /><span>Buy Now</span></>
+                                )}
                             </motion.button>
                         </div>
 
@@ -603,45 +657,56 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                         </div>
                     </div>
 
+                    {/* Add to Cart */}
                     <motion.button
-                        whileTap={{ scale: 0.96 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={addToCart}
                         disabled={loading || addedToCart}
-                        className={`h-12 px-6 min-w-[150px] rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-80 shrink-0 overflow-hidden relative ${
-                            addedToCart 
-                                ? 'text-white' 
-                                : isDark 
-                                    ? 'text-white' 
-                                    : 'text-white hover:brightness-110'
-                        }`}
+                        className="flex-1 h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-80 relative overflow-hidden text-white"
                         style={{
-                            background: addedToCart 
-                                ? `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` 
-                                : isDark 
-                                    ? `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
-                                    : primaryColor,
-                            boxShadow: addedToCart 
-                                ? `0 0 20px ${primaryColor}60` 
-                                : `0 4px 14px ${primaryColor}30`
+                            background: addedToCart
+                                ? 'linear-gradient(135deg, #10b981, #34d399)'
+                                : `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                            boxShadow: addedToCart
+                                ? '0 0 20px rgba(16,185,129,0.45)'
+                                : `0 4px 14px ${primaryColor}35`
                         }}
                     >
                         <AnimatePresence mode="wait">
                             {loading ? (
-                                <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="flex items-center gap-2">
-                                    <Loader2 className="animate-spin" size={18} />
+                                <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="flex items-center gap-1.5">
+                                    <Loader2 className="animate-spin" size={16} />
                                 </motion.div>
                             ) : addedToCart ? (
-                                <motion.div key="success" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="flex items-center gap-1.5">
+                                <motion.div key="success" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ type: 'spring', stiffness: 400 }} className="flex items-center gap-1.5">
                                     <CheckCircle2 size={16} strokeWidth={2.5} />
-                                    <span>Added</span>
+                                    <span>Added!</span>
                                 </motion.div>
                             ) : (
-                                <motion.div key="default" initial={{ opacity: 0, y: -15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 15 }} className="flex items-center gap-1.5">
+                                <motion.div key="default" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="flex items-center gap-1.5">
                                     <ShoppingCart size={16} strokeWidth={2.5} />
                                     <span>Add to Cart</span>
                                 </motion.div>
                             )}
                         </AnimatePresence>
+                    </motion.button>
+
+                    {/* Buy Now */}
+                    <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={buyNow}
+                        disabled={buyNowLoading}
+                        className={`h-12 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all border-2 shrink-0 ${
+                            isDark
+                                ? 'bg-white/[0.08] text-white border-white/10'
+                                : 'bg-slate-900 text-white border-slate-900'
+                        }`}
+                    >
+                        {buyNowLoading ? (
+                            <Loader2 className="animate-spin" size={15} />
+                        ) : (
+                            <><CreditCard size={15} strokeWidth={2.5} /><span>Buy Now</span></>
+                        )}
                     </motion.button>
                 </div>
             </div>

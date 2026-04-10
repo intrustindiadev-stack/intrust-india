@@ -344,10 +344,10 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
                         <CheckCircle2 size={12} />
                         <span>Ready for next stage</span>
                     </div>
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                         <button
                             onClick={handleDownloadInvoice}
-                            className="flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-gray-300 text-xs font-black transition-all flex items-center justify-center gap-2 active:scale-95"
+                            className="w-full sm:w-auto sm:flex-none px-5 py-3 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-gray-300 text-xs font-black transition-all flex items-center justify-center gap-2 active:scale-95"
                         >
                             <Download size={14} /> PDF INVOICE
                         </button>
@@ -356,7 +356,7 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
                                 onClick={handleMarkNext}
                                 disabled={updatingStatus}
                                 whileTap={{ scale: 0.96 }}
-                                className="flex-1 sm:flex-none px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95"
+                                className="w-full sm:w-auto sm:flex-none px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95"
                             >
                                 {updatingStatus ? <RotateCcw size={14} className="animate-spin" /> : <ArrowUpRight size={14} />}
                                 MARK AS {nextStatus.toUpperCase()}
