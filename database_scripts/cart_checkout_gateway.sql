@@ -74,6 +74,13 @@ BEGIN
 
     v_total_paise := v_total_paise + v_delivery_fee_paise;
 
+    -- 2.5 Cancel previous pending gateway drafts for this user to prevent duplicate order pollution
+    UPDATE public.shopping_order_groups
+    SET status = 'cancelled'
+    WHERE customer_id = p_customer_id 
+      AND status = 'pending' 
+      AND payment_method = 'gateway';
+
     -- 3. CREATE ORDER GROUP
     INSERT INTO public.shopping_order_groups (
         customer_id, 

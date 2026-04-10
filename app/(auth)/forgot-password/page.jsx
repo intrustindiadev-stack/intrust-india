@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { resetPassword } from '@/lib/supabase';
+// resetPassword now calls supabase.auth.resetPasswordForEmail internally
 import { Mail, ArrowRight, Loader2, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';

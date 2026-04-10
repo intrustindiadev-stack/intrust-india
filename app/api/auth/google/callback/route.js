@@ -55,6 +55,7 @@ export async function GET(request) {
 
         const tokenData = await tokenRes.json();
         const idToken = tokenData.id_token;
+        const accessToken = tokenData.access_token;
 
         if (!idToken) {
             console.error('[Google OAuth] No id_token in response');
@@ -77,6 +78,7 @@ export async function GET(request) {
         const { data: authData, error: authError } = await tempSupabase.auth.signInWithIdToken({
             provider: 'google',
             token: idToken,
+            access_token: accessToken,
         });
 
         if (authError) {
@@ -94,29 +96,48 @@ export async function GET(request) {
             return NextResponse.redirect(new URL('/login?error=no_session', appUrl));
         }
 
-        // Upsert Google profile data (avatar, name, email) into user_profiles
-        // This runs every login to keep the picture in sync with Google
+        // Ensure the profile exists and is in sync with the latest Google data.
+        // Uses upsert so newly-created users whose trigger had an exception still get a profile.
         const googlePicture =
             user.user_metadata?.avatar_url ||
             user.user_metadata?.picture ||
             null;
         const googleName = user.user_metadata?.full_name || user.user_metadata?.name || null;
 
-        if (googlePicture || googleName) {
-            const profileUpdate = {};
-            if (googlePicture) profileUpdate.avatar_url = googlePicture;
-            if (googleName) profileUpdate.full_name = googleName;
+        const { error: upsertErr } = await supabaseAdmin
+            .from('user_profiles')
+            .upsert(
+                {
+                    id: user.id,
+                    full_name: googleName || 'Google User',
+                    avatar_url: googlePicture,
+                    email: user.email,
+                    auth_provider: 'google',
+                    role: 'user',
+                    email_verified: true,
+                    email_verified_at: new Date().toISOString(),
+                },
+                {
+                    onConflict: 'id',
+                    ignoreDuplicates: false   // always update on conflict
+                }
+            );
 
-            const { error: upsertErr } = await supabaseAdmin
-                .from('user_profiles')
-                .update(profileUpdate)
-                .eq('id', user.id);
-
-            if (upsertErr) {
-                // Non-fatal — log and continue
-                console.warn('[Google OAuth] Could not update profile picture:', upsertErr.message);
-            }
+        if (upsertErr) {
+            // Non-fatal — log and continue. User is authenticated, profile sync can retry later.
+            console.warn('[Google OAuth] Could not upsert user profile:', upsertErr.message);
         }
+
+        // Ensure a wallet exists for this user — safe to call every login
+        // (ON CONFLICT DO NOTHING) so existing wallets are untouched.
+        const { error: walletErr } = await supabaseAdmin
+            .from('customer_wallets')
+            .upsert({ user_id: user.id }, { onConflict: 'user_id', ignoreDuplicates: true });
+
+        if (walletErr) {
+            console.warn('[Google OAuth] Could not create wallet:', walletErr.message);
+        }
+
 
         // Step 3: Determine the redirect destination BEFORE building the response
         const next = state ? decodeURIComponent(state) : null;

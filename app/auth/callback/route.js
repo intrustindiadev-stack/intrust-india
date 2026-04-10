@@ -60,12 +60,28 @@ export async function GET(request) {
 
     // Check for a custom redirect (e.g. from identity linking on profile page)
     if (next && next.startsWith('/')) {
+        // If the next param points to reset-password, forward the user there
+        if (next === '/reset-password') {
+            return NextResponse.redirect(new URL('/reset-password', origin))
+        }
         const nextUrl = new URL(next, origin)
         // If coming from profile explicitly, append success flag
         if (next === '/profile' || next.startsWith('/profile?')) {
             nextUrl.searchParams.set('linked', 'google')
         }
         return NextResponse.redirect(nextUrl)
+    }
+
+    // Detect fresh email verification: only for native email/password signups.
+    // Google OAuth also sets email_confirmed_at immediately, so we MUST check
+    // the provider — otherwise Google users get wrongly redirected to /login?verified=true.
+    const isEmailProvider = user.app_metadata?.provider === 'email'
+    if (isEmailProvider && user.email && user.email_confirmed_at) {
+        const confirmedAt = new Date(user.email_confirmed_at)
+        const isJustVerified = (Date.now() - confirmedAt.getTime()) < 60_000
+        if (isJustVerified) {
+            return NextResponse.redirect(new URL('/login?verified=true', origin))
+        }
     }
 
     const { data: profile } = await supabase

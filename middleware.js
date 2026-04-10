@@ -11,7 +11,7 @@ export async function middleware(request) {
     );
 
     // Skip auth check for public routes
-    const publicPaths = ['/login', '/signup', '/about', '/contact', '/'];
+    const publicPaths = ['/login', '/signup', '/about', '/contact', '/', '/forgot-password', '/reset-password', '/verify-email'];
     const isPublicPath = publicPaths.some(path =>
         request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith('/_next')
     );
@@ -28,9 +28,9 @@ export async function middleware(request) {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-current-path', request.nextUrl.pathname);
 
-    if (isPublicPath || !hasAuthCookie) {
-        // Fast path: no auth needed or no auth cookie
-        console.log('[MIDDLEWARE:FAST_PATH]', { requestId, reason: isPublicPath ? 'public' : 'no-auth' });
+    if (!hasAuthCookie) {
+        // Fast path: no auth cookie – skip expensive getUser()
+        console.log('[MIDDLEWARE:FAST_PATH]', { requestId, reason: 'no-auth' });
         return NextResponse.next({
             request: { headers: requestHeaders }
         });
@@ -108,9 +108,9 @@ export async function middleware(request) {
             return redirectResponse
         }
 
-        // Role-based access: if user is on customer/merchant routes, check if they are admin
-        // Admins should ONLY access /admin – redirect them away from everything else
-        if (user && (isProtectedRoute || isMerchantRoute)) {
+        // Role-based access: admins should ONLY access /admin
+        // Redirect them away from ALL non-admin paths (including home, public pages, customer/merchant routes)
+        if (user && !isAdminRoute) {
             try {
                 const { data: profile } = await supabase
                     .from('user_profiles')

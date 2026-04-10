@@ -119,36 +119,54 @@ export default async function handler(req, res) {
                         process.env.SUPABASE_SERVICE_ROLE_KEY
                     );
 
-                    const { data: updatedCoupon, error: updateCouponError } = await supabaseAdmin
-                        .from('coupons')
-                        .update({
-                            status: 'sold',
-                            purchased_by: currentTxn.user_id,
-                            purchased_at: new Date().toISOString()
-                        })
-                        .eq('id', couponId)
-                        .eq('status', 'available')
+                    // Check if an order already exists for this coupon (idempotency guard)
+                    const { data: existingOrder } = await supabaseAdmin
+                        .from('orders')
                         .select('id')
-                        .single();
+                        .eq('giftcard_id', couponId)
+                        .maybeSingle();
 
-                    if (!updateCouponError && updatedCoupon) {
-                        const amountPaise = Math.round(parseFloat(amount || currentTxn.amount) * 100);
-                        const { error: orderError } = await supabaseAdmin.from('orders').insert({
-                            user_id: currentTxn.user_id,
-                            giftcard_id: couponId,
-                            amount: amountPaise,
-                            payment_status: 'paid',
-                            created_at: new Date().toISOString()
-                        });
+                    if (existingOrder) {
+                        console.log(`[Webhook] Order already exists for coupon ${couponId} — skipping duplicate creation.`);
+                    } else {
+                        const { data: updatedCoupon, error: updateCouponError } = await supabaseAdmin
+                            .from('coupons')
+                            .update({
+                                status: 'sold',
+                                purchased_by: currentTxn.user_id,
+                                purchased_at: new Date().toISOString()
+                            })
+                            .eq('id', couponId)
+                            .eq('status', 'available')
+                            .select('id')
+                            .single();
 
-                        if (orderError) {
-                            // ROLLBACK: Revert coupon if order insert failed
-                            console.error('[Webhook] Order insert failed, rolling back coupon:', orderError.message);
-                            await supabaseAdmin
-                                .from('coupons')
-                                .update({ status: 'available', purchased_by: null, purchased_at: null })
-                                .eq('id', couponId)
-                                .eq('purchased_by', currentTxn.user_id);
+                        if (!updateCouponError && updatedCoupon) {
+                            const amountPaise = Math.round(parseFloat(amount || currentTxn.amount) * 100);
+                            const { error: orderError } = await supabaseAdmin.from('orders').insert({
+                                user_id: currentTxn.user_id,
+                                giftcard_id: couponId,
+                                amount: amountPaise,
+                                payment_status: 'paid',
+                                created_at: new Date().toISOString()
+                            });
+
+                            if (orderError) {
+                                // Unique constraint violation (23505) means callback already created the order — safe to ignore
+                                if (orderError.code === '23505') {
+                                    console.log(`[Webhook] Order for coupon ${couponId} already created by callback — idempotent no-op.`);
+                                } else {
+                                    // Genuine insert failure — rollback coupon status
+                                    console.error('[Webhook] Order insert failed, rolling back coupon:', orderError.message);
+                                    await supabaseAdmin
+                                        .from('coupons')
+                                        .update({ status: 'available', purchased_by: null, purchased_at: null })
+                                        .eq('id', couponId)
+                                        .eq('purchased_by', currentTxn.user_id);
+                                }
+                            } else {
+                                console.log(`[Webhook] Gift card order created for coupon ${couponId}`);
+                            }
                         }
                     }
                 }

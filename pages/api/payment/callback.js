@@ -1,4 +1,4 @@
-﻿import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '../../../lib/supabase/queries';
+import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '../../../lib/supabase/queries';
 import { CustomerWalletService } from '../../../lib/wallet/customerWalletService';
 import { decrypt } from '../../../lib/sabpaisa/encrypt';
 import { mapStatusToInternal } from '../../../lib/sabpaisa/utils';
@@ -185,13 +185,18 @@ export default async function handler(req, res) {
                             });
 
                         if (orderError) {
-                            // ROLLBACK: If order insert fails, revert coupon status
-                            console.error('[Callback] Order insert failed, rolling back coupon:', orderError.message);
-                            await supabaseAdmin
-                                .from('coupons')
-                                .update({ status: 'available', purchased_by: null, purchased_at: null })
-                                .eq('id', couponId)
-                                .eq('purchased_by', existingTxn.user_id);
+                            // Unique constraint violation (23505): webhook already created the order — safe no-op
+                            if (orderError.code === '23505') {
+                                console.log(`[Callback] Order for coupon ${couponId} already created by webhook — idempotent no-op.`);
+                            } else {
+                                // Genuine insert failure — rollback coupon status
+                                console.error('[Callback] Order insert failed, rolling back coupon:', orderError.message);
+                                await supabaseAdmin
+                                    .from('coupons')
+                                    .update({ status: 'available', purchased_by: null, purchased_at: null })
+                                    .eq('id', couponId)
+                                    .eq('purchased_by', existingTxn.user_id);
+                            }
                         } else {
                             console.log(`[Callback] Gift card order created for coupon ${couponId}`);
                         }
