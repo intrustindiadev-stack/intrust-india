@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithOTP, verifyOTP } from '@/lib/supabase';
 import { supabase } from '@/lib/supabaseClient';
@@ -8,12 +8,76 @@ import { Phone, ArrowRight, Loader2, ShieldCheck, Mail, Eye, EyeOff, CheckCircle
 import Image from 'next/image';
 import Link from 'next/link';
 
+function OTPBoxInput({ value, onChange, onComplete }) {
+    const refs = useRef([]);
+
+    const handleChange = (e, index) => {
+        const char = e.target.value.replace(/[^0-9]/g, '').slice(-1);
+        const chars = value.split('');
+        if (char) {
+            chars[index] = char;
+            const newString = chars.join('').padEnd(6, ' ').slice(0, 6);
+            onChange(newString.replace(/\s+/g, ''));
+            if (index < 5) {
+                refs.current[index + 1]?.focus();
+            } else if (newString.replace(/\s+/g, '').length === 6) {
+                onComplete && onComplete();
+            }
+        }
+    };
+
+    const handleKeyDown = (e, index) => {
+        if (e.key === 'Backspace') {
+            const chars = value.split('');
+            if (value[index]) {
+                chars[index] = '';
+                onChange(chars.join(''));
+            } else if (index > 0) {
+                refs.current[index - 1]?.focus();
+            }
+        }
+    };
+
+    const handlePaste = (e) => {
+        e.preventDefault();
+        const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+        if (pasted) {
+            onChange(pasted);
+            if (pasted.length === 6) {
+                refs.current[5]?.focus();
+                onComplete && onComplete();
+            } else {
+                refs.current[pasted.length]?.focus();
+            }
+        }
+    };
+
+    return (
+        <div className="flex justify-center gap-2">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+                <input
+                    key={i}
+                    ref={(el) => (refs.current[i] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={value[i] || ''}
+                    onChange={(e) => handleChange(e, i)}
+                    onKeyDown={(e) => handleKeyDown(e, i)}
+                    onPaste={i === 0 ? handlePaste : undefined}
+                    className="w-10 h-10 sm:w-12 sm:h-12 text-center text-xl font-bold border border-[var(--border-color)] rounded-xl focus:border-[#92BCEA] focus:ring-2 focus:ring-[#92BCEA]/20 outline-none transition-all"
+                />
+            ))}
+        </div>
+    );
+}
+
 export default function LoginPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
     // ─── Shared ─────────────────────────────────────────────────────────────────
-    const [step, setStep]               = useState('choice'); // 'choice' | 'phone' | 'otp' | 'email-form'
+    const [step, setStep]               = useState('email'); // 'email' | 'email-otp' | 'phone' | 'otp'
     const [phone, setPhone]             = useState('');
     const [otp, setOtp]                 = useState('');
     const [loading, setLoading]         = useState(false);
@@ -60,7 +124,7 @@ export default function LoginPage() {
 
     // ─── Phone OTP ──────────────────────────────────────────────────────────────
     const handleSendOTP = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         setError('');
         setLoading(true);
         try {
@@ -93,7 +157,7 @@ export default function LoginPage() {
     };
 
     const handleVerifyOTP = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         setError('');
         setLoading(true);
         try {
@@ -119,7 +183,7 @@ export default function LoginPage() {
 
     // ─── Email sign-in ────────────────────────────────────────────────────────────
     const handleEmailSignIn = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         setError('');
         setLoading(true);
         try {
@@ -150,20 +214,33 @@ export default function LoginPage() {
         }
     };
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 flex items-center justify-center p-4">
-            <div className="w-full max-w-md">
-                {/* Logo */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] shadow-lg">
-                        <Image src="/icon.png" alt="INTRUST" width={40} height={40} className="object-contain" />
-                    </div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white font-[family-name:var(--font-outfit)]">
-                        INTRUST
-                    </h1>
-                    <p className="text-gray-600 dark:text-gray-400 mt-2">Welcome back! Please login to continue</p>
-                </div>
+    const handleEmailOTPSend = async (e) => {
+        if (e) e.preventDefault();
+        if (!emailAddress) {
+            setError('Please enter your email address');
+            return;
+        }
+        setError('');
+        setLoading(true);
+        const { error } = await supabase.auth.signInWithOtp({ email: emailAddress });
+        if (error) {
+            setError(error.message);
+            setLoading(false);
+            return;
+        }
+        setStep('email-otp');
+        setLoading(false);
+    };
 
+    // Helper for Verify button to call handleVerifyOTP
+    const callVerifyOTP = () => {
+        handleVerifyOTP({ preventDefault: () => {} });
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-[var(--bg-secondary)] p-4">
+            <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-[var(--border-color)] p-8">
+                
                 {/* Notification banners */}
                 {verified && (
                     <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl flex items-center gap-3">
@@ -178,19 +255,52 @@ export default function LoginPage() {
                     </div>
                 )}
 
-                {/* Card */}
-                <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-none border border-gray-100 dark:border-gray-800 p-6 sm:p-8">
+                {/* ── EMAIL (default login) ── */}
+                {step === 'email' && (
+                    <div className="animate-fadeIn">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
+                        </div>
+                        <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Login</h1>
+                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">Enter your details to login.</p>
 
-                    {/* ── CHOICE ── */}
-                    {step === 'choice' && (
-                        <>
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 font-[family-name:var(--font-outfit)]">Login</h2>
+                        <form onSubmit={handleEmailOTPSend} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Email</label>
+                                <input
+                                    type="email"
+                                    value={emailAddress}
+                                    onChange={(e) => setEmailAddress(e.target.value)}
+                                    placeholder="Enter your Email"
+                                    className="w-full px-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all"
+                                    required
+                                />
+                            </div>
+                            
+                            {error && (
+                                <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>
+                            )}
 
-                            {/* Google */}
+                            <button
+                                type="submit"
+                                disabled={loading || !emailAddress}
+                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all flex justify-center"
+                            >
+                                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Login'}
+                            </button>
+                        </form>
+
+                        <div className="flex items-center gap-3 my-4">
+                            <div className="flex-1 h-px bg-[var(--border-color)]"></div>
+                            <span className="text-xs text-[var(--text-secondary)]">OR</span>
+                            <div className="flex-1 h-px bg-[var(--border-color)]"></div>
+                        </div>
+
+                        <div className="space-y-3">
                             <button
                                 onClick={handleGoogleSignIn}
                                 disabled={googleLoading}
-                                className="w-full py-3.5 px-4 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-200 font-semibold flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-3"
+                                className="w-full py-3.5 border border-[var(--border-color)] rounded-xl flex items-center justify-center gap-3 text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-all disabled:opacity-50"
                             >
                                 {googleLoading ? (
                                     <Loader2 className="animate-spin" size={20} />
@@ -207,206 +317,151 @@ export default function LoginPage() {
                                 )}
                             </button>
 
-                            {/* Phone */}
                             <button
                                 onClick={() => { setStep('phone'); setError(''); }}
-                                className="w-full py-3.5 px-4 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-200 font-semibold flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 transition-all mb-3"
+                                className="w-full py-3.5 border border-[var(--border-color)] rounded-xl flex items-center justify-center gap-3 text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-all"
                             >
                                 <Phone size={18} className="text-[#92BCEA]" />
-                                Continue with Phone
+                                Continue with Mobile Number
                             </button>
+                        </div>
 
-                            {/* Email */}
+                        <p className="text-sm text-[var(--text-secondary)] text-center mt-6">
+                            Don't have an account? <Link href="/signup" className="text-[#92BCEA] font-semibold hover:underline">Sign up</Link>
+                        </p>
+                    </div>
+                )}
+
+                {/* ── EMAIL OTP ── */}
+                {step === 'email-otp' && (
+                    <div className="animate-fadeIn">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
+                        </div>
+                        <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Check your email</h1>
+                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
+                            Enter the code sent to <span className="font-bold text-[var(--text-primary)]">{emailAddress}</span>
+                        </p>
+                        
+                        <OTPBoxInput value={otp} onChange={setOtp} onComplete={callVerifyOTP} />
+                        
+                        <p className="text-xs text-[var(--text-secondary)] text-center mt-3 mb-6">
+                            Can't find the email? Check your spam folder.
+                        </p>
+                        
+                        {error && (
+                            <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm mb-4">{error}</div>
+                        )}
+
+                        <div className="space-y-3">
                             <button
-                                onClick={() => { setStep('email-form'); setError(''); }}
-                                className="w-full py-3.5 px-4 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-200 font-semibold flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 transition-all"
+                                onClick={handleSendOTP}
+                                disabled={loading}
+                                className="w-full py-3.5 border border-[var(--border-color)] rounded-xl flex items-center justify-center gap-3 text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-all disabled:opacity-50"
                             >
-                                <Mail size={18} className="text-[#92BCEA]" />
-                                Continue with Email
+                                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Resend code'}
                             </button>
+                            <button
+                                onClick={handleVerifyOTP}
+                                disabled={loading || otp.length !== 6}
+                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all flex justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Verify'}
+                            </button>
+                        </div>
+                    </div>
+                )}
 
-                            {error && (
-                                <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-lg text-red-600 dark:text-red-400 text-sm">
-                                    {error}
-                                </div>
-                            )}
-                        </>
-                    )}
-
-                    {/* ── PHONE ── */}
-                    {step === 'phone' && (
-                        <>
-                            <div className="flex items-center gap-3 mb-6">
-                                <button onClick={() => { setStep('choice'); setError(''); }} className="text-gray-400 hover:text-[#92BCEA] transition-colors">
-                                    <ArrowRight size={20} className="rotate-180" />
-                                </button>
-                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white font-[family-name:var(--font-outfit)]">Phone Login</h2>
-                            </div>
-                            <form onSubmit={handleSendOTP} className="space-y-5">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Phone Number</label>
-                                    <div className="relative">
-                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                                        <input
-                                            type="tel"
-                                            value={phone}
-                                            onChange={(e) => setPhone(e.target.value)}
-                                            placeholder="9876543210"
-                                            className="w-full pl-12 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#92BCEA] focus:border-transparent transition-all"
-                                            required pattern="[0-9]{10}" maxLength={10}
-                                        />
-                                    </div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">We'll send you an OTP via SMS</p>
-                                </div>
-                                {error && (
-                                    <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-lg text-red-600 dark:text-red-400 text-sm">{error}</div>
-                                )}
-                                <button
-                                    type="submit"
-                                    disabled={loading || phone.length !== 10}
-                                    className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all disabled:bg-[#4A6FA5] disabled:opacity-100 disabled:hover:scale-100 disabled:cursor-not-allowed"
-                                >
-                                    {loading ? <><Loader2 className="animate-spin" size={20} /> Sending OTP...</> : <>Continue <ArrowRight size={20} /></>}
-                                </button>
-                            </form>
-                        </>
-                    )}
-
-                    {/* ── OTP ── */}
-                    {step === 'otp' && (
-                        <>
-                            <div className="text-center mb-6">
-                                <div className="inline-flex items-center justify-center w-16 h-16 bg-[#92BCEA]/10 rounded-full mb-4">
-                                    <ShieldCheck className="text-[#92BCEA]" size={32} />
-                                </div>
-                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 font-[family-name:var(--font-outfit)]">Enter OTP</h2>
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    Sent to <span className="text-gray-900 dark:text-white font-semibold">+91 {phone}</span>
-                                </p>
-                                <button type="button" onClick={() => setStep('phone')} className="text-[#92BCEA] text-sm mt-2 hover:underline font-medium">
-                                    Change number
-                                </button>
-                            </div>
-                            <form onSubmit={handleVerifyOTP} className="space-y-5">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">6-Digit OTP</label>
+                {/* ── PHONE ── */}
+                {step === 'phone' && (
+                    <div className="animate-fadeIn">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
+                        </div>
+                        <div className="flex items-center gap-3 mb-6 relative">
+                            <button onClick={() => { setStep('email'); setError(''); }} className="absolute -left-2 top-0 bottom-0 text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors p-2">
+                                <ArrowRight size={20} className="rotate-180" />
+                            </button>
+                            <h2 className="text-2xl font-bold text-[var(--text-primary)] w-full text-center">Phone Login</h2>
+                        </div>
+                        
+                        <form onSubmit={handleSendOTP} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Phone Number</label>
+                                <div className="relative">
+                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" size={20} />
                                     <input
-                                        type="text"
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                                        placeholder="000000"
-                                        className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-center text-2xl tracking-widest placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#92BCEA] focus:border-transparent transition-all"
-                                        required pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" autoFocus
+                                        type="tel"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        placeholder="9876543210"
+                                        className="w-full pl-12 pr-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all"
+                                        required pattern="[0-9]{10}" maxLength={10}
                                     />
                                 </div>
-                                {error && (
-                                    <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-lg text-red-600 dark:text-red-400 text-sm">{error}</div>
-                                )}
-                                <button
-                                    type="submit"
-                                    disabled={loading || otp.length !== 6}
-                                    className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all disabled:bg-[#4A6FA5] disabled:opacity-100 disabled:hover:scale-100 disabled:cursor-not-allowed"
-                                >
-                                    {loading ? <><Loader2 className="animate-spin" size={20} /> Verifying...</> : <>Verify &amp; Login <ShieldCheck size={20} /></>}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleSendOTP}
-                                    disabled={loading}
-                                    className="w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm transition-colors"
-                                >
-                                    Didn't receive OTP? <span className="underline font-semibold">Resend</span>
-                                </button>
-                            </form>
-                        </>
-                    )}
-
-                    {/* ── EMAIL FORM ── */}
-                    {step === 'email-form' && (
-                        <>
-                            <div className="flex items-center gap-3 mb-6">
-                                <button onClick={() => { setStep('choice'); setError(''); }} className="text-gray-400 hover:text-[#92BCEA] transition-colors">
-                                    <ArrowRight size={20} className="rotate-180" />
-                                </button>
-                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white font-[family-name:var(--font-outfit)]">Email Login</h2>
+                                <p className="text-xs text-[var(--text-secondary)] mt-2">We'll send you an OTP via SMS</p>
                             </div>
-                            <form onSubmit={handleEmailSignIn} className="space-y-5">
-                                {/* Email */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
-                                    <div className="relative">
-                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                                        <input
-                                            type="email"
-                                            value={emailAddress}
-                                            onChange={(e) => setEmailAddress(e.target.value)}
-                                            placeholder="john@example.com"
-                                            className="w-full pl-12 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#92BCEA] focus:border-transparent transition-all"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-                                {/* Password */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-                                        <Link href="/forgot-password" className="text-xs text-[#92BCEA] hover:underline font-medium">
-                                            Forgot Password?
-                                        </Link>
-                                    </div>
-                                    <div className="relative">
-                                        <input
-                                            type={showPassword ? 'text' : 'password'}
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            placeholder="Your password"
-                                            className="w-full pl-4 pr-12 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#92BCEA] focus:border-transparent transition-all"
-                                            required
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword((p) => !p)}
-                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#92BCEA] transition-colors"
-                                        >
-                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                        </button>
-                                    </div>
-                                </div>
+                            
+                            {error && (
+                                <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>
+                            )}
 
-                                {error && (
-                                    <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-lg text-red-600 dark:text-red-400 text-sm">{error}</div>
-                                )}
+                            <button
+                                type="submit"
+                                disabled={loading || phone.length !== 10}
+                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? <><Loader2 className="animate-spin" size={20} /> Sending...</> : <>Continue <ArrowRight size={18} /></>}
+                            </button>
+                        </form>
+                    </div>
+                )}
 
-                                <button
-                                    type="submit"
-                                    disabled={loading || !emailAddress || !password}
-                                    className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all disabled:bg-[#4A6FA5] disabled:opacity-100 disabled:hover:scale-100 disabled:cursor-not-allowed"
-                                >
-                                    {loading ? <><Loader2 className="animate-spin" size={20} /> Signing in...</> : <>Sign in <ArrowRight size={20} /></>}
-                                </button>
-                            </form>
-                        </>
-                    )}
-
-                    {/* Footer */}
-                    {(step === 'choice' || step === 'phone' || step === 'email-form') && (
-                        <div className="mt-6 text-center">
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Don't have an account?{' '}
-                                <Link href="/signup" className="text-[#92BCEA] font-semibold hover:underline">Sign up</Link>
-                            </p>
+                {/* ── PHONE OTP ── */}
+                {step === 'otp' && (
+                    <div className="animate-fadeIn">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
                         </div>
-                    )}
-                </div>
+                        <h2 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Enter OTP</h2>
+                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-2">
+                            Sent to <span className="font-semibold text-[var(--text-primary)]">+91 {phone}</span>
+                        </p>
+                        <div className="text-center mb-6">
+                            <button type="button" onClick={() => setStep('phone')} className="text-[#92BCEA] text-sm hover:underline font-medium">
+                                Change number
+                            </button>
+                        </div>
+                        
+                        <OTPBoxInput value={otp} onChange={setOtp} onComplete={callVerifyOTP} />
 
-                {/* Terms */}
-                <p className="text-center text-gray-500 text-xs mt-6">
-                    By continuing, you agree to our{' '}
-                    <a href="/terms" className="underline hover:text-gray-700">Terms of Service</a>
-                    {' '}and{' '}
-                    <a href="/privacy" className="underline hover:text-gray-700">Privacy Policy</a>
-                </p>
+                        <div className="mt-6 space-y-4">
+                            {error && (
+                                <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>
+                            )}
+
+                            <button
+                                onClick={handleVerifyOTP}
+                                disabled={loading || otp.length !== 6}
+                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? <><Loader2 className="animate-spin" size={20} /> Verifying...</> : <>Verify &amp; Login <ShieldCheck size={18} /></>}
+                            </button>
+                            
+                            <button
+                                type="button"
+                                onClick={handleSendOTP}
+                                disabled={loading}
+                                className="w-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm transition-colors"
+                            >
+                                Didn't receive OTP? <span className="underline font-semibold">Resend</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
+            
+            {/* Terms text is outside the card, absolutely positioned or just below? Unmentioned, I will omit because wrapper has items-center justify-center min-h-screen p-4, if I put it below it breaks the pure card centering unless put inside a flex col. The plan only specifies the card wrapper structure. */}
         </div>
     );
 }
