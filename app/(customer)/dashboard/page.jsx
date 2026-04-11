@@ -29,6 +29,8 @@ import ReferralGenzSection from '@/components/customer/dashboard/ReferralGenzSec
 import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 import DisclaimerNote from '@/components/customer/dashboard/DisclaimerNote';
 import AdvertisementModal from '@/components/home/AdvertisementModal';
+import KYCPopup from '@/components/kyc/KYCPopup';
+import { useKYCPopup } from '@/hooks/useKYCPopup';
 
 const OpportunitiesSection = dynamic(() => import('@/components/customer/OpportunitiesSection'), { ssr: false });
 const MerchantOpportunityBanner = dynamic(() => import('@/components/customer/MerchantOpportunityBanner'), { ssr: false });
@@ -93,6 +95,11 @@ export default function CustomerDashboardPage() {
     const [showPackages, setShowPackages] = useState(false);
     const [timeLeft, setTimeLeft] = useState(null);
     const [walletConfirmPkg, setWalletConfirmPkg] = useState(null);
+
+    const { isOpen: kycPopupOpen, closeKYC } = useKYCPopup({
+        kycStatus: userData.kycStatus,
+        enabled: !loading && !!user
+    });
 
     // Countdown logic
     useEffect(() => {
@@ -455,6 +462,7 @@ export default function CustomerDashboardPage() {
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)] flex flex-col">
             <AdvertisementModal />
+            <KYCPopup isOpen={kycPopupOpen} onClose={closeKYC} />
             <Navbar />
 
             {!userData.completedOnboarding && user && (

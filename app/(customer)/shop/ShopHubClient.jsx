@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 import HeroIllustrativeAd from '@/components/customer/shop/HeroIllustrativeAd';
 import MerchantCardSkeleton from '@/components/customer/shop/MerchantCardSkeleton';
+import RatingStars from '@/components/ui/RatingStars';
 
 // ── Accent palette ──────────────────────────────────────────────────────────
 const ACCENTS = [
@@ -188,13 +189,9 @@ function MerchantCard({ merchant, idx, rating }) {
                                 {merchant.business_name}
                             </h3>
                             <div className="flex flex-wrap items-center gap-2 mt-2">
-                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-200 dark:border-amber-500/20 text-[10px] font-bold">
-                                    <Star size={10} className="fill-amber-500" />
-                                    {rating && rating.total_ratings > 0 ? parseFloat(rating.avg_rating).toFixed(1) : "New"}
-                                </span>
-                                {(rating && rating.total_ratings > 0) && (
-                                    <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">({rating.total_ratings})</span>
-                                )}
+                                <div className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-lg px-2 py-1 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none flex items-center">
+                                    <RatingStars rating={rating?.avg_rating || 0} totalRatings={rating?.total_ratings || 0} size={10} />
+                                </div>
                                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-700 text-[10px] font-bold">
                                     <MapPin size={10} className="shrink-0" />
                                     <span className="truncate max-w-[80px] sm:max-w-[100px]">{addressLine}</span>

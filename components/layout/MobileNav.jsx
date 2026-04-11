@@ -13,14 +13,14 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
 
     // Menu Item Variants for Staggered Animation
     const itemVariants = {
-        hidden: { opacity: 0, x: 20 },
+        hidden: { opacity: 0, x: 10 },
         visible: (i) => ({
             opacity: 1,
             x: 0,
             transition: {
-                delay: 0.05 + i * 0.05,
-                duration: 0.3,
-                ease: [0.22, 1, 0.36, 1]
+                delay: 0.03 + i * 0.03,
+                duration: 0.2,
+                ease: 'easeOut'
             }
         })
     };
@@ -36,7 +36,7 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-[#171A21]/60 dark:bg-black/60 backdrop-blur-sm z-[998] lg:hidden"
+                        className="fixed inset-0 bg-black/50 z-[998] lg:hidden"
                     />
 
                     {/* Menu Panel - Slide from Right */}
@@ -45,13 +45,14 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{
-                            duration: 0.5,
-                            ease: [0.32, 0.725, 0.32, 1] // "Ease out cubic" - smooth & premium
+                            duration: 0.35,
+                            ease: [0.32, 0.725, 0.32, 1] // Snappier & tight
                         }}
+                        style={{ willChange: "transform" }}
                         className="fixed top-0 right-0 bottom-0 w-[85%] max-w-sm bg-white dark:bg-gray-900 z-[999] lg:hidden overflow-y-auto shadow-2xl flex flex-col"
                     >
                         {/* Header */}
-                        <div className="sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 p-5 flex items-center justify-between z-10 shrink-0">
+                        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 p-5 flex items-center justify-between z-10 shrink-0">
                             <div className="flex items-center gap-2.5">
                                 <div className="relative w-8 h-8">
                                     <Image

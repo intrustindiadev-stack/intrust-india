@@ -12,6 +12,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCardSkeleton from '@/components/customer/shop/ProductCardSkeleton';
+import MerchantProfileCard from '@/components/customer/shop/MerchantProfileCard';
 
 export default function StorefrontV2Client({ merchant, initialInventory, customer }) {
     const router = useRouter();
@@ -282,43 +283,12 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                             <ArrowLeft size={20} />
                         </button>
 
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-black overflow-hidden bg-blue-500 shrink-0 shadow-sm border-2 border-white dark:border-white/10">
-                            {avatarUrl ? (
-                                <img src={avatarUrl} alt={merchant?.business_name} loading="lazy" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                            ) : (
-                                <span>{merchant?.business_name?.substring(0, 2).toUpperCase()}</span>
-                            )}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                            <h1 className={`text-lg md:text-xl font-black capitalize leading-tight truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                                {merchant?.business_name}
-                            </h1>
-                            <div className="flex items-center gap-2 mt-1">
-                                {merchant?.rating && (
-                                   <span className="flex items-center gap-0.5 text-[10px] font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">
-                                       <Star size={10} className="fill-amber-500" />
-                                       {parseFloat(merchant.rating.avg_rating).toFixed(1)} ({merchant.rating.total_ratings})
-                                   </span>
-                                )}
-                                {merchant?.business_address && (
-                                   <span className="flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[120px]">
-                                       <MapPin size={10} className="shrink-0" />
-                                       <span className="truncate">{merchant.business_address.split(',')[0]}</span>
-                                   </span>
-                                )}
-                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] truncate hidden sm:inline border-l pl-2 ml-1" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', color: primaryColor }}>
-                                    {initialInventory.length} Items Available
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Search - Desktop */}
-                        <div className="flex-1 max-w-sm hidden sm:block relative">
+                        {/* Search - Desktop AND Mobile inline for sticky bar */}
+                        <div className="flex-1 w-full relative">
                             <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/40' : 'text-slate-400'}`} />
                             <input
                                 type="text"
-                                placeholder={`Search store...`}
+                                placeholder={`Search for items in ${merchant?.business_name}...`}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className={`w-full pl-10 pr-4 py-2 md:py-2.5 rounded-full text-sm font-medium outline-none transition-all border ${
@@ -330,23 +300,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                         </div>
                     </div>
 
-                    {/* Mobile Search */}
-                    <div className="px-4 pb-3 sm:hidden">
-                        <div className="relative">
-                            <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/40' : 'text-slate-400'}`} />
-                            <input
-                                type="text"
-                                placeholder={`Search store...`}
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className={`w-full pl-10 pr-4 py-2 rounded-full text-sm font-medium outline-none transition-all border ${
-                                    isDark 
-                                        ? 'bg-[#0a0c14]/50 text-white placeholder:text-white/30 border-white/[0.08] focus:bg-[#0a0c14] focus:border-white/20' 
-                                        : 'bg-white/50 text-slate-900 placeholder:text-slate-400 border-slate-200 hover:border-slate-300 hover:bg-white focus:border-blue-500 focus:bg-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]'
-                                    }`}
-                            />
-                        </div>
-                    </div>
+
 
                     {/* Animated Subcategory Pills */}
                     {merchantCategories.length > 1 && (
@@ -382,14 +336,20 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                 </header>
             </div>
 
-            {/* ====== AD BANNER ====== */}
-            <div className="max-w-7xl mx-auto w-full relative z-10 pt-2 -mb-2">
-                <AdBannerCarousel />
-            </div>
-
-            {/* ====== PRODUCT GRID ====== */}
+            {/* MAIN CONTENT AREA */}
             <main className="w-full px-2 sm:px-4 md:px-6 flex-1 py-4 md:py-6 relative z-10">
                 <div className="max-w-7xl mx-auto pb-32">
+                    
+                    {/* AD BANNER */}
+                    <div className="w-full relative z-10 mb-4">
+                        <AdBannerCarousel />
+                    </div>
+
+                    {/* MERCHANT PROFILE HEADER (Mobile-First) */}
+                    <MerchantProfileCard 
+                        merchant={merchant} 
+                        totalItems={initialInventory.length} 
+                    />
                     {isLoading ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
                             {Array.from({ length: 10 }).map((_, i) => (
