@@ -11,7 +11,7 @@ export async function middleware(request) {
     );
 
     // Skip auth check for public routes
-    const publicPaths = ['/login', '/signup', '/about', '/contact', '/', '/forgot-password', '/reset-password', '/verify-email'];
+    const publicPaths = ['/login', '/signup', '/about', '/contact', '/', '/forgot-password', '/reset-password', '/verify-email', '/verified'];
     const isPublicPath = publicPaths.some(path =>
         request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith('/_next')
     );

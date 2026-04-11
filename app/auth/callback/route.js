@@ -80,7 +80,7 @@ export async function GET(request) {
         const confirmedAt = new Date(user.email_confirmed_at)
         const isJustVerified = (Date.now() - confirmedAt.getTime()) < 60_000
         if (isJustVerified) {
-            return NextResponse.redirect(new URL('/login?verified=true', origin))
+            return NextResponse.redirect(new URL('/verified', origin))
         }
     }
 

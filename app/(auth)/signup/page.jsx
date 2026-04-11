@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithOTP, verifyOTP } from '@/lib/supabase';
 import { supabase } from '@/lib/supabaseClient';
-import { Phone, ArrowRight, Loader2, ShieldCheck, User, Sparkles, Mail, CheckCircle } from 'lucide-react';
+import { Phone, ArrowRight, Loader2, ShieldCheck, User, Sparkles, Mail, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -106,16 +106,15 @@ export default function SignupPage() {
         setError('');
 
         if (name.trim().length < 2) { setError('Please enter your full name.'); return; }
+        if (!password || password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+        if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
 
         setLoading(true);
         try {
-            // Generate dummy secure password to satisfy backend since fields are removed from UI
-            const dummyPassword = password || Math.random().toString(36).slice(-10) + 'A1!';
-            
             const res = await fetch('/api/auth/email/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: emailAddress, password: dummyPassword, full_name: name })
+                body: JSON.stringify({ email: emailAddress, password, full_name: name })
             });
             const data = await res.json();
 
@@ -204,16 +203,59 @@ export default function SignupPage() {
                                 />
                             </div>
 
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Password</label>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Min. 8 characters"
+                                        className="w-full px-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all pr-12"
+                                        required
+                                        minLength={8}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Confirm Password</label>
+                                <div className="relative">
+                                    <input
+                                        type={showConfirm ? 'text' : 'password'}
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        placeholder="Re-enter your password"
+                                        className="w-full px-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all pr-12"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirm(!showConfirm)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                    >
+                                        {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+
                             {error && (
                                 <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>
                             )}
 
                             <button
                                 type="submit"
-                                disabled={loading || !name.trim() || !emailAddress}
+                                disabled={loading || !name.trim() || !emailAddress || !password || !confirmPassword}
                                 className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all flex justify-center"
                             >
-                                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Send email code'}
+                                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Create Account'}
                             </button>
                         </form>
 
@@ -448,24 +490,43 @@ export default function SignupPage() {
                             <ShieldCheck className="text-yellow-600" size={32} />
                         </div>
                         <h2 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Account Already Exists</h2>
-                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
-                            This email is already linked to a <span className="font-bold text-[var(--text-primary)]">{providerLabel[conflictProvider] || conflictProvider}</span> account.
-                            <br /><br />
-                            Would you like to add email &amp; password login to your existing account?
-                        </p>
-                        <p className="text-xs text-[var(--text-secondary)] text-center mb-6">
-                            You'll need to sign in with your existing method first, then link the email provider from your profile.
-                        </p>
-                        
-                        <Link
-                            href="/login"
-                            className="flex items-center justify-center w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all mb-3"
-                        >
-                            Sign in to Link Account
-                        </Link>
-                        
+
+                        {conflictProvider === 'email' ? (
+                            // Already has email+password — just direct them to login
+                            <>
+                                <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
+                                    This email already has an account.<br />
+                                    Please log in with your email and password.
+                                </p>
+                                <Link
+                                    href="/login"
+                                    className="flex items-center justify-center w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all mb-3"
+                                >
+                                    Go to Login
+                                </Link>
+                            </>
+                        ) : (
+                            // Different provider (Google / Phone) — offer linking
+                            <>
+                                <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
+                                    This email is already linked to a <span className="font-bold text-[var(--text-primary)]">{providerLabel[conflictProvider] || conflictProvider}</span> account.
+                                    <br /><br />
+                                    Would you like to add email &amp; password login to your existing account?
+                                </p>
+                                <p className="text-xs text-[var(--text-secondary)] text-center mb-6">
+                                    Sign in with your existing method first, then link email from your profile settings.
+                                </p>
+                                <Link
+                                    href="/login"
+                                    className="flex items-center justify-center w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all mb-3"
+                                >
+                                    Sign in to Link Account
+                                </Link>
+                            </>
+                        )}
+
                         <button
-                            onClick={() => { setStep('email-form'); setError(''); }}
+                            onClick={() => { setStep('email-form'); setError(''); setPassword(''); setConfirmPassword(''); }}
                             className="w-full py-3 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                         >
                             Cancel

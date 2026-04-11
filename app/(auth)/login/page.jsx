@@ -222,12 +222,33 @@ function LoginContent() {
         }
         setError('');
         setLoading(true);
-        const { error } = await supabase.auth.signInWithOtp({ email: emailAddress });
+
+        // shouldCreateUser: false → Supabase will NOT auto-register unknown emails
+        const { error } = await supabase.auth.signInWithOtp({
+            email: emailAddress,
+            options: { shouldCreateUser: false }
+        });
+
         if (error) {
-            setError(error.message);
+            // Supabase returns a 422 / "Signups not allowed" when the email
+            // doesn't exist and shouldCreateUser is false — redirect to signup.
+            const msg = error.message?.toLowerCase() ?? '';
+            const isUnknownUser =
+                error.status === 422 ||
+                msg.includes('signup') ||
+                msg.includes('not found') ||
+                msg.includes('not registered');
+
+            if (isUnknownUser) {
+                setError('No account found with this email. Redirecting to signup...');
+                setTimeout(() => router.push('/signup'), 2000);
+            } else {
+                setError(error.message);
+            }
             setLoading(false);
             return;
         }
+
         setStep('email-otp');
         setLoading(false);
     };
@@ -264,7 +285,7 @@ function LoginContent() {
                         <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Login</h1>
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">Enter your details to login.</p>
 
-                        <form onSubmit={handleEmailOTPSend} className="space-y-5">
+                        <form onSubmit={handleEmailSignIn} className="space-y-5">
                             <div>
                                 <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Email</label>
                                 <input
@@ -276,14 +297,40 @@ function LoginContent() {
                                     required
                                 />
                             </div>
-                            
+
+                            <div>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)]">Password</label>
+                                    <Link href="/forgot-password" className="text-xs text-[#92BCEA] hover:underline font-medium">
+                                        Forgot password?
+                                    </Link>
+                                </div>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Enter your password"
+                                        className="w-full px-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all pr-12"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+
                             {error && (
                                 <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>
                             )}
 
                             <button
                                 type="submit"
-                                disabled={loading || !emailAddress}
+                                disabled={loading || !emailAddress || !password}
                                 className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all flex justify-center"
                             >
                                 {loading ? <Loader2 className="animate-spin" size={20} /> : 'Login'}

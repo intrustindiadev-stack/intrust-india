@@ -16,8 +16,11 @@ export async function POST(request) {
 
         const admin = createAdminClient();
 
-        // 1. Look up the user by email
-        const { data: existingUsers, error: listError } = await admin.auth.admin.listUsers();
+        // 1. Look up the user by email (using listUsers because direct auth.users access via PostgREST is blocked)
+        const { data: existingUsers, error: listError } = await admin.auth.admin.listUsers({
+            page: 1,
+            perPage: 1000
+        });
         if (listError) {
             console.error('[SIGNIN] listUsers error:', listError);
             return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
@@ -74,7 +77,32 @@ export async function POST(request) {
         });
 
         if (signInError || !signInData?.session) {
-            // Increment failed attempts
+            // Email not confirmed — show friendly message, do NOT count as a failed attempt
+            const msg = signInError?.message?.toLowerCase() ?? '';
+            if (msg.includes('not confirmed') || msg.includes('email not confirmed')) {
+                return NextResponse.json(
+                    { error: 'Please verify your email first. Check your inbox for a confirmation link.' },
+                    { status: 403 }
+                );
+            }
+
+            // Provider mismatch — do NOT count as a failed attempt
+            const provider = existing.app_metadata?.provider;
+            if (provider === 'google') {
+                return NextResponse.json(
+                    { error: "This account uses Google login. Please use 'Continue with Google' instead." },
+                    { status: 401 }
+                );
+            }
+            if (provider === 'phone' || provider === 'phone_otp') {
+                return NextResponse.json(
+                    { error: "This account uses Phone OTP. Please use 'Continue with Mobile Number' instead." },
+                    { status: 401 }
+                );
+            }
+
+            // Increment failed attempts (provider is 'email' — genuinely wrong password)
+
             const currentAttempts = (profile?.failed_login_attempts || 0) + 1;
             const updatePayload = { failed_login_attempts: currentAttempts };
 

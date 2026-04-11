@@ -15,7 +15,7 @@ export async function POST(request) {
 
         const admin = createAdminClient();
 
-        // Find user by email (efficient: filter server-side)
+        // Find user by email (efficient enough for current scale)
         const { data: existingUsers } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
         const user = existingUsers?.users?.find(
             (u) => u.email?.toLowerCase() === email.toLowerCase()
@@ -40,7 +40,7 @@ export async function POST(request) {
             .from('auth_tokens')
             .select('id')
             .eq('user_id', user.id)
-            .eq('token_type', 'verification')   // ← correct column name
+            .eq('token_type', 'email_verification')
             .gte('created_at', windowStart);
 
         if (recentTokens && recentTokens.length >= MAX_RESENDS_PER_WINDOW) {
@@ -77,7 +77,7 @@ export async function POST(request) {
             await admin.from('auth_tokens').insert({
                 user_id: user.id,
                 email,
-                token_type: 'verification',
+                token_type: 'email_verification',
                 sent_at: new Date().toISOString(),
                 expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour
             });

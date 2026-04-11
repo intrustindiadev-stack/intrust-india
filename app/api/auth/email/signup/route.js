@@ -16,14 +16,13 @@ export async function POST(request) {
 
         const admin = createAdminClient();
 
-        // ── Check if a user with this email already exists (efficient lookup) ──
+        // ── Check if a user with this email already exists ──
         const { data: existingUsers, error: listError } = await admin.auth.admin.listUsers({
             page: 1,
             perPage: 1000
         });
 
         // More targeted: filter by email in the returned list
-        // (Supabase admin API doesn't support direct email filter yet)
         const existing = listError ? null : existingUsers?.users?.find(
             (u) => u.email?.toLowerCase() === email.toLowerCase()
         );
@@ -35,10 +34,20 @@ export async function POST(request) {
                 .eq('id', existing.id)
                 .maybeSingle();
 
+            // Fallback to raw_app_meta_data.provider if the profile row isn't ready yet
+            // (race condition with the DB trigger that creates the profile)
+            let resolvedProvider = profile?.auth_provider;
+            if (!resolvedProvider || resolvedProvider === 'unknown') {
+                const metaProvider = existing.app_metadata?.provider;
+                if (metaProvider === 'google') resolvedProvider = 'google';
+                else if (metaProvider === 'phone' || metaProvider === 'phone_otp') resolvedProvider = 'phone_otp';
+                else if (metaProvider === 'email') resolvedProvider = 'email';
+            }
+
             return NextResponse.json(
                 {
                     conflict: true,
-                    provider: profile?.auth_provider || 'unknown',
+                    provider: resolvedProvider || 'unknown',
                     message: 'An account with this email already exists.'
                 },
                 { status: 409 }

@@ -60,32 +60,25 @@ export default function ResetPasswordPage() {
 
     // ─── Validate the reset token from the URL hash ───────────────────────────
     useEffect(() => {
-        // Supabase appends access_token to the URL hash after the user clicks the reset link.
-        // exchangeCodeForSession handles the code-based flow; for hash-based (older) flow we
-        // rely on the onAuthStateChange PASSWORD_RECOVERY event.
+        // Only a genuine PASSWORD_RECOVERY event (fired by Supabase when the user
+        // clicks the reset link) should unlock this form.
+        // Relying on getSession() is a false-positive: a logged-in user navigating
+        // here directly would also have a session but NOT a valid recovery token.
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
             if (event === 'PASSWORD_RECOVERY') {
                 setTokenValid(true);
             }
         });
 
-        // Also check if there's already an active session (meaning the token was already consumed)
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                setTokenValid(true);
-            } else {
-                // Wait briefly for the PASSWORD_RECOVERY event
-                const timer = setTimeout(() => {
-                    setTokenValid((prev) => {
-                        if (prev === null) return false;
-                        return prev;
-                    });
-                }, 2500);
-                return () => clearTimeout(timer);
-            }
-        });
+        // If no PASSWORD_RECOVERY event fires within 2.5 s, the link is invalid/expired.
+        const timer = setTimeout(() => {
+            setTokenValid((prev) => (prev === null ? false : prev));
+        }, 2500);
 
-        return () => subscription.unsubscribe();
+        return () => {
+            subscription.unsubscribe();
+            clearTimeout(timer);
+        };
     }, []);
 
     const handleResetPassword = async (e) => {
