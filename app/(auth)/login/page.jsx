@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithOTP, verifyOTP } from '@/lib/supabase';
 import { supabase } from '@/lib/supabaseClient';
@@ -72,7 +72,7 @@ function OTPBoxInput({ value, onChange, onComplete }) {
     );
 }
 
-export default function LoginPage() {
+function LoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -463,5 +463,13 @@ export default function LoginPage() {
             
             {/* Terms text is outside the card, absolutely positioned or just below? Unmentioned, I will omit because wrapper has items-center justify-center min-h-screen p-4, if I put it below it breaks the pure card centering unless put inside a flex col. The plan only specifies the card wrapper structure. */}
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[var(--bg-secondary)]"><Loader2 className="animate-spin text-[#92BCEA]" size={32} /></div>}>
+            <LoginContent />
+        </Suspense>
     );
 }
