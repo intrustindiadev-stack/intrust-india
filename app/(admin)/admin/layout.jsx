@@ -1,7 +1,8 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
-import { redirect } from 'next/navigation';
 import AdminLayout from '@/components/layout/admin/AdminLayout';
 import AdminBottomNav from '@/components/layout/admin/AdminBottomNav';
+import PageTransition from '@/components/layout/PageTransition';
+import UnauthorizedRedirect from '@/components/auth/UnauthorizedRedirect';
 
 export default async function AdminRootLayout({ children }) {
     // Use session-aware client to identify the user (reads cookies)
@@ -9,7 +10,7 @@ export default async function AdminRootLayout({ children }) {
     const { data: { user } } = await authSupabase.auth.getUser();
 
     if (!user) {
-        redirect('/login');
+        return <UnauthorizedRedirect to="/login" message="Authentication Required. Redirecting..." />;
     }
 
     // Use admin client to bypass RLS for profile fetch
@@ -21,10 +22,12 @@ export default async function AdminRootLayout({ children }) {
         .single();
 
     if (!['admin', 'super_admin'].includes(profile?.role)) {
-        redirect('/');
+        return <UnauthorizedRedirect to="/" message="Admin Access Required. Redirecting..." />;
     }
 
     return (
-        <AdminLayout adminProfile={profile}>{children}</AdminLayout>
+        <AdminLayout adminProfile={profile}>
+            <PageTransition>{children}</PageTransition>
+        </AdminLayout>
     );
 }

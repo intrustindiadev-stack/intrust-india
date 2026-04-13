@@ -1,33 +1,15 @@
 import { createAdminClient } from '@/lib/supabaseServer';
+import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
 
 // GET /api/admin/payout-requests — list all payout requests for admin
 export async function GET(request) {
     try {
-        // Extract Bearer token from Authorization header
-        const authHeader = request.headers.get('Authorization');
-        const token = authHeader?.replace('Bearer ', '');
+        const { user, profile, admin } = await getAuthUser(request);
 
-        const admin = createAdminClient();
-
-        // Verify user via token
-        let user = null;
-        if (token) {
-            const { data: { user: tokenUser }, error } = await admin.auth.getUser(token);
-            if (!error) user = tokenUser;
-        }
-
-        // Fallback: try cookie-based auth via service role getUser (won't work but safe fallback)
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-
-        // Verify admin role
-        const { data: profile } = await admin
-            .from('user_profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
 
         if (!['admin', 'super_admin'].includes(profile?.role)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

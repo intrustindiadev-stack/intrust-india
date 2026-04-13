@@ -518,3 +518,35 @@ html {
   scrollbar-width: none;
   /* Firefox */
 }
+
+/* ── Android / Mobile Support ── */
+
+/* Grayscale fallback for older Android WebViews */
+.grayscale-closed {
+  -webkit-filter: grayscale(0.85);
+  filter: grayscale(0.85);
+  opacity: 0.9;
+}
+
+/* Tap target minimum size for WCAG compliance on touch devices */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* iOS safe area for bottom nav (Android also supports env()) */
+.pb-safe-area {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* Prevent double-tap zoom on interactive elements (Android Chrome) */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Backdrop filter support for older Android */
+@supports not (backdrop-filter: blur(20px)) {
+  .glass, .glass-dark, .merchant-glass {
+    background: rgba(15, 23, 42, 0.95) !important;
+  }
+}

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabaseServer';
+import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
 import { CustomerWalletService } from '@/lib/wallet/customerWalletService';
 import { WalletService } from '@/lib/wallet/walletService';
@@ -29,25 +30,14 @@ function isValidUUID(str) {
  */
 export async function POST(request) {
     try {
-        const supabase = createAdminClient();
+        // ──────────────────────────────────────────
+        // 1. AUTHENTICATION (Bearer token or SSR cookie)
+        // ──────────────────────────────────────────
+        const { user: authUser, admin: supabase } = await getAuthUser(request);
 
-        // ──────────────────────────────────────────
-        // 1. AUTHENTICATION
-        // ──────────────────────────────────────────
-        const authHeader = request.headers.get('authorization');
-        if (!authHeader?.startsWith('Bearer ')) {
+        if (!authUser) {
             return NextResponse.json(
                 { error: 'Missing or invalid authorization header' },
-                { status: 401 }
-            );
-        }
-
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
-
-        if (authError || !authUser) {
-            return NextResponse.json(
-                { error: 'Invalid or expired authentication token' },
                 { status: 401 }
             );
         }

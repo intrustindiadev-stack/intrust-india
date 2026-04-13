@@ -1,28 +1,15 @@
 import { createAdminClient } from '@/lib/supabaseServer';
+import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
 
 // GET /api/admin/auto-mode/orders?merchantIds=id1,id2
 // Uses service role key to bypass RLS on shopping_order_groups
 export async function GET(request) {
     try {
-        const authHeader = request.headers.get('Authorization');
-        const token = authHeader?.replace('Bearer ', '');
-
-        const admin = createAdminClient();
+        const { user, profile, admin } = await getAuthUser(request);
 
         // Verify caller is an admin
-        let user = null;
-        if (token) {
-            const { data: { user: tokenUser }, error } = await admin.auth.getUser(token);
-            if (!error) user = tokenUser;
-        }
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-        const { data: profile } = await admin
-            .from('user_profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
 
         if (!['admin', 'super_admin'].includes(profile?.role)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

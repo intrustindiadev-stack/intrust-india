@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/lib/contexts/ThemeContext';
 import PWAInstallPrompt from '@/components/ui/PWAInstallPrompt';
 import StructuredData from "@/components/seo/StructuredData";
 import { Toaster } from 'react-hot-toast';
+import { ConfettiProvider } from '@/components/ui/ConfettiProvider';
 
 
 const inter = Inter({
@@ -127,15 +128,16 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Material+Icons+Round&display=swap" rel="stylesheet" />
       </head>
       <body className="antialiased">
-        <ThemeProvider>
-          <AuthProvider>
-            <StructuredData />
-            {children}
-            <Toaster position="top-center" reverseOrder={false} />
-            <PWAInstallPrompt />
-          </AuthProvider>
-        </ThemeProvider>
-
+        <ConfettiProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <StructuredData />
+              {children}
+              <Toaster position="top-center" reverseOrder={false} />
+              <PWAInstallPrompt />
+            </AuthProvider>
+          </ThemeProvider>
+        </ConfettiProvider>
       </body>
     </html>
   );

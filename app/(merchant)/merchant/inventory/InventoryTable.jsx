@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Image from 'next/image';
 import ListToMarketplace from '@/components/merchant/ListToMarketplace';
 import { supabase } from '@/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 import { 
     Store, 
     Edit3, 
@@ -16,28 +18,39 @@ import {
     ArrowUpRight
 } from 'lucide-react';
 
+import { useSubscription } from '@/components/merchant/SubscriptionContext';
+import { useConfetti } from '@/components/ui/ConfettiProvider';
+
 export default function InventoryTable({ initialCoupons }) {
+    const router = useRouter();
+    const { performAction } = useSubscription();
+    const { trigger: triggerConfetti } = useConfetti();
     const [selectedCoupon, setSelectedCoupon] = useState(null);
     const [showListModal, setShowListModal] = useState(false);
 
     const handleListSuccess = async () => {
         setShowListModal(false);
         setSelectedCoupon(null);
-        window.location.reload();
+        triggerConfetti();
+        toast.success("Coupon listed to marketplace!");
+        router.refresh();
     };
 
     const handleUnlist = async (couponId) => {
-        try {
-            const { error } = await supabase
-                .from('coupons')
-                .update({ listed_on_marketplace: false })
-                .eq('id', couponId);
+        performAction(async () => {
+            try {
+                const { error } = await supabase
+                    .from('coupons')
+                    .update({ listed_on_marketplace: false })
+                    .eq('id', couponId);
 
-            if (error) throw error;
-            window.location.reload();
-        } catch (err) {
-            alert('Failed to unlist: ' + err.message);
-        }
+                if (error) throw error;
+                toast.success("Coupon removed from marketplace.");
+                router.refresh();
+            } catch (err) {
+                toast.error('Failed to unlist: ' + err.message);
+            }
+        });
     };
 
     return (
@@ -129,10 +142,10 @@ export default function InventoryTable({ initialCoupons }) {
                             <div className="flex gap-2">
                                 {!coupon.listed_on_marketplace ? (
                                     <button
-                                        onClick={() => {
+                                        onClick={() => performAction(() => {
                                             setSelectedCoupon(coupon);
                                             setShowListModal(true);
-                                        }}
+                                        })}
                                         className="flex-1 py-3.5 bg-[#D4AF37] text-white font-black rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#D4AF37]/20"
                                     >
                                         <Store size={18} />
@@ -141,10 +154,10 @@ export default function InventoryTable({ initialCoupons }) {
                                 ) : (
                                     <>
                                         <button
-                                            onClick={() => {
+                                            onClick={() => performAction(() => {
                                                 setSelectedCoupon(coupon);
                                                 setShowListModal(true);
-                                            }}
+                                            })}
                                             className="flex-1 py-3.5 bg-blue-600 text-white font-black rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/20"
                                         >
                                             <Edit3 size={16} />
@@ -251,10 +264,10 @@ export default function InventoryTable({ initialCoupons }) {
                                         <div className="flex items-center justify-end gap-2">
                                             {!coupon.listed_on_marketplace ? (
                                                 <button
-                                                    onClick={() => {
+                                                    onClick={() => performAction(() => {
                                                         setSelectedCoupon(coupon);
                                                         setShowListModal(true);
-                                                    }}
+                                                    })}
                                                     className="h-10 px-4 bg-[#D4AF37] text-white font-black rounded-xl flex items-center gap-2 hover:opacity-90 transition-all shadow-md shadow-[#D4AF37]/20 group/btn"
                                                 >
                                                     <span className="text-[10px] uppercase tracking-widest">List Asset</span>
@@ -263,10 +276,10 @@ export default function InventoryTable({ initialCoupons }) {
                                             ) : (
                                                 <>
                                                     <button
-                                                        onClick={() => {
+                                                        onClick={() => performAction(() => {
                                                             setSelectedCoupon(coupon);
                                                             setShowListModal(true);
-                                                        }}
+                                                        })}
                                                         className="w-10 h-10 flex items-center justify-center bg-blue-600/10 text-blue-600 border border-blue-600/20 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm group/edit"
                                                         title="Edit Listing"
                                                     >

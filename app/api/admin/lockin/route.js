@@ -1,28 +1,15 @@
 import { createAdminClient } from '@/lib/supabaseServer';
+import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
     try {
-        const supabase = createAdminClient();
+        // 1. Auth & Admin Check (Bearer token or SSR cookie)
+        const { user: authUser, profile: adminProfile, admin: supabase } = await getAuthUser(request);
 
-        // 1. Auth & Admin Check
-        const authHeader = request.headers.get('authorization');
-        if (!authHeader?.startsWith('Bearer ')) {
+        if (!authUser) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
-
-        if (authError || !authUser) {
-            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-        }
-
-        const { data: adminProfile } = await supabase
-            .from('user_profiles')
-            .select('role')
-            .eq('id', authUser.id)
-            .single();
 
         if (!['admin', 'super_admin'].includes(adminProfile?.role)) {
             return NextResponse.json({ error: 'Access denied' }, { status: 403 });

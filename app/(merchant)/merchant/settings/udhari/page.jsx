@@ -8,9 +8,12 @@ import { toast } from 'react-hot-toast';
 import { Save, Loader2, ArrowLeft, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 
+import { useSubscription } from '@/components/merchant/SubscriptionContext';
+
 export default function MerchantUdhariSettingsPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
+    const { performAction } = useSubscription();
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -44,33 +47,36 @@ export default function MerchantUdhariSettingsPage() {
     }
 
     async function handleSave(e) {
-        e.preventDefault();
-        setSaving(true);
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch('/api/merchant/udhari-settings', {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token}`
-                },
-                body: JSON.stringify({
-                    udhari_enabled: settings.udhari_enabled,
-                    max_duration_days: parseInt(settings.max_duration_days),
-                    max_credit_limit_paise: parseInt(settings.max_credit_limit_paise),
-                })
-            });
-            
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error);
+        if (e) e.preventDefault();
+        
+        performAction(async () => {
+            setSaving(true);
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const res = await fetch('/api/merchant/udhari-settings', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session?.access_token}`
+                    },
+                    body: JSON.stringify({
+                        udhari_enabled: settings.udhari_enabled,
+                        max_duration_days: parseInt(settings.max_duration_days),
+                        max_credit_limit_paise: parseInt(settings.max_credit_limit_paise),
+                    })
+                });
+                
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error);
+                }
+                toast.success('Settings saved successfully');
+            } catch (error) {
+                toast.error(error.message || 'Failed to save settings');
+            } finally {
+                setSaving(false);
             }
-            toast.success('Settings saved successfully');
-        } catch (error) {
-            toast.error(error.message || 'Failed to save settings');
-        } finally {
-            setSaving(false);
-        }
+        });
     }
 
     if (authLoading || loading) return <div className="p-8 flex items-center justify-center"><Loader2 className="animate-spin text-amber-500" /></div>;
@@ -107,7 +113,12 @@ export default function MerchantUdhariSettingsPage() {
                             type="checkbox"
                             className="sr-only peer"
                             checked={settings.udhari_enabled}
-                            onChange={(e) => setSettings({ ...settings, udhari_enabled: e.target.checked })}
+                            onChange={(e) => {
+                                const val = e.target.checked;
+                                performAction(() => {
+                                    setSettings({ ...settings, udhari_enabled: val });
+                                });
+                            }}
                         />
                         <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-amber-500"></div>
                     </label>

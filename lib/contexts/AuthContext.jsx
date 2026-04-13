@@ -128,6 +128,36 @@ export function AuthProvider({ children }) {
         };
     }, []);
 
+    // Proactive session refresh: prevent auto-logout if tab is left open but inactive for hours
+    useEffect(() => {
+        if (!user) return;
+
+        // Auto-refresh the session every 10 minutes to guarantee it never expires while the app is open
+        const intervalId = setInterval(() => {
+            console.log('[AUTH-CONTEXT] Proactively refreshing session to prevent auto-logout');
+            supabase.auth.getSession();
+        }, 1000 * 60 * 10);
+
+        // Instantly refresh when the user switches back to the tab
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                console.log('[AUTH-CONTEXT] Tab became visible, refreshing session');
+                supabase.auth.getSession();
+            }
+        };
+
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+        }
+
+        return () => {
+            clearInterval(intervalId);
+            if (typeof document !== 'undefined') {
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
+            }
+        };
+    }, [user?.id]);
+
     const refreshProfile = async () => {
         if (user) {
             const updated = await fetchProfile(user.id);

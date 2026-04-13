@@ -4,7 +4,7 @@ import { MapPin, BadgeCheck, Phone, Star } from 'lucide-react';
 import RatingStars from '@/components/ui/RatingStars';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 
-export default function MerchantProfileCard({ merchant, totalItems }) {
+export default function MerchantProfileCard({ merchant, totalItems, isStoreOpen = true }) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     
@@ -47,6 +47,14 @@ export default function MerchantProfileCard({ merchant, totalItems }) {
                         <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
                             {totalItems || 0} Items
                         </span>
+
+                        {/* Store Status Badge */}
+                        {!isStoreOpen && (
+                            <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg bg-red-500 text-white shadow-sm flex items-center gap-1.5 animate-pulse">
+                                <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                                Closed
+                            </span>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-flow-col sm:auto-cols-max gap-2 sm:gap-6 mt-1">

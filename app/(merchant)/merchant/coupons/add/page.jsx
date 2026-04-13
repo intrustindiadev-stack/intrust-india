@@ -3,9 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useConfetti } from '@/components/ui/ConfettiProvider';
+import { useSubscription } from '@/components/merchant/SubscriptionContext';
+import { toast } from 'react-hot-toast';
 
 export default function AddCouponPage() {
     const router = useRouter();
+    const { trigger: triggerConfetti } = useConfetti();
+    const { performAction } = useSubscription();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         brand: '',
@@ -30,11 +35,16 @@ export default function AddCouponPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
-        // Mock submission
-        setTimeout(() => {
-            router.push('/merchant/dashboard');
-        }, 2000);
+        
+        performAction(async () => {
+            setLoading(true);
+            // Mock submission
+            setTimeout(() => {
+                triggerConfetti();
+                toast.success("Coupon added successfully!");
+                router.push('/merchant/dashboard');
+            }, 2000);
+        });
     };
 
     const discount = formData.faceValue && formData.sellingPrice

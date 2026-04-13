@@ -1,32 +1,18 @@
 import { createAdminClient } from '@/lib/supabaseServer';
+import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
 
 // GET /api/admin/merchants/:id — returns a single merchant's profile data
 export async function GET(request, { params }) {
     try {
         const merchantId = params.id;
-        const authHeader = request.headers.get('Authorization');
-        const token = authHeader?.replace('Bearer ', '');
+        const { user, profile, admin } = await getAuthUser(request);
 
-        const admin = createAdminClient();
-
-        // 1. Authenticate
-        let user = null;
-        if (token) {
-            const { data: { user: tokenUser }, error } = await admin.auth.getUser(token);
-            if (!error) user = tokenUser;
-        }
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         // 2. Verify admin role
-        const { data: profile } = await admin
-            .from('user_profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
         if (!['admin', 'super_admin'].includes(profile?.role)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
