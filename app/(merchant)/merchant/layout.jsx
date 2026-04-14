@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import MerchantLayout from '@/components/layout/merchant/MerchantLayout';
 import MerchantBottomNav from '@/components/layout/merchant/MerchantBottomNav';
-import PageTransition from '@/components/layout/PageTransition';
+
 import { SubscriptionProvider } from '@/components/merchant/SubscriptionContext';
 
 export default async function MerchantRootLayout({ children }) {
@@ -51,7 +51,7 @@ export default async function MerchantRootLayout({ children }) {
             <SubscriptionProvider isSubscribed={true} merchantData={merchantWithProfile}>
                 <>
                     <MerchantLayout>
-                        <PageTransition>{children}</PageTransition>
+                        {children}
                     </MerchantLayout>
                     <MerchantBottomNav />
                 </>
@@ -110,7 +110,7 @@ export default async function MerchantRootLayout({ children }) {
         <SubscriptionProvider isSubscribed={isSubscribed} merchantData={merchantWithProfile}>
             <>
                 <MerchantLayout>
-                    <PageTransition>{children}</PageTransition>
+                    {children}
                 </MerchantLayout>
                 <MerchantBottomNav />
             </>

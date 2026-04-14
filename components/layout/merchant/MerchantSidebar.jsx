@@ -150,10 +150,12 @@ export default function MerchantSidebar({ isOpen, setIsOpen }) {
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-xs text-gray-400 font-semibold">Status</span>
                                     <div className="flex items-center gap-2">
-                                        {merchantProfile.auto_mode_status === 'active' && (
+                                        {merchantProfile.subscription_expires_at && new Date(merchantProfile.subscription_expires_at) > new Date() && (
                                             <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/50 rounded-full">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                <span className="text-[9px] text-emerald-400 font-black uppercase tracking-widest">Auto LIVE</span>
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                <span className="text-[9px] text-emerald-400 font-black uppercase tracking-widest">
+                                                    Valid Till: {new Date(merchantProfile.subscription_expires_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                                </span>
                                             </div>
                                         )}
                                         <div className="flex items-center gap-1.5">

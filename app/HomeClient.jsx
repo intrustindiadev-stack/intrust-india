@@ -30,8 +30,8 @@ export default function HomeClient() {
 
     const stats = [
         { value: '10K+', label: 'Active Users', icon: TrendingUp },
-        { value: '₹50Cr+', label: 'Transactions', icon: Sparkles },
-        { value: '4.9★', label: 'App Rating', icon: Star },
+        { value: '₹50Cr+', label: 'Shopping Volume', icon: Sparkles },
+        { value: '4.9★', label: 'Store Rating', icon: Star },
     ];
 
     return (

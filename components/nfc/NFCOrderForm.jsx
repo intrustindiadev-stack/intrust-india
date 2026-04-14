@@ -12,7 +12,7 @@ import { useWallet } from '@/hooks/useWallet';
 import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
 import { toast } from 'react-hot-toast';
 
-export default function NFCOrderForm({ onPreviewUpdate, setIsSuccess }) {
+export default function NFCOrderForm({ setIsSuccess }) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const supabase = createClient();
@@ -70,16 +70,11 @@ export default function NFCOrderForm({ onPreviewUpdate, setIsSuccess }) {
     const totalAmountPaise = Math.round(totalAmount * 100);
 
     const updateFormData = (field, value) => {
-        setFormData(prev => {
-            const next = { ...prev, [field]: value.toUpperCase() };
-            if (onPreviewUpdate) onPreviewUpdate(next);
-            return next;
-        });
+        setFormData(prev => ({ ...prev, [field]: value.toUpperCase() }));
     };
 
     const nextStep = () => {
-        if (step === 1 && !formData.cardHolderName) return;
-        if (step === 2 && (!formData.phone || !formData.deliveryAddress)) return;
+        if (step === 1 && (!formData.cardHolderName || !formData.phone || !formData.deliveryAddress)) return;
         setStep(s => s + 1);
         window.scrollTo({ top: document.getElementById('nfc-order-section').offsetTop - 100, behavior: 'smooth' });
     };
@@ -131,7 +126,7 @@ export default function NFCOrderForm({ onPreviewUpdate, setIsSuccess }) {
         }
     };
 
-    const stepLabels = ['Personalise', 'Delivery', 'Review', 'Payment'];
+    const stepLabels = ['Delivery', 'Review', 'Payment'];
 
     return (
         <div className={`w-full rounded-2xl border transition-all duration-500 p-6 sm:p-10 relative overflow-visible ${isDark
@@ -162,7 +157,7 @@ export default function NFCOrderForm({ onPreviewUpdate, setIsSuccess }) {
                                         isDark ? 'text-white/20' : 'text-slate-400'
                                     }`}>{label}</span>
                                 </div>
-                                {s < 4 && (
+                                {s < 3 && (
                                     <div className={`flex-1 h-[1.5px] mx-3 rounded-full transition-colors duration-300 ${
                                         step > s ? "bg-blue-600" : isDark ? "bg-white/[0.05]" : "bg-slate-200"
                                     }`} />
@@ -174,55 +169,30 @@ export default function NFCOrderForm({ onPreviewUpdate, setIsSuccess }) {
 
                 <form
                     onSubmit={handleFormSubmit}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && step !== 4) e.preventDefault(); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && step !== 3) e.preventDefault(); }}
                     className="relative z-10"
                 >
                     <AnimatePresence mode="wait">
-                        {/* Step 1 — Name */}
+                        {/* Step 1 — Delivery */}
                         {step === 1 && (
                             <motion.div key="step1" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }} className="space-y-6">
                                 <div>
-                                    <h3 className={`text-lg font-black uppercase tracking-tight italic mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>Card Holder Name</h3>
-                                    <p className={`text-sm font-medium tracking-tight mb-5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>This name will be laser-engraved on your InTrust NFC card.</p>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            placeholder="Enter your full name"
-                                            className={`w-full h-14 px-5 rounded-xl outline-none transition-all text-base font-black tracking-tight uppercase placeholder:normal-case placeholder:text-sm placeholder:font-medium placeholder:tracking-normal ${isDark
-                                                ? "bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-white/20 focus:border-blue-500/50 focus:bg-white/[0.06]"
-                                                : "bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white"
-                                            }`}
-                                            value={formData.cardHolderName}
-                                            onChange={(e) => updateFormData('cardHolderName', e.target.value)}
-                                            required
-                                            maxLength={18}
-                                        />
-                                        <span className={`absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium ${isDark ? 'text-white/15' : 'text-slate-300'}`}>
-                                            {formData.cardHolderName.length}/18
-                                        </span>
-                                    </div>
-                                    <p className={`text-xs mt-2.5 flex items-center gap-1.5 ${isDark ? 'text-white/25' : 'text-slate-400'}`}>
-                                        <Info size={12} /> Max 18 characters · Laser-engraved on card
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={nextStep}
-                                    disabled={!formData.cardHolderName}
-                                    className="w-full h-14 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                                >
-                                    Continue <ArrowRight size={16} />
-                                </button>
-                            </motion.div>
-                        )}
-
-                        {/* Step 2 — Delivery */}
-                        {step === 2 && (
-                            <motion.div key="step2" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }} className="space-y-6">
-                                <div>
                                     <h3 className={`text-lg font-black uppercase tracking-tight italic mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>Delivery Details</h3>
-                                    <p className={`text-sm font-medium tracking-tight mb-5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Where should we deliver your NFC card?</p>
+                                    <p className={`text-sm font-medium tracking-tight mb-5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Where should we deliver your Digital Business Card?</p>
                                     <div className="space-y-4">
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                placeholder="Enter your name"
+                                                className={`w-full h-14 px-5 rounded-xl outline-none transition-all text-sm font-black tracking-tight ${isDark
+                                                    ? "bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-white/20 focus:border-blue-500/50 focus:bg-white/[0.06]"
+                                                    : "bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white"
+                                                }`}
+                                                value={formData.cardHolderName}
+                                                onChange={(e) => updateFormData('cardHolderName', e.target.value)}
+                                                required
+                                            />
+                                        </div>
                                         <div className="relative">
                                             <Phone size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/20' : 'text-slate-400'}`} />
                                             <input
@@ -253,16 +223,15 @@ export default function NFCOrderForm({ onPreviewUpdate, setIsSuccess }) {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button type="button" onClick={prevStep} className={`h-14 rounded-xl font-black text-[11px] uppercase tracking-widest border transition-colors ${isDark ? "bg-white/[0.04] text-white/50 border-white/[0.06] hover:bg-white/[0.08]" : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"}`}>Back</button>
-                                    <button type="button" onClick={nextStep} disabled={!formData.phone || !formData.deliveryAddress} className="h-14 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">Review <ArrowRight size={16} /></button>
+                                <div className="grid grid-cols-1 gap-3">
+                                    <button type="button" onClick={nextStep} disabled={!formData.cardHolderName || !formData.phone || !formData.deliveryAddress} className="h-14 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">Review <ArrowRight size={16} /></button>
                                 </div>
                             </motion.div>
                         )}
 
-                        {/* Step 3 — Review */}
-                        {step === 3 && (
-                            <motion.div key="step3" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }} className="space-y-6">
+                        {/* Step 2 — Review */}
+                        {step === 2 && (
+                            <motion.div key="step2" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }} className="space-y-6">
                                 <div>
                                     <h3 className={`text-lg font-black uppercase tracking-tight italic mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>Order Summary</h3>
                                     <p className={`text-sm font-medium tracking-tight mb-5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Review your order before proceeding to payment.</p>
@@ -307,9 +276,9 @@ export default function NFCOrderForm({ onPreviewUpdate, setIsSuccess }) {
                             </motion.div>
                         )}
 
-                        {/* Step 4 — Payment */}
-                        {step === 4 && (
-                            <motion.div key="step4" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }} className="space-y-6">
+                        {/* Step 3 — Payment */}
+                        {step === 3 && (
+                            <motion.div key="step3" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }} className="space-y-6">
                                 <div>
                                     <h3 className={`text-lg font-black uppercase tracking-tight italic mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>Payment Method</h3>
                                     <p className={`text-sm font-medium tracking-tight mb-5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Choose how you'd like to pay ₹{totalAmount.toLocaleString()}</p>

@@ -6,6 +6,7 @@ import TransactionsTable from '@/components/merchant/TransactionsTable';
 import MerchantAdBannerCarousel from '@/components/merchant/MerchantAdBannerCarousel';
 import LiveButton from '@/components/merchant/LiveButton';
 import AutoModePromo from '@/components/merchant/AutoModePromo';
+import StoreStatusToggle from '@/components/merchant/StoreStatusToggle';
 
 export const dynamic = 'force-dynamic';
 
@@ -142,8 +143,8 @@ export default async function MerchantDashboardPage() {
                 <AutoModePromo />
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 mt-2">
-                <div>
+            <div className="flex flex-col lg:flex-row lg:items-stretch justify-between mb-10 gap-6 mt-2">
+                <div className="flex-1">
                     <h2 className="font-display text-4xl font-bold mb-2 text-slate-800 dark:text-slate-100">Merchant Dashboard</h2>
                     <div className="flex flex-col gap-2">
                         <p className="text-slate-500 dark:text-slate-400">
@@ -160,7 +161,9 @@ export default async function MerchantDashboardPage() {
                         </div>
                     </div>
                 </div>
-                <div className="flex flex-wrap space-x-0 sm:space-x-4 gap-y-3">
+                <div className="flex flex-col gap-4 max-w-sm w-full lg:w-auto">
+                    <StoreStatusToggle initialStoreData={merchant} />
+                    <div className="flex flex-wrap space-x-0 sm:space-x-4 gap-y-3">
                     <Link href="/merchant/purchase" className="w-full sm:w-auto px-6 py-3 rounded-xl merchant-glass hover:bg-black/5 dark:hover:bg-white/10 transition-all flex items-center justify-center space-x-2 border border-black/5 dark:border-white/10">
                         <span className="material-icons-round text-[#D4AF37] text-sm">add_shopping_cart</span>
                         <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Purchase Coupons</span>
@@ -188,6 +191,7 @@ export default async function MerchantDashboardPage() {
                         )}
                     </Link>
                 </div>
+            </div>
             </div>
 
             <StatsCards stats={stats} />

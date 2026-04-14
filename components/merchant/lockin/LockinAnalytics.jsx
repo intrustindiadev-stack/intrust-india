@@ -109,11 +109,11 @@ export default function LockinAnalytics({ balances }) {
                             <Area 
                                 type="monotone" 
                                 dataKey="Capital" 
-                                stroke="#f1f5f9" 
-                                strokeWidth={1.5}
-                                fill="transparent" 
-                                dot={false}
-                                activeDot={false}
+                                stroke="#10B981" 
+                                strokeWidth={2.5}
+                                fillOpacity={0.05} 
+                                fill="#10B981"
+                                activeDot={{ r: 4, fill: '#10B981', stroke: '#fff', strokeWidth: 2 }}
                             />
                             <Area 
                                 type="monotone" 
@@ -181,7 +181,7 @@ export default function LockinAnalytics({ balances }) {
                                 <Info size={12} className="text-slate-400" />
                             </div>
                             <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
-                                Projections are based on current APR. Interest resets occur only upon maturity and re-investment.
+                                Growth projections reflect operational inventory turnover performance. Values reset upon maturity and reallocation.
                             </p>
                         </div>
                     </div>

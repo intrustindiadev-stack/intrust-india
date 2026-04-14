@@ -12,7 +12,8 @@ import {
     Calendar,
     ArrowUpRight,
     Clock,
-    AlertCircle
+    AlertCircle,
+    RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -96,7 +97,7 @@ export default function MerchantLockinPage() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-1.5">
                         <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Growth Portfolio</h1>
-                        <p className="text-sm font-semibold text-slate-500 tracking-tight opacity-70">Strategic management of partnership capital and bonus accruals</p>
+                        <p className="text-sm font-semibold text-slate-500 tracking-tight opacity-70">Capital deployed to fuel INTRUST Mart inventory, powered by your business.</p>
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -106,9 +107,10 @@ export default function MerchantLockinPage() {
                         </div>
                         <button
                             onClick={fetchBalances}
-                            className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white border hover:border-slate-200 rounded-xl transition-all shadow-sm"
+                            disabled={loading}
+                            className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white border hover:border-slate-200 rounded-xl transition-all shadow-sm group disabled:opacity-50"
                         >
-                            <Clock size={18} />
+                            <RefreshCw size={18} className={`${loading ? 'animate-spin text-blue-500' : 'group-hover:rotate-180 transition-all duration-500'}`} />
                         </button>
                     </div>
                 </div>

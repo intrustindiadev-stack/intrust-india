@@ -79,7 +79,10 @@ export default async function MerchantStorefrontPage({ params }) {
                 user_id,
                 business_name,
                 business_address,
-                shopping_banner_url
+                shopping_banner_url,
+                is_open,
+                opening_time,
+                closing_time
             `)
             .eq('slug', merchantSlug)
             .eq('status', 'approved')

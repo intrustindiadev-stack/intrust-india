@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Gift,
@@ -328,7 +329,7 @@ export default function MyGiftCardsClient({ coupons, totalCards, activeCount, pe
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="flex items-start justify-between mb-10"
+                    className="flex items-start justify-between mb-8"
                 >
                     <div>
                         <h1 className="flex items-center gap-3 text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-gray-100 tracking-tight mb-2">
@@ -343,6 +344,32 @@ export default function MyGiftCardsClient({ coupons, totalCards, activeCount, pe
                     >
                         Browse More →
                     </Link>
+                </motion.div>
+
+                {/* ── Hero Banner ──────────────────────────────────────────── */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.6, delay: 0.1 }}
+                    className="relative w-full aspect-[21/9] sm:aspect-[3/1] lg:aspect-[4/1] rounded-3xl overflow-hidden mb-10 shadow-lg"
+                >
+                    <Image
+                        src="/images/gift-cards-hero.png"
+                        alt="Your premium digital wallet"
+                        fill
+                        className="object-cover object-center"
+                        priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent flex items-center p-6 sm:p-10">
+                        <div className="max-w-md">
+                            <h2 className="text-white text-2xl sm:text-3xl font-black italic tracking-tight mb-2">
+                                Your Gift Cards
+                            </h2>
+                            <p className="text-white/80 text-xs sm:text-sm max-w-xs leading-relaxed">
+                                Securely access and decrypt your high-value gift cards instantly.
+                            </p>
+                        </div>
+                    </div>
                 </motion.div>
 
                 {/* ── Stat Cards ───────────────────────────────────────────── */}

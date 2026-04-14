@@ -1,5 +1,8 @@
+'use client';
+
 import React from 'react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronRight, Cpu, Shield, Zap, ClipboardList } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -45,7 +48,7 @@ export default function HeroSection({ previewName }) {
                         <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.4em] text-blue-500/80">Apply Now · Active</span>
                     </motion.div>
 
-                    <h1 className={`text-[clamp(3.5rem,10vw,8rem)] font-black tracking-[-0.06em] leading-[0.85] uppercase italic mb-8 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    <h1 className={`text-[clamp(3.3rem,9vw,7rem)] font-black tracking-[-0.06em] leading-[0.85] uppercase italic mb-8 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                         INTRUST<br />
                         <span className="inline-block relative text-blue-600">
                             SMART CARD
@@ -59,7 +62,7 @@ export default function HeroSection({ previewName }) {
                     </h1>
 
                     <p className={`text-lg sm:text-xl font-bold max-w-xl leading-[1.4] mb-12 tracking-tight ${isDark ? 'text-white/30' : 'text-slate-500'}`}>
-                        High-fidelity physical craftsmanship meets encrypted digital identity. <span className={`hidden lg:inline ${isDark ? 'text-white/60' : 'text-slate-900'}`}>The ultimate extension of your professional self.</span>
+                        Share your contact details, portfolio, and social links instantly with a single tap. <span className={`hidden lg:inline ${isDark ? 'text-white/60' : 'text-slate-900'}`}>No app required. The premium way to network.</span>
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
