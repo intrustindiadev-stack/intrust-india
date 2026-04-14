@@ -89,9 +89,11 @@ export async function POST(request) {
             // Provider mismatch — do NOT count as a failed attempt
             const provider = existing.app_metadata?.provider;
             if (provider === 'google') {
+                // Return a structured conflict response so the frontend can show
+                // the "Link Your Accounts" UI instead of a plain error.
                 return NextResponse.json(
-                    { error: "This account uses Google login. Please use 'Continue with Google' instead." },
-                    { status: 401 }
+                    { conflict: true, provider: 'google', email: existing.email },
+                    { status: 409 }
                 );
             }
             if (provider === 'phone' || provider === 'phone_otp') {

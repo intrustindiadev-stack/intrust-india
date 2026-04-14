@@ -60,35 +60,9 @@ export async function POST(request) {
         let panVerified = false;
         let bankVerified = false;
         let gstVerified = false;
-        let finalStatus = 'approved';
+        let finalStatus = 'pending'; // Changed to pending for manual review of PAN and Bank
 
-        // 1. Verify PAN
-        const panResult = await sprintVerify.verifyPAN(panCard);
-        if (panResult.valid === true) {
-            panVerified = true;
-        } else if (panResult.valid === 'manual_review') {
-            finalStatus = 'pending';
-        } else {
-            return NextResponse.json(
-                { error: `PAN Verification Failed: ${panResult.message}` },
-                { status: 400 }
-            );
-        }
-
-        // 2. Verify Bank Account
-        const bankResult = await sprintVerify.verifyBank(bankAccount, ifscCode);
-        if (bankResult.valid === true) {
-            bankVerified = true;
-        } else if (bankResult.valid === 'manual_review') {
-            finalStatus = 'pending';
-        } else {
-            return NextResponse.json(
-                { error: `Bank Verification Failed: ${bankResult.message}` },
-                { status: 400 }
-            );
-        }
-
-        // 3. Verify GSTIN (if provided)
+        // 1. Verify GSTIN (if provided)
         let gstResult = null;
         if (gstNumber) {
             gstResult = await sprintVerify.verifyGSTIN(gstNumber);
@@ -123,8 +97,8 @@ export async function POST(request) {
                     pan_verified: panVerified,
                     bank_verified: bankVerified,
                     gstin_verified: gstVerified,
-                    pan_data: panResult.data || null,
-                    bank_data: bankResult.data || null,
+                    pan_data: null,
+                    bank_data: null,
                     gstin_data: gstResult?.data || null,
                 }
             ])
@@ -167,7 +141,7 @@ export async function POST(request) {
                 await adminSupabase.from('notifications').insert({
                     user_id: user.id,
                     title: 'KYC Verified - Action Required 🎉',
-                    body: `Your merchant application for ${businessName} was automatically verified! Please pay the ₹149 subscription fee to activate your panel.`,
+                    body: `Your merchant application for ${businessName} was automatically verified! Choose a subscription plan (starting ₹499/month) to activate your merchant panel.`,
                     type: 'success',
                     reference_type: 'merchant_approved',
                     read: false

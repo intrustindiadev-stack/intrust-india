@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { TrendingUp, ArrowRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { Loader2, CheckCircle, AlertCircle, ShieldAlert, RefreshCw } from 'lucide-react';
+import { MERCHANT_SUBSCRIPTION_PLANS } from '@/lib/constants';
 
 export default function MerchantOpportunityBanner({ merchantStatus, subscriptionStatus, subscriptionExpiresAt }) {
     const isPending = merchantStatus === 'pending';
@@ -72,10 +73,11 @@ export default function MerchantOpportunityBanner({ merchantStatus, subscription
     };
 
     const getBody = () => {
+        const startingPrice = `₹${MERCHANT_SUBSCRIPTION_PLANS[0].price}`;
         if (isPending) return "We are currently reviewing your merchant application. This usually takes 24-48 hours. We'll notify you once processed!";
-        if (isExpired) return `Your monthly subscription expired on ${expiryFormatted}. Renew now for ₹149 to restore full access to your Merchant Dashboard.`;
-        if (isEffectivelyBlocked) return "Your application has been approved! Complete the one-time ₹149 subscription payment to access your merchant dashboard.";
-        if (isExpiringSoon) return `Your monthly subscription expires on ${expiryFormatted}. Renew now for ₹149/month to keep your store live without interruption.`;
+        if (isExpired) return `Your monthly subscription expired on ${expiryFormatted}. Renew with plans from ${startingPrice}/month to restore full access to your Merchant Dashboard.`;
+        if (isEffectivelyBlocked) return `Your application has been approved! Choose a subscription plan (starting ${startingPrice}/month) to activate your merchant panel.`;
+        if (isExpiringSoon) return `Your monthly subscription expires on ${expiryFormatted}. Renew with plans from ${startingPrice}/month to keep your store live without interruption.`;
         if (isApprovedAndPaid) return `Welcome aboard! Your merchant account is active. Next renewal due: ${expiryFormatted}.`;
         if (isRejected) return "Unfortunately, your application was not approved at this time. Please contact support to understand the requirements.";
         if (isSuspended) return "Your merchant account is temporarily suspended. Please check your email or contact support for more information.";
@@ -158,8 +160,8 @@ export default function MerchantOpportunityBanner({ merchantStatus, subscription
                         <div className="text-xs sm:text-sm text-green-100">Avg. Monthly Earning</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl sm:text-3xl font-bold text-white">₹149</div>
-                        <div className="text-xs sm:text-sm text-green-100">Per Month</div>
+                        <div className="text-2xl sm:text-3xl font-bold text-white">₹{MERCHANT_SUBSCRIPTION_PLANS[0].price}</div>
+                        <div className="text-xs sm:text-sm text-green-100">Starting/Month</div>
                     </div>
                 </div>
             </div>

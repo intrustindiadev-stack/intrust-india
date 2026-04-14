@@ -20,10 +20,19 @@ export async function GET(request) {
     url.searchParams.set('access_type', 'offline');
     url.searchParams.set('prompt', 'select_account');
 
-    // Pass through any 'next' redirect param
-    const next = new URL(request.url).searchParams.get('next');
-    if (next) {
-        url.searchParams.set('state', encodeURIComponent(next));
+    const reqUrl = new URL(request.url);
+    const next       = reqUrl.searchParams.get('next');
+    const linkMode   = reqUrl.searchParams.get('link_mode');    // 'email' when doing account merge
+    const pendingEmail = reqUrl.searchParams.get('pending_email');
+
+    // Build state payload — always a JSON object so the callback can reliably parse it
+    const statePayload = {};
+    if (next)         statePayload.next         = next;
+    if (linkMode)     statePayload.link_mode     = linkMode;
+    if (pendingEmail) statePayload.pending_email = pendingEmail;
+
+    if (Object.keys(statePayload).length > 0) {
+        url.searchParams.set('state', encodeURIComponent(JSON.stringify(statePayload)));
     }
 
     return NextResponse.redirect(url.toString());

@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { verifyGSTIN, verifyBank, verifyPAN } from '@/app/actions/sprintVerifyActions';
+import { verifyGSTIN } from '@/app/actions/sprintVerifyActions';
 
 // Confetti Component
 const Confetti = () => {
@@ -54,8 +54,8 @@ export default function MerchantApplyPage() {
     const [checkingStatus, setCheckingStatus] = useState(true);
 
     // Verification States
-    const [verifying, setVerifying] = useState({ pan: false, bank: false, gstin: false });
-    const [verified, setVerified] = useState({ pan: null, bank: null, gstin: null }); // null, 'verified', 'pending', 'failed'
+    const [verifying, setVerifying] = useState({ gstin: false });
+    const [verified, setVerified] = useState({ gstin: null }); // null, 'verified', 'pending', 'failed'
     const [successStatus, setSuccessStatus] = useState('approved');
 
 
@@ -140,77 +140,7 @@ export default function MerchantApplyPage() {
         }
     };
 
-    const handleVerifyBank = async () => {
-        if (!formData.bankAccount || !formData.ifscCode) {
-            toast.error("Please enter both Account Number and IFSC Code");
-            return;
-        }
 
-        setVerifying(prev => ({ ...prev, bank: true }));
-        try {
-            const result = await verifyBank(formData.bankAccount, formData.ifscCode);
-            if (result.valid === true) {
-                const accountName = result.data?.clientName || result.data?.fullName || '';
-
-                toast.success(`Bank Verified: ${accountName}`);
-                setVerified(prev => ({ ...prev, bank: 'verified' }));
-
-                if (accountName && !formData.ownerName) {
-                    setFormData(prev => ({ ...prev, ownerName: accountName }));
-                }
-            } else if (result.valid === 'manual_review') {
-                toast(result.message || 'Bank service degraded, manual review will be performed', { icon: '⚠️' });
-                setVerified(prev => ({ ...prev, bank: 'pending' }));
-            } else {
-                toast.error(result.message || 'Bank verification failed');
-                setVerified(prev => ({ ...prev, bank: 'failed' }));
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error('Failed to connect to verification service');
-        } finally {
-            setVerifying(prev => ({ ...prev, bank: false }));
-        }
-    };
-
-    const handleVerifyPAN = async () => {
-        if (!formData.panCard) {
-            toast.error("Please enter a PAN Number first");
-            return;
-        }
-
-        const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-        if (!panRegex.test(formData.panCard)) {
-            toast.error("Invalid PAN format.");
-            return;
-        }
-
-        setVerifying(prev => ({ ...prev, pan: true }));
-        try {
-            const result = await verifyPAN(formData.panCard);
-            if (result.valid === true) {
-                const fullName = result.data?.full_name || '';
-
-                toast.success(`PAN Verified: ${fullName}`);
-                setVerified(prev => ({ ...prev, pan: 'verified' }));
-
-                if (fullName && !formData.ownerName) {
-                    setFormData(prev => ({ ...prev, ownerName: fullName }));
-                }
-            } else if (result.valid === 'manual_review') {
-                toast(result.message || 'PAN service degraded, manual review will be performed', { icon: '⚠️' });
-                setVerified(prev => ({ ...prev, pan: 'pending' }));
-            } else {
-                toast.error(result.message || 'PAN verification failed');
-                setVerified(prev => ({ ...prev, pan: 'failed' }));
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error('Failed to connect to verification service');
-        } finally {
-            setVerifying(prev => ({ ...prev, pan: false }));
-        }
-    };
 
     const handleFormSubmit = async (e) => {
         if (e && e.preventDefault) e.preventDefault();
@@ -273,14 +203,20 @@ export default function MerchantApplyPage() {
     };
 
     const validateStep2 = () => {
-        if (verified.bank !== 'verified' && verified.bank !== 'pending') {
-            toast.error("Please verify your Bank Account details first.");
-            return "Please verify your Bank Account details first.";
+        if (!formData.bankAccount || !formData.ifscCode) {
+            toast.error("Please enter your Bank Account details.");
+            return "Please enter your Bank Account details.";
         }
 
-        if (verified.pan !== 'verified' && verified.pan !== 'pending') {
-            toast.error("Please verify your PAN details first.");
-            return "Please verify your PAN details first.";
+        if (!formData.panCard) {
+            toast.error("Please enter your PAN Number.");
+            return "Please enter your PAN Number.";
+        }
+        
+        const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+        if (!panRegex.test(formData.panCard)) {
+            toast.error("Invalid PAN format.");
+            return "Invalid PAN format.";
         }
 
         return null;
@@ -308,6 +244,92 @@ export default function MerchantApplyPage() {
         return (
             <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-[#020617] transition-colors">
                 <Loader2 className="animate-spin text-[#D4AF37]" size={32} />
+            </div>
+        );
+    }
+
+    if (profile && profile.kyc_status !== 'verified') {
+        const isPending = profile.kyc_status === 'pending';
+        const isRejected = profile.kyc_status === 'rejected';
+
+        return (
+            <div className="h-screen w-full bg-white dark:bg-[#020617] font-[family-name:var(--font-outfit)] overflow-hidden relative flex flex-col md:flex-row transition-colors">
+                 {/* Desktop: Left Side Brand Panel (Hidden on Mobile) */}
+                <div className="hidden md:flex w-1/2 lg:w-[45%] bg-slate-900 dark:bg-[#0F1419] h-full relative overflow-hidden flex-col justify-between p-12 text-white transition-colors">
+                    <div className="absolute inset-0 opacity-20">
+                        <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500 rounded-full blur-[100px] animate-pulse-slow" />
+                        <div className="absolute top-1/2 -left-24 w-72 h-72 bg-[#D4AF37] rounded-full blur-[100px] animate-pulse-slow delay-700" />
+                        <div className="absolute -bottom-24 right-24 w-80 h-80 bg-emerald-500 rounded-full blur-[100px]" />
+                    </div>
+
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-2 mb-8">
+                            <div className="w-10 h-10 bg-[#D4AF37] rounded-xl flex items-center justify-center text-slate-900 font-bold text-xl">I</div>
+                            <span className="text-2xl font-bold tracking-tight">INTRUST</span>
+                        </div>
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                        >
+                            <h1 className="text-5xl font-extrabold leading-tight mb-6">
+                                Grow your business <br />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-[#D4AF37]">exponentially.</span>
+                            </h1>
+                            <p className="text-slate-400 text-lg max-w-md">
+                                Join 2,400+ merchants who are already selling gift cards to millions of customers.
+                            </p>
+                        </motion.div>
+                    </div>
+
+                    <div className="relative z-10 space-y-6">
+                        <TrustItem icon={Users} title="Millions of Customers" text="Access our verified user base instantly." delay={0.4} />
+                        <TrustItem icon={Shield} title="Zero Fraud Liability" text="We cover 100% of chargeback risks." delay={0.5} />
+                        <TrustItem icon={Banknote} title="Instant Settlements" text="Get paid directly to your bank account." delay={0.6} />
+                    </div>
+
+                    <div className="relative z-10 text-[10px] text-slate-500 font-bold tracking-widest uppercase">
+                        © 2024 Intrust Platform
+                    </div>
+                </div>
+
+                {/* Right Panel: KYC Gate */}
+                <div className="flex-1 h-full relative flex items-center justify-center p-6 bg-white dark:bg-[#020617] transition-colors">
+                    <div className="max-w-[480px] w-full text-center">
+                        <div className="w-20 h-20 bg-amber-50 dark:bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Shield className="w-10 h-10 text-[#D4AF37]" />
+                        </div>
+                        <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-4">Complete KYC Before Applying</h2>
+                        <p className="text-slate-500 dark:text-slate-400 text-lg mb-8">
+                            You need to verify your identity (KYC) before you can apply to become a merchant on Intrust.
+                        </p>
+                        
+                        <div className={`p-4 rounded-xl text-left mb-8 font-medium shadow-sm border ${
+                            isPending ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20' :
+                            isRejected ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20' :
+                            'bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 border-black/5 dark:border-white/10'
+                        }`}>
+                            {isPending ? "Your KYC is under review. You'll be able to apply once it's approved." :
+                             isRejected ? "Your KYC was rejected. Please resubmit with correct details." :
+                             "Complete your KYC verification — it takes less than 2 minutes."}
+                        </div>
+
+                        <div className="space-y-4">
+                            <button
+                                onClick={() => router.push('/profile/kyc')}
+                                className="w-full py-4 bg-[#D4AF37] hover:bg-opacity-90 text-[#020617] font-black rounded-2xl shadow-lg shadow-[#D4AF37]/20 transition-all text-lg gold-glow"
+                            >
+                                {isPending ? "View KYC Status" : "Complete KYC"}
+                            </button>
+                            <button
+                                onClick={() => router.back()}
+                                className="w-full py-4 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-bold rounded-2xl transition-all"
+                            >
+                                ← Go Back
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -395,7 +417,14 @@ export default function MerchantApplyPage() {
                             >
                                 <div className="mb-10">
                                     <h2 className="text-4xl sm:text-5xl font-display font-black text-slate-900 dark:text-white mb-4 tracking-tight">Business Details</h2>
-                                    <p className="text-xl text-slate-500 dark:text-slate-400 font-semibold">Tell us about your business to get started.</p>
+                                    <div className="flex flex-col gap-2">
+                                        <p className="text-xl text-slate-500 dark:text-slate-400 font-semibold">Tell us about your business to get started.</p>
+                                        {profile?.kyc_status === 'verified' && (
+                                            <div className="inline-flex max-w-fit items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 text-sm font-bold border border-green-200 dark:border-green-500/30">
+                                                <CheckCircle size={16} /> KYC Verified — Identity Confirmed
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="space-y-10">
@@ -458,7 +487,6 @@ export default function MerchantApplyPage() {
                                             value={formData.bankAccount}
                                             onChange={e => {
                                                 setFormData({ ...formData, bankAccount: e.target.value });
-                                                if (verified.bank) setVerified(prev => ({ ...prev, bank: null }));
                                             }}
                                             autoFocus
                                             icon={CreditCard}
@@ -469,26 +497,16 @@ export default function MerchantApplyPage() {
                                                 value={formData.ifscCode}
                                                 onChange={e => {
                                                     setFormData({ ...formData, ifscCode: e.target.value });
-                                                    if (verified.bank) setVerified(prev => ({ ...prev, bank: null }));
                                                 }}
                                                 icon={Banknote}
-                                                actionLabel={verified.bank === 'verified' ? 'Verified' : 'Verify Bank'}
-                                                onAction={handleVerifyBank}
-                                                isVerifying={verifying.bank}
-                                                verificationState={verified.bank}
                                             />
                                             <SmoothInput
                                                 label="PAN Number"
                                                 value={formData.panCard}
                                                 onChange={e => {
                                                     setFormData({ ...formData, panCard: e.target.value.toUpperCase() });
-                                                    if (verified.pan) setVerified(prev => ({ ...prev, pan: null }));
                                                 }}
                                                 icon={FileText}
-                                                actionLabel="Verify"
-                                                onAction={handleVerifyPAN}
-                                                isVerifying={verifying.pan}
-                                                verificationState={verified.pan}
                                             />
                                         </div>
 
@@ -561,8 +579,8 @@ export default function MerchantApplyPage() {
                         </button>
                         <button
                             onClick={step === 2 ? handleFormSubmit : nextStep}
-                            disabled={loading || (step === 2 && ((verified.pan !== 'verified' && verified.pan !== 'pending') || (verified.bank !== 'verified' && verified.bank !== 'pending')))}
-                            className={`flex-1 flex gap-3 justify-center items-center py-5 rounded-2xl text-white dark:text-[#020617] font-black shadow-lg transition-all text-xl ${(loading || (step === 2 && ((verified.pan !== 'verified' && verified.pan !== 'pending') || (verified.bank !== 'verified' && verified.bank !== 'pending')))) ? 'bg-slate-200 dark:bg-white/5 shadow-none text-slate-400 cursor-not-allowed' : 'bg-[#D4AF37] shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/30 hover:scale-[1.02] active:scale-[0.98] gold-glow'}`}
+                            disabled={loading || (step === 2 && (!formData.bankAccount || !formData.ifscCode || !formData.panCard))}
+                            className={`flex-1 flex gap-3 justify-center items-center py-5 rounded-2xl text-white dark:text-[#020617] font-black shadow-lg transition-all text-xl ${(loading || (step === 2 && (!formData.bankAccount || !formData.ifscCode || !formData.panCard))) ? 'bg-slate-200 dark:bg-white/5 shadow-none text-slate-400 cursor-not-allowed' : 'bg-[#D4AF37] shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/30 hover:scale-[1.02] active:scale-[0.98] gold-glow'}`}
                         >
                             {loading && <Loader2 className="animate-spin" size={24} />}
                             {loading ? 'Submitting...' : step === 2 ? 'Submit Application' : 'Continue'}

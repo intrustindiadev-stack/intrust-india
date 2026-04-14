@@ -108,7 +108,7 @@ export async function POST(request) {
         await adminSupabase.from('notifications').insert({
             user_id: targetUserId,
             title: 'Merchant Application Approved 🎉',
-            body: `Congratulations! Your merchant application for ${existingMerchant.business_name} has been approved. Please pay the one-time subscription fee of ₹149 to activate your panel.`,
+            body: `Congratulations! Your merchant application for ${existingMerchant.business_name} has been approved. Choose a subscription plan (starting ₹499/month) to activate your merchant panel.`,
             type: 'success',
             reference_type: 'merchant_approved',
             read: false
