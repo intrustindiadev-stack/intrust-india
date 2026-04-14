@@ -7,9 +7,13 @@ import WithdrawalForm from '@/components/wallet/WithdrawalForm'; // Assuming thi
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
+import { useSubscription } from '@/components/merchant/SubscriptionContext';
+import { useConfetti } from '@/components/ui/ConfettiProvider';
 
 export default function WalletPage() {
     const router = useRouter();
+    const { performAction } = useSubscription();
+    const { trigger: triggerConfetti } = useConfetti();
     const [wallet, setWallet] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -230,14 +234,20 @@ export default function WalletPage() {
                     
                     <div className="flex flex-row gap-3 w-full">
                         <button
-                            onClick={() => { setShowTopup(true); setShowWithdrawal(false); }}
+                            onClick={() => performAction(() => {
+                                setShowTopup(true); 
+                                setShowWithdrawal(false); 
+                            })}
                             className="flex-1 px-4 py-4 bg-gradient-to-r from-[#D4AF37] to-[#e6cf73] hover:to-[#D4AF37] text-black font-black uppercase text-[11px] tracking-widest rounded-2xl shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all flex flex-col items-center justify-center gap-1 active:scale-95"
                         >
                             <span className="material-icons-round text-xl mb-1 stroke-2">add_circle_outline</span>
                             Add Money
                         </button>
                         <button
-                            onClick={() => { setShowWithdrawal(true); setShowTopup(false); }}
+                            onClick={() => performAction(() => {
+                                setShowWithdrawal(true); 
+                                setShowTopup(false); 
+                            })}
                             className="flex-1 px-4 py-4 bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-[#D4AF37]/50 text-white font-black uppercase text-[11px] tracking-widest rounded-2xl shadow-lg transition-all flex flex-col items-center justify-center gap-1 active:scale-95 group/btn"
                         >
                             <span className="material-icons-round text-xl mb-1 text-slate-400 group-hover/btn:text-[#D4AF37] transition-colors">account_balance</span>
@@ -261,6 +271,7 @@ export default function WalletPage() {
                             isMerchant={true}
                             onSuccess={() => {
                                 setShowTopup(false);
+                                triggerConfetti();
                                 fetchWalletData();
                             }}
                             onCancel={() => setShowTopup(false)}

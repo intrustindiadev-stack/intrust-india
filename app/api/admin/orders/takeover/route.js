@@ -1,20 +1,13 @@
 import { createAdminClient } from '@/lib/supabaseServer';
+import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
     try {
-        const supabase = createAdminClient();
-        const authHeader = request.headers.get('authorization');
-        
-        // Extract token
-        const token = authHeader?.split('Bearer ')[1];
-        if (!token) return NextResponse.json({ error: 'Missing token' }, { status: 401 });
+        const { user, profile, admin: supabase } = await getAuthUser(request);
 
-        // Verify Admin Auth
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-        if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user) return NextResponse.json({ error: 'Missing token' }, { status: 401 });
 
-        const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single();
         if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }

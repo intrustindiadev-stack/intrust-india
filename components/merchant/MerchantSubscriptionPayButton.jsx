@@ -132,7 +132,7 @@ export default function MerchantSubscriptionPayButton({
                                     type="button"
                                     onClick={() => setSelectedPlan(plan)}
                                     className={[
-                                        'relative flex flex-col items-center rounded-2xl p-4 border transition-all duration-200 cursor-pointer focus:outline-none',
+                                        'relative flex flex-col items-center rounded-2xl p-4 border transition-all duration-200 cursor-pointer focus:outline-none min-h-[72px] justify-center',
                                         isActive
                                             ? 'bg-[#D4AF37]/20 border-[#D4AF37] shadow-[0_0_16px_rgba(212,175,55,0.25)]'
                                             : 'bg-white/5 border-white/10 hover:border-white/30 hover:bg-white/10',

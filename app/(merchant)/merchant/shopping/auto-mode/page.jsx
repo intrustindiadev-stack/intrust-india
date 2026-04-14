@@ -8,6 +8,7 @@ import {
     ArrowLeft, TrendingDown, IndianRupee, Star, AlertTriangle, Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSubscription } from '@/components/merchant/SubscriptionContext';
 
 // ─── Mini Bar Chart ──────────────────────────────────────────────────────────
 function MiniBarChart({ data }) {
@@ -105,6 +106,7 @@ function StatCard({ icon: Icon, label, value, sub, accent = 'indigo', delay = 0,
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AutoModePage() {
+    const { performAction } = useSubscription();
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [merchant, setMerchant] = useState(null);
@@ -161,12 +163,12 @@ export default function AutoModePage() {
 
     useEffect(() => { fetchData(); }, []);
 
-    // Countdown timer
+    // Countdown timer for Auto Mode feature specifically
     useEffect(() => {
-        if (!merchant?.subscription_expires_at || merchant?.auto_mode !== true) return;
+        if (!merchant?.auto_mode_valid_until) return;
 
         const calculateTimeLeft = () => {
-            const difference = new Date(merchant.subscription_expires_at) - new Date();
+            const difference = new Date(merchant.auto_mode_valid_until) - new Date();
             if (difference > 0) {
                 const days = Math.floor(difference / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
@@ -182,7 +184,7 @@ export default function AutoModePage() {
         const timer = setInterval(calculateTimeLeft, 1000);
 
         return () => clearInterval(timer);
-    }, [merchant?.subscription_expires_at, merchant?.auto_mode]);
+    }, [merchant?.auto_mode_valid_until]);
 
     // ── Derived stats ──
     const stats = useMemo(() => {
@@ -261,13 +263,15 @@ export default function AutoModePage() {
     const subscriptionPrice = isFirstMonth ? 999 : 1999;
 
     const handleToggleAutoMode = async () => {
-        if (isAutoModeActive) {
-            // Turning OFF logic -> show warning modal first
-            setShowWarningModal(true);
-        } else {
-            // Turning ON -> skip payment modal since subscription handles it now, just confirm or turn on immediately
-            confirmActivation();
-        }
+        performAction(async () => {
+            if (isAutoModeActive) {
+                // Turning OFF logic -> show warning modal first
+                setShowWarningModal(true);
+            } else {
+                // Turning ON -> skip payment modal since subscription handles it now, just confirm or turn on immediately
+                confirmActivation();
+            }
+        });
     };
     const confirmDeactivation = async () => {
         setProcessing(true);
@@ -426,7 +430,18 @@ export default function AutoModePage() {
                         </>
                     )}
                     <button disabled={processing}
-                        onClick={() => isAutoModeActive ? setShowWarningModal(true) : setShowPaymentModal(true)}
+                        onClick={() => {
+                            if (isAutoModeActive) {
+                                setShowWarningModal(true);
+                            } else {
+                                const hasValidSub = merchant?.auto_mode_valid_until && new Date(merchant.auto_mode_valid_until) > new Date();
+                                if (hasValidSub) {
+                                    confirmActivation();
+                                } else {
+                                    setShowPaymentModal(true);
+                                }
+                            }
+                        }}
                         className={`relative w-20 h-20 rounded-full flex items-center justify-center border-2 transition-all duration-500 hover:scale-105 active:scale-95 disabled:opacity-70 shadow-2xl ${isAutoModeActive
                             ? 'bg-emerald-500/20 border-emerald-500 shadow-emerald-500/30'
                             : 'bg-slate-800 border-slate-600'}`}>

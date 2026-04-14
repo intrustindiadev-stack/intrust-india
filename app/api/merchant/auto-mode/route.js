@@ -33,7 +33,7 @@ export async function POST(request) {
         // 1. Get current merchant data
         const { data: merchant, error: merchantError } = await supabase
             .from('merchants')
-            .select('id, auto_mode, subscription_status, subscription_expires_at')
+            .select('id, auto_mode, subscription_status, subscription_expires_at, auto_mode_months_paid, auto_mode_valid_until')
             .eq('user_id', user.id)
             .single();
 
@@ -56,17 +56,74 @@ export async function POST(request) {
                 return NextResponse.json({ error: 'Auto Mode is already active' }, { status: 400 });
             }
 
-            const { error: updateError } = await supabase
-                .from('merchants')
-                .update({ auto_mode: true })
-                .eq('id', merchant.id);
+            const hasValidSub = merchant.auto_mode_valid_until && new Date(merchant.auto_mode_valid_until) > new Date();
 
-            if (updateError) throw updateError;
+            if (hasValidSub) {
+                // Subscription is still active, just turn the switch back on without charging
+                const { error: updateError } = await supabase
+                    .from('merchants')
+                    .update({ auto_mode: true })
+                    .eq('id', merchant.id);
 
-            return NextResponse.json({ 
-                success: true, 
-                message: 'Auto Mode activated successfully'
-            });
+                if (updateError) throw updateError;
+
+                return NextResponse.json({ 
+                    success: true, 
+                    message: 'Auto Mode re-activated successfully (Existing Subscription)'
+                });
+            } else {
+                // Charge the merchant
+                const costRupees = (merchant.auto_mode_months_paid || 0) === 0 ? 999 : 1999;
+                const costPaise = costRupees * 100;
+
+                // Check wallet balance
+                const { data: wallet, error: walletError } = await supabase
+                    .from('merchant_wallets')
+                    .select('id, balance_paise')
+                    .eq('merchant_id', merchant.id)
+                    .single();
+
+                if (walletError || !wallet || wallet.balance_paise < costPaise) {
+                    return NextResponse.json({ error: 'Insufficient wallet balance for Auto Mode subscription.' }, { status: 400 });
+                }
+
+                // Deduct from wallet
+                const { error: deductError } = await supabase
+                    .from('merchant_wallets')
+                    .update({ balance_paise: wallet.balance_paise - costPaise })
+                    .eq('id', wallet.id);
+                
+                if (deductError) throw deductError;
+
+                // Log transaction
+                await supabase.from('merchant_wallet_transactions').insert({
+                    merchant_id: merchant.id,
+                    type: 'platform_fee',
+                    amount_paise: costPaise,
+                    status: 'completed',
+                    reference_id: `auto_mode_${Date.now()}`,
+                    description: `Auto Mode Subscription (${costRupees} INR)`
+                });
+
+                const validUntil = new Date();
+                validUntil.setMonth(validUntil.getMonth() + 1);
+
+                const { error: updateError } = await supabase
+                    .from('merchants')
+                    .update({ 
+                        auto_mode: true,
+                        auto_mode_months_paid: (merchant.auto_mode_months_paid || 0) + 1,
+                        auto_mode_valid_until: validUntil.toISOString()
+                    })
+                    .eq('id', merchant.id);
+
+                if (updateError) throw updateError;
+
+                return NextResponse.json({ 
+                    success: true, 
+                    message: 'Auto Mode activated successfully! Subscription purchased.'
+                });
+            }
         }
 
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

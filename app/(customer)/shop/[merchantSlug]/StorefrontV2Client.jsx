@@ -25,6 +25,33 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     const [searchQuery, setSearchQuery] = useState('');
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingCartItem, setPendingCartItem] = useState(null);
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const isStoreOpen = useMemo(() => {
+        if (!merchant.is_open) return false;
+        if (!merchant.opening_time || !merchant.closing_time) return true;
+
+        const now = currentTime;
+        const currentMins = now.getHours() * 60 + now.getMinutes();
+        
+        const [openH, openM] = merchant.opening_time.split(':').map(Number);
+        const [closeH, closeM] = merchant.closing_time.split(':').map(Number);
+        
+        const openMins = openH * 60 + openM;
+        const closeMins = closeH * 60 + closeM;
+        
+        if (closeMins > openMins) {
+            return currentMins >= openMins && currentMins < closeMins;
+        } else {
+            // Overnight shift
+            return currentMins >= openMins || currentMins < closeMins;
+        }
+    }, [merchant.is_open, merchant.opening_time, merchant.closing_time, currentTime]);
     const supabase = createClient();
 
     // Preserve User's core sync logic
@@ -102,6 +129,10 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     };
 
     const addToCart = useCallback(async (item) => {
+        if (!isStoreOpen) {
+            toast.error("Store is currently closed and not accepting orders.");
+            return;
+        }
         if (!customer?.id) {
             router.push('/login');
             return;
@@ -153,7 +184,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
             console.error('Error adding to cart:', err);
             toast.error("Failed to add to cart");
         }
-    }, [customer?.id, supabase, router]);
+    }, [customer?.id, supabase, router, isStoreOpen]);
 
     const handleConfirmClearCart = async () => {
         if (!pendingCartItem) return;
@@ -250,7 +281,25 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     const avatarUrl = merchant?.user_profiles?.avatar_url || (Array.isArray(merchant?.user_profiles) ? merchant?.user_profiles[0]?.avatar_url : null);
 
     return (
-        <div className="relative min-h-screen flex flex-col">
+        <div className={`relative min-h-screen flex flex-col transition-all duration-700 ${!isStoreOpen ? 'grayscale-closed' : ''}`}>
+            {/* Status Banner for Closed Store */}
+            {!isStoreOpen && (
+                <div className="fixed top-0 left-0 right-0 z-[100] bg-black/90 text-white backdrop-blur-md py-3 px-4 flex items-center justify-center gap-4 text-sm font-bold border-b border-white/10">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                        <span className="uppercase tracking-[0.2em] text-[10px]">Closed</span>
+                    </div>
+                    <div className="h-4 w-[1px] bg-white/20" />
+                    <p className="flex items-center gap-2">
+                        <span className="material-icons-round text-sm text-[#D4AF37]">schedule</span>
+                        {merchant.is_open === false 
+                            ? "Store manually closed by owner" 
+                            : `Next opening: ${merchant.opening_time || '09:00'} today`}
+                    </p>
+                </div>
+            )}
+
+            <div className="relative min-h-screen flex flex-col pt-12 md:pt-14">
 
             {/* ====== CREATIVE AMBIENT BACKGROUND ====== */}
             <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
@@ -349,6 +398,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                     <MerchantProfileCard 
                         merchant={merchant} 
                         totalItems={initialInventory.length} 
+                        isStoreOpen={isStoreOpen}
                     />
                     {isLoading ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
@@ -404,6 +454,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                 confirmLabel="Clear & Add"
                 cancelLabel="Cancel"
             />
+            </div>
         </div>
     );
 }

@@ -209,7 +209,7 @@ export default async function AdminDashboard() {
                 {/* KPI Glass Cards - Mobile Horizontal Scroll */}
                 <div className="flex overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-6 gap-4 sm:gap-6 hide-scrollbar snap-x snap-mandatory">
                     {/* Today's Revenue Card */}
-                    <Link href="/admin/transactions" className="snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                    <Link href="/admin/transactions" style={{ animationDelay: '0ms' }} className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-600">
@@ -222,7 +222,7 @@ export default async function AdminDashboard() {
                     </Link>
 
                     {/* Revenue Card */}
-                    <Link href="/admin/transactions" className="snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                    <Link href="/admin/transactions" style={{ animationDelay: '100ms' }} className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
@@ -235,7 +235,7 @@ export default async function AdminDashboard() {
                     </Link>
 
                     {/* Active Merchants */}
-                    <Link href="/admin/merchants" className="snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                    <Link href="/admin/merchants" style={{ animationDelay: '200ms' }} className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600">
@@ -248,7 +248,7 @@ export default async function AdminDashboard() {
                     </Link>
 
                     {/* Total Coupons */}
-                    <Link href="/admin/giftcards" className="snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                    <Link href="/admin/giftcards" style={{ animationDelay: '300ms' }} className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
@@ -261,7 +261,7 @@ export default async function AdminDashboard() {
                     </Link>
 
                     {/* Today's Sales */}
-                    <Link href="/admin/shopping/orders" className="snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                    <Link href="/admin/shopping/orders" style={{ animationDelay: '400ms' }} className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600">
@@ -273,7 +273,7 @@ export default async function AdminDashboard() {
                         <h3 className="text-2xl sm:text-3xl font-black text-gray-950 tracking-tighter">{todaySalesData.count}</h3>
                     </Link>
                     {/* Shopping Revenue */}
-                    <Link href="/admin/shopping/orders" className="snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                    <Link href="/admin/shopping/orders" style={{ animationDelay: '500ms' }} className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
@@ -311,7 +311,7 @@ export default async function AdminDashboard() {
                                 </div>
                                 <div className="divide-y divide-gray-50">
                                     {pendingApprovals.map((merchant) => (
-                                        <div key={merchant.id} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors">
+                                        <div key={merchant.id} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gradient-to-r hover:from-slate-50 hover:to-transparent dark:hover:from-white/[0.02] dark:hover:to-transparent transition-all">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-500 text-lg font-bold shadow-inner">
                                                     {merchant.business_name?.charAt(0) || 'M'}
@@ -363,7 +363,7 @@ export default async function AdminDashboard() {
                                     <tbody className="divide-y divide-gray-50">
                                         {recentTransactions.length > 0 ? (
                                             recentTransactions.map((tx) => (
-                                                <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors group">
+                                                <tr key={tx.id} className="hover:bg-gradient-to-r hover:from-slate-50 hover:to-transparent dark:hover:from-white/[0.02] dark:hover:to-transparent transition-all group">
                                                     <td className="p-4 pl-6 font-medium text-slate-900 flex items-center gap-3">
                                                         <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
                                                             {tx.buyer_name?.charAt(0)}

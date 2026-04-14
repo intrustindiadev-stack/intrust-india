@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabaseServer';
+import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
 
 // GET — Fetch merchant's udhari settings
@@ -10,15 +11,9 @@ export async function GET(request) {
         let merchantId = searchParams.get('merchantId');
 
         if (!merchantId) {
-            const authHeader = request.headers.get('Authorization');
-            if (!authHeader) {
+            const { user } = await getAuthUser(request);
+            if (!user) {
                 return NextResponse.json({ error: 'Missing authorization header' }, { status: 401 });
-            }
-
-            const token = authHeader.replace('Bearer ', '');
-            const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
-            if (userError || !user) {
-                return NextResponse.json({ error: 'Invalid token or user not found' }, { status: 401 });
             }
 
             const { data: merchant } = await supabaseAdmin
@@ -62,15 +57,9 @@ export async function PATCH(request) {
     try {
         const supabaseAdmin = createAdminClient();
 
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader) {
+        const { user } = await getAuthUser(request);
+        if (!user) {
             return NextResponse.json({ error: 'Missing authorization header' }, { status: 401 });
-        }
-
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
-        if (userError || !user) {
-            return NextResponse.json({ error: 'Invalid token or user not found' }, { status: 401 });
         }
 
         const { data: merchant } = await supabaseAdmin

@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Package, RefreshCw, Tags, Sparkles } from 'lucide-react';
 import MerchantFloatingCart from '@/components/merchant/shopping/MerchantFloatingCart';
 import SuccessAnimation from '@/components/ui/SuccessAnimation';
+import { useSubscription } from '@/components/merchant/SubscriptionContext';
+import { useConfetti } from '@/components/ui/ConfettiProvider';
 
 const COMMISSION_RATE = 0.03;
 
@@ -20,6 +22,8 @@ export default function PurchasePage() {
     const [merchantBalance, setMerchantBalance] = useState(0);
     const [showSuccess, setShowSuccess] = useState(false);
     const [successStats, setSuccessStats] = useState(null);
+    const { performAction } = useSubscription();
+    const { trigger: triggerConfetti } = useConfetti();
 
     const fetchData = async () => {
         try {
@@ -94,38 +98,44 @@ export default function PurchasePage() {
 
     const handlePurchaseWallet = async () => {
         if (cartItems.length === 0) return;
-        if (merchantBalance < subtotalWithCommission) {
-            toast.error(`Insufficient balance! Need ₹${subtotalWithCommission.toFixed(2)} but have ₹${merchantBalance.toFixed(2)}`);
-            return;
-        }
 
-        try {
-            setPurchasing(true);
-            const couponIds = Object.keys(cart);
+        performAction(async () => {
+            if (merchantBalance < subtotalWithCommission) {
+                toast.error(`Insufficient balance! Need ₹${subtotalWithCommission.toFixed(2)} but have ₹${merchantBalance.toFixed(2)}`);
+                return;
+            }
 
-            const response = await fetch('/api/merchant/purchase', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ couponIds }),
-            });
+            try {
+                setPurchasing(true);
+                const couponIds = Object.keys(cart);
 
-            const result = await response.json();
-            if (!response.ok || !result.success) throw new Error(result.message || 'Purchase failed');
+                const response = await fetch('/api/merchant/purchase', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ couponIds }),
+                });
 
-            // Show success animation
-            setSuccessStats([
-                { label: 'Coupons Added', value: cartItems.length },
-                { label: 'Total Paid', value: `₹${subtotalWithCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` },
-            ]);
-            setCart({});
-            setShowSuccess(true);
-            fetchData();
-        } catch (err) {
-            console.error('Purchase error:', err);
-            toast.error('Purchase failed: ' + err.message);
-        } finally {
-            setPurchasing(false);
-        }
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.message || 'Purchase failed');
+
+                // Trigger celebration
+                triggerConfetti();
+
+                // Show success animation
+                setSuccessStats([
+                    { label: 'Coupons Added', value: cartItems.length },
+                    { label: 'Total Paid', value: `₹${subtotalWithCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` },
+                ]);
+                setCart({});
+                setShowSuccess(true);
+                fetchData();
+            } catch (err) {
+                console.error('Purchase error:', err);
+                toast.error('Purchase failed: ' + err.message);
+            } finally {
+                setPurchasing(false);
+            }
+        });
     };
 
     if (loading) {

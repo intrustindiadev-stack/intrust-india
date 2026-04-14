@@ -8,10 +8,13 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import { useState } from 'react';
 import KycStatusCard from "./KycStatusCard";
 import WalletCard from "./WalletCard";
+import { motion, LayoutGroup } from "framer-motion";
+import { useSubscription } from "./SubscriptionContext";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
     const pathname = usePathname();
     const { merchant } = useMerchant();
+    const { isSubscribed, setShowModal } = useSubscription();
 
     const menuItems = [
         { label: "Dashboard", href: "/merchant/dashboard", icon: "grid_view" },
@@ -87,7 +90,21 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                     </button>
                 </div>
 
-                <div className="px-5 mb-5 shrink-0">
+                <div className="px-5 mb-5 shrink-0 space-y-3">
+                    {!isSubscribed && (
+                        <div 
+                            onClick={() => setShowModal(true)}
+                            className="bg-gradient-to-r from-amber-500 to-[#D4AF37] p-3 rounded-2xl shadow-lg cursor-pointer hover:scale-[1.02] transition-transform flex items-center justify-between"
+                        >
+                            <div>
+                                <h3 className="text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                                    <span className="material-icons-round text-sm">lock</span> Platform Locked
+                                </h3>
+                                <p className="text-white/80 text-[10px] uppercase font-semibold mt-0.5">Activate to launch your store</p>
+                            </div>
+                            <span className="material-icons-round text-white bg-white/20 rounded-full p-1 text-sm">arrow_forward</span>
+                        </div>
+                    )}
                     <div className="bg-white/50 dark:bg-white/5 p-3 rounded-2xl border border-black/5 dark:border-[#D4AF37]/20 shadow-sm relative overflow-hidden backdrop-blur-md">
                         <KycStatusCard />
                         <WalletCard setIsOpen={setIsOpen} />
@@ -95,51 +112,61 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 </div>
 
                 <nav className="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar pb-6 relative z-10">
-                    {menuItems.map((item) => {
-                        const isActive = pathname === item.href;
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                onClick={() => setIsOpen(false)}
-                                className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative overflow-hidden ${isActive
-                                    ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
-                                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                                    }`}
-                            >
-                                {isActive && (
-                                    <div className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent z-0 border-l-4 border-slate-900 dark:border-[#D4AF37]" />
-                                )}
-                                <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
-                                <span className="text-[13px] font-bold tracking-wide z-10">{item.label}</span>
-                            </Link>
-                        );
-                    })}
+                    <LayoutGroup>
+                        {menuItems.map((item) => {
+                            const isActive = pathname === item.href;
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    onClick={() => setIsOpen(false)}
+                                    className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative overflow-hidden ${isActive
+                                        ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
+                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                        }`}
+                                >
+                                    {isActive && (
+                                        <motion.div 
+                                            layoutId="sidebar-active"
+                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                            className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent z-0 border-l-4 border-slate-900 dark:border-[#D4AF37]" 
+                                        />
+                                    )}
+                                    <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
+                                    <span className="text-[13px] font-bold tracking-wide z-10">{item.label}</span>
+                                </Link>
+                            );
+                        })}
 
-                    <div className="pt-8 pb-2 px-6">
-                        <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 font-black">Preferences</p>
-                    </div>
+                        <div className="pt-8 pb-2 px-6">
+                            <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 font-black">Preferences</p>
+                        </div>
 
-                    {preferencesItems.map((item) => {
-                        const isActive = pathname === item.href;
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                onClick={() => setIsOpen(false)}
-                                className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative overflow-hidden ${isActive
-                                    ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
-                                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                                    }`}
-                            >
-                                {isActive && (
-                                    <div className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent z-0 border-l-4 border-slate-900 dark:border-[#D4AF37]" />
-                                )}
-                                <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
-                                <span className="text-[13px] font-bold tracking-wide z-10">{item.label}</span>
-                            </Link>
-                        );
-                    })}
+                        {preferencesItems.map((item) => {
+                            const isActive = pathname === item.href;
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    onClick={() => setIsOpen(false)}
+                                    className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative overflow-hidden ${isActive
+                                        ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
+                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                        }`}
+                                >
+                                    {isActive && (
+                                        <motion.div 
+                                            layoutId="sidebar-active"
+                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                            className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent z-0 border-l-4 border-slate-900 dark:border-[#D4AF37]" 
+                                        />
+                                    )}
+                                    <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
+                                    <span className="text-[13px] font-bold tracking-wide z-10">{item.label}</span>
+                                </Link>
+                            );
+                        })}
+                    </LayoutGroup>
                 </nav>
 
                 <div className="p-4 mt-auto shrink-0 relative z-10">

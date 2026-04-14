@@ -56,3 +56,7 @@ docs/
 #zip
 .zip
 deploy_pipeline.zip
+
+# QA assets — PDFs should not be in source control
+e2e_tests/*.pdf
+e2e_tests/manual_checklist.txt
