@@ -129,7 +129,22 @@ export default function AdBannerCarousel() {
     const isDynamic = dynamicBanners.length > 0;
     const IconComponent = !isDynamic ? banner.icon : null;
 
-    if (loading) return null; // or a skeleton
+    // Skeleton while banners are loading
+    if (loading) return (
+        <div className="relative w-full mb-6 sm:mb-10">
+            <div className="relative w-full rounded-xl sm:rounded-3xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                <div className="absolute inset-0 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 animate-pulse" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="h-4 w-32 bg-white/30 rounded-full" />
+                        <div className="h-6 w-48 bg-white/30 rounded-full" />
+                        <div className="h-3 w-40 bg-white/20 rounded-full" />
+                        <div className="h-8 w-28 bg-white/30 rounded-xl mt-2" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div
@@ -137,8 +152,11 @@ export default function AdBannerCarousel() {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {/* Carousel Container */}
-            <div className={`relative overflow-hidden rounded-xl sm:rounded-3xl shadow-xl ${banner.glowColor} transition-shadow duration-500`}>
+            {/* 16:9 aspect-ratio shell — guarantees identical dimensions on all screen sizes */}
+            <div
+                className={`relative w-full overflow-hidden rounded-xl sm:rounded-3xl shadow-xl ${banner.glowColor} transition-shadow duration-500`}
+                style={{ aspectRatio: '16/9' }}
+            >
                 <AnimatePresence initial={false} custom={direction} mode="wait">
                     <motion.div
                         key={page}
@@ -162,20 +180,20 @@ export default function AdBannerCarousel() {
                                 paginate(-1);
                             }
                         }}
-                        className="relative cursor-grab active:cursor-grabbing"
+                        className="absolute inset-0 cursor-grab active:cursor-grabbing"
                         style={{ background: banner.bg, touchAction: 'pan-y' }}
                     >
                         {isDynamic ? (
-                            // Dynamic Image Render
-                            <Link href={banner.target_url || '#'} className="block w-full min-h-[140px] sm:min-h-[200px] relative">
+                            // Dynamic Image Render — fills the 16:9 box completely
+                            <Link href={banner.target_url || '#'} className="absolute inset-0">
                                 <img
                                     src={banner.image_url}
                                     alt={banner.title}
-                                    className="absolute inset-0 w-full h-full object-cover"
+                                    className="w-full h-full object-cover"
                                 />
                             </Link>
                         ) : (
-                            // Static Render
+                            // Static Render — absolutely positioned inside the 16:9 box
                             <>
                                 {/* Decorative Elements */}
                                 <div className="absolute top-0 right-0 w-40 h-40 sm:w-64 sm:h-64 rounded-full opacity-20 blur-3xl pointer-events-none"
@@ -190,8 +208,8 @@ export default function AdBannerCarousel() {
                                 <div className="absolute top-12 right-16 w-1.5 h-1.5 bg-white/15 rounded-full animate-pulse delay-300" />
                                 <div className="absolute bottom-8 right-12 w-3 h-3 bg-white/10 rounded-full animate-pulse delay-700" />
 
-                                {/* Content */}
-                                <div className="relative z-10 flex items-center justify-between p-4 sm:p-8 lg:p-10 min-h-[140px] sm:min-h-[200px]">
+                                {/* Content — fills absolute 16:9 container */}
+                                <div className="absolute inset-0 z-10 flex items-center justify-between p-4 sm:p-8 lg:p-10">
                                     <div className="flex-1 pr-2 sm:pr-4">
                                         <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
                                             <span className="text-[9px] sm:text-xs font-bold uppercase tracking-[0.15em] text-white/80 bg-white/10 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full backdrop-blur-sm">
@@ -213,7 +231,7 @@ export default function AdBannerCarousel() {
                                         </Link>
                                     </div>
 
-                                    {/* Icon — visible on all sizes */}
+                                    {/* Icon */}
                                     <div className={`flex items-center justify-center w-12 h-12 sm:w-20 sm:h-20 lg:w-28 lg:h-28 rounded-xl sm:rounded-2xl lg:rounded-3xl ${banner.iconBg} backdrop-blur-sm border border-white/10 shadow-2xl flex-shrink-0`}>
                                         <IconComponent className="w-6 h-6 sm:w-10 sm:h-10 lg:w-14 lg:h-14 text-white/90" strokeWidth={1.5} />
                                     </div>
@@ -223,7 +241,7 @@ export default function AdBannerCarousel() {
                     </motion.div>
                 </AnimatePresence>
 
-                {/* Navigation Arrows — hidden on small mobile, visible on larger screens */}
+                {/* Navigation Arrows */}
                 <button
                     onClick={() => { setHasInteracted(true); paginate(-1); }}
                     className="absolute left-1.5 sm:left-3 top-1/2 -translate-y-1/2 z-20 bg-black/25 hover:bg-black/45 active:bg-black/60 backdrop-blur-md text-white p-1 sm:p-2 rounded-full transition-all duration-200 hover:scale-110 border border-white/10 hidden sm:flex"

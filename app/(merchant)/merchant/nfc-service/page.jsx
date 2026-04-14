@@ -73,8 +73,7 @@ export default function MerchantNFCServicePage() {
     };
 
     const nextStep = () => {
-        if (step === 1 && !formData.cardHolderName) return;
-        if (step === 2 && (!formData.phone || !formData.deliveryAddress)) return;
+        if (step === 1 && (!formData.cardHolderName || !formData.phone || !formData.deliveryAddress)) return;
         setStep(s => s + 1);
     };
     const prevStep = () => setStep(s => s - 1);
@@ -119,7 +118,7 @@ export default function MerchantNFCServicePage() {
         }
     };
 
-    const stepLabels = ['Configure', 'Logistics', 'Review', 'Payment'];
+    const stepLabels = ['Delivery', 'Review', 'Payment'];
 
     // ─── SUCCESS SCREEN ─────────────────────────────────────────
     if (isSuccess) {
@@ -181,7 +180,7 @@ export default function MerchantNFCServicePage() {
                     <div className="merchant-glass bg-white/60 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 p-6 shadow-sm sticky top-28">
                         <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold mb-4">Live Preview</p>
                         <div className="flex justify-center">
-                            <NFC3DCard name={formData.cardHolderName || 'YOUR NAME'} theme="light" />
+                            <NFC3DCard theme="light" />
                         </div>
                         <div className="mt-6 space-y-2">
                             <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
@@ -230,41 +229,27 @@ export default function MerchantNFCServicePage() {
 
                     <form
                         onSubmit={handleFormSubmit}
-                        onKeyDown={(e) => { if (e.key === 'Enter' && step !== 4) e.preventDefault(); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && step !== 3) e.preventDefault(); }}
                     >
                         <AnimatePresence mode="wait">
-                            {/* Step 1: Configure */}
+                            {/* Step 1: Logistics / Delivery */}
                             {step === 1 && (
                                 <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                                    <div className="merchant-glass bg-white/60 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 p-6 shadow-sm">
-                                        <label className="block text-xs font-bold uppercase tracking-[0.15em] text-slate-500 mb-3">
-                                            <span className="material-icons-round text-[#D4AF37] text-sm align-middle mr-1">badge</span>
-                                            Cardholder Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="YOUR FULL NAME"
-                                            className="w-full px-4 py-4 rounded-xl bg-white dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-800 dark:text-white font-bold text-lg uppercase tracking-wider placeholder:text-slate-300 dark:placeholder:text-slate-600 outline-none focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/10 transition-all"
-                                            value={formData.cardHolderName}
-                                            onChange={(e) => updateFormData('cardHolderName', e.target.value)}
-                                            maxLength={18}
-                                            required
-                                        />
-                                        <p className="text-[10px] text-slate-400 mt-2 flex items-center gap-1">
-                                            <span className="material-icons-round text-xs">info</span>
-                                            Max 18 characters — laser-engraved on your card
-                                        </p>
-                                    </div>
-                                    <button type="button" onClick={nextStep} disabled={!formData.cardHolderName} className="w-full py-4 rounded-xl bg-[#D4AF37] text-[#020617] font-bold text-sm hover:bg-opacity-90 transition-all flex items-center justify-center gap-2 gold-glow disabled:opacity-30 disabled:cursor-not-allowed">
-                                        Continue <span className="material-icons-round text-sm">arrow_forward</span>
-                                    </button>
-                                </motion.div>
-                            )}
-
-                            {/* Step 2: Logistics */}
-                            {step === 2 && (
-                                <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
                                     <div className="merchant-glass bg-white/60 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 p-6 shadow-sm space-y-5">
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase tracking-[0.15em] text-slate-500 mb-3">
+                                                <span className="material-icons-round text-[#D4AF37] text-sm align-middle mr-1">person</span>
+                                                Your Name
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter your name"
+                                                className="w-full px-4 py-4 rounded-xl bg-white dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-800 dark:text-white font-semibold outline-none focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/10 transition-all"
+                                                value={formData.cardHolderName}
+                                                onChange={(e) => updateFormData('cardHolderName', e.target.value)}
+                                                required
+                                            />
+                                        </div>
                                         <div>
                                             <label className="block text-xs font-bold uppercase tracking-[0.15em] text-slate-500 mb-3">
                                                 <span className="material-icons-round text-[#D4AF37] text-sm align-middle mr-1">call</span>
@@ -294,18 +279,17 @@ export default function MerchantNFCServicePage() {
                                             />
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <button type="button" onClick={prevStep} className="py-4 rounded-xl merchant-glass border border-black/5 dark:border-white/10 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 transition-all">Back</button>
-                                        <button type="button" onClick={nextStep} disabled={!formData.phone || !formData.deliveryAddress} className="py-4 rounded-xl bg-[#D4AF37] text-[#020617] font-bold text-sm hover:bg-opacity-90 transition-all flex items-center justify-center gap-2 gold-glow disabled:opacity-30">
-                                            Review <span className="material-icons-round text-sm">arrow_forward</span>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <button type="button" onClick={nextStep} disabled={!formData.cardHolderName || !formData.phone || !formData.deliveryAddress} className="py-4 rounded-xl bg-[#D4AF37] text-[#020617] font-bold text-sm hover:bg-opacity-90 transition-all flex items-center justify-center gap-2 gold-glow disabled:opacity-30 disabled:cursor-not-allowed">
+                                            Review Order <span className="material-icons-round text-sm">arrow_forward</span>
                                         </button>
                                     </div>
                                 </motion.div>
                             )}
 
-                            {/* Step 3: Review */}
-                            {step === 3 && (
-                                <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                            {/* Step 2: Review */}
+                            {step === 2 && (
+                                <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
                                     <div className="merchant-glass bg-white/60 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 p-6 shadow-sm space-y-4">
                                         <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
                                             <span className="material-icons-round text-[#D4AF37] text-sm">receipt_long</span>
@@ -346,9 +330,9 @@ export default function MerchantNFCServicePage() {
                                 </motion.div>
                             )}
 
-                            {/* Step 4: Payment */}
-                            {step === 4 && (
-                                <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                            {/* Step 3: Payment */}
+                            {step === 3 && (
+                                <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
                                     <div className="merchant-glass bg-white/60 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 p-6 shadow-sm space-y-4">
                                         <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
                                             <span className="material-icons-round text-[#D4AF37] text-sm">payment</span>

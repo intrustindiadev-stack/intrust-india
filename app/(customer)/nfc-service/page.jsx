@@ -11,9 +11,12 @@ import OrderSection from '@/components/nfc/OrderSection';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 
 export default function NFCServicePage() {
-    const [previewData, setPreviewData] = useState({ cardHolderName: "YOUR NAME" });
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
     const [isSuccess, setIsSuccess] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const [viewportWidth, setViewportWidth] = useState(0);
@@ -28,13 +31,36 @@ export default function NFCServicePage() {
 
     const isMobile = viewportWidth < 1024;
 
-    if (!isMounted) return null;
+    if (!isMounted) return (
+        <div className={`relative min-h-screen overflow-hidden ${isDark ? 'bg-[#08090b]' : 'bg-white'}`}>
+            {/* Navbar skeleton */}
+            <div className={`fixed top-0 left-0 right-0 z-[120] h-16 border-b animate-pulse ${isDark ? 'bg-[#0d0e10] border-white/5' : 'bg-slate-100 border-black/5'}`} />
+
+            {/* Hero skeleton */}
+            <div className="pt-16 min-h-screen flex flex-col lg:flex-row items-center justify-center gap-12 px-6">
+                {/* Text block */}
+                <div className="flex flex-col items-center lg:items-start gap-4 max-w-xl w-full">
+                    <div className={`h-5 w-36 rounded-full animate-pulse ${isDark ? 'bg-white/5' : 'bg-slate-200'}`} />
+                    <div className={`h-16 w-80 rounded-2xl animate-pulse ${isDark ? 'bg-white/5' : 'bg-slate-200'}`} />
+                    <div className={`h-16 w-64 rounded-2xl animate-pulse ${isDark ? 'bg-blue-600/10' : 'bg-blue-100'}`} />
+                    <div className={`h-4 w-72 rounded-full animate-pulse ${isDark ? 'bg-white/5' : 'bg-slate-200'}`} />
+                    <div className={`h-4 w-56 rounded-full animate-pulse ${isDark ? 'bg-white/5' : 'bg-slate-200'}`} />
+                    <div className="flex gap-4 mt-4">
+                        <div className={`h-14 w-36 rounded-2xl animate-pulse ${isDark ? 'bg-white/10' : 'bg-slate-300'}`} />
+                        <div className={`h-14 w-36 rounded-2xl animate-pulse ${isDark ? 'bg-white/5' : 'bg-slate-200'}`} />
+                    </div>
+                </div>
+                {/* Card placeholder */}
+                <div className={`w-full max-w-[420px] aspect-[1.58/1] rounded-[24px] border animate-pulse shadow-2xl ${isDark ? 'bg-white/5 border-white/10 shadow-blue-500/5' : 'bg-slate-100 border-black/5 shadow-blue-500/20'}`} />
+            </div>
+        </div>
+    );
 
     return (
-        <div className="relative min-h-screen bg-[#08090b] selection:bg-blue-500/30 overflow-x-hidden">
+        <div className={`relative min-h-screen selection:bg-blue-500/30 overflow-x-hidden ${isDark ? 'bg-[#08090b]' : 'bg-white'}`}>
             {/* Professional Background Texture */}
             <div className="fixed inset-0 pointer-events-none z-0">
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.02]" />
+                <div className={`absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.02] ${isDark ? '' : 'invert'}`} />
                 <div className="absolute inset-x-0 top-0 h-screen bg-gradient-to-b from-blue-600/[0.03] to-transparent" />
             </div>
 
@@ -84,15 +110,15 @@ export default function NFCServicePage() {
                 ) : (
                     <main className="relative z-10 pt-20">
                         {/* THE JOURNEY: Mobile First & Professional */}
-                        <HeroSection previewName={previewData.cardHolderName} />
+                        <HeroSection />
 
                         <DetailsSection />
 
                         {/* Cradle transition provides semantic bridge to order */}
-                        <CradleSection name={previewData.cardHolderName} />
+                        <CradleSection />
 
                         {/* Order Section with full preview integration */}
-                        <OrderSection onPreviewUpdate={setPreviewData} setIsSuccess={setIsSuccess} />
+                        <OrderSection setIsSuccess={setIsSuccess} />
 
                         <Footer />
                     </main>
@@ -107,8 +133,8 @@ export default function NFCServicePage() {
 
             <style jsx global>{`
                 ::-webkit-scrollbar { width: 6px; }
-                ::-webkit-scrollbar-track { background: #08090b; }
-                ::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 10px; }
+                ::-webkit-scrollbar-track { background: ${isDark ? '#08090b' : '#f1f5f9'}; }
+                ::-webkit-scrollbar-thumb { background: ${isDark ? '#1a1b1e' : '#cbd5e1'}; border-radius: 10px; }
             `}</style>
         </div>
     );

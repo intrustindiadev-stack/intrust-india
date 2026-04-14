@@ -99,7 +99,7 @@ export default function CTASection() {
                     className="mb-4"
                 >
                     <h2 className="text-4xl md:text-6xl font-bold text-[#171A21] dark:text-gray-100 tracking-tight leading-[1.1]">
-                        The future of banking is <br />
+                        The future of shopping is <br />
                         <span className="text-[#92BCEA]">here and now.</span>
                     </h2>
                 </motion.div>
@@ -112,7 +112,7 @@ export default function CTASection() {
                     transition={{ duration: 0.6, delay: 0.2 }}
                     className="text-lg md:text-xl text-[#617073] dark:text-gray-300 max-w-lg mx-auto mb-8 leading-relaxed"
                 >
-                    Join <span className="font-semibold text-[#171A21] dark:text-gray-100">50,000+ users</span> experiencing the next generation of financial freedom.
+                    Join <span className="font-semibold text-[#171A21] dark:text-gray-100">50,000+ users</span> exploring curated gift cards, premium mart shopping, and smart NFC connectivity.
                 </motion.p>
 
                 {/* Actions - Clean Layout */}
@@ -145,9 +145,9 @@ export default function CTASection() {
                     transition={{ duration: 0.6, delay: 0.4 }}
                     className="flex flex-wrap items-center justify-center gap-6 md:gap-12 pt-8 border-t border-slate-100 w-full max-w-2xl"
                 >
-                    <TrustItem icon={Shield} label="Bank Grade Security" />
-                    <TrustItem icon={Zap} label="Instant Transfers" />
-                    <TrustItem icon={CreditCard} label="Zero Components" />
+                    <TrustItem icon={Shield} label="Verified Local Merchants" />
+                    <TrustItem icon={Zap} label="Secure Smart Payments" />
+                    <TrustItem icon={CreditCard} label="Smart NFC Solutions" />
                 </motion.div>
 
             </div>

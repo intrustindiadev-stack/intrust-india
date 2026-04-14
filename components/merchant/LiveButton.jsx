@@ -1,10 +1,21 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function LiveButton() {
     const [tooltip, setTooltip] = useState(false);
+    const [timeStr, setTimeStr] = useState('');
+
+    // Mount logic for clock
+    useEffect(() => {
+        const update = () => {
+            setTimeStr(new Date().toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }));
+        };
+        update();
+        const t = setInterval(update, 1000);
+        return () => clearInterval(t);
+    }, []);
 
     return (
         <div className="relative">
@@ -18,8 +29,8 @@ export default function LiveButton() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
                 </span>
-                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
-                    Live
+                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest min-w-[65px] text-center">
+                    {timeStr ? `LIVE: ${timeStr}` : 'LIVE'}
                 </span>
             </motion.div>
 

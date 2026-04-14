@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
-import PageTransition from '@/components/layout/PageTransition';
+
 
 export default async function CustomerLayout({ children }) {
     const supabase = await createServerSupabaseClient();
@@ -34,9 +34,5 @@ export default async function CustomerLayout({ children }) {
         }
     }
 
-    return (
-        <PageTransition>
-            {children}
-        </PageTransition>
-    );
+    return children;
 }

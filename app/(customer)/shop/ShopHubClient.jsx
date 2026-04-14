@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, Store, X, Sparkles, ChevronRight, BadgeCheck, Star, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -107,6 +107,35 @@ function MerchantCard({ merchant, idx, rating }) {
     // Calculate a stable deterministic random number based on merchant ID for live viewers
     const liveCount = merchant.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 35 + 5;
 
+    const [isOpen, setIsOpen] = useState(merchant.is_open !== false);
+
+    useEffect(() => {
+        if (merchant.is_open === false) {
+            setIsOpen(false);
+            return;
+        }
+        if (!merchant.opening_time || !merchant.closing_time) {
+            setIsOpen(true);
+            return;
+        }
+        const checkOpen = () => {
+            const now = new Date();
+            const currentMins = now.getHours() * 60 + now.getMinutes();
+            const [openH, openM] = merchant.opening_time.split(':').map(Number);
+            const [closeH, closeM] = merchant.closing_time.split(':').map(Number);
+            const openMins = openH * 60 + openM;
+            const closeMins = closeH * 60 + closeM;
+            if (closeMins > openMins) {
+                setIsOpen(currentMins >= openMins && currentMins < closeMins);
+            } else {
+                setIsOpen(currentMins >= openMins || currentMins < closeMins);
+            }
+        };
+        checkOpen();
+        const timer = setInterval(checkOpen, 60000);
+        return () => clearInterval(timer);
+    }, [merchant.is_open, merchant.opening_time, merchant.closing_time]);
+
     return (
         <motion.div variants={fadeUp} className="h-full">
             <Link
@@ -144,11 +173,20 @@ function MerchantCard({ merchant, idx, rating }) {
 
                     {/* Dynamic 'Live' Indicator for Store Activity */}
                     <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/30 text-white px-3 py-1.5 rounded-full shadow-lg group-hover:bg-black/60 transition-colors">
-                        <span className="relative flex h-1.5 w-1.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        </span>
-                        <span className="text-[9px] font-black uppercase tracking-widest leading-none mt-[1px]">LIVE</span>
+                        {isOpen ? (
+                            <>
+                                <span className="relative flex h-1.5 w-1.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                </span>
+                                <span className="text-[9px] font-black uppercase tracking-widest leading-none mt-[1px]">LIVE</span>
+                            </>
+                        ) : (
+                            <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                                <span className="text-[9px] font-black uppercase tracking-widest leading-none mt-[1px]">CLOSED</span>
+                            </>
+                        )}
                     </div>
 
                     {/* ── Overlapping Avatar (Stretching into the body) ── */}

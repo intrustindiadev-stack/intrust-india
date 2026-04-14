@@ -4,7 +4,7 @@ import React from 'react';
 import NFCOrderForm from './NFCOrderForm';
 import { motion } from 'framer-motion';
 
-export default function OrderSection({ onPreviewUpdate, setIsSuccess }) {
+export default function OrderSection({ setIsSuccess }) {
     return (
         <section id="nfc-order-section" className="relative min-h-screen bg-[#08090b] pt-24 pb-32 px-6 overflow-hidden">
             {/* Architectural Background */}
@@ -32,7 +32,7 @@ export default function OrderSection({ onPreviewUpdate, setIsSuccess }) {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
                     {/* The Hub Form */}
                     <div className="lg:col-span-8 lg:col-start-3">
-                         <NFCOrderForm onPreviewUpdate={onPreviewUpdate} setIsSuccess={setIsSuccess} />
+                         <NFCOrderForm setIsSuccess={setIsSuccess} />
                     </div>
                 </div>
             </div>

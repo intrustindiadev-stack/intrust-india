@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Power, Crown, CheckCircle2, ChevronRight, Activity, Wallet,
     ShieldCheck, Zap, Truck, Package, Clock, TrendingUp, BarChart2,
-    ArrowLeft, TrendingDown, IndianRupee, Star, AlertTriangle, Sparkles
+    ArrowLeft, TrendingDown, IndianRupee, Star, AlertTriangle, Sparkles, PlusCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSubscription } from '@/components/merchant/SubscriptionContext';
+import LiveButton from '@/components/merchant/LiveButton';
 
 // ─── Mini Bar Chart ──────────────────────────────────────────────────────────
 function MiniBarChart({ data }) {
@@ -160,6 +161,8 @@ export default function AutoModePage() {
             setLoading(false);
         }
     };
+
+    const hasValidSub = merchant?.auto_mode_valid_until && new Date(merchant.auto_mode_valid_until) > new Date();
 
     useEffect(() => { fetchData(); }, []);
 
@@ -381,6 +384,7 @@ export default function AutoModePage() {
                         <ArrowLeft size={15} />
                     </Link>
                     <div className="flex items-center gap-2">
+                        <LiveButton />
                         <Link href="/merchant/wallet" className="flex items-center gap-1.5 bg-black/30 backdrop-blur-xl border border-white/10 rounded-full px-3 py-1.5 text-[11px] font-black text-white">
                             <Wallet size={12} className="text-[#D4AF37]" /> ₹{walletBalance.toFixed(2)}
                         </Link>
@@ -408,12 +412,12 @@ export default function AutoModePage() {
                     {isAutoModeActive ? 'Your shop runs on auto. Orders handled automatically.' : 'Activate to run your shop on autopilot.'}
                 </p>
 
-                {isAutoModeActive && merchant?.auto_mode_valid_until && (
-                    <div className="mt-3 flex flex-col items-center gap-1.5">
-                        <span className="text-emerald-400 text-[10px] font-black bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                            Until {new Date(merchant.auto_mode_valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}
+                {hasValidSub && (
+                    <div className="mt-3 flex flex-col items-center gap-1.5 border border-white/10 p-2 px-4 rounded-xl bg-white/5 backdrop-blur-md">
+                        <span className={`text-[10px] font-black px-3 py-1 rounded-full border ${isAutoModeActive ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-slate-400 bg-slate-500/10 border-slate-500/20'}`}>
+                            Plan Valid Until: {new Date(merchant.auto_mode_valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                         </span>
-                        <span className="text-emerald-300 font-mono text-[10px]">{timeLeft}</span>
+                        <span className={`${isAutoModeActive ? 'text-emerald-300' : 'text-slate-400'} font-mono text-[10px]`}>{timeLeft}</span>
                     </div>
                 )}
 
@@ -434,7 +438,6 @@ export default function AutoModePage() {
                             if (isAutoModeActive) {
                                 setShowWarningModal(true);
                             } else {
-                                const hasValidSub = merchant?.auto_mode_valid_until && new Date(merchant.auto_mode_valid_until) > new Date();
                                 if (hasValidSub) {
                                     confirmActivation();
                                 } else {
@@ -704,12 +707,38 @@ export default function AutoModePage() {
                     <p className="text-xs text-slate-500 mb-4 max-w-xs mx-auto leading-relaxed">
                         Orders, inventory and deliveries handled automatically. Zero manual work.
                     </p>
-                    <button onClick={() => setShowPaymentModal(true)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-3 rounded-xl transition-all shadow-lg shadow-indigo-200 text-sm">
-                        Activate — ₹{subscriptionPrice}/mo
-                    </button>
+                    {hasValidSub ? (
+                        <button onClick={confirmActivation} disabled={processing}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white font-black px-8 py-3 rounded-xl transition-all shadow-lg shadow-emerald-200 text-sm">
+                            {processing ? 'Activating...' : 'Resume Auto Mode'}
+                        </button>
+                    ) : (
+                        <button onClick={() => setShowPaymentModal(true)}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-3 rounded-xl transition-all shadow-lg shadow-indigo-200 text-sm">
+                            Activate — ₹{subscriptionPrice}/mo
+                        </button>
+                    )}
                 </div>
             )}
+
+            {/* ── Capital Deployment CTA ── */}
+            <div className={`rounded-2xl border p-5 shadow-sm relative overflow-hidden transition-all ${isAutoModeActive ? 'bg-white border-slate-100' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="absolute top-0 right-0 w-40 h-40 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 pointer-events-none" />
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
+                            <Clock size={16} className="text-amber-500" /> Growth Portfolio
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
+                            Back INTRUST Mart operations with your deployed capital and fuel growth powered by {merchant?.business_name || 'your business'}.
+                        </p>
+                    </div>
+                    <Link href="/merchant/lockin"
+                        className="self-start md:self-auto bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black tracking-widest px-6 py-2.5 rounded-xl uppercase transition-all shadow-md shadow-amber-500/20 whitespace-nowrap text-center">
+                        View Deployments
+                    </Link>
+                </div>
+            </div>
 
             {/* ── Payment Modal ── */}
             <AnimatePresence>
@@ -744,10 +773,19 @@ export default function AutoModePage() {
                                 ))}
                             </ul>
                             <p className="text-xs text-slate-400 mb-3">Wallet: <span className="text-white font-black">₹{walletBalance.toFixed(2)}</span></p>
-                            <button onClick={confirmActivation} disabled={processing}
-                                className="w-full bg-[#D4AF37] hover:bg-[#c49f2d] text-black font-black py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)] disabled:opacity-50 flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
-                                {processing ? <Activity size={16} className="animate-spin" /> : <>Pay & Activate <ChevronRight size={16} strokeWidth={3} /></>}
-                            </button>
+                            
+                            {walletBalance < subscriptionPrice ? (
+                                <Link href="/merchant/wallet"
+                                    className="w-full bg-[#1e293b] hover:bg-[#334155] border border-white/10 text-white font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
+                                    <PlusCircle size={16} className="text-rose-400" />
+                                    Add ₹{(subscriptionPrice - walletBalance).toFixed(0)} to Wallet
+                                </Link>
+                            ) : (
+                                <button onClick={confirmActivation} disabled={processing}
+                                    className="w-full bg-[#D4AF37] hover:bg-[#c49f2d] text-black font-black py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)] disabled:opacity-50 flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
+                                    {processing ? <Activity size={16} className="animate-spin" /> : <>Pay & Activate <ChevronRight size={16} strokeWidth={3} /></>}
+                                </button>
+                            )}
                             {isFirstMonth && <p className="text-center text-slate-500 text-[10px] uppercase tracking-wider font-bold mt-3">Renews at ₹1999/month</p>}
                         </motion.div>
                     </motion.div>

@@ -3,6 +3,7 @@ import { Store, Plus, Package, TrendingUp, DollarSign, Sparkles } from 'lucide-r
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import MerchantInventoryClient from './MerchantInventoryClient';
+import StoreStatusToggle from '@/components/merchant/StoreStatusToggle';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,13 +77,16 @@ export default async function MerchantShopPage() {
                         Manage your live catalog, adjust stock, and set retail prices for custom products.
                     </p>
                 </div>
-                <Link
-                    href="/merchant/shopping/inventory/new"
-                    className="inline-flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2c5282] text-white px-5 py-3 rounded-2xl font-black text-sm transition-all shadow-xl shadow-blue-900/10 self-start sm:self-auto flex-shrink-0"
-                >
-                    <Plus size={18} />
-                    Add Custom Product
-                </Link>
+                <div className="flex flex-col gap-4 self-start sm:self-auto shrink-0 w-full max-w-sm ml-auto">
+                    <StoreStatusToggle initialStoreData={merchant} />
+                    <Link
+                        href="/merchant/shopping/inventory/new"
+                        className="inline-flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2c5282] text-white px-5 py-3 rounded-2xl font-black text-sm transition-all shadow-xl shadow-blue-900/10 w-full"
+                    >
+                        <Plus size={18} />
+                        Add Custom Product
+                    </Link>
+                </div>
             </div>
 
             {/* Stats Grid */}

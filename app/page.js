@@ -9,9 +9,10 @@ export async function generateMetadata() {
     description: "InTrust India — Buy gift cards, explore NFC solutions, and enjoy a curated e-commerce experience. Fast, secure, and trusted by 10,000+ customers. Based in Bhopal, serving all of India.",
     keywords: [
       "gift cards online india",
-      "nfc card india",
-      "premium ecommerce india",
-      "financial services india",
+      "nfc smart card india",
+      "premium local shopping india",
+      "intrust mart marketplace",
+      "secure marketplace india",
     ],
     alternates: {
       canonical: "/",

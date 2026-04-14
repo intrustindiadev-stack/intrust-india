@@ -12,6 +12,9 @@ import GiftCardSkeleton from './components/GiftCardSkeleton';
 import AdvancedFilters from './components/AdvancedFilters';
 import HeroSection from './components/HeroSection';
 import TrustBadges from './components/TrustBadges';
+import Link from 'next/link';
+import { Gift } from 'lucide-react';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 import StatsBar from './components/StatsBar';
 import Footer from '../../../components/layout/Footer';
 import CustomerBottomNav from '../../../components/layout/customer/CustomerBottomNav';
@@ -77,21 +80,33 @@ export default function GiftCardsClient({ initialCoupons }) {
     const [sortBy, setSortBy] = useState('popular');
     const [merchantFilter, setMerchantFilter] = useState('all');
     const [userRequests, setUserRequests] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    
+    // Theme context
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
 
     // Fetch user's active/pending requests to show status on cards
     useEffect(() => {
+        let isMounted = true;
         async function fetchUserRequests() {
             try {
                 const res = await fetch('/api/udhari/list?role=customer');
                 const data = await res.json();
-                if (data.success) {
+                if (data.success && isMounted) {
                     setUserRequests(data.requests || []);
                 }
             } catch (err) {
                 console.error("Failed to fetch user udhari requests", err);
+            } finally {
+                if (isMounted) {
+                    // Small delay to ensure skeletons show briefly for smooth visual transition
+                    setTimeout(() => setIsLoading(false), 300);
+                }
             }
         }
         fetchUserRequests();
+        return () => { isMounted = false; };
     }, []);
 
     // Advanced Filter States
@@ -171,7 +186,16 @@ export default function GiftCardsClient({ initialCoupons }) {
 
             <div style={{ paddingTop: '15vh' }} className="pb-24 px-4 sm:px-6">
                 <div className="max-w-7xl mx-auto">
-                    <Breadcrumbs items={[{ label: 'Gift Cards' }]} />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                        <Breadcrumbs items={[{ label: 'Gift Cards' }]} />
+                        <Link 
+                            href="/my-giftcards"
+                            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                        >
+                            <Gift size={18} />
+                            <span>My Gift Cards</span>
+                        </Link>
+                    </div>
                     <HeroSection />
 
                     <motion.div
@@ -278,16 +302,23 @@ export default function GiftCardsClient({ initialCoupons }) {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                        {sortedCoupons.map((coupon, index) => (
-                            <GiftCardItem
-                                key={coupon.id}
-                                coupon={coupon}
-                                index={index}
-                            />
-                        ))}
+                        {isLoading ? (
+                            Array(8).fill(0).map((_, index) => (
+                                <GiftCardSkeleton key={`skeleton-${index}`} isDark={isDark} />
+                            ))
+                        ) : sortedCoupons.length > 0 ? (
+                            sortedCoupons.map((coupon, index) => (
+                                <GiftCardItem
+                                    key={coupon.id}
+                                    coupon={coupon}
+                                    index={index}
+                                    udhariStatus={userRequests.find(r => r.coupon_id === coupon.id)?.status}
+                                />
+                            ))
+                        ) : null}
                     </div>
 
-                    {sortedCoupons.length === 0 && (
+                    {!isLoading && sortedCoupons.length === 0 && (
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}

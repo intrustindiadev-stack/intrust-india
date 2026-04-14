@@ -1,7 +1,7 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import AdminLayout from '@/components/layout/admin/AdminLayout';
 import AdminBottomNav from '@/components/layout/admin/AdminBottomNav';
-import PageTransition from '@/components/layout/PageTransition';
+
 import UnauthorizedRedirect from '@/components/auth/UnauthorizedRedirect';
 
 export default async function AdminRootLayout({ children }) {
@@ -27,7 +27,7 @@ export default async function AdminRootLayout({ children }) {
 
     return (
         <AdminLayout adminProfile={profile}>
-            <PageTransition>{children}</PageTransition>
+            {children}
         </AdminLayout>
     );
 }

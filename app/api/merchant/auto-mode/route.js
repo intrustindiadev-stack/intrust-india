@@ -78,19 +78,19 @@ export async function POST(request) {
 
                 // Check wallet balance
                 const { data: wallet, error: walletError } = await supabase
-                    .from('merchant_wallets')
-                    .select('id, balance_paise')
-                    .eq('merchant_id', merchant.id)
+                    .from('merchants')
+                    .select('id, wallet_balance_paise')
+                    .eq('id', merchant.id)
                     .single();
 
-                if (walletError || !wallet || wallet.balance_paise < costPaise) {
+                if (walletError || !wallet || wallet.wallet_balance_paise < costPaise) {
                     return NextResponse.json({ error: 'Insufficient wallet balance for Auto Mode subscription.' }, { status: 400 });
                 }
 
                 // Deduct from wallet
                 const { error: deductError } = await supabase
-                    .from('merchant_wallets')
-                    .update({ balance_paise: wallet.balance_paise - costPaise })
+                    .from('merchants')
+                    .update({ wallet_balance_paise: wallet.wallet_balance_paise - costPaise })
                     .eq('id', wallet.id);
                 
                 if (deductError) throw deductError;
