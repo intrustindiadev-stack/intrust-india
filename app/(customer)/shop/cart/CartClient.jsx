@@ -45,6 +45,7 @@ const CartClient = ({ userId }) => {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [draftGroupId, setDraftGroupId] = useState(null);
+  const [draftAmount, setDraftAmount] = useState(null);
   const [udhariEnabled, setUdhariEnabled] = useState(false);
   const [udhariDisabledReason, setUdhariDisabledReason] = useState(null);
   const [storeCreditDuration, setStoreCreditDuration] = useState(10);
@@ -278,6 +279,7 @@ const CartClient = ({ userId }) => {
         if (rpcError) throw rpcError;
         if (data.success) {
           setDraftGroupId(data.group_id);
+          setDraftAmount(data.total_paise);
           setIsPaymentModalOpen(true);
           // Keep checkingOut=true — button stays locked until modal is closed
           return;
@@ -324,7 +326,7 @@ const CartClient = ({ userId }) => {
             groupId,
             merchantId,
             durationDays: storeCreditDuration,
-            amountPaise: finalPayable,
+            amountPaise: draftData.total_paise,
           })
         });
         const resData = await res.json();
@@ -991,7 +993,7 @@ const CartClient = ({ userId }) => {
             // Clear draft so a fresh one is created if they retry
             setDraftGroupId(null);
           }}
-          amount={finalPayable / 100}
+          amount={(draftAmount || finalPayable) / 100}
           user={{ id: userId, email: profile?.email || '', phone: profile?.phone || '' }}
           productInfo={{ title: `${itemCount} Item${itemCount > 1 ? 's' : ''} in Cart` }}
           metadata={{ type: 'cart_checkout', groupId: draftGroupId }}

@@ -112,6 +112,24 @@ export async function POST(request) {
             );
         }
 
+        // ── Integrity Validation: Amount Mismatch Check ──
+        const paidAmountPaise = Math.round(parseFloat(amount) * 100);
+        const expectedAmountPaise = existingTxn?.expected_amount_paise ? Number(existingTxn.expected_amount_paise) : null;
+
+        if (existingTxn && internalStatus === 'SUCCESS' && expectedAmountPaise !== null) {
+            // Allow 0 paise tolerance - must be exact match for fixed-price flows
+            if (paidAmountPaise !== expectedAmountPaise) {
+                console.error(
+                    `[Callback] INTEGRITY VIOLATION for txn ${clientTxnId}: Amount Mismatch. ` +
+                    `Expected: ${expectedAmountPaise} paise, Received: ${paidAmountPaise} paise. ` +
+                    `Fulfillment BLOCKED to prevent loss/tampering.`
+                );
+                fulfillmentFailed = true;
+                internalStatus = 'FAILED';
+                result.transMsg = `Security Alert: Amount mismatch (Exp: ${expectedAmountPaise}, Rec: ${paidAmountPaise}). Manual verification required. Contact support.`;
+            }
+        }
+
         let fulfillmentFailed = false;
 
         // 5. Handle Wallet Credit for WALLET_TOPUP safely
@@ -129,7 +147,7 @@ export async function POST(request) {
                 console.error('[Callback] Failed to credit wallet:', walletError.message);
                 fulfillmentFailed = true;
                 internalStatus = 'FAILED';
-                result.transMsg = 'Wallet credit failed. Payment will be refunded.';
+                result.transMsg = 'Wallet credit failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
@@ -207,14 +225,14 @@ export async function POST(request) {
                         console.error('[Callback] Merchant not found for topup:', existingTxn.user_id);
                         fulfillmentFailed = true;
                         internalStatus = 'FAILED';
-                        result.transMsg = 'Merchant account not found. Payment will be refunded.';
+                        result.transMsg = 'Merchant account not found. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
                     }
                 }
             } catch (walletError) {
                 console.error('[Callback] Failed to credit merchant wallet:', walletError.message);
                 fulfillmentFailed = true;
                 internalStatus = 'FAILED';
-                result.transMsg = 'Merchant wallet credit error. Payment will be refunded.';
+                result.transMsg = 'Merchant wallet credit error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
@@ -266,7 +284,7 @@ export async function POST(request) {
                         console.error('[Callback] Udhari gateway settlement RPC error:', rpcError.message);
                         fulfillmentFailed = true;
                         internalStatus = 'FAILED';
-                        result.transMsg = 'Udhari settlement failed. Payment will be refunded.';
+                        result.transMsg = 'Udhari settlement failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
                     } else {
                         console.log(`[Callback] Udhari settled (gateway) for txn ${clientTxnId}`, rpcResult);
 
@@ -293,7 +311,7 @@ export async function POST(request) {
                 console.error('[Callback] Udhari payment processing error:', udhariError.message);
                 fulfillmentFailed = true;
                 internalStatus = 'FAILED';
-                result.transMsg = 'Udhari processing error. Payment will be refunded.';
+                result.transMsg = 'Udhari processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
@@ -322,7 +340,7 @@ export async function POST(request) {
                     console.error('[Callback] Cart checkout finalize error:', detailedError);
                     fulfillmentFailed = true;
                     internalStatus = 'FAILED';
-                    result.transMsg = `Cart order fulfillment failed: ${detailedError}. Payment will be refunded.`;
+                    result.transMsg = `Cart order fulfillment failed: ${detailedError}. Payment cannot be fulfilled automatically. Manual verification required. Contact support.`;
                 } else {
                     console.log(`[Callback] Cart checkout fulfilled for txn ${clientTxnId}`);
 
@@ -363,7 +381,7 @@ export async function POST(request) {
                 console.error('[Callback] Cart checkout processing error:', cartError.message);
                 fulfillmentFailed = true;
                 internalStatus = 'FAILED';
-                result.transMsg = 'Cart checkout processing error. Payment will be refunded.';
+                result.transMsg = 'Cart checkout processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
@@ -447,7 +465,7 @@ export async function POST(request) {
                                     .eq('purchased_by', existingTxn.user_id);
                                 fulfillmentFailed = true;
                                 internalStatus = 'FAILED';
-                                result.transMsg = 'Order creation failed. Payment will be refunded.';
+                                result.transMsg = 'Order creation failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
                             } else {
                                 try {
                                     // Customer Notification
@@ -485,20 +503,20 @@ export async function POST(request) {
                             console.error('[Callback] Coupon mark-as-sold failed or already sold');
                             fulfillmentFailed = true;
                             internalStatus = 'FAILED';
-                            result.transMsg = 'Gift card is no longer available. Payment will be refunded.';
+                            result.transMsg = 'Gift card is no longer available. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
                         }
                     } else {
                         console.error('[Callback] Missing couponId in udf2');
                         fulfillmentFailed = true;
                         internalStatus = 'FAILED';
-                        result.transMsg = 'Invalid gift card selection. Payment will be refunded.';
+                        result.transMsg = 'Invalid gift card selection. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
                     }
                 }
             } catch (gcError) {
                 console.error('[Callback] Gift card processing error:', gcError.message);
                 fulfillmentFailed = true;
                 internalStatus = 'FAILED';
-                result.transMsg = 'Gift card processing error. Payment will be refunded.';
+                result.transMsg = 'Gift card processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
@@ -541,7 +559,7 @@ export async function POST(request) {
                 console.error('[Callback] Gold subscription activation error:', goldError.message);
                 fulfillmentFailed = true;
                 internalStatus = 'FAILED';
-                result.transMsg = 'Gold subscription activation failed. Payment will be refunded.';
+                result.transMsg = 'Gold subscription activation failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
@@ -568,7 +586,7 @@ export async function POST(request) {
                     console.error('[Callback] Wholesale fulfillment error:', rpcError?.message || rpcResult?.message);
                     fulfillmentFailed = true;
                     internalStatus = 'FAILED';
-                    result.transMsg = 'Wholesale fulfillment failed. Payment will be refunded.';
+                    result.transMsg = 'Wholesale fulfillment failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
                 } else {
                     console.log(`[Callback] Wholesale purchase fulfilled for txn ${clientTxnId}`);
 
@@ -590,7 +608,7 @@ export async function POST(request) {
                 console.error('[Callback] Wholesale processing error:', wholesaleError.message);
                 fulfillmentFailed = true;
                 internalStatus = 'FAILED';
-                result.transMsg = 'Wholesale processing error. Payment will be refunded.';
+                result.transMsg = 'Wholesale processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
@@ -682,7 +700,7 @@ export async function POST(request) {
         if (fulfillmentFailed && internalStatus === 'SUCCESS') {
             internalStatus = 'FAILED';
             if (!result.transMsg || result.transMsg === status) {
-                result.transMsg = 'Fulfillment error. Payment will be refunded.';
+                result.transMsg = 'Fulfillment error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 

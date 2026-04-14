@@ -8,6 +8,7 @@ import { buildEncryptedPayload } from '@/lib/sabpaisa/payload';
 import { sabpaisaConfig, validateCallbackConfig } from '@/lib/sabpaisa/config';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import { MERCHANT_SUBSCRIPTION_PLANS } from '@/lib/constants';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -89,8 +90,39 @@ export async function POST(request) {
             process.env.SUPABASE_SERVICE_ROLE_KEY
         );
 
-        // ── KYC guard for gift card purchases ──
-        if (orderData.udf1 === 'GIFT_CARD') {
+        // ── Canonical Amount Derivation (Security Guard) ──
+        let canonicalAmountPaise = 0;
+        const udf1 = orderData.udf1 || '';
+        const udf2 = orderData.udf2 || ''; // groupId for CART, productId for GIFT
+        const udf3 = orderData.udf3 || ''; // planKey for SUB
+
+        if (udf1 === 'CART_CHECKOUT') {
+            const { data: group, error: groupErr } = await supabaseAdmin
+                .from('shopping_order_groups')
+                .select('total_amount_paise')
+                .eq('id', udf2)
+                .single();
+            if (groupErr || !group) {
+                return failResponse(400, 'Invalid or missing order group ID.', correlationId, groupErr);
+            }
+            canonicalAmountPaise = group.total_amount_paise;
+        } else if (udf1 === 'MERCHANT_SUBSCRIPTION') {
+            const plan = MERCHANT_SUBSCRIPTION_PLANS.find(p => p.key === udf3);
+            if (!plan) {
+                return failResponse(400, 'Invalid subscription plan selection.', correlationId);
+            }
+            canonicalAmountPaise = Math.round(plan.price * 100);
+        } else if (udf1 === 'GIFT_CARD') {
+            const { data: product, error: prodErr } = await supabaseAdmin
+                .from('shopping_products')
+                .select('suggested_retail_price_paise, is_gift_card')
+                .eq('id', udf2)
+                .single();
+            if (prodErr || !product || !product.is_gift_card) {
+                return failResponse(400, 'Invalid gift card selection.', correlationId, prodErr);
+            }
+
+            // KYC guard for gift card purchases
             const { data: profile } = await supabaseAdmin
                 .from('user_profiles')
                 .select('kyc_status')
@@ -104,8 +136,21 @@ export async function POST(request) {
                     correlationId
                 );
             }
+
+            canonicalAmountPaise = product.suggested_retail_price_paise;
+        } else {
+            // Variable price transactions (Wallet/Merchant Topups)
+            // We still derive it server-side from the input to ensure it is paise-clean
+            canonicalAmountPaise = Math.round(Number(orderData.amount) * 100);
         }
 
+        if (canonicalAmountPaise <= 0 || isNaN(canonicalAmountPaise)) {
+            return failResponse(400, 'Invalid payment amount.', correlationId);
+        }
+
+        // Override client amount with server-derived canonical amount for gateway encryption
+        orderData.amount = (canonicalAmountPaise / 100).toFixed(2);
+        
         // ── Persist transaction record ──
         const { error: insertError } = await supabaseAdmin
             .from('transactions')
@@ -113,10 +158,11 @@ export async function POST(request) {
                 client_txn_id: orderData.clientTxnId,
                 user_id: user.id,
                 amount: Number(orderData.amount),
+                expected_amount_paise: canonicalAmountPaise, // Track for callback validation
                 status: 'INITIATED',
-                udf1: orderData.udf1 || '',
-                udf2: orderData.udf2 || '',
-                udf3: orderData.udf3 || '',
+                udf1: udf1,
+                udf2: udf2,
+                udf3: udf3,
                 payer_email: orderData.payerEmail || '',
                 payer_mobile: orderData.payerMobile || '',
                 payer_name: orderData.payerName || ''

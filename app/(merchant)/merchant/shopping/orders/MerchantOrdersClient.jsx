@@ -27,13 +27,13 @@ const STATUS_CONFIG = {
 const STATUS_FLOW = ["pending", "packed", "shipped", "delivered"];
 
 const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, onToggle, isCancelled, merchantInfo, setShippingModal, setShippingData }) => {
-    const orderGrossProfit = (order.items || []).reduce((s, i) => s + (i.total_price_paise || 0), 0);
+    const orderGrossProfit = (order.items || []).reduce((s, i) => s + (i.gross_profit_paise || 0), 0);
     const orderCommission = order.platform_cut_paise ?? (order.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0);
-    const orderNetProfit = order.merchant_profit_paise ?? (order.items || []).reduce((s, i) => s + (i.profit_paise || 0), 0);
+    const orderNetProfit = (order.merchant_profit_paise ?? 0) !== 0 ? order.merchant_profit_paise : (order.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0);
     
-    // NEW: Cost and Pure Profit Logic
+    // Cost and Pure Profit Logic
     const orderTotalCost = (order.items || []).reduce((s, i) => s + ((i.cost_price_paise || 0) * i.quantity), 0);
-    const orderPureProfit = orderNetProfit - orderTotalCost;
+    const orderPureProfit = orderNetProfit;
     const StatusIcon = cfg.icon;
 
     return (

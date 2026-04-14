@@ -22,8 +22,12 @@ import {
     ExternalLink,
     Share2,
     HelpCircle,
-    FileText
+    FileText,
+    Download
 } from 'lucide-react';
+import { generateOrderInvoice } from '@/lib/invoiceGenerator';
+import { PLATFORM_CONFIG } from '@/lib/config/platform';
+import toast from 'react-hot-toast';
 
 export default function TransactionDetailPage() {
     const router = useRouter();
@@ -47,27 +51,84 @@ export default function TransactionDetailPage() {
             let data = null;
             let queryError = null;
 
+            const isCart = id.startsWith('cart-');
+            const actualId = isCart ? id.replace('cart-', '') : id;
+
             if (source === 'payout') {
                 const { data: payout, error: err } = await supabase
                     .from('payout_requests')
                     .select('*')
-                    .eq('id', id)
+                    .eq('id', actualId)
                     .single();
                 data = payout;
                 queryError = err;
             } else if (source === 'merchant') {
-                const { data: merchantTx, error: err } = await supabase
-                    .from('merchant_transactions')
-                    .select('*, coupons(*)')
-                    .eq('id', id)
-                    .single();
-                data = merchantTx;
-                queryError = err;
+                if (isCart) {
+                    // First fetch the base tx to get timestamp
+                    const { data: baseTx, error: baseErr } = await supabase
+                        .from('merchant_transactions')
+                        .select('*')
+                        .eq('id', actualId)
+                        .single();
+                    
+                    if (baseErr) throw baseErr;
+
+                    // Fetch all txs from that exact cart checkout (same timestamp)
+                    const { data: cartTxs, error: cartErr } = await supabase
+                        .from('merchant_transactions')
+                        .select('*, coupons(*)')
+                        .eq('merchant_id', baseTx.merchant_id)
+                        .eq('created_at', baseTx.created_at);
+                    
+                    if (cartErr) throw cartErr;
+
+                    // Fetch product titles for bulk items
+                    const productIds = cartTxs.map(tx => tx.metadata?.product_id).filter(Boolean);
+                    let productsMap = {};
+                    if (productIds.length > 0) {
+                        const { data: products, error: prodErr } = await supabase
+                            .from('shopping_products')
+                            .select('id, title')
+                            .in('id', productIds);
+                        
+                        if (prodErr) console.error("Error fetching shopping products:", prodErr);
+                        
+                        if (products) {
+                            productsMap = products.reduce((acc, p) => ({...acc, [p.id]: p}), {});
+                        }
+                    }
+
+                    cartTxs.forEach(tx => {
+                        const pId = tx.metadata?.product_id;
+                        if (pId && productsMap[pId]) {
+                            tx.product_details = productsMap[pId];
+                        }
+                    });
+
+                    // Aggregate
+                    const totalPaise = cartTxs.reduce((sum, tx) => sum + (tx.amount_paise || 0), 0);
+                    data = {
+                        ...baseTx,
+                        id: id,
+                        amount_paise: totalPaise,
+                        description: 'Wholesale Bulk Purchase (Cart Checkout)',
+                        cart_items: cartTxs
+                    };
+                    queryError = null;
+                } else {
+                    const { data: merchantTx, error: err } = await supabase
+                        .from('merchant_transactions')
+                        .select('*, coupons(*)')
+                        .eq('id', actualId)
+                        .single();
+                    data = merchantTx;
+                    queryError = err;
+                }
             } else {
                 const { data: walletTx, error: err } = await supabase
                     .from('wallet_transactions')
                     .select('*')
-                    .eq('id', id)
+                    .eq('id', actualId)
                     .single();
                 data = walletTx;
                 queryError = err;
@@ -95,6 +156,58 @@ export default function TransactionDetailPage() {
         navigator.clipboard.writeText(text);
         setCopiedId(true);
         setTimeout(() => setCopiedId(false), 2000);
+    };
+
+    const handleDownloadInvoice = () => {
+        if (!transaction) return;
+        
+        try {
+            const isCart = transaction.cart_items && transaction.cart_items.length > 0;
+            let formattedItems = [];
+
+            if (isCart) {
+                formattedItems = transaction.cart_items.map(item => {
+                    const meta = item.parsedMetadata || item.metadata || {};
+                    const qty = meta.quantity || 1;
+                    const wholesaleAmount = meta.wholesale_amount_paise || 0;
+                    const gstPct = meta.gst_percentage || 0;
+
+                    return {
+                        shopping_products: {
+                            title: item.product_details?.title || 'Wholesale Product',
+                            hsn_code: '9971',
+                            gst_percentage: gstPct
+                        },
+                        quantity: qty,
+                        unit_price_paise: wholesaleAmount / qty,
+                        total_price_paise: wholesaleAmount // MUST be pre-tax since generator ADDS gst.
+                    };
+                });
+            }
+
+            const mockOrder = {
+                id: transaction.id,
+                created_at: transaction.created_at,
+                customer_name: "Merchant Partner",
+                delivery_address: "Not Applicable",
+                customer_phone: "",
+                delivery_fee_paise: 0,
+                // These are needed if it falls back to a gift card 
+                amount: Math.abs(transaction.amount_paise || 0),
+                brand: transaction.coupons?.brand || 'InTrust Gift Card'
+            };
+
+            generateOrderInvoice({
+                order: mockOrder,
+                items: formattedItems,
+                seller: PLATFORM_CONFIG.business,
+                type: isCart ? 'shopping' : 'giftcard'
+            });
+            toast.success("Invoice generated successfully");
+        } catch (err) {
+            console.error("Invoice generation error:", err);
+            toast.error("Failed to generate invoice");
+        }
     };
 
     if (loading) {
@@ -181,9 +294,20 @@ export default function TransactionDetailPage() {
                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-0.5 block">Official Ledger</span>
                     <h1 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Transaction Record</h1>
                 </div>
-                <button className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-900 rounded-full shadow-sm dark:shadow-none border border-black/5 dark:border-white/5">
-                    <Share2 size={18} className="text-slate-600 dark:text-slate-400" />
-                </button>
+                <div className="flex items-center gap-2">
+                    {source === 'merchant' && (
+                        <button
+                            onClick={handleDownloadInvoice}
+                            title="Download Invoice"
+                            className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-900 rounded-full shadow-sm dark:shadow-none border border-black/5 dark:border-white/5 hover:bg-slate-50 transition-colors"
+                        >
+                            <Download size={18} className="text-[#D4AF37]" />
+                        </button>
+                    )}
+                    <button className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-900 rounded-full shadow-sm dark:shadow-none border border-black/5 dark:border-white/5">
+                        <Share2 size={18} className="text-slate-600 dark:text-slate-400" />
+                    </button>
+                </div>
             </div>
 
             {/* Digital Receipt Card */}
@@ -308,7 +432,70 @@ export default function TransactionDetailPage() {
                 </div>
 
                 {/* Dynamic Asset Card */}
-                {source === 'merchant' && transaction.coupons && (
+                {source === 'merchant' && transaction.cart_items && transaction.cart_items.length > 0 && (() => {
+                    const subtotalPaise = transaction.cart_items.reduce((sum, item) => sum + (item.metadata?.wholesale_amount_paise || 0), 0);
+                    const gstPaise = transaction.cart_items.reduce((sum, item) => sum + (item.metadata?.gst_amount_paise || 0), 0);
+                    const grandTotalPaise = subtotalPaise + gstPaise;
+
+                    return (
+                        <div className="space-y-6">
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.25rem] px-2">Cart Summary</h3>
+                            <div className="space-y-3">
+                                {transaction.cart_items.map(item => {
+                                    const qty = item.metadata?.quantity || 1;
+                                    const wholesaleAmount = (item.metadata?.wholesale_amount_paise || 0) / 100;
+                                    const gstAmount = (item.metadata?.gst_amount_paise || 0) / 100;
+                                    const title = item.product_details?.title || 'Unknown Product';
+                                    const brand = item.product_details?.brand || 'Platform';
+                                    
+                                    return (
+                                        <div key={item.id} className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-slate-50 dark:bg-slate-950 rounded-xl flex items-center justify-center text-slate-900 dark:text-white font-black text-lg border border-slate-100 dark:border-slate-800">
+                                                    {brand.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-black text-[#D4AF37] uppercase tracking-[0.2em] mb-0.5">{brand}</p>
+                                                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h4>
+                                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Qty: {qty}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-black text-slate-900 dark:text-white">₹{Number(wholesaleAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                                                {gstAmount > 0 && (
+                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">+ ₹{Number(gstAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} GST</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Price Breakdown */}
+                            <div className="bg-[#D4AF37]/5 rounded-2xl p-6 border border-[#D4AF37]/20 mt-6">
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center text-sm font-bold text-slate-600 dark:text-slate-400">
+                                        <span>Subtotal</span>
+                                        <span>₹{(subtotalPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm font-bold text-slate-600 dark:text-slate-400">
+                                        <span>Total GST</span>
+                                        <span>₹{(gstPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="h-px bg-slate-200 dark:bg-slate-800 my-4" />
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Total Paid</span>
+                                        <span className="text-xl font-black text-[#D4AF37]">
+                                            ₹{(grandTotalPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {source === 'merchant' && !transaction.cart_items && transaction.coupons && (
                     <div className="space-y-6">
                         <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.25rem] px-2">Related Asset</h3>
                         <Link

@@ -78,9 +78,9 @@ export default async function MerchantOrdersPage() {
     totalGrossProfit: orders.reduce((sum, o) =>
       sum + (o.items || []).reduce((s, i) => s + (i.gross_profit_paise || 0), 0), 0),
     totalCommission: orders.reduce((sum, o) =>
-      sum + (o.platform_cut_paise ?? (o.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0)), 0),
+      sum + (o.platform_cut_paise || (o.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0)), 0),
     totalNetProfit: orders.reduce((sum, o) =>
-      sum + (o.merchant_profit_paise ?? (o.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0)), 0),
+      sum + (o.merchant_profit_paise || (o.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0)), 0),
   };
 
   return (

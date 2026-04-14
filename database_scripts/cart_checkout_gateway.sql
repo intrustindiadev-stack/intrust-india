@@ -53,13 +53,18 @@ BEGIN
             COALESCE(mi.retail_price_paise, p.suggested_retail_price_paise) as effective_price,
             mi.stock_quantity as merchant_stock,
             p.admin_stock as platform_stock,
-            p.title as product_title
+            p.title as product_title,
+            p.gst_percentage
         FROM public.shopping_cart c
         LEFT JOIN public.merchant_inventory mi ON c.inventory_id = mi.id
         JOIN public.shopping_products p ON c.product_id = p.id
         WHERE c.customer_id = p_customer_id
     LOOP
         v_total_paise := v_total_paise + (v_cart_items.effective_price * v_cart_items.quantity);
+        
+        -- Add GST (aligned with UI: ROUND(price * qty * percentage / 100))
+        v_total_paise := v_total_paise + ROUND((v_cart_items.effective_price * v_cart_items.quantity * v_cart_items.gst_percentage / 100.0));
+        
         
         IF v_cart_items.is_platform_item THEN
             IF v_cart_items.platform_stock < v_cart_items.quantity THEN
