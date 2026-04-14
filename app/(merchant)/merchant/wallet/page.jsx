@@ -122,7 +122,30 @@ export default function WalletPage() {
         }
     }, [searchParams, fetchWalletData]);
 
-    const filteredTransactions = transactions.filter(tx => txFilter === 'ALL' || tx.transaction_type === txFilter);
+    // Helper to group transactions by identical timestamp and description
+    const groupTransactions = (txs) => {
+        const grouped = txs.reduce((acc, tx) => {
+            const key = `${tx.created_at}_${tx.description}`;
+            if (!acc[key]) {
+                acc[key] = { ...tx, amount: Number(tx.amount), _count: 1 };
+            } else {
+                acc[key].amount += Number(tx.amount);
+                acc[key]._count += 1;
+            }
+            return acc;
+        }, {});
+        
+        return Object.values(grouped)
+            .map(tx => ({
+                ...tx,
+                // If grouped multiple items, prefix ID with 'cart-' to trigger detail page aggregation
+                id: tx._count > 1 ? `cart-${tx.id}` : tx.id
+            }))
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    };
+
+    const displayTransactions = groupTransactions(transactions);
+    const filteredTransactions = displayTransactions.filter(tx => txFilter === 'ALL' || tx.transaction_type === txFilter);
 
     return (
         <div className="relative">

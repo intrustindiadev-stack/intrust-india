@@ -16,7 +16,10 @@ export default async function TakeoverOrdersPage() {
         console.error('Error fetching takeover orders:', error);
     }
 
-    const orders = data?.orders || [];
+    // Validate RPC business-level success flag — do NOT default to empty list on failure
+    const rpcError = error || (!data?.success ? (data?.message || 'Unauthorized or query failed') : null);
+
+    const orders = rpcError ? [] : (data?.orders || []);
 
     // Compute stats
     const stats = {
@@ -27,5 +30,5 @@ export default async function TakeoverOrdersPage() {
         cancelled: orders.filter(o => o.delivery_status === 'cancelled').length,
     };
 
-    return <TakeoverClient orders={orders} stats={stats} />;
+    return <TakeoverClient orders={orders} stats={stats} rpcError={rpcError} />;
 }

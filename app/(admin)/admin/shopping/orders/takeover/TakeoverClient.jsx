@@ -24,7 +24,7 @@ const STATUS_CONFIG = {
 
 const STATUS_FLOW = ["pending", "packed", "shipped", "delivered"];
 
-export default function TakeoverClient({ orders: initialOrders, stats: initialStats }) {
+export default function TakeoverClient({ orders: initialOrders, stats: initialStats, rpcError }) {
     const supabase = createClient();
     const router = useRouter();
     const [orders, setOrders] = useState(initialOrders);
@@ -129,7 +129,7 @@ export default function TakeoverClient({ orders: initialOrders, stats: initialSt
             const res = await fetch('/api/admin/orders/takeover', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId })
+                body: JSON.stringify({ order_id: orderId })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Takeover failed");
@@ -151,6 +151,17 @@ export default function TakeoverClient({ orders: initialOrders, stats: initialSt
 
     return (
         <div className="p-4 lg:p-8 max-w-7xl mx-auto min-h-screen bg-[#f8f9fb] dark:bg-slate-950 font-[family-name:var(--font-outfit)] transition-colors duration-300">
+            {/* RPC Error Banner */}
+            {rpcError && (
+                <div className="mb-6 flex items-center gap-3 px-5 py-4 rounded-2xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400">
+                    <AlertCircle size={18} className="shrink-0" />
+                    <p className="text-sm font-bold">
+                        <span className="font-black">Error loading orders:</span>{' '}
+                        {typeof rpcError === 'string' ? rpcError : rpcError?.message || 'An authorization or server error occurred.'}
+                    </p>
+                </div>
+            )}
+
             {/* Header */}
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
                 <div className="space-y-3">

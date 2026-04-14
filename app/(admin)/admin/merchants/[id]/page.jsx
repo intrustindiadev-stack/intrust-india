@@ -63,7 +63,21 @@ export default async function AdminMerchantDetailPage({ params }) {
         // Ignored
     }
 
-    // Fetch merchant transactions
+    // Consolidate identical transactions (e.g. from the same cart/order)
+    const consolidateTransactions = (txs) => {
+        const grouped = txs.reduce((acc, tx) => {
+            const key = `${tx.created_at}_${tx.description}`;
+            if (!acc[key]) {
+                acc[key] = { ...tx };
+            } else {
+                acc[key].amount_paise = (acc[key].amount_paise || 0) + (tx.amount_paise || 0);
+                // Keep the latest balance (the one encountered first in a DESC sorted list)
+            }
+            return acc;
+        }, {});
+        return Object.values(grouped).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    };
+
     let transactions = [];
     try {
         const { data: t } = await supabase
@@ -71,8 +85,8 @@ export default async function AdminMerchantDetailPage({ params }) {
             .select('*')
             .eq('merchant_id', id)
             .order('created_at', { ascending: false })
-            .limit(10);
-        if (t) transactions = t;
+            .limit(20); // Fetch more to allow for consolidation within the limit
+        if (t) transactions = consolidateTransactions(t);
     } catch (e) {
         console.log('Error fetching merchant transactions:', e);
     }

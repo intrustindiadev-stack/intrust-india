@@ -126,44 +126,36 @@ export async function GET(request) {
         const bulkGroupMap = new Map();
 
         (merchantTxs || []).forEach(tx => {
-            let txType = (tx.amount_paise || 0) < 0 ? 'DEBIT' : 'CREDIT';
-            let desc = tx.description || tx.transaction_type || 'Transaction';
+            const txType = (tx.amount_paise || 0) < 0 ? 'DEBIT' : 'CREDIT';
+            const desc = tx.description || tx.transaction_type || 'Transaction';
             const amountVal = Math.abs(tx.amount_paise || 0) / 100;
+            const key = tx.created_at; // PG transaction time is identical for items in same cart
 
-            if (tx.transaction_type === 'udhari_payment') {
-                txType = 'CREDIT';
-                desc = 'Store Credit Received';
-            }
-
-            // Consolidate Wholesale Bulk Purchases
-            if (desc && desc.startsWith('Wholesale bulk purchase')) {
-                const key = tx.created_at; // PG transaction time is identical for single checkout
-                if (bulkGroupMap.has(key)) {
-                    const group = bulkGroupMap.get(key);
-                    group.amountVal += amountVal;
-                    group.amount = group.amountVal.toFixed(2);
-                } else {
-                    const group = {
-                        id: `cart-${tx.id}`,
-                        source: 'merchant',
-                        transaction_type: txType,
-                        description: 'Wholesale Bulk Purchase (Cart)',
-                        amountVal: amountVal,
-                        amount: amountVal.toFixed(2),
-                        created_at: tx.created_at,
-                    };
-                    bulkGroupMap.set(key, group);
-                    groupedMerchantTxs.push(group);
+            if (bulkGroupMap.has(key)) {
+                const group = bulkGroupMap.get(key);
+                group.amountVal += amountVal;
+                group.amount = group.amountVal.toFixed(2);
+                // If items have different descriptions, might want to show "Multiple items" 
+                // but usually they share the same generic text for one checkout.
+                group._itemCount += 1;
+                if (group._itemCount > 1) {
+                    group.id = `cart-${group._anchorId}`;
                 }
             } else {
-                groupedMerchantTxs.push({
+                const group = {
                     id: tx.id,
+                    _anchorId: tx.id,
+                    _itemCount: 1,
                     source: 'merchant',
                     transaction_type: txType,
                     description: desc,
+                    originalDescription: desc,
+                    amountVal: amountVal,
                     amount: amountVal.toFixed(2),
                     created_at: tx.created_at,
-                });
+                };
+                bulkGroupMap.set(key, group);
+                groupedMerchantTxs.push(group);
             }
         });
 

@@ -111,7 +111,10 @@ export default function TransactionDetailPage() {
                         ...baseTx,
                         id: id,
                         amount_paise: totalPaise,
-                        description: 'Wholesale Bulk Purchase (Cart Checkout)',
+                        // Use original description if it contains "Gateway Checkout", otherwise use bulk label
+                        description: baseTx.description?.includes('Gateway Checkout') 
+                            ? baseTx.description 
+                            : 'Wholesale Bulk Purchase (Cart Checkout)',
                         cart_items: cartTxs
                     };
                     queryError = null;
@@ -433,7 +436,7 @@ export default function TransactionDetailPage() {
 
                 {/* Dynamic Asset Card */}
                 {source === 'merchant' && transaction.cart_items && transaction.cart_items.length > 0 && (() => {
-                    const subtotalPaise = transaction.cart_items.reduce((sum, item) => sum + (item.metadata?.wholesale_amount_paise || 0), 0);
+                    const subtotalPaise = transaction.cart_items.reduce((sum, item) => sum + (item.metadata?.wholesale_amount_paise || (item.amount_paise > 0 ? item.amount_paise : 0)), 0);
                     const gstPaise = transaction.cart_items.reduce((sum, item) => sum + (item.metadata?.gst_amount_paise || 0), 0);
                     const grandTotalPaise = subtotalPaise + gstPaise;
 
@@ -456,12 +459,14 @@ export default function TransactionDetailPage() {
                                                 </div>
                                                 <div>
                                                     <p className="text-[9px] font-black text-[#D4AF37] uppercase tracking-[0.2em] mb-0.5">{brand}</p>
-                                                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h4>
+                                                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">{title !== 'Unknown Product' ? title : (item.description || 'Order Item')}</h4>
                                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Qty: {qty}</p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm font-black text-slate-900 dark:text-white">₹{Number(wholesaleAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                                                <p className="text-sm font-black text-slate-900 dark:text-white">
+                                                    ₹{Number(wholesaleAmount > 0 ? wholesaleAmount : (item.amount_paise / 100)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                                </p>
                                                 {gstAmount > 0 && (
                                                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">+ ₹{Number(gstAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} GST</p>
                                                 )}
@@ -484,7 +489,9 @@ export default function TransactionDetailPage() {
                                     </div>
                                     <div className="h-px bg-slate-200 dark:bg-slate-800 my-4" />
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Total Paid</span>
+                                        <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                                            Total {isCredit ? 'Received' : 'Paid'}
+                                        </span>
                                         <span className="text-xl font-black text-[#D4AF37]">
                                             ₹{(grandTotalPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                         </span>

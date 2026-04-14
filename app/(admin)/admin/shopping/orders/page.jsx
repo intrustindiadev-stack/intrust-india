@@ -19,7 +19,10 @@ export default async function AdminOrdersPage() {
         console.error('Error fetching orders:', error);
     }
 
-    const orders = data?.orders || [];
+    // Validate RPC business-level success flag — do NOT default to empty list on failure
+    const rpcError = error || (!data?.success ? (data?.message || 'Unauthorized or query failed') : null);
+
+    const orders = rpcError ? [] : (data?.orders || []);
 
     // Compute stats
     const stats = {
@@ -33,5 +36,5 @@ export default async function AdminOrdersPage() {
         merchantOrders: orders.filter(o => !o.is_platform_order).length,
     };
 
-    return <AdminOrdersClient orders={orders} stats={stats} />;
+    return <AdminOrdersClient orders={orders} stats={stats} rpcError={rpcError} />;
 }
