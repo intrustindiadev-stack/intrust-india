@@ -27,8 +27,9 @@ export default async function AdminUserDetailPage({ params }) {
     const supabase = createAdminClient();
     const { id } = await params;
 
-    // Fetch current admin's permissions (filtered by their own identity)
+    // Fetch current admin's permissions and role
     let adminPermissions = [];
+    let isSuperAdmin = false;
     try {
         const { createServerSupabaseClient } = await import('@/lib/supabaseServer');
         const serverClient = await createServerSupabaseClient();
@@ -39,6 +40,13 @@ export default async function AdminUserDetailPage({ params }) {
                 .select('permission')
                 .eq('admin_user_id', currentAdmin.id);
             adminPermissions = (permData || []).map(p => p.permission);
+
+            const { data: adminProfile } = await supabase
+                .from('user_profiles')
+                .select('role')
+                .eq('id', currentAdmin.id)
+                .single();
+            isSuperAdmin = adminProfile?.role === 'super_admin';
         }
     } catch (e) {
         // Table may not exist yet — graceful fallback
@@ -204,7 +212,7 @@ export default async function AdminUserDetailPage({ params }) {
                         </div>
 
                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-                            <span className={`px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wide border ${user.role === 'admin' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                            <span className={`px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wide border ${['admin', 'super_admin'].includes(user.role) ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
                                 {user.role || 'customer'}
                             </span>
                             {user.kyc_status && getStatusBadge(user.kyc_status)}
@@ -408,7 +416,9 @@ export default async function AdminUserDetailPage({ params }) {
                                 <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block mb-1">Live Wallet Balance</span>
                                 <span className="font-extrabold text-3xl text-white">₹{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                             </div>
-                            <WalletAdjustSection userId={id} initialBalance={walletBalance} adminPermissions={adminPermissions} />
+                            {isSuperAdmin && (
+                                <WalletAdjustSection userId={id} initialBalance={walletBalance} adminPermissions={adminPermissions} />
+                            )}
                             <div className="flex justify-between items-center py-3 border-b border-slate-700/50">
                                 <span className="text-slate-400 font-medium text-sm">Total Spent</span>
                                 <span className="font-bold text-white text-lg">

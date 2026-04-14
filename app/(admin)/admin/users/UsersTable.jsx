@@ -261,6 +261,9 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
                                                     {user.role === 'admin' && (
                                                         <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-bold">ADMIN</span>
                                                     )}
+                                                    {user.role === 'super_admin' && (
+                                                        <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">SUPER ADMIN</span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
@@ -295,7 +298,7 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
                                                             className="block w-full text-sm border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border bg-white disabled:opacity-50 disabled:bg-gray-100"
                                                             value={user.kyc_status || 'not_started'}
                                                             onChange={(e) => updateKYCStatus(user.id, e.target.value)}
-                                                            disabled={user.role === 'admin'}
+                                                            disabled={user.role === 'admin' || user.role === 'super_admin'}
                                                         >
                                                             <option value="not_started" disabled>Select Status</option>
                                                             <option value="pending">Pending</option>

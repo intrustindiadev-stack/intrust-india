@@ -24,7 +24,7 @@ async function verifyAdmin() {
             .eq('id', user.id)
             .single();
 
-        return profile?.role === 'admin';
+        return ['admin', 'super_admin'].includes(profile?.role);
     } catch (error) {
         console.error('Admin verification failed:', error);
         return false;

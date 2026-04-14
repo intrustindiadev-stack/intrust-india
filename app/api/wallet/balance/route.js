@@ -44,7 +44,7 @@ export async function GET(request) {
 
         let merchant = null;
 
-        if (profile?.role === 'admin') {
+        if (profile?.role === 'admin' || profile?.role === 'super_admin') {
             const { data: ownMerchant } = await supabase.from('merchants').select('id, wallet_balance_paise').eq('user_id', user.id).single();
             merchant = ownMerchant || (await supabase.from('merchants').select('id, wallet_balance_paise').order('created_at', { ascending: false }).limit(1).single()).data;
         } else {

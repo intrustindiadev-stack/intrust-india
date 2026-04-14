@@ -11,8 +11,9 @@ export default async function AdminMerchantDetailPage({ params }) {
     const supabase = createAdminClient();
     const { id } = await params;
 
-    // Fetch current admin's permissions (filtered by their own identity)
+    // Fetch current admin's permissions and role
     let adminPermissions = [];
+    let isSuperAdmin = false;
     try {
         const { createServerSupabaseClient } = await import('@/lib/supabaseServer');
         const serverClient = await createServerSupabaseClient();
@@ -23,6 +24,13 @@ export default async function AdminMerchantDetailPage({ params }) {
                 .select('permission')
                 .eq('admin_user_id', currentAdmin.id);
             adminPermissions = (permData || []).map(p => p.permission);
+
+            const { data: adminProfile } = await supabase
+                .from('user_profiles')
+                .select('role')
+                .eq('id', currentAdmin.id)
+                .single();
+            isSuperAdmin = adminProfile?.role === 'super_admin';
         }
     } catch (e) {
         console.log('admin_permissions not available yet:', e);
@@ -292,12 +300,14 @@ export default async function AdminMerchantDetailPage({ params }) {
                             <Link href={`/admin/merchants/${merchant.id}/udhari`} className="block w-full py-4 bg-blue-600 text-white text-[10px] font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] uppercase tracking-widest text-center">
                                 Manage Settlements
                             </Link>
-                            <MerchantWalletAdjustSection
-                                merchantUserId={merchant.user_id}
-                                merchantId={merchant.id}
-                                initialBalance={(merchant.wallet_balance_paise || 0) / 100}
-                                adminPermissions={adminPermissions}
-                            />
+                            {isSuperAdmin && (
+                                <MerchantWalletAdjustSection
+                                    merchantUserId={merchant.user_id}
+                                    merchantId={merchant.id}
+                                    initialBalance={(merchant.wallet_balance_paise || 0) / 100}
+                                    adminPermissions={adminPermissions}
+                                />
+                            )}
                         </div>
                     </div>
 

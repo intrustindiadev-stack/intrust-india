@@ -94,6 +94,7 @@ function LoginContent() {
     const verified  = searchParams?.get('verified')  === 'true';
     const resetDone = searchParams?.get('reset')      === 'success';
     const merged    = searchParams?.get('merged')     === 'true';
+    const confirmed = searchParams?.get('confirmed')  === 'true';
 
     useEffect(() => {
         sessionStorage.removeItem('intrust_adv_seen');
@@ -110,7 +111,7 @@ function LoginContent() {
         const role = profile?.role;
         if (role === 'merchant') {
             window.location.href = '/merchant/dashboard';
-        } else if (role === 'admin') {
+        } else if (role === 'admin' || role === 'super_admin') {
             window.location.href = '/admin';
         } else {
             window.location.href = '/dashboard';
@@ -297,6 +298,15 @@ function LoginContent() {
                     <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl flex items-center gap-3">
                         <CheckCircle size={20} className="text-blue-600 dark:text-blue-400 shrink-0" />
                         <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">Your accounts have been linked! Please log in to continue.</p>
+                    </div>
+                )}
+                {confirmed && (
+                    <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl">
+                        <div className="flex items-center gap-3 mb-1">
+                            <CheckCircle size={20} className="text-green-600 dark:text-green-400 shrink-0" />
+                            <p className="text-sm font-bold text-green-700 dark:text-green-400">Email confirmed successfully! ✅</p>
+                        </div>
+                        <p className="text-sm text-green-600 dark:text-green-300 ml-8">Please log in with your email and password to continue.</p>
                     </div>
                 )}
 

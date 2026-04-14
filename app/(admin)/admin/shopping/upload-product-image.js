@@ -40,7 +40,7 @@ export async function uploadProductImage(formData, role) {
         const fileExt = file.name.split('.').pop().toLowerCase();
 
         let filePath;
-        if (role === 'admin') {
+        if (role === 'admin' || role === 'super_admin') {
             filePath = `admin/${timestamp}_${randomStr}.${fileExt}`;
         } else {
             // Get the current user's ID for merchant path scoping

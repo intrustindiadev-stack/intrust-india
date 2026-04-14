@@ -51,9 +51,9 @@ export async function POST(request) {
             .eq('id', authUser.id)
             .single();
 
-        if (profileError || !adminProfile || !['admin', 'super_admin'].includes(adminProfile.role)) {
+        if (profileError || !adminProfile || adminProfile.role !== 'super_admin') {
             return NextResponse.json(
-                { error: 'Access denied. Admin role required.' },
+                { error: 'Access denied. Super admin role required.' },
                 { status: 403 }
             );
         }

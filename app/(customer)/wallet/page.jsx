@@ -99,18 +99,48 @@ export default function CustomerWalletPage() {
             }
 
             // Fetch Transactions only if wallet actually exists/created to prevent 403 on foreign key
+            let mergedTxs = [];
+            
             if (hasWallet) {
-                const { data: txs, error: txError } = await supabase
+                // Fetch successful wallet adjustments
+                const { data: successfulTxs, error: txError } = await supabase
                     .from('customer_wallet_transactions')
                     .select('*')
                     .eq('user_id', user.id)
                     .order('created_at', { ascending: false })
                     .limit(20);
 
-                if (!txError && txs) {
-                    setTransactions(txs);
+                if (!txError && successfulTxs) {
+                    mergedTxs = [...successfulTxs];
                 }
             }
+            
+            // Also fetch failed / pending SabPaisa topups specifically
+            const { data: failedTopups, error: failedError } = await supabase
+                .from('transactions')
+                .select('client_txn_id, created_at, amount, status, payment_mode')
+                .eq('user_id', user.id)
+                .eq('udf1', 'WALLET_TOPUP')
+                .neq('status', 'SUCCESS')
+                .order('created_at', { ascending: false })
+                .limit(20);
+                
+            if (!failedError && failedTopups) {
+                const mappedFailed = failedTopups.map(t => ({
+                    id: t.client_txn_id,
+                    type: 'TOPUP',
+                    description: `Wallet Topup attempt ${t.payment_mode ? `(${t.payment_mode})` : ''}`,
+                    created_at: t.created_at,
+                    amount_paise: Math.round((Number(t.amount) || 0) * 100),
+                    status: t.status // FAILED, INITIATED, etc.
+                }));
+                mergedTxs = [...mergedTxs, ...mappedFailed];
+            }
+            
+            // Sort by Date DESC and slice top 20
+            mergedTxs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            setTransactions(mergedTxs.slice(0, 20));
+            
         } catch (error) {
             console.error('Error fetching wallet data:', error);
         } finally {
@@ -225,11 +255,17 @@ export default function CustomerWalletPage() {
                                 {transactions.map((tx) => (
                                     <div key={tx.id} className="p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
                                         <div className="flex items-center gap-4">
-                                            <div className={`p-3 rounded-2xl ${getIconColor(tx.type)}`}>
+                                            <div className={`p-3 rounded-2xl ${
+                                                ['FAILED', 'ERROR', 'ABORTED'].includes(tx.status)
+                                                    ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
+                                                    : tx.status === 'INITIATED'
+                                                        ? 'text-gray-500 bg-gray-50 dark:bg-gray-800'
+                                                        : getIconColor(tx.type)
+                                            }`}>
                                                 {tx.type === 'DEBIT' ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
                                             </div>
                                             <div>
-                                                <p className="font-bold text-gray-900 dark:text-white text-sm">
+                                                <p className={`font-bold text-sm ${['FAILED', 'ERROR', 'ABORTED'].includes(tx.status) ? 'text-gray-500 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'}`}>
                                                     {tx.description || tx.type}
                                                 </p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -238,10 +274,26 @@ export default function CustomerWalletPage() {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className={`font-black text-sm ${tx.type === 'DEBIT' ? 'text-gray-900 dark:text-white' : 'text-green-500'}`}>
-                                                {tx.type === 'DEBIT' ? '-' : '+'} ₹{(tx.amount_paise / 100).toFixed(2)}
+                                            <p className={`font-black text-sm ${
+                                                ['FAILED', 'ERROR', 'ABORTED'].includes(tx.status)
+                                                    ? 'text-gray-400 line-through'
+                                                    : tx.status === 'INITIATED'
+                                                        ? 'text-gray-500'
+                                                        : tx.type === 'DEBIT'
+                                                            ? 'text-gray-900 dark:text-white'
+                                                            : 'text-green-500'
+                                            }`}>
+                                                {tx.type === 'DEBIT' && !['FAILED', 'ERROR', 'ABORTED'].includes(tx.status) ? '-' : '+'} ₹{(tx.amount_paise / 100).toFixed(2)}
                                             </p>
-                                            <p className="text-[10px] text-gray-400 mt-0.5 uppercase font-bold tracking-widest">{tx.status || 'COMPLETED'}</p>
+                                            <p className={`text-[10px] mt-0.5 uppercase font-bold tracking-widest ${
+                                                ['FAILED', 'ERROR', 'ABORTED'].includes(tx.status)
+                                                    ? 'text-red-500'
+                                                    : tx.status === 'INITIATED'
+                                                        ? 'text-amber-500'
+                                                        : 'text-gray-400'
+                                            }`}>
+                                                {tx.status || 'COMPLETED'}
+                                            </p>
                                         </div>
                                     </div>
                                 ))}

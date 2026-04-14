@@ -60,7 +60,9 @@ export default function TransactionsPage() {
             logo: <Gift size={20} />
         }));
 
-        const normalizedWallet = (walletTxs || []).map(w => {
+        const normalizedWallet = (walletTxs || [])
+            .filter(w => w.reference_type !== 'GIFT_CARD_PURCHASE')
+            .map(w => {
             let logo = <Wallet size={20} />;
             let isSpent = false;
             let isCashback = false;

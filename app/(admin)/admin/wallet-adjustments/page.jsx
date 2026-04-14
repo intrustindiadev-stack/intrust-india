@@ -1,5 +1,5 @@
-import { createAdminClient } from '@/lib/supabaseServer';
-import { FileText, ArrowUpCircle, ArrowDownCircle, Clock, CheckCircle, XCircle, Search, Download, Filter } from 'lucide-react';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabaseServer';
+import { FileText, ArrowUpCircle, ArrowDownCircle, Clock, CheckCircle, XCircle, Search, Download, Filter, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -8,7 +8,43 @@ export default async function WalletAdjustmentsPage({ searchParams }) {
     const supabase = createAdminClient();
     const params = await searchParams;
 
-    // Parse filters from search params
+    // --- Super Admin Guard ---
+    try {
+        const serverClient = await createServerSupabaseClient();
+        const { data: { user: currentAdmin } } = await serverClient.auth.getUser();
+        if (currentAdmin) {
+            const { data: adminProfile } = await supabase
+                .from('user_profiles')
+                .select('role')
+                .eq('id', currentAdmin.id)
+                .single();
+            if (adminProfile?.role !== 'super_admin') {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-6 font-[family-name:var(--font-outfit)]">
+                        <div className="bg-white rounded-3xl p-10 border border-red-100 shadow-lg text-center max-w-sm">
+                            <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-6">
+                                <ShieldAlert size={32} className="text-red-500" />
+                            </div>
+                            <h1 className="text-xl font-black text-slate-900 mb-2 tracking-tight">Access Denied</h1>
+                            <p className="text-sm text-slate-500 font-medium mb-6">
+                                Wallet adjustment audit logs are restricted to Super Admins only.
+                            </p>
+                            <Link
+                                href="/admin"
+                                className="inline-block px-6 py-2.5 bg-slate-900 text-white text-xs font-black rounded-xl uppercase tracking-widest hover:bg-slate-700 transition-colors"
+                            >
+                                Back to Dashboard
+                            </Link>
+                        </div>
+                    </div>
+                );
+            }
+        }
+    } catch (e) {
+        console.error('Role check failed on wallet-adjustments page:', e);
+    }
+
+
     const statusFilter = params?.status || '';
     const walletTypeFilter = params?.walletType || '';
     const page = parseInt(params?.page || '1', 10);

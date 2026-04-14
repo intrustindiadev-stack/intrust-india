@@ -48,7 +48,7 @@ export default async function Home() {
       .eq('id', user.id)
       .single();
 
-    if (profile?.role === 'admin') {
+    if (profile?.role === 'admin' || profile?.role === 'super_admin') {
       redirect('/admin');
     }
     if (profile?.role === 'merchant') {

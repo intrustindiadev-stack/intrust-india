@@ -289,11 +289,29 @@ export async function GET(request) {
             session = otpData.session;
             user    = otpData.user ?? otpData.session.user;
         } else {
-            // No duplicate — normal Google sign-in, just upsert profile
-            const { error: upsertErr } = await supabaseAdmin
+            // No duplicate — normal Google sign-in. Check if profile exists first to avoid overwriting role
+            const { data: currentProfile } = await supabaseAdmin
                 .from('user_profiles')
-                .upsert(
-                    {
+                .select('role, auth_provider')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            if (currentProfile) {
+                // Only update non-critical fields
+                await supabaseAdmin
+                    .from('user_profiles')
+                    .update({
+                        full_name:        googleName || 'Google User',
+                        avatar_url:       googlePicture,
+                        email_verified:   true,
+                        email_verified_at: new Date().toISOString(),
+                    })
+                    .eq('id', user.id);
+            } else {
+                // New Google user, insert profile
+                const { error: insertErr } = await supabaseAdmin
+                    .from('user_profiles')
+                    .insert({
                         id:               user.id,
                         full_name:        googleName || 'Google User',
                         avatar_url:       googlePicture,
@@ -302,12 +320,11 @@ export async function GET(request) {
                         role:             'user',
                         email_verified:   true,
                         email_verified_at: new Date().toISOString(),
-                    },
-                    { onConflict: 'id', ignoreDuplicates: false }
-                );
+                    });
 
-            if (upsertErr) {
-                console.warn('[Google OAuth] Could not upsert user profile:', upsertErr.message);
+                if (insertErr) {
+                    console.warn('[Google OAuth] Could not insert user profile:', insertErr.message);
+                }
             }
         }
 
@@ -331,7 +348,7 @@ export async function GET(request) {
                 .eq('id', user.id)
                 .maybeSingle();
 
-            if (profile?.role === 'admin')    redirectPath = '/admin';
+            if (profile?.role === 'admin' || profile?.role === 'super_admin')    redirectPath = '/admin';
             else if (profile?.role === 'merchant') redirectPath = '/merchant/dashboard';
         }
 

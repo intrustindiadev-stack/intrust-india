@@ -4,113 +4,113 @@ import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabaseClient';
 import dynamic from 'next/dynamic';
 import { motion, useReducedMotion } from 'framer-motion';
-import {
-    PaymentStatusLayout,
-    StatusHeader,
-    ReferenceBlock,
-    ActionRow
-} from '@/components/payment/PaymentStatus';
+import { CheckCircle, Clock, Star, ShoppingBag, CreditCard, Wallet } from 'lucide-react';
 
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 
-const getPaymentConfig = (txnId, transaction, userRole) => {
-    const isMerchantSub = txnId?.startsWith('MSUB_') || transaction?.udf1 === 'MERCHANT_SUBSCRIPTION';
-    const isGoldSub = txnId?.startsWith('GOLD_') || transaction?.udf1 === 'GOLD_SUBSCRIPTION';
-    const isGiftCard = txnId?.startsWith('GC_') || txnId?.startsWith('WALLET_') || transaction?.udf1 === 'GIFT_CARD';
-    const isWalletTopup = txnId?.startsWith('WLT_') || transaction?.udf1 === 'WALLET_TOPUP';
-
+// Returns display config based on transaction type
+const getConfig = (txnId, transaction, userRole) => {
     const dashboardLink = userRole === 'merchant' ? '/merchant/dashboard' : '/dashboard';
+    const type = transaction?.udf1;
+    const isMerchantSub = txnId?.startsWith('MSUB_') || type === 'MERCHANT_SUBSCRIPTION';
+    const isGoldSub = txnId?.startsWith('GOLD_') || type === 'GOLD_SUBSCRIPTION';
+    const isGiftCard = txnId?.startsWith('GC_') || type === 'GIFT_CARD';
+    const isWalletTopup = txnId?.startsWith('WLT_') || type === 'WALLET_TOPUP';
+    const isCartCheckout = type === 'CART_CHECKOUT';
+    const isUdhari = type === 'UDHARI_PAYMENT';
 
-    if (isMerchantSub) {
-        return {
-            variant: 'amber',
-            title: 'STORE ACTIVATED 🎉',
-            description: 'Your payment was successful. Welcome to your Merchant Dashboard! You will be redirected shortly.',
-            methodLabel: transaction?.payment_mode || 'Online Payment',
-            amount: transaction?.paid_amount || transaction?.amount,
-            primary: { label: 'ENTER DASHBOARD', href: '/merchant/dashboard', variant: 'amber' },
-            secondary: { label: 'View Profile', href: '/merchant/profile', variant: 'amber' }
-        };
-    } else if (isGoldSub) {
-        return {
-            variant: 'amber',
-            title: 'ELITE GOLD ACTIVATED',
-            description: 'Welcome to the inner circle. Your premium benefits and cashback are now active!',
-            methodLabel: 'Wallet Pay',
-            amount: transaction?.paid_amount || transaction?.amount,
-            primary: { label: 'ENTER DASHBOARD', href: dashboardLink, variant: 'amber' },
-            secondary: { label: 'Back to Home', href: dashboardLink, variant: 'amber' },
-            tertiary: { label: 'Go to Dashboard', href: '/dashboard' }
-        };
-    } else if (isGiftCard) {
-        return {
-            variant: 'indigo',
-            title: 'GIFT CARD SECURED',
-            description: 'Your gift card has been secured and added to your wallet. Ready to redeem?',
-            methodLabel: transaction?.payment_mode || 'Online Payment',
-            amount: transaction?.paid_amount || transaction?.amount,
-            primary: { label: 'VIEW MY CARDS', href: userRole === 'merchant' ? '/merchant/inventory' : '/my-giftcards', variant: 'indigo' },
-            secondary: { label: 'View My Cards', href: '/my-giftcards', variant: 'indigo' }
-        };
-    } else if (isWalletTopup) {
-        return {
-            variant: 'blue',
-            title: 'PAYMENT SUCCESSFUL',
-            description: 'Funds added. Your wallet is loaded and ready for some serious spending.',
-            methodLabel: transaction?.payment_mode || 'Online Payment',
-            amount: transaction?.paid_amount || transaction?.amount,
-            primary: { label: 'CHECK BALANCE', href: userRole === 'merchant' ? '/merchant/wallet' : '/wallet', variant: 'blue' },
-            secondary: { label: 'Back to Home', href: dashboardLink }
-        };
-    } else {
-        return {
-            variant: 'blue',
-            title: 'PAYMENT SUCCESSFUL',
-            description: 'Transaction complete. Your digital goods are being served hot and fresh.',
-            methodLabel: transaction?.payment_mode || 'Online Payment',
-            amount: transaction?.paid_amount || transaction?.amount,
-            primary: { label: 'VIEW ASSETS', href: dashboardLink, variant: 'blue' },
-            secondary: { label: 'Back to Home', href: dashboardLink }
-        };
-    }
+    if (isMerchantSub) return {
+        icon: <Star size={48} className="text-white" strokeWidth={2.5} />,
+        color: '#f59e0b',
+        title: 'Store Activated! 🎉',
+        subtitle: 'Your merchant subscription is now active. Welcome to your dashboard!',
+        redirectTo: '/merchant/dashboard',
+        redirectDelay: 4000,
+        redirectLabel: 'Merchant Dashboard',
+        showConfetti: true,
+    };
+    if (isGoldSub) return {
+        icon: <Star size={48} className="text-white" strokeWidth={2.5} />,
+        color: '#f59e0b',
+        title: 'Elite Gold Activated! ⭐',
+        subtitle: 'Your premium benefits and cashback are now active!',
+        redirectTo: dashboardLink,
+        redirectDelay: 4000,
+        redirectLabel: 'Go to Dashboard',
+        showConfetti: true,
+    };
+    if (isGiftCard) return {
+        icon: <CreditCard size={48} className="text-white" strokeWidth={2.5} />,
+        color: '#6366f1',
+        title: 'Gift Card Secured! 💳',
+        subtitle: 'Your gift card has been added to your account and is ready to use.',
+        redirectTo: userRole === 'merchant' ? '/merchant/inventory' : '/my-giftcards',
+        redirectDelay: 3500,
+        redirectLabel: 'View My Cards',
+        showConfetti: false,
+    };
+    if (isCartCheckout) return {
+        icon: <ShoppingBag size={48} className="text-white" strokeWidth={2.5} />,
+        color: '#2563eb',
+        title: 'Order Placed! 🛍️',
+        subtitle: 'Your order has been confirmed and is being processed.',
+        redirectTo: '/orders?success=true',
+        redirectDelay: 3000,
+        redirectLabel: 'Track Your Order',
+        showConfetti: false,
+    };
+    if (isUdhari) return {
+        icon: <CheckCircle size={48} className="text-white" strokeWidth={2.5} />,
+        color: '#10b981',
+        title: 'Store Credit Paid! ✅',
+        subtitle: 'Your store credit has been settled successfully.',
+        redirectTo: dashboardLink,
+        redirectDelay: 3500,
+        redirectLabel: 'Go to Dashboard',
+        showConfetti: false,
+    };
+    // Default: Wallet Topup or generic
+    return {
+        icon: <Wallet size={48} className="text-white" strokeWidth={2.5} />,
+        color: '#2563eb',
+        title: 'Payment Successful! ✅',
+        subtitle: isWalletTopup
+            ? 'Funds added. Your wallet is loaded and ready for some serious spending.'
+            : 'Transaction complete. Your payment was processed successfully.',
+        redirectTo: isWalletTopup
+            ? (userRole === 'merchant' ? '/merchant/wallet' : '/wallet')
+            : dashboardLink,
+        redirectDelay: 3500,
+        redirectLabel: isWalletTopup ? 'Check Balance' : 'Go to Dashboard',
+        showConfetti: false,
+    };
 };
 
 const SuccessPage = () => {
     const router = useRouter();
     const { txnId } = router.query;
 
-    const [verificationState, setVerificationState] = useState('loading'); // 'loading', 'verified', 'error'
+    const [state, setState] = useState('loading'); // 'loading' | 'verified' | 'error'
     const [transaction, setTransaction] = useState(null);
     const [userRole, setUserRole] = useState(null);
-    const [windowDimensions, setWindowDimensions] = useState({ width: 0, height: 0 });
-    const [showConfetti, setShowConfetti] = useState(true);
-
+    const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
     const shouldReduceMotion = useReducedMotion();
 
+    // Track window size for confetti
     useEffect(() => {
-        setWindowDimensions({ width: window.innerWidth, height: window.innerHeight });
-        const handleResize = () => setWindowDimensions({ width: window.innerWidth, height: window.innerHeight });
-        window.addEventListener('resize', handleResize);
+        const update = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+        update();
+        window.addEventListener('resize', update);
+        return () => window.removeEventListener('resize', update);
+    }, []);
 
-        // Shorten confetti duration and tie it to motion preferences
-        if (!shouldReduceMotion) {
-            const timer = setTimeout(() => setShowConfetti(false), 5000); // reduced from 8000
-            return () => {
-                window.removeEventListener('resize', handleResize);
-                clearTimeout(timer);
-            };
-        } else {
-            setShowConfetti(false); // disable confetti entirely for reduced motion
-            return () => window.removeEventListener('resize', handleResize);
-        }
-    }, [shouldReduceMotion]);
-
+    // Verify transaction
     useEffect(() => {
         if (!txnId) return;
 
-        const verifyTransaction = async () => {
+        const verify = async () => {
             try {
-                // If this is a synthetic wallet transaction from a direct balance deduction, skip backend fetch
+                // Synthetic wallet txns (direct balance deduction)
                 if (txnId.startsWith('WALLET_')) {
                     setTransaction({
                         status: 'SUCCESS',
@@ -118,192 +118,219 @@ const SuccessPage = () => {
                         payment_mode: 'Intrust Wallet',
                         udf1: router.query.type || 'GIFT_CARD'
                     });
-                    setVerificationState('verified');
+                    setState('verified');
                     return;
                 }
 
                 const { data: { session } } = await supabase.auth.getSession();
-
                 if (!session) {
                     router.replace(`/login?returnUrl=/payment/success?txnId=${txnId}`);
                     return;
                 }
 
-                // Fetch User Role
-                const { data: roleData } = await supabase.from('user_profiles')
+                const { data: roleData } = await supabase
+                    .from('user_profiles')
                     .select('role')
                     .eq('id', session.user.id)
                     .single();
-
                 if (roleData) setUserRole(roleData.role);
 
-                // Fetch Transaction
                 const res = await fetch(`/api/transaction/details?id=${txnId}`, {
                     headers: { Authorization: `Bearer ${session.access_token}` }
                 });
-
                 const data = await res.json();
 
                 if (!res.ok || !data.transaction) {
-                    setVerificationState('error');
+                    setState('error');
                     setTimeout(() => router.replace(`/payment/failure?txnId=${txnId}&msg=Transaction%20not%20found`), 2000);
                     return;
                 }
 
                 const tx = data.transaction;
-
-                // Explicit Verification Gate
                 if (tx.status === 'SUCCESS') {
                     setTransaction(tx);
-                    setVerificationState('verified');
-                    
-                    if (txnId.startsWith('MSUB_') || tx.udf1 === 'MERCHANT_SUBSCRIPTION') {
-                        setTimeout(() => router.replace('/merchant/dashboard'), 5000);
-                    }
+                    setState('verified');
                 } else if (tx.status === 'FAILED' || tx.status === 'ERROR') {
                     router.replace(`/payment/failure?txnId=${txnId}`);
                 } else {
                     router.replace(`/payment/processing?txnId=${txnId}`);
                 }
-
             } catch (err) {
                 console.error(err);
-                setVerificationState('error');
+                setState('error');
             }
         };
 
-        verifyTransaction();
+        verify();
     }, [txnId, router]);
 
-    if (verificationState === 'loading') {
+    // Auto-redirect on verified
+    useEffect(() => {
+        if (state !== 'verified' || !transaction) return;
+        const config = getConfig(txnId, transaction, userRole);
+        const timer = setTimeout(() => router.replace(config.redirectTo), config.redirectDelay);
+        return () => clearTimeout(timer);
+    }, [state, transaction, txnId, userRole, router]);
+
+    // ── Loading ──────────────────────────────────────────────────────────────
+    if (state === 'loading') {
         return (
             <>
                 <Head>
                     <title>Verifying Payment — InTrust India</title>
-                    <meta name="description" content="Please wait while we verify your payment with InTrust India." />
                     <meta name="robots" content="noindex, nofollow" />
-                    <link rel="canonical" href="https://www.intrustindia.com/payment/success" />
                 </Head>
-                <PaymentStatusLayout variant="blue">
-                    <StatusHeader title="VERIFYING PAYMENT" isLoading={true} />
-                    <div className="px-8 pb-10 text-center">
-                        <p className="text-gray-400 text-sm mb-8 leading-relaxed">
-                            Hold on a second while we securely verify your transaction with the bank...
-                        </p>
-                    </div>
-                </PaymentStatusLayout>
+                <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#f7f8fa] dark:bg-[#080a10]">
+                    <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                        className="w-14 h-14 rounded-full border-4 border-slate-200 dark:border-white/10 border-t-blue-500 mb-5"
+                    />
+                    <p className="text-slate-500 dark:text-white/40 text-sm font-bold">Verifying payment…</p>
+                </div>
             </>
         );
     }
 
-    if (verificationState === 'error') {
+    // ── Error ────────────────────────────────────────────────────────────────
+    if (state === 'error') {
         return (
             <>
                 <Head>
                     <title>Verification Error — InTrust India</title>
-                    <meta name="description" content="There was an issue verifying your payment. Please contact InTrust India support." />
                     <meta name="robots" content="noindex, nofollow" />
-                    <link rel="canonical" href="https://www.intrustindia.com/payment/success" />
                 </Head>
-                <PaymentStatusLayout variant="red">
-                    <StatusHeader
-                        title="VERIFICATION ERROR"
-                        variant="red"
-                        icon={
-                            <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        }
-                    />
-                    <div className="px-8 pb-10 text-center">
-                        <p className="text-gray-400 text-sm mb-8 leading-relaxed">
-                            We encountered an issue looking up your transaction. Redirecting...
-                        </p>
-                    </div>
-                </PaymentStatusLayout>
+                <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#f7f8fa] dark:bg-[#080a10]">
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 12 }}
+                        className="w-20 h-20 mx-auto mb-5 rounded-full bg-red-600 flex items-center justify-center shadow-[0_0_40px_rgba(220,38,38,0.3)]"
+                    >
+                        <CheckCircle size={40} className="text-white" strokeWidth={2.5} />
+                    </motion.div>
+                    <h1 className="text-slate-900 dark:text-white text-xl font-black mb-2">Verification Error</h1>
+                    <p className="text-slate-500 dark:text-white/30 text-sm font-medium">Redirecting…</p>
+                </div>
             </>
         );
     }
 
-    const config = getPaymentConfig(txnId, transaction, userRole);
-
-    // Responsive confetti pieces count
-    const confettiPieces = windowDimensions.width < 768 ? 150 : 300;
-
-    const confettiColors = config.variant === 'amber'
-        ? ['#F59E0B', '#fbbf24', '#fcd34d', '#ffffff']
-        : config.variant === 'indigo'
-            ? ['#6366F1', '#818CF8', '#A78BFA', '#ffffff']
-            : undefined;
+    // ── Verified ─────────────────────────────────────────────────────────────
+    const config = getConfig(txnId, transaction, userRole);
+    const progressDuration = config.redirectDelay / 1000;
 
     return (
         <>
-        <Head>
-            <title>{config.title.replace(/_/g, ' ')} — InTrust India Payment</title>
-            <meta name="description" content={config.description} />
-            <meta name="robots" content="noindex, nofollow" />
-            <link rel="canonical" href="https://www.intrustindia.com/payment/success" />
-        </Head>
-        <PaymentStatusLayout variant={config.variant}>
-            {showConfetti && !shouldReduceMotion && (
-                <div className="fixed inset-0 pointer-events-none z-50">
+            <Head>
+                <title>Payment Successful — InTrust India</title>
+                <meta name="description" content="Your payment was processed successfully by InTrust India." />
+                <meta name="robots" content="noindex, nofollow" />
+            </Head>
+
+            {/* Confetti for subscription payments */}
+            {config.showConfetti && !shouldReduceMotion && (
+                <div className="fixed inset-0 pointer-events-none z-[200]">
                     <Confetti
-                        width={windowDimensions.width}
-                        height={windowDimensions.height}
+                        width={windowSize.width}
+                        height={windowSize.height}
                         recycle={false}
-                        numberOfPieces={config.variant === 'amber' ? confettiPieces + 100 : confettiPieces}
+                        numberOfPieces={windowSize.width < 768 ? 180 : 320}
                         gravity={0.15}
-                        colors={confettiColors}
+                        colors={['#f59e0b', '#fbbf24', '#fcd34d', '#ffffff']}
                     />
                 </div>
             )}
 
-            <StatusHeader
-                title={config.title}
-                variant={config.variant}
-                icon={
-                    <motion.svg
-                        className="w-12 h-12 text-white"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <motion.path
-                            initial={shouldReduceMotion ? { pathLength: 1 } : { pathLength: 0 }}
-                            animate={{ pathLength: 1 }}
-                            transition={{ duration: 0.6, delay: 0.5 }}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={3}
-                            d="M5 13l4 4L19 7"
-                        />
-                    </motion.svg>
-                }
-            />
-
-            <div className="px-8 pb-10 text-center">
-                <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.6 }}
-                    className="text-gray-400 text-sm mb-8 leading-relaxed max-w-[280px] mx-auto"
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="fixed inset-0 z-[100] flex items-center justify-center bg-[#f7f8fa] dark:bg-[#080a10]"
+            >
+                <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
+                    className="text-center px-8 max-w-sm w-full"
                 >
-                    {config.description}
-                </motion.p>
+                    {/* Animated Icon Circle */}
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 12, delay: 0.4 }}
+                        className="w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center"
+                        style={{
+                            background: config.color,
+                            boxShadow: `0 0 50px ${config.color}50`
+                        }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.65, duration: 0.4 }}
+                        >
+                            {config.icon}
+                        </motion.div>
+                    </motion.div>
 
-                <div className={shouldReduceMotion ? '' : "transform-gpu"}>
-                    <ReferenceBlock
-                        amount={config.amount}
-                        method={config.methodLabel}
-                        refId={txnId}
-                        statusLabel="Completed"
-                        variant={config.variant}
-                    />
-                </div>
+                    {/* Title */}
+                    <motion.h1
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.6 }}
+                        className="text-2xl font-black mb-2 text-slate-900 dark:text-white"
+                    >
+                        {config.title}
+                    </motion.h1>
 
-                <ActionRow {...config} />
-            </div>
-        </PaymentStatusLayout>
+                    {/* Subtitle */}
+                    <motion.p
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.75 }}
+                        className="text-sm font-medium mb-3 text-slate-500 dark:text-white/40 leading-relaxed"
+                    >
+                        {config.subtitle}
+                    </motion.p>
+
+                    {/* Transaction ID */}
+                    {txnId && (
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.9 }}
+                            className="text-[10px] font-mono text-slate-400 dark:text-white/20 mb-8 break-all"
+                        >
+                            Ref: {txnId}
+                        </motion.p>
+                    )}
+
+                    {/* Progress bar */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.8 }}
+                        className="w-full h-1 rounded-full overflow-hidden bg-slate-200 dark:bg-white/[0.06]"
+                    >
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: '100%' }}
+                            transition={{ delay: 0.5, duration: progressDuration, ease: 'linear' }}
+                            className="h-full rounded-full"
+                            style={{ background: config.color }}
+                        />
+                    </motion.div>
+
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1 }}
+                        className="text-[10px] font-bold text-slate-400 dark:text-white/20 mt-3 uppercase tracking-widest"
+                    >
+                        Redirecting to {config.redirectLabel}…
+                    </motion.p>
+                </motion.div>
+            </motion.div>
         </>
     );
 };

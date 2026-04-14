@@ -74,13 +74,15 @@ export async function GET(request) {
 
     // Detect fresh email verification: only for native email/password signups.
     // Google OAuth also sets email_confirmed_at immediately, so we MUST check
-    // the provider — otherwise Google users get wrongly redirected to /login?verified=true.
+    // the provider — otherwise Google users get wrongly redirected to /login?confirmed=true.
     const isEmailProvider = user.app_metadata?.provider === 'email'
     if (isEmailProvider && user.email && user.email_confirmed_at) {
         const confirmedAt = new Date(user.email_confirmed_at)
         const isJustVerified = (Date.now() - confirmedAt.getTime()) < 60_000
         if (isJustVerified) {
-            return NextResponse.redirect(new URL('/verified', origin))
+            // Sign the user out — they confirmed their email but should log in manually
+            await supabase.auth.signOut()
+            return NextResponse.redirect(new URL('/login?confirmed=true', origin))
         }
     }
 
@@ -90,7 +92,7 @@ export async function GET(request) {
         .eq('id', user.id)
         .maybeSingle() // safer than single()
 
-    if (profile?.role === 'admin') {
+    if (profile?.role === 'admin' || profile?.role === 'super_admin') {
         return NextResponse.redirect(new URL('/admin', origin))
     }
 
