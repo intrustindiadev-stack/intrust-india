@@ -1,26 +1,39 @@
 'use client';
 
-import { useState } from 'react';
-import { Store, Clock, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Store, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 
 export default function StoreStatusToggle({ initialStoreData }) {
     const supabase = createClient();
     const [isOpen, setIsOpen] = useState(initialStoreData?.is_open ?? true);
-    const [openingTime, setOpeningTime] = useState(initialStoreData?.opening_time || '09:00');
-    const [closingTime, setClosingTime] = useState(initialStoreData?.closing_time || '21:00');
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSave = async (newIsOpen, newOpenTime, newCloseTime) => {
+    useEffect(() => {
+        if (!initialStoreData?.id) return;
+        
+        const channel = supabase
+            .channel(`merchant_toggle_${initialStoreData.id}`)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'merchants', filter: `id=eq.${initialStoreData.id}` }, (payload) => {
+                if (payload.new) {
+                    setIsOpen(payload.new.is_open);
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [initialStoreData?.id]);
+
+    const handleSave = async (newIsOpen) => {
         setIsLoading(true);
         try {
             const { error } = await supabase
                 .from('merchants')
                 .update({
-                    is_open: newIsOpen,
-                    opening_time: newOpenTime,
-                    closing_time: newCloseTime,
+                    is_open: newIsOpen
                 })
                 .eq('id', initialStoreData.id);
 
@@ -37,8 +50,6 @@ export default function StoreStatusToggle({ initialStoreData }) {
             toast.error('Failed to update schedule');
             // Revert on error
             setIsOpen(initialStoreData?.is_open ?? true);
-            setOpeningTime(initialStoreData?.opening_time || '09:00');
-            setClosingTime(initialStoreData?.closing_time || '21:00');
         } finally {
             setIsLoading(false);
         }
@@ -77,7 +88,7 @@ export default function StoreStatusToggle({ initialStoreData }) {
                         onChange={(e) => {
                             const val = e.target.checked;
                             setIsOpen(val);
-                            handleSave(val, openingTime, closingTime);
+                            handleSave(val);
                         }}
                         disabled={isLoading}
                     />
@@ -85,36 +96,7 @@ export default function StoreStatusToggle({ initialStoreData }) {
                 </label>
             </div>
 
-            <div className="relative grid grid-cols-2 gap-4 sm:gap-6 border-t border-slate-100 dark:border-white/5 pt-6 sm:pt-8 z-10 bg-slate-50/40 dark:bg-white/[0.02] -mx-6 -mb-6 px-6 pb-6 sm:-mx-8 sm:-mb-8 sm:px-8 sm:pb-8 flex-1 items-center">
-                <div className="flex flex-col gap-2.5">
-                    <label className="text-[10px] sm:text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <Clock size={12} className="text-emerald-500" />
-                        Opening Hrs
-                    </label>
-                    <input
-                        type="time"
-                        value={openingTime}
-                        onChange={(e) => setOpeningTime(e.target.value)}
-                        onBlur={() => handleSave(isOpen, openingTime, closingTime)}
-                        disabled={isLoading}
-                        className="bg-white dark:bg-[#0c0e16] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-base sm:text-lg font-black text-slate-800 dark:text-slate-100 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none w-full transition-all shadow-sm group-hover:shadow-md"
-                    />
-                </div>
-                <div className="flex flex-col gap-2.5">
-                    <label className="text-[10px] sm:text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <Clock size={12} className="text-rose-500" />
-                        Closing Hrs
-                    </label>
-                    <input
-                        type="time"
-                        value={closingTime}
-                        onChange={(e) => setClosingTime(e.target.value)}
-                        onBlur={() => handleSave(isOpen, openingTime, closingTime)}
-                        disabled={isLoading}
-                        className="bg-white dark:bg-[#0c0e16] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-base sm:text-lg font-black text-slate-800 dark:text-slate-100 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none w-full transition-all shadow-sm group-hover:shadow-md"
-                    />
-                </div>
-            </div>
+
             {isLoading && (
                 <div className="absolute inset-0 bg-white/60 dark:bg-black/60 backdrop-blur-[4px] flex items-center justify-center z-20 transition-all rounded-[2rem]">
                     <div className="flex flex-col items-center gap-3">

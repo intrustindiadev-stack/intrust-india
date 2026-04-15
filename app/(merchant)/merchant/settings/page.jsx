@@ -44,6 +44,21 @@ export default function MerchantSettingsPage() {
         fetchSettings();
     }, []);
 
+    useEffect(() => {
+        if (!merchantProfile?.id) return;
+
+        const channel = supabase
+            .channel(`merchant_self_sync_${merchantProfile.id}`)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'merchants', filter: `id=eq.${merchantProfile.id}` }, (payload) => {
+                if (payload.new) {
+                    setMerchantProfile(prev => ({ ...prev, is_open: payload.new.is_open }));
+                }
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [merchantProfile?.id]);
+
     const fetchSettings = async () => {
         try {
             setLoading(true);
@@ -251,7 +266,6 @@ export default function MerchantSettingsPage() {
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
                             Control your store's visibility and operating hours. Users cannot place orders when the store is closed.
                         </p>
-
                         <div className="space-y-8 max-w-2xl">
                             {/* Manual Toggle */}
                             <div className="flex items-center justify-between p-6 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 group hover:border-[#D4AF37]/30 transition-colors shadow-sm">
@@ -278,78 +292,18 @@ export default function MerchantSettingsPage() {
                                                     .update({ is_open: newVal })
                                                     .eq('id', merchantProfile.id);
                                                 if (error) throw error;
-                                                setSuccess(`Store is now ${newVal ? 'OPEN' : 'CLOSED'}`);
+                                                toast.success(`Store is now ${newVal ? 'OPEN' : 'CLOSED'}`);
                                             } catch (err) {
-                                                setError(err.message);
                                                 setMerchantProfile(prev => ({ ...prev, is_open: !newVal }));
+                                                toast.error('Failed to update status');
                                             }
                                         }}
                                     />
                                     <div className="w-14 h-7 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#D4AF37]"></div>
                                 </label>
                             </div>
-
-                            {/* Operating Hours */}
-                            <div className="p-6 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 space-y-6">
-                                <h3 className="text-xs font-bold uppercase tracking-widest text-[#D4AF37] mb-2 flex items-center gap-2">
-                                    <span className="material-icons-round text-sm">schedule</span>
-                                    Business Hours
-                                </h3>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="group">
-                                        <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
-                                            Opening Time
-                                        </label>
-                                        <input
-                                            type="time"
-                                            value={merchantProfile?.opening_time || '09:00'}
-                                            onChange={(e) => setMerchantProfile({ ...merchantProfile, opening_time: e.target.value })}
-                                            className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
-                                        />
-                                    </div>
-
-                                    <div className="group">
-                                        <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
-                                            Closing Time
-                                        </label>
-                                        <input
-                                            type="time"
-                                            value={merchantProfile?.closing_time || '21:00'}
-                                            onChange={(e) => setMerchantProfile({ ...merchantProfile, closing_time: e.target.value })}
-                                            className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="pt-4 border-t border-black/5 dark:border-white/5">
-                                    <button
-                                        onClick={async () => {
-                                            setSaving(true);
-                                            try {
-                                                const { error } = await supabase
-                                                    .from('merchants')
-                                                    .update({ 
-                                                        opening_time: merchantProfile.opening_time,
-                                                        closing_time: merchantProfile.closing_time
-                                                    })
-                                                    .eq('id', merchantProfile.id);
-                                                if (error) throw error;
-                                                setSuccess('Business hours updated successfully!');
-                                            } catch (err) {
-                                                setError(err.message);
-                                            } finally {
-                                                setSaving(false);
-                                            }
-                                        }}
-                                        disabled={saving}
-                                        className="px-8 py-3 bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 text-[#D4AF37] font-bold rounded-xl transition-all border border-[#D4AF37]/20 flex items-center gap-2"
-                                    >
-                                        {saving ? 'Saving...' : 'Update Hours'}
-                                    </button>
-                                </div>
-                            </div>
                         </div>
+
                     </div>
                 )}
 

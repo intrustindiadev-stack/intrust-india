@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart, Zap, Shirt, Pill, Home, Utensils, Grid, Star, MapPin } from 'lucide-react';
+import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart, Zap, Shirt, Pill, Home, Utensils, Grid, Star, MapPin, Store } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
@@ -25,34 +25,48 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     const [searchQuery, setSearchQuery] = useState('');
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingCartItem, setPendingCartItem] = useState(null);
-    const [currentTime, setCurrentTime] = useState(new Date());
+    const [liveMerchant, setLiveMerchant] = useState(merchant);
 
     useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-        return () => clearInterval(timer);
-    }, []);
+        setLiveMerchant(merchant);
+    }, [merchant]);
+
+    const supabase = createClient();
+
+    useEffect(() => {
+        if (!liveMerchant?.id) return;
+
+        let channel;
+        if (liveMerchant.id === 'official') {
+            channel = supabase
+                .channel('platform_settings_updates')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'platform_settings', filter: 'key=eq.platform_store' }, (payload) => {
+                    if (payload.new?.value) {
+                        let parsedStatus = { is_open: true };
+                        try { parsedStatus = JSON.parse(payload.new.value); } catch(e) {}
+                        setLiveMerchant(prev => ({ ...prev, is_open: parsedStatus.is_open }));
+                    }
+                })
+                .subscribe();
+        } else {
+            channel = supabase
+                .channel(`merchant_updates_${liveMerchant.id}`)
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'merchants', filter: `id=eq.${liveMerchant.id}` }, (payload) => {
+                    if (payload.new) {
+                        setLiveMerchant(prev => ({ ...prev, is_open: payload.new.is_open }));
+                    }
+                })
+                .subscribe();
+        }
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [liveMerchant?.id]);
 
     const isStoreOpen = useMemo(() => {
-        if (!merchant.is_open) return false;
-        if (!merchant.opening_time || !merchant.closing_time) return true;
-
-        const now = currentTime;
-        const currentMins = now.getHours() * 60 + now.getMinutes();
-        
-        const [openH, openM] = merchant.opening_time.split(':').map(Number);
-        const [closeH, closeM] = merchant.closing_time.split(':').map(Number);
-        
-        const openMins = openH * 60 + openM;
-        const closeMins = closeH * 60 + closeM;
-        
-        if (closeMins > openMins) {
-            return currentMins >= openMins && currentMins < closeMins;
-        } else {
-            // Overnight shift
-            return currentMins >= openMins || currentMins < closeMins;
-        }
-    }, [merchant.is_open, merchant.opening_time, merchant.closing_time, currentTime]);
-    const supabase = createClient();
+        return !!liveMerchant.is_open;
+    }, [liveMerchant.is_open]);
 
     // Preserve User's core sync logic
     useEffect(() => {
@@ -281,23 +295,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     const avatarUrl = merchant?.user_profiles?.avatar_url || (Array.isArray(merchant?.user_profiles) ? merchant?.user_profiles[0]?.avatar_url : null);
 
     return (
-        <div className={`relative min-h-screen flex flex-col transition-all duration-700 ${!isStoreOpen ? 'grayscale-closed' : ''}`}>
-            {/* Status Banner for Closed Store */}
-            {!isStoreOpen && (
-                <div className="fixed top-0 left-0 right-0 z-[100] bg-black/90 text-white backdrop-blur-md py-3 px-4 flex items-center justify-center gap-4 text-sm font-bold border-b border-white/10">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                        <span className="uppercase tracking-[0.2em] text-[10px]">Closed</span>
-                    </div>
-                    <div className="h-4 w-[1px] bg-white/20" />
-                    <p className="flex items-center gap-2">
-                        <span className="material-icons-round text-sm text-[#D4AF37]">schedule</span>
-                        {merchant.is_open === false 
-                            ? "Store manually closed by owner" 
-                            : `Next opening: ${merchant.opening_time || '09:00'} today`}
-                    </p>
-                </div>
-            )}
+        <div className={`relative min-h-screen flex flex-col transition-all duration-700`}>
 
             <div className="relative min-h-screen flex flex-col pt-12 md:pt-14">
 
@@ -396,10 +394,25 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
 
                     {/* MERCHANT PROFILE HEADER (Mobile-First) */}
                     <MerchantProfileCard 
-                        merchant={merchant} 
+                        merchant={liveMerchant} 
                         totalItems={initialInventory.length} 
                         isStoreOpen={isStoreOpen}
                     />
+
+                    {/* Store Closed Browsing Note */}
+                    {!isStoreOpen && (
+                        <div className={`mt-4 mb-2 md:mt-6 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 ${isDark ? 'bg-amber-500/10 border border-amber-500/20 text-amber-200' : 'bg-amber-50 border border-amber-200 text-amber-800'}`}>
+                            <div className="flex items-center gap-3 w-full sm:w-auto">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-amber-500/20' : 'bg-white shadow-sm'}`}>
+                                    <Store size={20} className={isDark ? 'text-amber-400' : 'text-amber-600'} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h4 className="font-bold text-sm">Not Acccepting Orders</h4>
+                                    <p className="text-xs font-medium opacity-80 mt-0.5">You can still explore our inventory, but ordering is turned off. Check back soon!</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     {isLoading ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
                             {Array.from({ length: 10 }).map((_, i) => (
@@ -424,6 +437,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                                     secondaryColor={secondaryColor}
                                     isWishlisted={wishlistIds.has(item.product_id)}
                                     onWishlist={() => toggleWishlist(item)}
+                                    isStoreOpen={isStoreOpen}
                                 />
                             ))}
                         </div>
@@ -432,7 +446,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
             </main>
 
             {/* FLOATING CART */}
-            {totalItems > 0 && (
+            {totalItems > 0 && isStoreOpen && (
                 <FloatingCart
                     count={totalItems}
                     total={totalPrice}

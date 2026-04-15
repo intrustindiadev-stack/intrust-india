@@ -26,7 +26,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
-export default function ProductDetailClient({ product, inventory, customer, recommendedProducts = [] }) {
+export default function ProductDetailClient({ product, inventory, customer, recommendedProducts = [], initialPlatformStatus }) {
     const router = useRouter();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -38,6 +38,9 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const [wishlistLoading, setWishlistLoading] = useState(false);
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+    const [isPlatformOpen, setIsPlatformOpen] = useState(initialPlatformStatus?.is_open ?? true);
+    const [merchantStatuses, setMerchantStatuses] = useState(new Map()); // Map<id, is_open>
+    const [isClosedAnimation, setIsClosedAnimation] = useState(false);
     const supabase = createClient();
 
     useEffect(() => {
@@ -50,6 +53,59 @@ export default function ProductDetailClient({ product, inventory, customer, reco
             .maybeSingle()
             .then(({ data }) => setIsWishlisted(!!data));
     }, [customer?.id, product.id]);
+
+    // Initialize merchant statuses
+    useEffect(() => {
+        const statusMap = new Map();
+        inventory.forEach(inv => {
+            if (inv.merchants) {
+                statusMap.set(inv.merchants.id, inv.merchants.is_open);
+            }
+        });
+        setMerchantStatuses(statusMap);
+    }, [inventory]);
+
+    // Real-time synchronization for store status
+    useEffect(() => {
+        // 1. Sync Platform Store
+        const platformChannel = supabase
+            .channel('pdp_platform_sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'platform_settings', filter: 'key=eq.platform_store' }, (payload) => {
+                if (payload.new?.value) {
+                    try {
+                        const parsed = JSON.parse(payload.new.value);
+                        setIsPlatformOpen(parsed.is_open);
+                    } catch (e) { }
+                }
+            })
+            .subscribe();
+
+        // 2. Sync Merchants in inventory
+        const activeMerchantIds = inventory.map(inv => inv.merchants?.id).filter(Boolean);
+        if (activeMerchantIds.length === 0) return () => { supabase.removeChannel(platformChannel); };
+
+        const merchantChannel = supabase
+            .channel('pdp_merchants_sync')
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'merchants'
+            }, (payload) => {
+                if (payload.new && activeMerchantIds.includes(payload.new.id)) {
+                    setMerchantStatuses(prev => {
+                        const next = new Map(prev);
+                        next.set(payload.new.id, payload.new.is_open);
+                        return next;
+                    });
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(platformChannel);
+            supabase.removeChannel(merchantChannel);
+        };
+    }, [inventory]);
 
     const toggleWishlist = async () => {
         if (!customer?.id) {
@@ -114,7 +170,20 @@ export default function ProductDetailClient({ product, inventory, customer, reco
 
     const selectedOffer = allOffers[0] || platformOffer;
 
+    const isStoreOpen = selectedOffer.is_platform_direct 
+        ? isPlatformOpen 
+        : (merchantStatuses.get(inventory.find(i => i.id === selectedOffer.id)?.merchant_id) ?? true);
+
+    const triggerClosedAnimation = () => {
+        setIsClosedAnimation(true);
+        setTimeout(() => setIsClosedAnimation(false), 500);
+    };
+
     const addToCart = async () => {
+        if (!isStoreOpen) {
+            triggerClosedAnimation();
+            return;
+        }
         if (!customer) {
             toast.error('Please login to add to cart');
             router.push('/login');
@@ -150,6 +219,10 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     };
 
     const buyNow = async () => {
+        if (!isStoreOpen) {
+            triggerClosedAnimation();
+            return;
+        }
         if (!customer) {
             toast.error('Please login to purchase');
             router.push('/login');
@@ -248,7 +321,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                 <nav className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-4 sm:mb-6 overflow-x-auto whitespace-nowrap no-scrollbar">
                     <Link href="/shop" className={`transition-colors ${isDark ? 'text-white/30 hover:text-white/60' : 'text-slate-400 hover:text-slate-600'}`}>Shop</Link>
                     <ChevronRight size={10} className={isDark ? 'text-white/15' : 'text-slate-300'} />
-                    <span 
+                    <span
                         className="transition-colors"
                         style={{ color: isDark ? `${primaryColor}90` : primaryColor }}
                     >
@@ -351,15 +424,14 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                             key={idx}
                                             type="button"
                                             onClick={() => setSelectedImageIndex(idx)}
-                                            className={`shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${
-                                                idx === selectedImageIndex
+                                            className={`shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${idx === selectedImageIndex
                                                     ? isDark
                                                         ? 'border-white/40 scale-105'
                                                         : 'border-slate-700 scale-105'
                                                     : isDark
                                                         ? 'border-white/10 opacity-60 hover:opacity-100'
                                                         : 'border-slate-200 opacity-70 hover:opacity-100'
-                                            }`}
+                                                }`}
                                             style={idx === selectedImageIndex ? { borderColor: primaryColor } : {}}
                                         >
                                             <img
@@ -403,7 +475,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
 
                             {savings > 0 && (
                                 <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs sm:text-sm font-black border transition-all`}
-                                    style={{ 
+                                    style={{
                                         backgroundColor: isDark ? `${primaryColor}15` : `${primaryColor}10`,
                                         color: primaryColor,
                                         borderColor: isDark ? `${primaryColor}25` : `${primaryColor}15`
@@ -447,32 +519,35 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                     whileTap={{ scale: 0.97 }}
                                     whileHover={{ scale: 1.02 }}
                                     onClick={addToCart}
-                                    disabled={loading || addedToCart}
-                                    className="flex-1 h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2.5 text-white transition-all disabled:opacity-80 overflow-hidden relative"
-                                    style={{
-                                        background: addedToCart
-                                            ? `linear-gradient(135deg, #10b981, #34d399)`
-                                            : `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-                                        boxShadow: addedToCart
-                                            ? '0 0 22px rgba(16,185,129,0.45)'
-                                            : `0 8px 30px ${primaryColor}35`
+                                    disabled={loading}
+                                    animate={{
+                                        x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0,
+                                        backgroundColor: isStoreOpen ? (addedToCart ? '#10b981' : primaryColor) : '#ef4444'
                                     }}
+                                    transition={{
+                                        x: { type: 'keyframes', duration: 0.4 },
+                                        default: { type: 'spring', stiffness: 400, damping: 25 }
+                                    }}
+                                    className="flex-1 h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2.5 text-white transition-all disabled:opacity-80 overflow-hidden relative shadow-lg"
                                 >
                                     <AnimatePresence mode="wait">
-                                        {loading ? (
-                                            <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="flex items-center gap-2">
-                                                <Loader2 className="animate-spin" size={20} />
+                                        {!isStoreOpen ? (
+                                            <motion.div key="closed" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 line-clamp-1 px-2">
+                                                <Store size={18} strokeWidth={2.5} />
+                                                <span>STORE CLOSED</span>
+                                            </motion.div>
+                                        ) : loading ? (
+                                            <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 font-bold">
+                                                <Loader2 className="animate-spin" size={18} />
                                                 <span>Adding...</span>
                                             </motion.div>
                                         ) : addedToCart ? (
-                                            <motion.div key="success" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ type: 'spring', stiffness: 400 }} className="flex items-center gap-2">
-                                                <motion.div initial={{ rotate: -20, scale: 0.5 }} animate={{ rotate: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 500, delay: 0.05 }}>
-                                                    <CheckCircle2 size={20} strokeWidth={2.5} />
-                                                </motion.div>
-                                                <span>Added to Cart!</span>
+                                            <motion.div key="success" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 font-bold">
+                                                <CheckCircle2 size={18} strokeWidth={2.5} />
+                                                <span>In Cart!</span>
                                             </motion.div>
                                         ) : (
-                                            <motion.div key="default" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="flex items-center gap-2">
+                                            <motion.div key="default" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 font-bold">
                                                 <ShoppingCart size={18} strokeWidth={2.5} />
                                                 <span>Add to Cart</span>
                                             </motion.div>
@@ -487,14 +562,21 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                 whileHover={{ scale: 1.01 }}
                                 onClick={buyNow}
                                 disabled={buyNowLoading}
-                                className={`w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2.5 transition-all border-2 ${
-                                    isDark
-                                        ? 'bg-white/[0.06] text-white border-white/10 hover:bg-white/[0.1] hover:border-white/20'
-                                        : 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800'
-                                }`}
+                                animate={{
+                                    x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0,
+                                    borderColor: isStoreOpen ? (isDark ? 'rgba(255,255,255,0.1)' : 'transparent') : '#ef4444',
+                                    backgroundColor: isStoreOpen ? (isDark ? 'rgba(255,255,255,0.06)' : '#0f172a') : '#ef4444'
+                                }}
+                                transition={{
+                                    x: { type: 'keyframes', duration: 0.4 },
+                                    default: { type: 'spring', stiffness: 400, damping: 25 }
+                                }}
+                                className={`w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2.5 transition-all border-2 text-white`}
                             >
                                 {buyNowLoading ? (
                                     <><Loader2 className="animate-spin" size={18} /><span>Processing...</span></>
+                                ) : !isStoreOpen ? (
+                                    <><Store size={18} strokeWidth={2.5} /><span>NOT ACCEPTING ORDERS</span></>
                                 ) : (
                                     <><CreditCard size={18} strokeWidth={2.5} /><span>Buy Now</span></>
                                 )}
@@ -527,7 +609,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                             </div>
                             <div className="text-right shrink-0 ml-2">
                                 <div className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider`}
-                                    style={{ 
+                                    style={{
                                         backgroundColor: isDark ? `${primaryColor}20` : `${primaryColor}10`,
                                         color: primaryColor
                                     }}
@@ -661,20 +743,30 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={addToCart}
-                        disabled={loading || addedToCart}
+                        disabled={loading}
+                        animate={{
+                            x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0,
+                            backgroundColor: isStoreOpen ? (addedToCart ? '#10b981' : primaryColor) : '#ef4444'
+                        }}
+                        transition={{
+                            x: { type: 'keyframes', duration: 0.4 },
+                            default: { type: 'spring', stiffness: 400, damping: 25 }
+                        }}
                         className="flex-1 h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-80 relative overflow-hidden text-white"
                         style={{
-                            background: addedToCart
-                                ? 'linear-gradient(135deg, #10b981, #34d399)'
-                                : `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
                             boxShadow: addedToCart
                                 ? '0 0 20px rgba(16,185,129,0.45)'
                                 : `0 4px 14px ${primaryColor}35`
                         }}
                     >
                         <AnimatePresence mode="wait">
-                            {loading ? (
-                                <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="flex items-center gap-1.5">
+                            {!isStoreOpen ? (
+                                <motion.div key="closed" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5">
+                                    <Store size={18} strokeWidth={2.5} />
+                                    <span>CLOSED</span>
+                                </motion.div>
+                            ) : loading ? (
+                                <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="flex items-center gap-2">
                                     <Loader2 className="animate-spin" size={16} />
                                 </motion.div>
                             ) : addedToCart ? (
@@ -683,9 +775,9 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                     <span>Added!</span>
                                 </motion.div>
                             ) : (
-                                <motion.div key="default" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="flex items-center gap-1.5">
+                                <motion.div key="default" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5">
                                     <ShoppingCart size={16} strokeWidth={2.5} />
-                                    <span>Add to Cart</span>
+                                    <span>Add</span>
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -696,11 +788,10 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                         whileTap={{ scale: 0.95 }}
                         onClick={buyNow}
                         disabled={buyNowLoading}
-                        className={`h-12 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all border-2 shrink-0 ${
-                            isDark
+                        className={`h-12 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all border-2 shrink-0 ${isDark
                                 ? 'bg-white/[0.08] text-white border-white/10'
                                 : 'bg-slate-900 text-white border-slate-900'
-                        }`}
+                            }`}
                     >
                         {buyNowLoading ? (
                             <Loader2 className="animate-spin" size={15} />

@@ -46,7 +46,7 @@ export default async function ProductDetailPage({ params }) {
         .from('merchant_inventory')
         .select(`
             *,
-            merchants(business_name, business_address)
+            merchants(id, business_name, business_address, is_open)
         `)
         .eq('product_id', product.id)
         .eq('is_active', true)
@@ -62,6 +62,18 @@ export default async function ProductDetailPage({ params }) {
             .eq('id', user.id)
             .single();
         customerProfile = profile;
+    }
+
+    // 4. Fetch Platform Store status
+    const { data: platformSettings } = await supabase
+        .from('platform_settings')
+        .select('value')
+        .eq('key', 'platform_store')
+        .single();
+    
+    let platformStatus = { is_open: true };
+    if (platformSettings?.value) {
+        try { platformStatus = JSON.parse(platformSettings.value); } catch(e) {}
     }
 
     // 4. Fetch recommended products from same category (exclude current product)
@@ -116,6 +128,7 @@ export default async function ProductDetailPage({ params }) {
                     inventory={inventory || []} 
                     customer={customerProfile}
                     recommendedProducts={recommendedProducts}
+                    platformStatus={platformStatus}
                 />
             </main>
         </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, Store, X, Sparkles, ChevronRight, BadgeCheck, Star, MapPin } from 'lucide-react';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 import HeroIllustrativeAd from '@/components/customer/shop/HeroIllustrativeAd';
@@ -34,7 +35,37 @@ const fadeUp = {
 
 // ── Featured Card (Intrust Official) – full-width ─────────────────────────
 function FeaturedCard({ merchant }) {
-    const liveUsers = 105; // High deterministic number for the main store
+    const supabase = createClient();
+    const [isOpen, setIsOpen] = useState(merchant.is_open !== false); // Default to server-provided status
+
+    useEffect(() => {
+        // Initial fetch
+        const fetchStatus = async () => {
+            const { data } = await supabase.from('platform_settings').select('value').eq('key', 'platform_store').single();
+            if (data?.value) {
+                try {
+                    const parsed = JSON.parse(data.value);
+                    setIsOpen(parsed.is_open);
+                } catch (e) {}
+            }
+        };
+        fetchStatus();
+
+        const channel = supabase
+            .channel('hub_platform_sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'platform_settings', filter: 'key=eq.platform_store' }, (payload) => {
+                if (payload.new?.value) {
+                    try {
+                        const parsed = JSON.parse(payload.new.value);
+                        setIsOpen(parsed.is_open);
+                    } catch (e) {}
+                }
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, []);
+
     return (
         <motion.div variants={fadeUp} className="col-span-full mb-1">
             <Link href="/shop/official" className="group block focus-visible:outline-none">
@@ -52,13 +83,22 @@ function FeaturedCard({ merchant }) {
                     <div className="absolute inset-0 bg-gradient-to-t from-indigo-950/90 via-indigo-950/40 to-transparent z-[2]" />
                     <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/20 to-transparent z-[2]" />
 
-                    {/* Live users indicator */}
-                    <div className="absolute top-5 right-5 z-20 flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/20 text-white px-3.5 py-1.5 rounded-full shadow-lg">
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                        </span>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/90">LIVE</span>
+                    {/* Live users / Status indicator */}
+                    <div className={`absolute top-5 right-5 z-20 flex items-center gap-1.5 backdrop-blur-md border text-white px-3.5 py-1.5 rounded-full shadow-lg ${isOpen ? 'bg-black/40 border-white/20' : 'bg-rose-500/80 border-rose-400'}`}>
+                        {isOpen ? (
+                            <>
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                                </span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white/90">LIVE</span>
+                            </>
+                        ) : (
+                            <>
+                                <span className="w-2 h-2 rounded-full bg-white opacity-80" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white">CLOSED</span>
+                            </>
+                        )}
                     </div>
 
                     <div className="relative z-10 flex flex-col gap-2 mt-auto">
@@ -108,33 +148,22 @@ function MerchantCard({ merchant, idx, rating }) {
     const liveCount = merchant.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 35 + 5;
 
     const [isOpen, setIsOpen] = useState(merchant.is_open !== false);
+    const supabase = createClient();
 
     useEffect(() => {
-        if (merchant.is_open === false) {
-            setIsOpen(false);
-            return;
-        }
-        if (!merchant.opening_time || !merchant.closing_time) {
-            setIsOpen(true);
-            return;
-        }
-        const checkOpen = () => {
-            const now = new Date();
-            const currentMins = now.getHours() * 60 + now.getMinutes();
-            const [openH, openM] = merchant.opening_time.split(':').map(Number);
-            const [closeH, closeM] = merchant.closing_time.split(':').map(Number);
-            const openMins = openH * 60 + openM;
-            const closeMins = closeH * 60 + closeM;
-            if (closeMins > openMins) {
-                setIsOpen(currentMins >= openMins && currentMins < closeMins);
-            } else {
-                setIsOpen(currentMins >= openMins || currentMins < closeMins);
-            }
-        };
-        checkOpen();
-        const timer = setInterval(checkOpen, 60000);
-        return () => clearInterval(timer);
-    }, [merchant.is_open, merchant.opening_time, merchant.closing_time]);
+        if (!merchant.id) return;
+        
+        const channel = supabase
+            .channel(`hub_merchant_${merchant.id}`)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'merchants', filter: `id=eq.${merchant.id}` }, (payload) => {
+                if (payload.new) {
+                    setIsOpen(payload.new.is_open !== false);
+                }
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [merchant.id]);
 
     return (
         <motion.div variants={fadeUp} className="h-full">

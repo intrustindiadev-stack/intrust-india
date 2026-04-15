@@ -52,12 +52,12 @@ export default function MerchantProfileCard({ merchant, totalItems, isStoreOpen 
                         {!isStoreOpen ? (
                             <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg bg-red-500 text-white shadow-sm flex items-center gap-1.5 animate-pulse whitespace-nowrap">
                                 <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-                                Closed • Opens {merchant?.opening_time || '09:00'}
+                                Closed
                             </span>
                         ) : (
                             <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-600'} flex items-center gap-1.5 whitespace-nowrap`}>
                                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                                Open till {merchant?.closing_time || '21:00'}
+                                Live Now
                             </span>
                         )}
                     </div>
