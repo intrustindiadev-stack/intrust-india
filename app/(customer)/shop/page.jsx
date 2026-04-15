@@ -23,9 +23,7 @@ export default async function MerchantHubPage() {
             business_name,
             business_address,
             shopping_banner_url,
-            is_open,
-            opening_time,
-            closing_time
+            is_open
         `)
         .eq('status', 'approved')
         .order('business_name', { ascending: true });
@@ -43,6 +41,7 @@ export default async function MerchantHubPage() {
         customerProfileResult,
         wishlistCountResult,
         cartCountResult,
+        platformResult,
     ] = await Promise.all([
         // Avatar profiles for all merchant users
         userIds.length > 0
@@ -62,7 +61,20 @@ export default async function MerchantHubPage() {
         user
             ? supabase.from('shopping_cart').select('*', { count: 'exact', head: true }).eq('customer_id', user.id)
             : Promise.resolve({ count: 0 }),
+        // Platform status
+        adminClient.from('platform_settings').select('value').eq('key', 'platform_store').single(),
     ]);
+
+    let platformStatus = { is_open: true };
+    try {
+        if (platformResult?.data?.value) {
+            platformStatus = typeof platformResult.data.value === 'string'
+                ? JSON.parse(platformResult.data.value)
+                : platformResult.data.value;
+        }
+    } catch (e) {
+        console.error('Error parsing platform status in shop:', e);
+    }
 
     // Merge avatar profiles into merchants
     if (userIds.length > 0) {
@@ -83,7 +95,8 @@ export default async function MerchantHubPage() {
             slug: 'official',
             business_name: 'Intrust Official',
             business_address: null,
-            user_profiles: { avatar_url: '/icons/intrustLogo.png', full_name: null }
+            user_profiles: { avatar_url: '/icons/intrustLogo.png', full_name: null },
+            is_open: !!platformStatus.is_open
         },
         ...(merchants || [])
     ];

@@ -33,7 +33,7 @@ import SabpaisaPaymentModal from "@/components/payment/SabpaisaPaymentModal";
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 
-const CartClient = ({ userId }) => {
+const CartClient = ({ userId, initialPlatformStatus }) => {
   const [cartItems, setCartItems] = useState([]);
   const [stockWarnings, setStockWarnings] = useState(new Map());
   const [loading, setLoading] = useState(true);
@@ -41,6 +41,8 @@ const CartClient = ({ userId }) => {
   const [walletBalance, setWalletBalance] = useState(0);
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(null);
+  const [isPlatformOpen, setIsPlatformOpen] = useState(initialPlatformStatus?.is_open ?? true);
+  const [merchantStatuses, setMerchantStatuses] = useState(new Map()); // Map<id, is_open>
   const [paymentMode, setPaymentMode] = useState('wallet');
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -73,7 +75,7 @@ const CartClient = ({ userId }) => {
           merchant_inventory (
             retail_price_paise,
             custom_title,
-            merchants (business_name)
+            merchants (id, business_name, is_open)
           ),
           shopping_products (
             id,
@@ -118,8 +120,18 @@ const CartClient = ({ userId }) => {
           }
         }
         setStockWarnings(warnings);
+
+        // Update merchant statuses map
+        const statusMap = new Map();
+        for (const item of cart) {
+          if (!item.is_platform_item && item.merchant_inventory?.merchants) {
+            statusMap.set(item.merchant_inventory.merchants.id, item.merchant_inventory.merchants.is_open);
+          }
+        }
+        setMerchantStatuses(statusMap);
       } else {
         setStockWarnings(new Map());
+        setMerchantStatuses(new Map());
       }
 
       const { data: wallet } = await supabase
@@ -196,6 +208,59 @@ const CartClient = ({ userId }) => {
 
   useEffect(() => { fetchData(); }, [userId]);
 
+  // Real-time synchronization for store status
+  useEffect(() => {
+    // 1. Sync Platform Store
+    const platformChannel = supabase
+      .channel('cart_platform_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'platform_settings', filter: 'key=eq.platform_store' }, (payload) => {
+        if (payload.new?.value) {
+          try {
+            const parsed = JSON.parse(payload.new.value);
+            setIsPlatformOpen(parsed.is_open);
+          } catch (e) {}
+        }
+      })
+      .subscribe();
+
+    // 2. Sync Merchants in cart
+    const activeMerchantIds = Array.from(merchantStatuses.keys());
+    if (activeMerchantIds.length === 0) return () => { supabase.removeChannel(platformChannel); };
+
+    const merchantChannel = supabase
+      .channel('cart_merchants_sync')
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'merchants'
+      }, (payload) => {
+        if (payload.new && activeMerchantIds.includes(payload.new.id)) {
+          setMerchantStatuses(prev => {
+            const next = new Map(prev);
+            next.set(payload.new.id, payload.new.is_open);
+            return next;
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(platformChannel);
+      supabase.removeChannel(merchantChannel);
+    };
+  }, [merchantStatuses.size > 0]);
+
+  const isAnyStoreClosed = React.useMemo(() => {
+    const hasPlatformItems = cartItems.some(i => i.is_platform_item);
+    if (hasPlatformItems && !isPlatformOpen) return true;
+    
+    // Check merchants
+    for (const [id, isOpen] of merchantStatuses.entries()) {
+      if (!isOpen) return true;
+    }
+    return false;
+  }, [cartItems, isPlatformOpen, merchantStatuses]);
+
   const handleSaveAddress = async (e) => {
     e.preventDefault();
     setSavingAddress(true);
@@ -258,6 +323,12 @@ const CartClient = ({ userId }) => {
     try {
       setCheckingOut(true);
       setError(null);
+
+      if (isAnyStoreClosed) {
+        setError("Store is currently closed. Cannot place order.");
+        setCheckingOut(false);
+        return;
+      }
       
       if (paymentMode === 'wallet') {
         const { data, error: rpcError } = await supabase.rpc("customer_checkout_v4", { p_customer_id: userId });
@@ -377,7 +448,7 @@ const CartClient = ({ userId }) => {
     true
   );
   const isPaymentModeValid = paymentMode === 'wallet' || paymentMode === 'gateway' || paymentMode === 'store_credit';
-  const canCheckout = canPay && !hasStockIssues && hasValidAddress && isPaymentModeValid && isMinOrderMet;
+  const canCheckout = canPay && !hasStockIssues && hasValidAddress && isPaymentModeValid && isMinOrderMet && !isAnyStoreClosed;
 
   // Payment modes
   const paymentModes = [
@@ -548,6 +619,29 @@ const CartClient = ({ userId }) => {
           </div>
         </div>
 
+        {/* Global Store Status Warning */}
+        <AnimatePresence>
+          {isAnyStoreClosed && (
+            <motion.div
+              initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+              animate={{ height: 'auto', opacity: 1, marginBottom: 16 }}
+              exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+              className={`p-4 rounded-2xl flex items-start gap-3 bg-red-500 text-white shadow-lg overflow-hidden`}
+            >
+              <div className="p-2 bg-white/20 rounded-xl mt-0.5">
+                <Store size={18} strokeWidth={3} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-black uppercase tracking-tight">Store Currently Closed</h3>
+                <p className="text-[11px] font-bold opacity-90 leading-relaxed mt-0.5">
+                  Some items in your cart are from stores that are not currently accepting orders. 
+                  Please remove these items or wait for the store to open to proceed with your order.
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
           
           {/* LEFT: Address + Items */}
@@ -617,6 +711,9 @@ const CartClient = ({ userId }) => {
                   const merchantName = item.is_platform_item ? "InTrust Official" : (item.merchant_inventory?.merchants?.business_name || "Merchant");
                   const liveStock = stockWarnings.has(item.id) ? stockWarnings.get(item.id) : null;
                   const hasStockIssue = liveStock !== null;
+                  
+                  const merchantId = item.merchant_inventory?.merchants?.id;
+                  const isItemStoreOpen = item.is_platform_item ? isPlatformOpen : (merchantStatuses.get(merchantId) ?? true);
 
                   return (
                     <motion.div 
@@ -651,6 +748,14 @@ const CartClient = ({ userId }) => {
                             <h3 className={`text-xs sm:text-sm font-bold leading-tight line-clamp-2 ${isDark ? 'text-white/80' : 'text-slate-800'}`}>
                               {item.merchant_inventory?.custom_title || item.shopping_products?.title}
                             </h3>
+                            {!isItemStoreOpen && (
+                              <div className="mt-1 flex gap-1.5 flex-wrap">
+                                <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-red-500 text-white flex items-center gap-1`}>
+                                  <Store size={10} strokeWidth={3} />
+                                  Store Closed
+                                </span>
+                              </div>
+                            )}
                             {hasStockIssue && (
                               <div className="mt-1">
                                 <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${isDark ? 'bg-red-900/20 text-red-400 border border-red-800/30' : 'bg-red-50 text-red-600 border border-red-100'}`}>
@@ -902,6 +1007,8 @@ const CartClient = ({ userId }) => {
                 >
                   {checkingOut ? (
                     <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>
+                  ) : isAnyStoreClosed ? (
+                    "Store is currently closed"
                   ) : !isMinOrderMet ? (
                     `Add ₹${((MIN_ORDER_VALUE - billDetails.sellingTotal)/100).toLocaleString('en-IN')} more to order`
                   ) : hasStockIssues ? (
@@ -966,6 +1073,8 @@ const CartClient = ({ userId }) => {
           >
             {checkingOut ? (
               <Loader2 className="w-5 h-5 animate-spin" />
+            ) : isAnyStoreClosed ? (
+              "Store Closed"
             ) : !isMinOrderMet ? (
               `Add ₹${((MIN_ORDER_VALUE - billDetails.sellingTotal)/100).toLocaleString('en-IN')} more`
             ) : hasStockIssues ? (

@@ -28,6 +28,7 @@ import {
     Image as ImageIcon,
     AlertCircle,
     ClipboardList,
+    Activity,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
@@ -44,6 +45,7 @@ const navigationGroups = [
         items: [
             { name: 'Users', href: '/admin/users', icon: Users },
             { name: 'Merchants', href: '/admin/merchants', icon: Store },
+            { name: 'Store Status', href: '/admin/store-status', icon: Activity },
             { name: 'Store Credit', href: '/admin/merchants/udhari', icon: CreditCard },
         ]
     },

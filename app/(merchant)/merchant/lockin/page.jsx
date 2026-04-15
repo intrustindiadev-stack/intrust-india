@@ -24,6 +24,8 @@ export default function MerchantLockinPage() {
     const [balances, setBalances] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isRevealed, setIsRevealed] = useState(false);
+    const [lastSynced, setLastSynced] = useState(new Date());
+    const [syncText, setSyncText] = useState('Updated just now');
 
     // Animated Counter Component
     const AnimatedNumber = ({ value, decimals = 0 }) => {
@@ -44,6 +46,22 @@ export default function MerchantLockinPage() {
 
         return <span>{displayValue.toLocaleString('en-IN', { maximumFractionDigits: decimals, minimumFractionDigits: decimals })}</span>;
     };
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const secondsPast = Math.floor((new Date() - lastSynced) / 1000);
+            if (secondsPast < 60) {
+                setSyncText('Updated just now');
+            } else if (secondsPast < 3600) {
+                const mins = Math.floor(secondsPast / 60);
+                setSyncText(`Updated ${mins} min${mins > 1 ? 's' : ''} ago`);
+            } else {
+                const hours = Math.floor(secondsPast / 3600);
+                setSyncText(`Updated ${hours} hr${hours > 1 ? 's' : ''} ago`);
+            }
+        }, 10000);
+        return () => clearInterval(timer);
+    }, [lastSynced]);
 
     const fetchBalances = async () => {
         setLoading(true);
@@ -67,6 +85,8 @@ export default function MerchantLockinPage() {
 
             if (error) throw error;
             setBalances(data || []);
+            setLastSynced(new Date());
+            setSyncText('Updated just now');
         } catch (err) {
             console.error('Error:', err);
             toast.error('Failed to load portfolio');
@@ -105,13 +125,22 @@ export default function MerchantLockinPage() {
                             <ShieldCheck size={16} className="text-blue-500" />
                             <span className="text-xs font-bold text-slate-700">Protected Assets</span>
                         </div>
-                        <button
-                            onClick={fetchBalances}
-                            disabled={loading}
-                            className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white border hover:border-slate-200 rounded-xl transition-all shadow-sm group disabled:opacity-50"
-                        >
-                            <RefreshCw size={18} className={`${loading ? 'animate-spin text-blue-500' : 'group-hover:rotate-180 transition-all duration-500'}`} />
-                        </button>
+                        <div className="flex items-center gap-3 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm transition-all hover:border-slate-300">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span className="text-xs font-bold text-slate-700 select-none min-w-[100px]">{syncText}</span>
+                            <div className="w-[1px] h-4 bg-slate-200"></div>
+                            <button
+                                onClick={fetchBalances}
+                                disabled={loading}
+                                className="text-slate-400 hover:text-blue-600 transition-all group disabled:opacity-50"
+                                aria-label="Refresh balances"
+                            >
+                                <RefreshCw size={16} className={`${loading ? 'animate-spin text-blue-500' : 'group-hover:rotate-180 transition-all duration-500'}`} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 

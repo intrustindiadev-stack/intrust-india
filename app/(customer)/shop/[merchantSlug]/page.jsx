@@ -21,16 +21,7 @@ export default async function MerchantStorefrontPage({ params }) {
     let customerResult = { data: null };
 
     if (merchantSlug === 'official') {
-        merchant = {
-            id: 'official',
-            slug: 'official',
-            business_name: 'Intrust Official',
-            business_address: 'Premium Hub',
-            rating: { avg_rating: 4.9, total_ratings: 50000 },
-            user_profiles: { avatar_url: '/icons/intrustLogo.png' }
-        };
-
-        const [platformProductsResult, officialCustomerResult] = await Promise.all([
+        const [platformProductsResult, officialCustomerResult, platformSettingsResult] = await Promise.all([
             supabase
                 .from('shopping_products')
                 .select('id, slug, title, description, product_images, category, mrp_paise, suggested_retail_price_paise, admin_stock, is_active')
@@ -39,7 +30,29 @@ export default async function MerchantStorefrontPage({ params }) {
             user
                 ? supabase.from('user_profiles').select('*').eq('id', user.id).single()
                 : Promise.resolve({ data: null }),
+            createAdminClient().from('platform_settings').select('value').eq('key', 'platform_store').single()
         ]);
+
+        let officialStoreStatus = { is_open: true };
+        try {
+            if (platformSettingsResult?.data?.value) {
+                officialStoreStatus = typeof platformSettingsResult.data.value === 'string' 
+                    ? JSON.parse(platformSettingsResult.data.value)
+                    : platformSettingsResult.data.value;
+            }
+        } catch (e) {
+            console.error('Error parsing platform status:', e);
+        }
+
+        merchant = {
+            id: 'official',
+            slug: 'official',
+            business_name: 'Intrust Official',
+            business_address: 'Premium Hub',
+            rating: { avg_rating: 4.9, total_ratings: 50000 },
+            user_profiles: { avatar_url: '/icons/intrustLogo.png' },
+            is_open: !!officialStoreStatus.is_open
+        };
 
         customerResult = officialCustomerResult;
 
@@ -80,9 +93,7 @@ export default async function MerchantStorefrontPage({ params }) {
                 business_name,
                 business_address,
                 shopping_banner_url,
-                is_open,
-                opening_time,
-                closing_time
+                is_open
             `)
             .eq('slug', merchantSlug)
             .eq('status', 'approved')

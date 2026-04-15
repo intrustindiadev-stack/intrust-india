@@ -1,20 +1,27 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Minus, Package, BadgeCheck, Check, Heart } from 'lucide-react';
+import { Plus, Minus, Package, BadgeCheck, Check, Heart, Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#000000', secondaryColor = '#1e293b', isWishlisted = false, onWishlist }) {
+export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#000000', secondaryColor = '#1e293b', isWishlisted = false, onWishlist, isStoreOpen = true }) {
     const router = useRouter();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const product = item.shopping_products;
     const [justAdded, setJustAdded] = useState(false);
+    const [isClosedAnimation, setIsClosedAnimation] = useState(false);
 
     const handleAdd = (e) => {
         e.stopPropagation();
+        if (!isStoreOpen) {
+            setIsClosedAnimation(true);
+            setTimeout(() => setIsClosedAnimation(false), 1200);
+            onAdd(); // This will still trigger the toast in parent, but we show animation here too
+            return;
+        }
         setJustAdded(true);
         onAdd();
         setTimeout(() => setJustAdded(false), 1800);
@@ -193,11 +200,18 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                         <motion.button
                             key="add"
                             initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
+                            animate={{ 
+                                scale: 1, 
+                                opacity: 1,
+                                x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0
+                            }}
                             exit={{ scale: 0.95, opacity: 0 }}
                             whileTap={{ scale: 0.94 }}
                             whileHover={{ scale: 1.02 }}
-                            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                            transition={{ 
+                                x: { type: 'keyframes', duration: 0.4 },
+                                default: { type: 'spring', stiffness: 400, damping: 25 }
+                            }}
                             onClick={handleAdd}
                             className={`w-full h-9 md:h-10 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-all active:scale-95 ${
                                 isDark
@@ -205,13 +219,17 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                                     : 'border shadow-sm hover:brightness-110 text-white'
                             }`}
                             style={{
-                                borderColor: `${primaryColor}40`,
-                                backgroundColor: isDark ? 'transparent' : primaryColor,
-                                color: isDark ? primaryColor : 'white',
+                                borderColor: isClosedAnimation ? '#ef4444' : `${primaryColor}40`,
+                                backgroundColor: isClosedAnimation ? '#ef4444' : (isDark ? 'transparent' : primaryColor),
+                                color: isClosedAnimation ? 'white' : (isDark ? primaryColor : 'white'),
                             }}
                         >
-                            <span className="font-black tracking-wide">ADD</span>
-                            <Plus size={13} strokeWidth={3} />
+                            <span className="font-black tracking-wide">{isClosedAnimation ? 'CLOSED' : 'ADD'}</span>
+                            {isClosedAnimation ? (
+                                <Store size={13} strokeWidth={3} />
+                            ) : (
+                                <Plus size={13} strokeWidth={3} />
+                            )}
                         </motion.button>
                     )}
                 </AnimatePresence>
