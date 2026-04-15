@@ -30,7 +30,7 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
     const orderGrossProfit = (order.items || []).reduce((s, i) => s + (i.gross_profit_paise || 0), 0);
     const orderCommission = order.platform_cut_paise ?? (order.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0);
     const orderNetProfit = (order.merchant_profit_paise ?? 0) !== 0 ? order.merchant_profit_paise : (order.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0);
-    
+
     // Cost and Pure Profit Logic
     const orderTotalCost = (order.items || []).reduce((s, i) => s + ((i.cost_price_paise || 0) * i.quantity), 0);
     const orderPureProfit = orderNetProfit;
@@ -342,7 +342,7 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                 .eq('merchant_id', merchantId)
                 .eq('status', 'pending')
                 .eq('source_type', 'shop_order');
-                
+
             if (!error && count !== null) {
                 setPendingCreditsCount(count);
             }
@@ -409,308 +409,307 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
     return (
         <>
             <div className="space-y-10 pb-20">
-            {/* Comment 7: Error banner — shown when server-side data fetch fails */}
-            {error && (
-                <div className="flex items-start gap-4 p-5 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-2xl">
-                    <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-red-700 dark:text-red-400">Unable to load orders</p>
-                        <p className="text-xs text-red-500 dark:text-red-400/80 mt-0.5">Please try refreshing the page. If the issue persists, <a href="mailto:support@intrust.in" className="underline hover:no-underline">contact support</a>.</p>
+                {/* Comment 7: Error banner — shown when server-side data fetch fails */}
+                {error && (
+                    <div className="flex items-start gap-4 p-5 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-2xl">
+                        <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-red-700 dark:text-red-400">Unable to load orders</p>
+                            <p className="text-xs text-red-500 dark:text-red-400/80 mt-0.5">Please try refreshing the page. If the issue persists, <a href="mailto:support@intrust.in" className="underline hover:no-underline">contact support</a>.</p>
+                        </div>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="shrink-0 text-xs font-black text-red-600 dark:text-red-400 hover:underline uppercase tracking-widest"
+                        >
+                            Retry
+                        </button>
                     </div>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="shrink-0 text-xs font-black text-red-600 dark:text-red-400 hover:underline uppercase tracking-widest"
+                )}
+                {/* Header Hero Section */}
+                <div className="relative group">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                    <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white shadow-xl dark:shadow-none dark:bg-white/[0.02] border border-slate-100 dark:border-white/10 p-8 rounded-3xl backdrop-blur-md">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-emerald-500/20 rounded-xl border border-emerald-500/30">
+                                    <ShoppingBag className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                                </div>
+                                <h1 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">Merchant Orders</h1>
+                            </div>
+                            <p className="text-slate-500 dark:text-gray-400 text-sm font-medium pl-1 hidden sm:block">Monitor your commerce performance and manage order fulfillment pipeline.</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Link
+                                href="/merchant/shopping/wholesale"
+                                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-sm font-black text-black transition-all shadow-xl shadow-emerald-500/20 active:scale-95"
+                            >
+                                <ArrowUpRight size={16} /> BUY STOCK
+                            </Link>
+                            <Link
+                                href="/merchant/shopping/inventory"
+                                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/20 text-sm font-black text-white border border-slate-800 dark:border-white/10 transition-all backdrop-blur-md"
+                            >
+                                <Store size={16} /> MANAGE SHOP
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+
+                {merchantInfo?.auto_mode && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-[#0a1f16] border border-emerald-500/30 rounded-[2rem] p-5 md:p-6 relative overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)] group flex items-center gap-4"
                     >
-                        Retry
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/20 to-transparent opacity-50 blur-xl pointer-events-none"></div>
+                        <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20 relative z-10">
+                            <Sparkles className="text-emerald-400" size={24} />
+                        </div>
+                        <div className="relative z-10">
+                            <h3 className="text-emerald-400 font-black text-sm uppercase tracking-widest mb-1 drop-shadow-md">Auto Mode Active</h3>
+                            <p className="text-emerald-100/70 text-xs md:text-sm font-medium tracking-tight leading-relaxed max-w-xl">Focus on your business. Intrust AI is automatically evaluating and processing incoming orders.</p>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Performance KPIs */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[
+                        { label: "Gross Revenue", value: (stats.totalRevenue || 0) / 100, icon: DollarSign, color: "text-slate-900 dark:text-white", bg: "bg-slate-100 dark:bg-white/10", border: "border-slate-200 dark:border-white/10", sub: `${stats.totalOrders} total orders` },
+                        { label: "Sales Profit", value: (stats.totalGrossProfit || 0) / 100, icon: TrendingUp, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10 dark:bg-blue-500/20", border: "border-blue-200 dark:border-blue-500/30", sub: "Earned from products" },
+                        { label: "Platform Fee", value: -(stats.totalCommission || 0) / 100, icon: TrendingDown, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-500/20", border: "border-amber-200 dark:border-amber-500/30", sub: stats.totalRevenue > 0 ? `${((stats.totalCommission / stats.totalRevenue) * 100).toFixed(1)}% effective rate` : "Platform commission" },
+                        { label: "Net Earnings", value: (stats.totalNetProfit || 0) / 100, icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10 dark:bg-emerald-500/20", border: "border-emerald-200 dark:border-emerald-500/40", sub: `${stats.deliveredOrders} orders settled` },
+                    ].map((s, idx) => (
+                        <motion.div
+                            key={s.label}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            className="group bg-white dark:bg-white/[0.03] backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-3xl p-6 hover:shadow-lg dark:hover:shadow-none hover:border-emerald-500/20 dark:hover:bg-white/[0.05] dark:hover:border-white/20 transition-all"
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <div className={`p-2 ${s.bg} rounded-xl border ${s.border}`}>
+                                    <s.icon className={`w-4 h-4 ${s.color}`} />
+                                </div>
+                                <span className="text-[10px] font-black text-slate-400 dark:text-gray-400 uppercase tracking-widest">{s.label}</span>
+                            </div>
+                            <div className="flex items-baseline gap-1">
+                                <span className={`text-2xl font-black tracking-tighter ${s.color}`}>
+                                    {s.value < 0 ? "−" : ""}₹{Math.abs(s.value).toLocaleString("en-IN")}
+                                </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 dark:text-gray-500 font-bold mt-2 uppercase tracking-tight opacity-70">{s.sub}</p>
+                        </motion.div>
+                    ))}
+                </div>
+
+                {/* View Toggles */}
+                <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-xl w-fit">
+                    <button
+                        onClick={() => setActiveView("orders")}
+                        className={`px-6 py-2 rounded-lg text-sm font-black tracking-tight transition-all ${activeView === "orders" ? "bg-white dark:bg-black text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
+                            }`}
+                    >
+                        Standard Orders
+                    </button>
+                    <button
+                        onClick={() => setActiveView("credits")}
+                        className={`relative px-6 py-2 rounded-lg text-sm font-black tracking-tight transition-all ${activeView === "credits" ? "bg-white dark:bg-black text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
+                            }`}
+                    >
+                        Store Credit Requests
+                        {pendingCreditsCount > 0 && (
+                            <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                            </span>
+                        )}
                     </button>
                 </div>
-            )}
-            {/* Header Hero Section */}
-            <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white shadow-xl dark:shadow-none dark:bg-white/[0.02] border border-slate-100 dark:border-white/10 p-8 rounded-3xl backdrop-blur-md">
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2.5 bg-emerald-500/20 rounded-xl border border-emerald-500/30">
-                                <ShoppingBag className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+
+                {activeView === "orders" ? (
+                    <>
+                        {/* Smart Search & Global Filters */}
+                        <div className="sticky top-20 z-20 flex flex-col md:flex-row gap-4 items-stretch md:items-center bg-white/80 dark:bg-black/40 backdrop-blur-2xl border border-slate-200 dark:border-white/10 p-3 rounded-2xl shadow-xl dark:shadow-2xl">
+                            <div className="relative flex-1 group">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Scan Order ID, Customer Name, or Product Brand..."
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-12 pr-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-600 focus:ring-1 focus:ring-emerald-500/40 focus:bg-white dark:focus:bg-white/[0.07] outline-none transition-all font-medium tracking-tight"
+                                />
                             </div>
-                            <h1 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">Merchant Orders</h1>
-                        </div>
-                        <p className="text-slate-500 dark:text-gray-400 text-sm font-medium pl-1 hidden sm:block">Monitor your commerce performance and manage order fulfillment pipeline.</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                        <Link
-                            href="/merchant/shopping/wholesale"
-                            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-sm font-black text-black transition-all shadow-xl shadow-emerald-500/20 active:scale-95"
-                        >
-                            <ArrowUpRight size={16} /> BUY STOCK
-                        </Link>
-                        <Link
-                            href="/merchant/shopping/inventory"
-                            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/20 text-sm font-black text-white border border-slate-800 dark:border-white/10 transition-all backdrop-blur-md"
-                        >
-                            <Store size={16} /> MANAGE SHOP
-                        </Link>
-                    </div>
-                </div>
-            </div>
-
-            {merchantInfo?.auto_mode_status === 'active' && (
-                <motion.div 
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-[#0a1f16] border border-emerald-500/30 rounded-[2rem] p-5 md:p-6 relative overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)] group flex items-center gap-4"
-                >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/20 to-transparent opacity-50 blur-xl pointer-events-none"></div>
-                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20 relative z-10">
-                        <Sparkles className="text-emerald-400" size={24} />
-                    </div>
-                    <div className="relative z-10">
-                        <h3 className="text-emerald-400 font-black text-sm uppercase tracking-widest mb-1 drop-shadow-md">Auto Mode Active</h3>
-                        <p className="text-emerald-100/70 text-xs md:text-sm font-medium tracking-tight leading-relaxed max-w-xl">Focus on your business. Intrust AI is automatically evaluating and processing incoming orders.</p>
-                    </div>
-                </motion.div>
-            )}
-
-            {/* Performance KPIs */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                    { label: "Gross Revenue", value: (stats.totalRevenue || 0) / 100, icon: DollarSign, color: "text-slate-900 dark:text-white", bg: "bg-slate-100 dark:bg-white/10", border: "border-slate-200 dark:border-white/10", sub: `${stats.totalOrders} total orders` },
-                    { label: "Sales Profit", value: (stats.totalGrossProfit || 0) / 100, icon: TrendingUp, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10 dark:bg-blue-500/20", border: "border-blue-200 dark:border-blue-500/30", sub: "Earned from products" },
-                    { label: "Platform Fee", value: -(stats.totalCommission || 0) / 100, icon: TrendingDown, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-500/20", border: "border-amber-200 dark:border-amber-500/30", sub: stats.totalRevenue > 0 ? `${((stats.totalCommission / stats.totalRevenue) * 100).toFixed(1)}% effective rate` : "Platform commission" },
-                    { label: "Net Earnings", value: (stats.totalNetProfit || 0) / 100, icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10 dark:bg-emerald-500/20", border: "border-emerald-200 dark:border-emerald-500/40", sub: `${stats.deliveredOrders} orders settled` },
-                ].map((s, idx) => (
-                    <motion.div
-                        key={s.label}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                        className="group bg-white dark:bg-white/[0.03] backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-3xl p-6 hover:shadow-lg dark:hover:shadow-none hover:border-emerald-500/20 dark:hover:bg-white/[0.05] dark:hover:border-white/20 transition-all"
-                    >
-                        <div className="flex items-center justify-between mb-4">
-                            <div className={`p-2 ${s.bg} rounded-xl border ${s.border}`}>
-                                <s.icon className={`w-4 h-4 ${s.color}`} />
+                            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 overflow-x-auto no-scrollbar">
+                                {["all", "pending", "packed", "shipped", "delivered", "cancelled"].map(f => {
+                                    const count = f === "all" ? orders.length : orders.filter(o => o.delivery_status === f).length;
+                                    return (
+                                        <button
+                                            key={f}
+                                            onClick={() => setFilter(f)}
+                                            className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${filter === f ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/20" : "hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-gray-500"
+                                                }`}
+                                        >
+                                            {f}
+                                            <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black ${filter === f ? "bg-black/10" : "bg-slate-200 dark:bg-white/10"}`}>{count}</span>
+                                        </button>
+                                    );
+                                })}
                             </div>
-                            <span className="text-[10px] font-black text-slate-400 dark:text-gray-400 uppercase tracking-widest">{s.label}</span>
                         </div>
-                        <div className="flex items-baseline gap-1">
-                            <span className={`text-2xl font-black tracking-tighter ${s.color}`}>
-                                {s.value < 0 ? "−" : ""}₹{Math.abs(s.value).toLocaleString("en-IN")}
-                            </span>
+
+                        {/* Orders Feed */}
+                        <div className="space-y-6">
+                            {filtered.length === 0 ? (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="text-center py-32 bg-slate-50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 rounded-[3rem] space-y-4 shadow-inner"
+                                >
+                                    <div className="w-20 h-20 bg-white dark:bg-white/5 rounded-full flex items-center justify-center mx-auto border border-slate-100 dark:border-white/10 shadow-sm">
+                                        <Package className="w-10 h-10 text-slate-300 dark:text-gray-700" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-slate-700 dark:text-gray-300">Clean Slate</h3>
+                                        <p className="text-slate-500 dark:text-gray-500 text-sm mt-1 max-w-xs mx-auto">We couldn't find any orders matching your current search or filter criteria.</p>
+                                    </div>
+                                    {search && (
+                                        <button
+                                            onClick={() => { setSearch(""); setFilter("all"); }}
+                                            className="text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-widest hover:underline"
+                                        >
+                                            Clear all filters
+                                        </button>
+                                    )}
+                                </motion.div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {filtered.map(order => (
+                                        <OrderCard
+                                            key={order.id}
+                                            order={order}
+                                            cfg={STATUS_CONFIG[order.delivery_status] || STATUS_CONFIG.pending}
+                                            nextStatus={getNextStatus(order.delivery_status)}
+                                            isExpanded={expandedId === order.id}
+                                            isUpdating={updatingId === order.id}
+                                            isCancelled={order.delivery_status === "cancelled"}
+                                            onUpdate={updateStatus}
+                                            onToggle={() => setExpandedId(expandedId === order.id ? null : order.id)}
+                                            merchantInfo={merchantInfo}
+                                            setShippingModal={setShippingModal}
+                                            setShippingData={setShippingData}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                        <p className="text-[10px] text-slate-500 dark:text-gray-500 font-bold mt-2 uppercase tracking-tight opacity-70">{s.sub}</p>
-                    </motion.div>
-                ))}
+                    </>
+                ) : (
+                    <div className="relative">
+                        <StoreCreditRequestsTab merchantId={merchantId} />
+                    </div>
+                )}
             </div>
 
-            {/* View Toggles */}
-            <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-xl w-fit">
-                <button
-                    onClick={() => setActiveView("orders")}
-                    className={`px-6 py-2 rounded-lg text-sm font-black tracking-tight transition-all ${activeView === "orders" ? "bg-white dark:bg-black text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
-                        }`}
-                >
-                    Standard Orders
-                </button>
-                <button
-                    onClick={() => setActiveView("credits")}
-                    className={`relative px-6 py-2 rounded-lg text-sm font-black tracking-tight transition-all ${activeView === "credits" ? "bg-white dark:bg-black text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
-                        }`}
-                >
-                    Store Credit Requests
-                    {pendingCreditsCount > 0 && (
-                        <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                        </span>
-                    )}
-                </button>
-            </div>
+            {/* Shipping Modal */}
+            <AnimatePresence>
+                {shippingModal && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShippingModal(null)}
+                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 dark:border-white/10"
+                        >
+                            <div className="p-8">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div>
+                                        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Order Fulfillment</h2>
+                                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-1">Order #{shippingModal.id.slice(0, 8).toUpperCase()}</p>
+                                    </div>
+                                    <button onClick={() => setShippingModal(null)} className="p-3 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
+                                        <X size={20} className="text-slate-400" />
+                                    </button>
+                                </div>
 
-            {activeView === "orders" ? (
-                <>
-                    {/* Smart Search & Global Filters */}
-                    <div className="sticky top-20 z-20 flex flex-col md:flex-row gap-4 items-stretch md:items-center bg-white/80 dark:bg-black/40 backdrop-blur-2xl border border-slate-200 dark:border-white/10 p-3 rounded-2xl shadow-xl dark:shadow-2xl">
-                        <div className="relative flex-1 group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 transition-colors" />
-                            <input
-                                type="text"
-                                placeholder="Scan Order ID, Customer Name, or Product Brand..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-12 pr-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-600 focus:ring-1 focus:ring-emerald-500/40 focus:bg-white dark:focus:bg-white/[0.07] outline-none transition-all font-medium tracking-tight"
-                            />
-                        </div>
-                        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 overflow-x-auto no-scrollbar">
-                            {["all", "pending", "packed", "shipped", "delivered", "cancelled"].map(f => {
-                                const count = f === "all" ? orders.length : orders.filter(o => o.delivery_status === f).length;
-                                return (
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Tracking ID / Number</label>
+                                        <div className="relative">
+                                            <Truck className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                            <input
+                                                type="text"
+                                                placeholder="Enter shipping tracking ID..."
+                                                className="w-full pl-11 pr-5 py-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-bold text-sm text-slate-900 dark:text-white"
+                                                value={shippingData.tracking_number}
+                                                onChange={(e) => setShippingData(prev => ({ ...prev, tracking_number: e.target.value }))}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Estimated Delivery (Manual Date & Time)</label>
+                                        <div className="relative group">
+                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
+                                            <input
+                                                type="datetime-local"
+                                                className="w-full pl-11 pr-5 py-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-bold text-sm text-slate-900 dark:text-white"
+                                                value={shippingData.estimated_delivery_at}
+                                                onChange={(e) => setShippingData(prev => ({ ...prev, estimated_delivery_at: e.target.value }))}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Delivery Person / Notes</label>
+                                        <textarea
+                                            placeholder="e.g. Delivery Partner: Rahul (+91 98XXX XXXXX)"
+                                            rows={2}
+                                            className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-bold text-sm text-slate-900 dark:text-white resize-none"
+                                            value={shippingData.status_notes}
+                                            onChange={(e) => setShippingData(prev => ({ ...prev, status_notes: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="mt-10">
                                     <button
-                                        key={f}
-                                        onClick={() => setFilter(f)}
-                                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${filter === f ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/20" : "hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-gray-500"
+                                        onClick={() => updateStatus(
+                                            shippingModal.id,
+                                            shippingModal.mode === 'schedule' ? shippingModal.delivery_status : 'shipped',
+                                            shippingData.tracking_number,
+                                            shippingData.estimated_delivery_at,
+                                            shippingData.status_notes
+                                        )}
+                                        disabled={updatingId === shippingModal.id}
+                                        className={`w-full py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 disabled:opacity-50 ${shippingModal.mode === 'schedule'
+                                                ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20'
+                                                : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20'
                                             }`}
                                     >
-                                        {f}
-                                        <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black ${filter === f ? "bg-black/10" : "bg-slate-200 dark:bg-white/10"}`}>{count}</span>
+                                        {updatingId === shippingModal.id ? (
+                                            <RotateCcw className="animate-spin" size={18} />
+                                        ) : (
+                                            <>
+                                                {shippingModal.mode === 'schedule' ? <Calendar size={18} /> : <Truck size={18} />}
+                                                {shippingModal.mode === 'schedule' ? 'SAVE DELIVERY INFO' : 'CONFIRM SHIPMENT'}
+                                            </>
+                                        )}
                                     </button>
-                                );
-                            })}
-                        </div>
+                                </div>
+                            </div>
+                        </motion.div>
                     </div>
-
-                    {/* Orders Feed */}
-                    <div className="space-y-6">
-                        {filtered.length === 0 ? (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="text-center py-32 bg-slate-50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 rounded-[3rem] space-y-4 shadow-inner"
-                            >
-                                <div className="w-20 h-20 bg-white dark:bg-white/5 rounded-full flex items-center justify-center mx-auto border border-slate-100 dark:border-white/10 shadow-sm">
-                                    <Package className="w-10 h-10 text-slate-300 dark:text-gray-700" />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-slate-700 dark:text-gray-300">Clean Slate</h3>
-                                    <p className="text-slate-500 dark:text-gray-500 text-sm mt-1 max-w-xs mx-auto">We couldn't find any orders matching your current search or filter criteria.</p>
-                                </div>
-                                {search && (
-                                    <button
-                                        onClick={() => { setSearch(""); setFilter("all"); }}
-                                        className="text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-widest hover:underline"
-                                    >
-                                        Clear all filters
-                                    </button>
-                                )}
-                            </motion.div>
-                        ) : (
-                            <div className="space-y-4">
-                                {filtered.map(order => (
-                                    <OrderCard
-                                        key={order.id}
-                                        order={order}
-                                        cfg={STATUS_CONFIG[order.delivery_status] || STATUS_CONFIG.pending}
-                                        nextStatus={getNextStatus(order.delivery_status)}
-                                        isExpanded={expandedId === order.id}
-                                        isUpdating={updatingId === order.id}
-                                        isCancelled={order.delivery_status === "cancelled"}
-                                        onUpdate={updateStatus}
-                                        onToggle={() => setExpandedId(expandedId === order.id ? null : order.id)}
-                                        merchantInfo={merchantInfo}
-                                        setShippingModal={setShippingModal}
-                                        setShippingData={setShippingData}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </>
-            ) : (
-                <div className="relative">
-                    <StoreCreditRequestsTab merchantId={merchantId} />
-                </div>
-            )}
-        </div>
-
-        {/* Shipping Modal */}
-        <AnimatePresence>
-            {shippingModal && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setShippingModal(null)}
-                        className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
-                    />
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 dark:border-white/10"
-                    >
-                        <div className="p-8">
-                            <div className="flex items-center justify-between mb-8">
-                                <div>
-                                    <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Order Fulfillment</h2>
-                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-1">Order #{shippingModal.id.slice(0, 8).toUpperCase()}</p>
-                                </div>
-                                <button onClick={() => setShippingModal(null)} className="p-3 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
-                                    <X size={20} className="text-slate-400" />
-                                </button>
-                            </div>
-
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Tracking ID / Number</label>
-                                    <div className="relative">
-                                        <Truck className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                                        <input
-                                            type="text"
-                                            placeholder="Enter shipping tracking ID..."
-                                            className="w-full pl-11 pr-5 py-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-bold text-sm text-slate-900 dark:text-white"
-                                            value={shippingData.tracking_number}
-                                            onChange={(e) => setShippingData(prev => ({ ...prev, tracking_number: e.target.value }))}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Estimated Delivery (Manual Date & Time)</label>
-                                    <div className="relative group">
-                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
-                                        <input
-                                            type="datetime-local"
-                                            className="w-full pl-11 pr-5 py-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-bold text-sm text-slate-900 dark:text-white"
-                                            value={shippingData.estimated_delivery_at}
-                                            onChange={(e) => setShippingData(prev => ({ ...prev, estimated_delivery_at: e.target.value }))}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Delivery Person / Notes</label>
-                                    <textarea
-                                        placeholder="e.g. Delivery Partner: Rahul (+91 98XXX XXXXX)"
-                                        rows={2}
-                                        className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-bold text-sm text-slate-900 dark:text-white resize-none"
-                                        value={shippingData.status_notes}
-                                        onChange={(e) => setShippingData(prev => ({ ...prev, status_notes: e.target.value }))}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="mt-10">
-                                <button
-                                    onClick={() => updateStatus(
-                                        shippingModal.id, 
-                                        shippingModal.mode === 'schedule' ? shippingModal.delivery_status : 'shipped', 
-                                        shippingData.tracking_number, 
-                                        shippingData.estimated_delivery_at, 
-                                        shippingData.status_notes
-                                    )}
-                                    disabled={updatingId === shippingModal.id}
-                                    className={`w-full py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 disabled:opacity-50 ${
-                                        shippingModal.mode === 'schedule' 
-                                        ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20' 
-                                        : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20'
-                                    }`}
-                                >
-                                    {updatingId === shippingModal.id ? (
-                                        <RotateCcw className="animate-spin" size={18} />
-                                    ) : (
-                                        <>
-                                            {shippingModal.mode === 'schedule' ? <Calendar size={18} /> : <Truck size={18} />}
-                                            {shippingModal.mode === 'schedule' ? 'SAVE DELIVERY INFO' : 'CONFIRM SHIPMENT'}
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
+                )}
+            </AnimatePresence>
         </>
     );
 }

@@ -107,19 +107,44 @@ export async function POST(request) {
             }
             canonicalAmountPaise = group.total_amount_paise;
         } else if (udf1 === 'MERCHANT_SUBSCRIPTION') {
+            // ── Ownership verification: caller must own the merchant record they are paying for ──
+            const { data: merchantOwner, error: merchantOwnerErr } = await supabaseAdmin
+                .from('merchants')
+                .select('user_id')
+                .eq('id', udf2)
+                .single();
+
+            if (merchantOwnerErr || !merchantOwner) {
+                return failResponse(400, 'Invalid merchant reference.', correlationId, merchantOwnerErr);
+            }
+
+            if (merchantOwner.user_id !== user.id) {
+                return failResponse(
+                    403,
+                    'Unauthorized: You do not own this merchant account.',
+                    correlationId,
+                    `user ${user.id} attempted to initiate subscription for merchant ${udf2} (owned by ${merchantOwner.user_id})`
+                );
+            }
+
             const plan = MERCHANT_SUBSCRIPTION_PLANS.find(p => p.key === udf3);
             if (!plan) {
                 return failResponse(400, 'Invalid subscription plan selection.', correlationId);
             }
             canonicalAmountPaise = Math.round(plan.price * 100);
         } else if (udf1 === 'GIFT_CARD') {
-            const { data: product, error: prodErr } = await supabaseAdmin
-                .from('shopping_products')
-                .select('suggested_retail_price_paise, is_gift_card')
+            // udf2 = coupons.id (the specific coupon being purchased)
+            const { data: coupon, error: couponErr } = await supabaseAdmin
+                .from('coupons')
+                .select('selling_price_paise, status')
                 .eq('id', udf2)
                 .single();
-            if (prodErr || !product || !product.is_gift_card) {
-                return failResponse(400, 'Invalid gift card selection.', correlationId, prodErr);
+
+            if (couponErr || !coupon) {
+                return failResponse(400, 'Invalid gift card selection.', correlationId, couponErr);
+            }
+            if (coupon.status !== 'available') {
+                return failResponse(400, 'This gift card is no longer available for purchase.', correlationId);
             }
 
             // KYC guard for gift card purchases
@@ -137,7 +162,26 @@ export async function POST(request) {
                 );
             }
 
-            canonicalAmountPaise = product.suggested_retail_price_paise;
+            canonicalAmountPaise = coupon.selling_price_paise;
+        } else if (udf1 === 'NFC_ORDER') {
+            // udf2 = nfc_orders.id (created before payment initiation)
+            const { data: nfcOrder, error: nfcErr } = await supabaseAdmin
+                .from('nfc_orders')
+                .select('sale_price_paise, payment_status, user_id')
+                .eq('id', udf2)
+                .single();
+
+            if (nfcErr || !nfcOrder) {
+                return failResponse(400, 'Invalid NFC order reference.', correlationId, nfcErr);
+            }
+            if (nfcOrder.user_id !== user.id) {
+                return failResponse(403, 'Unauthorized: You do not own this NFC order.', correlationId);
+            }
+            if (nfcOrder.payment_status !== 'pending') {
+                return failResponse(400, 'This NFC order has already been paid or is in an invalid state.', correlationId);
+            }
+
+            canonicalAmountPaise = nfcOrder.sale_price_paise;
         } else {
             // Variable price transactions (Wallet/Merchant Topups)
             // We still derive it server-side from the input to ensure it is paise-clean

@@ -42,6 +42,7 @@ BEGIN
     UPDATE public.merchants
     SET 
         wallet_balance_paise = v_new_balance,
+        auto_mode = true,
         auto_mode_status = 'active',
         auto_mode_months_paid = v_months_paid,
         auto_mode_valid_until = v_valid_until,

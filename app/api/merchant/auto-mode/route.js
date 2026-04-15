@@ -44,7 +44,10 @@ export async function POST(request) {
         if (action === 'deactivate') {
             const { error: updateError } = await supabase
                 .from('merchants')
-                .update({ auto_mode: false })
+                .update({
+                    auto_mode: false,
+                    auto_mode_status: 'inactive'
+                })
                 .eq('id', merchant.id);
 
             if (updateError) throw updateError;
@@ -62,66 +65,40 @@ export async function POST(request) {
                 // Subscription is still active, just turn the switch back on without charging
                 const { error: updateError } = await supabase
                     .from('merchants')
-                    .update({ auto_mode: true })
-                    .eq('id', merchant.id);
-
-                if (updateError) throw updateError;
-
-                return NextResponse.json({ 
-                    success: true, 
-                    message: 'Auto Mode re-activated successfully (Existing Subscription)'
-                });
-            } else {
-                // Charge the merchant
-                const costRupees = (merchant.auto_mode_months_paid || 0) === 0 ? 999 : 1999;
-                const costPaise = costRupees * 100;
-
-                // Check wallet balance
-                const { data: wallet, error: walletError } = await supabase
-                    .from('merchants')
-                    .select('id, wallet_balance_paise')
-                    .eq('id', merchant.id)
-                    .single();
-
-                if (walletError || !wallet || wallet.wallet_balance_paise < costPaise) {
-                    return NextResponse.json({ error: 'Insufficient wallet balance for Auto Mode subscription.' }, { status: 400 });
-                }
-
-                // Deduct from wallet
-                const { error: deductError } = await supabase
-                    .from('merchants')
-                    .update({ wallet_balance_paise: wallet.wallet_balance_paise - costPaise })
-                    .eq('id', wallet.id);
-                
-                if (deductError) throw deductError;
-
-                // Log transaction
-                await supabase.from('merchant_wallet_transactions').insert({
-                    merchant_id: merchant.id,
-                    type: 'platform_fee',
-                    amount_paise: costPaise,
-                    status: 'completed',
-                    reference_id: `auto_mode_${Date.now()}`,
-                    description: `Auto Mode Subscription (${costRupees} INR)`
-                });
-
-                const validUntil = new Date();
-                validUntil.setMonth(validUntil.getMonth() + 1);
-
-                const { error: updateError } = await supabase
-                    .from('merchants')
-                    .update({ 
+                    .update({
                         auto_mode: true,
-                        auto_mode_months_paid: (merchant.auto_mode_months_paid || 0) + 1,
-                        auto_mode_valid_until: validUntil.toISOString()
+                        auto_mode_status: 'active'
                     })
                     .eq('id', merchant.id);
 
                 if (updateError) throw updateError;
 
-                return NextResponse.json({ 
-                    success: true, 
-                    message: 'Auto Mode activated successfully! Subscription purchased.'
+                return NextResponse.json({
+                    success: true,
+                    message: 'Auto Mode re-activated successfully (Existing Subscription)'
+                });
+            } else {
+                // Charge the merchant via Atomic RPC
+                const costRupees = (merchant.auto_mode_months_paid || 0) === 0 ? 999 : 1999;
+                const costPaise = costRupees * 100;
+
+                const { data, error: rpcError } = await supabase.rpc('merchant_activate_auto_mode', {
+                    p_merchant_id: merchant.id,
+                    p_price_paise: costPaise,
+                    p_description: `Auto Mode Subscription (${costRupees} INR)`
+                });
+
+                if (rpcError) throw rpcError;
+
+                if (!data.success) {
+                    return NextResponse.json({ error: data.message }, { status: 400 });
+                }
+
+                return NextResponse.json({
+                    success: true,
+                    message: data.message,
+                    new_balance: data.new_balance,
+                    valid_until: data.valid_until
                 });
             }
         }

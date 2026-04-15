@@ -4,15 +4,15 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useMerchant } from '@/hooks/useMerchant';
 import ConfirmModal from '@/components/ui/ConfirmModal';
-import { 
-    Store, 
-    User, 
-    Mail, 
-    Phone, 
-    MapPin, 
-    ShieldCheck, 
-    Camera, 
-    Save, 
+import {
+    Store,
+    User,
+    Mail,
+    Phone,
+    MapPin,
+    ShieldCheck,
+    Camera,
+    Save,
     LogOut,
     Loader2,
     CheckCircle2,
@@ -56,7 +56,7 @@ function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
 
     return (
         <div className="relative group mx-auto mb-10 w-fit">
-            <div 
+            <div
                 className="relative w-32 h-32 rounded-[2.5rem] overflow-hidden cursor-pointer shadow-2xl ring-4 ring-white/10 group-hover:ring-blue-500/50 transition-all duration-500"
                 onClick={() => !uploading && fileRef.current?.click()}
             >
@@ -124,23 +124,23 @@ export default function ProfilePage() {
             setUploadingBanner(true);
             setSaveStatus(null);
             setErrorMessage('');
-            
+
             const { error: uploadError } = await supabase.storage
                 .from('merchant_banners')
                 .upload(filePath, file);
 
             if (uploadError) throw uploadError;
-            
+
             const { data: { publicUrl } } = supabase.storage
                 .from('merchant_banners')
                 .getPublicUrl(filePath);
 
             setFormData(prev => ({ ...prev, shopping_banner_url: publicUrl }));
-            
+
             await supabase.from('merchants')
                 .update({ shopping_banner_url: publicUrl })
                 .eq('user_id', merchant.user_id);
-                
+
             setSaveStatus('success');
             setTimeout(() => setSaveStatus(null), 3000);
         } catch (error) {
@@ -154,7 +154,7 @@ export default function ProfilePage() {
 
     const handleSave = async (e) => {
         e.preventDefault();
-        
+
         // 1. Validation for "intrust"
         if (formData.business_name.trim().toLowerCase() === 'intrust') {
             setSaveStatus('error');
@@ -225,7 +225,7 @@ export default function ProfilePage() {
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
             {/* Header */}
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12"
             >
@@ -235,7 +235,7 @@ export default function ProfilePage() {
                             <User size={12} />
                             Merchant Account
                         </div>
-                        {merchant?.auto_mode_status === 'active' && (
+                        {merchant?.auto_mode && (
                             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">Auto LIVE</span>
@@ -249,7 +249,7 @@ export default function ProfilePage() {
                         Manage your business identity, contact details, and storefront settings.
                     </p>
                 </div>
-                <button 
+                <button
                     onClick={() => setShowLogoutModal(true)}
                     className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-100 dark:bg-white/5 hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-600 dark:text-slate-400 hover:text-red-600 transition-all font-black text-sm self-start sm:self-auto border border-transparent hover:border-red-500/20"
                 >
@@ -260,7 +260,7 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Profile Hero / Avatar */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                     className="lg:col-span-4"
                 >
@@ -268,9 +268,9 @@ export default function ProfilePage() {
                         {/* Decorative Background */}
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[60px] rounded-full -mr-10 -mt-10" />
                         <div className="absolute bottom-0 left-0 w-32 h-32 bg-violet-500/10 blur-[60px] rounded-full -ml-10 -mb-10 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                        
+
                         <div className="relative z-10 text-center">
-                            <AvatarUpload 
+                            <AvatarUpload
                                 userId={merchant.user_id}
                                 avatarUrl={formData.avatar_url}
                                 displayName={formData.owner_name || merchant.business_name}
@@ -313,7 +313,7 @@ export default function ProfilePage() {
                 </motion.div>
 
                 {/* Form Content */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
                     className="lg:col-span-8"
                 >
@@ -330,9 +330,9 @@ export default function ProfilePage() {
                                 <div className="relative w-full h-32 sm:h-48 rounded-xl border-2 border-dashed border-slate-200 dark:border-white/10 flex flex-col items-center justify-center overflow-hidden transition-all group-hover:border-blue-500/50 bg-white/50 dark:bg-black/20">
                                     {formData.shopping_banner_url ? (
                                         <>
-                                            <img 
-                                                src={formData.shopping_banner_url} 
-                                                alt="Store Banner" 
+                                            <img
+                                                src={formData.shopping_banner_url}
+                                                alt="Store Banner"
                                                 className="w-full h-full object-cover"
                                             />
                                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -365,10 +365,10 @@ export default function ProfilePage() {
                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Business Name</label>
                                     <div className="relative group">
                                         <Store className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-                                        <input 
+                                        <input
                                             type="text" required
                                             value={formData.business_name}
-                                            onChange={e => setFormData({...formData, business_name: e.target.value})}
+                                            onChange={e => setFormData({ ...formData, business_name: e.target.value })}
                                             placeholder="Trading Name"
                                             className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all font-[family-name:var(--font-outfit)]"
                                         />
@@ -380,10 +380,10 @@ export default function ProfilePage() {
                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">GST Number</label>
                                     <div className="relative group">
                                         <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-                                        <input 
+                                        <input
                                             type="text"
                                             value={formData.gst_number}
-                                            onChange={e => setFormData({...formData, gst_number: e.target.value.toUpperCase()})}
+                                            onChange={e => setFormData({ ...formData, gst_number: e.target.value.toUpperCase() })}
                                             placeholder="GSTIN"
                                             className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all uppercase"
                                         />
@@ -394,10 +394,10 @@ export default function ProfilePage() {
                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Owner / Manager Name</label>
                                     <div className="relative group">
                                         <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-                                        <input 
+                                        <input
                                             type="text" required
                                             value={formData.owner_name}
-                                            onChange={e => setFormData({...formData, owner_name: e.target.value})}
+                                            onChange={e => setFormData({ ...formData, owner_name: e.target.value })}
                                             placeholder="Full Name"
                                             className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all font-[family-name:var(--font-outfit)]"
                                         />
@@ -408,10 +408,10 @@ export default function ProfilePage() {
                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Business Address</label>
                                     <div className="relative group">
                                         <MapPin className="absolute left-4 top-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-                                        <textarea 
+                                        <textarea
                                             rows={3} required
                                             value={formData.business_address}
-                                            onChange={e => setFormData({...formData, business_address: e.target.value})}
+                                            onChange={e => setFormData({ ...formData, business_address: e.target.value })}
                                             placeholder="Shop / Office Address"
                                             className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all resize-none font-[family-name:var(--font-outfit)]"
                                         />
@@ -432,10 +432,10 @@ export default function ProfilePage() {
                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Business Email</label>
                                     <div className="relative group">
                                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-                                        <input 
+                                        <input
                                             type="email" required
                                             value={formData.business_email}
-                                            onChange={e => setFormData({...formData, business_email: e.target.value})}
+                                            onChange={e => setFormData({ ...formData, business_email: e.target.value })}
                                             placeholder="email@example.com"
                                             className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all"
                                         />
@@ -446,10 +446,10 @@ export default function ProfilePage() {
                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Business Phone</label>
                                     <div className="relative group">
                                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-                                        <input 
+                                        <input
                                             type="tel" required
                                             value={formData.business_phone}
-                                            onChange={e => setFormData({...formData, business_phone: e.target.value})}
+                                            onChange={e => setFormData({ ...formData, business_phone: e.target.value })}
                                             placeholder="+91"
                                             className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all"
                                         />
@@ -461,13 +461,12 @@ export default function ProfilePage() {
                         {/* Status Messages & Save */}
                         <AnimatePresence>
                             {saveStatus && (
-                                <motion.div 
+                                <motion.div
                                     initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                                    className={`p-4 rounded-2xl flex items-center gap-3 border ${
-                                        saveStatus === 'success' 
-                                        ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20 text-emerald-600'
-                                        : 'bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20 text-red-600'
-                                    }`}
+                                    className={`p-4 rounded-2xl flex items-center gap-3 border ${saveStatus === 'success'
+                                            ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20 text-emerald-600'
+                                            : 'bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20 text-red-600'
+                                        }`}
                                 >
                                     {saveStatus === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
                                     <p className="text-sm font-black">{saveStatus === 'success' ? 'Profile updated successfully!' : errorMessage}</p>

@@ -289,8 +289,8 @@ export default function AutoModePage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to update Auto Mode status');
 
-            setMerchant(prev => ({ ...prev, auto_mode: false }));
             setSuccess('Auto Mode has been deactivated.');
+            await fetchData();
             setTimeout(() => setSuccess(null), 4000);
         } catch (err) {
             setError(err.message); setTimeout(() => setError(null), 5000);
@@ -315,17 +315,8 @@ export default function AutoModePage() {
                 throw new Error(data.error || 'Failed to update Auto Mode status');
             }
 
-            if (isAutoModeActive) {
-                // Was turned off
-                setMerchant(prev => ({ ...prev, auto_mode: false }));
-            } else {
-                // Was turned on
-                setMerchant(prev => ({
-                    ...prev,
-                    auto_mode: true
-                }));
-                setSuccess('Auto Mode activated successfully! Your storefront is now automated.');
-            }
+            setSuccess('Auto Mode activated successfully! Your storefront is now automated.');
+            await fetchData();
             setShowPaymentModal(false);
         } catch (err) {
             console.error('Activation error:', err);
@@ -773,7 +764,7 @@ export default function AutoModePage() {
                                 ))}
                             </ul>
                             <p className="text-xs text-slate-400 mb-3">Wallet: <span className="text-white font-black">₹{walletBalance.toFixed(2)}</span></p>
-                            
+
                             {walletBalance < subscriptionPrice ? (
                                 <Link href="/merchant/wallet"
                                     className="w-full bg-[#1e293b] hover:bg-[#334155] border border-white/10 text-white font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider">

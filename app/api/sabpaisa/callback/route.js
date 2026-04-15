@@ -112,6 +112,9 @@ export async function POST(request) {
             );
         }
 
+        // ── Declare fulfillmentFailed before any branch that may set it ──
+        let fulfillmentFailed = false;
+
         // ── Integrity Validation: Amount Mismatch Check ──
         const paidAmountPaise = Math.round(parseFloat(amount) * 100);
         const expectedAmountPaise = existingTxn?.expected_amount_paise ? Number(existingTxn.expected_amount_paise) : null;
@@ -129,8 +132,6 @@ export async function POST(request) {
                 result.transMsg = `Security Alert: Amount mismatch (Exp: ${expectedAmountPaise}, Rec: ${paidAmountPaise}). Manual verification required. Contact support.`;
             }
         }
-
-        let fulfillmentFailed = false;
 
         // 5. Handle Wallet Credit for WALLET_TOPUP safely
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'WALLET_TOPUP' && !wasAlreadySuccess) {
@@ -403,6 +404,80 @@ export async function POST(request) {
             }
         }
 
+        // 5f-nfc. Handle NFC Order Payment — Success path
+        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'NFC_ORDER' && !wasAlreadySuccess) {
+            try {
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
+                const nfcOrderId = existingTxn.udf2;
+
+                // Idempotency: check current payment_status before mutating
+                const { data: nfcOrder } = await supabaseAdmin
+                    .from('nfc_orders')
+                    .select('id, payment_status')
+                    .eq('id', nfcOrderId)
+                    .single();
+
+                if (nfcOrder?.payment_status === 'paid') {
+                    console.log(`[Callback] NFC order ${nfcOrderId} already paid — skipping duplicate fulfillment.`);
+                } else {
+                    const { error: nfcUpdateErr } = await supabaseAdmin
+                        .from('nfc_orders')
+                        .update({ payment_status: 'paid', status: 'confirmed' })
+                        .eq('id', nfcOrderId)
+                        .neq('payment_status', 'paid'); // idempotency guard
+
+                    if (nfcUpdateErr) {
+                        console.error('[Callback] NFC order update failed:', nfcUpdateErr.message);
+                        fulfillmentFailed = true;
+                        internalStatus = 'FAILED';
+                        result.transMsg = 'NFC order fulfillment failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
+                    } else {
+                        console.log(`[Callback] NFC order ${nfcOrderId} marked paid/confirmed for txn ${clientTxnId}`);
+                        try {
+                            await supabaseAdmin.from('notifications').insert({
+                                user_id: existingTxn.user_id,
+                                title: 'NFC Card Order Confirmed ✅',
+                                body: `Your NFC card order of ₹${amount} has been confirmed and will be dispatched soon.`,
+                                type: 'success',
+                                reference_id: nfcOrderId,
+                                reference_type: 'nfc_order'
+                            });
+                        } catch (notifErr) {
+                            console.error('[Callback] NFC order notification failed:', notifErr.message);
+                        }
+                    }
+                }
+            } catch (nfcError) {
+                console.error('[Callback] NFC order processing error:', nfcError.message);
+                fulfillmentFailed = true;
+                internalStatus = 'FAILED';
+                result.transMsg = 'NFC order processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
+            }
+        }
+
+        // 5f-nfc-fail. Handle NFC Order Payment — Failure / Abort path
+        if (existingTxn && internalStatus !== 'SUCCESS' && existingTxn.udf1 === 'NFC_ORDER') {
+            try {
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
+                const nfcOrderId = existingTxn.udf2;
+                // Guard: never overwrite an already-paid order with failure
+                await supabaseAdmin
+                    .from('nfc_orders')
+                    .update({ payment_status: 'failed' })
+                    .eq('id', nfcOrderId)
+                    .neq('payment_status', 'paid');
+                console.log(`[Callback] NFC order ${nfcOrderId} marked as payment_failed for txn ${clientTxnId}`);
+            } catch (failErr) {
+                console.error('[Callback] Failed to mark NFC order as failed:', failErr.message);
+            }
+        }
+
         // 6. Handle Gift Card Purchase — Atomic coupon+order with rollback safety
         if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GIFT_CARD' && !wasAlreadySuccess) {
             try {
@@ -621,6 +696,23 @@ export async function POST(request) {
                 );
 
                 const merchantId = existingTxn.udf2;
+
+                // ── Security: Re-verify merchant ownership before mutating ──
+                // Guards against tampered UDFs or replayed legacy transaction records.
+                const { data: ownerCheck, error: ownerCheckErr } = await supabaseAdmin
+                    .from('merchants')
+                    .select('user_id')
+                    .eq('id', merchantId)
+                    .single();
+
+                if (ownerCheckErr || !ownerCheck || ownerCheck.user_id !== existingTxn.user_id) {
+                    console.error(
+                        `[Callback] SECURITY: Merchant ownership mismatch for txn ${clientTxnId}. ` +
+                        `Transaction user: ${existingTxn.user_id}, Merchant owner: ${ownerCheck?.user_id}. ` +
+                        `Blocking subscription activation.`
+                    );
+                    throw new Error('Merchant ownership verification failed. Refusing to activate subscription.');
+                }
 
                 // Resolve plan duration from udf3 (e.g. "MSUB_6M").
                 // Fall back to 30 days for any legacy ₹149 transactions with no plan key.

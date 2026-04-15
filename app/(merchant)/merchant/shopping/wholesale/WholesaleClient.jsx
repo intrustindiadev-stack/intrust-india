@@ -26,38 +26,38 @@ export default function WholesaleClient({ products = [], merchant, categories = 
     const updateQuantity = (e, product, delta) => {
         const productId = product.id;
         const maxStock = product.admin_stock;
-        
+
         // Resolve bounding rect synchronously to avoid React event pooling/nullification issues
         const rect = e?.currentTarget?.getBoundingClientRect();
         const currentQty = cart[productId] || 0;
 
-            // Fly animation on Add
-            if (delta > 0 && currentQty < maxStock && rect) {
-                const animId = Date.now() + Math.random();
-                
-                // Get destination coordinates if cart button is present
-                let destX = typeof window !== 'undefined' ? window.innerWidth / 2 : 0;
-                let destY = typeof window !== 'undefined' ? window.innerHeight - 50 : 0;
-                const cartBtn = document.getElementById('merchant-floating-cart-btn');
-                if (cartBtn) {
-                    const btnRect = cartBtn.getBoundingClientRect();
-                    destX = btnRect.left + btnRect.width / 2 - 24; // center the 48px flying icon
-                    destY = btnRect.top + btnRect.height / 2 - 24;
-                }
+        // Fly animation on Add
+        if (delta > 0 && currentQty < maxStock && rect) {
+            const animId = Date.now() + Math.random();
 
-                setFlyingItems(items => [...items, {
-                    id: animId,
-                    x: rect.left + rect.width / 2 - 24, // start from center of product image/button
-                    y: rect.top + rect.height / 2 - 24,
-                    destX,
-                    destY,
-                    image: product.product_images?.[0]
-                }]);
-                
-                setTimeout(() => {
-                    setFlyingItems(items => items.filter(item => item.id !== animId));
-                }, 1200);
+            // Get destination coordinates if cart button is present
+            let destX = typeof window !== 'undefined' ? window.innerWidth / 2 : 0;
+            let destY = typeof window !== 'undefined' ? window.innerHeight - 50 : 0;
+            const cartBtn = document.getElementById('merchant-floating-cart-btn');
+            if (cartBtn) {
+                const btnRect = cartBtn.getBoundingClientRect();
+                destX = btnRect.left + btnRect.width / 2 - 24; // center the 48px flying icon
+                destY = btnRect.top + btnRect.height / 2 - 24;
             }
+
+            setFlyingItems(items => [...items, {
+                id: animId,
+                x: rect.left + rect.width / 2 - 24, // start from center of product image/button
+                y: rect.top + rect.height / 2 - 24,
+                destX,
+                destY,
+                image: product.product_images?.[0]
+            }]);
+
+            setTimeout(() => {
+                setFlyingItems(items => items.filter(item => item.id !== animId));
+            }, 1200);
+        }
 
         setCart(prev => {
             const currentQtyInner = prev[productId] || 0;
@@ -220,19 +220,19 @@ export default function WholesaleClient({ products = [], merchant, categories = 
 
     const filteredProducts = products.filter(p => {
         const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-        const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
         return matchesCategory && matchesSearch;
     });
 
-    const isAutoModeActive = merchant?.auto_mode_status === 'active';
+    const isAutoModeActive = merchant?.auto_mode;
 
     return (
         <>
-            <WholesaleProductModal 
-                product={selectedProduct} 
-                isOpen={!!selectedProduct} 
-                onClose={() => setSelectedProduct(null)} 
+            <WholesaleProductModal
+                product={selectedProduct}
+                isOpen={!!selectedProduct}
+                onClose={() => setSelectedProduct(null)}
             />
 
             {/* Fly to Cart Animation Elements */}
@@ -240,14 +240,14 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                 <motion.div
                     key={item.id}
                     initial={{ x: item.x, y: item.y, scale: 0.8, opacity: 1, rotate: 0 }}
-                    animate={{ 
-                        x: item.destX, 
-                        y: item.destY, 
-                        scale: 0.3, 
+                    animate={{
+                        x: item.destX,
+                        y: item.destY,
+                        scale: 0.3,
                         opacity: 0,
                         rotate: 360
                     }}
-                    transition={{ 
+                    transition={{
                         x: { duration: 1.2, ease: "easeOut" },
                         y: { duration: 1.2, ease: "easeIn" },
                         scale: { duration: 1.2, ease: "easeInOut" },
@@ -259,13 +259,13 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                 >
                     {item.image ? (
                         <div className="w-full h-full relative rounded-full overflow-hidden">
-                             <img src={item.image} className="w-full h-full object-cover" alt="Flying item" />
-                             {/* Premium Overlay inside the image flying orb */}
-                             <div className="absolute inset-0 bg-emerald-500/20 mix-blend-overlay"></div>
+                            <img src={item.image} className="w-full h-full object-cover" alt="Flying item" />
+                            {/* Premium Overlay inside the image flying orb */}
+                            <div className="absolute inset-0 bg-emerald-500/20 mix-blend-overlay"></div>
                         </div>
                     ) : (
                         <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-white shadow-inner">
-                            <Package size={18} strokeWidth={2.5}/>
+                            <Package size={18} strokeWidth={2.5} />
                         </div>
                     )}
                 </motion.div>
@@ -286,7 +286,7 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                 <div className="xl:col-span-2 space-y-6">
                     {/* Auto Mode Indicator */}
                     {isAutoModeActive && (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="bg-[#0a1f16]/90 border border-emerald-500/30 rounded-3xl p-5 md:p-6 mb-6 relative overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)] group flex items-center gap-4"
@@ -380,7 +380,7 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                                         className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-600/8 transition-all duration-500 flex flex-col group overflow-hidden"
                                     >
                                         {/* Product Image */}
-                                        <div 
+                                        <div
                                             className={`aspect-[4/3] relative bg-gradient-to-br ${gradientClass} p-1 cursor-pointer`}
                                             onClick={() => setSelectedProduct(product)}
                                         >

@@ -149,10 +149,19 @@ export default function SabpaisaPaymentModal({
         clientTxnId = `CART_${Date.now()}_${uniqueRandomStr}`;
         udf1 = "CART_CHECKOUT";
         udf2 = metadata.groupId;
-      } else {
+      } else if (metadata?.type === 'gift_card_purchase') {
         clientTxnId = `GC_${Date.now()}_${uniqueRandomStr}`;
         udf1 = "GIFT_CARD";
-        udf2 = metadata?.type === 'gift_card_purchase' ? metadata?.coupon_id : (productInfo?.id || "mock_product");
+        udf2 = metadata.coupon_id; // coupons.id — matches initiate validation & callback fulfillment
+      } else if (metadata?.type === 'nfc_order') {
+        clientTxnId = `NFC_${Date.now()}_${uniqueRandomStr}`;
+        udf1 = "NFC_ORDER";
+        udf2 = metadata.orderId; // Consistent with nfc-service/page.jsx and NFCOrderForm.jsx
+      } else {
+        // Hard error: never silently misfile an unknown type as GIFT_CARD
+        throw new Error(
+          `Unsupported payment type: "${metadata?.type || 'unknown'}". Please contact support.`
+        );
       }
 
       const response = await fetch('/api/sabpaisa/initiate', {
@@ -301,10 +310,10 @@ export default function SabpaisaPaymentModal({
                       {productInfo?.title || "Gift Card"}
                     </p>
                     <p className="text-xs text-indigo-300/80">
-                      {metadata?.type === 'cart_checkout' 
-                        ? 'Shopping Cart Order' 
-                        : metadata?.type === 'wallet_topup' 
-                          ? 'Wallet Top-Up' 
+                      {metadata?.type === 'cart_checkout'
+                        ? 'Shopping Cart Order'
+                        : metadata?.type === 'wallet_topup'
+                          ? 'Wallet Top-Up'
                           : 'Digital Gift Card'}
                     </p>
                   </div>
@@ -448,7 +457,7 @@ export default function SabpaisaPaymentModal({
                       <div className="p-5 rounded-2xl border-2 border-indigo-200 bg-indigo-50">
                         <h4 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
                           <span className="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 text-xs">
-                            
+
                           </span>
                           Add Money to Wallet
                         </h4>
@@ -518,13 +527,13 @@ export default function SabpaisaPaymentModal({
               <>
                 {/* ── Other Methods ── */}
                 {!initialMethod && (
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-px bg-gray-200 flex-1" />
-                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-widest whitespace-nowrap">
-                    Other Payment Methods
-                  </h4>
-                  <div className="h-px bg-gray-200 flex-1" />
-                </div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-px bg-gray-200 flex-1" />
+                    <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-widest whitespace-nowrap">
+                      Other Payment Methods
+                    </h4>
+                    <div className="h-px bg-gray-200 flex-1" />
+                  </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-3">

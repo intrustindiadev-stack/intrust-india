@@ -3,9 +3,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { 
-    ArrowLeft, Clock, Package, TrendingUp, Sparkles, Building2, 
-    Eye, FileText, CheckCircle2, XCircle, ShoppingBag, 
+import {
+    ArrowLeft, Clock, Package, TrendingUp, Sparkles, Building2,
+    Eye, FileText, CheckCircle2, XCircle, ShoppingBag,
     BarChart3, Calendar, Phone, Mail, User, Wallet, Zap,
     TrendingDown, ChevronRight, Activity, Globe, ShieldCheck
 } from 'lucide-react';
@@ -32,10 +32,10 @@ function MiniBarChart({ data, color = '#6366f1' }) {
                         <motion.div
                             initial={{ scaleY: 0 }} animate={{ scaleY: 1 }}
                             transition={{ delay: i * 0.02, duration: 0.5, ease: 'circOut' }}
-                            style={{ 
-                                height: `${Math.max((d.value / max) * 100, 6)}%`, 
-                                backgroundColor: hovered === i ? '#4f46e5' : color, 
-                                originY: 1 
+                            style={{
+                                height: `${Math.max((d.value / max) * 100, 6)}%`,
+                                backgroundColor: hovered === i ? '#4f46e5' : color,
+                                originY: 1
                             }}
                             className={`w-full rounded-t-md transition-all duration-200 ${hovered === i ? 'opacity-100 shadow-[0_0_12px_rgba(79,70,229,0.3)]' : 'opacity-80'}`}
                         />
@@ -124,7 +124,7 @@ export default function AutoMerchantDetailsClient({ merchantId }) {
         const grossRevenue = delivered.reduce((s, o) => s + (o.total_amount_paise || 0), 0);
         const platformCut = delivered.reduce((s, o) => s + (o.platform_cut_paise || 0), 0);
         const merchantProfit = delivered.reduce((s, o) => s + (o.merchant_profit_paise || 0), 0);
-        
+
         return {
             totalOrders: orders.length,
             deliveredCount: delivered.length,
@@ -141,14 +141,14 @@ export default function AutoMerchantDetailsClient({ merchantId }) {
         for (let i = chartPeriod - 1; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
-            d.setHours(0,0,0,0);
+            d.setHours(0, 0, 0, 0);
             const next = new Date(d); next.setDate(next.getDate() + 1);
-            
+
             const dayOrders = orders.filter(o => {
                 const t = new Date(o.created_at);
                 return t >= d && t < next;
             });
-            
+
             days.push({
                 label: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
                 value: dayOrders.reduce((s, o) => s + (o.platform_cut_paise || 0), 0), // Focusing on platform cut for admin
@@ -175,7 +175,7 @@ export default function AutoMerchantDetailsClient({ merchantId }) {
         </div>
     );
 
-    const isAutoActive = merchant.auto_mode_status === 'active';
+    const isAutoActive = merchant.auto_mode;
     const fmt = (paise) => `₹${(paise / 100).toLocaleString('en-IN')}`;
 
     return (
@@ -201,13 +201,13 @@ export default function AutoMerchantDetailsClient({ merchantId }) {
             </div>
 
             <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
-                
+
                 {/* ── Hero Status Card ── */}
                 <div className="bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl relative p-8 md:p-12">
                     {/* Background Visuals */}
                     <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-600/10 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
                     <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-emerald-500/5 blur-[80px] rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
-                    
+
                     <div className="relative z-10 flex flex-col md:flex-row gap-10 items-center justify-between">
                         <div className="flex items-center gap-8 text-center md:text-left">
                             <div className="w-24 h-24 rounded-3xl bg-white shadow-2xl p-1 shrink-0 overflow-hidden border-2 border-indigo-500/20">
@@ -240,7 +240,7 @@ export default function AutoMerchantDetailsClient({ merchantId }) {
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-end">
                                         <p className={`text-2xl font-black ${isAutoActive ? 'text-white' : 'text-rose-400'}`}>{isAutoActive ? 'Valid' : 'Expired'}</p>
-                                        <p className="text-[10px] font-bold text-slate-500 pb-1">Expires {new Date(merchant.auto_mode_valid_until).toLocaleDateString('en-IN', {month:'short', day:'numeric'})}</p>
+                                        <p className="text-[10px] font-bold text-slate-500 pb-1">Expires {new Date(merchant.auto_mode_valid_until).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}</p>
                                     </div>
                                     <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
                                         <motion.div initial={{ width: 0 }} animate={{ width: isAutoActive ? '100%' : '0%' }} className="h-full bg-indigo-500 rounded-full" />
@@ -261,10 +261,10 @@ export default function AutoMerchantDetailsClient({ merchantId }) {
 
                 {/* ── Dashboard Content ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    
+
                     {/* Left: Analytics */}
                     <div className="lg:col-span-8 space-y-6">
-                        
+
                         {/* Stats Row */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <DetailStat icon={TrendingUp} label="Gross Rev" value={fmt(metrics.grossRevenue)} color="indigo" />
@@ -336,7 +336,7 @@ export default function AutoMerchantDetailsClient({ merchantId }) {
                                 </h3>
                                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Last {orders.length} events</div>
                             </div>
-                            
+
                             <div className="divide-y divide-slate-50">
                                 {orders.length === 0 ? (
                                     <div className="p-20 text-center">
@@ -359,7 +359,7 @@ export default function AutoMerchantDetailsClient({ merchantId }) {
                                                             {o.delivery_status || 'pending'}
                                                         </span>
                                                         <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                                                            <Clock size={10} /> {new Date(o.created_at).toLocaleDateString('en-IN', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}
+                                                            <Clock size={10} /> {new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -387,7 +387,7 @@ export default function AutoMerchantDetailsClient({ merchantId }) {
                         <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm overflow-hidden relative">
                             <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 blur-2xl rounded-full" />
                             <h3 className="font-black text-slate-800 text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
-                                <Sparkles size={14} className="text-indigo-600"/> Merchant Insights
+                                <Sparkles size={14} className="text-indigo-600" /> Merchant Insights
                             </h3>
                             <div className="space-y-5">
                                 <div className="flex justify-between items-center text-sm font-bold">
@@ -400,7 +400,7 @@ export default function AutoMerchantDetailsClient({ merchantId }) {
                                 </div>
                                 <div className="flex justify-between items-center text-sm font-bold">
                                     <span className="text-slate-400">Onboarding Date</span>
-                                    <span className="text-slate-800">{new Date(merchant.created_at).toLocaleDateString('en-IN', {month:'long', year:'numeric'})}</span>
+                                    <span className="text-slate-800">{new Date(merchant.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</span>
                                 </div>
                                 <div className="h-px bg-slate-100" />
                                 <div className="space-y-4">
@@ -430,7 +430,7 @@ export default function AutoMerchantDetailsClient({ merchantId }) {
                         <div className="bg-slate-900 rounded-[2rem] p-6 shadow-xl border border-white/5">
                             <h3 className="text-white/40 font-black text-[10px] uppercase tracking-widest mb-4">Command Center</h3>
                             <div className="space-y-2">
-                                <Link href={`/admin/merchants/${merchant.id}`} 
+                                <Link href={`/admin/merchants/${merchant.id}`}
                                     className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl group transition-all">
                                     <div className="flex items-center gap-3">
                                         <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-500/20 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-all">
@@ -443,7 +443,7 @@ export default function AutoMerchantDetailsClient({ merchantId }) {
                                     </div>
                                     <ChevronRight size={14} className="text-white/20 group-hover:text-white" />
                                 </Link>
-                                
+
                                 <button className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-rose-500/20 rounded-2xl group transition-all border border-transparent hover:border-rose-500/30">
                                     <div className="flex items-center gap-3 text-left">
                                         <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-rose-500/20 text-rose-400 group-hover:bg-rose-500 group-hover:text-white transition-all">

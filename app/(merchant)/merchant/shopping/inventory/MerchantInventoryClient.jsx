@@ -118,8 +118,8 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
 
     return (
         <div className="space-y-6">
-            {merchant?.auto_mode_status === 'active' && (
-                <motion.div 
+            {merchant?.auto_mode && (
+                <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-[#0a1f16] border border-emerald-500/30 rounded-[2rem] p-5 md:p-6 mb-2 relative overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)] group flex items-center gap-4"
@@ -246,9 +246,9 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                                         {!item.is_active && (
                                             <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px] flex items-center justify-center">
                                                 <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${(!isPlatform && product?.approval_status === 'rejected') ? 'bg-red-500/90 text-white' : (!isPlatform && product?.approval_status === 'pending_approval') ? 'bg-amber-500/90 text-white' : 'bg-white/90 dark:bg-black/60 text-slate-600 dark:text-slate-300'}`}>
-                                                    {(!isPlatform && product?.approval_status === 'rejected') ? 'Rejected' 
-                                                     : (!isPlatform && product?.approval_status === 'pending_approval') ? 'Pending Approval' 
-                                                     : 'Draft'}
+                                                    {(!isPlatform && product?.approval_status === 'rejected') ? 'Rejected'
+                                                        : (!isPlatform && product?.approval_status === 'pending_approval') ? 'Pending Approval'
+                                                            : 'Draft'}
                                                 </span>
                                             </div>
                                         )}
@@ -264,7 +264,7 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                                                     <Tag size={10} /> Custom
                                                 </span>
                                             )}
-                                            
+
                                             {/* Approval Badge for Custom Products */}
                                             {!isPlatform && product?.approval_status === 'pending_approval' && (
                                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/90 text-white text-[9px] font-black uppercase tracking-widest backdrop-blur-sm shadow-sm">

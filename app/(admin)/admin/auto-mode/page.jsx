@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { 
-    Sparkles, Users, Search, TrendingUp, Activity, Package, Building2, 
+import {
+    Sparkles, Users, Search, TrendingUp, Activity, Package, Building2,
     ChevronRight, Wallet, BadgeCheck, Zap, ArrowLeft, BarChart3,
     Clock, Smartphone, Globe, ShieldCheck
 } from 'lucide-react';
@@ -54,8 +54,8 @@ export default function AutoModeAdminDashboard() {
                 headers: { Authorization: `Bearer ${session.access_token}` },
             });
             const data = await res.json();
-            
-            const activeMerchants = (data.merchants || []).filter(m => m.auto_mode_status === 'active');
+
+            const activeMerchants = (data.merchants || []).filter(m => m.auto_mode);
             const transformed = activeMerchants.map(m => ({
                 id: m.id,
                 userId: m.user_id,
@@ -70,15 +70,14 @@ export default function AutoModeAdminDashboard() {
             setTotalSubsRevenue((data.totalSubscriptionRevenuePaise || 0));
 
             if (transformed.length > 0) {
-                const { data: ordersData, error: ordersError } = await supabase
-                    .from('shopping_order_groups')
-                    .select('id, merchant_id, created_at, delivery_status, total_amount_paise, merchant_profit_paise, platform_cut_paise')
-                    .in('merchant_id', transformed.map(m => m.id))
-                    .order('created_at', { ascending: false })
-                    .limit(1000);
+                const merchantIds = transformed.map(m => m.id).join(',');
+                const ordersRes = await fetch(`/api/admin/auto-mode/orders?merchantIds=${merchantIds}`, {
+                    headers: { Authorization: `Bearer ${session.access_token}` },
+                });
+                const ordersData = await ordersRes.json();
 
-                if (!ordersError && ordersData) {
-                    setOrders(ordersData);
+                if (ordersRes.ok && ordersData.orders) {
+                    setOrders(ordersData.orders);
                 }
             }
         } catch (error) {
@@ -94,7 +93,7 @@ export default function AutoModeAdminDashboard() {
             result = orders.filter(o => o.merchant_id === selectedMerchantId);
         }
         if (search) {
-            result = result.filter(o => o.id.includes(search) || (o.total_amount_paise/100).toString().includes(search));
+            result = result.filter(o => o.id.includes(search) || (o.total_amount_paise / 100).toString().includes(search));
         }
         return result;
     }, [orders, selectedMerchantId, search]);
@@ -141,7 +140,7 @@ export default function AutoModeAdminDashboard() {
                 {/* Background Decor Props */}
                 <div className="absolute top-0 right-0 w-1/3 h-full bg-indigo-500/20 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 animate-pulse" />
                 <div className="absolute bottom-0 left-0 w-1/4 h-1/2 bg-emerald-500/10 blur-[100px] rounded-full translate-y-1/2 -translate-x-1/2" />
-                
+
                 <div className="max-w-7xl mx-auto relative z-10">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                         <div className="max-w-xl">
@@ -159,7 +158,7 @@ export default function AutoModeAdminDashboard() {
                                 Monitoring {merchants.length} live merchants and handling thousands of automated transactions in real-time with zero-latency execution.
                             </motion.p>
                         </div>
-                        
+
                         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}
                             className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-6 md:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-10 shadow-3xl w-full md:w-auto relative group overflow-hidden">
                             <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -180,7 +179,7 @@ export default function AutoModeAdminDashboard() {
 
             {/* ── Main Dashboard Content ── */}
             <div className="max-w-7xl mx-auto px-4 md:px-6 -mt-24 relative z-20 mb-20">
-                
+
                 {/* 1. Quick Global Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
                     <DashboardStat icon={Users} label="Live Network" value={merchants.length} subText="Active Merchants" color="indigo" />
@@ -211,7 +210,7 @@ export default function AutoModeAdminDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    
+
                     {/* 3. Merchant Selector (Side Panel) */}
                     <div className="lg:col-span-4 space-y-4">
                         <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden sticky top-8">
@@ -221,7 +220,7 @@ export default function AutoModeAdminDashboard() {
                                 </h3>
                                 <div className="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{merchants.length}</div>
                             </div>
-                            
+
                             <div className="max-h-[600px] overflow-y-auto custom-scrollbar p-3 space-y-2">
                                 {/* Global Toggle */}
                                 <button onClick={() => setSelectedMerchantId('ALL')}
@@ -289,7 +288,7 @@ export default function AutoModeAdminDashboard() {
                                                         <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border transition-colors ${isDelivered ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:border-indigo-100 group-hover:text-indigo-600'}`}>
                                                             <p className="text-[14px] font-black leading-none">#{order.id.slice(-4).toUpperCase()}</p>
                                                         </div>
-                                                        
+
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2 mb-1">
                                                                 <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${isDelivered ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
@@ -304,7 +303,7 @@ export default function AutoModeAdminDashboard() {
                                                             <div className="flex items-baseline gap-2">
                                                                 <p className="text-xl font-black text-slate-800 tracking-tight">{fmt(order.total_amount_paise)}</p>
                                                                 <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
-                                                                    <Clock size={10} /> {new Date(order.created_at).toLocaleDateString('en-IN', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}
+                                                                    <Clock size={10} /> {new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -314,7 +313,7 @@ export default function AutoModeAdminDashboard() {
                                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Platform Fee</p>
                                                             <p className="text-sm font-black text-indigo-600">+{fmt(order.platform_cut_paise || 0)}</p>
                                                         </div>
-                                                        
+
                                                         <ChevronRight size={18} className="text-slate-300 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
                                                     </div>
                                                 </Link>
