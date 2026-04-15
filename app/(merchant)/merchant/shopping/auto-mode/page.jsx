@@ -318,6 +318,7 @@ export default function AutoModePage() {
             setSuccess('Auto Mode activated successfully! Your storefront is now automated.');
             await fetchData();
             setShowPaymentModal(false);
+            setTimeout(() => setSuccess(null), 4000);
         } catch (err) {
             console.error('Activation error:', err);
             setError(err.message || 'Failed to activate. Please try again.');
