@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ShoppingCart, X, Trash2, Loader2, Wallet, CreditCard,
@@ -171,9 +172,18 @@ export default function MerchantFloatingCart({
 
                     {/* Low balance warning */}
                     {isInsufficient && (
-                        <div className="flex items-start gap-2 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-[10px] font-bold leading-tight">
-                            <Info size={14} className="shrink-0 mt-0.5" />
-                            <p>Wallet insufficient. Use UPI/Cards to complete purchase.</p>
+                        <div className="flex flex-col gap-3 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                            <div className="flex items-start gap-2 text-amber-200 text-[10px] font-bold leading-tight">
+                                <Info size={14} className="shrink-0 mt-0.5" />
+                                <p>Wallet insufficient. Add money to wallet to complete purchase.</p>
+                            </div>
+                            <Link
+                                href="/merchant/wallet"
+                                className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-black rounded-xl text-[10px] font-black uppercase tracking-widest text-center transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                <Wallet size={14} />
+                                Add Money to Wallet
+                            </Link>
                         </div>
                     )}
 
