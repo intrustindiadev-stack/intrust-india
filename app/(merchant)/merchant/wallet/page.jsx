@@ -10,7 +10,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useSubscription } from '@/components/merchant/SubscriptionContext';
 import { useConfetti } from '@/components/ui/ConfettiProvider';
 
-export default function WalletPage() {
+function WalletContent() {
     const router = useRouter();
     const { performAction } = useSubscription();
     const { trigger: triggerConfetti } = useConfetti();
@@ -406,5 +406,18 @@ export default function WalletPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function WalletPage() {
+    return (
+        <Suspense fallback={
+            <div className="p-12 text-center">
+                <span className="material-icons-round animate-spin text-[#D4AF37] text-4xl">autorenew</span>
+                <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-4">Loading Wallet State...</p>
+            </div>
+        }>
+            <WalletContent />
+        </Suspense>
     );
 }

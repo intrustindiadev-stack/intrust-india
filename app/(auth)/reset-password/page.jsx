@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Eye, EyeOff, Loader2, CheckCircle, ArrowRight, Lock } from 'lucide-react';
@@ -46,7 +48,7 @@ function PasswordStrengthMeter({ password }) {
     );
 }
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const verified = searchParams.get('verified');
@@ -90,7 +92,7 @@ export default function ResetPasswordPage() {
             subscription.unsubscribe();
             clearTimeout(timer);
         };
-    }, []);
+    }, [verified]);
 
     const handleResetPassword = async (e) => {
         e.preventDefault();
@@ -271,5 +273,17 @@ export default function ResetPasswordPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function ResetPasswordPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+                <Loader2 className="animate-spin text-[#92BCEA]" size={32} />
+            </div>
+        }>
+            <ResetPasswordContent />
+        </Suspense>
     );
 }

@@ -74,7 +74,7 @@ function Toast({ msg, type }) {
     );
 }
 
-export default function CustomerProfilePage() {
+function CustomerProfileContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user: authUser, loading: authLoading, refreshProfile, refreshUser } = useAuth();
@@ -167,12 +167,12 @@ export default function CustomerProfilePage() {
                             const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
                             months.push(d);
                         }
-                        
+
                         const newGraphData = months.map(date => {
                             const monthName = date.toLocaleDateString('en-US', { month: 'short' });
                             const year = date.getFullYear();
                             const monthIndex = date.getMonth();
-                            
+
                             // Calculate savings for this month
                             const savingsThisMonth = (couponsData || []).reduce((sum, c) => {
                                 if (!c.purchased_at) return sum;
@@ -323,9 +323,9 @@ export default function CustomerProfilePage() {
                             </motion.div>
 
                             {/* Stats Summary */}
-                            <AccountSummaryCard 
-                                purchaseCount={purchaseCount} 
-                                totalSavedPaise={totalSavedPaise} 
+                            <AccountSummaryCard
+                                purchaseCount={purchaseCount}
+                                totalSavedPaise={totalSavedPaise}
                                 graphData={graphData}
                             />
                         </div>
@@ -387,5 +387,13 @@ export default function CustomerProfilePage() {
 
             <CustomerBottomNav />
         </div>
+    );
+}
+
+export default function CustomerProfilePage() {
+    return (
+        <Suspense fallback={<ProfileSkeleton />}>
+            <CustomerProfileContent />
+        </Suspense>
     );
 }
