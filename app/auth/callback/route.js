@@ -11,23 +11,36 @@ export async function GET(request) {
         return NextResponse.redirect(new URL('/', origin))
     }
 
-    const cookieStore = await cookies() // ✅ MUST be awaited
+    const cookieStore = await cookies()
+    const cookiesToSet = []
 
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         {
             cookies: {
-                get: (name) => cookieStore.get(name)?.value,
-                set: (name, value, options) => {
-                    cookieStore.set({ name, value, ...options })
+                getAll() {
+                    return cookieStore.getAll()
                 },
-                remove: (name, options) => {
-                    cookieStore.set({ name, value: '', ...options })
+                setAll(newCookies) {
+                    newCookies.forEach((c) => cookiesToSet.push(c))
                 },
             },
         }
     )
+
+    const applyCookies = (res) => {
+        cookiesToSet.forEach(({ name, value, options }) => {
+            res.cookies.set(name, value, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                ...options
+            })
+        })
+        return res
+    }
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     const next = requestUrl.searchParams.get('next')
@@ -37,17 +50,17 @@ export async function GET(request) {
 
         // Handle identity linking errors
         if (error.code === 'identity_already_exists' || error.message?.includes('identity_already_exists') || error.message?.includes('already linked')) {
-            return NextResponse.redirect(new URL('/profile?error=already_linked', origin))
+            return applyCookies(NextResponse.redirect(new URL('/profile?error=already_linked', origin)))
         }
 
         // Generic linking error if 'next' is present
         if (next && next.startsWith('/')) {
             const errorUrl = new URL(next, origin)
             errorUrl.searchParams.set('error', 'link_failed')
-            return NextResponse.redirect(errorUrl)
+            return applyCookies(NextResponse.redirect(errorUrl))
         }
 
-        return NextResponse.redirect(new URL('/', origin))
+        return applyCookies(NextResponse.redirect(new URL('/', origin)))
     }
 
     const {
@@ -55,21 +68,26 @@ export async function GET(request) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-        return NextResponse.redirect(new URL('/', origin))
+        return applyCookies(NextResponse.redirect(new URL('/', origin)))
+    }
+
+    const type = requestUrl.searchParams.get('type')
+    if (type === 'recovery') {
+        return applyCookies(NextResponse.redirect(new URL('/reset-password?verified=true', origin)))
     }
 
     // Check for a custom redirect (e.g. from identity linking on profile page)
     if (next && next.startsWith('/')) {
         // If the next param points to reset-password, forward the user there
         if (next === '/reset-password') {
-            return NextResponse.redirect(new URL('/reset-password', origin))
+            return applyCookies(NextResponse.redirect(new URL('/reset-password', origin)))
         }
         const nextUrl = new URL(next, origin)
         // If coming from profile explicitly, append success flag
         if (next === '/profile' || next.startsWith('/profile?')) {
             nextUrl.searchParams.set('linked', 'google')
         }
-        return NextResponse.redirect(nextUrl)
+        return applyCookies(NextResponse.redirect(nextUrl))
     }
 
     // Detect fresh email verification: only for native email/password signups.
@@ -82,7 +100,7 @@ export async function GET(request) {
         if (isJustVerified) {
             // Sign the user out — they confirmed their email but should log in manually
             await supabase.auth.signOut()
-            return NextResponse.redirect(new URL('/login?confirmed=true', origin))
+            return applyCookies(NextResponse.redirect(new URL('/login?confirmed=true', origin)))
         }
     }
 
@@ -93,12 +111,12 @@ export async function GET(request) {
         .maybeSingle() // safer than single()
 
     if (profile?.role === 'admin' || profile?.role === 'super_admin') {
-        return NextResponse.redirect(new URL('/admin', origin))
+        return applyCookies(NextResponse.redirect(new URL('/admin', origin)))
     }
 
     if (profile?.role === 'merchant') {
-        return NextResponse.redirect(new URL('/merchant/dashboard', origin))
+        return applyCookies(NextResponse.redirect(new URL('/merchant/dashboard', origin)))
     }
 
-    return NextResponse.redirect(new URL('/dashboard', origin))
+    return applyCookies(NextResponse.redirect(new URL('/dashboard', origin)))
 }

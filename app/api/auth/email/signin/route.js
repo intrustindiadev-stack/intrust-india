@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
-import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 
 const MAX_ATTEMPTS = 5;
@@ -58,20 +57,24 @@ export async function POST(request) {
             }
         }
 
-        // 3. Attempt sign-in using a temporary non-cookie client, then write cookies manually
-        const tempClient = createClient(
+        // 3. Attempt sign-in
+        const cookiesToSet = [];
+        const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
             {
-                auth: {
-                    persistSession: false,
-                    autoRefreshToken: false,
-                    detectSessionInUrl: false
+                cookies: {
+                    getAll() {
+                        return request.cookies.getAll();
+                    },
+                    setAll(newCookies) {
+                        newCookies.forEach((c) => cookiesToSet.push(c));
+                    }
                 }
             }
         );
 
-        const { data: signInData, error: signInError } = await tempClient.auth.signInWithPassword({
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
             email,
             password
         });
@@ -152,38 +155,24 @@ export async function POST(request) {
             .update({ failed_login_attempts: 0, locked_until: null })
             .eq('id', existing.id);
 
-        // 5. Set auth cookie on the response (same pattern as verify-otp route)
+        // 5. Set auth cookie on the response
         const response = NextResponse.json({
             success: true,
             user: signInData.user
         });
 
-        const cookieServerClient = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-            {
-                cookies: {
-                    getAll() {
-                        return request.cookies.getAll();
-                    },
-                    setAll(cookiesToSet) {
-                        cookiesToSet.forEach(({ name, value, options }) => {
-                            const isRefreshToken = name.includes('refresh-token');
-                            response.cookies.set(name, value, {
-                                httpOnly: true,
-                                secure: process.env.NODE_ENV === 'production',
-                                sameSite: 'lax',
-                                path: '/',
-                                ...(isRefreshToken ? { maxAge: 60 * 60 * 24 * 365 } : {}),
-                                ...options
-                            });
-                        });
-                    }
-                }
-            }
-        );
-
-        await cookieServerClient.auth.setSession(signInData.session);
+        // Replay collected cookies onto the response
+        cookiesToSet.forEach(({ name, value, options }) => {
+            const isRefreshToken = name.includes('refresh-token');
+            response.cookies.set(name, value, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                ...(isRefreshToken ? { maxAge: 60 * 60 * 24 * 365 } : {}),
+                ...options
+            });
+        });
 
         // 6. Audit log successful login
         try {

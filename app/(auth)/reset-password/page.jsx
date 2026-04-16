@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Eye, EyeOff, Loader2, CheckCircle, ArrowRight, Lock } from 'lucide-react';
 import Image from 'next/image';
@@ -10,11 +10,11 @@ import Link from 'next/link';
 // ─── Password Strength Helpers ─────────────────────────────────────────────────
 function getPasswordStrength(password) {
     const checks = {
-        length:    password.length >= 8,
+        length: password.length >= 8,
         uppercase: /[A-Z]/.test(password),
         lowercase: /[a-z]/.test(password),
-        number:    /[0-9]/.test(password),
-        special:   /[^A-Za-z0-9]/.test(password)
+        number: /[0-9]/.test(password),
+        special: /[^A-Za-z0-9]/.test(password)
     };
     const passed = Object.values(checks).filter(Boolean).length;
     return { checks, score: passed };
@@ -36,11 +36,11 @@ function PasswordStrengthMeter({ password }) {
                 {labels[score - 1] || 'Too Weak'}
             </p>
             <ul className="text-[10px] text-gray-400 space-y-0.5 px-1">
-                {!checks.length    && <li>• At least 8 characters</li>}
+                {!checks.length && <li>• At least 8 characters</li>}
                 {!checks.uppercase && <li>• One uppercase letter</li>}
                 {!checks.lowercase && <li>• One lowercase letter</li>}
-                {!checks.number    && <li>• One number</li>}
-                {!checks.special   && <li>• One special character</li>}
+                {!checks.number && <li>• One number</li>}
+                {!checks.special && <li>• One special character</li>}
             </ul>
         </div>
     );
@@ -48,32 +48,43 @@ function PasswordStrengthMeter({ password }) {
 
 export default function ResetPasswordPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const verified = searchParams.get('verified');
 
-    const [password, setPassword]           = useState('');
+    const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [showPassword, setShowPassword]   = useState(false);
-    const [showConfirm, setShowConfirm]     = useState(false);
-    const [loading, setLoading]             = useState(false);
-    const [error, setError]                 = useState('');
-    const [tokenValid, setTokenValid]       = useState(null); // null = checking, true, false
-    const [success, setSuccess]             = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [tokenValid, setTokenValid] = useState(null); // null = checking, true, false
+    const [success, setSuccess] = useState(false);
 
     // ─── Validate the reset token from the URL hash ───────────────────────────
     useEffect(() => {
         // Only a genuine PASSWORD_RECOVERY event (fired by Supabase when the user
         // clicks the reset link) should unlock this form.
-        // Relying on getSession() is a false-positive: a logged-in user navigating
-        // here directly would also have a session but NOT a valid recovery token.
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-            if (event === 'PASSWORD_RECOVERY') {
+        // If coming from the callback with verified=true, we still wait for the
+        // INITIAL_SESSION or a session to be present.
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log(`[RESET-PASSWORD] Auth event: ${event}`, session ? 'Session: active' : 'Session: null');
+
+            if (event === 'PASSWORD_RECOVERY' || (verified === 'true' && session)) {
                 setTokenValid(true);
             }
         });
 
-        // If no PASSWORD_RECOVERY event fires within 2.5 s, the link is invalid/expired.
+        // Also check immediately in case the session is already there
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (verified === 'true' && session) {
+                setTokenValid(true);
+            }
+        });
+
+        // If no event fires within 4s, the link is likely invalid/expired.
         const timer = setTimeout(() => {
             setTokenValid((prev) => (prev === null ? false : prev));
-        }, 2500);
+        }, 4000);
 
         return () => {
             subscription.unsubscribe();
@@ -90,6 +101,14 @@ export default function ResetPasswordPage() {
         if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
 
         setLoading(true);
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+        if (!currentSession) {
+            setError('Auth session missing! Please ensure you followed the link from your email.');
+            setLoading(false);
+            return;
+        }
+
         try {
             const { error: updateError } = await supabase.auth.updateUser({ password });
             if (updateError) {
@@ -100,10 +119,18 @@ export default function ResetPasswordPage() {
 
             // Invalidate all other sessions
             try {
-                await fetch('/api/auth/email/invalidate-sessions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const { data: { session } } = await supabase.auth.getSession();
+                const accessToken = session?.access_token;
+
+                if (accessToken) {
+                    await fetch('/api/auth/email/invalidate-sessions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+                }
             } catch (e) {
                 // Non-fatal if this fails
                 console.warn('[RESET-PASSWORD] invalidate-sessions failed (non-fatal):', e);

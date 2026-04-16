@@ -1,18 +1,21 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
 
 export async function POST(request) {
     try {
-        // Validate the caller is authenticated
-        const serverClient = await createServerSupabaseClient();
-        const { data: { user }, error: sessionError } = await serverClient.auth.getUser();
+        const authHeader = request.headers.get('authorization') ?? '';
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
-        if (sessionError || !user) {
+        if (!token) {
             return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
         }
 
         const admin = createAdminClient();
+        const { data: { user }, error: sessionError } = await admin.auth.getUser(token);
+
+        if (sessionError || !user) {
+            return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+        }
 
         // Sign out all OTHER sessions for this user (keep the current one)
         const { error: signOutError } = await admin.auth.admin.signOut(user.id, 'others');
