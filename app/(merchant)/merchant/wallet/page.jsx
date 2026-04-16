@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import WalletTopup from '@/components/wallet/WalletTopup';
 import WithdrawalForm from '@/components/wallet/WithdrawalForm'; // Assuming this component exists
