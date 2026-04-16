@@ -210,10 +210,10 @@ export default function MerchantSettingsPage() {
             <div className="fixed top-[-10%] left-[-5%] w-[40%] h-[40%] bg-[#D4AF37]/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
             <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none -z-10 dark:opacity-20"></div>
 
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 mt-6 gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 mt-4 sm:mt-6 gap-2 sm:gap-4">
                 <div>
-                    <h1 className="font-display text-4xl font-bold text-slate-800 dark:text-slate-100 mb-2">Settings</h1>
-                    <p className="text-slate-600 dark:text-slate-400 font-medium">Manage your account and business preferences</p>
+                    <h1 className="font-display text-2xl sm:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-1">Settings</h1>
+                    <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 font-medium">Manage your account and preferences</p>
                 </div>
             </div>
 
@@ -258,7 +258,7 @@ export default function MerchantSettingsPage() {
             {/* Content Container */}
             <div className="merchant-glass rounded-3xl border border-black/5 dark:border-white/5 overflow-hidden shadow-xl mb-12">
                 {activeTab === 'store' && (
-                    <div className="p-8">
+                    <div className="p-5 sm:p-8">
                         <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
                             <span className="material-icons-round text-[#D4AF37] mr-3">storefront</span>
                             Store Management
@@ -279,10 +279,10 @@ export default function MerchantSettingsPage() {
                                     </p>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        className="sr-only peer" 
-                                        checked={merchantProfile?.is_open} 
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={merchantProfile?.is_open}
                                         onChange={async (e) => {
                                             const newVal = e.target.checked;
                                             setMerchantProfile(prev => ({ ...prev, is_open: newVal }));
@@ -308,7 +308,7 @@ export default function MerchantSettingsPage() {
                 )}
 
                 {activeTab === 'business' && (
-                    <div className="p-8">
+                    <div className="p-5 sm:p-8">
                         <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-8 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
                             <span className="material-icons-round text-[#D4AF37] mr-3">storefront</span>
                             Business Information
@@ -407,7 +407,7 @@ export default function MerchantSettingsPage() {
                 )}
 
                 {activeTab === 'bank' && (
-                    <div className="p-8">
+                    <div className="p-5 sm:p-8">
                         <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
                             <span className="material-icons-round text-[#D4AF37] mr-3">account_balance</span>
                             Bank Account Details
@@ -547,7 +547,7 @@ export default function MerchantSettingsPage() {
                 )}
 
                 {activeTab === 'account' && (
-                    <div className="p-8">
+                    <div className="p-5 sm:p-8">
                         <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-8 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
                             <span className="material-icons-round text-[#D4AF37] mr-3">manage_accounts</span>
                             Account Information
@@ -619,7 +619,7 @@ export default function MerchantSettingsPage() {
                 )}
 
                 {activeTab === 'notifications' && (
-                    <div className="p-8">
+                    <div className="p-5 sm:p-8">
                         <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-8 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
                             <span className="material-icons-round text-[#D4AF37] mr-3">notifications_active</span>
                             Notification Preferences

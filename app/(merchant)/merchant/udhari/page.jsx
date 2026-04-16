@@ -37,7 +37,7 @@ export default function MerchantUdhariPage() {
             const { data: { session } } = await supabase.auth.getSession();
             const url = new URL('/api/udhari/list', window.location.origin);
             url.searchParams.append('role', 'merchant');
-            
+
             const res = await fetch(url.toString(), {
                 headers: { 'Authorization': `Bearer ${session?.access_token}` }
             });
@@ -67,7 +67,7 @@ export default function MerchantUdhariPage() {
 
     const handleApproveConfirm = async () => {
         if (!selectedApproveRequest) return;
-        
+
         const req = selectedApproveRequest;
         setProcessingId(req.id);
         try {
@@ -101,7 +101,7 @@ export default function MerchantUdhariPage() {
 
     const handleDenySubmit = async () => {
         if (!selectedRequest) return;
-        
+
         setProcessingId(selectedRequest.id);
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -135,7 +135,7 @@ export default function MerchantUdhariPage() {
     if (authLoading) return <div className="p-8"><Loader2 className="animate-spin text-blue-600" /></div>;
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-3">
                     <span className="material-icons-round text-[#D4AF37] text-3xl">credit_score</span>
@@ -153,16 +153,15 @@ export default function MerchantUdhariPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex merchant-glass gold-border rounded-lg p-1 max-w-md">
+            <div className="flex merchant-glass gold-border rounded-lg p-1 w-full sm:max-w-md overflow-x-auto no-scrollbar">
                 {['pending', 'active', 'history'].map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`flex-1 py-2 px-4 rounded text-sm font-bold capitalize transition-all ${
-                            activeTab === tab
+                        className={`flex-1 py-2 px-4 rounded text-sm font-bold capitalize transition-all ${activeTab === tab
                                 ? 'bg-[#D4AF37]/10 dark:bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30 shadow-sm'
                                 : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-                        }`}
+                            }`}
                     >
                         {tab === 'active' ? 'Awaiting Payment' : tab}
                     </button>
@@ -183,10 +182,10 @@ export default function MerchantUdhariPage() {
                     <div className="divide-y divide-slate-100 dark:divide-white/5">
                         <AnimatePresence>
                             {requests.map((req) => (
-                                <UdhariRow 
-                                    key={req.id} 
-                                    req={req} 
-                                    activeTab={activeTab} 
+                                <UdhariRow
+                                    key={req.id}
+                                    req={req}
+                                    activeTab={activeTab}
                                     processingId={processingId}
                                     onApproveClick={handleApproveClick}
                                     onDenyClick={(r) => {
@@ -204,7 +203,7 @@ export default function MerchantUdhariPage() {
             <AnimatePresence>
                 {showApproveModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -212,7 +211,7 @@ export default function MerchantUdhariPage() {
                         >
                             {/* Decorative background element */}
                             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-400 to-orange-500" />
-                            
+
                             <button onClick={() => setShowApproveModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 transition-colors">
                                 <X size={24} />
                             </button>
@@ -230,7 +229,7 @@ export default function MerchantUdhariPage() {
                             <div className="space-y-4 mb-8">
                                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-100 dark:border-white/5">
                                     <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                                        By approving this request for <span className="font-black text-gray-900 dark:text-white underline decoration-amber-500/30">₹{(selectedApproveRequest?.amount_paise/100).toFixed(2)}</span>, you agree to reserve the gift card for <span className="font-black text-gray-900 dark:text-white">{selectedApproveRequest?.duration_days} days</span>.
+                                        By approving this request for <span className="font-black text-gray-900 dark:text-white underline decoration-amber-500/30">₹{(selectedApproveRequest?.amount_paise / 100).toFixed(2)}</span>, you agree to reserve the gift card for <span className="font-black text-gray-900 dark:text-white">{selectedApproveRequest?.duration_days} days</span>.
                                     </p>
                                 </div>
 
@@ -266,7 +265,7 @@ export default function MerchantUdhariPage() {
             <AnimatePresence>
                 {showDenyModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -319,7 +318,7 @@ export default function MerchantUdhariPage() {
 
 function UdhariRow({ req, activeTab, processingId, onApproveClick, onDenyClick }) {
     return (
-        <motion.div 
+        <motion.div
             layout
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -337,7 +336,7 @@ function UdhariRow({ req, activeTab, processingId, onApproveClick, onDenyClick }
                             <h3 className="font-bold text-slate-900 dark:text-slate-100">{req.customer?.full_name || 'Unknown User'}</h3>
                             {req.customer?.kyc_status === 'verified' && <ShieldCheck size={14} className="text-green-500" />}
                         </div>
-                                                <p className="text-sm text-slate-500 dark:text-slate-400 group relative">
+                        <p className="text-sm text-slate-500 dark:text-slate-400 group relative">
                             {(() => {
                                 const isOverdue = req.status === 'approved' && req.due_date && new Date() > new Date(req.due_date);
                                 if (isOverdue) return req.customer?.phone || 'No phone';
@@ -351,7 +350,7 @@ function UdhariRow({ req, activeTab, processingId, onApproveClick, onDenyClick }
                                 </span>
                             )}
                         </p>
-                        
+
                         {/* Trust metrics */}
                         <div className="flex flex-wrap gap-2 mt-2">
                             <span className={`text-xs px-2 py-0.5 rounded-full border ${req.customerStats?.accountAgeDays > 30 ? 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20' : 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300 border-slate-200 dark:border-gray-700'}`}>
@@ -369,7 +368,7 @@ function UdhariRow({ req, activeTab, processingId, onApproveClick, onDenyClick }
                         </div>
                     </div>
                 </div>
-                
+
                 {req.customer_note && (
                     <div className="ml-16 bg-slate-50 dark:bg-white/5 p-3 rounded-lg border border-slate-100 dark:border-white/5 text-sm text-slate-600 dark:text-slate-300 italic">
                         "{req.customer_note}"
@@ -395,7 +394,7 @@ function UdhariRow({ req, activeTab, processingId, onApproveClick, onDenyClick }
                 <div className="text-2xl font-extrabold text-transparent bg-gradient-to-r from-[#D4AF37] to-[#c9a227] bg-clip-text">
                     ₹{(req.amount_paise / 100).toFixed(2)}
                 </div>
-                
+
                 {activeTab === 'active' && req.due_date && (
                     <div className="mt-2 text-sm">
                         <span className="text-slate-500 dark:text-slate-400">Due: </span>
@@ -435,11 +434,10 @@ function UdhariRow({ req, activeTab, processingId, onApproveClick, onDenyClick }
                 )}
 
                 {activeTab === 'history' && (
-                    <div className={`rounded-lg p-3 text-center border ${
-                        req.status === 'completed' ? 'bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/30 text-green-700 dark:text-green-400' :
-                        req.status === 'denied' ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400' :
-                        'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400'
-                    }`}>
+                    <div className={`rounded-lg p-3 text-center border ${req.status === 'completed' ? 'bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/30 text-green-700 dark:text-green-400' :
+                            req.status === 'denied' ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400' :
+                                'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400'
+                        }`}>
                         <span className="text-sm font-bold uppercase">{req.status}</span>
                     </div>
                 )}

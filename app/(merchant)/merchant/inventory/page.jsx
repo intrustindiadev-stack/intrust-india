@@ -70,7 +70,7 @@ export default async function InventoryPage({ searchParams }) {
         .select('*')
         .order('created_at', { ascending: false })
         .range((page - 1) * limit, page * limit - 1);
-    
+
     if (merchant) {
         inventoryQuery = inventoryQuery.eq('merchant_id', merchant.id);
     }
@@ -139,8 +139,8 @@ export default async function InventoryPage({ searchParams }) {
 
             <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 mt-6 gap-4">
                 <div>
-                    <h1 className="font-display text-4xl font-bold text-slate-800 dark:text-slate-100 mb-2">My Inventory</h1>
-                    <p className="text-slate-500 dark:text-slate-400 font-medium">Manage your purchased coupons and marketplace listings</p>
+                    <h1 className="font-display text-2xl sm:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-1">My Inventory</h1>
+                    <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 font-medium">Manage your purchased coupons and listings</p>
                 </div>
             </div>
 
@@ -192,7 +192,7 @@ export default async function InventoryPage({ searchParams }) {
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex gap-3 mb-6 bg-black/5 dark:bg-white/5 p-1 rounded-2xl w-fit border border-black/5 dark:border-white/5 shadow-sm">
+            <div className="flex gap-2 mb-6 bg-black/5 dark:bg-white/5 p-1 rounded-2xl w-full sm:w-fit border border-black/5 dark:border-white/5 shadow-sm overflow-x-auto no-scrollbar">
                 <Link
                     href="/merchant/inventory?filter=all"
                     className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all focus:outline-none flex items-center space-x-2 ${filter === 'all'

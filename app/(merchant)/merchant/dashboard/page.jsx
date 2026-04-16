@@ -138,7 +138,7 @@ export default async function MerchantDashboardPage() {
             <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
 
             <MerchantAdBannerCarousel />
-            
+
             <div className="mt-8">
                 <AutoModePromo />
             </div>
@@ -161,37 +161,37 @@ export default async function MerchantDashboardPage() {
                         </div>
                     </div>
                 </div>
-                <div className="flex flex-col gap-4 max-w-sm w-full lg:w-auto">
+                <div className="flex flex-col gap-4 w-full lg:w-auto mt-4 lg:mt-0">
                     <StoreStatusToggle initialStoreData={merchant} />
-                    <div className="flex flex-wrap space-x-0 sm:space-x-4 gap-y-3">
-                    <Link href="/merchant/purchase" className="w-full sm:w-auto px-6 py-3 rounded-xl merchant-glass hover:bg-black/5 dark:hover:bg-white/10 transition-all flex items-center justify-center space-x-2 border border-black/5 dark:border-white/10">
-                        <span className="material-icons-round text-[#D4AF37] text-sm">add_shopping_cart</span>
-                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Purchase Coupons</span>
-                    </Link>
-                    <Link href="/merchant/udhari" className="w-full sm:w-auto px-6 py-3 rounded-xl merchant-glass hover:bg-black/5 dark:hover:bg-white/10 transition-all flex items-center justify-center space-x-2 border border-black/5 dark:border-white/10 relative">
-                        <span className="material-icons-round text-amber-500 text-sm">schedule</span>
-                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Store Credits</span>
-                        {pendingUdhariCount > 0 && (
-                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-bounce">
-                                {pendingUdhariCount}
-                            </span>
-                        )}
-                    </Link>
-                    <Link href="/merchant/inventory" className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#D4AF37] text-[#020617] font-bold hover:bg-opacity-90 transition-all flex items-center justify-center space-x-2 gold-glow">
-                        <span className="material-icons-round text-sm">inventory</span>
-                        <span>View Inventory</span>
-                    </Link>
-                    <Link href="/merchant/shopping/orders" className="w-full sm:w-auto px-6 py-3 rounded-xl merchant-glass hover:bg-black/5 dark:hover:bg-white/10 transition-all flex items-center justify-center space-x-2 border border-black/5 dark:border-white/10 relative">
-                        <span className="material-icons-round text-emerald-500 text-sm">local_shipping</span>
-                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Shopping Orders</span>
-                        {shoppingOrderItems.length > 0 && (
-                            <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                {shoppingOrderItems.length}
-                            </span>
-                        )}
-                    </Link>
+                    <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-3">
+                        <Link href="/merchant/purchase" className="w-full sm:w-auto justify-center px-6 py-3 rounded-xl merchant-glass hover:bg-black/5 dark:hover:bg-white/10 transition-all flex items-center space-x-2 border border-black/5 dark:border-white/10">
+                            <span className="material-icons-round text-[#D4AF37] text-sm">add_shopping_cart</span>
+                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Purchase Coupons</span>
+                        </Link>
+                        <Link href="/merchant/udhari" className="w-full sm:w-auto justify-center px-6 py-3 rounded-xl merchant-glass hover:bg-black/5 dark:hover:bg-white/10 transition-all flex items-center space-x-2 border border-black/5 dark:border-white/10 relative">
+                            <span className="material-icons-round text-amber-500 text-sm">schedule</span>
+                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Store Credits</span>
+                            {pendingUdhariCount > 0 && (
+                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-bounce">
+                                    {pendingUdhariCount}
+                                </span>
+                            )}
+                        </Link>
+                        <Link href="/merchant/inventory" className="w-full sm:w-auto justify-center px-6 py-3 rounded-xl bg-[#D4AF37] text-[#020617] font-bold hover:bg-opacity-90 transition-all flex items-center space-x-2 gold-glow">
+                            <span className="material-icons-round text-sm">inventory</span>
+                            <span>View Inventory</span>
+                        </Link>
+                        <Link href="/merchant/shopping/orders" className="w-full sm:w-auto justify-center px-6 py-3 rounded-xl merchant-glass hover:bg-black/5 dark:hover:bg-white/10 transition-all flex items-center space-x-2 border border-black/5 dark:border-white/10 relative">
+                            <span className="material-icons-round text-emerald-500 text-sm">local_shipping</span>
+                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Shopping Orders</span>
+                            {shoppingOrderItems.length > 0 && (
+                                <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                    {shoppingOrderItems.length}
+                                </span>
+                            )}
+                        </Link>
+                    </div>
                 </div>
-            </div>
             </div>
 
             <StatsCards stats={stats} />

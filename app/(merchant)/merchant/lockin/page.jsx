@@ -111,12 +111,12 @@ export default function MerchantLockinPage() {
     }, 0);
 
     return (
-        <div className="p-6 bg-[#FAFBFC] min-h-screen font-sans selection:bg-blue-100 italic-none">
+        <div className="p-4 md:p-6 bg-[#FAFBFC] min-h-screen font-sans selection:bg-blue-100 italic-none">
             <div className="max-w-6xl mx-auto space-y-10">
                 {/* Refined Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-1.5">
-                        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Growth Portfolio</h1>
+                        <h1 className="text-2xl md:text-4xl font-extrabold text-slate-900 tracking-tight">Growth Portfolio</h1>
                         <p className="text-sm font-semibold text-slate-500 tracking-tight opacity-70">Capital deployed to fuel INTRUST Mart inventory, powered by your business.</p>
                     </div>
 
@@ -146,7 +146,7 @@ export default function MerchantLockinPage() {
 
                 {/* Portfolio Value Summary */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    <div className="lg:col-span-8 bg-slate-950 rounded-[3rem] p-10 md:p-14 text-white shadow-2xl shadow-blue-900/10 relative overflow-hidden group border border-white/5">
+                    <div className="lg:col-span-8 bg-slate-950 rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 lg:p-14 text-white shadow-2xl shadow-blue-900/10 relative overflow-hidden group border border-white/5">
                         {/* High-end Gradient Layers */}
                         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-600/10 blur-[130px] rounded-full -mr-48 -mt-48 transition-all duration-1000 group-hover:bg-blue-600/20" />
                         <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-500/10 blur-[100px] rounded-full -ml-32 -mb-32" />
@@ -203,7 +203,7 @@ export default function MerchantLockinPage() {
                                 </div>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-16 pt-8 border-t border-white/5">
+                            <div className="flex flex-wrap items-center gap-6 md:gap-16 pt-8 border-t border-white/5">
                                 <div className="space-y-2">
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Partnership Capital</p>
                                     <p className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
@@ -309,7 +309,7 @@ export default function MerchantLockinPage() {
                                 <Link
                                     href={`/merchant/lockin/${item.id}`}
                                     key={item.id}
-                                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-9 hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-blue-500/10 transition-all duration-500 group flex flex-col justify-between min-h-[300px] hover:-translate-y-2 relative overflow-hidden"
+                                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-9 hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-blue-500/10 transition-all duration-500 group flex flex-col justify-between min-h-[260px] md:min-h-[300px] hover:-translate-y-2 relative overflow-hidden"
                                 >
                                     <div className="flex justify-between items-start relative z-10">
                                         <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-400 flex items-center justify-center border border-slate-100 dark:border-slate-700 transition-all group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 shadow-sm">
@@ -348,7 +348,7 @@ export default function MerchantLockinPage() {
                             ))}
                         </div>
                     ) : (
-                        <div className="bg-white border border-dashed border-slate-200 rounded-[2.5rem] p-20 text-center flex flex-col items-center">
+                        <div className="bg-white border border-dashed border-slate-200 rounded-[2.5rem] p-10 md:p-20 text-center flex flex-col items-center">
                             <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4">
                                 <AlertCircle size={32} className="text-slate-300" />
                             </div>

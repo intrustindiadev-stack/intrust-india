@@ -47,7 +47,7 @@ export default function AnalyticsCharts({ revenueData, inventoryData, brandData 
                     <span className="material-icons-round text-blue-500 dark:text-blue-400 mr-2">timeline</span>
                     Revenue Trend (Last 30 Days)
                 </h3>
-                <div className="h-[300px] w-full relative z-10 overflow-hidden">
+                <div className="h-[220px] sm:h-[300px] w-full relative z-10 overflow-hidden">
                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                         <AreaChart
                             data={revenueData}
@@ -95,7 +95,7 @@ export default function AnalyticsCharts({ revenueData, inventoryData, brandData 
                     <span className="material-icons-round text-purple-600 dark:text-purple-400 mr-2">pie_chart</span>
                     Inventory Status
                 </h3>
-                <div className="h-[300px] w-full flex flex-col items-center justify-center relative z-10">
+                <div className="h-[220px] sm:h-[300px] w-full flex flex-col items-center justify-center relative z-10">
                     {inventoryData.every(d => d.value === 0) ? (
                         <div className="text-center text-slate-500 flex flex-col items-center">
                             <div className="w-16 h-16 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mb-3">
@@ -144,7 +144,7 @@ export default function AnalyticsCharts({ revenueData, inventoryData, brandData 
                     <span className="material-icons-round text-[#D4AF37] mr-2">star</span>
                     Top Brands by Revenue
                 </h3>
-                <div className="h-[300px] w-full relative z-10">
+                <div className="h-[250px] sm:h-[300px] w-full relative z-10">
                     {brandData.length === 0 ? (
                         <div className="text-center text-slate-500 h-full flex flex-col items-center justify-center">
                             <div className="w-16 h-16 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mb-3">

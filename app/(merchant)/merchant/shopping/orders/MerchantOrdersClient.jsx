@@ -245,12 +245,12 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
 
                             {/* Action Bar */}
                             {!isCancelled && (
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-                                    <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-500/70 font-semibold bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10 w-fit">
-                                        <CheckCircle2 size={12} />
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 sm:pt-2 border-t border-slate-100 sm:border-0 dark:border-white/5">
+                                    <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-500/70 font-semibold bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10 w-fit shrink-0">
+                                        <CheckCircle2 className="shrink-0" size={14} />
                                         <span>Ready for next stage</span>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="grid grid-cols-1 sm:flex sm:items-center gap-3 w-full sm:w-auto">
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -261,7 +261,7 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                                     status_notes: order.status_notes || ''
                                                 });
                                             }}
-                                            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 active:scale-95"
+                                            className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 active:scale-95"
                                         >
                                             <Calendar size={14} /> Schedule
                                         </button>
@@ -288,7 +288,7 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                                     type: 'shopping',
                                                 });
                                             }}
-                                            className="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-gray-300 text-xs font-black transition-all flex items-center gap-2 tracking-wide"
+                                            className="w-full sm:w-auto justify-center px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-gray-300 text-xs font-black transition-all flex items-center gap-2 tracking-wide"
                                         >
                                             <Download size={14} /> PDF INVOICE
                                         </button>
@@ -299,7 +299,7 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                                     onUpdate(order.id, nextStatus);
                                                 }}
                                                 disabled={isUpdating}
-                                                className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 group/btn"
+                                                className="w-full sm:w-auto justify-center px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 group/btn"
                                             >
                                                 {isUpdating ? <RotateCcw size={14} className="animate-spin" /> : <ArrowUpRight size={14} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />}
                                                 MARK AS {STATUS_CONFIG[nextStatus]?.label.toUpperCase()}
@@ -365,6 +365,20 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
         return idx >= 0 && idx < STATUS_FLOW.length - 1 ? STATUS_FLOW[idx + 1] : null;
     };
 
+    // Maps known DB/RPC error strings to merchant-safe messages.
+    const getFulfillmentErrorMessage = (err) => {
+        const msg = (err?.message || "").toLowerCase();
+        if (msg.includes("non_zero_amount") || msg.includes("non zero"))
+            return "Order payout is ₹0 — no payment was credited. Contact support if this is unexpected.";
+        if (msg.includes("settlement_status") || msg.includes("already settled"))
+            return "This order has already been settled and cannot be updated again.";
+        if (msg.includes("insufficient"))
+            return "Could not update order: insufficient data. Please refresh and try again.";
+        if (msg.includes("unauthorized"))
+            return "You are not authorised to update this order.";
+        return "Order update failed. Please try again or contact support.";
+    };
+
     const updateStatus = async (orderId, newStatus, tracking = null, estAt = null, notes = null) => {
         if (newStatus === 'shipped' && !tracking && !shippingModal) {
             setShippingModal({ id: orderId });
@@ -399,8 +413,8 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                 status_notes: ''
             });
         } catch (err) {
-            console.error("Status update failed:", err);
-            toast.error(err.message || "Failed to update order status");
+            console.error("[MerchantOrders] status update failed:", err);
+            toast.error(getFulfillmentErrorMessage(err));
         } finally {
             setUpdatingId(null);
         }
@@ -503,8 +517,8 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                     ))}
                 </div>
 
-                {/* View Toggles */}
-                <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-xl w-fit">
+                {/* Tabs */}
+                <div className="flex space-x-1 mb-8 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-2xl overflow-x-auto hide-scrollbar">
                     <button
                         onClick={() => setActiveView("orders")}
                         className={`px-6 py-2 rounded-lg text-sm font-black tracking-tight transition-all ${activeView === "orders" ? "bg-white dark:bg-black text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
@@ -630,10 +644,12 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                             className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 dark:border-white/10"
                         >
                             <div className="p-8">
-                                <div className="flex items-center justify-between mb-8">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
                                     <div>
-                                        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Order Fulfillment</h2>
-                                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-1">Order #{shippingModal.id.slice(0, 8).toUpperCase()}</p>
+                                        <h4 className="font-bold text-slate-800 dark:text-slate-100 text-[15px]">Order #{shippingModal.id.slice(0, 8)}</h4>
+                                        <p className="text-[11px] text-slate-500 uppercase tracking-widest font-bold mt-0.5 whitespace-nowrap">
+                                            Order Fulfillment
+                                        </p>
                                     </div>
                                     <button onClick={() => setShippingModal(null)} className="p-3 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
                                         <X size={20} className="text-slate-400" />
@@ -691,8 +707,8 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                                         )}
                                         disabled={updatingId === shippingModal.id}
                                         className={`w-full py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 disabled:opacity-50 ${shippingModal.mode === 'schedule'
-                                                ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20'
-                                                : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20'
+                                            ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20'
+                                            : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20'
                                             }`}
                                     >
                                         {updatingId === shippingModal.id ? (

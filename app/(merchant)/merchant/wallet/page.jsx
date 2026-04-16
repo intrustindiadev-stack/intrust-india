@@ -25,7 +25,7 @@ export default function WalletPage() {
     const [displayBalance, setDisplayBalance] = useState(0);
     const [txFilter, setTxFilter] = useState('ALL');
     const animFrameRef = useRef(null);
-    
+
     const balance = wallet?.balance ?? 0;
 
     // Counting animation — runs every time balance is revealed
@@ -134,7 +134,7 @@ export default function WalletPage() {
             }
             return acc;
         }, {});
-        
+
         return Object.values(grouped)
             .map(tx => ({
                 ...tx,
@@ -153,10 +153,10 @@ export default function WalletPage() {
             <div className="fixed top-[-10%] left-[-5%] w-[40%] h-[40%] bg-[#D4AF37]/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
             <div className="fixed bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
 
-            <div className="flex items-center justify-between mt-4 mb-6 sticky top-0 bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-xl z-30 p-4 -mx-4 sm:mx-0 sm:p-0 rounded-b-3xl sm:rounded-none border-b border-black/5 dark:border-white/5 sm:border-none shadow-sm sm:shadow-none">
+            <div className="flex items-center justify-between mt-0 sm:mt-4 mb-6 sticky top-0 bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-xl z-30 p-4 -mx-4 sm:mx-0 sm:p-0 rounded-b-2xl sm:rounded-none border-b border-black/5 dark:border-white/5 sm:border-none shadow-sm sm:shadow-none">
                 <div>
-                    <h1 className="font-display text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">InTrust Wallet</h1>
-                    <p className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-widest font-bold mt-1">Premium Balance Manager</p>
+                    <h1 className="font-display text-xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">InTrust Wallet</h1>
+                    <p className="text-[9px] sm:text-xs text-slate-500 uppercase tracking-widest font-bold mt-0.5">Premium Balance Manager</p>
                 </div>
                 <button
                     onClick={fetchWalletData}
@@ -210,14 +210,14 @@ export default function WalletPage() {
                             </AnimatePresence>
 
                             {loading ? (
-                                <div className="h-12 w-32 bg-white/5 animate-pulse rounded-2xl" />
+                                <div className="h-10 sm:h-12 w-24 sm:w-32 bg-white/5 animate-pulse rounded-2xl" />
                             ) : (
                                 <div className="relative overflow-hidden">
                                     <AnimatePresence mode="wait" initial={false}>
                                         {balanceRevealed ? (
                                             <motion.h2
                                                 key="amount"
-                                                className="text-5xl sm:text-7xl font-sans font-black text-white tracking-tighter"
+                                                className="text-4xl sm:text-7xl font-sans font-black text-white tracking-tighter"
                                                 initial={{ y: 20, opacity: 0, filter: 'blur(4px)' }}
                                                 animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
                                                 exit={{ y: -20, opacity: 0, filter: 'blur(4px)' }}
@@ -228,7 +228,7 @@ export default function WalletPage() {
                                         ) : (
                                             <motion.h2
                                                 key="dots"
-                                                className="text-5xl sm:text-7xl font-sans font-black text-slate-500 tracking-[0.2em] pt-2"
+                                                className="text-4xl sm:text-7xl font-sans font-black text-slate-500 tracking-[0.2em] pt-1 sm:pt-2"
                                                 initial={{ y: 20, opacity: 0, filter: 'blur(4px)' }}
                                                 animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
                                                 exit={{ y: -20, opacity: 0, filter: 'blur(4px)' }}
@@ -247,33 +247,33 @@ export default function WalletPage() {
                                 </span>
                             )}
                         </motion.button>
-                        
+
                         {!loading && (
                             <p className="text-[10px] font-bold text-[#D4AF37]/50 mt-3 tracking-widest uppercase">
                                 {balanceRevealed ? 'Tap to hide securely' : 'Tap to decrypt balance'}
                             </p>
                         )}
                     </div>
-                    
-                    <div className="flex flex-row gap-3 w-full">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                         <button
                             onClick={() => performAction(() => {
-                                setShowTopup(true); 
-                                setShowWithdrawal(false); 
+                                setShowTopup(true);
+                                setShowWithdrawal(false);
                             })}
-                            className="flex-1 px-4 py-4 bg-gradient-to-r from-[#D4AF37] to-[#e6cf73] hover:to-[#D4AF37] text-black font-black uppercase text-[11px] tracking-widest rounded-2xl shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all flex flex-col items-center justify-center gap-1 active:scale-95"
+                            className="w-full px-4 py-4 bg-gradient-to-r from-[#D4AF37] to-[#e6cf73] hover:to-[#D4AF37] text-black font-black uppercase text-[11px] tracking-widest rounded-2xl shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all flex items-center justify-center gap-2 active:scale-95"
                         >
-                            <span className="material-icons-round text-xl mb-1 stroke-2">add_circle_outline</span>
+                            <span className="material-icons-round text-lg stroke-2">add_circle_outline</span>
                             Add Money
                         </button>
                         <button
                             onClick={() => performAction(() => {
-                                setShowWithdrawal(true); 
-                                setShowTopup(false); 
+                                setShowWithdrawal(true);
+                                setShowTopup(false);
                             })}
-                            className="flex-1 px-4 py-4 bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-[#D4AF37]/50 text-white font-black uppercase text-[11px] tracking-widest rounded-2xl shadow-lg transition-all flex flex-col items-center justify-center gap-1 active:scale-95 group/btn"
+                            className="w-full px-4 py-4 bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-[#D4AF37]/50 text-white font-black uppercase text-[11px] tracking-widest rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 group/btn"
                         >
-                            <span className="material-icons-round text-xl mb-1 text-slate-400 group-hover/btn:text-[#D4AF37] transition-colors">account_balance</span>
+                            <span className="material-icons-round text-lg text-slate-400 group-hover/btn:text-[#D4AF37] transition-colors">account_balance</span>
                             Withdraw
                         </button>
                     </div>
@@ -371,11 +371,11 @@ export default function WalletPage() {
                         >
                             {/* Hover accent */}
                             <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            
+
                             <div className={`w-12 h-12 rounded-[1rem] flex items-center justify-center shrink-0 border ${tx.transaction_type === 'CREDIT' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
                                 <span className="material-icons-round text-xl">{tx.transaction_type === 'CREDIT' ? 'south_west' : 'north_east'}</span>
                             </div>
-                            
+
                             <div className="ml-4 flex-1 min-w-0">
                                 <h4 className="text-[13px] font-black text-slate-800 dark:text-slate-100 truncate flex items-center justify-between">
                                     <span className="truncate">{tx.description || tx.reference_type || 'Wallet Transfer'}</span>

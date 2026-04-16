@@ -15,17 +15,17 @@ import { createClient } from "@/lib/supabaseClient";
 
 // ─── Delivery Stage Config ───────────────────────────────────────────────────
 const STAGES = [
-    { key: "pending",   label: "Order Placed",  icon: Clock,        color: "amber"   },
-    { key: "packed",    label: "Packed",         icon: Package,      color: "blue"    },
-    { key: "shipped",   label: "Shipped",        icon: Truck,        color: "violet"  },
-    { key: "delivered", label: "Delivered",      icon: CheckCircle2, color: "emerald" },
+    { key: "pending", label: "Order Placed", icon: Clock, color: "amber" },
+    { key: "packed", label: "Packed", icon: Package, color: "blue" },
+    { key: "shipped", label: "Shipped", icon: Truck, color: "violet" },
+    { key: "delivered", label: "Delivered", icon: CheckCircle2, color: "emerald" },
 ];
 
 const COLOR_MAP = {
-    amber:   { ring: "ring-amber-400",   bg: "bg-amber-400",   text: "text-amber-600 dark:text-amber-400",   light: "bg-amber-500/10",   border: "border-amber-500/20"   },
-    blue:    { ring: "ring-blue-400",    bg: "bg-blue-400",    text: "text-blue-600 dark:text-blue-400",     light: "bg-blue-500/10",    border: "border-blue-500/20"    },
-    violet:  { ring: "ring-violet-400",  bg: "bg-violet-400",  text: "text-violet-600 dark:text-violet-400", light: "bg-violet-500/10",  border: "border-violet-500/20"  },
-    emerald: { ring: "ring-emerald-400", bg: "bg-emerald-400", text: "text-emerald-600 dark:text-emerald-400",light: "bg-emerald-500/10",border: "border-emerald-500/20" },
+    amber: { ring: "ring-amber-400", bg: "bg-amber-400", text: "text-amber-600 dark:text-amber-400", light: "bg-amber-500/10", border: "border-amber-500/20" },
+    blue: { ring: "ring-blue-400", bg: "bg-blue-400", text: "text-blue-600 dark:text-blue-400", light: "bg-blue-500/10", border: "border-blue-500/20" },
+    violet: { ring: "ring-violet-400", bg: "bg-violet-400", text: "text-violet-600 dark:text-violet-400", light: "bg-violet-500/10", border: "border-violet-500/20" },
+    emerald: { ring: "ring-emerald-400", bg: "bg-emerald-400", text: "text-emerald-600 dark:text-emerald-400", light: "bg-emerald-500/10", border: "border-emerald-500/20" },
 };
 
 const STATUS_FLOW = ["pending", "packed", "shipped", "delivered"];
@@ -157,12 +157,26 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
     const [currentStatus, setCurrentStatus] = useState(order.delivery_status);
 
     const orderGrossProfit = (order.items || []).reduce((s, i) => s + (i.gross_profit_paise || 0), 0);
-    const orderCommission  = (order.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0);
-    const orderNetProfit   = (order.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0);
+    const orderCommission = (order.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0);
+    const orderNetProfit = (order.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0);
 
     const currentIdx = STATUS_FLOW.indexOf(currentStatus);
     const nextStatus = currentIdx >= 0 && currentIdx < STATUS_FLOW.length - 1 ? STATUS_FLOW[currentIdx + 1] : null;
     const isCancelled = currentStatus === "cancelled";
+
+    // Maps known DB/RPC error strings to merchant-safe messages.
+    const getFulfillmentErrorMessage = (err) => {
+        const msg = (err?.message || "").toLowerCase();
+        if (msg.includes("non_zero_amount") || msg.includes("non zero"))
+            return "Order payout is ₹0 — no payment was credited. Contact support if this is unexpected.";
+        if (msg.includes("settlement_status") || msg.includes("already settled"))
+            return "This order has already been settled and cannot be updated again.";
+        if (msg.includes("insufficient"))
+            return "Could not update order: insufficient data. Please refresh and try again.";
+        if (msg.includes("unauthorized"))
+            return "You are not authorised to update this order.";
+        return "Order update failed. Please try again or contact support.";
+    };
 
     const handleMarkNext = async () => {
         if (!nextStatus) return;
@@ -181,7 +195,8 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
             setCurrentStatus(nextStatus);
             toast.success(`Order marked as ${nextStatus}!`);
         } catch (err) {
-            toast.error(err.message || "Status update failed");
+            console.error("[MerchantOrderDetail] status update failed:", err);
+            toast.error(getFulfillmentErrorMessage(err));
         } finally {
             setUpdatingStatus(false);
         }
@@ -212,15 +227,15 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
             <div className="flex items-center gap-3">
                 <Link
                     href="/merchant/shopping/orders"
-                    className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-gray-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors active:scale-90"
+                    className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center shrink-0 justify-center text-slate-600 dark:text-gray-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors active:scale-90"
                 >
                     <ChevronLeft size={20} />
                 </Link>
-                <div>
-                    <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                <div className="min-w-0">
+                    <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
                         Order #{order.id.slice(0, 8).toUpperCase()}
                     </h1>
-                    <p className="text-xs text-slate-500 dark:text-gray-400 font-medium">
+                    <p className="text-xs text-slate-500 dark:text-gray-400 font-medium truncate">
                         {order.created_at ? format(new Date(order.created_at), "dd MMM yyyy, HH:mm") : "N/A"} · {order.customer_name || "Guest"}
                     </p>
                 </div>

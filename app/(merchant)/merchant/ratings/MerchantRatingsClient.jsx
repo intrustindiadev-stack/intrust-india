@@ -140,7 +140,7 @@ export default function MerchantRatingsClient({ initialRatings, avgRating, total
                 {/* Summary Card */}
                 <div className="bg-white dark:bg-[#13161f] rounded-2xl p-5 border border-slate-100 dark:border-white/[0.05] shadow-sm">
                     {totalRatings > 0 ? (
-                        <div className="flex gap-6 items-center">
+                        <div className="flex flex-col sm:flex-row gap-6 items-center">
                             <div className="text-center shrink-0">
                                 <p className="text-5xl font-black text-slate-900 dark:text-white">{parseFloat(avgRating).toFixed(1)}</p>
                                 <div className="flex justify-center gap-0.5 mt-1">
@@ -176,11 +176,10 @@ export default function MerchantRatingsClient({ initialRatings, avgRating, total
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}
-                                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                                    filter === f
+                                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${filter === f
                                         ? 'bg-amber-400 text-white border-amber-400 shadow-md shadow-amber-400/30'
                                         : 'bg-white dark:bg-[#13161f] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:border-amber-300'
-                                }`}
+                                    }`}
                             >
                                 {f === 0 ? 'All' : `${f} ★`}
                             </button>

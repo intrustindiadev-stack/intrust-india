@@ -21,11 +21,11 @@ export default function LockinAnalytics({ balances }) {
     const generateProjectionData = () => {
         const data = [];
         const now = new Date();
-        
+
         for (let i = 0; i <= 12; i++) {
             const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
             const label = date.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
-            
+
             let totalPrincipal = 0;
             let projectedValue = 0;
 
@@ -34,9 +34,9 @@ export default function LockinAnalytics({ balances }) {
                     const principal = b.amount_paise / 100;
                     const rate = b.interest_rate / 100;
                     const startDate = new Date(b.start_date);
-                    
+
                     const monthsDiff = (date.getFullYear() - startDate.getFullYear()) * 12 + (date.getMonth() - startDate.getMonth());
-                    
+
                     if (monthsDiff >= 0) {
                         totalPrincipal += principal;
                         const interest = principal * rate * (monthsDiff / 12);
@@ -87,41 +87,41 @@ export default function LockinAnalytics({ balances }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Primary Growth Chart */}
             <div className="lg:col-span-8 space-y-4">
-                <div className="h-[320px] w-full">
+                <div className="h-[220px] md:h-[320px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={chartData}>
                             <defs>
                                 <linearGradient id="colorProjection" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.08}/>
-                                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.08} />
+                                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                            <XAxis 
-                                dataKey="name" 
-                                axisLine={false} 
-                                tickLine={false} 
-                                tick={{fill: '#94a3b8', fontSize: 9, fontWeight: 700}}
+                            <XAxis
+                                dataKey="name"
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 700 }}
                                 dy={10}
                             />
                             <YAxis hide />
                             <Tooltip content={<CustomTooltip />} />
-                            <Area 
-                                type="monotone" 
-                                dataKey="Capital" 
-                                stroke="#10B981" 
+                            <Area
+                                type="monotone"
+                                dataKey="Capital"
+                                stroke="#10B981"
                                 strokeWidth={2.5}
-                                fillOpacity={0.05} 
+                                fillOpacity={0.05}
                                 fill="#10B981"
                                 activeDot={{ r: 4, fill: '#10B981', stroke: '#fff', strokeWidth: 2 }}
                             />
-                            <Area 
-                                type="monotone" 
-                                dataKey="Projection" 
-                                stroke="#3B82F6" 
+                            <Area
+                                type="monotone"
+                                dataKey="Projection"
+                                stroke="#3B82F6"
                                 strokeWidth={3.5}
-                                fillOpacity={1} 
-                                fill="url(#colorProjection)" 
+                                fillOpacity={1}
+                                fill="url(#colorProjection)"
                                 activeDot={{ r: 6, fill: '#3B82F6', stroke: '#fff', strokeWidth: 3 }}
                             />
                         </AreaChart>
@@ -139,7 +139,7 @@ export default function LockinAnalytics({ balances }) {
                                 <ShieldCheck size={14} />
                             </div>
                         </div>
-                        
+
                         <div className="h-32 flex items-center justify-center">
                             {statusData.length > 0 ? (
                                 <ResponsiveContainer width="100%" height="100%">
@@ -163,15 +163,15 @@ export default function LockinAnalytics({ balances }) {
                         </div>
 
                         <div className="space-y-2">
-                             {statusData.map((item, idx) => (
-                                 <div key={idx} className="flex items-center justify-between text-[10px]">
-                                     <div className="flex items-center gap-2">
-                                         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
-                                         <span className="font-bold text-slate-600">{item.name} Contracts</span>
-                                     </div>
-                                     <span className="font-black text-slate-900">{item.value}</span>
-                                 </div>
-                             ))}
+                            {statusData.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-[10px]">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
+                                        <span className="font-bold text-slate-600">{item.name} Contracts</span>
+                                    </div>
+                                    <span className="font-black text-slate-900">{item.value}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
 

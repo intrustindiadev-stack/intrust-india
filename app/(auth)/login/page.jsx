@@ -17,11 +17,12 @@ function OTPBoxInput({ value, onChange, onComplete }) {
         if (char) {
             chars[index] = char;
             const newString = chars.join('').padEnd(6, ' ').slice(0, 6);
-            onChange(newString.replace(/\s+/g, ''));
+            const completed = newString.replace(/\s+/g, '');
+            onChange(completed);
             if (index < 5) {
                 refs.current[index + 1]?.focus();
-            } else if (newString.replace(/\s+/g, '').length === 6) {
-                onComplete && onComplete();
+            } else if (completed.length === 6) {
+                onComplete && onComplete(completed);
             }
         }
     };
@@ -45,7 +46,7 @@ function OTPBoxInput({ value, onChange, onComplete }) {
             onChange(pasted);
             if (pasted.length === 6) {
                 refs.current[5]?.focus();
-                onComplete && onComplete();
+                onComplete && onComplete(pasted);
             } else {
                 refs.current[pasted.length]?.focus();
             }
@@ -167,13 +168,16 @@ function LoginContent() {
         setLoading(false);
     };
 
-    const handleVerifyOTP = async (e) => {
+    const handleVerifyOTP = async (e, otpOverride) => {
         if (e) e.preventDefault();
+        if (loading) return; // block duplicate in-flight submissions
+        const otpValue = otpOverride || otp;
+        if (otpValue.replace(/\s+/g, '').length !== 6) return; // strict 6-digit guard
         setError('');
         setLoading(true);
         try {
             const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
-            const { data, error: verifyError } = await verifyOTP(formattedPhone, otp);
+            const { data, error: verifyError } = await verifyOTP(formattedPhone, otpValue);
             if (verifyError) {
                 setError(verifyError.message || 'Invalid OTP');
                 setLoading(false);
@@ -272,9 +276,9 @@ function LoginContent() {
         setLoading(false);
     };
 
-    // Helper for Verify button to call handleVerifyOTP
-    const callVerifyOTP = () => {
-        handleVerifyOTP({ preventDefault: () => {} });
+    // Helper for auto-verify on OTP completion — receives the completed value directly
+    const callVerifyOTP = (completedOtp) => {
+        handleVerifyOTP({ preventDefault: () => {} }, completedOtp);
     };
 
     return (
@@ -486,7 +490,11 @@ function LoginContent() {
                             Enter the code sent to <span className="font-bold text-[var(--text-primary)]">{emailAddress}</span>
                         </p>
                         
-                        <OTPBoxInput value={otp} onChange={setOtp} onComplete={callVerifyOTP} />
+                        <OTPBoxInput
+                            value={otp}
+                            onChange={(v) => { setError(''); setOtp(v); }}
+                            onComplete={callVerifyOTP}
+                        />
                         
                         <p className="text-xs text-[var(--text-secondary)] text-center mt-3 mb-6">
                             Can't find the email? Check your spam folder.
@@ -571,12 +579,16 @@ function LoginContent() {
                             Sent to <span className="font-semibold text-[var(--text-primary)]">+91 {phone}</span>
                         </p>
                         <div className="text-center mb-6">
-                            <button type="button" onClick={() => setStep('phone')} className="text-[#92BCEA] text-sm hover:underline font-medium">
+                            <button type="button" onClick={() => { setStep('phone'); setError(''); }} className="text-[#92BCEA] text-sm hover:underline font-medium">
                                 Change number
                             </button>
                         </div>
                         
-                        <OTPBoxInput value={otp} onChange={setOtp} onComplete={callVerifyOTP} />
+                        <OTPBoxInput
+                            value={otp}
+                            onChange={(v) => { setError(''); setOtp(v); }}
+                            onComplete={callVerifyOTP}
+                        />
 
                         <div className="mt-6 space-y-4">
                             {error && (
@@ -593,7 +605,7 @@ function LoginContent() {
                             
                             <button
                                 type="button"
-                                onClick={handleSendOTP}
+                                onClick={(e) => { setError(''); handleSendOTP(e); }}
                                 disabled={loading}
                                 className="w-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm transition-colors"
                             >

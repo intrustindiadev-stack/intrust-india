@@ -2,12 +2,12 @@
 
 import { useState, useEffect, use } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { 
-    Clock, 
-    Calendar, 
-    ShieldCheck, 
-    TrendingUp, 
-    CheckCircle, 
+import {
+    Clock,
+    Calendar,
+    ShieldCheck,
+    TrendingUp,
+    CheckCircle,
     Building2,
     CalendarDays,
     Wallet,
@@ -17,14 +17,14 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { 
-    AreaChart, 
-    Area, 
-    XAxis, 
-    YAxis, 
-    CartesianGrid, 
-    Tooltip as RechartsTooltip, 
-    ResponsiveContainer 
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip as RechartsTooltip,
+    ResponsiveContainer
 } from 'recharts';
 
 export default function MerchantLockinDetailPage({ params }) {
@@ -71,7 +71,7 @@ export default function MerchantLockinDetailPage({ params }) {
     const startDate = new Date(lockin.start_date);
     const endDate = new Date(lockin.end_date);
     const today = new Date();
-    
+
     // Calculate progress
     const totalDuration = endDate - startDate;
     const elapsed = Math.min(totalDuration, Math.max(0, today - startDate));
@@ -90,7 +90,7 @@ export default function MerchantLockinDetailPage({ params }) {
 
     const handleClaim = async () => {
         const totalAmount = (lockin.amount_paise + (lockin.accumulated_interest_paise || 0)) / 100;
-        
+
         const confirm = window.confirm(`Request release of ₹${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} to your bank account?`);
         if (!confirm) return;
 
@@ -134,12 +134,12 @@ export default function MerchantLockinDetailPage({ params }) {
     };
 
     return (
-        <div className="p-6 bg-[#FAFBFC] min-h-screen font-sans selection:bg-blue-100">
+        <div className="p-4 md:p-6 bg-[#FAFBFC] min-h-screen font-sans selection:bg-blue-100">
             <div className="max-w-4xl mx-auto space-y-10">
                 {/* Clean Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-4">
-                        <button 
+                        <button
                             onClick={() => router.push('/merchant/lockin')}
                             className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm group"
                         >
@@ -158,18 +158,18 @@ export default function MerchantLockinDetailPage({ params }) {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Primary Stats */}
                     <div className="lg:col-span-12">
-                        <div className="bg-[#0F172A] rounded-[2.5rem] p-10 text-white shadow-2xl shadow-blue-900/20 relative overflow-hidden group">
+                        <div className="bg-[#0F172A] rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 text-white shadow-2xl shadow-blue-900/20 relative overflow-hidden group">
                             {/* High-end Gradient Layers */}
                             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-600/20 blur-[130px] rounded-full -mr-48 -mt-48 transition-all duration-700 group-hover:bg-blue-600/30" />
                             <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/10 blur-[100px] rounded-full -ml-40 -mb-40 transition-all duration-700 group-hover:bg-emerald-500/20" />
-                            
-                            <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-12 items-end">
+
+                            <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12 items-end">
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2 mb-2">
                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                                         <p className="text-[10px] font-black text-blue-200/60 uppercase tracking-[0.2em]">Partnership Capital</p>
                                     </div>
-                                    <h2 className="text-6xl font-black tracking-tighter text-white">
+                                    <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-white">
                                         ₹{(lockin.amount_paise / 100).toLocaleString('en-IN')}
                                     </h2>
                                 </div>
@@ -188,7 +188,7 @@ export default function MerchantLockinDetailPage({ params }) {
                     {/* Progress & Growth Chart */}
                     <div className="lg:col-span-8 space-y-8">
                         {lockin.status === 'matured' && (
-                            <button 
+                            <button
                                 onClick={handleClaim}
                                 className="w-full bg-emerald-600 text-white py-6 rounded-3xl font-bold text-lg shadow-lg shadow-emerald-200 hover:bg-emerald-700 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 animate-pulse-subtle"
                             >
@@ -205,7 +205,7 @@ export default function MerchantLockinDetailPage({ params }) {
                                 </span>
                             </div>
                             <div className="relative h-2.5 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-                                <div 
+                                <div
                                     className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(37,99,235,0.5)] group"
                                     style={{ width: `${progressPercent}%` }}
                                 >
@@ -233,30 +233,30 @@ export default function MerchantLockinDetailPage({ params }) {
                                     <AreaChart data={projectionData}>
                                         <defs>
                                             <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#2563eb" stopOpacity={0.05}/>
-                                                <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                                                <stop offset="5%" stopColor="#2563eb" stopOpacity={0.05} />
+                                                <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                        <XAxis 
-                                            dataKey="month" 
-                                            axisLine={false} 
-                                            tickLine={false} 
-                                            tick={{fontSize: 9, fill: '#94a3b8', fontWeight: 600}}
+                                        <XAxis
+                                            dataKey="month"
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
                                             dy={10}
                                         />
                                         <YAxis hide />
-                                        <RechartsTooltip 
-                                            contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)'}}
+                                        <RechartsTooltip
+                                            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}
                                             formatter={(value) => [`₹${value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, 'Projected Value']}
                                         />
-                                        <Area 
-                                            type="monotone" 
-                                            dataKey="value" 
-                                            stroke="#2563eb" 
+                                        <Area
+                                            type="monotone"
+                                            dataKey="value"
+                                            stroke="#2563eb"
                                             strokeWidth={3}
-                                            fillOpacity={1} 
-                                            fill="url(#colorValue)" 
+                                            fillOpacity={1}
+                                            fill="url(#colorValue)"
                                             activeDot={{ r: 6, fill: '#2563eb', stroke: '#fff', strokeWidth: 3 }}
                                         />
                                     </AreaChart>
@@ -291,44 +291,43 @@ export default function MerchantLockinDetailPage({ params }) {
                         </div>
 
                         <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-8">
-                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Partnership Lifecycle</h4>
-                             <div className="relative pl-8 space-y-8">
-                                 {/* Vertical Line */}
-                                 <div className="absolute left-4 top-0 bottom-0 w-px bg-slate-100" />
-                                 
-                                 {[
-                                     { label: 'Initiated', date: startDate, active: true },
-                                     { label: 'Growth Active', date: 'In Progress', active: progressPercent > 0 && progressPercent < 100 },
-                                     { label: 'Fund Unlocked', date: endDate, active: progressPercent >= 100 },
-                                     { label: 'Disbursement', date: lockin.status === 'paid_out' ? 'Completed' : 'Pending', active: lockin.status === 'paid_out' }
-                                 ].map((step, idx) => (
-                                     <div key={idx} className="relative flex items-start gap-4">
-                                         <div className={`absolute -left-5 w-2.5 h-2.5 rounded-full border-2 border-white ring-4 transition-all duration-500 ${
-                                             step.active ? 'bg-blue-600 ring-blue-50 scale-125' : 'bg-slate-200 ring-slate-50'
-                                         }`} />
-                                         <div className="space-y-0.5">
-                                             <p className={`text-[11px] font-black uppercase tracking-widest ${step.active ? 'text-slate-900' : 'text-slate-400'}`}>
-                                                 {step.label}
-                                             </p>
-                                             <p className="text-[10px] font-bold text-slate-400">
-                                                 {typeof step.date === 'string' ? step.date : step.date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                             </p>
-                                         </div>
-                                     </div>
-                                 ))}
-                             </div>
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Partnership Lifecycle</h4>
+                            <div className="relative pl-8 space-y-8">
+                                {/* Vertical Line */}
+                                <div className="absolute left-4 top-0 bottom-0 w-px bg-slate-100" />
+
+                                {[
+                                    { label: 'Initiated', date: startDate, active: true },
+                                    { label: 'Growth Active', date: 'In Progress', active: progressPercent > 0 && progressPercent < 100 },
+                                    { label: 'Fund Unlocked', date: endDate, active: progressPercent >= 100 },
+                                    { label: 'Disbursement', date: lockin.status === 'paid_out' ? 'Completed' : 'Pending', active: lockin.status === 'paid_out' }
+                                ].map((step, idx) => (
+                                    <div key={idx} className="relative flex items-start gap-4">
+                                        <div className={`absolute -left-5 w-2.5 h-2.5 rounded-full border-2 border-white ring-4 transition-all duration-500 ${step.active ? 'bg-blue-600 ring-blue-50 scale-125' : 'bg-slate-200 ring-slate-50'
+                                            }`} />
+                                        <div className="space-y-0.5">
+                                            <p className={`text-[11px] font-black uppercase tracking-widest ${step.active ? 'text-slate-900' : 'text-slate-400'}`}>
+                                                {step.label}
+                                            </p>
+                                            <p className="text-[10px] font-bold text-slate-400">
+                                                {typeof step.date === 'string' ? step.date : step.date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
 
                         <div className="p-6 rounded-3xl bg-amber-50 border border-amber-100">
-                             <div className="flex items-start gap-3">
-                                 <Info size={16} className="text-amber-600 mt-0.5" />
-                                 <div className="space-y-1">
-                                     <h5 className="text-[10px] font-black text-amber-900 uppercase tracking-widest leading-none">Reward Policy</h5>
-                                     <p className="text-[10px] text-amber-700 font-medium leading-relaxed">
-                                         Retention bonuses are calculated based on the net term. Manual pre-mature release is not available to ensure fund integrity.
-                                     </p>
-                                 </div>
-                             </div>
+                            <div className="flex items-start gap-3">
+                                <Info size={16} className="text-amber-600 mt-0.5" />
+                                <div className="space-y-1">
+                                    <h5 className="text-[10px] font-black text-amber-900 uppercase tracking-widest leading-none">Reward Policy</h5>
+                                    <p className="text-[10px] text-amber-700 font-medium leading-relaxed">
+                                        Retention bonuses are calculated based on the net term. Manual pre-mature release is not available to ensure fund integrity.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
