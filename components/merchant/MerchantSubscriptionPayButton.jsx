@@ -48,7 +48,9 @@ export default function MerchantSubscriptionPayButton({
                     clientTxnId,
                     payerName,
                     payerEmail,
-                    payerMobile,
+                    payerMobile: payerMobile
+                        ? String(payerMobile).replace(/\D/g, '').replace(/^91/, '').slice(-10)
+                        : '9999999999',
                     udf1: 'MERCHANT_SUBSCRIPTION',
                     udf2: merchantId,
                     udf3: selectedPlan.key,
@@ -96,14 +98,14 @@ export default function MerchantSubscriptionPayButton({
     const headingText = isRenewal && !isExpired
         ? 'Renew Your Subscription'
         : isExpired
-        ? 'Subscription Expired'
-        : 'Activate Your Store';
+            ? 'Subscription Expired'
+            : 'Activate Your Store';
 
     const subtitleText = isExpired
         ? `${businessName} — Your subscription expired on ${expiryFormatted}. Renew now to restore access.`
         : isRenewal
-        ? `${businessName} — Your subscription expires on ${expiryFormatted}. Renew now to keep your store live.`
-        : `${businessName} — Complete platform access fee to take your store live.`;
+            ? `${businessName} — Your subscription expires on ${expiryFormatted}. Renew now to keep your store live.`
+            : `${businessName} — Complete platform access fee to take your store live.`;
 
     return (
         <div className="w-full max-w-lg">
