@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Extend Vercel function timeout to 60s for heavy RPC
 
 /**
  * GET /api/cron/order-timeout
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request) {
     try {
         const supabaseAdmin = createAdminClient();
-        
+
         // Call the RPC
         const { data, error } = await supabaseAdmin.rpc('admin_takeover_stale_orders');
 

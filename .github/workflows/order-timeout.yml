@@ -11,5 +11,7 @@ jobs:
     steps:
       - name: Trigger Order Timeout API
         run: |
-          curl -X GET "https://intrustindia.com/api/cron/order-timeout" \
-          -H "Accept: application/json"
+          curl -f -X GET "https://intrustindia.com/api/cron/order-timeout" \
+          -H "Accept: application/json" \
+          --max-time 120 \
+          --connect-timeout 10
