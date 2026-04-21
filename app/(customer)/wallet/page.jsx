@@ -100,7 +100,7 @@ export default function CustomerWalletPage() {
 
             // Fetch Transactions only if wallet actually exists/created to prevent 403 on foreign key
             let mergedTxs = [];
-            
+
             if (hasWallet) {
                 // Fetch successful wallet adjustments
                 const { data: successfulTxs, error: txError } = await supabase
@@ -114,17 +114,17 @@ export default function CustomerWalletPage() {
                     mergedTxs = [...successfulTxs];
                 }
             }
-            
+
             // Also fetch failed / pending SabPaisa topups specifically
             const { data: failedTopups, error: failedError } = await supabase
                 .from('transactions')
                 .select('client_txn_id, created_at, amount, status, payment_mode')
                 .eq('user_id', user.id)
                 .eq('udf1', 'WALLET_TOPUP')
-                .neq('status', 'SUCCESS')
+                .neq('status', 'gateway_success')
                 .order('created_at', { ascending: false })
                 .limit(20);
-                
+
             if (!failedError && failedTopups) {
                 const mappedFailed = failedTopups.map(t => ({
                     id: t.client_txn_id,
@@ -136,11 +136,11 @@ export default function CustomerWalletPage() {
                 }));
                 mergedTxs = [...mergedTxs, ...mappedFailed];
             }
-            
+
             // Sort by Date DESC and slice top 20
             mergedTxs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             setTransactions(mergedTxs.slice(0, 20));
-            
+
         } catch (error) {
             console.error('Error fetching wallet data:', error);
         } finally {
@@ -187,8 +187,8 @@ export default function CustomerWalletPage() {
                                     Total Balance
                                 </span>
                                 <div className="mt-2 flex items-baseline gap-2">
-                                    <BalanceReveal 
-                                        value={`₹${balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`} 
+                                    <BalanceReveal
+                                        value={`₹${balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
                                         className="text-5xl font-black tabular-nums"
                                     />
                                 </div>
@@ -255,17 +255,16 @@ export default function CustomerWalletPage() {
                                 {transactions.map((tx) => (
                                     <div key={tx.id} className="p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
                                         <div className="flex items-center gap-4">
-                                            <div className={`p-3 rounded-2xl ${
-                                                ['FAILED', 'ERROR', 'ABORTED'].includes(tx.status)
-                                                    ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
-                                                    : tx.status === 'INITIATED'
-                                                        ? 'text-gray-500 bg-gray-50 dark:bg-gray-800'
-                                                        : getIconColor(tx.type)
-                                            }`}>
+                                            <div className={`p-3 rounded-2xl ${['failed', 'ERROR', 'aborted'].includes(tx.status)
+                                                ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
+                                                : tx.status === 'initiated'
+                                                    ? 'text-gray-500 bg-gray-50 dark:bg-gray-800'
+                                                    : getIconColor(tx.type)
+                                                }`}>
                                                 {tx.type === 'DEBIT' ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
                                             </div>
                                             <div>
-                                                <p className={`font-bold text-sm ${['FAILED', 'ERROR', 'ABORTED'].includes(tx.status) ? 'text-gray-500 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'}`}>
+                                                <p className={`font-bold text-sm ${['failed', 'ERROR', 'aborted'].includes(tx.status) ? 'text-gray-500 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'}`}>
                                                     {tx.description || tx.type}
                                                 </p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -274,24 +273,22 @@ export default function CustomerWalletPage() {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className={`font-black text-sm ${
-                                                ['FAILED', 'ERROR', 'ABORTED'].includes(tx.status)
-                                                    ? 'text-gray-400 line-through'
-                                                    : tx.status === 'INITIATED'
-                                                        ? 'text-gray-500'
-                                                        : tx.type === 'DEBIT'
-                                                            ? 'text-gray-900 dark:text-white'
-                                                            : 'text-green-500'
-                                            }`}>
-                                                {tx.type === 'DEBIT' && !['FAILED', 'ERROR', 'ABORTED'].includes(tx.status) ? '-' : '+'} ₹{(tx.amount_paise / 100).toFixed(2)}
+                                            <p className={`font-black text-sm ${['failed', 'ERROR', 'aborted'].includes(tx.status)
+                                                ? 'text-gray-400 line-through'
+                                                : tx.status === 'initiated'
+                                                    ? 'text-gray-500'
+                                                    : tx.type === 'DEBIT'
+                                                        ? 'text-gray-900 dark:text-white'
+                                                        : 'text-green-500'
+                                                }`}>
+                                                {tx.type === 'DEBIT' && !['failed', 'ERROR', 'aborted'].includes(tx.status) ? '-' : '+'} ₹{(tx.amount_paise / 100).toFixed(2)}
                                             </p>
-                                            <p className={`text-[10px] mt-0.5 uppercase font-bold tracking-widest ${
-                                                ['FAILED', 'ERROR', 'ABORTED'].includes(tx.status)
-                                                    ? 'text-red-500'
-                                                    : tx.status === 'INITIATED'
-                                                        ? 'text-amber-500'
-                                                        : 'text-gray-400'
-                                            }`}>
+                                            <p className={`text-[10px] mt-0.5 uppercase font-bold tracking-widest ${['failed', 'ERROR', 'aborted'].includes(tx.status)
+                                                ? 'text-red-500'
+                                                : tx.status === 'initiated'
+                                                    ? 'text-amber-500'
+                                                    : 'text-gray-400'
+                                                }`}>
                                                 {tx.status || 'COMPLETED'}
                                             </p>
                                         </div>

@@ -194,7 +194,7 @@ export async function POST(request) {
 
         // Override client amount with server-derived canonical amount for gateway encryption
         orderData.amount = (canonicalAmountPaise / 100).toFixed(2);
-        
+
         // ── Persist transaction record ──
         const { error: insertError } = await supabaseAdmin
             .from('transactions')
@@ -203,7 +203,7 @@ export async function POST(request) {
                 user_id: user.id,
                 amount: Number(orderData.amount),
                 expected_amount_paise: canonicalAmountPaise, // Track for callback validation
-                status: 'INITIATED',
+                status: 'initiated',
                 udf1: udf1,
                 udf2: udf2,
                 udf3: udf3,

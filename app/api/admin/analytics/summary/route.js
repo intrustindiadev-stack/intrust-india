@@ -59,9 +59,9 @@ export async function GET() {
             { name: 'Merchants', value: mCount || 1 },
         ];
 
-        const successTx = transactions.filter(t => t.status === 'completed' || t.status === 'SUCCESS').length;
-        const failedTx = transactions.filter(t => ['failed', 'FAILED', 'ABORTED'].includes(t.status)).length;
-        const pendingTx = transactions.filter(t => !['completed', 'SUCCESS', 'failed', 'FAILED', 'ABORTED'].includes(t.status)).length;
+        const successTx = transactions.filter(t => t.status === 'completed' || t.status === 'gateway_success').length;
+        const failedTx = transactions.filter(t => ['failed', 'aborted'].includes(t.status)).length;
+        const pendingTx = transactions.filter(t => !['completed', 'gateway_success', 'failed', 'aborted'].includes(t.status)).length;
         const orderStatusData = [
             { name: 'Success', value: successTx || 1 },
             { name: 'Failed', value: failedTx || 1 },

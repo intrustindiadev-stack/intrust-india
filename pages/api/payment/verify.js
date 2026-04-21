@@ -62,7 +62,7 @@ export default async function handler(req, res) {
         // Update DB if status changed and is more definitive
         if (statusResponse.internalStatus && statusResponse.internalStatus !== 'ERROR') {
             const newStatus = statusResponse.internalStatus;
-            if (transaction.status !== newStatus && transaction.status !== 'SUCCESS') {
+            if (transaction.status !== newStatus && transaction.status !== 'gateway_success') {
                 // Only update to a more final state (don't overwrite SUCCESS)
                 await updateTransaction(clientTxnId, {
                     status: newStatus,

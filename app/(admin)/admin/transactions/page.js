@@ -110,8 +110,8 @@ export default async function TransactionsPage({ searchParams }) {
     rawTxns.forEach(t => {
         const profile = profileMap[t.user_id] || {};
         const status = (t.status || '').toUpperCase();
-        const isSuccess = status === 'SUCCESS' || status === 'COMPLETED';
-        const isFail = status === 'FAILED' || status === 'FAILURE';
+        const isSuccess = status === 'SUCCESS' || status === 'COMPLETED' || status === 'GATEWAY_SUCCESS';
+        const isFail = status === 'FAILED' || status === 'FAILURE' || status === 'ABORTED';
 
         unified.push({
             id: t.client_txn_id || t.id,
@@ -249,12 +249,12 @@ export default async function TransactionsPage({ searchParams }) {
     // ──────────────── STATS (from full dataset before pagination) ────────────────
     const totalCredits = filtered.filter(t => t.type === 'Credit' && t.status === 'Success').reduce((s, t) => s + t.amountRaw, 0);
     const totalDebits = filtered.filter(t => t.type === 'Debit' && t.status === 'Success').reduce((s, t) => s + t.amountRaw, 0);
-    
+
     // Today's Revenue Calculation
     const todayStr = new Date().toISOString().split('T')[0];
-    const todaysRevenue = filtered.filter(t => 
-        t.type === 'Credit' && 
-        t.status === 'Success' && 
+    const todaysRevenue = filtered.filter(t =>
+        t.type === 'Credit' &&
+        t.status === 'Success' &&
         (t.dateRaw || '').startsWith(todayStr)
     ).reduce((s, t) => s + t.amountRaw, 0);
 
@@ -367,11 +367,10 @@ export default async function TransactionsPage({ searchParams }) {
                             <Link
                                 key={`source-${s}`}
                                 href={buildUrl({ source: s, page: 1 })}
-                                className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider border transition-all whitespace-nowrap ${
-                                    sourceFilter === s
-                                    ? (s === 'Wallet Adjustment' ? 'bg-violet-700 text-white border-violet-700 shadow-md' : 'bg-slate-900 text-white border-slate-900 shadow-md')
-                                    : (s === 'Wallet Adjustment' ? 'bg-violet-50 text-violet-700 border-violet-100 hover:border-violet-400' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800')
-                                }`}
+                                className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider border transition-all whitespace-nowrap ${sourceFilter === s
+                                        ? (s === 'Wallet Adjustment' ? 'bg-violet-700 text-white border-violet-700 shadow-md' : 'bg-slate-900 text-white border-slate-900 shadow-md')
+                                        : (s === 'Wallet Adjustment' ? 'bg-violet-50 text-violet-700 border-violet-100 hover:border-violet-400' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800')
+                                    }`}
                             >
                                 {s || 'All Sources'}
                             </Link>

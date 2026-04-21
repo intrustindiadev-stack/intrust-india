@@ -113,7 +113,7 @@ export default async function handler(req, res) {
                     user_id: user.id, // Critical: Include user_id
                     client_txn_id: clientTxnId,
                     amount: amount,
-                    status: 'INITIATED',
+                    status: 'initiated',
                     payer_name: payerName || user.user_metadata?.full_name || 'User',
                     payer_email: payerEmail || user.email,
                     payer_mobile: cleanMobile,

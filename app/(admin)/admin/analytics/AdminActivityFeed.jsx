@@ -25,11 +25,11 @@ export default function AdminActivityFeed({ initialActivity }) {
             // `amount` is stored in rupees (e.g. "500.00")
             amount: `₹${Number(tx.amount || 0).toLocaleString('en-IN')}`,
             status:
-                tx.status === 'completed' || tx.status === 'SUCCESS'
+                tx.status === 'completed' || tx.status === 'gateway_success'
                     ? 'success'
-                    : tx.status === 'failed' || tx.status === 'FAILED' || tx.status === 'ABORTED'
-                    ? 'error'
-                    : 'info',
+                    : tx.status === 'failed' || tx.status === 'aborted'
+                        ? 'error'
+                        : 'info',
         };
         setFeed(prev => [item, ...prev].slice(0, 20));
         setPulse(true);
@@ -89,8 +89,8 @@ export default function AdminActivityFeed({ initialActivity }) {
                                 ${activity.status === 'error'
                                     ? 'bg-red-50 text-red-600 border-2 border-red-100'
                                     : activity.status === 'success'
-                                    ? 'bg-emerald-50 text-emerald-600 border-2 border-emerald-100'
-                                    : 'bg-blue-50 text-blue-600 border-2 border-blue-100'
+                                        ? 'bg-emerald-50 text-emerald-600 border-2 border-emerald-100'
+                                        : 'bg-blue-50 text-blue-600 border-2 border-blue-100'
                                 }`}
                         >
                             {(activity.user || '?').charAt(0).toUpperCase()}
@@ -110,9 +110,8 @@ export default function AdminActivityFeed({ initialActivity }) {
                                 </p>
                             )}
                             {activity.amount && (
-                                <p className={`text-sm font-extrabold mt-1.5 ${
-                                    activity.status === 'error' ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'
-                                }`}>
+                                <p className={`text-sm font-extrabold mt-1.5 ${activity.status === 'error' ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'
+                                    }`}>
                                     {activity.amount}
                                 </p>
                             )}

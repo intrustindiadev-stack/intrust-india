@@ -14,7 +14,7 @@ export default async function handler(req, res) {
         }
 
         // Check if eligible for refund (e.g., must be SUCCESS)
-        if (transaction.status !== 'SUCCESS') {
+        if (transaction.status !== 'gateway_success') {
             return res.status(400).json({ error: 'Transaction not eligible for refund' });
         }
 

@@ -113,7 +113,7 @@ const SuccessPage = () => {
                 // Synthetic wallet txns (direct balance deduction)
                 if (txnId.startsWith('WALLET_')) {
                     setTransaction({
-                        status: 'SUCCESS',
+                        status: 'gateway_success',
                         amount: router.query.amount || 0,
                         payment_mode: 'Intrust Wallet',
                         udf1: router.query.type || 'GIFT_CARD'
@@ -147,10 +147,10 @@ const SuccessPage = () => {
                 }
 
                 const tx = data.transaction;
-                if (tx.status === 'SUCCESS') {
+                if (tx.status === 'gateway_success') {
                     setTransaction(tx);
                     setState('verified');
-                } else if (tx.status === 'FAILED' || tx.status === 'ERROR') {
+                } else if (tx.status === 'failed' || tx.status === 'ERROR') {
                     router.replace(`/payment/failure?txnId=${txnId}`);
                 } else {
                     router.replace(`/payment/processing?txnId=${txnId}`);

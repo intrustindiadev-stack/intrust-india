@@ -142,8 +142,8 @@ export default async function AnalyticsPage() {
 
     // 2. Transaction Status Distribution (from transactions table)
     const successTx = transactions.filter(t => COMPLETED_STATUSES.includes(t.status)).length;
-    const failedTx = transactions.filter(t => t.status === 'failed' || t.status === 'FAILED' || t.status === 'ABORTED').length;
-    const pendingTx = transactions.filter(t => ![...COMPLETED_STATUSES, 'failed', 'FAILED', 'ABORTED'].includes(t.status)).length;
+    const failedTx = transactions.filter(t => t.status === 'failed' || t.status === 'aborted').length;
+    const pendingTx = transactions.filter(t => ![...COMPLETED_STATUSES, 'failed', 'aborted'].includes(t.status)).length;
     const orderStatusData = [
         { name: 'Success', value: successTx || 1 },
         { name: 'Failed', value: failedTx || 1 },
@@ -173,7 +173,7 @@ export default async function AnalyticsPage() {
             time: new Date(tx.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
             // amount stored in paise now
             amount: `₹${(getAmountPaise(tx) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-            status: COMPLETED_STATUSES.includes(tx.status) ? 'success' : (tx.status === 'failed' || tx.status === 'FAILED') ? 'error' : 'info'
+            status: COMPLETED_STATUSES.includes(tx.status) ? 'success' : tx.status === 'failed' ? 'error' : 'info'
         };
     });
 

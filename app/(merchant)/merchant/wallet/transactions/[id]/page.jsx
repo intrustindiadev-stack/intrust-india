@@ -70,7 +70,7 @@ export default function TransactionDetailPage() {
                         .select('*')
                         .eq('id', actualId)
                         .single();
-                    
+
                     if (baseErr) throw baseErr;
 
                     // Fetch all txs from that exact cart checkout (same timestamp)
@@ -79,7 +79,7 @@ export default function TransactionDetailPage() {
                         .select('*, coupons(*)')
                         .eq('merchant_id', baseTx.merchant_id)
                         .eq('created_at', baseTx.created_at);
-                    
+
                     if (cartErr) throw cartErr;
 
                     // Fetch product titles for bulk items
@@ -90,11 +90,11 @@ export default function TransactionDetailPage() {
                             .from('shopping_products')
                             .select('id, title')
                             .in('id', productIds);
-                        
+
                         if (prodErr) console.error("Error fetching shopping products:", prodErr);
-                        
+
                         if (products) {
-                            productsMap = products.reduce((acc, p) => ({...acc, [p.id]: p}), {});
+                            productsMap = products.reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
                         }
                     }
 
@@ -112,8 +112,8 @@ export default function TransactionDetailPage() {
                         id: id,
                         amount_paise: totalPaise,
                         // Use original description if it contains "Gateway Checkout", otherwise use bulk label
-                        description: baseTx.description?.includes('Gateway Checkout') 
-                            ? baseTx.description 
+                        description: baseTx.description?.includes('Gateway Checkout')
+                            ? baseTx.description
                             : 'Wholesale Bulk Purchase (Cart Checkout)',
                         cart_items: cartTxs
                     };
@@ -163,7 +163,7 @@ export default function TransactionDetailPage() {
 
     const handleDownloadInvoice = () => {
         if (!transaction) return;
-        
+
         try {
             const isCart = transaction.cart_items && transaction.cart_items.length > 0;
             let formattedItems = [];
@@ -261,7 +261,7 @@ export default function TransactionDetailPage() {
     const status = (source === 'payout' ? transaction.status : (transaction.status || 'COMPLETED')).toUpperCase();
 
     const getStatusTheme = (s) => {
-        if (s === 'COMPLETED' || s === 'SUCCESS' || s === 'APPROVED' || s === 'RELEASED') return {
+        if (s === 'COMPLETED' || s === 'SUCCESS' || s === 'GATEWAY_SUCCESS' || s === 'APPROVED' || s === 'RELEASED') return {
             bg: 'bg-emerald-500',
             text: 'text-emerald-500',
             icon: CheckCircle2,
@@ -450,7 +450,7 @@ export default function TransactionDetailPage() {
                                     const gstAmount = (item.metadata?.gst_amount_paise || 0) / 100;
                                     const title = item.product_details?.title || 'Unknown Product';
                                     const brand = item.product_details?.brand || 'Platform';
-                                    
+
                                     return (
                                         <div key={item.id} className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
                                             <div className="flex items-center gap-4">

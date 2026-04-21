@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     amount DECIMAL(12, 2) NOT NULL,
     paid_amount DECIMAL(12, 2),
     currency TEXT DEFAULT 'INR',
-    status TEXT NOT NULL DEFAULT 'INITIATED', -- INITIATED, SUCCESS, FAILED, ABORTED, PENDING
+    status TEXT NOT NULL DEFAULT 'initiated', -- initiated, gateway_success, failed, aborted, pending
     status_code TEXT,
     sabpaisa_message TEXT,
     bank_message TEXT,

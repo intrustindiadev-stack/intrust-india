@@ -99,7 +99,7 @@ export async function POST(request) {
 
         // 3. Get Existing Transaction to Check Type
         const existingTxn = await getTransactionByClientTxnId(clientTxnId);
-        const wasAlreadySuccess = existingTxn && existingTxn.status === 'SUCCESS';
+        const wasAlreadySuccess = existingTxn && existingTxn.status === 'gateway_success';
 
         // Critical guard: if no DB record exists, log it prominently.
         // This happens when: (a) initiate failed before INSERT, (b) service key misconfigured,
@@ -119,7 +119,7 @@ export async function POST(request) {
         const paidAmountPaise = Math.round(parseFloat(amount) * 100);
         const expectedAmountPaise = existingTxn?.expected_amount_paise ? Number(existingTxn.expected_amount_paise) : null;
 
-        if (existingTxn && internalStatus === 'SUCCESS' && expectedAmountPaise !== null) {
+        if (existingTxn && internalStatus === 'gateway_success' && expectedAmountPaise !== null) {
             // Allow 0 paise tolerance - must be exact match for fixed-price flows
             if (paidAmountPaise !== expectedAmountPaise) {
                 console.error(
@@ -128,13 +128,13 @@ export async function POST(request) {
                     `Fulfillment BLOCKED to prevent loss/tampering.`
                 );
                 fulfillmentFailed = true;
-                internalStatus = 'FAILED';
+                internalStatus = 'failed';
                 result.transMsg = `Security Alert: Amount mismatch (Exp: ${expectedAmountPaise}, Rec: ${paidAmountPaise}). Manual verification required. Contact support.`;
             }
         }
 
         // 5. Handle Wallet Credit for WALLET_TOPUP safely
-        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'WALLET_TOPUP' && !wasAlreadySuccess) {
+        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'WALLET_TOPUP' && !wasAlreadySuccess) {
             try {
                 await CustomerWalletService.creditWallet(
                     existingTxn.user_id,
@@ -147,13 +147,13 @@ export async function POST(request) {
             } catch (walletError) {
                 console.error('[Callback] Failed to credit wallet:', walletError.message);
                 fulfillmentFailed = true;
-                internalStatus = 'FAILED';
+                internalStatus = 'failed';
                 result.transMsg = 'Wallet credit failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
         // 5b. Handle Merchant Wallet Credit for MERCHANT_TOPUP safely
-        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'MERCHANT_TOPUP' && !wasAlreadySuccess) {
+        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'MERCHANT_TOPUP' && !wasAlreadySuccess) {
             try {
                 const supabaseAdmin = createClient(
                     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -225,14 +225,14 @@ export async function POST(request) {
                     } else {
                         console.error('[Callback] Merchant not found for topup:', existingTxn.user_id);
                         fulfillmentFailed = true;
-                        internalStatus = 'FAILED';
+                        internalStatus = 'failed';
                         result.transMsg = 'Merchant account not found. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
                     }
                 }
             } catch (walletError) {
                 console.error('[Callback] Failed to credit merchant wallet:', walletError.message);
                 fulfillmentFailed = true;
-                internalStatus = 'FAILED';
+                internalStatus = 'failed';
                 result.transMsg = 'Merchant wallet credit error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
@@ -240,7 +240,7 @@ export async function POST(request) {
         // 5c. Handle Udhari Payment Settlement via SabPaisa (gateway-funded)
         // NOTE: Uses settle_udhari_gateway_payment — NOT settle_udhari_payment.
         // The gateway already collected funds, so we must NOT debit the customer wallet.
-        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'UDHARI_PAYMENT' && !wasAlreadySuccess) {
+        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'UDHARI_PAYMENT' && !wasAlreadySuccess) {
             try {
                 const supabaseAdmin = createClient(
                     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -284,7 +284,7 @@ export async function POST(request) {
                     if (rpcError) {
                         console.error('[Callback] Udhari gateway settlement RPC error:', rpcError.message);
                         fulfillmentFailed = true;
-                        internalStatus = 'FAILED';
+                        internalStatus = 'failed';
                         result.transMsg = 'Udhari settlement failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
                     } else {
                         console.log(`[Callback] Udhari settled (gateway) for txn ${clientTxnId}`, rpcResult);
@@ -311,13 +311,13 @@ export async function POST(request) {
             } catch (udhariError) {
                 console.error('[Callback] Udhari payment processing error:', udhariError.message);
                 fulfillmentFailed = true;
-                internalStatus = 'FAILED';
+                internalStatus = 'failed';
                 result.transMsg = 'Udhari processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
         // 5d. Handle Cart Checkout
-        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'CART_CHECKOUT' && !wasAlreadySuccess) {
+        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'CART_CHECKOUT' && !wasAlreadySuccess) {
             try {
                 const supabaseAdmin = createClient(
                     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -340,7 +340,7 @@ export async function POST(request) {
                     const detailedError = rpcError?.message || rpcResult?.message || 'Unknown fulfillment error';
                     console.error('[Callback] Cart checkout finalize error:', detailedError);
                     fulfillmentFailed = true;
-                    internalStatus = 'FAILED';
+                    internalStatus = 'failed';
                     result.transMsg = `Cart order fulfillment failed: ${detailedError}. Payment cannot be fulfilled automatically. Manual verification required. Contact support.`;
                 } else {
                     console.log(`[Callback] Cart checkout fulfilled for txn ${clientTxnId}`);
@@ -381,13 +381,13 @@ export async function POST(request) {
             } catch (cartError) {
                 console.error('[Callback] Cart checkout processing error:', cartError.message);
                 fulfillmentFailed = true;
-                internalStatus = 'FAILED';
+                internalStatus = 'failed';
                 result.transMsg = 'Cart checkout processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
         // 5e. Handle Cart Checkout Failure
-        if (existingTxn && internalStatus !== 'SUCCESS' && existingTxn.udf1 === 'CART_CHECKOUT') {
+        if (existingTxn && internalStatus !== 'gateway_success' && existingTxn.udf1 === 'CART_CHECKOUT') {
             try {
                 const supabaseAdmin = createClient(
                     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -405,7 +405,7 @@ export async function POST(request) {
         }
 
         // 5f-nfc. Handle NFC Order Payment — Success path
-        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'NFC_ORDER' && !wasAlreadySuccess) {
+        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'NFC_ORDER' && !wasAlreadySuccess) {
             try {
                 const supabaseAdmin = createClient(
                     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -432,7 +432,7 @@ export async function POST(request) {
                     if (nfcUpdateErr) {
                         console.error('[Callback] NFC order update failed:', nfcUpdateErr.message);
                         fulfillmentFailed = true;
-                        internalStatus = 'FAILED';
+                        internalStatus = 'failed';
                         result.transMsg = 'NFC order fulfillment failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
                     } else {
                         console.log(`[Callback] NFC order ${nfcOrderId} marked paid/confirmed for txn ${clientTxnId}`);
@@ -453,13 +453,13 @@ export async function POST(request) {
             } catch (nfcError) {
                 console.error('[Callback] NFC order processing error:', nfcError.message);
                 fulfillmentFailed = true;
-                internalStatus = 'FAILED';
+                internalStatus = 'failed';
                 result.transMsg = 'NFC order processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
         // 5f-nfc-fail. Handle NFC Order Payment — Failure / Abort path
-        if (existingTxn && internalStatus !== 'SUCCESS' && existingTxn.udf1 === 'NFC_ORDER') {
+        if (existingTxn && internalStatus !== 'gateway_success' && existingTxn.udf1 === 'NFC_ORDER') {
             try {
                 const supabaseAdmin = createClient(
                     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -479,7 +479,7 @@ export async function POST(request) {
         }
 
         // 6. Handle Gift Card Purchase — Atomic coupon+order with rollback safety
-        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GIFT_CARD' && !wasAlreadySuccess) {
+        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'GIFT_CARD' && !wasAlreadySuccess) {
             try {
                 const supabaseAdmin = createClient(
                     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -496,7 +496,7 @@ export async function POST(request) {
                 if (!profile || profile.kyc_status !== 'verified') {
                     console.error(`[Callback] KYC check failed for GIFT_CARD transaction ${clientTxnId}`);
                     // Ensure the transaction is marked as failed or policy-blocked
-                    internalStatus = 'FAILED';
+                    internalStatus = 'failed';
                     result.transMsg = 'KYC Policy Block: Verification required for gift cards';
                     fulfillmentFailed = true;
                 } else {
@@ -539,7 +539,7 @@ export async function POST(request) {
                                     .eq('id', couponId)
                                     .eq('purchased_by', existingTxn.user_id);
                                 fulfillmentFailed = true;
-                                internalStatus = 'FAILED';
+                                internalStatus = 'failed';
                                 result.transMsg = 'Order creation failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
                             } else {
                                 try {
@@ -577,26 +577,26 @@ export async function POST(request) {
                         } else {
                             console.error('[Callback] Coupon mark-as-sold failed or already sold');
                             fulfillmentFailed = true;
-                            internalStatus = 'FAILED';
+                            internalStatus = 'failed';
                             result.transMsg = 'Gift card is no longer available. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
                         }
                     } else {
                         console.error('[Callback] Missing couponId in udf2');
                         fulfillmentFailed = true;
-                        internalStatus = 'FAILED';
+                        internalStatus = 'failed';
                         result.transMsg = 'Invalid gift card selection. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
                     }
                 }
             } catch (gcError) {
                 console.error('[Callback] Gift card processing error:', gcError.message);
                 fulfillmentFailed = true;
-                internalStatus = 'FAILED';
+                internalStatus = 'failed';
                 result.transMsg = 'Gift card processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
         // 7. Handle Gold Subscription Activation
-        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GOLD_SUBSCRIPTION' && !wasAlreadySuccess) {
+        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'GOLD_SUBSCRIPTION' && !wasAlreadySuccess) {
             try {
                 const packageId = existingTxn.udf2;
                 const monthsToAdd = packageId === 'GOLD_1M' ? 1 : packageId === 'GOLD_3M' ? 3 : 12;
@@ -633,13 +633,13 @@ export async function POST(request) {
             } catch (goldError) {
                 console.error('[Callback] Gold subscription activation error:', goldError.message);
                 fulfillmentFailed = true;
-                internalStatus = 'FAILED';
+                internalStatus = 'failed';
                 result.transMsg = 'Gold subscription activation failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
         // 5f. Handle Wholesale Purchase Fulfillment
-        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'WHOLESALE_PURCHASE' && !wasAlreadySuccess) {
+        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'WHOLESALE_PURCHASE' && !wasAlreadySuccess) {
             try {
                 const supabaseAdmin = createClient(
                     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -660,7 +660,7 @@ export async function POST(request) {
                 if (rpcError || (rpcResult && !rpcResult.success)) {
                     console.error('[Callback] Wholesale fulfillment error:', rpcError?.message || rpcResult?.message);
                     fulfillmentFailed = true;
-                    internalStatus = 'FAILED';
+                    internalStatus = 'failed';
                     result.transMsg = 'Wholesale fulfillment failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
                 } else {
                     console.log(`[Callback] Wholesale purchase fulfilled for txn ${clientTxnId}`);
@@ -682,13 +682,13 @@ export async function POST(request) {
             } catch (wholesaleError) {
                 console.error('[Callback] Wholesale processing error:', wholesaleError.message);
                 fulfillmentFailed = true;
-                internalStatus = 'FAILED';
+                internalStatus = 'failed';
                 result.transMsg = 'Wholesale processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
         // 5g. Handle Merchant Subscription Fulfillment (first-time OR renewal)
-        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'MERCHANT_SUBSCRIPTION' && !wasAlreadySuccess) {
+        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'MERCHANT_SUBSCRIPTION' && !wasAlreadySuccess) {
             try {
                 const supabaseAdmin = createClient(
                     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -783,21 +783,21 @@ export async function POST(request) {
             } catch (subError) {
                 console.error('[Callback] Merchant Subscription fulfillment error:', subError.message);
                 fulfillmentFailed = true;
-                internalStatus = 'FAILED';
+                internalStatus = 'failed';
                 result.transMsg = 'Failed to activate merchant subscription. Contact support.';
             }
         }
 
         // 7b. Catch-all: Downgrade to failure if fulfillment failed on any path but status wasn't reset
-        if (fulfillmentFailed && internalStatus === 'SUCCESS') {
-            internalStatus = 'FAILED';
+        if (fulfillmentFailed && internalStatus === 'gateway_success') {
+            internalStatus = 'failed';
             if (!result.transMsg || result.transMsg === status) {
                 result.transMsg = 'Fulfillment error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
         }
 
         // 4. Update Transaction Status
-        if (clientTxnId && (!fulfillmentFailed || internalStatus !== 'SUCCESS')) {
+        if (clientTxnId && (!fulfillmentFailed || internalStatus !== 'gateway_success')) {
             try {
                 await updateTransaction(clientTxnId, {
                     status: internalStatus,
@@ -817,7 +817,7 @@ export async function POST(request) {
         let redirectPath = '/payment/failure';
         let redirectQuery = `?txnId=${clientTxnId}&msg=${encodeURIComponent(result.transMsg || 'Payment Failed')}`;
 
-        if (internalStatus === 'SUCCESS') {
+        if (internalStatus === 'gateway_success') {
             // Merchant-specific redirects for immediate dashboard access
             if (existingTxn?.udf1 === 'MERCHANT_SUBSCRIPTION') {
                 redirectPath = '/merchant/dashboard';
@@ -833,10 +833,10 @@ export async function POST(request) {
                 redirectPath = '/payment/success';
                 redirectQuery = `?txnId=${clientTxnId}`;
             }
-        } else if (internalStatus === 'PENDING') {
+        } else if (internalStatus === 'pending') {
             redirectPath = '/payment/processing';
             redirectQuery = `?txnId=${clientTxnId}`;
-        } else if (internalStatus === 'FAILED' || internalStatus === 'ABORTED') {
+        } else if (internalStatus === 'failed' || internalStatus === 'aborted') {
             // Handle failed/aborted payments with appropriate messaging
             redirectPath = '/payment/failure';
             redirectQuery = `?txnId=${clientTxnId}&msg=${encodeURIComponent(result.transMsg || 'Payment Failed')}`;

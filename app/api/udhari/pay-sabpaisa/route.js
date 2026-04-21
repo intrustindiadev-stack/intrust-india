@@ -62,7 +62,7 @@ export async function POST(request) {
                 client_txn_id: clientTxnId,
                 user_id: user.id,
                 amount: parseFloat(totalAmountRupees),
-                status: 'INITIATED',
+                status: 'initiated',
                 udf1: 'UDHARI_PAYMENT',
                 udf2: requestId,
                 udf3: udhariRequest.merchant_id,

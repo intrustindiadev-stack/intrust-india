@@ -70,7 +70,7 @@ export default async function handler(req, res) {
             });
         }
 
-        if (['SUCCESS', 'FAILED', 'ABORTED'].includes(currentTxn.status)) {
+        if (['gateway_success', 'failed', 'aborted'].includes(currentTxn.status)) {
             console.log(`Transaction ${clientTxnId} already in final state: ${currentTxn.status}. Acknowledging webhook.`);
             return res.status(200).json({
                 status: 200,
@@ -95,7 +95,7 @@ export default async function handler(req, res) {
         });
 
         // Handle WALLET_TOPUP credit
-        if (internalStatus === 'SUCCESS' && currentTxn.udf1 === 'WALLET_TOPUP') {
+        if (internalStatus === 'gateway_success' && currentTxn.udf1 === 'WALLET_TOPUP') {
             try {
                 await CustomerWalletService.creditWallet(
                     currentTxn.user_id,
@@ -110,7 +110,7 @@ export default async function handler(req, res) {
         }
 
         // Handle GIFT_CARD purchase
-        if (internalStatus === 'SUCCESS' && currentTxn.udf1 === 'GIFT_CARD') {
+        if (internalStatus === 'gateway_success' && currentTxn.udf1 === 'GIFT_CARD') {
             try {
                 const couponId = currentTxn.udf2;
                 if (couponId) {
@@ -176,7 +176,7 @@ export default async function handler(req, res) {
         }
 
         // Handle GOLD_SUBSCRIPTION
-        if (internalStatus === 'SUCCESS' && currentTxn.udf1 === 'GOLD_SUBSCRIPTION') {
+        if (internalStatus === 'gateway_success' && currentTxn.udf1 === 'GOLD_SUBSCRIPTION') {
             try {
                 const supabaseAdmin = createClient(
                     process.env.NEXT_PUBLIC_SUPABASE_URL,

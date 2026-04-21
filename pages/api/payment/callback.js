@@ -110,7 +110,7 @@ export default async function handler(req, res) {
         const existingTxn = await getTransactionByClientTxnId(clientTxnId);
 
         // 4. Update Transaction Status (if it wasn't already SUCCESS)
-        const wasAlreadySuccess = existingTxn && existingTxn.status === 'SUCCESS';
+        const wasAlreadySuccess = existingTxn && existingTxn.status === 'gateway_success';
 
         if (clientTxnId) {
             try {
@@ -129,7 +129,7 @@ export default async function handler(req, res) {
         }
 
         // 5. Handle Wallet Credit for WALLET_TOPUP safely
-        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'WALLET_TOPUP') {
+        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'WALLET_TOPUP') {
             if (!wasAlreadySuccess) {
                 try {
                     await CustomerWalletService.creditWallet(
@@ -147,7 +147,7 @@ export default async function handler(req, res) {
         }
 
         // 6. Handle Gift Card Purchase — Atomic coupon+order with rollback safety
-        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GIFT_CARD' && !wasAlreadySuccess) {
+        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'GIFT_CARD' && !wasAlreadySuccess) {
             try {
                 const couponId = existingTxn.udf2;
                 if (couponId) {
@@ -208,7 +208,7 @@ export default async function handler(req, res) {
         }
 
         // 7. Handle Gold Subscription Success
-        if (existingTxn && internalStatus === 'SUCCESS' && existingTxn.udf1 === 'GOLD_SUBSCRIPTION') {
+        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'GOLD_SUBSCRIPTION') {
             if (!wasAlreadySuccess) {
                 try {
                     const supabaseAdmin = createClient(
@@ -264,7 +264,7 @@ export default async function handler(req, res) {
         }
 
         // 8. Redirect User based on Status and Transaction Type
-        if (internalStatus === 'SUCCESS') {
+        if (internalStatus === 'gateway_success') {
             // Merchant-specific redirects for immediate dashboard access
             if (existingTxn?.udf1 === 'MERCHANT_SUBSCRIPTION') {
                 res.redirect(`/merchant/dashboard?welcome=true&txnId=${clientTxnId}`);
@@ -276,9 +276,9 @@ export default async function handler(req, res) {
                 // Default success page for customer transactions
                 res.redirect(`/payment/success?txnId=${clientTxnId}`);
             }
-        } else if (internalStatus === 'PENDING') {
+        } else if (internalStatus === 'pending') {
             res.redirect(`/payment/processing?txnId=${clientTxnId}`);
-        } else if (internalStatus === 'FAILED' || internalStatus === 'ABORTED') {
+        } else if (internalStatus === 'failed' || internalStatus === 'aborted') {
             res.redirect(`/payment/failure?txnId=${clientTxnId}&msg=${encodeURIComponent(transMsg || 'Payment Failed')}`);
         } else {
             // Timeout or unknown status - redirect to processing page

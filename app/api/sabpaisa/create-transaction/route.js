@@ -43,7 +43,7 @@ export async function POST(req) {
                 client_txn_id: clientTxnId,
                 user_id: user.id,
                 amount: amount,
-                status: 'INITIATED',
+                status: 'initiated',
                 udf1: udf1,
                 udf2: udf2,
                 udf3: udf3,
