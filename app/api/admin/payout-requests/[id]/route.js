@@ -80,30 +80,33 @@ export async function PATCH(request, { params }) {
             }
         }
 
-        // ---- HANDLE RELEASED: mark contract as paid_out ----
-        if (action === 'released' && isGrowthFund && payoutReq.reference_id) {
-            await admin
-                .from('merchant_lockin_balances')
-                .update({ status: 'paid_out' })
-                .eq('id', payoutReq.reference_id);
+        // ---- HANDLE RELEASED: atomic RPC call ----
+        if (action === 'released') {
+            const { error: rpcErr, data: result } = await admin.rpc('admin_approve_payout', {
+                p_payout_request_id: id,
+                p_admin_user_id: user.id
+            });
+            if (rpcErr) throw rpcErr;
+            if (!result || !result.success) throw new Error(result?.error || 'Failed to approve payout');
+            // fall through to notification block
+        } else {
+            // ---- UPDATE PAYOUT REQUEST STATUS (for approved/rejected) ----
+            const { error: updateErr } = await admin
+                .from('payout_requests')
+                .update({
+                    status: action,
+                    admin_note: admin_note || null,
+                    reviewed_by: user.id,
+                    reviewed_at: new Date().toISOString(),
+                })
+                .eq('id', id);
+
+            if (updateErr) throw updateErr;
         }
-
-        // ---- UPDATE PAYOUT REQUEST STATUS ----
-        const { error: updateErr } = await admin
-            .from('payout_requests')
-            .update({
-                status: action,
-                admin_note: admin_note || null,
-                reviewed_by: user.id,
-                reviewed_at: new Date().toISOString(),
-            })
-            .eq('id', id);
-
-        if (updateErr) throw updateErr;
 
         // ---- SEND NOTIFICATION TO MERCHANT ----
         const baseBody = `Your ${isGrowthFund ? 'Growth Fund release' : 'withdrawal'} of ₹${Number(payoutReq.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-        
+
         const notifMap = {
             approved: {
                 title: '✅ Payout Approved',

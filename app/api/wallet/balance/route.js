@@ -126,7 +126,10 @@ export async function GET(request) {
         const bulkGroupMap = new Map();
 
         (merchantTxs || []).forEach(tx => {
-            const txType = (tx.amount_paise || 0) < 0 ? 'DEBIT' : 'CREDIT';
+            let txType = (tx.amount_paise || 0) < 0 ? 'DEBIT' : 'CREDIT';
+            if (tx.transaction_type === 'payout') {
+                txType = 'SETTLEMENT';
+            }
             const desc = tx.description || tx.transaction_type || 'Transaction';
             const amountVal = Math.abs(tx.amount_paise || 0) / 100;
             const key = tx.created_at; // PG transaction time is identical for items in same cart

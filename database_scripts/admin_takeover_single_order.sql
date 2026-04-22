@@ -73,6 +73,11 @@ BEGIN
         total_commission_paid_paise = COALESCE(total_commission_paid_paise, 0) + v_new_platform_cut
     WHERE id = v_order.merchant_id;
 
+    -- Increment fulfillment failure count
+    UPDATE public.merchants
+    SET fulfillment_failure_count = fulfillment_failure_count + 1
+    WHERE id = v_order.merchant_id;
+
     -- Insert merchant transaction
     INSERT INTO public.merchant_transactions (
        merchant_id, transaction_type, amount_paise, commission_paise, balance_after_paise, description

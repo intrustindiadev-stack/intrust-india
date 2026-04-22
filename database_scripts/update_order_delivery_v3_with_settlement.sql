@@ -80,6 +80,25 @@ BEGIN
            'Order #' || substring(p_order_id::text from 1 for 8) || ' profit settled (Merchant approved within 2 hours — 70% commission)'
        );
 
+       -- INSERT platform_ledger for shopping commission
+       INSERT INTO public.platform_ledger (
+           transaction_id,
+           entry_type,
+           amount_paise,
+           balance_after_paise,
+           description,
+           created_at
+       ) VALUES (
+           p_order_id,
+           'shopping_commission',
+           COALESCE(v_order.platform_cut_paise, 0),
+           (SELECT COALESCE(SUM(amount_paise), 0)
+            FROM public.platform_ledger
+            WHERE entry_type = 'shopping_commission') + COALESCE(v_order.platform_cut_paise, 0),
+           'Shopping commission: Order #' || substring(p_order_id::text from 1 for 8),
+           NOW()
+       );
+
        -- Update settlement_status to settled
        UPDATE public.shopping_order_groups 
        SET settlement_status = 'settled' 

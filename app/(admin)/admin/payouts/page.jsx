@@ -51,11 +51,10 @@ function ActionRow({ request, onAction, processing }) {
                             {request.merchants?.business_name || 'Unknown Merchant'}
                         </span>
                         <StatusBadge status={request.status} />
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest border ${
-                            isGrowthFund 
-                                ? 'bg-indigo-50 text-indigo-700 border-indigo-100' 
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest border ${isGrowthFund
+                                ? 'bg-indigo-50 text-indigo-700 border-indigo-100'
                                 : 'bg-slate-50 text-slate-600 border-slate-100'
-                        }`}>
+                            }`}>
                             {isGrowthFund ? 'Growth Fund' : 'Wallet Withdrawal'}
                         </span>
                     </div>
@@ -184,9 +183,12 @@ export default function AdminPayoutsPage() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Action failed');
+            setError('');
             fetchRequests();
         } catch (err) {
             console.error(err);
+            setError(err instanceof Error ? err.message : 'Something went wrong');
+            fetchRequests();
         } finally {
             setProcessingId(null);
         }

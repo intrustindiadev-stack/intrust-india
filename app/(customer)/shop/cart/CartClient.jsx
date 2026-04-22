@@ -99,10 +99,10 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
         const merchantInventoryIds = cart.filter(i => !i.is_platform_item).map(i => i.inventory_id).filter(Boolean);
 
         const [platformStockRes, merchantStockRes] = await Promise.all([
-          platformProductIds.length > 0 
+          platformProductIds.length > 0
             ? supabase.from('shopping_products').select('id, admin_stock').in('id', platformProductIds)
             : Promise.resolve({ data: [] }),
-          merchantInventoryIds.length > 0 
+          merchantInventoryIds.length > 0
             ? supabase.from('merchant_inventory').select('id, stock_quantity').in('id', merchantInventoryIds)
             : Promise.resolve({ data: [] })
         ]);
@@ -111,10 +111,10 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
         const merchantStockMap = new Map((merchantStockRes.data || []).map(m => [m.id, m.stock_quantity || 0]));
 
         for (const item of cart) {
-          const liveStock = item.is_platform_item 
+          const liveStock = item.is_platform_item
             ? platformStockMap.get(item.shopping_products?.id) || 0
             : merchantStockMap.get(item.inventory_id) || 0;
-            
+
           if (liveStock < item.quantity || liveStock === 0) {
             warnings.set(item.id, liveStock);
           }
@@ -156,18 +156,18 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
         } else {
           const nonPlatformItems = cart.filter(i => !i.is_platform_item);
           const inventoryIds = nonPlatformItems.map(i => i.inventory_id).filter(Boolean);
-          
+
           if (inventoryIds.length > 0) {
             const { data: merchantsData, error: merchantsError } = await supabase
               .from('merchant_inventory')
               .select('merchant_id')
               .in('id', inventoryIds);
-              
+
             if (merchantsError || !merchantsData) return;
 
             const merchantIds = merchantsData.map(m => m.merchant_id).filter(id => id && id !== 'null');
             const uniqueMerchants = [...new Set(merchantIds)];
-            
+
             if (uniqueMerchants.length > 1) {
               setUdhariEnabled(false);
               setUdhariDisabledReason('mixed');
@@ -176,7 +176,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                 .from('merchant_udhari_settings')
                 .select('udhari_enabled')
                 .eq('merchant_id', uniqueMerchants[0]);
-              
+
               if (settings && settings.length > 0) {
                 setUdhariEnabled(settings[0].udhari_enabled === true);
               } else {
@@ -187,7 +187,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
           }
         }
       }
-      
+
       if (userProfile) {
         const p = (userProfile.address || "").split(',').map(s => s.trim());
         setAddressForm({
@@ -218,7 +218,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
           try {
             const parsed = JSON.parse(payload.new.value);
             setIsPlatformOpen(parsed.is_open);
-          } catch (e) {}
+          } catch (e) { }
         }
       })
       .subscribe();
@@ -229,9 +229,9 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
 
     const merchantChannel = supabase
       .channel('cart_merchants_sync')
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
         table: 'merchants'
       }, (payload) => {
         if (payload.new && activeMerchantIds.includes(payload.new.id)) {
@@ -253,7 +253,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
   const isAnyStoreClosed = React.useMemo(() => {
     const hasPlatformItems = cartItems.some(i => i.is_platform_item);
     if (hasPlatformItems && !isPlatformOpen) return true;
-    
+
     // Check merchants
     for (const [id, isOpen] of merchantStatuses.entries()) {
       if (!isOpen) return true;
@@ -276,11 +276,11 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
         address: combinedAddress,
         phone: finalPhone || null
       }).eq('id', userId);
-      
+
       if (error) throw error;
-      
-      setProfile(prev => ({ 
-        ...prev, 
+
+      setProfile(prev => ({
+        ...prev,
         address: combinedAddress,
         phone: addressForm.phone
       }));
@@ -329,7 +329,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
         setCheckingOut(false);
         return;
       }
-      
+
       if (paymentMode === 'wallet') {
         const { data, error: rpcError } = await supabase.rpc("customer_checkout_v4", { p_customer_id: userId });
         if (rpcError) throw rpcError;
@@ -409,7 +409,11 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
       }
     } catch (err) {
       console.error("Checkout error:", err);
-      setError(err.message || "Unexpected error during checkout");
+      let errMsg = err.message || "Unexpected error during checkout";
+      if (err.code === '23514') errMsg = "Data constraint violation: Stock may be insufficient or constraints failed.";
+      else if (err.code === '23502') errMsg = "Missing required information for checkout.";
+      else if (err.code === '23503') errMsg = "Referenced product or merchant not found.";
+      setError(errMsg);
     } finally {
       setCheckingOut(false);
     }
@@ -417,10 +421,10 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
 
   // Bill
   const billDetails = cartItems.reduce((acc, item) => {
-    const sellingPrice = item.is_platform_item 
-      ? (item.shopping_products?.suggested_retail_price_paise || 0) 
+    const sellingPrice = item.is_platform_item
+      ? (item.shopping_products?.suggested_retail_price_paise || 0)
       : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
-    
+
     const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
     const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;
     const gstRate = item.shopping_products?.gst_percentage || 0;
@@ -437,15 +441,15 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
   const itemCount = cartItems.reduce((a, i) => a + i.quantity, 0);
   const hasStockIssues = stockWarnings.size > 0;
   const hasValidAddress = profile && profile.address && profile.phone;
-  
+
   const MIN_ORDER_VALUE = 49900;
   const isMinOrderMet = finalPayable >= MIN_ORDER_VALUE;
 
   const hasSufficientBalance = paymentMode === 'wallet' ? walletBalance >= finalPayable : true;
   const canPay = (
     paymentMode === 'wallet' ? walletBalance >= finalPayable :
-    paymentMode === 'store_credit' ? udhariEnabled :
-    true
+      paymentMode === 'store_credit' ? udhariEnabled :
+        true
   );
   const isPaymentModeValid = paymentMode === 'wallet' || paymentMode === 'gateway' || paymentMode === 'store_credit';
   const canCheckout = canPay && !hasStockIssues && hasValidAddress && isPaymentModeValid && isMinOrderMet && !isAnyStoreClosed;
@@ -514,21 +518,21 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
   // ========== ORDER SUCCESS OVERLAY ==========
   if (orderSuccess) {
     return (
-      <motion.div 
-        initial={{ opacity: 0 }} 
-        animate={{ opacity: 1 }} 
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         className={`fixed inset-0 z-[100] flex items-center justify-center ${isDark ? 'bg-[#080a10]' : 'bg-white'}`}
       >
-        <motion.div 
-          initial={{ scale: 0.5, opacity: 0 }} 
-          animate={{ scale: 1, opacity: 1 }} 
+        <motion.div
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
           className="text-center px-8 max-w-md"
         >
           {/* Animated check circle */}
-          <motion.div 
-            initial={{ scale: 0 }} 
-            animate={{ scale: 1 }} 
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 300, damping: 12, delay: 0.4 }}
             className="w-24 h-24 mx-auto mb-6 rounded-full bg-blue-600 flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.3)]"
           >
@@ -541,17 +545,17 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
             </motion.div>
           </motion.div>
 
-          <motion.h1 
-            initial={{ y: 20, opacity: 0 }} 
-            animate={{ y: 0, opacity: 1 }} 
+          <motion.h1
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.6 }}
             className={`text-2xl font-black mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}
           >
             Order Placed! 🎉
           </motion.h1>
-          <motion.p 
-            initial={{ y: 20, opacity: 0 }} 
-            animate={{ y: 0, opacity: 1 }} 
+          <motion.p
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.8 }}
             className={`text-sm font-medium mb-8 ${isDark ? 'text-white/40' : 'text-slate-500'}`}
           >
@@ -560,9 +564,9 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
 
           {/* Animated progress bar */}
           <motion.div className={`w-full h-1 rounded-full overflow-hidden ${isDark ? 'bg-white/[0.06]' : 'bg-slate-100'}`}>
-            <motion.div 
-              initial={{ width: 0 }} 
-              animate={{ width: "100%" }} 
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: "100%" }}
               transition={{ delay: 0.5, duration: 2.5, ease: "linear" }}
               className="h-full rounded-full bg-blue-600"
             />
@@ -586,8 +590,8 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
   if (cartItems.length === 0) {
     return (
       <div className={`min-h-screen pt-28 px-4 ${isDark ? 'bg-[#080a10]' : 'bg-[#f7f8fa]'}`}>
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0 }} 
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           className={`max-w-md mx-auto text-center py-16 px-6 rounded-2xl ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white shadow-sm border border-slate-100'}`}
         >
@@ -607,7 +611,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
   return (
     <div className={`min-h-screen pb-36 sm:pb-12 pt-24 md:pt-28 ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
       <div className="max-w-5xl mx-auto px-3 sm:px-4 md:px-6">
-        
+
         {/* Header */}
         <div className="flex items-center gap-3 mb-5 md:mb-8">
           <button onClick={() => router.back()} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shrink-0 ${isDark ? 'bg-white/[0.04] border border-white/[0.06] text-white/50 hover:text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
@@ -634,7 +638,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
               <div className="flex-1">
                 <h3 className="text-sm font-black uppercase tracking-tight">Store Currently Closed</h3>
                 <p className="text-[11px] font-bold opacity-90 leading-relaxed mt-0.5">
-                  Some items in your cart are from stores that are not currently accepting orders. 
+                  Some items in your cart are from stores that are not currently accepting orders.
                   Please remove these items or wait for the store to open to proceed with your order.
                 </p>
               </div>
@@ -643,12 +647,12 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
         </AnimatePresence>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
-          
+
           {/* LEFT: Address + Items */}
           <div className="lg:col-span-7 space-y-4">
 
             {/* Delivery Address */}
-            <motion.div 
+            <motion.div
               initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
               className={`rounded-2xl p-4 sm:p-5 relative overflow-hidden ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white border border-slate-100 shadow-sm'}`}
             >
@@ -678,7 +682,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
             </motion.div>
 
             {/* Cart Items */}
-            <motion.div 
+            <motion.div
               initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}
               className={`rounded-2xl p-4 sm:p-5 ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white border border-slate-100 shadow-sm'}`}
             >
@@ -702,8 +706,8 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
 
               <AnimatePresence mode="popLayout">
                 {cartItems.map((item, idx) => {
-                  const sellingPrice = item.is_platform_item 
-                    ? (item.shopping_products?.suggested_retail_price_paise || 0) 
+                  const sellingPrice = item.is_platform_item
+                    ? (item.shopping_products?.suggested_retail_price_paise || 0)
                     : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
                   const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
                   const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;
@@ -711,13 +715,13 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                   const merchantName = item.is_platform_item ? "InTrust Official" : (item.merchant_inventory?.merchants?.business_name || "Merchant");
                   const liveStock = stockWarnings.has(item.id) ? stockWarnings.get(item.id) : null;
                   const hasStockIssue = liveStock !== null;
-                  
+
                   const merchantId = item.merchant_inventory?.merchants?.id;
                   const isItemStoreOpen = item.is_platform_item ? isPlatformOpen : (merchantStatuses.get(merchantId) ?? true);
 
                   return (
-                    <motion.div 
-                      key={item.id} 
+                    <motion.div
+                      key={item.id}
                       layout
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -725,7 +729,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                       transition={{ delay: idx * 0.05 }}
                       className={`flex gap-3 pb-4 mb-4 border-b last:border-b-0 last:pb-0 last:mb-0 ${isDark ? 'border-white/[0.03]' : 'border-slate-50'}`}
                     >
-                      <Link 
+                      <Link
                         href={`/shop/product/${item.shopping_products?.slug}`}
                         className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex-shrink-0 p-1.5 flex items-center justify-center ${isDark ? 'bg-[#0c0e14] border border-white/[0.04]' : 'bg-slate-50 border border-slate-100'}`}
                       >
@@ -764,8 +768,8 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                               </div>
                             )}
                           </div>
-                          <button 
-                            onClick={() => removeItem(item.id)} 
+                          <button
+                            onClick={() => removeItem(item.id)}
                             className={`p-1.5 rounded-lg transition-all shrink-0 active:scale-90 ${isDark ? 'text-white/15 hover:text-red-400 hover:bg-red-900/20' : 'text-slate-300 hover:text-red-500 hover:bg-red-50'}`}
                           >
                             <Trash2 size={14} />
@@ -791,7 +795,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                             <button onClick={() => updateQuantity(item.id, -1)} className="w-7 h-full flex items-center justify-center hover:bg-black/5 active:scale-90 transition-all">
                               <Minus size={12} strokeWidth={3} />
                             </button>
-                            <motion.span 
+                            <motion.span
                               key={item.quantity}
                               initial={{ scale: 1.3 }}
                               animate={{ scale: 1 }}
@@ -799,14 +803,13 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                             >
                               {item.quantity}
                             </motion.span>
-                            <button 
-                              onClick={() => updateQuantity(item.id, 1)} 
+                            <button
+                              onClick={() => updateQuantity(item.id, 1)}
                               disabled={hasStockIssue && item.quantity >= liveStock}
-                              className={`w-7 h-full flex items-center justify-center transition-all ${
-                                hasStockIssue && item.quantity >= liveStock
+                              className={`w-7 h-full flex items-center justify-center transition-all ${hasStockIssue && item.quantity >= liveStock
                                   ? 'opacity-30 cursor-not-allowed'
                                   : 'hover:bg-black/5 active:scale-90'
-                              }`}
+                                }`}
                             >
                               <Plus size={12} strokeWidth={3} />
                             </button>
@@ -825,7 +828,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
             <div className="sticky top-24 space-y-4">
 
               {/* Bill Summary */}
-              <motion.div 
+              <motion.div
                 initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}
                 className={`rounded-2xl p-4 sm:p-5 ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white border border-slate-100 shadow-sm'}`}
               >
@@ -858,7 +861,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                 <div className={`border-t border-dashed pt-3 ${isDark ? 'border-white/[0.06]' : 'border-slate-200'}`}>
                   <div className="flex justify-between items-end">
                     <span className={`text-sm font-extrabold ${isDark ? 'text-white/70' : 'text-slate-700'}`}>To Pay</span>
-                    <motion.span 
+                    <motion.span
                       key={finalPayable}
                       initial={{ scale: 1.1 }}
                       animate={{ scale: 1 }}
@@ -871,17 +874,17 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
 
                 {/* Minimum order warning inside the bill section */}
                 {!isMinOrderMet && billDetails.sellingTotal > 0 && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
                     className={`mt-3 flex items-start gap-2 text-[11px] font-bold rounded-lg p-3 ${isDark ? 'bg-amber-900/10 text-amber-500 border border-amber-800/20' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}
                   >
                     <AlertCircle size={14} className="shrink-0 mt-0.5" />
-                    <p>Minimum order value is <strong>₹499</strong>. Please add items worth ₹{((MIN_ORDER_VALUE - finalPayable)/100).toLocaleString('en-IN')} more to checkout.</p>
+                    <p>Minimum order value is <strong>₹499</strong>. Please add items worth ₹{((MIN_ORDER_VALUE - finalPayable) / 100).toLocaleString('en-IN')} more to checkout.</p>
                   </motion.div>
                 )}
 
                 {totalDiscount > 0 && isMinOrderMet && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
                     className={`mt-3 flex items-center gap-2 text-[10px] font-black rounded-lg p-2.5 ${isDark ? 'bg-blue-900/20 text-blue-400 border border-blue-800/10' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}
                   >
@@ -892,7 +895,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
               </motion.div>
 
               {/* ====== PAYMENT MODE SELECTION ====== */}
-              <motion.div 
+              <motion.div
                 initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }}
                 className={`rounded-2xl p-4 sm:p-5 ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white border border-slate-100 shadow-sm'}`}
               >
@@ -911,22 +914,21 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                         key={mode.id}
                         onClick={() => !isDisabled && setPaymentMode(mode.id)}
                         disabled={isDisabled}
-                        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left relative overflow-hidden ${
-                          isDisabled 
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left relative overflow-hidden ${isDisabled
                             ? `cursor-not-allowed ${isDark ? 'opacity-30' : 'opacity-40'}`
-                            : isSelected 
+                            : isSelected
                               ? `${isDark ? 'bg-white/[0.04]' : 'bg-slate-50'} ring-2`
                               : `${isDark ? 'bg-white/[0.02] hover:bg-white/[0.04]' : 'bg-slate-50/50 hover:bg-slate-50'}`
-                        }`}
-                        style={isSelected && !isDisabled ? { 
+                          }`}
+                        style={isSelected && !isDisabled ? {
                           ringColor: mode.color,
                           borderColor: mode.color,
                           ['--tw-ring-color']: mode.color
                         } : {}}
                       >
-                        <div 
+                        <div
                           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                          style={{ 
+                          style={{
                             background: isSelected ? `${mode.color}15` : isDark ? 'rgba(255,255,255,0.03)' : '#f1f5f9',
                             color: isSelected ? mode.color : isDark ? 'rgba(255,255,255,0.3)' : '#94a3b8'
                           }}
@@ -965,13 +967,12 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                         <button
                           key={days}
                           onClick={() => setStoreCreditDuration(days)}
-                          className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${
-                            storeCreditDuration === days
+                          className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${storeCreditDuration === days
                               ? 'bg-amber-500 text-white shadow-md'
                               : isDark
                                 ? 'bg-white/5 text-white/50 hover:bg-white/10'
                                 : 'bg-white text-slate-500 hover:bg-amber-100 border border-amber-200'
-                          }`}
+                            }`}
                         >
                           {days} Days
                         </button>
@@ -985,7 +986,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
               </motion.div>
 
               {/* Desktop Place Order */}
-              <motion.div 
+              <motion.div
                 initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5 }}
                 className="hidden md:block"
               >
@@ -999,26 +1000,25 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                 <button
                   disabled={checkingOut || !canCheckout}
                   onClick={handleCheckout}
-                  className={`w-full py-3.5 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] ${
-                    !canCheckout
+                  className={`w-full py-3.5 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] ${!canCheckout
                       ? `cursor-not-allowed ${isDark ? 'bg-white/[0.04] text-white/20' : 'bg-slate-100 text-slate-400'}`
                       : "bg-blue-600 hover:bg-blue-700 text-white shadow-[0_6px_20px_rgba(37,99,235,0.25)]"
-                  }`}
+                    }`}
                 >
                   {checkingOut ? (
                     <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>
                   ) : isAnyStoreClosed ? (
                     "Store is currently closed"
                   ) : !isMinOrderMet ? (
-                    `Add ₹${((MIN_ORDER_VALUE - billDetails.sellingTotal)/100).toLocaleString('en-IN')} more to order`
+                    `Add ₹${((MIN_ORDER_VALUE - billDetails.sellingTotal) / 100).toLocaleString('en-IN')} more to order`
                   ) : hasStockIssues ? (
                     "Some items out of stock"
                   ) : !hasValidAddress ? (
                     "Add Delivery Address"
                   ) : !hasSufficientBalance && paymentMode === 'wallet' ? (
-                     "Insufficient Wallet Balance"
+                    "Insufficient Wallet Balance"
                   ) : !isPaymentModeValid ? (
-                     "Coming Soon"
+                    "Coming Soon"
                   ) : (
                     <>Place Order <ArrowRight size={16} strokeWidth={3} /></>
                   )}
@@ -1047,7 +1047,7 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
             <span className={`text-[9px] font-black uppercase tracking-wider ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
               {paymentMode === 'wallet' ? 'Pay via Wallet' : paymentMode === 'gateway' ? 'Pay via Gateway' : paymentMode === 'store_credit' ? 'Store Credit' : 'Cash on Delivery'}
             </span>
-            <motion.p 
+            <motion.p
               key={finalPayable}
               initial={{ scale: 1.05 }}
               animate={{ scale: 1 }}
@@ -1061,22 +1061,21 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
               </p>
             )}
           </div>
-          
+
           <button
             disabled={checkingOut || !canCheckout}
             onClick={handleCheckout}
-            className={`flex-1 py-3 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] ${
-              !canCheckout
+            className={`flex-1 py-3 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] ${!canCheckout
                 ? `cursor-not-allowed ${isDark ? 'bg-white/[0.04] text-white/20' : 'bg-slate-100 text-slate-400'}`
                 : "bg-blue-600 text-white shadow-[0_4px_14px_rgba(37,99,235,0.25)]"
-            }`}
+              }`}
           >
             {checkingOut ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : isAnyStoreClosed ? (
               "Store Closed"
             ) : !isMinOrderMet ? (
-              `Add ₹${((MIN_ORDER_VALUE - billDetails.sellingTotal)/100).toLocaleString('en-IN')} more`
+              `Add ₹${((MIN_ORDER_VALUE - billDetails.sellingTotal) / 100).toLocaleString('en-IN')} more`
             ) : hasStockIssues ? (
               "Out of stock items"
             ) : !hasValidAddress ? (
@@ -1131,26 +1130,26 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
               <form onSubmit={handleSaveAddress} className="space-y-3.5">
                 <div>
                   <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Street Address</label>
-                  <input required type="text" value={addressForm.address} onChange={e => setAddressForm(f => ({...f, address: e.target.value}))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="House no, Street area" />
+                  <input required type="text" value={addressForm.address} onChange={e => setAddressForm(f => ({ ...f, address: e.target.value }))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="House no, Street area" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>City</label>
-                    <input required type="text" value={addressForm.city} onChange={e => setAddressForm(f => ({...f, city: e.target.value}))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="City" />
+                    <input required type="text" value={addressForm.city} onChange={e => setAddressForm(f => ({ ...f, city: e.target.value }))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="City" />
                   </div>
                   <div>
                     <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Pincode</label>
-                    <input required type="text" value={addressForm.pincode} onChange={e => setAddressForm(f => ({...f, pincode: e.target.value}))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="123456" />
+                    <input required type="text" value={addressForm.pincode} onChange={e => setAddressForm(f => ({ ...f, pincode: e.target.value }))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="123456" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 pb-2">
                   <div>
                     <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>State</label>
-                    <input required type="text" value={addressForm.state} onChange={e => setAddressForm(f => ({...f, state: e.target.value}))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="State" />
+                    <input required type="text" value={addressForm.state} onChange={e => setAddressForm(f => ({ ...f, state: e.target.value }))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="State" />
                   </div>
                   <div>
                     <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Phone</label>
-                    <input required type="tel" value={addressForm.phone} onChange={e => setAddressForm(f => ({...f, phone: e.target.value}))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="9876543210" />
+                    <input required type="tel" value={addressForm.phone} onChange={e => setAddressForm(f => ({ ...f, phone: e.target.value }))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="9876543210" />
                   </div>
                 </div>
 

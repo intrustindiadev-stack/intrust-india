@@ -372,17 +372,22 @@ function WalletContent() {
                             {/* Hover accent */}
                             <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
-                            <div className={`w-12 h-12 rounded-[1rem] flex items-center justify-center shrink-0 border ${tx.transaction_type === 'CREDIT' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
-                                <span className="material-icons-round text-xl">{tx.transaction_type === 'CREDIT' ? 'south_west' : 'north_east'}</span>
+                            <div className={`w-12 h-12 rounded-[1rem] flex items-center justify-center shrink-0 border ${tx.transaction_type === 'SETTLEMENT' ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500' : tx.transaction_type === 'CREDIT' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+                                <span className="material-icons-round text-xl">{tx.transaction_type === 'SETTLEMENT' ? 'account_balance' : tx.transaction_type === 'CREDIT' ? 'south_west' : 'north_east'}</span>
                             </div>
 
                             <div className="ml-4 flex-1 min-w-0">
                                 <h4 className="text-[13px] font-black text-slate-800 dark:text-slate-100 truncate flex items-center justify-between">
-                                    <span className="truncate">{tx.description || tx.reference_type || 'Wallet Transfer'}</span>
-                                    <div className={`text-sm tracking-tight ${tx.transaction_type === 'CREDIT' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-white'}`}>
-                                        {tx.transaction_type === 'CREDIT' ? '+' : '-'}₹{Number(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    <span className="truncate">{tx.transaction_type === 'SETTLEMENT' ? 'Payout Settled to Bank' : (tx.description || tx.reference_type || 'Wallet Transfer')}</span>
+                                    <div className={`text-sm tracking-tight ${tx.transaction_type === 'SETTLEMENT' ? 'text-slate-600 dark:text-slate-400' : tx.transaction_type === 'CREDIT' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-white'}`}>
+                                        {tx.transaction_type === 'SETTLEMENT' ? '' : tx.transaction_type === 'CREDIT' ? '+' : '-'}₹{Number(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                     </div>
                                 </h4>
+                                {tx.transaction_type === 'SETTLEMENT' && (
+                                    <p className="text-[10px] text-indigo-600 font-bold mt-1 tracking-wide">
+                                        Bank settlement complete - Balance pre-adjusted on request.
+                                    </p>
+                                )}
                                 <div className="flex items-center justify-between mt-1">
                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
                                         {new Date(tx.created_at).toLocaleDateString('en-IN', {

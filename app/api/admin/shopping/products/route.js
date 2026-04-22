@@ -43,6 +43,15 @@ export async function POST(request) {
         });
 
         if (error) {
+            if (error.code === '23514') {
+                return NextResponse.json({ error: 'Data constraint violation.' }, { status: 400 });
+            }
+            if (error.code === '23502') {
+                return NextResponse.json({ error: 'Missing required system field.' }, { status: 400 });
+            }
+            if (error.code === '23503') {
+                return NextResponse.json({ error: 'Foreign key violation. A linked record is missing.' }, { status: 400 });
+            }
             console.error('RPC Error:', error);
             throw error;
         }
@@ -79,6 +88,18 @@ export async function PATCH(request) {
             });
 
             if (error) {
+                if (error.code === '23514') {
+                    if (error.message?.includes('admin_stock_non_negative')) {
+                        return NextResponse.json({ error: 'Insufficient stock' }, { status: 400 });
+                    }
+                    return NextResponse.json({ error: 'Data constraint violation.' }, { status: 400 });
+                }
+                if (error.code === '23502') {
+                    return NextResponse.json({ error: 'Missing required system field.' }, { status: 400 });
+                }
+                if (error.code === '23503') {
+                    return NextResponse.json({ error: 'Foreign key violation. A linked record is missing.' }, { status: 400 });
+                }
                 console.error('RPC Error:', error);
                 throw error;
             }
@@ -104,6 +125,15 @@ export async function PATCH(request) {
         });
 
         if (error) {
+            if (error.code === '23514') {
+                return NextResponse.json({ error: 'Data constraint violation.' }, { status: 400 });
+            }
+            if (error.code === '23502') {
+                return NextResponse.json({ error: 'Missing required system field.' }, { status: 400 });
+            }
+            if (error.code === '23503') {
+                return NextResponse.json({ error: 'Foreign key violation. A linked record is missing.' }, { status: 400 });
+            }
             console.error('RPC Error:', error);
             throw error;
         }

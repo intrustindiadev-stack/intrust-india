@@ -119,7 +119,17 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                 p_merchant_id: merchant.id,
             });
 
-            if (error) throw error;
+            if (error) {
+                if (error.code === '23514') {
+                    if (error.message?.includes('admin_stock_non_negative')) {
+                        throw new Error('Insufficient stock to complete this purchase');
+                    }
+                    throw new Error('Data constraint violation. Check constraints.');
+                }
+                if (error.code === '23502') throw new Error('Missing required system field.');
+                if (error.code === '23503') throw new Error('Foreign key violation. A linked record is missing.');
+                throw error;
+            }
             if (data && !data.success) throw new Error(data.message);
 
             // Show success animation

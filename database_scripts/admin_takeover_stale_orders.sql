@@ -21,7 +21,7 @@ BEGIN
         WHERE sog.delivery_status = 'pending'
           AND sog.settlement_status = 'pending'
           AND sog.is_platform_order = false
-          AND sog.status = 'completed'
+          AND sog.payment_status = 'paid'
           AND sog.created_at < NOW() - INTERVAL '2 hours'
           AND sog.merchant_id IS NOT NULL
     LOOP
@@ -67,6 +67,11 @@ BEGIN
         UPDATE public.merchants
         SET wallet_balance_paise = COALESCE(wallet_balance_paise, 0) + v_new_merchant_profit,
             total_commission_paid_paise = COALESCE(total_commission_paid_paise, 0) + v_new_platform_cut
+        WHERE id = v_stale_order.merchant_id;
+
+        -- Increment fulfillment failure count
+        UPDATE public.merchants
+        SET fulfillment_failure_count = fulfillment_failure_count + 1
         WHERE id = v_stale_order.merchant_id;
 
         -- Insert merchant transaction

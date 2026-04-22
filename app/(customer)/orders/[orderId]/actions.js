@@ -19,7 +19,7 @@ export async function cancelOrderAction(orderId) {
         // 1. Fetch order and verify ownership + cancellability
         const { data: order, error: fetchError } = await adminClient
             .from("shopping_order_groups")
-            .select("id, customer_id, delivery_status, status, payment_method, total_amount_paise")
+            .select("id, customer_id, delivery_status, status, payment_status, payment_method, total_amount_paise")
             .eq("id", orderId)
             .eq("customer_id", user.id) // ownership check
             .single();
@@ -33,7 +33,7 @@ export async function cancelOrderAction(orderId) {
         if (['shipped', 'delivered'].includes(order.delivery_status)) {
             return { success: false, message: `Order cannot be cancelled as it has already been ${order.delivery_status}.` };
         }
-        if (order.status === 'failed' || order.status === 'cancelled') {
+        if (order.payment_status === 'failed' || order.delivery_status === 'cancelled') {
             return { success: false, message: "This order has already been cancelled." };
         }
         // Wallet refund on cancellation is intentionally disabled.
@@ -43,13 +43,15 @@ export async function cancelOrderAction(orderId) {
             .from("shopping_order_groups")
             .update({
                 delivery_status: 'cancelled',
-                status: 'failed'
             })
             .eq("id", orderId)
             .eq("customer_id", user.id); // double-check ownership in WHERE clause
 
         if (updateError) {
             console.error("[cancelOrder] Failed to update order status:", updateError);
+            if (updateError.code === '23514') {
+                return { success: false, message: "Cannot cancel order. The change violates database validation constraints." };
+            }
             return { success: false, message: "Failed to cancel order. Please try again." };
         }
 

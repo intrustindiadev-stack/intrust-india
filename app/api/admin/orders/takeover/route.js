@@ -16,7 +16,7 @@ export async function POST(request) {
         const { order_id } = body;
 
         if (!order_id) {
-             return NextResponse.json({ error: 'Missing order_id' }, { status: 400 });
+            return NextResponse.json({ error: 'Missing order_id' }, { status: 400 });
         }
 
         const { data, error: rpcErr } = await supabase.rpc('admin_takeover_single_order', {
@@ -24,8 +24,21 @@ export async function POST(request) {
             p_admin_id: user.id
         });
 
-        if (rpcErr || !data?.success) {
-            return NextResponse.json({ error: rpcErr?.message || data?.message || 'Failed to takeover' }, { status: 400 });
+        if (rpcErr) {
+            if (rpcErr.code === '23514') {
+                return NextResponse.json({ error: 'Data constraint violation. Check inventory or payment rules.' }, { status: 400 });
+            }
+            if (rpcErr.code === '23502') {
+                return NextResponse.json({ error: 'Missing required field in order structure.' }, { status: 400 });
+            }
+            if (rpcErr.code === '23503') {
+                return NextResponse.json({ error: 'Foreign key violation. Linked record missing.' }, { status: 400 });
+            }
+            return NextResponse.json({ error: rpcErr.message || 'Failed to takeover' }, { status: 400 });
+        }
+
+        if (!data?.success) {
+            return NextResponse.json({ error: data?.message || 'Failed to takeover' }, { status: 400 });
         }
 
         return NextResponse.json({ success: true, message: 'Order manually taken over' });

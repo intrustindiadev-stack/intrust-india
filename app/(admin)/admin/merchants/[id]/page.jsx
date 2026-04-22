@@ -155,8 +155,8 @@ export default async function AdminMerchantDetailPage({ params }) {
                                     {merchant.status}
                                 </span>
                                 {isApproved && (
-                                    <span className={`inline-flex items-center px-3 sm:px-4 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest border shadow-sm ${merchant.subscription_status === 'active' 
-                                        ? 'bg-amber-100 text-amber-800 border-amber-300' 
+                                    <span className={`inline-flex items-center px-3 sm:px-4 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest border shadow-sm ${merchant.subscription_status === 'active'
+                                        ? 'bg-amber-100 text-amber-800 border-amber-300'
                                         : 'bg-rose-100 text-rose-800 border-rose-300'}`}>
                                         Sub: {merchant.subscription_status || 'unpaid'}
                                     </span>
@@ -185,6 +185,13 @@ export default async function AdminMerchantDetailPage({ params }) {
                             <div className="text-center px-4">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Withdrawals</p>
                                 <p className="text-2xl font-black text-slate-900">{payouts.length}</p>
+                            </div>
+                            <div className="hidden sm:block w-px h-12 bg-slate-200" />
+                            <div className="text-center px-4">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fulfillment Failures</p>
+                                <p className={`text-2xl font-black ${merchant.fulfillment_failure_count > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+                                    {merchant.fulfillment_failure_count}
+                                </p>
                             </div>
                         </div>
                     )}
@@ -304,10 +311,16 @@ export default async function AdminMerchantDetailPage({ params }) {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                 <div className="bg-white/5 p-3 sm:p-4 rounded-2xl border border-white/10 hover:bg-white/10 transition-colors">
                                     <p className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Payouts</p>
                                     <p className="text-xl sm:text-2xl font-black text-blue-400">{payouts.length}</p>
+                                </div>
+                                <div className="bg-white/5 p-3 sm:p-4 rounded-2xl border border-white/10 hover:bg-white/10 transition-colors">
+                                    <p className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Fulfillment Failures</p>
+                                    <p className={`text-xl sm:text-2xl font-black ${(merchant.fulfillment_failure_count || 0) > 0 ? 'text-rose-400' : 'text-white'}`}>
+                                        {merchant.fulfillment_failure_count || 0}
+                                    </p>
                                 </div>
                             </div>
 
