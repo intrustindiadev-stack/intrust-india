@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { notFound, redirect } from 'next/navigation';
-import { Building2, Phone, Mail, FileText, CheckCircle, XCircle, Clock, MapPin, CreditCard, User, AlertCircle } from 'lucide-react';
+import { Building2, Phone, Mail, FileText, CheckCircle, XCircle, Clock, MapPin, CreditCard, User, AlertCircle, ShoppingBag, ShoppingCart, Star, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import MerchantActions from './MerchantActions';
 import MerchantWalletAdjustSection from './MerchantWalletAdjustSection';
@@ -85,10 +85,53 @@ export default async function AdminMerchantDetailPage({ params }) {
             .select('*')
             .eq('merchant_id', id)
             .order('created_at', { ascending: false })
-            .limit(20); // Fetch more to allow for consolidation within the limit
+            .limit(20);
         if (t) transactions = consolidateTransactions(t);
     } catch (e) {
         console.log('Error fetching merchant transactions:', e);
+    }
+
+    // Fetch Shopping Performance (for merchants selling products)
+    let shopStats = { totalSales: 0, platformCut: 0, merchantProfit: 0, orderCount: 0 };
+    try {
+        const { data: orders } = await supabase
+            .from('shopping_order_groups')
+            .select('total_amount_paise, platform_cut_paise, merchant_profit_paise, status')
+            .eq('merchant_id', id);
+        
+        if (orders) {
+            shopStats = orders.reduce((acc, order) => {
+                const total = Number(order.total_amount_paise) || 0;
+                const cut = Number(order.platform_cut_paise) || 0;
+                const profit = Number(order.merchant_profit_paise) || 0;
+                
+                acc.totalSales += total;
+                acc.platformCut += cut;
+                acc.merchantProfit += profit;
+                acc.orderCount += 1;
+                return acc;
+            }, { totalSales: 0, platformCut: 0, merchantProfit: 0, orderCount: 0 });
+        }
+    } catch (e) {
+        console.log('Error fetching shop stats:', e);
+    }
+
+    // Fetch Merchant Ratings
+    let ratingInfo = { average: 0, count: 0 };
+    try {
+        const { data: ratings } = await supabase
+            .from('merchant_ratings')
+            .select('rating')
+            .eq('merchant_id', id);
+        if (ratings && ratings.length > 0) {
+            const sum = ratings.reduce((s, r) => s + (r.rating || 0), 0);
+            ratingInfo = {
+                average: (sum / ratings.length).toFixed(1),
+                count: ratings.length
+            };
+        }
+    } catch (e) {
+        console.log('Error fetching ratings:', e);
     }
 
     const formatDate = (dateString) => {
@@ -138,12 +181,21 @@ export default async function AdminMerchantDetailPage({ params }) {
                                     <p className="text-base sm:text-lg font-semibold text-slate-600">
                                         {merchant.user_profiles?.full_name || 'Unknown Owner'}
                                     </p>
-                                    <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-slate-300" />
                                     <span className="text-xs sm:text-sm font-bold text-slate-400">
-                                        Joined {formatDate(merchant.created_at)}
-                                    </span>
-                                </div>
-                            </div>
+                                         Joined {formatDate(merchant.created_at)}
+                                     </span>
+                                     {ratingInfo.count > 0 && (
+                                         <>
+                                             <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-slate-300" />
+                                             <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 rounded-full border border-amber-100">
+                                                 <Star size={12} className="text-amber-500 fill-amber-500" />
+                                                 <span className="text-xs font-black text-amber-700">{ratingInfo.average}</span>
+                                                 <span className="text-[10px] font-bold text-amber-600/60">({ratingInfo.count})</span>
+                                             </div>
+                                         </>
+                                     )}
+                                 </div>
+                             </div>
 
                             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 pt-2">
                                 <span className={`inline-flex items-center px-3 sm:px-4 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest border shadow-sm ${isPending
@@ -181,10 +233,18 @@ export default async function AdminMerchantDetailPage({ params }) {
                     {isPending && <MerchantActions merchantId={merchant.id} userId={merchant.user_id} status={merchant.status} />}
 
                     {isApproved && (
-                        <div className="hidden lg:flex items-center gap-6 bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
-                            <div className="text-center px-4">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Withdrawals</p>
-                                <p className="text-2xl font-black text-slate-900">{payouts.length}</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 bg-slate-50/50 p-4 sm:p-6 rounded-3xl border border-slate-100 shadow-inner">
+                            <div className="text-center sm:text-left px-2 border-r border-slate-100 last:border-0">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Gross Sales</p>
+                                <p className="text-xl sm:text-2xl font-black text-slate-900">₹{(shopStats.totalSales / 100).toLocaleString('en-IN')}</p>
+                            </div>
+                            <div className="text-center sm:text-left px-2 border-r border-slate-100 last:border-0">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Platform Cut</p>
+                                <p className="text-xl sm:text-2xl font-black text-rose-500">₹{(shopStats.platformCut / 100).toLocaleString('en-IN')}</p>
+                            </div>
+                            <div className="text-center sm:text-left px-2 last:border-0 hidden sm:block">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Net Profit</p>
+                                <p className="text-xl sm:text-2xl font-black text-emerald-600">₹{(shopStats.merchantProfit / 100).toLocaleString('en-IN')}</p>
                             </div>
                         </div>
                     )}
@@ -278,6 +338,34 @@ export default async function AdminMerchantDetailPage({ params }) {
                                 <div className="font-mono font-black text-slate-900 p-4 bg-slate-50/50 border border-slate-100 rounded-[1.25rem] shadow-inner text-base sm:text-lg tracking-widest uppercase">
                                     {merchant.ifsc_code || 'N/A'}
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Sales Insights */}
+                    <div className="bg-white rounded-[1.5rem] sm:rounded-[2rem] p-6 sm:p-8 border border-slate-200 shadow-sm transition-all hover:shadow-md">
+                        <h2 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-3 tracking-tight mb-8">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                                <ShoppingBag className="text-emerald-600" size={18} />
+                            </div>
+                            Shopping Insights
+                        </h2>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Orders</p>
+                                <p className="text-xl font-black text-slate-900">{shopStats.orderCount}</p>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg Order Value</p>
+                                <p className="text-xl font-black text-slate-900">₹{shopStats.orderCount > 0 ? (shopStats.totalSales / shopStats.orderCount / 100).toFixed(0) : 0}</p>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Items Sold</p>
+                                <p className="text-xl font-black text-slate-900">—</p>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Retention Rate</p>
+                                <p className="text-xl font-black text-slate-900">N/A</p>
                             </div>
                         </div>
                     </div>

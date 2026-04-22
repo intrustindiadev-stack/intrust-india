@@ -95,18 +95,34 @@ export default async function AdminUserDetailPage({ params }) {
         .eq('user_id', id);
     if (kyc) kyc_records = kyc;
 
-    // Fetch Recent Orders (Customer context)
-    let orders = [];
+    // Fetch Unified Order History (Shopping, Gift Cards, NFC)
+    let unifiedOrders = [];
+    let spendingStats = { totalSpent: 0, shopping: 0, giftCards: 0, nfc: 0, count: 0 };
+    
     try {
-        const { data } = await supabase
-            .from('orders')
-            .select('*')
-            .eq('user_id', id)
-            .order('created_at', { ascending: false })
-            .limit(5);
-        orders = data || [];
+        const [shoppingOrders, giftCardOrders, nfcOrders] = await Promise.all([
+            supabase.from('shopping_order_groups').select('*').eq('customer_id', id).eq('status', 'completed'),
+            supabase.from('transactions').select('*').eq('user_id', id).in('status', ['PAID', 'COMPLETED', 'completed', 'success']),
+            supabase.from('nfc_orders').select('*').eq('user_id', id).eq('payment_status', 'paid')
+        ]);
+
+        const shops = (shoppingOrders.data || []).map(o => ({ ...o, type: 'SHOPPING', amount: Number(o.total_amount_paise) || 0 }));
+        const gifts = (giftCardOrders.data || []).map(o => ({ ...o, type: 'GIFT_CARD', amount: Number(o.total_paid_paise || o.amount || 0) }));
+        const nfcs = (nfcOrders.data || []).map(o => ({ ...o, type: 'NFC_CARD', amount: Number(o.sale_price_paise) || 0 }));
+
+        unifiedOrders = [...shops, ...gifts, ...nfcs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
+        spendingStats = unifiedOrders.reduce((acc, order) => {
+            acc.totalSpent += order.amount;
+            acc.count += 1;
+            if (order.type === 'SHOPPING') acc.shopping += order.amount;
+            if (order.type === 'GIFT_CARD') acc.giftCards += order.amount;
+            if (order.type === 'NFC_CARD') acc.nfc += order.amount;
+            return acc;
+        }, { totalSpent: 0, shopping: 0, giftCards: 0, nfc: 0, count: 0 });
+
     } catch (e) {
-        console.log('Could not fetch orders', e);
+        console.log('Error fetching unified orders', e);
     }
 
     // Customer Wallet Balance
@@ -168,12 +184,12 @@ export default async function AdminUserDetailPage({ params }) {
         });
     }
 
-    orders.slice(0, 3).forEach(o => {
+    unifiedOrders.slice(0, 5).forEach(o => {
         activities.push({
-            title: "Transaction",
-            desc: `₹${((o.amount || 0) / 100).toLocaleString('en-IN')} — ${o.payment_status}`,
+            title: o.type.replace('_', ' '),
+            desc: `₹${(o.amount / 100).toLocaleString('en-IN')}`,
             date: o.created_at,
-            color: o.payment_status === 'paid' ? "bg-emerald-500" : "bg-gray-400"
+            color: "bg-emerald-500"
         });
     });
 
@@ -287,49 +303,85 @@ export default async function AdminUserDetailPage({ params }) {
                         </div>
                     )}
 
-                    {/* Order History (if user has orders) */}
-                    {orders.length > 0 && (
-                        <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
-                            <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2 mb-6 tracking-tight">
-                                <ShoppingBag className="text-indigo-600" />
-                                Recent Orders
+                    {/* Spending Analytics */}
+                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm transition-all hover:shadow-md">
+                        <div className="flex items-center justify-between mb-8">
+                            <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-3 tracking-tight">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                                    <ShoppingBag className="text-indigo-600" size={20} />
+                                </div>
+                                Spending Analytics
                             </h2>
+                            <div className="flex flex-col items-end">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Lifetime Value (LTV)</p>
+                                <p className="text-2xl font-black text-slate-900">₹{(spendingStats.totalSpent / 100).toLocaleString('en-IN')}</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">E-Commerce</p>
+                                    <p className="text-lg font-black text-slate-900">₹{(spendingStats.shopping / 100).toLocaleString('en-IN')}</p>
+                                </div>
+                                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm">🛍️</div>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Gift Cards</p>
+                                    <p className="text-lg font-black text-slate-900">₹{(spendingStats.giftCards / 100).toLocaleString('en-IN')}</p>
+                                </div>
+                                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm">🎁</div>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">NFC One</p>
+                                    <p className="text-lg font-black text-slate-900">₹{(spendingStats.nfc / 100).toLocaleString('en-IN')}</p>
+                                </div>
+                                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm">🪪</div>
+                            </div>
+                        </div>
+
+                        {unifiedOrders.length > 0 ? (
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="border-b-2 border-gray-100 text-left">
-                                            <th className="pb-3 font-bold text-gray-400 text-[10px] uppercase tracking-wider">Order ID</th>
+                                        <tr className="border-b border-gray-100 text-left">
+                                            <th className="pb-3 font-bold text-gray-400 text-[10px] uppercase tracking-wider">Order Type</th>
                                             <th className="pb-3 font-bold text-gray-400 text-[10px] uppercase tracking-wider">Date</th>
-                                            <th className="pb-3 font-bold text-gray-400 text-[10px] uppercase tracking-wider">Amount</th>
-                                            <th className="pb-3 font-bold text-gray-400 text-[10px] uppercase tracking-wider">Status</th>
+                                            <th className="pb-3 font-bold text-gray-400 text-[10px] uppercase tracking-wider text-right">Amount</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-50 font-medium">
-                                        {orders.map(order => (
-                                            <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                                                <td className="py-4 font-mono text-sm text-gray-500">
-                                                    {order.id.slice(0, 8)}...
+                                    <tbody className="divide-y divide-gray-50">
+                                        {unifiedOrders.slice(0, 10).map((order, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                                <td className="py-4">
+                                                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border ${
+                                                        order.type === 'SHOPPING' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                        order.type === 'GIFT_CARD' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                                                        'bg-amber-50 text-amber-700 border-amber-100'
+                                                    }`}>
+                                                        {order.type.replace('_', ' ')}
+                                                    </span>
                                                 </td>
-                                                <td className="py-4 text-sm text-gray-900">
+                                                <td className="py-4 text-xs font-bold text-slate-500">
                                                     {formatDate(order.created_at)}
                                                 </td>
-                                                <td className="py-4 font-bold text-gray-900">
-                                                    ₹{((order.amount || 0) / 100).toLocaleString('en-IN')}
-                                                </td>
-                                                <td className="py-4">
-                                                    <span className={`px-2.5 py-1 rounded text-[10px] font-extrabold uppercase tracking-wider border ${order.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                                        order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-700 border-gray-200'
-                                                        }`}>
-                                                        {order.payment_status}
-                                                    </span>
+                                                <td className="py-4 text-right font-black text-slate-900">
+                                                    ₹{(order.amount / 100).toLocaleString('en-IN')}
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="text-center py-12 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                                <ShoppingBag className="w-12 h-12 text-slate-200 mx-auto mb-4 opacity-50" />
+                                <p className="text-slate-400 font-black uppercase tracking-widest text-xs">No transaction history</p>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Referral Info */}
                     <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
@@ -422,12 +474,12 @@ export default async function AdminUserDetailPage({ params }) {
                             <div className="flex justify-between items-center py-3 border-b border-slate-700/50">
                                 <span className="text-slate-400 font-medium text-sm">Total Spent</span>
                                 <span className="font-bold text-white text-lg">
-                                    ₹{orders.reduce((sum, o) => sum + (o.payment_status === 'paid' ? (o.amount || 0) / 100 : 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    ₹{(spendingStats.totalSpent / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center py-3">
                                 <span className="text-slate-400 font-medium text-sm">Valid Orders</span>
-                                <span className="font-bold text-white bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full">{orders.filter(o => o.payment_status === 'paid').length}</span>
+                                <span className="font-bold text-white bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full">{unifiedOrders.filter(o => o.status === 'completed' || o.payment_status === 'paid').length}</span>
                             </div>
                         </div>
                     </div>
