@@ -47,67 +47,111 @@ BEGIN
     RAISE EXCEPTION 'udhari_not_found';
   END IF;
 
-  -- 2. Lock & verify the coupon is still reserved
-  SELECT * INTO v_coupon
-  FROM coupons
-  WHERE id     = v_udhari.coupon_id
-    AND status = 'reserved'
-  FOR UPDATE;
+  IF v_udhari.source_type = 'shop_order' THEN
+    -- Shop order specific logic
+    
+    -- 2. Mark order group as confirmed (pending -> merchant to fulfill)
+    UPDATE shopping_order_groups
+    SET delivery_status  = 'pending',
+        payment_method   = 'store_credit' 
+    WHERE id = v_udhari.shopping_order_group_id;
 
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'coupon_not_reserved';
+    -- 3. Credit merchant wallet
+    SELECT wallet_balance_paise INTO v_merchant_new_balance
+    FROM merchants
+    WHERE id = v_udhari.merchant_id
+    FOR UPDATE;
+
+    v_merchant_new_balance := COALESCE(v_merchant_new_balance, 0) + p_amount_paise;
+
+    UPDATE merchants
+    SET wallet_balance_paise = v_merchant_new_balance,
+        updated_at           = NOW()
+    WHERE id = v_udhari.merchant_id;
+
+    -- 4. Insert merchant ledger entry
+    INSERT INTO merchant_transactions (
+      merchant_id, transaction_type, amount_paise, commission_paise,
+      balance_after_paise, description, metadata
+    ) VALUES (
+      v_udhari.merchant_id,
+      'store_credit_payment',
+      p_amount_paise,
+      0,
+      v_merchant_new_balance,
+      'Store Credit Paid (Gateway): Shop Order #' || LEFT(v_udhari.shopping_order_group_id::text, 8),
+      jsonb_build_object(
+        'udhari_request_id', p_udhari_request_id,
+        'customer_id',       p_customer_user_id,
+        'shopping_order_group_id', v_udhari.shopping_order_group_id,
+        'gateway_amount_paise', p_amount_paise
+      )
+    );
+     
+  ELSE
+    -- Default / Gift Card logic
+    -- 2. Lock & verify the coupon is still reserved
+    SELECT * INTO v_coupon
+    FROM coupons
+    WHERE id     = v_udhari.coupon_id
+      AND status = 'reserved'
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'coupon_not_reserved';
+    END IF;
+
+    -- 3. Mark coupon as sold
+    UPDATE coupons
+    SET status       = 'sold',
+        purchased_by = p_customer_user_id,
+        purchased_at = NOW()
+    WHERE id = v_coupon.id;
+
+    -- 4. Insert order record
+    INSERT INTO orders (
+      user_id, merchant_id, giftcard_id, amount, payment_status, created_at
+    ) VALUES (
+      p_customer_user_id, v_udhari.merchant_id, v_coupon.id,
+      p_amount_paise, 'paid', NOW()
+    ) RETURNING id INTO v_order_id;
+
+    -- 5. Credit merchant wallet
+    -- Use SELECT FOR UPDATE to prevent concurrent race with topup/payout.
+    SELECT wallet_balance_paise INTO v_merchant_new_balance
+    FROM merchants
+    WHERE id = v_udhari.merchant_id
+    FOR UPDATE;
+
+    -- Credit the full amount (including convenience fee) to merchant wallet
+    v_merchant_new_balance := COALESCE(v_merchant_new_balance, 0) + p_amount_paise;
+
+    UPDATE merchants
+    SET wallet_balance_paise = v_merchant_new_balance,
+        updated_at           = NOW()
+    WHERE id = v_udhari.merchant_id;
+
+    -- 6. Insert merchant ledger entry
+    INSERT INTO merchant_transactions (
+      merchant_id, transaction_type, amount_paise, commission_paise,
+      balance_after_paise, description, metadata
+    ) VALUES (
+      v_udhari.merchant_id,
+      'udhari_payment',
+      p_amount_paise,
+      0,
+      v_merchant_new_balance,
+      'Udhari Paid (Gateway): ' ||
+        COALESCE(v_coupon.title, 'Gift Card') ||
+        COALESCE(' (Cust: ' || p_customer_email || ')', ''),
+      jsonb_build_object(
+        'udhari_request_id', p_udhari_request_id,
+        'customer_id',       p_customer_user_id,
+        'coupon_id',         v_coupon.id,
+        'gateway_amount_paise', p_amount_paise
+      )
+    );
   END IF;
-
-  -- 3. Mark coupon as sold
-  UPDATE coupons
-  SET status       = 'sold',
-      purchased_by = p_customer_user_id,
-      purchased_at = NOW()
-  WHERE id = v_coupon.id;
-
-  -- 4. Insert order record
-  INSERT INTO orders (
-    user_id, merchant_id, giftcard_id, amount, payment_status, created_at
-  ) VALUES (
-    p_customer_user_id, v_udhari.merchant_id, v_coupon.id,
-    p_amount_paise, 'paid', NOW()
-  ) RETURNING id INTO v_order_id;
-
-  -- 5. Credit merchant wallet
-  -- Use SELECT FOR UPDATE to prevent concurrent race with topup/payout.
-  SELECT wallet_balance_paise INTO v_merchant_new_balance
-  FROM merchants
-  WHERE id = v_udhari.merchant_id
-  FOR UPDATE;
-
-  -- Credit the full amount (including convenience fee) to merchant wallet
-  v_merchant_new_balance := COALESCE(v_merchant_new_balance, 0) + p_amount_paise;
-
-  UPDATE merchants
-  SET wallet_balance_paise = v_merchant_new_balance,
-      updated_at           = NOW()
-  WHERE id = v_udhari.merchant_id;
-
-  -- 6. Insert merchant ledger entry
-  INSERT INTO merchant_transactions (
-    merchant_id, transaction_type, amount_paise, commission_paise,
-    balance_after_paise, description, metadata
-  ) VALUES (
-    v_udhari.merchant_id,
-    'udhari_payment',
-    p_amount_paise,
-    0,
-    v_merchant_new_balance,
-    'Udhari Paid (Gateway): ' ||
-      COALESCE(v_coupon.title, 'Gift Card') ||
-      COALESCE(' (Cust: ' || p_customer_email || ')', ''),
-    jsonb_build_object(
-      'udhari_request_id', p_udhari_request_id,
-      'customer_id',       p_customer_user_id,
-      'coupon_id',         v_coupon.id,
-      'gateway_amount_paise', p_amount_paise
-    )
-  );
 
   -- 7. Mark udhari request completed
   UPDATE udhari_requests

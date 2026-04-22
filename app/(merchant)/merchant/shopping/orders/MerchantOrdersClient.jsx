@@ -14,6 +14,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import StoreCreditRequestsTab from "./StoreCreditRequestsTab";
 import { generateOrderInvoice } from "@/lib/invoiceGenerator";
+import { calculatePlatformFeePercentage } from "@/lib/utils/ledger";
 import { toast } from "react-hot-toast";
 
 const STATUS_CONFIG = {
@@ -189,13 +190,9 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                     <div className="flex justify-between items-center text-xs">
                                         <div className="flex items-center gap-1.5">
                                             <span className="text-slate-500 dark:text-gray-500 font-medium tracking-wide">Platform Fee</span>
-                                            {order.commission_rate !== undefined ? (
+                                            {calculatePlatformFeePercentage(order.commission_rate, orderCommission, orderGrossProfit) !== null && (
                                                 <span className="text-[9px] px-1 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 font-black">
-                                                    {Math.round((1 - order.commission_rate) * 100)}%
-                                                </span>
-                                            ) : orderGrossProfit > 0 && (
-                                                <span className="text-[9px] px-1 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 font-black">
-                                                    {((orderCommission / (orderGrossProfit + orderCommission)) * 100).toFixed(0)}%
+                                                    {calculatePlatformFeePercentage(order.commission_rate, orderCommission, orderGrossProfit)}%
                                                 </span>
                                             )}
                                         </div>

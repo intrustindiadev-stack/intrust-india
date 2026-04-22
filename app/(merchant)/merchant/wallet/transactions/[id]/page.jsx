@@ -126,6 +126,31 @@ export default function TransactionDetailPage() {
                         .single();
                     data = merchantTx;
                     queryError = err;
+
+                    if (data && data.transaction_type === 'store_credit_payment' && data.metadata?.shopping_order_group_id) {
+                        const groupId = data.metadata.shopping_order_group_id;
+
+                        const [groupRes, itemsRes] = await Promise.all([
+                            supabase
+                                .from('shopping_order_groups')
+                                .select('id, total_amount_paise, delivery_fee_paise, platform_cut_paise, merchant_profit_paise, commission_rate, payment_method')
+                                .eq('id', groupId)
+                                .single(),
+                            supabase
+                                .from('shopping_order_items')
+                                .select('id, quantity, unit_price_paise, gst_amount_paise, commission_amount_paise, shopping_products(title)')
+                                .eq('group_id', groupId)
+                        ]);
+
+                        if (!groupRes.error && !itemsRes.error && groupRes.data) {
+                            data.store_credit_order = {
+                                group: groupRes.data,
+                                items: itemsRes.data
+                            };
+                        } else {
+                            console.error('Error fetching store_credit_order details:', groupRes.error || itemsRes.error);
+                        }
+                    }
                 }
             } else {
                 const { data: walletTx, error: err } = await supabase
@@ -166,6 +191,7 @@ export default function TransactionDetailPage() {
 
         try {
             const isCart = transaction.cart_items && transaction.cart_items.length > 0;
+            const isStoreCredit = transaction.store_credit_order != null;
             let formattedItems = [];
 
             if (isCart) {
@@ -186,6 +212,22 @@ export default function TransactionDetailPage() {
                         total_price_paise: wholesaleAmount // MUST be pre-tax since generator ADDS gst.
                     };
                 });
+            } else if (isStoreCredit) {
+                formattedItems = transaction.store_credit_order.items.map(item => {
+                    const gstPct = item.unit_price_paise > 0 && item.quantity > 0
+                        ? Math.round((item.gst_amount_paise / (item.unit_price_paise * item.quantity)) * 100)
+                        : 0;
+                    return {
+                        shopping_products: {
+                            title: item.shopping_products?.title || 'Order Product',
+                            hsn_code: '9971',
+                            gst_percentage: gstPct
+                        },
+                        quantity: item.quantity,
+                        unit_price_paise: item.unit_price_paise,
+                        total_price_paise: item.unit_price_paise * item.quantity
+                    };
+                });
             }
 
             const mockOrder = {
@@ -204,7 +246,7 @@ export default function TransactionDetailPage() {
                 order: mockOrder,
                 items: formattedItems,
                 seller: PLATFORM_CONFIG.business,
-                type: isCart ? 'shopping' : 'giftcard'
+                type: (isCart || isStoreCredit) ? 'shopping' : 'giftcard'
             });
             toast.success("Invoice generated successfully");
         } catch (err) {
@@ -494,6 +536,80 @@ export default function TransactionDetailPage() {
                                         </span>
                                         <span className="text-xl font-black text-[#D4AF37]">
                                             ₹{(grandTotalPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {source === 'merchant' && transaction.store_credit_order && (() => {
+                    const { group, items } = transaction.store_credit_order;
+                    const subtotalPaise = items.reduce((sum, item) => sum + (item.unit_price_paise * item.quantity), 0);
+                    const gstPaise = items.reduce((sum, item) => sum + item.gst_amount_paise, 0);
+                    const deliveryPaise = group.delivery_fee_paise || 0;
+                    const totalPaise = group.total_amount_paise || transaction.metadata?.gateway_amount_paise || 0;
+
+                    return (
+                        <div className="space-y-6">
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.25rem] px-2">Order Breakdown</h3>
+                            <div className="space-y-3">
+                                {items.map(item => {
+                                    const title = item.shopping_products?.title || 'Unknown Product';
+                                    return (
+                                        <div key={item.id} className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-slate-50 dark:bg-slate-950 rounded-xl flex items-center justify-center text-slate-900 dark:text-white font-black text-lg border border-slate-100 dark:border-slate-800">
+                                                    {title.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h4>
+                                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Qty: {item.quantity}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-black text-slate-900 dark:text-white">
+                                                    ₹{Number(item.unit_price_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                                </p>
+                                                {item.gst_amount_paise > 0 && (
+                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">+ ₹{Number(item.gst_amount_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })} GST</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="bg-[#D4AF37]/5 rounded-2xl p-6 border border-[#D4AF37]/20 mt-6">
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center text-sm font-bold text-slate-600 dark:text-slate-400">
+                                        <span>Product Subtotal</span>
+                                        <span>₹{(subtotalPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm font-bold text-slate-600 dark:text-slate-400">
+                                        <span>GST</span>
+                                        <span>₹{(gstPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm font-bold text-slate-600 dark:text-slate-400">
+                                        <span>Delivery Fee</span>
+                                        <span>₹{(deliveryPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="h-px bg-slate-200 dark:bg-slate-800 my-4" />
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                                            Total Charged
+                                        </span>
+                                        <span className="text-xl font-black text-[#D4AF37]">
+                                            ₹{(totalPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-500 uppercase tracking-wider">
+                                            Merchant Received
+                                        </span>
+                                        <span className="text-sm font-black text-emerald-600 dark:text-emerald-500">
+                                            ₹{((transaction.amount_paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>
                                 </div>

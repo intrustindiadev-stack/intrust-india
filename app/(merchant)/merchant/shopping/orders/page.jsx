@@ -52,7 +52,7 @@ export default async function MerchantOrdersPage() {
       items: (order.items || []).map(item => ({
         id: item.id,
         product_title: item.product_title || "Unknown Product",
-        product_image: item.product_image || null,
+        product_image: item.product_image || item.image_url || null,
         quantity: item.quantity,
         unit_price_paise: item.unit_price_paise,
         cost_price_paise: item.cost_price_paise || 0,

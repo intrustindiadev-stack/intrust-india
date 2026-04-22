@@ -22,7 +22,8 @@ export default async function MerchantOrderDetailPage({ params }) {
 
     const adminDb = createAdminClient();
 
-    // Fetch single order with items via RPC
+    // Fetch single order with items via RPC. The actual RPC payload returns fields like product_image
+    // instead of image_url. Fallback added for backward compatibility.
     const { data: rpcResult } = await adminDb.rpc('merchant_get_my_orders', {
         p_merchant_id: merchant.id
     });
@@ -36,7 +37,7 @@ export default async function MerchantOrderDetailPage({ params }) {
         items: (rawOrder.items || []).map(item => ({
             id: item.id,
             product_title: item.product_title || "Unknown Product",
-            product_image: item.image_url || null,
+            product_image: item.product_image || item.image_url || null,
             quantity: item.quantity,
             unit_price_paise: item.unit_price_paise,
             total_price_paise: (item.unit_price_paise || 0) * (item.quantity || 1),

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { generateOrderInvoice } from "@/lib/invoiceGenerator";
+import { calculatePlatformFeePercentage } from "@/lib/utils/ledger";
 import { toast } from "react-hot-toast";
 import { createClient } from "@/lib/supabaseClient";
 
@@ -332,9 +333,9 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
                     <div className="flex justify-between items-center text-xs">
                         <div className="flex items-center gap-1.5">
                             <span className="text-slate-500 dark:text-gray-400 font-medium">Platform Fee</span>
-                            {orderGrossProfit > 0 && (
+                            {calculatePlatformFeePercentage(order.commission_rate, orderCommission, orderGrossProfit) !== null && (
                                 <span className="text-[9px] px-1 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 font-black">
-                                    {((orderCommission / (orderGrossProfit + orderCommission)) * 100).toFixed(0)}%
+                                    {calculatePlatformFeePercentage(order.commission_rate, orderCommission, orderGrossProfit)}%
                                 </span>
                             )}
                         </div>

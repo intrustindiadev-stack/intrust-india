@@ -11,22 +11,23 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
 import { generateOrderInvoice } from "@/lib/invoiceGenerator";
+import { calculatePlatformFeePercentage } from "@/lib/utils/ledger";
 import { PLATFORM_CONFIG } from "@/lib/config/platform";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STATUS_CONFIG = {
-    pending:   { label: "Pending",   color: "text-amber-600",  bg: "bg-amber-50",  border: "border-amber-200",  dot: "bg-amber-400",  icon: Clock },
-    packed:    { label: "Packed",    color: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200",   dot: "bg-blue-500",   icon: Package },
-    shipped:   { label: "Shipped",   color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200", dot: "bg-violet-500", icon: Truck },
-    delivered: { label: "Delivered", color: "text-emerald-600",bg: "bg-emerald-50",border: "border-emerald-200",dot: "bg-emerald-500",icon: CheckCircle2 },
-    cancelled: { label: "Cancelled", color: "text-red-500",    bg: "bg-red-50",    border: "border-red-200",    dot: "bg-red-500",    icon: XCircle },
+    pending: { label: "Pending", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", dot: "bg-amber-400", icon: Clock },
+    packed: { label: "Packed", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", dot: "bg-blue-500", icon: Package },
+    shipped: { label: "Shipped", color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200", dot: "bg-violet-500", icon: Truck },
+    delivered: { label: "Delivered", color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", dot: "bg-emerald-500", icon: CheckCircle2 },
+    cancelled: { label: "Cancelled", color: "text-red-500", bg: "bg-red-50", border: "border-red-200", dot: "bg-red-500", icon: XCircle },
 };
 
 const STATUS_FLOW = ["pending", "packed", "shipped", "delivered"];
 const STEPS = [
-    { key: "pending",   label: "Placed",    icon: Package },
-    { key: "packed",    label: "Packed",    icon: Package },
-    { key: "shipped",   label: "Shipped",   icon: Truck },
+    { key: "pending", label: "Placed", icon: Package },
+    { key: "packed", label: "Packed", icon: Package },
+    { key: "shipped", label: "Shipped", icon: Truck },
     { key: "delivered", label: "Delivered", icon: CheckCircle2 },
 ];
 
@@ -278,7 +279,9 @@ export default function AdminOrderDetailClient({ order: initialOrder, sellerDeta
                                 <div className="mt-3 pt-3 border-t border-slate-100">
                                     <div className="p-3 bg-violet-50 rounded-xl border border-violet-100">
                                         <p className="text-xs font-black text-violet-700 flex items-center gap-1.5"><Zap size={11} /> Commission split applied</p>
-                                        <p className="text-xs text-violet-500 mt-0.5">Rate: {((1 - (order.commission_rate || 0.95)) * 100).toFixed(0)}% platform fee</p>
+                                        {calculatePlatformFeePercentage(order.commission_rate, platformCut, totalProfit) !== null && (
+                                            <p className="text-xs text-violet-500 mt-0.5">Rate: {calculatePlatformFeePercentage(order.commission_rate, platformCut, totalProfit)}% platform fee</p>
+                                        )}
                                     </div>
                                     <Link href={`/admin/merchants/${order.merchant_id}`}
                                         className="mt-3 flex items-center gap-1 text-xs font-black text-blue-600 hover:text-blue-700">
