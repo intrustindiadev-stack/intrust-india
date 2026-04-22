@@ -9,7 +9,7 @@ export default function Header({ setSidebarOpen }) {
     const displayBalance = loading ? "..." : (balance?.balance_paise !== undefined ? (balance.balance_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00");
 
     return (
-        <header className="sticky top-0 h-20 merchant-glass border-b border-white/5 dark:border-white/5 flex items-center justify-between px-4 sm:px-8 z-10 w-full transition-all duration-300">
+        <header className="sticky top-0 h-20 merchant-glass border-b border-white/5 dark:border-white/5 flex items-center justify-between px-4 sm:px-8 z-50 w-full transition-all duration-300">
             <div className="flex items-center gap-4 flex-1">
                 {/* Mobile Menu Button */}
                 <button

@@ -12,7 +12,7 @@ export default function StoreStatusToggle({ initialStoreData }) {
 
     useEffect(() => {
         if (!initialStoreData?.id) return;
-        
+
         const channel = supabase
             .channel(`merchant_toggle_${initialStoreData.id}`)
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'merchants', filter: `id=eq.${initialStoreData.id}` }, (payload) => {
@@ -56,11 +56,8 @@ export default function StoreStatusToggle({ initialStoreData }) {
     };
 
     return (
-        <div className="relative bg-white dark:bg-[#0c0e16] border border-slate-200 dark:border-white/10 rounded-[2rem] p-6 sm:p-8 shadow-xl shadow-slate-200/50 dark:shadow-none w-full flex flex-col overflow-hidden transition-all duration-300 hover:border-blue-400/30 group min-h-[220px] lg:min-h-full">
-            {/* Soft background glow based on state */}
-            <div className={`absolute -top-12 -right-12 w-48 h-48 blur-[80px] rounded-full pointer-events-none transition-colors duration-1000 ${isOpen ? 'bg-emerald-500/30' : 'bg-rose-500/10'}`} />
-            
-            <div className="relative flex items-center justify-between gap-6 z-10 mb-8 sm:mb-10">
+        <div className="relative bg-white dark:bg-[#0c0e16] border border-slate-200 dark:border-white/10 rounded-2xl p-4 sm:p-5 shadow-lg shadow-slate-200/50 dark:shadow-none w-full sm:w-auto flex flex-col justify-center overflow-hidden transition-all duration-300 hover:border-blue-400/30 group min-w-[280px]">
+            <div className="relative flex items-center justify-between gap-4 z-10">
                 <div className="flex items-center gap-4">
                     <div className={`w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center shadow-inner transition-all duration-500 group-hover:scale-110 ${isOpen ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-50 dark:bg-white/5 text-slate-400'}`}>
                         <Store size={26} strokeWidth={2.5} />

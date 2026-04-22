@@ -77,7 +77,7 @@ export default async function MerchantRootLayout({ children }) {
         redirect('/merchant-status/rejected');
     }
     if (merchant.status === 'suspended') {
-        redirect('/merchant-status/suspended');
+        redirect('/merchant/suspended');
     }
     if (merchant.status !== 'approved' && !['pending', 'rejected', 'suspended'].includes(merchant.status)) {
         redirect('/merchant-apply');

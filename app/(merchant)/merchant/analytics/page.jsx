@@ -5,7 +5,10 @@ import { DollarSign, ShoppingBag, Package, TrendingUp } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage({ searchParams }) {
+    const params = await searchParams;
+    const selectedRange = params.range || '30d';
+
     const supabase = await createServerSupabaseClient();
 
     // 1. Get User & Auth
@@ -35,49 +38,72 @@ export default async function AnalyticsPage() {
         redirect('/merchant-apply');
     }
 
-    // 3. Fetch Data Correctly
+    // 3. Calculate Date Range
+    const getStartDate = (range) => {
+        const now = new Date();
+        if (range === '7d') return new Date(now.setDate(now.getDate() - 7)).toISOString();
+        if (range === '30d') return new Date(now.setDate(now.getDate() - 30)).toISOString();
+        if (range === '90d') return new Date(now.setDate(now.getDate() - 90)).toISOString();
+        return null; // All time
+    };
+
+    const startDate = getStartDate(selectedRange);
+
+    // 4. Fetch Data Correctly
     const [
-        soldCouponsRes, 
-        availableCountRes, 
-        listedCountRes, 
-        udhariRevenueRes, 
+        soldCouponsRes,
+        availableCountRes,
+        listedCountRes,
+        udhariRevenueRes,
         wholesaleOrdersRes,
-        retailItemsRes,
+        settledOrderGroupsRes,
         merchantInventoryRes
     ] = await Promise.all([
-        supabase
-            .from('coupons')
-            .select('*')
-            .eq('merchant_id', merchant.id)
-            .eq('status', 'sold')
-            .order('purchased_at', { ascending: true }),
+        (() => {
+            let query = supabase
+                .from('coupons')
+                .select('id, brand, merchant_selling_price_paise, merchant_purchase_price_paise, merchant_commission_paise, status, purchased_at')
+                .eq('merchant_id', merchant.id)
+                .eq('status', 'sold')
+                .order('purchased_at', { ascending: true });
+            if (startDate) query = query.gte('purchased_at', startDate);
+            return query;
+        })(),
 
         // Gift Card Inventory
-        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'available'),
-        supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
-        
-        // Store Credit Revenue (Gift Cards + Shop Orders)
-        supabase.from('merchant_transactions')
-            .select('amount_paise')
-            .eq('merchant_id', merchant.id)
-            .in('transaction_type', ['udhari_payment', 'store_credit_payment']),
-            
-        // Wholesale Spend (Merchant buying from Platform)
-        supabase.from('shopping_orders')
-            .select('*, shopping_products(title)')
-            .eq('buyer_id', merchant.id)
-            .eq('order_type', 'wholesale'),
+        supabase.from('coupons').select('id', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('status', 'available'),
+        supabase.from('coupons').select('id', { count: 'exact', head: true }).eq('merchant_id', merchant.id).eq('listed_on_marketplace', true),
 
-        // Retail Earnings (Customer buying from Merchant via cart)
-        supabase.from('shopping_order_items')
-            .select(`
-                id, seller_id, quantity, unit_price_paise,
-                shopping_products(title),
-                shopping_order_groups!inner(created_at, payment_method, delivery_status, customer_id)
-            `)
-            .eq('seller_id', merchant.id)
-            .neq('shopping_order_groups.delivery_status', 'cancelled')
-            .not('shopping_order_groups.payment_method', 'is', null),
+        // Store Credit Revenue (Gift Cards + Shop Orders)
+        (() => {
+            let query = supabase.from('merchant_transactions')
+                .select('amount_paise, created_at')
+                .eq('merchant_id', merchant.id)
+                .in('transaction_type', ['udhari_payment', 'store_credit_payment']);
+            if (startDate) query = query.gte('created_at', startDate);
+            return query;
+        })(),
+
+        // Wholesale Spend (Merchant buying from Platform)
+        (() => {
+            let query = supabase.from('shopping_orders')
+                .select('*, shopping_products(title)')
+                .eq('buyer_id', merchant.id)
+                .eq('order_type', 'wholesale');
+            if (startDate) query = query.gte('created_at', startDate);
+            return query;
+        })(),
+
+        // Retail Earnings (Settled order groups only)
+        (() => {
+            let query = supabase
+                .from('shopping_order_groups')
+                .select('id, merchant_profit_paise, total_amount_paise, created_at, delivery_status, payment_method')
+                .eq('merchant_id', merchant.id)
+                .eq('settlement_status', 'settled');
+            if (startDate) query = query.gte('created_at', startDate);
+            return query;
+        })(),
 
         // Physical Product Inventory    
         supabase.from('merchant_inventory')
@@ -89,44 +115,20 @@ export default async function AnalyticsPage() {
     const availableCouponsCount = availableCountRes.count || 0;
     const listedCouponsCount = listedCountRes.count || 0;
     const physicalInventoryCount = merchantInventoryRes.count || 0;
-    
+
     // Unified Inventory
     const activeInventoryCount = availableCouponsCount + physicalInventoryCount;
     const soldCouponsCount = soldCoupons.length;
-    const udhariRevenue = (udhariRevenueRes.data || []).reduce((sum, tx) => sum + (tx.amount_paise || 0), 0) / 100;
-    
-    // Merge Wholesale and Retail Orders
+    // Orders Data
     const wholesaleOrders = wholesaleOrdersRes.data || [];
-    const retailItems = retailItemsRes.data || [];
+    const settledOrderGroups = settledOrderGroupsRes.data || [];
 
-    const retailOrdersFormatted = retailItems.map(item => ({
-        id: item.id,
-        seller_id: item.seller_id,
-        buyer_id: item.shopping_order_groups?.customer_id,
-        created_at: item.shopping_order_groups?.created_at,
-        order_type: 'retail',
-        quantity: item.quantity,
-        unit_price_paise: item.unit_price_paise,
-        total_price_paise: item.unit_price_paise * item.quantity,
-        shopping_products: item.shopping_products,
-        payment_method: item.shopping_order_groups?.payment_method
-    }));
+    const udhariRevenue = (udhariRevenueRes.data || []).reduce((sum, tx) => sum + (tx.amount_paise || 0), 0) / 100;
 
-    const shoppingOrders = [...wholesaleOrders, ...retailOrdersFormatted].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    
-    // Revenue calculations
-    const shoppingRevenue = shoppingOrders
-        .filter(o => o.seller_id === merchant.id)
-        .reduce((sum, o) => {
-            const gross = Number(o.total_price_paise) || 0;
-            // Retail orders are subject to 5% platform commission; wholesale are not
-            const net = o.order_type === 'retail' ? gross * 0.95 : gross;
-            return sum + net;
-        }, 0) / 100;
-        
-    const shoppingSpend = shoppingOrders
-        .filter(o => o.buyer_id === merchant.id)
-        .reduce((sum, o) => sum + (Number(o.total_price_paise) || 0), 0) / 100;
+    // Revenue calculations: authoritative profit from settled groups
+    const shoppingRevenue = settledOrderGroups.reduce((sum, o) => sum + (o.merchant_profit_paise || 0), 0) / 100;
+
+    const shoppingSpend = wholesaleOrders.reduce((sum, o) => sum + (Number(o.total_price_paise) || 0), 0) / 100;
 
     // 4. Calculate Unified KPIs
     const totalCouponProfit = soldCoupons.reduce((sum, c) => {
@@ -137,8 +139,13 @@ export default async function AnalyticsPage() {
     }, 0);
 
     const totalRevenue = totalCouponProfit + shoppingRevenue;
-    
-    const totalSalesValue = soldCoupons.reduce((sum, c) => sum + ((c.merchant_selling_price_paise || 0) / 100), 0) + shoppingRevenue;
+
+    const totalSalesValue = soldCoupons.reduce((sum, c) => sum + ((c.merchant_selling_price_paise || 0) / 100), 0) + settledOrderGroups.reduce((sum, o) => sum + (o.total_amount_paise || 0), 0) / 100;
+
+    const totalOrdersCount = settledOrderGroups.length;
+    const avgOrderValue = totalOrdersCount > 0
+        ? (settledOrderGroups.reduce((sum, o) => sum + (o.total_amount_paise || 0), 0) / 100) / totalOrdersCount
+        : 0;
 
     // 5. Prepare Chart Data (Unified)
 
@@ -149,38 +156,41 @@ export default async function AnalyticsPage() {
     };
 
     const revenueMap = new Map();
-    
+
     // Add Gift Card Revenue to Trend Chart
     soldCoupons.forEach(c => {
         if (c.purchased_at) {
             const dateKey = formatDate(c.purchased_at);
             const profit = ((c.merchant_selling_price_paise || 0) / 100) - ((c.merchant_purchase_price_paise || 0) / 100) - ((c.merchant_commission_paise || 0) / 100);
+            const timestamp = new Date(c.purchased_at).getTime();
 
-            const existing = revenueMap.get(dateKey) || { revenue: 0, salesCount: 0 };
+            const existing = revenueMap.get(dateKey) || { revenue: 0, salesCount: 0, timestamp: Infinity };
             revenueMap.set(dateKey, {
                 revenue: existing.revenue + profit,
-                salesCount: existing.salesCount + 1
+                salesCount: existing.salesCount + 1,
+                timestamp: Math.min(existing.timestamp, timestamp)
             });
         }
     });
 
-    // Add Shopping Order Revenue to Trend Chart
-    shoppingOrders.forEach(o => {
-        if (o.created_at && o.seller_id === merchant.id) {
+    // Add Shopping Order Revenue to Trend Chart (Retail settled profit)
+    settledOrderGroups.forEach(o => {
+        if (o.created_at) {
             const dateKey = formatDate(o.created_at);
-            const profit = (o.total_price_paise || 0) / 100; // Assuming strict retail prices for merchants here
+            const profit = (o.merchant_profit_paise || 0) / 100;
+            const timestamp = new Date(o.created_at).getTime();
 
-            const existing = revenueMap.get(dateKey) || { revenue: 0, salesCount: 0 };
+            const existing = revenueMap.get(dateKey) || { revenue: 0, salesCount: 0, timestamp: Infinity };
             revenueMap.set(dateKey, {
                 revenue: existing.revenue + profit,
-                salesCount: existing.salesCount + 1
+                salesCount: existing.salesCount + 1,
+                timestamp: Math.min(existing.timestamp, timestamp)
             });
         }
     });
 
     const revenueData = Array.from(revenueMap.entries())
-        // Sorting by date chronologically (basic string parsing workaround, robust enough for month bounds)
-        .sort((a, b) => new Date(a.date + "/2026") - new Date(b.date + "/2026"))
+        .sort((a, b) => a[1].timestamp - b[1].timestamp)
         .map(([date, data]) => ({
             date,
             revenue: data.revenue,
@@ -195,14 +205,14 @@ export default async function AnalyticsPage() {
 
     // Unified Top Brands & Products
     const brandMap = new Map();
-    
+
     soldCoupons.forEach(c => {
         const brand = c.brand || 'Unknown Gift Card';
         const revenue = ((c.merchant_selling_price_paise || 0) / 100);
         brandMap.set(brand, (brandMap.get(brand) || 0) + revenue);
     });
 
-    shoppingOrders.forEach(o => {
+    wholesaleOrders.forEach(o => {
         if (o.seller_id === merchant.id) {
             const productTitle = o.shopping_products?.title || 'Unknown Product';
             const revenue = (o.total_price_paise || 0) / 100;
@@ -294,6 +304,33 @@ export default async function AnalyticsPage() {
                         </h3>
                     </div>
                 </div>
+
+                {/* New KPI Cards */}
+                <div className="merchant-glass rounded-3xl p-6 border border-black/5 dark:border-white/5 hover:border-[#D4AF37]/30 transition-all group overflow-hidden relative shadow-lg">
+                    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-indigo-500/10 rounded-full blur-xl group-hover:bg-indigo-500/20 transition-all"></div>
+                    <div className="flex flex-col mb-2 relative z-10">
+                        <div className="flex items-center space-x-2 text-indigo-600 dark:text-indigo-400 mb-2">
+                            <span className="material-icons-round text-lg">receipt_long</span>
+                            <span className="font-bold uppercase tracking-widest text-[10px]">Total Orders</span>
+                        </div>
+                        <h3 className="text-3xl font-display font-bold text-slate-800 dark:text-slate-100">
+                            {totalOrdersCount.toLocaleString('en-IN')}
+                        </h3>
+                    </div>
+                </div>
+
+                <div className="merchant-glass rounded-3xl p-6 border border-black/5 dark:border-white/5 hover:border-[#D4AF37]/30 transition-all group overflow-hidden relative shadow-lg">
+                    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-pink-500/10 rounded-full blur-xl group-hover:bg-pink-500/20 transition-all"></div>
+                    <div className="flex flex-col mb-2 relative z-10">
+                        <div className="flex items-center space-x-2 text-pink-600 dark:text-pink-400 mb-2">
+                            <span className="material-icons-round text-lg">calculate</span>
+                            <span className="font-bold uppercase tracking-widest text-[10px]">Avg Order Value</span>
+                        </div>
+                        <h3 className="text-3xl font-display font-bold text-slate-800 dark:text-slate-100">
+                            ₹{avgOrderValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h3>
+                    </div>
+                </div>
             </div>
 
             {/* Charts Section */}
@@ -302,6 +339,7 @@ export default async function AnalyticsPage() {
                     revenueData={revenueData}
                     inventoryData={inventoryData}
                     brandData={brandData}
+                    selectedRange={selectedRange}
                 />
             </div>
 
@@ -322,10 +360,10 @@ export default async function AnalyticsPage() {
                         <div className="relative z-10">
                             <h3 className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-4">Retail Earnings</h3>
                             <p className="text-4xl font-bold text-slate-900 dark:text-slate-100">₹{shoppingRevenue.toLocaleString('en-IN')}</p>
-                            <p className="text-xs font-semibold text-slate-500 mt-2">Net earnings after 5% platform commission</p>
+                            <p className="text-xs font-semibold text-slate-500 mt-2">Net earnings after platform commission (settled orders only)</p>
                         </div>
                     </div>
-                    
+
                     <div className="p-6 rounded-2xl bg-rose-50/50 dark:bg-rose-500/5 border border-rose-100 dark:border-rose-500/20 shadow-sm relative overflow-hidden group">
                         <div className="absolute -right-10 -top-10 text-rose-500/5 group-hover:text-rose-500/10 transition-colors">
                             <ShoppingBag size={120} />
@@ -343,69 +381,52 @@ export default async function AnalyticsPage() {
                         <thead>
                             <tr className="text-slate-500 text-xs uppercase tracking-wider font-bold bg-slate-50 dark:bg-slate-800/50">
                                 <th className="py-4 px-4">Item Details</th>
-                                <th className="py-4 px-4">Role</th>
                                 <th className="py-4 px-4">Format</th>
                                 <th className="py-4 px-4">Qty</th>
-                                <th className="py-4 px-4 text-right">Unit Price</th>
+                                <th className="py-4 px-4 text-right">Total Price</th>
                                 <th className="py-4 px-4 text-right">Net Total</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                            {shoppingOrders.length > 0 ? (
-                                shoppingOrders
+                            {wholesaleOrders.length > 0 ? (
+                                wholesaleOrders
                                     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                                     .slice(0, 10).map((order) => {
-                                    
-                                    const isRetailer = order.seller_id === merchant.id;
-                                    
-                                    return (
-                                        <tr key={order.id} className="group hover:bg-white dark:hover:bg-slate-800 transition-colors">
-                                            <td className="py-4 px-4">
-                                                <div className="font-bold text-slate-700 dark:text-slate-200">
-                                                    {order.shopping_products?.title || 'Unknown Product'}
-                                                </div>
-                                                <div className="text-[10px] text-slate-400 font-medium">
-                                                    {new Date(order.created_at).toLocaleDateString(undefined, {
-                                                        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                                                    })}
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-4">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-7 h-7 rounded-xl ${isRetailer ? 'bg-blue-500/10 text-blue-600' : 'bg-rose-500/10 text-rose-600'} flex items-center justify-center shrink-0`}>
-                                                        <DollarSign size={14} />
+
+                                        return (
+                                            <tr key={order.id} className="group hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                                                <td className="py-4 px-4">
+                                                    <div className="font-bold text-slate-700 dark:text-slate-200">
+                                                        {order.shopping_products?.title || 'Unknown Product'}
                                                     </div>
-                                                    <span className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
-                                                        {isRetailer ? 'Seller' : 'Buyer'}
+                                                    <div className="text-[10px] text-slate-400 font-medium">
+                                                        {new Date(order.created_at).toLocaleDateString(undefined, {
+                                                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                                        })}
+                                                    </div>
+                                                </td>
+                                                <td className="py-4 px-4">
+                                                    <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase shadow-sm bg-indigo-50 text-indigo-600 border border-indigo-100 dark:bg-indigo-500/20 dark:border-indigo-500/20`}>
+                                                        {order.order_type}
                                                     </span>
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-4">
-                                                <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase shadow-sm ${
-                                                    order.order_type === 'wholesale' 
-                                                    ? 'bg-indigo-50 text-indigo-600 border border-indigo-100 dark:bg-indigo-500/20 dark:border-indigo-500/20' 
-                                                    : 'bg-emerald-50 text-emerald-600 border border-emerald-100 dark:bg-emerald-500/20 dark:border-emerald-500/20'
-                                                }`}>
-                                                    {order.order_type}
-                                                </span>
-                                            </td>
-                                            <td className="py-4 px-4 font-bold text-slate-600 dark:text-slate-400">
-                                                x{order.quantity}
-                                            </td>
-                                            <td className="py-4 px-4 text-right text-slate-500 dark:text-slate-400 font-medium tracking-tight">
-                                                ₹{(order.unit_price_paise / 100).toFixed(2)}
-                                            </td>
-                                            <td className="py-4 px-4 text-right">
-                                                <div className={`font-bold tracking-tight ${isRetailer ? 'text-blue-600 dark:text-blue-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                                                    {isRetailer ? '+' : '-'} ₹{(order.total_price_paise / 100).toFixed(2)}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
+                                                </td>
+                                                <td className="py-4 px-4 font-bold text-slate-600 dark:text-slate-400">
+                                                    x{order.quantity || 1}
+                                                </td>
+                                                <td className="py-4 px-4 text-right text-slate-500 dark:text-slate-400 font-medium tracking-tight">
+                                                    ₹{(order.total_price_paise / 100).toFixed(2)}
+                                                </td>
+                                                <td className="py-4 px-4 text-right">
+                                                    <div className="font-bold tracking-tight text-rose-600 dark:text-rose-400">
+                                                        - ₹{(order.total_price_paise / 100).toFixed(2)}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                             ) : (
                                 <tr>
-                                    <td colSpan="6" className="py-16 text-center">
+                                    <td colSpan="5" className="py-16 text-center">
                                         <div className="flex flex-col items-center max-w-xs mx-auto text-slate-400">
                                             <Package size={48} className="mb-4 opacity-50" />
                                             <p className="font-semibold text-slate-600 dark:text-slate-300">No completed orders yet</p>

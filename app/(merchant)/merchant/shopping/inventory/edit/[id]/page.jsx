@@ -38,6 +38,10 @@ export default async function MerchantEditProductPage({ params }) {
         redirect('/merchant/shopping/inventory');
     }
 
+    if (product.approval_status === 'live') {
+        redirect('/merchant/shopping/inventory');
+    }
+
     return (
         <div className="p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 mb-8">

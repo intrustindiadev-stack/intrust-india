@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -7,6 +7,8 @@ export function useWallet() {
     const [loading, setLoading] = useState(true);
     const [transactions, setTransactions] = useState([]);
     const [transactionsLoading, setTransactionsLoading] = useState(false);
+    const channelRef = useRef(null);
+    const merchantIdRef = useRef(null);
 
     // Helper to get auth headers
     const getAuthHeaders = async () => {
@@ -41,6 +43,35 @@ export function useWallet() {
             if (res.ok) {
                 const data = await res.json();
                 setBalance(data.wallet || { balance: 0, currency: 'INR' });
+
+                // Store merchant_id for realtime subscription
+                const merchantId = data.wallet?.merchant_id;
+                if (merchantId && merchantId !== merchantIdRef.current) {
+                    merchantIdRef.current = merchantId;
+                    // Subscribe to realtime balance updates
+                    if (channelRef.current) {
+                        supabase.removeChannel(channelRef.current);
+                    }
+                    const channel = supabase
+                        .channel(`wallet_realtime_${merchantId}`)
+                        .on('postgres_changes', {
+                            event: 'UPDATE',
+                            schema: 'public',
+                            table: 'merchants',
+                            filter: `id=eq.${merchantId}`,
+                        }, (payload) => {
+                            const newPaise = payload.new?.wallet_balance_paise;
+                            if (newPaise !== undefined) {
+                                setBalance((prev) => ({
+                                    ...prev,
+                                    balance: (newPaise / 100).toFixed(2),
+                                    balance_paise: newPaise,
+                                }));
+                            }
+                        })
+                        .subscribe();
+                    channelRef.current = channel;
+                }
             } else {
                 console.error('Failed to fetch balance:', res.status);
                 setBalance({ balance: 0, currency: 'INR' });
@@ -108,6 +139,13 @@ export function useWallet() {
 
     useEffect(() => {
         fetchBalance();
+        return () => {
+            // Cleanup realtime channel on unmount
+            if (channelRef.current) {
+                supabase.removeChannel(channelRef.current);
+                channelRef.current = null;
+            }
+        };
     }, [fetchBalance]);
 
     return {

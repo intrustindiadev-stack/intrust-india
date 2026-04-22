@@ -3,13 +3,11 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Zap, ChevronRight, CheckCircle2 } from "lucide-react";
-import { useMerchant } from "@/hooks/useMerchant";
 
-export default function AutoModePromo() {
-    const { merchant } = useMerchant();
 
+export default function AutoModePromo({ autoMode }) {
     // Do not show promo heavily if they already have it
-    if (merchant?.auto_mode) {
+    if (autoMode) {
         return (
             <div className="mb-8 w-full rounded-3xl bg-gradient-to-r from-[#0a1f16] to-[#123126] border border-emerald-500/20 p-4 flex items-center justify-between shadow-[0_0_30px_rgba(16,185,129,0.1)] relative overflow-hidden">
                 <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full pointer-events-none" />

@@ -117,7 +117,16 @@ export default function MerchantAdBannerCarousel() {
     const isDynamic = dynamicBanners.length > 0;
     const IconComponent = !isDynamic ? banner.icon : null;
 
-    if (loading) return null; // or a skeleton
+    if (loading) return (
+        <div className="w-full mb-6 sm:mb-10">
+            <div className="rounded-xl sm:rounded-3xl bg-slate-200 dark:bg-slate-800 animate-pulse min-h-[140px] sm:min-h-[200px]" />
+            <div className="flex justify-center gap-2 mt-2.5 sm:mt-4">
+                {[...Array(3)].map((_, i) => (
+                    <div key={i} className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-700 animate-pulse" />
+                ))}
+            </div>
+        </div>
+    );
 
     return (
         <div
@@ -211,17 +220,17 @@ export default function MerchantAdBannerCarousel() {
                     </motion.div>
                 </AnimatePresence>
 
-                {/* Navigation Arrows — hidden on small mobile, visible on larger screens */}
+                {/* Navigation Arrows — visible on all screen sizes */}
                 <button
                     onClick={() => { setHasInteracted(true); paginate(-1); }}
-                    className="absolute left-1.5 sm:left-3 top-1/2 -translate-y-1/2 z-20 bg-black/25 hover:bg-black/45 active:bg-black/60 backdrop-blur-md text-white p-1 sm:p-2 rounded-full transition-all duration-200 hover:scale-110 border border-white/10 hidden sm:flex"
+                    className="absolute left-1.5 sm:left-3 top-1/2 -translate-y-1/2 z-20 bg-black/25 hover:bg-black/45 active:bg-black/60 backdrop-blur-md text-white p-1 sm:p-2 rounded-full transition-all duration-200 hover:scale-110 border border-white/10 flex"
                     aria-label="Previous banner"
                 >
                     <ChevronLeft size={18} />
                 </button>
                 <button
                     onClick={() => { setHasInteracted(true); paginate(1); }}
-                    className="absolute right-1.5 sm:right-3 top-1/2 -translate-y-1/2 z-20 bg-black/25 hover:bg-black/45 active:bg-black/60 backdrop-blur-md text-white p-1 sm:p-2 rounded-full transition-all duration-200 hover:scale-110 border border-white/10 hidden sm:flex"
+                    className="absolute right-1.5 sm:right-3 top-1/2 -translate-y-1/2 z-20 bg-black/25 hover:bg-black/45 active:bg-black/60 backdrop-blur-md text-white p-1 sm:p-2 rounded-full transition-all duration-200 hover:scale-110 border border-white/10 flex"
                     aria-label="Next banner"
                 >
                     <ChevronRight size={18} />

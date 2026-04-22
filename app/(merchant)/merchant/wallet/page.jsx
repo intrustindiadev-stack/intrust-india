@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
 import { useSubscription } from '@/components/merchant/SubscriptionContext';
 import { useConfetti } from '@/components/ui/ConfettiProvider';
+import { groupTransactions } from '@/lib/wallet/groupTransactions';
 
 function WalletContent() {
     const router = useRouter();
@@ -112,6 +113,24 @@ function WalletContent() {
     }, [fetchWalletData]);
 
     useEffect(() => {
+        if (!merchantData?.id) return;
+
+        const channel = supabase
+            .channel(`merchant-wallet-${merchantData.id}`)
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'merchant_transactions',
+                filter: `merchant_id=eq.${merchantData.id}`,
+            }, () => {
+                fetchWalletData();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [merchantData?.id, fetchWalletData]);
+
+    useEffect(() => {
         const action = searchParams.get('action');
         const topup = searchParams.get('topup');
         if (action === 'topup') {
@@ -122,28 +141,7 @@ function WalletContent() {
         }
     }, [searchParams, fetchWalletData]);
 
-    // Helper to group transactions by identical timestamp and description
-    const groupTransactions = (txs) => {
-        const grouped = txs.reduce((acc, tx) => {
-            const key = `${tx.created_at}_${tx.description}`;
-            if (!acc[key]) {
-                acc[key] = { ...tx, amount: Number(tx.amount), _count: 1 };
-            } else {
-                acc[key].amount += Number(tx.amount);
-                acc[key]._count += 1;
-            }
-            return acc;
-        }, {});
-
-        return Object.values(grouped)
-            .map(tx => ({
-                ...tx,
-                // If grouped multiple items, prefix ID with 'cart-' to trigger detail page aggregation
-                id: tx._count > 1 ? `cart-${tx.id}` : tx.id
-            }))
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    };
-
+    // Transactions are now grouped using a shared utility
     const displayTransactions = groupTransactions(transactions);
     const filteredTransactions = displayTransactions.filter(tx => txFilter === 'ALL' || tx.transaction_type === txFilter);
 
@@ -358,6 +356,12 @@ function WalletContent() {
                                 {f}
                             </button>
                         ))}
+                        <button
+                            onClick={() => router.push('/merchant/wallet/transactions')}
+                            className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-lg text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-all border border-transparent hover:border-[#D4AF37]/20"
+                        >
+                            View All
+                        </button>
                     </div>
                     {loading && <span className="material-icons-round animate-spin text-slate-400 dark:text-slate-500 text-sm">autorenew</span>}
                 </div>

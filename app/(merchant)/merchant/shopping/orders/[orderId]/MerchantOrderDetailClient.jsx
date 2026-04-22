@@ -6,13 +6,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Package, CheckCircle2, Truck, Clock, ArrowLeft,
     MapPin, Receipt, Store, Calendar, Download, ArrowUpRight,
-    RotateCcw, AlertTriangle, ChevronLeft
+    RotateCcw, AlertTriangle, ChevronLeft, XCircle
 } from "lucide-react";
 import { format } from "date-fns";
 import { generateOrderInvoice } from "@/lib/invoiceGenerator";
 import { calculatePlatformFeePercentage } from "@/lib/utils/ledger";
 import { toast } from "react-hot-toast";
 import { createClient } from "@/lib/supabaseClient";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 
 // ─── Delivery Stage Config ───────────────────────────────────────────────────
 const STAGES = [
@@ -156,6 +157,8 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
     const supabase = createClient();
     const [updatingStatus, setUpdatingStatus] = useState(false);
     const [currentStatus, setCurrentStatus] = useState(order.delivery_status);
+    const [showCannotFulfillModal, setShowCannotFulfillModal] = useState(false);
+    const [cannotFulfillLoading, setCannotFulfillLoading] = useState(false);
 
     const orderGrossProfit = (order.items || []).reduce((s, i) => s + (i.gross_profit_paise || 0), 0);
     const orderCommission = (order.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0);
@@ -176,7 +179,26 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
             return "Could not update order: insufficient data. Please refresh and try again.";
         if (msg.includes("unauthorized"))
             return "You are not authorised to update this order.";
-        return "Order update failed. Please try again or contact support.";
+    };
+
+    const handleCannotFulfill = async () => {
+        setCannotFulfillLoading(true);
+        try {
+            const response = await fetch(`/api/merchant/cannot-fulfill`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: order.id }),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || "Escalation failed");
+            toast.success("Order escalated to admin. Commission adjusted.");
+            setCurrentStatus('admin_takeover');
+        } catch (err) {
+            toast.error(err.message || "Failed to escalate");
+        } finally {
+            setCannotFulfillLoading(false);
+            setShowCannotFulfillModal(false);
+        }
     };
 
     const handleMarkNext = async () => {
@@ -202,6 +224,7 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
             setUpdatingStatus(false);
         }
     };
+
 
     const handleDownloadInvoice = () => {
         generateOrderInvoice({
@@ -367,6 +390,15 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
                         >
                             <Download size={14} /> PDF INVOICE
                         </button>
+                        {currentStatus === 'pending' && order.settlement_status === 'pending' && (
+                            <button
+                                onClick={() => setShowCannotFulfillModal(true)}
+                                disabled={cannotFulfillLoading}
+                                className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-black transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                            >
+                                <XCircle size={14} /> CANNOT FULFILL
+                            </button>
+                        )}
                         {nextStatus && (
                             <motion.button
                                 onClick={handleMarkNext}
@@ -381,6 +413,16 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={showCannotFulfillModal}
+                onConfirm={handleCannotFulfill}
+                onCancel={() => setShowCannotFulfillModal(false)}
+                title="Cannot Fulfill Order?"
+                message="This will escalate the order to admin for fulfillment. Your commission will be reduced to 30% of the profit margin. This action cannot be undone."
+                confirmLabel="Yes, Escalate"
+                cancelLabel="Keep Order"
+            />
         </div>
     );
 }

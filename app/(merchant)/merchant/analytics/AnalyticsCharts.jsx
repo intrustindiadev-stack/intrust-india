@@ -15,10 +15,31 @@ import {
     Bar,
     Legend
 } from 'recharts';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#F43F5E', '#8B5CF6'];
+const COLORS = ['#D4AF37', '#10B981', '#F59E0B', '#F43F5E', '#8B5CF6'];
 
-export default function AnalyticsCharts({ revenueData, inventoryData, brandData }) {
+export default function AnalyticsCharts({ revenueData, inventoryData, brandData, selectedRange }) {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    const ranges = [
+        { label: 'Last 7 days', value: '7d' },
+        { label: 'Last 30 days', value: '30d' },
+        { label: 'Last 90 days', value: '90d' },
+        { label: 'All time', value: 'all' },
+    ];
+
+    const handleRangeChange = (range) => {
+        const params = new URLSearchParams(searchParams);
+        params.set('range', range);
+        router.push(`?${params.toString()}`, { scroll: false });
+    };
+
+    const getChartTitle = () => {
+        const range = ranges.find(r => r.value === selectedRange);
+        return `Revenue Trend (${range ? range.label : 'Last 30 Days'})`;
+    };
 
     // Custom Tooltip for Revenue Chart
     const CustomTooltip = ({ active, payload, label }) => {
@@ -26,7 +47,7 @@ export default function AnalyticsCharts({ revenueData, inventoryData, brandData 
             return (
                 <div className="merchant-glass p-4 border border-black/5 dark:border-white/10 shadow-2xl rounded-2xl backdrop-blur-md">
                     <p className="text-slate-800 dark:text-slate-200 font-bold mb-2">{label}</p>
-                    <p className="text-blue-600 dark:text-blue-400 font-bold text-lg">
+                    <p className="text-[#D4AF37] font-bold text-lg">
                         ₹{payload[0].value.toFixed(2)}
                     </p>
                     <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">
@@ -42,11 +63,28 @@ export default function AnalyticsCharts({ revenueData, inventoryData, brandData 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             {/* Revenue Trend Chart */}
             <div className="merchant-glass p-6 rounded-3xl shadow-lg border border-black/5 dark:border-white/5 lg:col-span-2 relative overflow-hidden group">
-                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all pointer-events-none"></div>
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-6 font-display flex items-center relative z-10">
-                    <span className="material-icons-round text-blue-500 dark:text-blue-400 mr-2">timeline</span>
-                    Revenue Trend (Last 30 Days)
-                </h3>
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-[#D4AF37]/10 rounded-full blur-3xl group-hover:bg-[#D4AF37]/20 transition-all pointer-events-none"></div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4 relative z-10">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 font-display flex items-center">
+                        <span className="material-icons-round text-[#D4AF37] mr-2">timeline</span>
+                        {getChartTitle()}
+                    </h3>
+
+                    <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-black/5 dark:border-white/5 overflow-x-auto no-scrollbar">
+                        {ranges.map((range) => (
+                            <button
+                                key={range.value}
+                                onClick={() => handleRangeChange(range.value)}
+                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${selectedRange === range.value
+                                        ? 'bg-[#D4AF37] text-white shadow-md shadow-[#D4AF37]/20'
+                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                                    }`}
+                            >
+                                {range.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
                 <div className="h-[220px] sm:h-[300px] w-full relative z-10 overflow-hidden">
                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                         <AreaChart
@@ -55,8 +93,8 @@ export default function AnalyticsCharts({ revenueData, inventoryData, brandData 
                         >
                             <defs>
                                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                                    <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" className="dark:stroke-white/[0.05]" />
@@ -77,11 +115,11 @@ export default function AnalyticsCharts({ revenueData, inventoryData, brandData 
                             <Area
                                 type="monotone"
                                 dataKey="revenue"
-                                stroke="#3B82F6"
+                                stroke="#D4AF37"
                                 strokeWidth={3}
                                 fillOpacity={1}
                                 fill="url(#colorRevenue)"
-                                activeDot={{ r: 6, fill: '#3B82F6', stroke: '#fff', strokeWidth: 2 }}
+                                activeDot={{ r: 6, fill: '#D4AF37', stroke: '#fff', strokeWidth: 2 }}
                             />
                         </AreaChart>
                     </ResponsiveContainer>

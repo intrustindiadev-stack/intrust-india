@@ -12,6 +12,11 @@ const nextConfig = {
       },
     ],
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '5mb',
+    },
+  },
   // Performance optimizations
   compress: true,
   poweredByHeader: false,
@@ -25,9 +30,9 @@ const nextConfig = {
   async headers() {
     const sabpaisaUrl = process.env.SABPAISA_INIT_URL || process.env.NEXT_PUBLIC_SABPAISA_INIT_URL || 'https://securepay.sabpaisa.in';
     const callbackUrl = process.env.SABPAISA_CALLBACK_URL || '';
-    
+
     const allowedOrigins = ["'self'"];
-    
+
     try {
       if (sabpaisaUrl) allowedOrigins.push(new URL(sabpaisaUrl).origin);
       if (callbackUrl) allowedOrigins.push(new URL(callbackUrl).origin);

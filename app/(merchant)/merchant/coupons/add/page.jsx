@@ -35,15 +35,38 @@ export default function AddCouponPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
+        if (!isMarkupValid) {
+            toast.error("Markup too high! Max 20% allowed.");
+            return;
+        }
+
         performAction(async () => {
             setLoading(true);
-            // Mock submission
-            setTimeout(() => {
+            try {
+                const response = await fetch('/api/merchant/coupons/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to add coupon');
+                }
+
                 triggerConfetti();
-                toast.success("Coupon added successfully!");
+                toast.success(data.message || "Coupon added successfully!");
                 router.push('/merchant/dashboard');
-            }, 2000);
+            } catch (error) {
+                console.error('Submit error:', error);
+                toast.error(error.message || "Something went wrong. Please try again.");
+            } finally {
+                setLoading(false);
+            }
         });
     };
 

@@ -24,11 +24,13 @@ export async function uploadProductImage(formData, role) {
 
         // Validate type
         if (!VALID_TYPES.includes(file.type)) {
+            console.error('Upload rejected: Invalid file type', file.type);
             return { success: false, error: 'Invalid file type. Only JPEG, PNG, and WebP are allowed.' };
         }
 
         // Validate size
         if (file.size > MAX_SIZE) {
+            console.error('Upload rejected: File too large', file.size);
             return { success: false, error: 'File too large. Maximum size is 5 MB.' };
         }
 
@@ -37,17 +39,29 @@ export async function uploadProductImage(formData, role) {
         // Build storage path
         const timestamp = Date.now();
         const randomStr = Math.random().toString(36).substring(7);
-        const fileExt = file.name.split('.').pop().toLowerCase();
+        const originalName = file.name || 'image.jpg';
+        const fileExt = originalName.split('.').pop().toLowerCase() || 'jpg';
 
         let filePath;
         if (role === 'admin' || role === 'super_admin') {
             filePath = `admin/${timestamp}_${randomStr}.${fileExt}`;
         } else {
             // Get the current user's ID for merchant path scoping
-            const serverClient = await createServerSupabaseClient();
-            const { data: { user } } = await serverClient.auth.getUser();
-            const userId = user?.id || 'unknown';
-            filePath = `merchant/${userId}/${timestamp}_${randomStr}.${fileExt}`;
+            // Using createServerSupabaseClient to check authentication
+            try {
+                const serverClient = await createServerSupabaseClient();
+                const { data: { user }, error: authError } = await serverClient.auth.getUser();
+
+                if (authError || !user) {
+                    console.error('Merchant upload auth error:', authError);
+                    return { success: false, error: 'Session expired. Please log in again.' };
+                }
+
+                filePath = `merchant/${user.id}/${timestamp}_${randomStr}.${fileExt}`;
+            } catch (authErr) {
+                console.error('Failed to get auth user:', authErr);
+                return { success: false, error: 'Authentication service unavailable' };
+            }
         }
 
         // Convert to buffer
@@ -64,8 +78,13 @@ export async function uploadProductImage(formData, role) {
             });
 
         if (error) {
-            console.error('Product image upload error:', error);
-            return { success: false, error: 'Failed to upload image: ' + error.message };
+            console.error('Supabase Storage upload error:', error);
+            return {
+                success: false,
+                error: (error.message?.includes('Bucket not found'))
+                    ? 'Storage system misconfigured. Please contact support.'
+                    : 'Failed to save image to storage: ' + error.message
+            };
         }
 
         // Get public URL
@@ -80,8 +99,8 @@ export async function uploadProductImage(formData, role) {
         };
 
     } catch (err) {
-        console.error('uploadProductImage server error:', err);
-        return { success: false, error: 'Failed to upload image' };
+        console.error('CRITICAL: uploadProductImage server error:', err);
+        return { success: false, error: 'An unexpected error occurred during upload. Please try again.' };
     }
 }
 
@@ -103,13 +122,13 @@ export async function deleteProductImage(fileName) {
             .remove([fileName]);
 
         if (error) {
-            console.error('Product image delete error:', error);
+            console.error('Supabase Storage delete error:', error);
             return { success: false, error: 'Failed to delete image: ' + error.message };
         }
 
         return { success: true };
     } catch (err) {
-        console.error('deleteProductImage server error:', err);
+        console.error('CRITICAL: deleteProductImage server error:', err);
         return { success: false, error: 'Failed to delete image' };
     }
 }

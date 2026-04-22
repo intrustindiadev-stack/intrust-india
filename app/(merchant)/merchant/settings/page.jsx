@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useSearchParams } from 'next/navigation';
+import toast from 'react-hot-toast';
+import Link from 'next/link';
 
 export default function MerchantSettingsPage() {
     const [loading, setLoading] = useState(true);
@@ -31,6 +33,13 @@ export default function MerchantSettingsPage() {
         bank_name: '',
     });
     const [savingBank, setSavingBank] = useState(false);
+
+    const [notifSettings, setNotifSettings] = useState({
+        email_notifications: true,
+        purchase_notifications: true,
+        sale_notifications: true,
+        marketing_updates: false,
+    });
     const searchParams = useSearchParams();
 
     useEffect(() => {
@@ -105,6 +114,22 @@ export default function MerchantSettingsPage() {
                 business_phone: merchant?.business_phone || profile?.phone || '',
                 business_email: merchant?.business_email || user.email || '',
             });
+
+            // Fetch notification settings
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const response = await fetch('/api/merchant/notification-settings', {
+                    headers: {
+                        'Authorization': `Bearer ${session?.access_token}`
+                    }
+                });
+                const notifData = await response.json();
+                if (notifData.success) {
+                    setNotifSettings(notifData.settings);
+                }
+            } catch (err) {
+                console.error('Error fetching notification settings:', err);
+            }
         } catch (error) {
             console.error('Error fetching settings:', error);
             setError(error.message);
@@ -301,6 +326,29 @@ export default function MerchantSettingsPage() {
                                     />
                                     <div className="w-14 h-7 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#D4AF37]"></div>
                                 </label>
+                            </div>
+
+                            {/* Store Credit Card */}
+                            <div className="flex items-center justify-between p-6 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 group hover:border-[#D4AF37]/30 transition-colors shadow-sm">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-11 h-11 bg-[#D4AF37]/10 border border-[#D4AF37]/30 rounded-xl flex items-center justify-center">
+                                        <span className="material-icons-round text-[#D4AF37]">credit_card</span>
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-slate-800 dark:text-slate-100">
+                                            Store Credit (Pay Later)
+                                        </p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                                            Configure udhari limits and repayment rules
+                                        </p>
+                                    </div>
+                                </div>
+                                <Link
+                                    href="/merchant/settings/udhari"
+                                    className="px-4 py-2 border border-[#D4AF37]/50 rounded-xl text-[#B8860B] font-bold text-xs hover:bg-[#D4AF37] hover:text-white transition-all whitespace-nowrap"
+                                >
+                                    Configure →
+                                </Link>
                             </div>
                         </div>
 
@@ -628,10 +676,10 @@ export default function MerchantSettingsPage() {
                         <div className="space-y-4 max-w-2xl">
                             {/* Notification Row Component would be better but keeping it for inline style */}
                             {[
-                                { id: 'email', label: 'Email Notifications', desc: 'Receive account updates and alerts via email', icon: 'email', checked: true },
-                                { id: 'purchase', label: 'Purchase Notifications', desc: 'Get notified when you purchase new coupons for inventory', icon: 'shopping_cart_test', checked: true },
-                                { id: 'sale', label: 'Sale Notifications', desc: 'Get real-time alerts when your coupons are sold', icon: 'sell', checked: true },
-                                { id: 'marketing', label: 'Marketing Updates', desc: 'Receive promotional offers, platform updates, and news', icon: 'campaign', checked: false }
+                                { id: 'email_notifications', label: 'Email Notifications', desc: 'Receive account updates and alerts via email', icon: 'email' },
+                                { id: 'purchase_notifications', label: 'Purchase Notifications', desc: 'Get notified when you purchase new coupons for inventory', icon: 'shopping_cart' },
+                                { id: 'sale_notifications', label: 'Sale Notifications', desc: 'Get real-time alerts when your coupons are sold', icon: 'sell' },
+                                { id: 'marketing_updates', label: 'Marketing Updates', desc: 'Receive promotional offers, platform updates, and news', icon: 'campaign' }
                             ].map((item) => (
                                 <div key={item.id} className="flex items-center justify-between p-6 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 group hover:bg-black/[0.08] dark:hover:bg-white/10 transition-colors shadow-sm">
                                     <div>
@@ -642,7 +690,36 @@ export default function MerchantSettingsPage() {
                                         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">{item.desc}</p>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" className="sr-only peer" defaultChecked={item.checked} />
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={notifSettings[item.id]}
+                                            onChange={async (e) => {
+                                                const newVal = e.target.checked;
+                                                // Optimistic update
+                                                setNotifSettings(prev => ({ ...prev, [item.id]: newVal }));
+
+                                                try {
+                                                    const { data: { session } } = await supabase.auth.getSession();
+                                                    const res = await fetch('/api/merchant/notification-settings', {
+                                                        method: 'PATCH',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                            'Authorization': `Bearer ${session?.access_token}`
+                                                        },
+                                                        body: JSON.stringify({ [item.id]: newVal })
+                                                    });
+
+                                                    const result = await res.json();
+                                                    if (!result.success) throw new Error(result.error || 'Failed to save');
+                                                    toast.success('Preferences saved');
+                                                } catch (err) {
+                                                    // Revert
+                                                    setNotifSettings(prev => ({ ...prev, [item.id]: !newVal }));
+                                                    toast.error(err.message || 'Failed to update preferences');
+                                                }
+                                            }}
+                                        />
                                         <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#D4AF37]"></div>
                                     </label>
                                 </div>

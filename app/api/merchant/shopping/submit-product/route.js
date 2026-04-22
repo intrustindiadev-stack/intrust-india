@@ -1,15 +1,12 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/apiAuth';
 
 export async function POST(request) {
     try {
-        const supabase = await createServerSupabaseClient();
-        const adminSupabase = createAdminClient();
+        const { user, profile, admin: adminSupabase } = await getAuthUser(request);
 
-        // 1. Verify Authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-        if (authError || !user) {
+        if (!user) {
             return NextResponse.json(
                 { error: 'Unauthorized. Please log in.' },
                 { status: 401 }
@@ -21,16 +18,16 @@ export async function POST(request) {
         const { merchantId, editMode, productId, formData } = body;
 
         // Verify that the user is the owner of this merchant account or an admin
-        const { data: merchantProfile, error: merchantProfileError } = await supabase
+        // Fetch merchantProfile via adminSupabase (bypasses RLS for reliability)
+        const { data: merchantProfile, error: merchantProfileError } = await adminSupabase
             .from('merchants')
             .select('user_id, business_name')
             .eq('id', merchantId)
-            .single();
+            .maybeSingle();
 
-        if (merchantProfileError || (!merchantProfile && user.id !== merchantProfile?.user_id)) {
-            // Check if user is admin (emergency bypass)
-            const { data: userRole } = await supabase.from('user_profiles').select('role').eq('id', user.id).single();
-            if (userRole?.role !== 'admin' && userRole?.role !== 'super_admin') {
+        const isAdmin = ['admin', 'super_admin'].includes(profile?.role);
+        if (merchantProfileError || !merchantProfile || merchantProfile.user_id !== user.id) {
+            if (!isAdmin) {
                 return NextResponse.json(
                     { error: 'Forbidden. You do not own this merchant account.' },
                     { status: 403 }
@@ -41,6 +38,20 @@ export async function POST(request) {
         let savedProduct;
 
         if (editMode && productId) {
+            // Live product guard: check current status before updating
+            const { data: currentProduct } = await adminSupabase
+                .from('shopping_products')
+                .select('approval_status')
+                .eq('id', productId)
+                .single();
+
+            if (currentProduct?.approval_status === 'live') {
+                return NextResponse.json(
+                    { error: 'Cannot edit a live product. Contact admin to make changes.' },
+                    { status: 403 }
+                );
+            }
+
             // UPDATE existing product
             const { data: updatedProduct, error: productUpdateError } = await adminSupabase
                 .from('shopping_products')

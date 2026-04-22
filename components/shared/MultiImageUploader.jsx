@@ -54,8 +54,14 @@ export default function MultiImageUploader({
 
             onChange([...images, result.url]);
         } catch (err) {
-            console.error('Upload error:', err);
-            toast.error('Failed to upload image');
+            console.error('Upload error details:', err);
+            // Check for common network/Next.js errors
+            const errorMessage = err?.message || '';
+            if (errorMessage.includes('body size')) {
+                toast.error('Image is too large for the current server configuration.');
+            } else {
+                toast.error('Failed to upload image. Please check your connection and try again.');
+            }
         } finally {
             setUploading(false);
         }

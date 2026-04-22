@@ -93,8 +93,7 @@ export default async function InventoryPage({ searchParams }) {
         console.error('Inventory Fetch Error:', inventoryError);
     }
 
-    console.log('Raw Inventory Count:', rawInventory?.length);
-    console.log('First Item:', rawInventory?.[0]);
+
 
     // 6. Fetch stats for these coupons (Purchase Price) separately to avoid Join issues
     let transactions = [];

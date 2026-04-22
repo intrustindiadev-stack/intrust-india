@@ -93,6 +93,7 @@ export async function POST(request) {
                 merchant_id: merchantId,
                 items: validatedItems,
                 total_amount_paise: totalPaise,
+                expected_amount_paise: totalPaise,
                 status: 'pending'
             })
             .select('id')

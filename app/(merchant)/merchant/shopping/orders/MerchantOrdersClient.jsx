@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import StoreCreditRequestsTab from "./StoreCreditRequestsTab";
 import { generateOrderInvoice } from "@/lib/invoiceGenerator";
@@ -314,6 +315,7 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
 };
 
 export default function MerchantOrdersClient({ orders: initialOrders, stats, merchantId, merchantInfo, error }) {
+    const router = useRouter();
     const supabase = createClient();
     const [orders, setOrders] = useState(initialOrders);
     const [filter, setFilter] = useState("all");
@@ -347,6 +349,39 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
 
         fetchPendingCreditsCount();
     }, [merchantId, supabase]);
+
+    useEffect(() => {
+        if (!merchantId) return;
+
+        const channel = supabase
+            .channel(`merchant-orders-${merchantId}`)
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'shopping_order_groups',
+                filter: `merchant_id=eq.${merchantId}`,
+            }, () => {
+                toast.success('New order received! 🛒');
+                router.refresh();
+            })
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'shopping_order_groups',
+                filter: `merchant_id=eq.${merchantId}`,
+            }, (payload) => {
+                setOrders(prev =>
+                    prev.map(o =>
+                        o.id === payload.new.id
+                            ? { ...o, ...payload.new }
+                            : o
+                    )
+                );
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [merchantId, supabase, router]);
 
     const filtered = orders.filter(o => {
         const matchesFilter = filter === "all" || o.delivery_status === filter;

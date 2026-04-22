@@ -82,10 +82,5 @@ export function useMerchant() {
         fetchMerchant();
     }, []);
 
-    // Debug log
-    useEffect(() => {
-        if (!loading) console.log('[useMerchant] State:', { merchant, isAdmin, loading, error });
-    }, [loading, merchant, isAdmin, error]);
-
     return { merchant, loading, error, isAdmin };
 }

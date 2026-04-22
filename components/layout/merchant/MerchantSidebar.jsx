@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import NotificationBell from '@/components/notifications/NotificationBell';
+
 import {
     LayoutDashboard,
     Package,
@@ -131,16 +131,13 @@ export default function MerchantSidebar({ isOpen, setIsOpen }) {
                             </div>
                         </Link>
 
-                        <div className="flex items-center gap-2">
-                            <NotificationBell apiPath="/api/merchant/notifications" />
-                            {/* Close button for mobile */}
-                            <button
-                                onClick={() => setIsOpen(false)}
-                                className="lg:hidden text-gray-400 hover:text-white transition-colors"
-                            >
-                                <ChevronLeft size={24} />
-                            </button>
-                        </div>
+                        {/* Close button for mobile */}
+                        <button
+                            onClick={() => setIsOpen(false)}
+                            className="lg:hidden text-gray-400 hover:text-white transition-colors"
+                        >
+                            <ChevronLeft size={24} />
+                        </button>
                     </div>
 
                     {/* Merchant Status Badge */}
@@ -166,8 +163,8 @@ export default function MerchantSidebar({ isOpen, setIsOpen }) {
                                         </div>
                                     </div>
                                 </div>
-                                <Link 
-                                    href="/merchant/wallet" 
+                                <Link
+                                    href="/merchant/wallet"
                                     onClick={() => setIsOpen(false)}
                                     className="block mt-1 group-hover:bg-[#3d5a7f]/50 p-2 -mx-2 rounded-lg transition-colors cursor-pointer"
                                 >
