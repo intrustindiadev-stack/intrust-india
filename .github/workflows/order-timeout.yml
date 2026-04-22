@@ -13,5 +13,6 @@ jobs:
         run: |
           curl -f -X GET "https://intrustindia.com/api/cron/order-timeout" \
           -H "Accept: application/json" \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
           --max-time 120 \
           --connect-timeout 10

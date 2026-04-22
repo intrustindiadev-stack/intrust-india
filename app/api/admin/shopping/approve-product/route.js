@@ -73,7 +73,12 @@ export async function POST(request) {
             // Update product status
             const { error: updateProductError } = await adminSupabase
                 .from('shopping_products')
-                .update({ approval_status: 'live', is_active: true })
+                .update({
+                    approval_status: 'live',
+                    is_active: true,
+                    reviewed_at: new Date().toISOString(),
+                    reviewed_by: user.id
+                })
                 .eq('id', productId);
 
             if (updateProductError) throw updateProductError;
@@ -84,7 +89,7 @@ export async function POST(request) {
                 .update({ is_active: true })
                 .eq('product_id', productId)
                 .eq('is_platform_product', false);
-            
+
             if (updateInvError) throw updateInvError;
 
             // Notify user
@@ -118,9 +123,14 @@ export async function POST(request) {
             // Update product status
             const { error: rejectError } = await adminSupabase
                 .from('shopping_products')
-                .update({ approval_status: 'rejected', rejection_reason: rejectionReason || null })
+                .update({
+                    approval_status: 'rejected',
+                    rejection_reason: rejectionReason || null,
+                    reviewed_at: new Date().toISOString(),
+                    reviewed_by: user.id
+                })
                 .eq('id', productId);
-            
+
             if (rejectError) throw rejectError;
 
             // Notify user

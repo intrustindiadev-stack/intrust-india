@@ -29,7 +29,9 @@ export default async function ProductDetailPage({ params }) {
     const { data: product, error: productError } = await supabase
         .from('shopping_products')
         .select(`
-            *,
+            id, title, description, product_images, mrp_paise,
+            suggested_retail_price_paise, category_id, category, slug,
+            is_active, gst_percentage, hsn_code, approval_status, created_at,
             shopping_categories(name, color_primary, color_secondary)
         `)
         .eq('slug', productSlug)
@@ -70,10 +72,10 @@ export default async function ProductDetailPage({ params }) {
         .select('value')
         .eq('key', 'platform_store')
         .single();
-    
+
     let platformStatus = { is_open: true };
     if (platformSettings?.value) {
-        try { platformStatus = JSON.parse(platformSettings.value); } catch(e) {}
+        try { platformStatus = JSON.parse(platformSettings.value); } catch (e) { }
     }
 
     // 4. Fetch recommended products from same category (exclude current product)
@@ -98,7 +100,10 @@ export default async function ProductDetailPage({ params }) {
 
         const { data: recPlatform } = await supabase
             .from('shopping_products')
-            .select('*')
+            .select(`
+                id, slug, title, description, product_images, category,
+                mrp_paise, suggested_retail_price_paise, is_active
+            `)
             .eq('is_active', true)
             .gt('admin_stock', 0)
             .is('deleted_at', null)
@@ -110,10 +115,21 @@ export default async function ProductDetailPage({ params }) {
             id: `platform-${p.id}`,
             product_id: p.id,
             retail_price_paise: p.suggested_retail_price_paise,
-            stock_quantity: p.admin_stock,
+            // Use a sentinel value (1) to signal in-stock without leaking the real count
+            stock_quantity: 1,
             is_platform_direct: true,
             merchants: { business_name: 'InTrust Official' },
-            shopping_products: p
+            shopping_products: {
+                id: p.id,
+                slug: p.slug,
+                title: p.title,
+                description: p.description,
+                product_images: p.product_images,
+                category: p.category,
+                mrp_paise: p.mrp_paise,
+                suggested_retail_price_paise: p.suggested_retail_price_paise,
+                is_active: p.is_active,
+            },
         }));
 
         recommendedProducts = [...platformMapped, ...(recInventory || [])].slice(0, 10);
@@ -123,9 +139,9 @@ export default async function ProductDetailPage({ params }) {
         <div className="min-h-screen">
             <Navbar customer={customerProfile} />
             <main>
-                <ProductDetailClient 
-                    product={product} 
-                    inventory={inventory || []} 
+                <ProductDetailClient
+                    product={product}
+                    inventory={inventory || []}
                     customer={customerProfile}
                     recommendedProducts={recommendedProducts}
                     platformStatus={platformStatus}

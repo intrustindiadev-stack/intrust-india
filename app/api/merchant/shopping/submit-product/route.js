@@ -57,6 +57,7 @@ export async function POST(request) {
                     hsn_code: formData.hsn_code,
                     approval_status: 'pending_approval',
                     rejection_reason: null,
+                    submitted_at: new Date().toISOString()
                 })
                 .eq('id', productId)
                 .select()
@@ -78,7 +79,7 @@ export async function POST(request) {
                 .eq('product_id', productId)
                 .eq('merchant_id', merchantId)
                 .eq('is_platform_product', false);
-            
+
             if (invUpdateError) throw invUpdateError;
 
         } else {
@@ -99,7 +100,8 @@ export async function POST(request) {
                     hsn_code: formData.hsn_code,
                     approval_status: 'pending_approval',
                     is_active: false,
-                    submitted_by_merchant_id: merchantId
+                    submitted_by_merchant_id: merchantId,
+                    submitted_at: new Date().toISOString()
                 }])
                 .select()
                 .single();
@@ -130,7 +132,7 @@ export async function POST(request) {
                 .from('user_profiles')
                 .select('id')
                 .in('role', ['admin', 'super_admin']);
-                
+
             if (admins && admins.length > 0) {
                 const notifications = admins.map(admin => ({
                     user_id: admin.id,

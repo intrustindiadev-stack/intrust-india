@@ -11,6 +11,11 @@ export const maxDuration = 60; // Extend Vercel function timeout to 60s for heav
  * Purpose: Scan for pending merchant orders older than 2 hours and transfer to admin with reduced commission.
  */
 export async function GET(request) {
+    const authHeader = request.headers.get('authorization');
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         const supabaseAdmin = createAdminClient();
 
