@@ -83,7 +83,7 @@ export default function TakeoverClient({ orders: initialOrders, stats: initialSt
         setUpdatingId(orderId);
         try {
             console.log('Updating order status:', { orderId, newStatus, tracking, estAt, notes });
-            
+
             // Standard status update
             const { data, error } = await supabase.rpc("update_order_delivery_v3", {
                 p_order_id: orderId,
@@ -133,7 +133,7 @@ export default function TakeoverClient({ orders: initialOrders, stats: initialSt
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Takeover failed");
-            
+
             toast.success("Order taken over successfully");
             router.refresh();
         } catch (err) {
@@ -153,13 +153,27 @@ export default function TakeoverClient({ orders: initialOrders, stats: initialSt
         <div className="p-4 lg:p-8 max-w-7xl mx-auto min-h-screen bg-[#f8f9fb] dark:bg-slate-950 font-[family-name:var(--font-outfit)] transition-colors duration-300">
             {/* RPC Error Banner */}
             {rpcError && (
-                <div className="mb-6 flex items-center gap-3 px-5 py-4 rounded-2xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400">
-                    <AlertCircle size={18} className="shrink-0" />
-                    <p className="text-sm font-bold">
-                        <span className="font-black">Error loading orders:</span>{' '}
-                        {typeof rpcError === 'string' ? rpcError : rpcError?.message || 'An authorization or server error occurred.'}
-                    </p>
-                </div>
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-8 p-6 rounded-[2rem] bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-950/20 dark:to-red-900/10 border-2 border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 shadow-xl shadow-red-500/5 flex flex-col sm:flex-row items-center gap-6"
+                >
+                    <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center shrink-0 border border-red-500/20 shadow-inner">
+                        <AlertCircle size={28} className="text-red-600 dark:text-red-400" />
+                    </div>
+                    <div className="flex-1 text-center sm:text-left">
+                        <h3 className="text-lg font-black tracking-tight mb-1">Critical Error Loading Orders</h3>
+                        <p className="text-sm font-bold opacity-80 leading-relaxed">
+                            {typeof rpcError === 'string' ? rpcError : rpcError?.message || 'An authorization or server error occurred.'}
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => router.refresh()}
+                        className="px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-red-600/20 active:scale-95 flex items-center gap-2 shrink-0"
+                    >
+                        <RefreshCw size={14} /> Retry Sync
+                    </button>
+                </motion.div>
             )}
 
             {/* Header */}
@@ -177,10 +191,19 @@ export default function TakeoverClient({ orders: initialOrders, stats: initialSt
                     </h1>
                     <p className="text-slate-400 dark:text-gray-500 font-medium text-lg">Manage unfulfilled merchant orders that lapsed</p>
                 </div>
-                <Link href="/admin/shopping/orders" className="group flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 font-bold text-sm hover:bg-slate-50 dark:hover:bg-white/10 transition-all shadow-sm">
-                    <RotateCcw size={16} className="group-hover:-rotate-45 transition-transform" />
-                    Back to All Orders
-                </Link>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => router.refresh()}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 font-bold text-sm hover:bg-slate-50 dark:hover:bg-white/10 transition-all shadow-sm"
+                    >
+                        <RefreshCw size={16} />
+                        Refresh
+                    </button>
+                    <Link href="/admin/shopping/orders" className="group flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 font-bold text-sm hover:bg-slate-50 dark:hover:bg-white/10 transition-all shadow-sm">
+                        <RotateCcw size={16} className="group-hover:-rotate-45 transition-transform" />
+                        Back to All Orders
+                    </Link>
+                </div>
             </header>
 
             {/* Stats Grid - Mobile Horizontal Scroll */}
@@ -305,13 +328,13 @@ export default function TakeoverClient({ orders: initialOrders, stats: initialSt
                                                     </span>
                                                 </div>
                                                 <h3 className="text-lg font-black text-slate-950 dark:text-white tracking-tight truncate">{order.customer_name || "Guest User"}</h3>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <p className="text-[9px] sm:text-[10px] font-black text-slate-900 dark:text-white">₹{((order.total_amount_paise || 0) / 100).toLocaleString("en-IN")}</p>
-                                                        <span className="text-slate-300 dark:text-gray-700">•</span>
-                                                        <p className="text-[9px] font-bold text-red-500 flex items-center gap-1">
-                                                            <Clock size={10} /> Esc: {order.admin_takeover_at ? format(new Date(order.admin_takeover_at), "dd MMM HH:mm") : "—"}
-                                                        </p>
-                                                    </div>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <p className="text-[9px] sm:text-[10px] font-black text-slate-900 dark:text-white">₹{((order.total_amount_paise || 0) / 100).toLocaleString("en-IN")}</p>
+                                                    <span className="text-slate-300 dark:text-gray-700">•</span>
+                                                    <p className="text-[9px] font-bold text-red-500 flex items-center gap-1">
+                                                        <Clock size={10} /> Esc: {order.admin_takeover_at ? format(new Date(order.admin_takeover_at), "dd MMM HH:mm") : "—"}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
 

@@ -116,10 +116,11 @@ export async function POST(request) {
             );
         }
 
-        const hasFullAccess = permissions.includes('adjust_wallet_any');
+        const isSuperAdmin = adminProfile.role === 'super_admin';
+        const hasFullAccess = isSuperAdmin || permissions.includes('adjust_wallet_any');
         const hasLimitedAccess = permissions.includes('adjust_wallet_under_10k');
 
-        // Require explicit permission grants — no default-allow fallback
+        // Require explicit permission grants OR super_admin role
         const hasPermission = hasFullAccess || hasLimitedAccess;
 
         if (!hasPermission) {

@@ -162,7 +162,9 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
 
     const orderGrossProfit = (order.items || []).reduce((s, i) => s + (i.gross_profit_paise || 0), 0);
     const orderCommission = (order.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0);
-    const orderNetProfit = (order.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0);
+    const orderNetProfit = (order.merchant_profit_paise ?? 0) !== 0
+        ? order.merchant_profit_paise
+        : (order.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0);
 
     const currentIdx = STATUS_FLOW.indexOf(currentStatus);
     const nextStatus = currentIdx >= 0 && currentIdx < STATUS_FLOW.length - 1 ? STATUS_FLOW[currentIdx + 1] : null;

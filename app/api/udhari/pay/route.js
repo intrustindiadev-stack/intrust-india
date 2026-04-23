@@ -84,7 +84,7 @@ export async function POST(request) {
 
         if (rpcError) {
             console.error(JSON.stringify({ correlationId, stage: 'settle_rpc_error', error: rpcError, code: rpcError.code, message: rpcError.message }));
-            
+
             if (rpcError.message.includes('udhari_not_found') || rpcError.message.includes('wallet_not_found')) {
                 return NextResponse.json({ error: 'Udhari request or wallet not found.' }, { status: 404 });
             }
@@ -122,6 +122,16 @@ export async function POST(request) {
                 reference_type: 'udhari_completed',
             });
         }
+
+        // 10.1 ADDED: Notify Customer
+        await supabaseAdmin.from('notifications').insert([{
+            user_id: userId,
+            title: 'Store Credit Payment Successful ✅',
+            body: `Your payment of ₹${(totalAmountPaise / 100).toFixed(2)} for ${udhariRequest.coupon?.title || 'Gift Card'} has been settled. Check your Gift Cards.`,
+            type: 'success',
+            reference_id: requestId,
+            reference_type: 'udhari_completed'
+        }]);
 
         return NextResponse.json({
             success: true,

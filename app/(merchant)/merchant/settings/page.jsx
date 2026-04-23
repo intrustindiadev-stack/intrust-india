@@ -183,27 +183,26 @@ export default function MerchantSettingsPage() {
         setError(null);
         setSuccess(null);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('Not authenticated');
-            const payload = {
-                bank_account_name: bankData.account_holder_name,
-                bank_account_number: bankData.account_number,
-                bank_ifsc_code: bankData.ifsc,
-                bank_name: bankData.bank_name,
-                bank_data: {
-                    account_holder_name: bankData.account_holder_name,
-                    account_number: bankData.account_number,
-                    ifsc: bankData.ifsc,
-                    bank_name: bankData.bank_name,
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('Not authenticated');
+
+            const response = await fetch('/api/merchant/bank-details', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
                 },
-                // Reset verification — admin must re-verify after any change
-                bank_verified: false,
-            };
-            const { error: updateError } = await supabase
-                .from('merchants')
-                .update(payload)
-                .eq('user_id', user.id);
-            if (updateError) throw updateError;
+                body: JSON.stringify({
+                    bank_account_name: bankData.account_holder_name,
+                    bank_account_number: bankData.account_number,
+                    bank_ifsc_code: bankData.ifsc,
+                    bank_name: bankData.bank_name,
+                }),
+            });
+
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to save bank details');
+
             setSuccess('Bank details saved! Pending admin verification.');
             await fetchSettings();
         } catch (err) {

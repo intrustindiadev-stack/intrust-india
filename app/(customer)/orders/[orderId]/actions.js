@@ -19,7 +19,7 @@ export async function cancelOrderAction(orderId) {
         // 1. Fetch order and verify ownership + cancellability
         const { data: order, error: fetchError } = await adminClient
             .from("shopping_order_groups")
-            .select("id, customer_id, delivery_status, status, payment_status, payment_method, total_amount_paise")
+            .select("id, customer_id, merchant_id, delivery_status, status, payment_status, payment_method, total_amount_paise")
             .eq("id", orderId)
             .eq("customer_id", user.id) // ownership check
             .single();
@@ -53,6 +53,50 @@ export async function cancelOrderAction(orderId) {
                 return { success: false, message: "Cannot cancel order. The change violates database validation constraints." };
             }
             return { success: false, message: "Failed to cancel order. Please try again." };
+        }
+
+        // 2.1 ADDED: Notify Merchant and Admins about cancellation
+        try {
+            // Fetch merchant's user_id
+            const { data: merchantData } = await adminClient
+                .from('merchants')
+                .select('user_id')
+                .eq('id', order.merchant_id)
+                .single();
+
+            if (merchantData?.user_id) {
+                const orderIdShort = orderId.slice(0, 8).toUpperCase();
+
+                // 1. Notify Merchant
+                await adminClient.from('notifications').insert([{
+                    user_id: merchantData.user_id,
+                    title: 'Order Cancelled ❌',
+                    body: `Order #${orderIdShort} has been cancelled by the customer.`,
+                    type: 'warning',
+                    reference_type: 'shopping_order',
+                    reference_id: orderId
+                }]);
+
+                // 2. Notify all Admins
+                const { data: adminProfiles } = await adminClient
+                    .from('user_profiles')
+                    .select('id')
+                    .eq('role', 'admin');
+
+                if (adminProfiles && adminProfiles.length > 0) {
+                    const adminNotifs = adminProfiles.map(ap => ({
+                        user_id: ap.id,
+                        title: 'Order Cancelled',
+                        body: `Order #${orderIdShort} has been cancelled by the customer.`,
+                        type: 'info',
+                        reference_type: 'shopping_order',
+                        reference_id: orderId
+                    }));
+                    await adminClient.from('notifications').insert(adminNotifs);
+                }
+            }
+        } catch (notifErr) {
+            console.error("[cancelOrder] Notification error (non-blocking):", notifErr);
         }
 
         if (order.payment_method === 'store_credit') {

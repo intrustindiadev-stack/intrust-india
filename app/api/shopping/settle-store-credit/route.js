@@ -15,7 +15,7 @@ export async function POST(request) {
     try {
         // 1. Identify User (Safer pattern for API routes)
         let userId = null;
-        
+
         // Try getting session from headers first (most reliable for our setup)
         const authHeader = request.headers.get('Authorization');
         if (authHeader?.startsWith('Bearer ')) {
@@ -30,14 +30,15 @@ export async function POST(request) {
 
         // Fallback to cookies (Read-only to prevent Next.js "cookies().set() is not allowed" error)
         if (!userId) {
+            const cookieStore = await cookies();
             const supabase = createServerClient(
                 process.env.NEXT_PUBLIC_SUPABASE_URL,
                 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
                 {
                     cookies: {
-                        get(name) { return cookies().get(name)?.value; },
-                        set() {}, // No-op in API routes
-                        remove() {}, // No-op in API routes
+                        get(name) { return cookieStore.get(name)?.value; },
+                        set() { }, // No-op in API routes
+                        remove() { }, // No-op in API routes
                     },
                 }
             );
@@ -67,7 +68,7 @@ export async function POST(request) {
 
         const { data, error } = await adminSupabase.rpc('settle_store_credit_for_cart', {
             p_udhari_request_id: udhariRequestId,
-            p_customer_user_id:  userId,
+            p_customer_user_id: userId,
         });
 
         if (error) {
@@ -118,7 +119,7 @@ export async function POST(request) {
         }
 
         return NextResponse.json({
-            success:        data.success,
+            success: data.success,
             newBalancePaise: data.new_balance_paise,
         });
 

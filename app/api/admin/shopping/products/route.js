@@ -26,7 +26,6 @@ export async function POST(request) {
             hsn_code
         } = body;
 
-        // Use RPC to bypass RLS safely without service role key
         const { data, error } = await supabase.rpc('admin_insert_shopping_product', {
             p_title: title,
             p_description: description,
@@ -54,6 +53,31 @@ export async function POST(request) {
             }
             console.error('RPC Error:', error);
             throw error;
+        }
+
+        // Notify all merchants about the new product
+        try {
+            const { createAdminClient } = await import('@/lib/supabaseServer');
+            const supabaseAdmin = createAdminClient();
+            const { data: merchants } = await supabaseAdmin
+                .from('merchants')
+                .select('user_id')
+                .eq('status', 'approved');
+
+            if (merchants && merchants.length > 0) {
+                const notifications = merchants.map(m => ({
+                    user_id: m.user_id,
+                    title: 'New Product Available 🛍️',
+                    body: `A new product "${title}" has been added to the wholesale catalog. Check it out now!`,
+                    type: 'info',
+                    reference_type: 'wholesale_product',
+                    reference_id: data.id,
+                    read: false
+                }));
+                await supabaseAdmin.from('notifications').insert(notifications);
+            }
+        } catch (notifError) {
+            console.error('Error notifying merchants about new product:', notifError);
         }
 
         return NextResponse.json({ product: data }, { status: 201 });

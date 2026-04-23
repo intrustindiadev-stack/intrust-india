@@ -40,6 +40,24 @@ export async function POST(request) {
 
         if (error) throw error;
 
+        // 5.1 ADDED: Notify Admins
+        const { data: adminProfiles } = await supabaseAdmin
+            .from('user_profiles')
+            .select('id')
+            .eq('role', 'admin');
+
+        if (adminProfiles && adminProfiles.length > 0) {
+            const adminNotifs = adminProfiles.map((ap) => ({
+                user_id: ap.id,
+                title: 'New KYC Submited',
+                body: `A new KYC record has been submitted for review (User: ${user.id.slice(0, 8)}).`,
+                type: 'info',
+                reference_type: 'kyc_verification',
+                reference_id: user.id
+            }));
+            await supabaseAdmin.from('notifications').insert(adminNotifs);
+        }
+
         return NextResponse.json({ success: true, record: data });
     } catch (error) {
         console.error('[API] KYC Submit Error:', error);

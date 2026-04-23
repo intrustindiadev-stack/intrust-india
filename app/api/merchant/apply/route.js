@@ -120,7 +120,7 @@ export async function POST(request) {
                 .from('user_profiles')
                 .select('id')
                 .eq('role', 'admin');
-                
+
             if (admins && admins.length > 0) {
                 const notifications = admins.map(admin => ({
                     user_id: admin.id,
@@ -134,8 +134,8 @@ export async function POST(request) {
                 const { error: notifInsertError } = await adminSupabase.from('notifications').insert(notifications);
                 if (notifInsertError) console.error('Error inserting admin notifications:', notifInsertError);
             }
-            
-            
+
+
             // If they are auto-approved by KYC, give them a notification to pay
             if (finalStatus === 'approved') {
                 await adminSupabase.from('notifications').insert({
@@ -144,6 +144,17 @@ export async function POST(request) {
                     body: `Your merchant application for ${businessName} was automatically verified! Choose a subscription plan (starting ₹499/month) to activate your merchant panel.`,
                     type: 'success',
                     reference_type: 'merchant_approved',
+                    read: false
+                });
+            } else {
+                // Confirm submission for pending applications
+                await adminSupabase.from('notifications').insert({
+                    user_id: user.id,
+                    title: 'Application Received! 📝',
+                    body: `Your merchant application for ${businessName} has been received and is under review. We'll notify you once it's approved.`,
+                    type: 'info',
+                    reference_type: 'merchant_application',
+                    reference_id: merchant.id,
                     read: false
                 });
             }

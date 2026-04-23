@@ -113,6 +113,18 @@ export async function POST(request, { params }) {
             }
         ]);
 
+        // 7.1 ADDED: Notify Merchant
+        await adminSupabase.from('notifications').insert([{
+            user_id: existingMerchant.user_id,
+            title: suspend ? 'Account Suspended ⚠️' : 'Account Reinstated ✅',
+            body: suspend
+                ? `Your merchant account has been suspended.${reason ? ` Reason: ${reason}` : ''} Please contact support for more details.`
+                : 'Your merchant account has been reinstated. You can now resume your operations.',
+            type: suspend ? 'warning' : 'success',
+            reference_type: suspend ? 'merchant_suspended' : 'merchant_unsuspended',
+            reference_id: merchantData.id
+        }]);
+
         if (auditError) {
             console.error('Error logging audit:', auditError);
             // Rollback merchant status

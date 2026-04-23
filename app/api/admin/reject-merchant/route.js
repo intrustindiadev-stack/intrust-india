@@ -139,6 +139,16 @@ export async function POST(request) {
             }
         ]);
 
+        // 7.1 ADDED: Notify Merchant
+        await adminSupabase.from('notifications').insert([{
+            user_id: targetUserId,
+            title: 'Application Not Approved ❌',
+            body: `Your merchant application for ${existingMerchant.business_name || 'your business'} was not approved.${reason ? ` Reason: ${reason}` : ''}`,
+            type: 'error',
+            reference_type: 'merchant_rejected',
+            reference_id: merchantData.id
+        }]);
+
         if (auditError) {
             console.error('Error logging audit:', auditError);
             // Rollback user role and merchant status

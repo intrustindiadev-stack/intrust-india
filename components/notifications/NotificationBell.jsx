@@ -18,6 +18,9 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [offset, setOffset] = useState(0);
     const [pos, setPos] = useState({ top: 0, right: 0 });
     const [mounted, setMounted] = useState(false);
     const buttonRef = useRef(null);
@@ -27,25 +30,46 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
 
     useEffect(() => { setMounted(true); }, []);
 
-    const fetchNotifications = useCallback(async () => {
+    const fetchNotifications = useCallback(async (isLoadMore = false) => {
         try {
+            if (isLoadMore) setLoadingMore(true);
+            else setLoading(true);
+
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
-            const res = await fetch(apiPath, {
+
+            const currentOffset = isLoadMore ? offset : 0;
+            const res = await fetch(`${apiPath}?limit=20&offset=${currentOffset}`, {
                 headers: { Authorization: `Bearer ${session.access_token}` }
             });
+
             if (!res.ok) return;
             const data = await res.json();
-            setNotifications(data.notifications || []);
+
+            if (isLoadMore) {
+                setNotifications(prev => [...prev, ...(data.notifications || [])]);
+            } else {
+                setNotifications(data.notifications || []);
+            }
+
             setUnreadCount(data.unreadCount || 0);
-        } catch {
-            // silently fail on poll
+            setHasMore(data.hasMore || false);
+            if (data.notifications?.length > 0) {
+                setOffset(currentOffset + data.notifications.length);
+            }
+        } catch (err) {
+            console.error('Error fetching notifications:', err);
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
         }
-    }, [apiPath]);
+    }, [apiPath, offset]);
 
     useEffect(() => {
         fetchNotifications();
-        pollRef.current = setInterval(fetchNotifications, 30000);
+
+        // Polling for count primarily
+        pollRef.current = setInterval(() => fetchNotifications(false), 30000);
 
         // Supabase Realtime subscription for instant notification updates
         let realtimeChannel = null;
@@ -64,6 +88,7 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                     (payload) => {
                         setNotifications(prev => [payload.new, ...prev]);
                         setUnreadCount(prev => prev + 1);
+                        setOffset(prev => prev + 1);
                     }
                 )
                 .subscribe();
@@ -73,7 +98,7 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
             if (pollRef.current) clearInterval(pollRef.current);
             if (realtimeChannel) supabase.removeChannel(realtimeChannel);
         };
-    }, [fetchNotifications]);
+    }, []); // Only once on mount
 
     // Close on outside click
     useEffect(() => {
@@ -106,7 +131,14 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                 },
                 body: JSON.stringify(body),
             });
-            fetchNotifications();
+            // Just local update to avoid full refetch
+            if (id) {
+                setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+                setUnreadCount(prev => Math.max(0, prev - 1));
+            } else {
+                setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                setUnreadCount(0);
+            }
         } catch {
             // ignore
         }
@@ -224,9 +256,15 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
 
             // ── Wholesale / Inventory ────────────────────────────────────────
             case 'wholesale_purchase':
+            case 'wholesale_product':
             case 'merchant_inventory':
                 // Merchant gets notified
                 router.push('/merchant/shopping/inventory');
+                break;
+
+            case 'platform_product':
+                // Admin gets notified
+                if (isAdmin) router.push('/admin/shopping');
                 break;
 
             // ── Lockin / Growth fund ─────────────────────────────────────────
@@ -251,7 +289,7 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
             case 'custom_product_submission':
                 if (isAdmin) router.push('/admin/shopping?tab=custom');
                 break;
-            
+
             case 'product_approved':
             case 'product_rejected':
                 if (isMerchant) router.push('/merchant/shopping/inventory');
@@ -291,15 +329,15 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                             Mark all read
                         </button>
                     )}
-                    <button onClick={fetchNotifications} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                        <span className={`material-icons-round text-sm ${loading ? 'animate-spin' : ''}`}>refresh</span>
+                    <button onClick={() => fetchNotifications(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        <span className={`material-icons-round text-sm ${(loading && !loadingMore) ? 'animate-spin' : ''}`}>refresh</span>
                     </button>
                 </div>
             </div>
 
             {/* List */}
-            <div className="max-h-80 overflow-y-auto divide-y divide-black/5 dark:divide-white/5">
-                {notifications.length === 0 ? (
+            <div className="max-h-96 overflow-y-auto divide-y divide-black/5 dark:divide-white/5 bg-white dark:bg-slate-900">
+                {notifications.length === 0 && !loading ? (
                     <div className="py-10 text-center">
                         <span className="material-icons-round text-slate-300 dark:text-slate-600 text-4xl">notifications_none</span>
                         <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">No notifications yet</p>
@@ -327,6 +365,25 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                         </button>
                     ))
                 )}
+
+                {hasMore && (
+                    <div className="p-3 bg-black/[0.01] dark:bg-white/[0.01]">
+                        <button
+                            onClick={() => fetchNotifications(true)}
+                            disabled={loadingMore}
+                            className="w-full py-2 text-xs font-semibold text-slate-500 hover:text-[#D4AF37] dark:text-slate-400 transition-colors flex items-center justify-center gap-2"
+                        >
+                            {loadingMore ? (
+                                <>
+                                    <span className="material-icons-round text-sm animate-spin">refresh</span>
+                                    Loading...
+                                </>
+                            ) : (
+                                'View older notifications'
+                            )}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>,
         document.body
@@ -335,10 +392,10 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
     const buttonClass = variant === 'navbar'
         ? 'relative p-2 rounded-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
         : variant === 'minimal'
-        ? 'relative p-2 rounded-full text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors'
-        : variant === 'header'
-        ? 'relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-90 duration-200'
-        : 'relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors';
+            ? 'relative p-2 rounded-full text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors'
+            : variant === 'header'
+                ? 'relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-90 duration-200'
+                : 'relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors';
 
     return (
         <>

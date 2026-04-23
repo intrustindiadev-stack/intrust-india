@@ -144,6 +144,20 @@ export async function POST(request) {
                     { id: clientTxnId, type: 'TOPUP' }
                 );
                 console.log(`[Callback] Wallet credited for txn ${clientTxnId}`);
+
+                // 5.1 ADDED: Notify Customer
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
+                await supabaseAdmin.from('notifications').insert([{
+                    user_id: existingTxn.user_id,
+                    title: 'Wallet Topped Up ✅',
+                    body: `Your wallet has been credited with ₹${amount}.`,
+                    type: 'success',
+                    reference_type: 'wallet_topup',
+                    reference_id: clientTxnId
+                }]);
             } catch (walletError) {
                 console.error('[Callback] Failed to credit wallet:', walletError.message);
                 fulfillmentFailed = true;
@@ -222,6 +236,16 @@ export async function POST(request) {
                         }
 
                         console.log(`[Callback] Merchant Wallet credited for txn ${clientTxnId}`);
+
+                        // 5b.1 ADDED: Notify Merchant
+                        await supabaseAdmin.from('notifications').insert([{
+                            user_id: existingTxn.user_id,
+                            title: 'Wallet Funded ✅',
+                            body: `Your merchant wallet has been credited with ₹${amount}.`,
+                            type: 'success',
+                            reference_type: 'merchant_wallet_topup',
+                            reference_id: clientTxnId
+                        }]);
                     } else {
                         console.error('[Callback] Merchant not found for topup:', existingTxn.user_id);
                         fulfillmentFailed = true;
@@ -399,6 +423,16 @@ export async function POST(request) {
                     .update({ status: 'failed' })
                     .eq('id', groupId);
                 console.log(`[Callback] Cart checkout marked as failed/aborted for txn ${clientTxnId}`);
+
+                // 5e.1 ADDED: Notify Customer of Payment Failure
+                await supabaseAdmin.from('notifications').insert([{
+                    user_id: existingTxn.user_id,
+                    title: 'Checkout Payment Failed ❌',
+                    body: `Your payment of ₹${amount} for order checkout failed. Please try again or use another method.`,
+                    type: 'error',
+                    reference_type: 'shopping_order',
+                    reference_id: groupId
+                }]);
             } catch (failError) {
                 console.error('[Callback] Failed to flag cart checkout as failed:', failError.message);
             }

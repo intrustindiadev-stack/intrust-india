@@ -41,6 +41,42 @@ export async function POST(request) {
             return NextResponse.json({ error: data?.message || 'Failed to takeover' }, { status: 400 });
         }
 
+        // 2.1 ADDED: Notify Merchant and Customer
+        try {
+            const { data: order } = await supabase
+                .from('shopping_order_groups')
+                .select('merchant_id, customer_id')
+                .eq('id', order_id)
+                .single();
+
+            if (order) {
+                // 1. Notify Merchant (their order was taken over)
+                const { data: mData } = await supabase.from('merchants').select('user_id').eq('id', order.merchant_id).single();
+                if (mData) {
+                    await supabase.from('notifications').insert([{
+                        user_id: mData.user_id,
+                        title: 'Order Taken Over by Admin ⚠️',
+                        body: `Order #${order_id.slice(0, 8).toUpperCase()} has been manually taken over by an admin for fulfillment.`,
+                        type: 'warning',
+                        reference_type: 'shopping_order',
+                        reference_id: order_id
+                    }]);
+                }
+
+                // 2. Notify Customer (fulfillment is handled by platform)
+                await supabase.from('notifications').insert([{
+                    user_id: order.customer_id,
+                    title: 'Order Status Update 🛍️',
+                    body: `Your order #${order_id.slice(0, 8).toUpperCase()} is now being fulfilled directly by the platform.`,
+                    type: 'info',
+                    reference_type: 'shopping_order',
+                    reference_id: order_id
+                }]);
+            }
+        } catch (err) {
+            console.error('[Takeover Notif Error]:', err);
+        }
+
         return NextResponse.json({ success: true, message: 'Order manually taken over' });
     } catch (error) {
         console.error('[Manual Takeover Error]:', error);

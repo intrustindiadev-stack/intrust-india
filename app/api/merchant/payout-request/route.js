@@ -200,6 +200,16 @@ export async function POST(request) {
             await admin.from('notifications').insert(notifs);
         }
 
+        // 8.1 ADDED: Self-notification for merchant
+        await admin.from('notifications').insert([{
+            user_id: user.id,
+            title: 'Withdrawal Request Submitted ✅',
+            body: `Your withdrawal request of ₹${amountNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })} has been submitted and is under review.`,
+            type: 'success',
+            reference_type: 'payout_request',
+            reference_id: payoutReq.id
+        }]);
+
         return NextResponse.json({ success: true, request: payoutReq });
     } catch (error) {
         console.error('[API] Payout POST Error:', error);

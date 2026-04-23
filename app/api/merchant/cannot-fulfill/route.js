@@ -65,6 +65,24 @@ export async function POST(req) {
             return NextResponse.json({ error: data?.message || "Escalation failed" }, { status: 400 });
         }
 
+        // 6. ADDED: Notify all Admins
+        const { data: adminProfiles } = await adminSupabase
+            .from('user_profiles')
+            .select('id')
+            .eq('role', 'admin');
+
+        if (adminProfiles && adminProfiles.length > 0) {
+            const adminNotifs = adminProfiles.map((ap) => ({
+                user_id: ap.id,
+                title: 'Order Escalated 🚩',
+                body: `A merchant has flagged Order #${orderId.slice(0, 8).toUpperCase()} as "Cannot Fulfill". Review required.`,
+                type: 'error',
+                reference_type: 'shopping_order',
+                reference_id: orderId
+            }));
+            await adminSupabase.from('notifications').insert(adminNotifs);
+        }
+
         return NextResponse.json({ success: true, message: data.message });
 
     } catch (error) {

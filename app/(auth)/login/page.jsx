@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Phone, ArrowRight, Loader2, ShieldCheck, Mail, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 
 function OTPBoxInput({ value, onChange, onComplete }) {
     const refs = useRef([]);
@@ -78,28 +79,32 @@ function LoginContent() {
     const searchParams = useSearchParams();
 
     // ─── Shared ─────────────────────────────────────────────────────────────────
-    const [step, setStep]               = useState('email'); // 'email' | 'google-conflict' | 'email-otp' | 'phone' | 'otp'
-    const [phone, setPhone]             = useState('');
-    const [otp, setOtp]                 = useState('');
-    const [loading, setLoading]         = useState(false);
+    const [step, setStep] = useState('email'); // 'email' | 'google-conflict' | 'email-otp' | 'phone' | 'otp'
+    const [phone, setPhone] = useState('');
+    const [otp, setOtp] = useState('');
+    const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
-    const [error, setError]             = useState('');
 
     // ─── Email-specific ──────────────────────────────────────────────────────────
     const [emailAddress, setEmailAddress] = useState('');
-    const [password, setPassword]         = useState('');
+    const [password, setPassword] = useState('');
     const [conflictEmail, setConflictEmail] = useState(''); // email returned by 409 conflict
     const [showPassword, setShowPassword] = useState(false);
 
     // ─── Query-param notices ─────────────────────────────────────────────────────
-    const verified  = searchParams?.get('verified')  === 'true';
-    const resetDone = searchParams?.get('reset')      === 'success';
-    const merged    = searchParams?.get('merged')     === 'true';
-    const confirmed = searchParams?.get('confirmed')  === 'true';
+    const verified = searchParams?.get('verified') === 'true';
+    const resetDone = searchParams?.get('reset') === 'success';
+    const merged = searchParams?.get('merged') === 'true';
+    const confirmed = searchParams?.get('confirmed') === 'true';
 
     useEffect(() => {
         sessionStorage.removeItem('intrust_adv_seen');
-    }, []);
+
+        if (verified) toast.success('Email verified! You can now log in.');
+        if (resetDone) toast.success('Password reset successful! Please log in.');
+        if (merged) toast.success('Your accounts have been linked! Please log in.');
+        if (confirmed) toast.success('Email confirmed! You can now log in.');
+    }, [verified, resetDone, merged, confirmed]);
 
     // ─── Role-based redirect helper ──────────────────────────────────────────────
     const redirectByRole = async (user) => {
@@ -122,14 +127,11 @@ function LoginContent() {
     // ─── Google ──────────────────────────────────────────────────────────────────
     const handleGoogleSignIn = () => {
         setGoogleLoading(true);
-        setError('');
         window.location.href = '/api/auth/google';
     };
 
-    // ─── Google Link (Flow A) — redirect with link_mode so callback knows to merge
     const handleGoogleLink = () => {
         setGoogleLoading(true);
-        setError('');
         const url = `/api/auth/google?link_mode=email&pending_email=${encodeURIComponent(conflictEmail)}`;
         window.location.href = url;
     };
@@ -137,30 +139,29 @@ function LoginContent() {
     // ─── Phone OTP ──────────────────────────────────────────────────────────────
     const handleSendOTP = async (e) => {
         if (e) e.preventDefault();
-        setError('');
         setLoading(true);
         try {
             const { data: userId, error: checkError } = await supabase
                 .rpc('get_user_id_by_phone', { phone_number: phone });
             if (checkError) {
-                setError('Something went wrong, please try again.');
+                toast.error('Something went wrong, please try again.');
                 setLoading(false);
                 return;
             }
             if (!userId) {
-                setError('No account found with this phone number. Redirecting to signup...');
+                toast.error('No account found with this phone number. Redirecting to signup...');
                 setTimeout(() => router.push('/signup'), 1500);
                 return;
             }
         } catch (err) {
-            setError('Something went wrong, please try again.');
+            toast.error('Something went wrong, please try again.');
             setLoading(false);
             return;
         }
         const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
         const { error: otpError } = await signInWithOTP(formattedPhone);
         if (otpError) {
-            setError(otpError.message || 'Failed to send OTP');
+            toast.error(otpError.message || 'Failed to send OTP');
             setLoading(false);
             return;
         }
@@ -173,13 +174,11 @@ function LoginContent() {
         if (loading) return; // block duplicate in-flight submissions
         const otpValue = otpOverride || otp;
         if (otpValue.replace(/\s+/g, '').length !== 6) return; // strict 6-digit guard
-        setError('');
-        setLoading(true);
         try {
             const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
             const { data, error: verifyError } = await verifyOTP(formattedPhone, otpValue);
             if (verifyError) {
-                setError(verifyError.message || 'Invalid OTP');
+                toast.error(verifyError.message || 'Invalid OTP');
                 setLoading(false);
                 return;
             }
@@ -187,11 +186,11 @@ function LoginContent() {
             if (user) {
                 await redirectByRole(user);
             } else {
-                setError('Login failed. Please try again.');
+                toast.error('Login failed. Please try again.');
                 setLoading(false);
             }
         } catch (err) {
-            setError('An unexpected error occurred. Please try again.');
+            toast.error('An unexpected error occurred. Please try again.');
             setLoading(false);
         }
     };
@@ -199,7 +198,6 @@ function LoginContent() {
     // ─── Email sign-in ────────────────────────────────────────────────────────────
     const handleEmailSignIn = async (e) => {
         if (e) e.preventDefault();
-        setError('');
         setLoading(true);
         try {
             const res = await fetch('/api/auth/email/signin', {
@@ -218,7 +216,7 @@ function LoginContent() {
             }
 
             if (!res.ok) {
-                setError(data.error || 'Invalid email or password.');
+                toast.error(data.error || 'Invalid email or password.');
                 setLoading(false);
                 return;
             }
@@ -227,12 +225,12 @@ function LoginContent() {
             if (user) {
                 await redirectByRole(user);
             } else {
-                setError('Login failed. Please try again.');
+                toast.error('Login failed. Please try again.');
                 setLoading(false);
             }
         } catch (err) {
             console.error('[LOGIN] Email signin error:', err);
-            setError('Network error. Please try again.');
+            toast.error('Network error. Please try again.');
             setLoading(false);
         }
     };
@@ -240,10 +238,9 @@ function LoginContent() {
     const handleEmailOTPSend = async (e) => {
         if (e) e.preventDefault();
         if (!emailAddress) {
-            setError('Please enter your email address');
+            toast.error('Please enter your email address');
             return;
         }
-        setError('');
         setLoading(true);
 
         // shouldCreateUser: false → Supabase will NOT auto-register unknown emails
@@ -263,10 +260,10 @@ function LoginContent() {
                 msg.includes('not registered');
 
             if (isUnknownUser) {
-                setError('No account found with this email. Redirecting to signup...');
+                toast.error('No account found with this email. Redirecting to signup...');
                 setTimeout(() => router.push('/signup'), 2000);
             } else {
-                setError(error.message);
+                toast.error(error.message);
             }
             setLoading(false);
             return;
@@ -278,41 +275,12 @@ function LoginContent() {
 
     // Helper for auto-verify on OTP completion — receives the completed value directly
     const callVerifyOTP = (completedOtp) => {
-        handleVerifyOTP({ preventDefault: () => {} }, completedOtp);
+        handleVerifyOTP({ preventDefault: () => { } }, completedOtp);
     };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[var(--bg-secondary)] p-4">
             <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-[var(--border-color)] p-8">
-                
-                {/* Notification banners */}
-                {verified && (
-                    <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl flex items-center gap-3">
-                        <CheckCircle size={20} className="text-green-600 dark:text-green-400 shrink-0" />
-                        <p className="text-sm font-semibold text-green-700 dark:text-green-400">Email verified! You can now log in.</p>
-                    </div>
-                )}
-                {resetDone && (
-                    <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl flex items-center gap-3">
-                        <CheckCircle size={20} className="text-green-600 dark:text-green-400 shrink-0" />
-                        <p className="text-sm font-semibold text-green-700 dark:text-green-400">Password reset successful! Please log in with your new password.</p>
-                    </div>
-                )}
-                {merged && (
-                    <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl flex items-center gap-3">
-                        <CheckCircle size={20} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                        <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">Your accounts have been linked! Please log in to continue.</p>
-                    </div>
-                )}
-                {confirmed && (
-                    <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl">
-                        <div className="flex items-center gap-3 mb-1">
-                            <CheckCircle size={20} className="text-green-600 dark:text-green-400 shrink-0" />
-                            <p className="text-sm font-bold text-green-700 dark:text-green-400">Email confirmed successfully! ✅</p>
-                        </div>
-                        <p className="text-sm text-green-600 dark:text-green-300 ml-8">Please log in with your email and password to continue.</p>
-                    </div>
-                )}
 
                 {/* ── EMAIL (default login) ── */}
                 {step === 'email' && (
@@ -362,10 +330,6 @@ function LoginContent() {
                                 </div>
                             </div>
 
-                            {error && (
-                                <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>
-                            )}
-
                             <button
                                 type="submit"
                                 disabled={loading || !emailAddress || !password}
@@ -403,7 +367,7 @@ function LoginContent() {
                             </button>
 
                             <button
-                                onClick={() => { setStep('phone'); setError(''); }}
+                                onClick={() => { setStep('phone'); }}
                                 className="w-full py-3.5 border border-[var(--border-color)] rounded-xl flex items-center justify-center gap-3 text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-all"
                             >
                                 <Phone size={18} className="text-[#92BCEA]" />
@@ -443,10 +407,6 @@ function LoginContent() {
                             Your data stays intact.
                         </div>
 
-                        {error && (
-                            <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm mb-4">{error}</div>
-                        )}
-
                         <button
                             id="google-verify-btn"
                             onClick={handleGoogleLink}
@@ -471,7 +431,7 @@ function LoginContent() {
                         <button
                             id="cancel-btn"
                             type="button"
-                            onClick={() => { setStep('email'); setError(''); setGoogleLoading(false); }}
+                            onClick={() => { setStep('email'); setGoogleLoading(false); }}
                             className="w-full py-2.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                         >
                             Cancel — go back to login
@@ -489,20 +449,16 @@ function LoginContent() {
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
                             Enter the code sent to <span className="font-bold text-[var(--text-primary)]">{emailAddress}</span>
                         </p>
-                        
+
                         <OTPBoxInput
                             value={otp}
-                            onChange={(v) => { setError(''); setOtp(v); }}
+                            onChange={(v) => { setOtp(v); }}
                             onComplete={callVerifyOTP}
                         />
-                        
+
                         <p className="text-xs text-[var(--text-secondary)] text-center mt-3 mb-6">
                             Can't find the email? Check your spam folder.
                         </p>
-                        
-                        {error && (
-                            <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm mb-4">{error}</div>
-                        )}
 
                         <div className="space-y-3">
                             <button
@@ -530,12 +486,12 @@ function LoginContent() {
                             <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
                         </div>
                         <div className="flex items-center gap-3 mb-6 relative">
-                            <button onClick={() => { setStep('email'); setError(''); }} className="absolute -left-2 top-0 bottom-0 text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors p-2">
+                            <button onClick={() => { setStep('email'); }} className="absolute -left-2 top-0 bottom-0 text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors p-2">
                                 <ArrowRight size={20} className="rotate-180" />
                             </button>
                             <h2 className="text-2xl font-bold text-[var(--text-primary)] w-full text-center">Phone Login</h2>
                         </div>
-                        
+
                         <form onSubmit={handleSendOTP} className="space-y-5">
                             <div>
                                 <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Phone Number</label>
@@ -552,10 +508,6 @@ function LoginContent() {
                                 </div>
                                 <p className="text-xs text-[var(--text-secondary)] mt-2">We'll send you an OTP via SMS</p>
                             </div>
-                            
-                            {error && (
-                                <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>
-                            )}
 
                             <button
                                 type="submit"
@@ -579,22 +531,18 @@ function LoginContent() {
                             Sent to <span className="font-semibold text-[var(--text-primary)]">+91 {phone}</span>
                         </p>
                         <div className="text-center mb-6">
-                            <button type="button" onClick={() => { setStep('phone'); setError(''); }} className="text-[#92BCEA] text-sm hover:underline font-medium">
+                            <button type="button" onClick={() => { setStep('phone'); }} className="text-[#92BCEA] text-sm hover:underline font-medium">
                                 Change number
                             </button>
                         </div>
-                        
+
                         <OTPBoxInput
                             value={otp}
-                            onChange={(v) => { setError(''); setOtp(v); }}
+                            onChange={(v) => { setOtp(v); }}
                             onComplete={callVerifyOTP}
                         />
 
                         <div className="mt-6 space-y-4">
-                            {error && (
-                                <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>
-                            )}
-
                             <button
                                 onClick={handleVerifyOTP}
                                 disabled={loading || otp.length !== 6}
@@ -602,10 +550,10 @@ function LoginContent() {
                             >
                                 {loading ? <><Loader2 className="animate-spin" size={20} /> Verifying...</> : <>Verify &amp; Login <ShieldCheck size={18} /></>}
                             </button>
-                            
+
                             <button
                                 type="button"
-                                onClick={(e) => { setError(''); handleSendOTP(e); }}
+                                onClick={(e) => { handleSendOTP(e); }}
                                 disabled={loading}
                                 className="w-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm transition-colors"
                             >
@@ -615,7 +563,7 @@ function LoginContent() {
                     </div>
                 )}
             </div>
-            
+
             {/* Terms text is outside the card, absolutely positioned or just below? Unmentioned, I will omit because wrapper has items-center justify-center min-h-screen p-4, if I put it below it breaks the pure card centering unless put inside a flex col. The plan only specifies the card wrapper structure. */}
         </div>
     );

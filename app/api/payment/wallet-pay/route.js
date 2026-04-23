@@ -104,6 +104,16 @@ export async function POST(request) {
             // We don't fail the whole request because the primary action (subscription) succeeded
         }
 
+        // 8. ADDED: Notify Merchant
+        await supabaseAdmin.from('notifications').insert([{
+            user_id: user.id,
+            title: 'Elite Gold Activated! 🎉',
+            body: `Your Elite Gold subscription has been activated using your wallet. Expiry: ${newExpiryDate.toLocaleDateString('en-IN')}`,
+            type: 'success',
+            reference_type: 'merchant_subscription',
+            reference_id: packageId
+        }]);
+
         return NextResponse.json({
             success: true,
             message: 'Subscription activated and cashback rewarded',

@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Eye, EyeOff, Loader2, CheckCircle, ArrowRight, Lock } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 
 // ─── Password Strength Helpers ─────────────────────────────────────────────────
 function getPasswordStrength(password) {
@@ -58,7 +59,6 @@ function ResetPasswordContent() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
     const [tokenValid, setTokenValid] = useState(null); // null = checking, true, false
     const [success, setSuccess] = useState(false);
 
@@ -96,17 +96,16 @@ function ResetPasswordContent() {
 
     const handleResetPassword = async (e) => {
         e.preventDefault();
-        setError('');
 
         const { score } = getPasswordStrength(password);
-        if (score < 3) { setError('Please choose a stronger password.'); return; }
-        if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
+        if (score < 3) { toast.error('Please choose a stronger password.'); return; }
+        if (password !== confirmPassword) { toast.error('Passwords do not match.'); return; }
 
         setLoading(true);
         const { data: { session: currentSession } } = await supabase.auth.getSession();
 
         if (!currentSession) {
-            setError('Auth session missing! Please ensure you followed the link from your email.');
+            toast.error('Auth session missing! Please ensure you followed the link from your email.');
             setLoading(false);
             return;
         }
@@ -114,7 +113,7 @@ function ResetPasswordContent() {
         try {
             const { error: updateError } = await supabase.auth.updateUser({ password });
             if (updateError) {
-                setError(updateError.message || 'Failed to update password. Please request a new reset link.');
+                toast.error(updateError.message || 'Failed to update password. Please request a new reset link.');
                 setLoading(false);
                 return;
             }
@@ -139,13 +138,14 @@ function ResetPasswordContent() {
             }
 
             setSuccess(true);
+            toast.success('Password updated successfully!');
             setTimeout(() => {
                 window.location.href = '/login?reset=success';
             }, 2500);
 
         } catch (err) {
             console.error('[RESET-PASSWORD] Unexpected error:', err);
-            setError('An unexpected error occurred. Please try again.');
+            toast.error('An unexpected error occurred. Please try again.');
             setLoading(false);
         }
     };
@@ -249,10 +249,6 @@ function ResetPasswordContent() {
                                         <p className="text-xs font-bold text-red-500 mt-1">Passwords do not match</p>
                                     )}
                                 </div>
-
-                                {error && (
-                                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{error}</div>
-                                )}
 
                                 <button
                                     type="submit"

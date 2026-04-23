@@ -14,7 +14,7 @@ export async function POST(request) {
     try {
         // 1. Identify User (Safer pattern for API routes)
         let userId = null;
-        
+
         // Try getting session from headers first (most reliable for our setup)
         const authHeader = request.headers.get('Authorization');
         if (authHeader?.startsWith('Bearer ')) {
@@ -29,14 +29,15 @@ export async function POST(request) {
 
         // Fallback to cookies (Read-only to prevent Next.js "cookies().set() is not allowed" error)
         if (!userId) {
+            const cookieStore = await cookies();
             const supabase = createServerClient(
                 process.env.NEXT_PUBLIC_SUPABASE_URL,
                 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
                 {
                     cookies: {
-                        get(name) { return cookies().get(name)?.value; },
-                        set() {}, // No-op in API routes
-                        remove() {}, // No-op in API routes
+                        get(name) { return cookieStore.get(name)?.value; },
+                        set() { }, // No-op in API routes
+                        remove() { }, // No-op in API routes
                     },
                 }
             );
@@ -53,14 +54,14 @@ export async function POST(request) {
         const { groupId, merchantId, durationDays, amountPaise } = body;
 
         if (!groupId || !merchantId || !durationDays || !amountPaise) {
-            return NextResponse.json({ 
-                error: 'Missing required parameters', 
-                received: { 
-                    groupId: !!groupId, 
-                    merchantId: !!merchantId, 
-                    durationDays: !!durationDays, 
-                    amountPaise: !!amountPaise 
-                } 
+            return NextResponse.json({
+                error: 'Missing required parameters',
+                received: {
+                    groupId: !!groupId,
+                    merchantId: !!merchantId,
+                    durationDays: !!durationDays,
+                    amountPaise: !!amountPaise
+                }
             }, { status: 400 });
         }
 
@@ -73,30 +74,30 @@ export async function POST(request) {
 
         // 3. Call RPC using Admin Client
         console.log(`[request-store-credit] User ${userId} requesting credit for group ${groupId}`);
-        
+
         const adminSupabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL, 
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
             process.env.SUPABASE_SERVICE_ROLE_KEY
         );
 
         const { data, error: rpcError } = await adminSupabase.rpc('request_store_credit_for_cart', {
-            p_customer_id:   userId,
-            p_group_id:      groupId,
-            p_merchant_id:   merchantId,
-            p_amount_paise:  cleanAmount,
+            p_customer_id: userId,
+            p_group_id: groupId,
+            p_merchant_id: merchantId,
+            p_amount_paise: cleanAmount,
             p_duration_days: cleanDuration
         });
 
         if (rpcError) {
             console.error('[request-store-credit] RPC Execution error:', rpcError);
             const msg = rpcError.message || 'Database error occurred';
-            
+
             let status = 500;
             if (msg.includes('not_found')) status = 404;
             if (msg.includes('permission_denied') || msg.includes('ownership')) status = 403;
             if (msg.includes('invalid_status')) status = 400;
 
-            return NextResponse.json({ 
+            return NextResponse.json({
                 error: msg,
                 details: rpcError.details,
                 hint: rpcError.hint,
@@ -117,7 +118,7 @@ export async function POST(request) {
 
     } catch (err) {
         console.error('[request-store-credit] Critical error:', err);
-        return NextResponse.json({ 
+        return NextResponse.json({
             error: err.message || 'An unexpected server error occurred',
             stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
         }, { status: 500 });

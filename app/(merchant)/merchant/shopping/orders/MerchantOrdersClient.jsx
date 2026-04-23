@@ -243,69 +243,79 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
 
                             {/* Action Bar */}
                             {!isCancelled && (
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 sm:pt-2 border-t border-slate-100 sm:border-0 dark:border-white/5">
-                                    <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-500/70 font-semibold bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10 w-fit shrink-0">
-                                        <CheckCircle2 className="shrink-0" size={14} />
-                                        <span>Ready for next stage</span>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:flex sm:items-center gap-3 w-full sm:w-auto">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setShippingModal({ ...order, mode: 'schedule' });
-                                                setShippingData({
-                                                    tracking_number: order.tracking_number || '',
-                                                    estimated_delivery_at: order.estimated_delivery_at ? format(new Date(order.estimated_delivery_at), "yyyy-MM-dd'T'HH:mm") : format(new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
-                                                    status_notes: order.status_notes || ''
-                                                });
-                                            }}
-                                            className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 active:scale-95"
-                                        >
-                                            <Calendar size={14} /> Schedule
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                generateOrderInvoice({
-                                                    order: {
-                                                        ...order,
-                                                        delivery_fee_paise: order.delivery_fee_paise || 0,
-                                                    },
-                                                    items: order.items || [],
-                                                    seller: {
-                                                        name: merchantInfo?.business_name || 'Merchant Store',
-                                                        address: merchantInfo?.business_address || '',
-                                                        phone: merchantInfo?.business_phone || '',
-                                                        gstin: merchantInfo?.gst_number || 'Unregistered',
-                                                    },
-                                                    customer: {
-                                                        name: order.customer_name || 'Customer',
-                                                        phone: order.customer_phone || '',
-                                                        address: order.delivery_address || '',
-                                                    },
-                                                    type: 'shopping',
-                                                });
-                                            }}
-                                            className="w-full sm:w-auto justify-center px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-gray-300 text-xs font-black transition-all flex items-center gap-2 tracking-wide"
-                                        >
-                                            <Download size={14} /> PDF INVOICE
-                                        </button>
-                                        {nextStatus && order.settlement_status !== 'settled' && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onUpdate(order.id, nextStatus);
-                                                }}
-                                                disabled={isUpdating}
-                                                className="w-full sm:w-auto justify-center px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 group/btn"
-                                            >
-                                                {isUpdating ? <RotateCcw size={14} className="animate-spin" /> : <ArrowUpRight size={14} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />}
-                                                MARK AS {STATUS_CONFIG[nextStatus]?.label.toUpperCase()}
-                                            </button>
-                                        )}
-                                    </div>
+                                <div className="pt-4 sm:pt-2 border-t border-slate-100 sm:border-0 dark:border-white/5">
+                                    {order.payment_method === 'store_credit' ? (
+                                        <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-500 font-semibold bg-amber-500/5 px-4 py-2.5 rounded-xl border border-amber-500/10 w-full justify-center sm:justify-start">
+                                            <Clock className="shrink-0" size={14} />
+                                            <span>Store Credit Order — manage via Store Credit Requests tab</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                            <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-500/70 font-semibold bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10 w-fit shrink-0">
+                                                <CheckCircle2 className="shrink-0" size={14} />
+                                                <span>Ready for next stage</span>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:flex sm:items-center gap-3 w-full sm:w-auto">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShippingModal({ ...order, mode: 'schedule' });
+                                                        setShippingData({
+                                                            tracking_number: order.tracking_number || '',
+                                                            estimated_delivery_at: order.estimated_delivery_at ? format(new Date(order.estimated_delivery_at), "yyyy-MM-dd'T'HH:mm") : format(new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
+                                                            status_notes: order.status_notes || ''
+                                                        });
+                                                    }}
+                                                    className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 active:scale-95"
+                                                >
+                                                    <Calendar size={14} /> Schedule
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        generateOrderInvoice({
+                                                            order: {
+                                                                ...order,
+                                                                delivery_fee_paise: order.delivery_fee_paise || 0,
+                                                            },
+                                                            items: order.items || [],
+                                                            seller: {
+                                                                name: merchantInfo?.business_name || 'Merchant Store',
+                                                                address: merchantInfo?.business_address || '',
+                                                                phone: merchantInfo?.business_phone || '',
+                                                                gstin: merchantInfo?.gst_number || 'Unregistered',
+                                                            },
+                                                            customer: {
+                                                                name: order.customer_name || 'Customer',
+                                                                phone: order.customer_phone || '',
+                                                                address: order.delivery_address || '',
+                                                            },
+                                                            type: 'shopping',
+                                                        });
+                                                    }}
+                                                    className="w-full sm:w-auto justify-center px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-gray-300 text-xs font-black transition-all flex items-center gap-2 tracking-wide"
+                                                >
+                                                    <Download size={14} /> PDF INVOICE
+                                                </button>
+                                                {nextStatus && order.settlement_status !== 'settled' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onUpdate(order.id, nextStatus);
+                                                        }}
+                                                        disabled={isUpdating}
+                                                        className="w-full sm:w-auto justify-center px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 group/btn"
+                                                    >
+                                                        {isUpdating ? <RotateCcw size={14} className="animate-spin" /> : <ArrowUpRight size={14} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />}
+                                                        MARK AS {STATUS_CONFIG[nextStatus]?.label.toUpperCase()}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
+
                         </div>
                     </motion.div>
                 )}

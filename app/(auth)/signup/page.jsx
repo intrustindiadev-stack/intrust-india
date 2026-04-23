@@ -7,28 +7,28 @@ import { supabase } from '@/lib/supabaseClient';
 import { Phone, ArrowRight, Loader2, ShieldCheck, User, Sparkles, Mail, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
+import AccountLinkingPrompt from '@/components/auth/AccountLinkingPrompt';
 
 export default function SignupPage() {
     const router = useRouter();
 
     // ─── Shared state ───────────────────────────────────────────────────────────
-    const [step, setStep]                   = useState('email-form'); // 'choice' removed, defaults to 'email-form'
-    const [name, setName]                   = useState('');
-    const [phone, setPhone]                 = useState('');
-    const [otp, setOtp]                     = useState('');
-    const [loading, setLoading]             = useState(false);
+    const [step, setStep] = useState('email-form'); // 'choice' removed, defaults to 'email-form'
+    const [name, setName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [otp, setOtp] = useState('');
+    const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
-    const [error, setError]                 = useState('');
 
     // ─── Email-specific state ───────────────────────────────────────────────────
-    const [emailAddress, setEmailAddress]   = useState('');
-    const [password, setPassword]           = useState('');
+    const [emailAddress, setEmailAddress] = useState('');
+    const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [showPassword, setShowPassword]   = useState(false);
-    const [showConfirm, setShowConfirm]     = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
     const [conflictProvider, setConflictProvider] = useState('');
     const [resendLoading, setResendLoading] = useState(false);
-    const [resendSuccess, setResendSuccess] = useState(false);
 
     useEffect(() => {
         sessionStorage.removeItem('intrust_adv_seen');
@@ -43,7 +43,7 @@ export default function SignupPage() {
             options: { redirectTo: `${window.location.origin}/auth/callback` }
         });
         if (googleError) {
-            setError(googleError.message || 'Google sign in failed');
+            toast.error(googleError.message || 'Google sign in failed');
             setGoogleLoading(false);
         }
     };
@@ -51,17 +51,15 @@ export default function SignupPage() {
     // ─── Phone OTP flow ─────────────────────────────────────────────────────────
     const handleContinue = (e) => {
         if (e) e.preventDefault();
-        if (name.trim().length < 2) { setError('Please enter your full name'); return; }
-        setError('');
+        if (name.trim().length < 2) { toast.error('Please enter your full name'); return; }
         setStep('phone');
     };
 
     const handleSendOTP = async (e) => {
         if (e) e.preventDefault();
-        setError('');
         setLoading(true);
         if (phone.length !== 10) {
-            setError('Please enter a valid 10-digit phone number');
+            toast.error('Please enter a valid 10-digit phone number');
             setLoading(false);
             return;
         }
@@ -69,7 +67,7 @@ export default function SignupPage() {
             const { data: userData, error: checkError } = await supabase
                 .rpc('get_user_id_by_phone', { phone_number: phone });
             if (!checkError && userData) {
-                setError('Account already exists. Please login instead.');
+                toast.error('Account already exists. Please login instead.');
                 setLoading(false);
                 return;
             }
@@ -78,24 +76,23 @@ export default function SignupPage() {
         }
         const formattedPhone = `+91${phone}`;
         const { error: otpError } = await signInWithOTP(formattedPhone);
-        if (otpError) { setError(otpError.message || 'Failed to send OTP.'); setLoading(false); return; }
+        if (otpError) { toast.error(otpError.message || 'Failed to send OTP.'); setLoading(false); return; }
         setStep('otp');
         setLoading(false);
     };
 
     const handleVerifyOTP = async (e) => {
         if (e) e.preventDefault();
-        setError('');
-        if (otp.length !== 6) { setError('Please enter the 6-digit OTP'); return; }
+        if (otp.length !== 6) { toast.error('Please enter the 6-digit OTP'); return; }
         setLoading(true);
         try {
             const formattedPhone = `+91${phone}`;
             const { data, error: verifyError } = await verifyOTP(formattedPhone, otp, name);
-            if (verifyError) { setError(verifyError.message || 'Invalid OTP.'); setLoading(false); return; }
+            if (verifyError) { toast.error(verifyError.message || 'Invalid OTP.'); setLoading(false); return; }
             window.location.href = '/dashboard';
         } catch (err) {
             console.error('[SIGNUP] Unexpected OTP error:', err);
-            setError('An unexpected error occurred. Please try again.');
+            toast.error('An unexpected error occurred. Please try again.');
             setLoading(false);
         }
     };
@@ -103,11 +100,9 @@ export default function SignupPage() {
     // ─── Email flow ─────────────────────────────────────────────────────────────
     const handleEmailSignup = async (e) => {
         e.preventDefault();
-        setError('');
-
-        if (name.trim().length < 2) { setError('Please enter your full name.'); return; }
-        if (!password || password.length < 8) { setError('Password must be at least 8 characters.'); return; }
-        if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
+        if (name.trim().length < 2) { toast.error('Please enter your full name.'); return; }
+        if (!password || password.length < 8) { toast.error('Password must be at least 8 characters.'); return; }
+        if (password !== confirmPassword) { toast.error('Passwords do not match.'); return; }
 
         setLoading(true);
         try {
@@ -126,7 +121,7 @@ export default function SignupPage() {
             }
 
             if (!res.ok) {
-                setError(data.error || 'Signup failed. Please try again.');
+                toast.error(data.error || 'Signup failed. Please try again.');
                 setLoading(false);
                 return;
             }
@@ -134,7 +129,7 @@ export default function SignupPage() {
             setStep('email-pending');
         } catch (err) {
             console.error('[SIGNUP] Email signup error:', err);
-            setError('Network error. Please try again.');
+            toast.error('Network error. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -142,7 +137,6 @@ export default function SignupPage() {
 
     const handleResendVerification = async () => {
         setResendLoading(true);
-        setResendSuccess(false);
         try {
             const res = await fetch('/api/auth/email/resend-verification', {
                 method: 'POST',
@@ -151,12 +145,12 @@ export default function SignupPage() {
             });
             const data = await res.json();
             if (!res.ok) {
-                setError(data.error || 'Failed to resend. Please try again.');
+                toast.error(data.error || 'Failed to resend. Please try again.');
             } else {
-                setResendSuccess(true);
+                toast.success('Verification email resent!');
             }
         } catch (err) {
-            setError('Network error. Please try again.');
+            toast.error('Network error. Please try again.');
         } finally {
             setResendLoading(false);
         }
@@ -190,7 +184,7 @@ export default function SignupPage() {
                                     required
                                 />
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Email</label>
                                 <input
@@ -246,10 +240,6 @@ export default function SignupPage() {
                                 </div>
                             </div>
 
-                            {error && (
-                                <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>
-                            )}
-
                             <button
                                 type="submit"
                                 disabled={loading || !name.trim() || !emailAddress || !password || !confirmPassword}
@@ -287,7 +277,7 @@ export default function SignupPage() {
                             </button>
 
                             <button
-                                onClick={() => { setStep('details'); setError(''); }}
+                                onClick={() => { setStep('details'); }}
                                 className="w-full py-3.5 border border-[var(--border-color)] rounded-xl flex items-center justify-center gap-3 text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-all"
                             >
                                 <Phone size={18} className="text-[#92BCEA]" />
@@ -308,7 +298,7 @@ export default function SignupPage() {
                             <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
                         </div>
                         <div className="flex items-center gap-3 mb-6 relative">
-                            <button onClick={() => { setStep('email-form'); setError(''); }} className="absolute -left-2 top-0 bottom-0 text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors p-2">
+                            <button onClick={() => { setStep('email-form'); }} className="absolute -left-2 top-0 bottom-0 text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors p-2">
                                 <ArrowRight size={20} className="rotate-180" />
                             </button>
                             <h2 className="text-2xl font-bold text-[var(--text-primary)] w-full text-center">Your Name</h2>
@@ -330,10 +320,6 @@ export default function SignupPage() {
                                     />
                                 </div>
                             </div>
-                            
-                            {error && (
-                                <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>
-                            )}
 
                             <button
                                 type="submit"
@@ -353,7 +339,7 @@ export default function SignupPage() {
                             <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
                         </div>
                         <div className="flex items-center gap-3 mb-6 relative">
-                            <button onClick={() => { setStep('details'); setError(''); }} className="absolute -left-2 top-0 bottom-0 text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors p-2">
+                            <button onClick={() => { setStep('details'); }} className="absolute -left-2 top-0 bottom-0 text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors p-2">
                                 <ArrowRight size={20} className="rotate-180" />
                             </button>
                             <h2 className="text-2xl font-bold text-[var(--text-primary)] w-full text-center">Verify Phone</h2>
@@ -379,10 +365,6 @@ export default function SignupPage() {
                                     />
                                 </div>
                             </div>
-
-                            {error && (
-                                <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>
-                            )}
 
                             <button
                                 type="submit"
@@ -418,10 +400,6 @@ export default function SignupPage() {
                                 />
                             </div>
 
-                            {error && (
-                                <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>
-                            )}
-
                             <button
                                 type="submit"
                                 disabled={loading || otp.length !== 6}
@@ -429,7 +407,7 @@ export default function SignupPage() {
                             >
                                 {loading ? <Loader2 className="animate-spin" size={20} /> : 'Finalize Signup'}
                             </button>
-                            
+
                             <div className="flex flex-col gap-4 text-center">
                                 <button type="button" onClick={handleSendOTP} disabled={loading} className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors">
                                     Resend Code
@@ -457,15 +435,6 @@ export default function SignupPage() {
                             Click the link in the email to activate your account. Check spam if it doesn't arrive.
                         </p>
 
-                        {resendSuccess && (
-                            <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-600 text-sm mb-4 text-center">
-                                Verification email resent!
-                            </div>
-                        )}
-                        {error && (
-                            <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm mb-4">{error}</div>
-                        )}
-
                         <button
                             onClick={handleResendVerification}
                             disabled={resendLoading}
@@ -473,7 +442,7 @@ export default function SignupPage() {
                         >
                             {resendLoading ? <Loader2 className="animate-spin" size={18} /> : 'Resend Verification Email'}
                         </button>
-                        
+
                         <Link
                             href="/login"
                             className="flex items-center justify-center w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all"
@@ -486,51 +455,15 @@ export default function SignupPage() {
                 {/* ── EMAIL CONFLICT (account linking prompt) ── */}
                 {step === 'email-conflict' && (
                     <div className="animate-fadeIn">
-                        <div className="w-16 h-16 rounded-2xl bg-yellow-100 flex items-center justify-center mx-auto mb-4">
-                            <ShieldCheck className="text-yellow-600" size={32} />
-                        </div>
-                        <h2 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Account Already Exists</h2>
-
-                        {conflictProvider === 'email' ? (
-                            // Already has email+password — just direct them to login
-                            <>
-                                <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
-                                    This email already has an account.<br />
-                                    Please log in with your email and password.
-                                </p>
-                                <Link
-                                    href="/login"
-                                    className="flex items-center justify-center w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all mb-3"
-                                >
-                                    Go to Login
-                                </Link>
-                            </>
-                        ) : (
-                            // Different provider (Google / Phone) — offer linking
-                            <>
-                                <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
-                                    This email is already linked to a <span className="font-bold text-[var(--text-primary)]">{providerLabel[conflictProvider] || conflictProvider}</span> account.
-                                    <br /><br />
-                                    Would you like to add email &amp; password login to your existing account?
-                                </p>
-                                <p className="text-xs text-[var(--text-secondary)] text-center mb-6">
-                                    Sign in with your existing method first, then link email from your profile settings.
-                                </p>
-                                <Link
-                                    href="/login"
-                                    className="flex items-center justify-center w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all mb-3"
-                                >
-                                    Sign in to Link Account
-                                </Link>
-                            </>
-                        )}
-
-                        <button
-                            onClick={() => { setStep('email-form'); setError(''); setPassword(''); setConfirmPassword(''); }}
-                            className="w-full py-3 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-                        >
-                            Cancel
-                        </button>
+                        <AccountLinkingPrompt
+                            email={emailAddress}
+                            provider={conflictProvider}
+                            onCancel={() => {
+                                setStep('email-form');
+                                setPassword('');
+                                setConfirmPassword('');
+                            }}
+                        />
                     </div>
                 )}
 

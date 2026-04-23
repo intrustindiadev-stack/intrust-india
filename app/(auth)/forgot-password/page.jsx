@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { resetPassword } from '@/lib/supabase';
 // resetPassword now calls supabase.auth.resetPasswordForEmail internally
+import { toast } from 'react-hot-toast';
 import { Mail, ArrowRight, Loader2, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -12,18 +13,16 @@ export default function ForgotPasswordPage() {
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
 
     const handleResetPassword = async (e) => {
         e.preventDefault();
-        setError('');
         setLoading(true);
 
         const { error: resetError } = await resetPassword(email);
 
         if (resetError) {
-            setError(resetError.message || 'Failed to send reset link');
+            toast.error(resetError.message || 'Failed to send reset link');
             setLoading(false);
             return;
         }
@@ -90,12 +89,6 @@ export default function ForgotPasswordPage() {
                                         />
                                     </div>
                                 </div>
-
-                                {error && (
-                                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                                        {error}
-                                    </div>
-                                )}
 
                                 <button
                                     type="submit"
