@@ -6,7 +6,7 @@ import Navbar from '@/components/layout/Navbar';
 import {
     Wallet, Package, TrendingUp, Gift, Heart, Star,
     Smartphone, ShoppingCart, Tv, Store, CreditCard, ScanLine, Grid,
-    CheckCircle, Clock, ChevronRight, Check, Lock, Calendar, AlertCircle, X, Shield, Sparkles
+    CheckCircle, Clock, ChevronRight, Check, Lock, Calendar, AlertCircle, X, Shield, Sparkles, Sun
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
@@ -28,6 +28,7 @@ import GoldSubscription from '@/components/customer/dashboard/GoldSubscription';
 import ReferralGenzSection from '@/components/customer/dashboard/ReferralGenzSection';
 import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 import DisclaimerNote from '@/components/customer/dashboard/DisclaimerNote';
+import SolarPromoCard from '@/components/customer/dashboard/SolarPromoCard';
 import AdvertisementModal from '@/components/home/AdvertisementModal';
 import KYCPopup from '@/components/kyc/KYCPopup';
 import { useKYCPopup } from '@/hooks/useKYCPopup';
@@ -447,6 +448,7 @@ export default function CustomerDashboardPage() {
         { id: 1, label: 'Gift Cards', icon: Gift, color: 'text-purple-600 bg-purple-50', href: '/gift-cards' },
         { id: 2, label: 'Shopping', icon: ShoppingCart, color: 'text-amber-600 bg-amber-50', href: '/shop' },
         { id: 3, label: 'NFC Card', icon: Smartphone, color: 'text-blue-600 bg-blue-50', href: '/nfc-service' },
+        { id: 4, label: 'Solar', icon: Sun, color: 'text-yellow-600 bg-yellow-50', href: '/solar' },
     ];
 
     const stats = [
@@ -510,6 +512,8 @@ export default function CustomerDashboardPage() {
                             )}
 
                             <QuickServices services={quickServices} />
+
+                            <SolarPromoCard />
 
                             {/* Insert shopping orders before generic activity */}
                             <RecentShoppingOrders userId={user?.id} />

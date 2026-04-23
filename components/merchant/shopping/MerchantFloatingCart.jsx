@@ -219,7 +219,7 @@ export default function MerchantFloatingCart({
     return (
         <>
             {/* ===== DESKTOP STICKY SIDEBAR ===== */}
-            <div className="hidden xl:block xl:col-span-1">
+            <div className="hidden xl:block">
                 <div className="sticky top-24 bg-[#1e3a5f] rounded-[2.5rem] p-7 text-white shadow-2xl shadow-blue-900/20 border border-blue-800 overflow-hidden flex flex-col max-h-[calc(100vh-8rem)]">
                     {/* Glows */}
                     <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/20 rounded-full blur-[80px] pointer-events-none" />
@@ -252,9 +252,9 @@ export default function MerchantFloatingCart({
                 </div>
             </div>
 
-            {/* ===== MOBILE: FLOATING BUTTON + BOTTOM DRAWER ===== */}
+            {/* ===== MOBILE: FAB + FULL-SCREEN CART PAGE ===== */}
             <div className="xl:hidden">
-                {/* FAB */}
+                {/* FAB — only show when cart has items or always visible */}
                 <motion.button
                     onClick={toggleDrawer}
                     className="fixed right-4 bottom-28 z-[500] bg-[#1e3a5f] text-white rounded-2xl shadow-2xl shadow-blue-900/40 border border-blue-700 flex items-center gap-3 px-5 py-4"
@@ -293,36 +293,34 @@ export default function MerchantFloatingCart({
                     </motion.div>
                 </motion.button>
 
-                {/* Bottom Drawer */}
+                {/* Full-Screen Cart Page */}
                 <AnimatePresence>
                     {drawerOpen && (
-                        <>
-                            {/* Backdrop */}
-                            <motion.div
-                                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[600]"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => setDrawerOpen(false)}
-                            />
+                        <motion.div
+                            className="fixed inset-0 z-[700] bg-[#0e1f36] flex flex-col overflow-hidden"
+                            initial={{ x: '100%' }}
+                            animate={{ x: 0, transition: { type: 'spring', stiffness: 320, damping: 32 } }}
+                            exit={{ x: '100%', transition: { duration: 0.22 } }}
+                        >
+                            {/* Ambient glows */}
+                            <div className="absolute -top-24 -right-24 w-72 h-72 bg-blue-500/15 rounded-full blur-[100px] pointer-events-none" />
+                            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/15 rounded-full blur-[80px] pointer-events-none" />
 
-                            {/* Drawer Panel */}
-                            <motion.div
-                                className="fixed left-0 right-0 bottom-0 z-[700] bg-[#1e3a5f] rounded-t-[2.5rem] p-6 shadow-2xl border-t border-blue-700 flex flex-col overflow-hidden"
-                                style={{ maxHeight: '88vh' }}
-                                variants={drawerVariants}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                            >
-                                {/* Handle + Header */}
-                                <div className="flex items-center justify-between mb-5 flex-shrink-0">
-                                    <div>
-                                        <h2 className="text-xl font-black text-white tracking-tight">Order Slip</h2>
-                                        <p className="text-blue-300/70 text-[10px] font-bold uppercase tracking-widest">
-                                            {itemCount} Item{itemCount !== 1 ? 's' : ''}
-                                        </p>
-                                    </div>
+                            {/* Header */}
+                            <div className="relative z-10 flex items-center justify-between px-5 pt-14 pb-4 border-b border-white/10 shrink-0">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-300/60 mb-0.5">Wholesale</p>
+                                    <h2 className="text-2xl font-black text-white tracking-tight leading-none">
+                                        Order Slip
+                                    </h2>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    {/* Item count badge */}
+                                    {itemCount > 0 && (
+                                        <span className="px-3 py-1 rounded-full bg-[#D4AF37] text-black text-[10px] font-black uppercase tracking-widest">
+                                            {itemCount} item{itemCount !== 1 ? 's' : ''}
+                                        </span>
+                                    )}
                                     <button
                                         onClick={() => setDrawerOpen(false)}
                                         className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
@@ -330,17 +328,17 @@ export default function MerchantFloatingCart({
                                         <X size={20} />
                                     </button>
                                 </div>
+                            </div>
 
-                                <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-500/20 rounded-full blur-[60px] pointer-events-none" />
-
-                                <div className="relative z-10 flex flex-col flex-1 min-h-0 overflow-hidden">
-                                    <CartContent />
-                                </div>
-                            </motion.div>
-                        </>
+                            {/* Scrollable Content */}
+                            <div className="relative z-10 flex-1 overflow-y-auto px-5 py-4 min-h-0">
+                                <CartContent />
+                            </div>
+                        </motion.div>
                     )}
                 </AnimatePresence>
             </div>
+
         </>
     );
 }

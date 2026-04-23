@@ -11,6 +11,7 @@ import {
     Package,
     Receipt,
     Smartphone,
+    Sun,
     TrendingUp,
     Settings,
     LogOut,
@@ -57,6 +58,7 @@ const navigationGroups = [
             { name: 'Auto Mode', href: '/admin/auto-mode', icon: Sparkles },
             { name: 'NFC Service', href: '/admin/nfc', icon: Smartphone },
             { name: 'Gift Cards', href: '/admin/giftcards', icon: Gift },
+            { name: 'Solar Leads', href: '/admin/solar', icon: Sun },
         ]
     },
     {

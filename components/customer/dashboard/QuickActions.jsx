@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Gift, Package, ChevronRight } from 'lucide-react';
+import { Gift, Package, ChevronRight, Sun } from 'lucide-react';
 
 export default function QuickActions() {
     return (
@@ -33,6 +33,15 @@ export default function QuickActions() {
                     </div>
                     <div className="font-bold">Refer & Earn</div>
                     <ChevronRight size={16} className="ml-auto opacity-60" />
+                </Link>
+                <Link href="/solar" className="flex items-center gap-3 p-3 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-900/30 group transition-colors">
+                    <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                        <Sun size={20} />
+                    </div>
+                    <div className="font-bold text-slate-700 dark:text-gray-300 group-hover:text-amber-700 dark:group-hover:text-amber-400">
+                        Go Solar <span className="text-[10px] font-black bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-full ml-1 uppercase tracking-widest">Free</span>
+                    </div>
+                    <ChevronRight size={16} className="ml-auto text-slate-400" />
                 </Link>
             </div>
         </motion.div>

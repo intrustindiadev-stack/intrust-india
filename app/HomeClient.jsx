@@ -8,6 +8,7 @@ import ServicesGrid from '@/components/home/ServicesGrid';
 import TrendingProducts from '@/components/home/TrendingProducts';
 import HowItWorksSection from '@/components/home/HowItWorksSection';
 import SmartNFCSection from '@/components/home/SmartNFCSection';
+import SolarSection from '@/components/home/SolarSection';
 import TrustBadgesStrip from '@/components/home/TrustBadgesStrip';
 import TestimonialsSection from '@/components/home/TestimonialsSection';
 import { SlowProgressLoader } from '@/components/ui/InTrustProgressLoader';
@@ -44,6 +45,7 @@ export default function HomeClient() {
                     <TrendingProducts />
                     <HowItWorksSection />
                     <SmartNFCSection />
+                    <SolarSection />
                     <TrustBadgesStrip />
                     <TestimonialsSection />
                     <Footer />

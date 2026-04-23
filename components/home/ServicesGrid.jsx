@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ShoppingCart, CreditCard, Gift, Wallet, Store } from 'lucide-react';
+import { ShoppingCart, CreditCard, Gift, Wallet, Store, Sun } from 'lucide-react';
 import Link from 'next/link';
 
 const SERVICES = [
@@ -60,6 +60,18 @@ const SERVICES = [
         iconColor: 'text-amber-600 dark:text-amber-400',
         border: 'hover:border-amber-200 dark:hover:border-amber-700',
     },
+    {
+        id: 'solar',
+        icon: Sun,
+        label: 'Solar Power',
+        desc: '₹0 investment. Govt subsidy covers down payment',
+        href: '/solar',
+        gradient: 'from-yellow-500/10 to-amber-400/10',
+        iconBg: 'bg-yellow-50 dark:bg-yellow-900/30',
+        iconColor: 'text-yellow-600 dark:text-yellow-400',
+        border: 'hover:border-yellow-200 dark:hover:border-yellow-700',
+        badge: 'New',
+    },
 ];
 
 const containerVariants = {
@@ -106,14 +118,14 @@ export default function ServicesGrid() {
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true, margin: '-40px' }}
-                    className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4"
+                    className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4"
                 >
                     {SERVICES.map((svc) => (
                         <motion.div key={svc.id} variants={cardVariants}>
                             <Link
                                 href={svc.href}
                                 className={`
-                                    group flex flex-col items-center text-center p-4 md:p-5 rounded-2xl
+                                    group relative flex flex-col items-center text-center p-4 md:p-5 rounded-2xl
                                     border transition-all duration-300
                                     bg-[var(--card-bg)] border-[var(--border-color)]
                                     ${svc.border}
@@ -121,6 +133,13 @@ export default function ServicesGrid() {
                                     active:scale-[0.98]
                                 `}
                             >
+                                {/* Badge */}
+                                {svc.badge && (
+                                    <span className="absolute top-2 right-2 text-[9px] font-black uppercase tracking-widest bg-amber-500 text-white px-1.5 py-0.5 rounded-full">
+                                        {svc.badge}
+                                    </span>
+                                )}
+
                                 {/* Icon */}
                                 <div className={`
                                     w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center mb-3

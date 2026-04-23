@@ -291,9 +291,9 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                 secondaryAction={{ label: 'Buy More Stock', onClick: () => setShowSuccess(false) }}
             />
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <div className="space-y-6">
                 {/* Products Area */}
-                <div className="xl:col-span-2 space-y-6">
+                <div className="space-y-6">
                     {/* Auto Mode Indicator */}
                     {isAutoModeActive && (
                         <motion.div
@@ -370,7 +370,7 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                     )}
 
                     {/* Products Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-2 gap-4 pb-40 xl:pb-10">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pb-32 xl:pb-6">
                         {filteredProducts.length === 0 ? (
                             <div className="col-span-2 py-20 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200">
                                 <Package className="mx-auto text-slate-200 mb-4" size={56} />
@@ -475,8 +475,25 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                         )}
                     </div>
                 </div>
+            </div>
 
-                {/* Floating Cart */}
+            {/* Cart — desktop sticky sidebar sits in its own row; FAB handles mobile */}
+            <div className="hidden xl:block">
+                <MerchantFloatingCart
+                    cartItems={cartItems}
+                    merchantBalance={merchantBalance}
+                    subtotalInRupees={subtotal}
+                    onRemoveItem={removeFromCart}
+                    onPurchaseWallet={handlePurchaseWallet}
+                    onPurchaseGateway={handleGatewayPurchase}
+                    isPurchasing={isPurchasing}
+                    isProcessingGateway={isProcessingGateway}
+                    walletLabel="Pay via Wallet"
+                    gatewayLabel="Pay via UPI / Cards"
+                />
+            </div>
+            {/* Mobile FAB Cart */}
+            <div className="xl:hidden">
                 <MerchantFloatingCart
                     cartItems={cartItems}
                     merchantBalance={merchantBalance}

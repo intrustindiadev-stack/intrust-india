@@ -38,6 +38,7 @@ export default function HeroSection() {
         { icon: Gift, label: 'Gift Cards', href: '/gift-cards' },
         { icon: ShoppingBag, label: 'Shopping', href: '/shop' },
         { icon: Zap, label: 'NFC Service', href: '/nfc-service' },
+        { icon: Sun, label: 'Solar Power', href: '/solar' },
     ];
 
     return (
