@@ -32,6 +32,7 @@ export default function MerchantNFCServicePage() {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [pendingOrderId, setPendingOrderId] = useState(null);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [hasExistingOrder, setHasExistingOrder] = useState(false);
 
     useEffect(() => {
         const init = async () => {
@@ -45,6 +46,15 @@ export default function MerchantNFCServicePage() {
                     .eq('id', authUser.id)
                     .single();
                 if (profile) setKycStatus(profile.kyc_status);
+
+                const { data: existingOrders } = await supabase
+                    .from('nfc_orders')
+                    .select('id')
+                    .eq('user_id', authUser.id)
+                    .eq('payment_status', 'paid');
+                if (existingOrders && existingOrders.length > 0) {
+                    setHasExistingOrder(true);
+                }
             }
         };
 
@@ -202,7 +212,19 @@ export default function MerchantNFCServicePage() {
 
                 {/* ─── RIGHT: Order Form ─────────────────────────── */}
                 <div className="lg:col-span-3">
-                    {/* Stepper */}
+                    {hasExistingOrder ? (
+                        <div className="merchant-glass bg-white/60 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 p-10 shadow-sm flex flex-col items-center justify-center text-center h-full min-h-[400px]">
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-6 bg-[#D4AF37]/10 text-[#D4AF37]">
+                                <span className="material-icons-round text-3xl">check_circle</span>
+                            </div>
+                            <h3 className="text-xl font-bold uppercase tracking-tight text-slate-800 dark:text-white mb-3">Card Already Ordered</h3>
+                            <p className="text-sm font-medium tracking-tight text-slate-500 dark:text-slate-400 max-w-md">
+                                You already have an active InTrust NFC card.
+                            </p>
+                        </div>
+                    ) : (
+                    <div>
+                        {/* Stepper */}
                     <div className="flex items-center gap-2 mb-8">
                         {stepLabels.map((label, i) => {
                             const s = i + 1;
@@ -388,6 +410,8 @@ export default function MerchantNFCServicePage() {
                             )}
                         </AnimatePresence>
                     </form>
+                    </div>
+                    )}
                 </div>
             </div>
 

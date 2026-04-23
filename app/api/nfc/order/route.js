@@ -38,6 +38,22 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Missing required order fields' }, { status: 400 });
         }
 
+        // Enforce 1 NFC card per profile
+        const { data: existingOrders, error: checkError } = await supabaseAdmin
+            .from('nfc_orders')
+            .select('id, payment_status')
+            .eq('user_id', userId)
+            .eq('payment_status', 'paid');
+
+        if (checkError) {
+            return NextResponse.json({ error: 'Failed to verify existing orders' }, { status: 500 });
+        }
+
+        if (existingOrders && existingOrders.length > 0) {
+            return NextResponse.json({ error: 'You already have an active NFC card. Only 1 card is allowed per profile.' }, { status: 400 });
+        }
+
+
         // 1. Handle Wallet Payment Logic
         if (paymentMethod === 'wallet') {
             // Fetch User Profile for KYC check + role detection

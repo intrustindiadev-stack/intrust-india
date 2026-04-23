@@ -4,18 +4,18 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import HeroSection from '@/components/home/HeroSection';
-import OffersCarousel from '@/components/home/OffersCarousel';
-import StatsSection from '@/components/home/StatsSection';
-import CTASection from '@/components/home/CTASection';
+import ServicesGrid from '@/components/home/ServicesGrid';
+import TrendingProducts from '@/components/home/TrendingProducts';
+import HowItWorksSection from '@/components/home/HowItWorksSection';
+import SmartNFCSection from '@/components/home/SmartNFCSection';
+import TrustBadgesStrip from '@/components/home/TrustBadgesStrip';
+import TestimonialsSection from '@/components/home/TestimonialsSection';
 import { SlowProgressLoader } from '@/components/ui/InTrustProgressLoader';
-import { TrendingUp, Sparkles, Star } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
-
 import { useTheme } from '@/lib/contexts/ThemeContext';
 
 export default function HomeClient() {
-
     const { theme } = useTheme();
     const { isAuthenticated } = useAuth();
     const [showLoader, setShowLoader] = useState(false);
@@ -27,12 +27,6 @@ export default function HomeClient() {
             sessionStorage.setItem('intrust_visited', 'true');
         }
     }, []);
-
-    const stats = [
-        { value: '10K+', label: 'Active Users', icon: TrendingUp },
-        { value: '₹50Cr+', label: 'Shopping Volume', icon: Sparkles },
-        { value: '4.9★', label: 'Store Rating', icon: Star },
-    ];
 
     return (
         <>
@@ -46,9 +40,12 @@ export default function HomeClient() {
                 <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
                     <Navbar />
                     <HeroSection />
-                    <OffersCarousel />
-                    <StatsSection stats={stats} />
-                    <CTASection />
+                    <ServicesGrid />
+                    <TrendingProducts />
+                    <HowItWorksSection />
+                    <SmartNFCSection />
+                    <TrustBadgesStrip />
+                    <TestimonialsSection />
                     <Footer />
                     {isAuthenticated && <CustomerBottomNav />}
                 </div>
