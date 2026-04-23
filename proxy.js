@@ -1,7 +1,7 @@
 import { createServerClient as createClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
-export async function middleware(request) {
+export async function proxy(request) {
     const startTime = Date.now();
     const requestId = request.headers.get('x-request-id') || Math.random().toString(36).slice(2);
 
@@ -171,8 +171,8 @@ export async function middleware(request) {
         return response
 
     } catch (error) {
-        const isRefreshTokenError = error.message?.includes('Refresh Token Not Found') || 
-                                   error.code === 'refresh_token_not_found';
+        const isRefreshTokenError = error.message?.includes('Refresh Token Not Found') ||
+            error.code === 'refresh_token_not_found';
 
         if (isRefreshTokenError) {
             console.warn('[MIDDLEWARE:AUTH_RECOVERABLE]', {

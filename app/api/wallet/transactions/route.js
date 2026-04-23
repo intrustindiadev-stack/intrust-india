@@ -1,37 +1,18 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/apiAuth';
 
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '50');
-        const offset = (page - 1) * limit;
+        
+        // Support direct offset parameter (used by useWallet.js)
+        const offsetParam = searchParams.get('offset');
+        const offset = offsetParam !== null ? parseInt(offsetParam) : (page - 1) * limit;
 
-        const cookieStore = await cookies();
-
-        const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY,
-            {
-                cookies: {
-                    get(name) {
-                        return cookieStore.get(name)?.value;
-                    },
-                },
-            }
-        );
-
-        const supabaseAuth = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-            {
-                cookies: { get(name) { return cookieStore.get(name)?.value; } }
-            }
-        );
-
-        const { data: { user } } = await supabaseAuth.auth.getUser();
+        // Use unified auth helper (handles both Bearer token and cookies)
+        const { user, admin: supabase } = await getAuthUser(request);
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -50,7 +31,7 @@ export async function GET(request) {
 
         // To support proper pagination across merged tables, we fetch a larger buffer
         // for each source and then merge, sort, and slice.
-        const fetchLimit = page * limit;
+        const fetchLimit = offset + limit;
 
         // 2. Fetch Sabpaisa Wallet Top-up transactions
         const { data: walletTxs } = await supabase
@@ -131,7 +112,8 @@ export async function GET(request) {
         return NextResponse.json({
             transactions: allTransactions,
             page,
-            limit
+            limit,
+            offset
         });
 
     } catch (error) {
