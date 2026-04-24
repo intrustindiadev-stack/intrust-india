@@ -461,6 +461,16 @@ export default async function AdminDashboard() {
                                         </p>
                                     </div>
                                 </Link>
+
+                                <Link href="/admin/careers" className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-violet-100 transition-all">
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center text-white text-xl shadow-lg shadow-violet-500/20 group-hover:scale-110 transition-transform">
+                                        💼
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-slate-900 group-hover:text-violet-600 transition-colors">Career Applications</h3>
+                                        <p className="text-sm text-slate-500 mt-1 leading-snug">Review freelancer, agent & DSA applications</p>
+                                    </div>
+                                </Link>
                             </div>
                         </div>
                     </div>

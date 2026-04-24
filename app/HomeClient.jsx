@@ -11,6 +11,7 @@ import SmartNFCSection from '@/components/home/SmartNFCSection';
 import SolarSection from '@/components/home/SolarSection';
 import TrustBadgesStrip from '@/components/home/TrustBadgesStrip';
 import TestimonialsSection from '@/components/home/TestimonialsSection';
+import CareerOpportunitiesSection from '@/components/home/CareerOpportunitiesSection';
 import { SlowProgressLoader } from '@/components/ui/InTrustProgressLoader';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
@@ -48,6 +49,7 @@ export default function HomeClient() {
                     <SolarSection />
                     <TrustBadgesStrip />
                     <TestimonialsSection />
+                    <CareerOpportunitiesSection />
                     <Footer />
                     {isAuthenticated && <CustomerBottomNav />}
                 </div>
