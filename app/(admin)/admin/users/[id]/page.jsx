@@ -16,10 +16,12 @@ import {
     Gift,
     Copy,
     Sparkles,
-    Briefcase
+    Briefcase,
+    Trophy,
 } from 'lucide-react';
 import KYCReviewSection from './KYCReviewSection';
 import WalletAdjustSection from './WalletAdjustSection';
+import RewardAdjustSection from './RewardAdjustSection';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,7 +100,7 @@ export default async function AdminUserDetailPage({ params }) {
     // Fetch Unified Order History (Shopping, Gift Cards, NFC)
     let unifiedOrders = [];
     let spendingStats = { totalSpent: 0, shopping: 0, giftCards: 0, nfc: 0, count: 0 };
-    
+
     try {
         const [shoppingOrders, giftCardOrders, nfcOrders] = await Promise.all([
             supabase.from('shopping_order_groups').select('*').eq('customer_id', id).eq('status', 'completed'),
@@ -111,7 +113,7 @@ export default async function AdminUserDetailPage({ params }) {
         const nfcs = (nfcOrders.data || []).map(o => ({ ...o, type: 'NFC_CARD', amount: Number(o.sale_price_paise) || 0 }));
 
         unifiedOrders = [...shops, ...gifts, ...nfcs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        
+
         spendingStats = unifiedOrders.reduce((acc, order) => {
             acc.totalSpent += order.amount;
             acc.count += 1;
@@ -139,6 +141,36 @@ export default async function AdminUserDetailPage({ params }) {
         }
     } catch (e) {
         console.log('Error fetching customer wallet balance:', e);
+    }
+
+    // Reward Points Balance
+    let rewardPoints = {
+        current_balance: 0,
+        total_earned: 0,
+        total_redeemed: 0,
+        tier: 'bronze',
+        tree_size: 0,
+        direct_referrals: 0,
+    };
+    try {
+        const { data: rpRow } = await supabase
+            .from('reward_points_balance')
+            .select('current_balance, total_earned, total_redeemed, tier, tree_size, direct_referrals')
+            .eq('user_id', id)
+            .maybeSingle();
+
+        if (rpRow) {
+            rewardPoints = {
+                current_balance: rpRow.current_balance ?? 0,
+                total_earned: rpRow.total_earned ?? 0,
+                total_redeemed: rpRow.total_redeemed ?? 0,
+                tier: rpRow.tier ?? 'bronze',
+                tree_size: rpRow.tree_size ?? 0,
+                direct_referrals: rpRow.direct_referrals ?? 0,
+            };
+        }
+    } catch (e) {
+        console.log('Error fetching reward points balance:', e);
     }
 
     const formatDate = (dateString) => {
@@ -356,11 +388,10 @@ export default async function AdminUserDetailPage({ params }) {
                                         {unifiedOrders.slice(0, 10).map((order, idx) => (
                                             <tr key={idx} className="hover:bg-gray-50 transition-colors">
                                                 <td className="py-4">
-                                                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border ${
-                                                        order.type === 'SHOPPING' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                                                        order.type === 'GIFT_CARD' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                                                        'bg-amber-50 text-amber-700 border-amber-100'
-                                                    }`}>
+                                                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border ${order.type === 'SHOPPING' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                            order.type === 'GIFT_CARD' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                                                                'bg-amber-50 text-amber-700 border-amber-100'
+                                                        }`}>
                                                         {order.type.replace('_', ' ')}
                                                     </span>
                                                 </td>
@@ -482,6 +513,51 @@ export default async function AdminUserDetailPage({ params }) {
                                 <span className="font-bold text-white bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full">{unifiedOrders.filter(o => o.status === 'completed' || o.payment_status === 'paid').length}</span>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Reward Points Card */}
+                    <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 border border-amber-500/20 shadow-xl text-white">
+                        <h2 className="text-lg font-extrabold text-white mb-5 tracking-tight flex items-center gap-2">
+                            <Trophy size={20} className="text-amber-400" />
+                            Reward Points (IRP)
+                        </h2>
+                        <div className="space-y-3">
+                            <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
+                                <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block mb-1">Current Balance</span>
+                                <span className="font-extrabold text-3xl text-amber-400">{rewardPoints.current_balance.toLocaleString('en-IN')} <span className="text-sm font-bold text-slate-400">pts</span></span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                                    <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest block mb-1">Total Earned</span>
+                                    <span className="font-bold text-white">{rewardPoints.total_earned.toLocaleString('en-IN')} pts</span>
+                                </div>
+                                <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                                    <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest block mb-1">Total Redeemed</span>
+                                    <span className="font-bold text-white">{rewardPoints.total_redeemed.toLocaleString('en-IN')} pts</span>
+                                </div>
+                                <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                                    <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest block mb-1">Network Size</span>
+                                    <span className="font-bold text-white">{rewardPoints.tree_size} users</span>
+                                </div>
+                                <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                                    <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest block mb-1">Direct Referrals</span>
+                                    <span className="font-bold text-white">{rewardPoints.direct_referrals} users</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between bg-slate-800/50 px-4 py-3 rounded-xl border border-slate-700">
+                                <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Tier</span>
+                                <span className={`text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full ${rewardPoints.tier === 'platinum' ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' :
+                                        rewardPoints.tier === 'gold' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                                            rewardPoints.tier === 'silver' ? 'bg-slate-300/20 text-slate-300 border border-slate-300/30' :
+                                                'bg-amber-700/20 text-amber-700 border border-amber-700/30'
+                                    }`}>
+                                    {rewardPoints.tier === 'platinum' ? '💎' : rewardPoints.tier === 'gold' ? '🥇' : rewardPoints.tier === 'silver' ? '🥈' : '🥉'} {rewardPoints.tier.charAt(0).toUpperCase() + rewardPoints.tier.slice(1)}
+                                </span>
+                            </div>
+                        </div>
+                        {isSuperAdmin && (
+                            <RewardAdjustSection userId={id} initialBalance={rewardPoints.current_balance} />
+                        )}
                     </div>
 
                     <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">

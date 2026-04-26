@@ -369,6 +369,20 @@ export async function POST(request) {
                 } else {
                     console.log(`[Callback] Cart checkout fulfilled for txn ${clientTxnId}`);
 
+                    // Distribute purchase rewards
+                    try {
+                        const amountPaise = Math.round(parseFloat(amount) * 100);
+                        await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
+                            p_event_type: 'purchase',
+                            p_source_user_id: existingTxn.user_id,
+                            p_reference_id: groupId,
+                            p_reference_type: 'shopping_order',
+                            p_amount_paise: amountPaise
+                        });
+                    } catch (rewardErr) {
+                        console.error('[Callback] Cart checkout reward distribution error:', rewardErr.message);
+                    }
+
                     try {
                         await supabaseAdmin.from('notifications').insert({
                             user_id: existingTxn.user_id,
@@ -603,6 +617,20 @@ export async function POST(request) {
                                             reference_id: newOrder.id,
                                             reference_type: 'gift_card_purchase'
                                         });
+                                    }
+
+                                    // Distribute purchase rewards for gift card
+                                    try {
+                                        const amountPaise = Math.round(parseFloat(amount) * 100);
+                                        await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
+                                            p_event_type: 'purchase',
+                                            p_source_user_id: existingTxn.user_id,
+                                            p_reference_id: couponId,
+                                            p_reference_type: 'gift_card_purchase',
+                                            p_amount_paise: amountPaise
+                                        });
+                                    } catch (rewardErr) {
+                                        console.error('[Callback] Gift card reward distribution error:', rewardErr.message);
                                     }
                                 } catch (notificationError) {
                                     console.error('[Callback] Gift card notifications failed:', notificationError.message);

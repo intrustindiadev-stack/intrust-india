@@ -30,6 +30,7 @@ import {
     AlertCircle,
     ClipboardList,
     Activity,
+    Trophy,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
@@ -72,6 +73,7 @@ const navigationGroups = [
     {
         title: 'Growth & Setup',
         items: [
+            { name: 'Rewards', href: '/admin/rewards', icon: Trophy },
             { name: 'Partnership Growth', href: '/admin/lockin', icon: Clock },
             { name: 'Banners', href: '/admin/banners', icon: ImageIcon },
             { name: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
@@ -91,13 +93,13 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
     // REALTIME TAKEOVER COUNT
     useEffect(() => {
         const supabase = createClient();
-        
+
         async function fetchCount() {
             const { count, error } = await supabase
                 .from('shopping_order_groups')
                 .select('*', { count: 'exact', head: true })
                 .eq('settlement_status', 'admin_takeover');
-            
+
             if (!error) setTakeoverCount(count || 0);
         }
 
@@ -105,8 +107,8 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
 
         const channel = supabase
             .channel('takeover-count-sync')
-            .on('postgres_changes', 
-                { event: '*', schema: 'public', table: 'shopping_order_groups', filter: 'settlement_status=eq.admin_takeover' }, 
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'shopping_order_groups', filter: 'settlement_status=eq.admin_takeover' },
                 () => fetchCount()
             )
             .subscribe();

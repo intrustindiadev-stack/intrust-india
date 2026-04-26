@@ -22,7 +22,7 @@ import RecentShoppingOrders from '@/components/customer/RecentShoppingOrders';
 import AccountSummaryCard from '@/components/customer/profile/AccountSummaryCard';
 
 // ── Icons & Utils ──
-import { Check, X, Star } from 'lucide-react';
+import { Check, X, Star, Gift, ArrowRight, Trophy } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { createClient } from '@/lib/supabaseClient';
 import LiveButton from '@/components/merchant/LiveButton';
@@ -320,6 +320,48 @@ function CustomerProfileContent() {
                                     onManageWallet={() => router.push('/wallet')}
                                     onManageUdhari={() => router.push('/store-credits')}
                                 />
+                            </motion.div>
+
+                            {/* Referrals shortcut */}
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.25 }}
+                            >
+                                <button
+                                    onClick={() => router.push('/refer')}
+                                    className="w-full flex items-center gap-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-[2.5rem] px-6 py-4 shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-all"
+                                >
+                                    <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                                        <Gift size={20} className="text-white" />
+                                    </div>
+                                    <div className="text-left flex-1">
+                                        <p className="font-black text-sm">Referrals</p>
+                                        <p className="text-white/70 text-xs">View your network &amp; earnings</p>
+                                    </div>
+                                    <ArrowRight size={18} className="text-white/70 flex-shrink-0" />
+                                </button>
+                            </motion.div>
+
+                            {/* Reward Points shortcut */}
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.3 }}
+                            >
+                                <button
+                                    onClick={() => router.push('/rewards')}
+                                    className="w-full flex items-center gap-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-[2.5rem] px-6 py-4 shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-all"
+                                >
+                                    <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                                        <Trophy size={20} className="text-white" />
+                                    </div>
+                                    <div className="text-left flex-1">
+                                        <p className="font-black text-sm">Reward Points</p>
+                                        <p className="text-white/70 text-xs">Redeem &amp; track your IRP balance</p>
+                                    </div>
+                                    <ArrowRight size={18} className="text-white/70 flex-shrink-0" />
+                                </button>
                             </motion.div>
 
                             {/* Stats Summary */}
