@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Calendar, Clock, DollarSign, BookOpen, Shield, X } from 'lucide-react';
+import { Home, Users, Calendar, Clock, DollarSign, BookOpen, Shield, X, Briefcase } from 'lucide-react';
 
 export default function HRMSidebar({ isOpen, setIsOpen, userProfile }) {
     const pathname = usePathname();
@@ -10,6 +10,8 @@ export default function HRMSidebar({ isOpen, setIsOpen, userProfile }) {
     const menuItems = [
         { name: 'Dashboard', icon: Home, path: '/hrm' },
         { name: 'Employees', icon: Users, path: '/hrm/employees' },
+        { name: 'Jobs', icon: Briefcase, path: '/hrm/jobs' },
+        { name: 'Recruitment', icon: Users, path: '/hrm/recruitment' },
         { name: 'Attendance', icon: Clock, path: '/hrm/attendance' },
         { name: 'Leaves', icon: Calendar, path: '/hrm/leaves' },
         { name: 'Salary', icon: DollarSign, path: '/hrm/salary' },
