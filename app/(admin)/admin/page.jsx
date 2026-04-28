@@ -40,7 +40,9 @@ export default async function AdminDashboard() {
         todaySalesData,
         recentTransactions,
         pendingApprovals,
-        shoppingStats
+        shoppingStats,
+        totalLeadsCount,
+        totalEmployeesCount
     ] = await Promise.all([
         // 1. Total Revenue (from transactions table + shopping_order_groups)
         Promise.all([
@@ -176,6 +178,23 @@ export default async function AdminDashboard() {
                     else acc.commissionRevenue += Math.round((Number(order.total_amount_paise) || 0) * 0.05);
                     return acc;
                 }, { revenue: 0, sales: 0, pendingOrders: 0, platformRevenue: 0, commissionRevenue: 0 });
+            }),
+
+        // 8. CRM Leads Total
+        supabase.from('crm_leads')
+            .select('*', { count: 'exact', head: true })
+            .then(({ count, error }) => {
+                if (error) console.error('Error fetching leads count:', error);
+                return count || 0;
+            }),
+
+        // 9. Total Employees (Including HR, support, etc. basically anyone not admin, user, merchant)
+        supabase.from('user_profiles')
+            .select('*', { count: 'exact', head: true })
+            .in('role', ['employee', 'hr', 'support', 'sales'])
+            .then(({ count, error }) => {
+                if (error) console.error('Error fetching employees count:', error);
+                return count || 0;
             })
     ]);
 
@@ -286,6 +305,32 @@ export default async function AdminDashboard() {
                         {shoppingStats.pendingOrders > 0 && (
                             <p className="text-[10px] font-black text-amber-600 mt-1 uppercase tracking-tighter animate-pulse">{shoppingStats.pendingOrders} orders pending</p>
                         )}
+                    </Link>
+
+                    {/* CRM Leads */}
+                    <Link href="/crm/pipeline" style={{ animationDelay: '600ms' }} className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                            </div>
+                            <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full uppercase tracking-widest">Pipeline</span>
+                        </div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total CRM Leads</p>
+                        <h3 className="text-2xl sm:text-3xl font-black text-gray-950 tracking-tighter">{totalLeadsCount}</h3>
+                    </Link>
+
+                    {/* Active Employees */}
+                    <Link href="/admin/users" style={{ animationDelay: '700ms' }} className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-pink-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                            </div>
+                            <span className="text-[10px] font-black text-pink-600 bg-pink-50 px-2.5 py-1 rounded-full uppercase tracking-widest">Staff</span>
+                        </div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Active Employees</p>
+                        <h3 className="text-2xl sm:text-3xl font-black text-gray-950 tracking-tighter">{totalEmployeesCount}</h3>
                     </Link>
                 </div>
 
@@ -459,6 +504,16 @@ export default async function AdminDashboard() {
                                         <p className="text-sm text-slate-500 mt-1 leading-snug">
                                             {shoppingStats.sales} total · {shoppingStats.pendingOrders} pending dispatch
                                         </p>
+                                    </div>
+                                </Link>
+
+                                <Link href="/admin/careers" className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-violet-100 transition-all">
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center text-white text-xl shadow-lg shadow-violet-500/20 group-hover:scale-110 transition-transform">
+                                        💼
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-slate-900 group-hover:text-violet-600 transition-colors">Career Applications</h3>
+                                        <p className="text-sm text-slate-500 mt-1 leading-snug">Review freelancer, agent & DSA applications</p>
                                     </div>
                                 </Link>
                             </div>

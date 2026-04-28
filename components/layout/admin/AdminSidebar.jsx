@@ -31,6 +31,9 @@ import {
     ClipboardList,
     Activity,
     Trophy,
+    Briefcase,
+    UserCheck,
+    BarChart3,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
@@ -68,6 +71,14 @@ const navigationGroups = [
             { name: 'Transactions', href: '/admin/transactions', icon: Receipt },
             { name: 'Payouts', href: '/admin/payouts', icon: Banknote },
             { name: 'Invoice Generator', href: '/admin/invoice', icon: FileText },
+        ]
+    },
+    {
+        title: 'Enterprise Portals',
+        items: [
+            { name: 'Career Applications', href: '/admin/careers', icon: Briefcase },
+            { name: 'CRM Overview', href: '/admin/crm', icon: BarChart3 },
+            { name: 'HRM Overview', href: '/admin/hrm', icon: UserCheck },
         ]
     },
     {

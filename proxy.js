@@ -79,12 +79,17 @@ export async function proxy(request) {
             '/shop/cart',
             '/merchant-apply',
             '/merchant-status',
-            '/merchant-subscribe'
+            '/merchant-subscribe',
+            '/crm',
+            '/hrm',
+            '/employee'
             // '/gift-cards' removed - browsing should be public, only purchase requires auth
         ]
 
-        const adminRoutes = ['/admin']
+        const adminRoutes = ['/admin', '/hrm']
         const merchantRoutes = ['/merchant/']
+        const crmRoutes = ['/crm']
+        const employeeRoutes = ['/employee']
         const { pathname } = request.nextUrl
 
         // Check if current path is protected
@@ -93,9 +98,11 @@ export async function proxy(request) {
         )
         const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route))
         const isMerchantRoute = merchantRoutes.some((route) => pathname.startsWith(route))
+        const isCrmRoute = crmRoutes.some((route) => pathname.startsWith(route))
+        const isEmployeeRoute = employeeRoutes.some((route) => pathname.startsWith(route))
 
         // Redirect to login if accessing protected route without session
-        if ((isProtectedRoute || isAdminRoute || isMerchantRoute) && !user) {
+        if ((isProtectedRoute || isAdminRoute || isMerchantRoute || isCrmRoute || isEmployeeRoute) && !user) {
             const redirectUrl = new URL('/login', request.url)
             redirectUrl.searchParams.set('redirect', pathname)
             console.log('[MIDDLEWARE:REDIRECT]', { requestId, to: '/login', from: pathname });

@@ -29,6 +29,7 @@ import ReferralGenzSection from '@/components/customer/dashboard/ReferralGenzSec
 import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 import DisclaimerNote from '@/components/customer/dashboard/DisclaimerNote';
 import SolarPromoCard from '@/components/customer/dashboard/SolarPromoCard';
+import CareerOpportunityCard from '@/components/customer/dashboard/CareerOpportunityCard';
 import AdvertisementModal from '@/components/home/AdvertisementModal';
 import KYCPopup from '@/components/kyc/KYCPopup';
 import { useKYCPopup } from '@/hooks/useKYCPopup';
@@ -539,6 +540,7 @@ export default function CustomerDashboardPage() {
                                 paymentLoading={paymentLoading}
                             />
                             <QuickActions />
+                            <CareerOpportunityCard />
                         </div>
                     </div>
 
