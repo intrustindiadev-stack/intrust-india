@@ -11,10 +11,12 @@ import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const STATUS_CONFIG = {
-    pending: { label: 'Pending', color: 'text-amber-600 bg-amber-50 border-amber-200', dot: 'bg-amber-500' },
-    under_review: { label: 'Under Review', color: 'text-blue-600 bg-blue-50 border-blue-200', dot: 'bg-blue-500' },
-    approved: { label: 'Approved', color: 'text-emerald-600 bg-emerald-50 border-emerald-200', dot: 'bg-emerald-500' },
-    rejected: { label: 'Rejected', color: 'text-red-600 bg-red-50 border-red-200', dot: 'bg-red-500' },
+    pending:             { label: 'Pending',              color: 'text-amber-600 bg-amber-50 border-amber-200',     dot: 'bg-amber-500' },
+    under_review:        { label: 'Under Review',         color: 'text-blue-600 bg-blue-50 border-blue-200',        dot: 'bg-blue-500' },
+    interview_scheduled: { label: 'Interview Scheduled',  color: 'text-violet-600 bg-violet-50 border-violet-200',  dot: 'bg-violet-500' },
+    offer_sent:          { label: 'Offer Sent',           color: 'text-indigo-600 bg-indigo-50 border-indigo-200',  dot: 'bg-indigo-500' },
+    hired:               { label: 'Hired',                color: 'text-emerald-600 bg-emerald-50 border-emerald-200', dot: 'bg-emerald-500' },
+    rejected:            { label: 'Rejected',             color: 'text-red-600 bg-red-50 border-red-200',           dot: 'bg-red-500' },
 };
 
 const ROLE_CONFIG = {
@@ -36,6 +38,12 @@ function ApplicationDrawer({ app, onClose, onUpdate }) {
     const [status, setStatus] = useState(app?.status || 'pending');
     const [panelAccess, setPanelAccess] = useState(app?.panel_access_granted || '');
     const [adminNotes, setAdminNotes] = useState(app?.admin_notes || '');
+    const [interviewDate, setInterviewDate] = useState(app?.interview_date ? app.interview_date.slice(0,16) : '');
+    const [interviewNotes, setInterviewNotes] = useState(app?.interview_notes || '');
+    const [offeredSalary, setOfferedSalary] = useState(app?.offered_salary || '');
+    const [commissionPct, setCommissionPct] = useState(app?.commission_percent || '');
+    const [joiningBonus, setJoiningBonus] = useState(app?.joining_bonus || '');
+    const [offerNotes, setOfferNotes] = useState(app?.offer_letter_notes || '');
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
@@ -43,6 +51,12 @@ function ApplicationDrawer({ app, onClose, onUpdate }) {
             setStatus(app.status);
             setPanelAccess(app.panel_access_granted || '');
             setAdminNotes(app.admin_notes || '');
+            setInterviewDate(app.interview_date ? app.interview_date.slice(0,16) : '');
+            setInterviewNotes(app.interview_notes || '');
+            setOfferedSalary(app.offered_salary || '');
+            setCommissionPct(app.commission_percent || '');
+            setJoiningBonus(app.joining_bonus || '');
+            setOfferNotes(app.offer_letter_notes || '');
         }
     }, [app]);
 
@@ -60,8 +74,34 @@ function ApplicationDrawer({ app, onClose, onUpdate }) {
                 panel_access_granted: panelAccess || null,
                 reviewed_at: new Date().toISOString(),
             };
-            if (status === 'approved' && panelAccess) {
+            if (status === 'interview_scheduled') {
+                if (interviewDate) updates.interview_date = interviewDate;
+                if (interviewNotes) updates.interview_notes = interviewNotes;
+            }
+            if (status === 'offer_sent' || status === 'hired') {
+                if (offeredSalary) updates.offered_salary = parseInt(offeredSalary);
+                if (commissionPct) updates.commission_percent = parseFloat(commissionPct);
+                if (joiningBonus) updates.joining_bonus = parseInt(joiningBonus);
+                if (offerNotes) updates.offer_letter_notes = offerNotes;
+            }
+            if (status === 'hired') {
+                updates.hired_at = new Date().toISOString();
+            }
+            if ((status === 'hired' || status === 'offer_sent') && panelAccess) {
                 updates.access_granted_at = new Date().toISOString();
+                
+                // If the applicant is hired, panel access is granted, and they have an account, update their role
+                if (status === 'hired' && app.user_id) {
+                    const roleMap = {
+                        'crm': 'sales_exec',
+                        'employee': 'employee',
+                        'merchant': 'merchant'
+                    };
+                    const newRole = roleMap[panelAccess];
+                    if (newRole) {
+                        await supabase.from('user_profiles').update({ role: newRole }).eq('id', app.user_id);
+                    }
+                }
             }
             const { error } = await supabase.from('career_applications').update(updates).eq('id', app.id);
             if (error) throw error;
@@ -171,20 +211,63 @@ function ApplicationDrawer({ app, onClose, onUpdate }) {
                             </select>
                         </div>
 
+                        {/* Interview fields */}
+                        {status === 'interview_scheduled' && (
+                            <div className="space-y-3 p-4 rounded-2xl bg-violet-50 border border-violet-200">
+                                <p className="text-xs font-bold text-violet-700 uppercase tracking-wider">Interview Details</p>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Interview Date & Time</label>
+                                    <input type="datetime-local" value={interviewDate} onChange={e => setInterviewDate(e.target.value)}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Interview Notes</label>
+                                    <textarea value={interviewNotes} onChange={e => setInterviewNotes(e.target.value)} rows={2}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                        placeholder="Round type, interviewer, location..." />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Offer fields */}
+                        {(status === 'offer_sent' || status === 'hired') && (
+                            <div className="space-y-3 p-4 rounded-2xl bg-indigo-50 border border-indigo-200">
+                                <p className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Offer Details</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1">Offered Salary (₹/mo)</label>
+                                        <input type="number" value={offeredSalary} onChange={e => setOfferedSalary(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="0" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1">Commission %</label>
+                                        <input type="number" value={commissionPct} onChange={e => setCommissionPct(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="0" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1">Joining Bonus (₹)</label>
+                                        <input type="number" value={joiningBonus} onChange={e => setJoiningBonus(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="0" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-700 mb-1">Offer Letter Notes</label>
+                                    <textarea value={offerNotes} onChange={e => setOfferNotes(e.target.value)} rows={2}
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="Conditions, start date, etc." />
+                                </div>
+                            </div>
+                        )}
+
                         {/* Panel Access */}
-                        {status === 'approved' && (
+                        {(status === 'offer_sent' || status === 'hired') && (
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Grant Panel Access</label>
-                                <select
-                                    value={panelAccess}
-                                    onChange={e => setPanelAccess(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                                >
-                                    {PANEL_OPTIONS.map(opt => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
+                                <select value={panelAccess} onChange={e => setPanelAccess(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                                    {PANEL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                 </select>
-                                <p className="text-xs text-gray-400 mt-1">This will update the user's role in the system to grant appropriate panel access.</p>
+                                <p className="text-xs text-gray-400 mt-1">Grant panel access when hiring is confirmed.</p>
                             </div>
                         )}
 
@@ -228,7 +311,7 @@ export default function AdminCareersPage() {
     const [search, setSearch] = useState('');
     const [selectedApp, setSelectedApp] = useState(null);
 
-    const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, under_review: 0, rejected: 0 });
+    const [stats, setStats] = useState({ total: 0, pending: 0, hired: 0, under_review: 0, rejected: 0 });
 
     const fetchApplications = useCallback(async () => {
         setLoading(true);
@@ -247,7 +330,7 @@ export default function AdminCareersPage() {
             setStats({
                 total: apps.length,
                 pending: apps.filter(a => a.status === 'pending').length,
-                approved: apps.filter(a => a.status === 'approved').length,
+                hired: apps.filter(a => a.status === 'hired').length,
                 under_review: apps.filter(a => a.status === 'under_review').length,
                 rejected: apps.filter(a => a.status === 'rejected').length,
             });
@@ -306,7 +389,7 @@ export default function AdminCareersPage() {
                         { label: 'Total', value: stats.total, color: 'from-gray-500 to-slate-600' },
                         { label: 'Pending', value: stats.pending, color: 'from-amber-500 to-orange-500' },
                         { label: 'Under Review', value: stats.under_review, color: 'from-blue-500 to-cyan-500' },
-                        { label: 'Approved', value: stats.approved, color: 'from-emerald-500 to-teal-500' },
+                        { label: 'Hired', value: stats.hired, color: 'from-emerald-500 to-teal-500' },
                         { label: 'Rejected', value: stats.rejected, color: 'from-red-500 to-rose-500' },
                     ].map(s => (
                         <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">

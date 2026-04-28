@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 
 const ROLE_LABELS = {
     employee: 'Employee', sales_exec: 'Sales Executive', sales_manager: 'Sales Manager',
-    hr_admin: 'HR Admin', admin: 'Admin', super_admin: 'Super Admin',
+    hr_manager: 'HR Manager', admin: 'Admin', super_admin: 'Super Admin',
 };
 
 export default function EmployeeProfilePage() {

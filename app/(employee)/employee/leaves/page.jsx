@@ -16,9 +16,9 @@ const STATUS_STYLE = {
 };
 
 const LEAVE_BALANCES = [
-    { type: 'Casual Leave (CL)', total: 12, used: 2, color: 'from-blue-500 to-indigo-500' },
-    { type: 'Sick Leave (SL)', total: 8, used: 3, color: 'from-amber-500 to-orange-500' },
-    { type: 'Earned Leave (EL)', total: 21, used: 0, color: 'from-emerald-500 to-teal-500' },
+    { type: 'Casual Leave (CL)', key: 'Casual Leave', total: 12, color: 'from-blue-500 to-indigo-500' },
+    { type: 'Sick Leave (SL)', key: 'Sick Leave', total: 8, color: 'from-amber-500 to-orange-500' },
+    { type: 'Earned Leave (EL)', key: 'Earned Leave', total: 21, color: 'from-emerald-500 to-teal-500' },
 ];
 
 export default function EmployeeLeavesPage() {
@@ -27,6 +27,7 @@ export default function EmployeeLeavesPage() {
     const [leaves, setLeaves] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [usedMap, setUsedMap] = useState({});
     const [form, setForm] = useState({ leave_type: 'Casual Leave', from_date: '', to_date: '', reason: '' });
 
     const fetchLeaves = async () => {
@@ -36,7 +37,17 @@ export default function EmployeeLeavesPage() {
             .select('*')
             .eq('employee_id', user.id)
             .order('created_at', { ascending: false });
-        setLeaves(data || []);
+        const rows = data || [];
+        setLeaves(rows);
+        // Compute used days per type (approved only, current year)
+        const currentYear = new Date().getFullYear();
+        const map = {};
+        rows.filter(r => r.status === 'approved' && new Date(r.from_date).getFullYear() === currentYear)
+            .forEach(r => {
+                const days = Math.max(1, Math.ceil((new Date(r.to_date) - new Date(r.from_date)) / 86400000) + 1);
+                map[r.leave_type] = (map[r.leave_type] || 0) + days;
+            });
+        setUsedMap(map);
         setLoading(false);
     };
 
@@ -155,7 +166,8 @@ export default function EmployeeLeavesPage() {
             {/* Leave Balance Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {LEAVE_BALANCES.map((lb, i) => {
-                    const remaining = lb.total - lb.used;
+                    const used = usedMap[lb.key] || 0;
+                    const remaining = Math.max(0, lb.total - used);
                     const pct = Math.round((remaining / lb.total) * 100);
                     return (
                         <motion.div key={lb.type} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}

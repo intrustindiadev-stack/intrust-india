@@ -13,10 +13,31 @@ const COLUMNS = [
     { id: 'won', title: 'Won ✓', color: 'border-t-emerald-500', badge: 'bg-emerald-100 text-emerald-700' },
 ];
 
+const SOURCES = ['All', 'Solar', 'Merchants', 'Users', 'Imported'];
+
+const getSourceCategory = (source) => {
+    if (!source) return 'Other';
+    const s = source.toLowerCase();
+    if (s.includes('merchant')) return 'Merchants';
+    if (s.includes('user')) return 'Users';
+    if (s.includes('solar')) return 'Solar';
+    if (s.includes('csv') || s.includes('import')) return 'Imported';
+    return 'Other';
+};
+
+const SOURCE_COLORS = {
+    'Merchants': 'bg-fuchsia-50 text-fuchsia-600 border-fuchsia-200',
+    'Users': 'bg-cyan-50 text-cyan-600 border-cyan-200',
+    'Solar': 'bg-orange-50 text-orange-600 border-orange-200',
+    'Imported': 'bg-gray-100 text-gray-600 border-gray-300',
+    'Other': 'bg-slate-50 text-slate-600 border-slate-200'
+};
+
 export default function PipelinePage() {
     const [leads, setLeads] = useState([]);
     const [loading, setLoading] = useState(true);
     const [dragging, setDragging] = useState(null);
+    const [sourceFilter, setSourceFilter] = useState('All');
 
     const fetchLeads = useCallback(async () => {
         const { data } = await supabase
@@ -36,7 +57,12 @@ export default function PipelinePage() {
         return () => supabase.removeChannel(ch);
     }, [fetchLeads]);
 
-    const getByStatus = (status) => leads.filter(l => l.status === status);
+    const filteredLeads = leads.filter(l => {
+        if (sourceFilter === 'All') return true;
+        return getSourceCategory(l.source) === sourceFilter;
+    });
+
+    const getByStatus = (status) => filteredLeads.filter(l => l.status === status);
 
     // Drag & Drop handlers
     const handleDragStart = (e, lead) => {
@@ -57,7 +83,7 @@ export default function PipelinePage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 h-screen flex flex-col gap-5">
-            <div className="flex justify-between items-center shrink-0">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Pipeline Board</h1>
                     <p className="text-sm text-gray-500 mt-0.5">Drag cards across stages to update status in real-time.</p>
@@ -66,10 +92,23 @@ export default function PipelinePage() {
                     <button onClick={fetchLeads} className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors">
                         <RefreshCw size={15} className="text-gray-500" />
                     </button>
-                    <Link href="/crm/leads" className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25">
+                    <Link href="/crm/leads" className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all">
                         <Plus size={15} /> Add Lead
                     </Link>
                 </div>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2 shrink-0">
+                {SOURCES.map(src => (
+                    <button
+                        key={src}
+                        onClick={() => setSourceFilter(src)}
+                        className={`px-3.5 py-1.5 rounded-lg text-sm font-bold border transition-colors ${sourceFilter === src ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                    >
+                        {src}
+                    </button>
+                ))}
             </div>
 
             {loading ? (
@@ -96,27 +135,32 @@ export default function PipelinePage() {
 
                                     {/* Scrollable column body */}
                                     <div className="flex-1 bg-gray-50/80 border border-gray-200 border-t-0 rounded-b-2xl p-2.5 overflow-y-auto space-y-2.5 min-h-[200px]">
-                                        {colLeads.map(lead => (
-                                            <div
-                                                key={lead.id}
-                                                draggable
-                                                onDragStart={e => handleDragStart(e, lead)}
-                                                className={`bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all cursor-grab active:cursor-grabbing select-none ${dragging?.id === lead.id ? 'opacity-40' : ''}`}
-                                            >
-                                                <div className="flex items-start justify-between gap-2 mb-2">
-                                                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-indigo-700 font-bold text-xs flex-shrink-0">
-                                                        {(lead.contact_name || lead.title || '?').charAt(0).toUpperCase()}
+                                        {colLeads.map(lead => {
+                                            const category = getSourceCategory(lead.source);
+                                            return (
+                                                <div
+                                                    key={lead.id}
+                                                    draggable
+                                                    onDragStart={e => handleDragStart(e, lead)}
+                                                    className={`bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all cursor-grab active:cursor-grabbing select-none ${dragging?.id === lead.id ? 'opacity-40' : ''}`}
+                                                >
+                                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-indigo-700 font-bold text-xs flex-shrink-0">
+                                                            {(lead.contact_name || lead.title || '?').charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{lead.contact_name || lead.title}</p>
+                                                            {lead.phone && <p className="text-[11px] text-gray-400 mt-0.5">{lead.phone}</p>}
+                                                        </div>
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{lead.contact_name || lead.title}</p>
-                                                        {lead.phone && <p className="text-[11px] text-gray-400 mt-0.5">{lead.phone}</p>}
-                                                    </div>
+                                                    {lead.source && (
+                                                        <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border mt-1 ${SOURCE_COLORS[category] || SOURCE_COLORS.Other}`}>
+                                                            {lead.source}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                {lead.source && (
-                                                    <p className="text-[11px] text-gray-400 bg-gray-50 rounded-lg px-2 py-1 mt-1">via {lead.source}</p>
-                                                )}
-                                            </div>
-                                        ))}
+                                            )
+                                        })}
                                         {colLeads.length === 0 && (
                                             <div className="flex flex-col items-center justify-center py-8 text-gray-300 text-xs font-medium">
                                                 <div className="w-8 h-8 border-2 border-dashed border-gray-200 rounded-xl mb-2" />

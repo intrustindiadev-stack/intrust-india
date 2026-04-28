@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, Plus, Phone, Mail, ArrowUpRight, X, ChevronDown, RefreshCw, User, Building2, MapPin, Briefcase } from 'lucide-react';
+import { Search, Filter, Plus, Phone, Mail, ArrowUpRight, X, ChevronDown, RefreshCw, User, Building2, MapPin, Briefcase, Download, UploadCloud } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -17,6 +17,150 @@ const STATUS_STYLE = {
     won: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     lost: 'bg-rose-50 text-rose-700 border-rose-200',
 };
+
+function ImportLeadsDrawer({ onClose, onSave }) {
+    const { user } = useAuth();
+    const [file, setFile] = useState(null);
+    const [uploading, setUploading] = useState(false);
+
+    const handleDownloadTemplate = () => {
+        const headers = "title,contact_name,phone,email,source,notes\n";
+        const sampleRow = "Sample Lead,John Doe,9876543210,john@example.com,CSV Import,Interested in services\n";
+        const blob = new Blob([headers + sampleRow], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "crm_leads_template.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleUpload = async () => {
+        if (!file) {
+            toast.error('Please select a file first.');
+            return;
+        }
+
+        setUploading(true);
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const text = e.target.result;
+                const rows = text.split('\n').map(row => row.trim()).filter(row => row);
+                if (rows.length < 2) throw new Error("File seems empty or only has headers.");
+
+                const headers = rows[0].toLowerCase().split(',').map(h => h.trim());
+                const nameIdx = headers.indexOf('contact_name');
+                const titleIdx = headers.indexOf('title');
+                const phoneIdx = headers.indexOf('phone');
+                const emailIdx = headers.indexOf('email');
+                const sourceIdx = headers.indexOf('source');
+                const notesIdx = headers.indexOf('notes');
+
+                if (nameIdx === -1 && phoneIdx === -1 && emailIdx === -1) {
+                    throw new Error("CSV must have at least contact_name, phone, or email column.");
+                }
+
+                const leadsToInsert = [];
+                for (let i = 1; i < rows.length; i++) {
+                    const columns = rows[i].split(',').map(c => c.trim());
+                    // Basic parsing (does not handle commas inside quotes)
+                    const contact_name = nameIdx !== -1 ? columns[nameIdx] : '';
+                    const title = titleIdx !== -1 ? columns[titleIdx] : '';
+                    const phone = phoneIdx !== -1 ? columns[phoneIdx] : '';
+                    const email = emailIdx !== -1 ? columns[emailIdx] : null;
+                    const source = sourceIdx !== -1 ? columns[sourceIdx] : 'CSV Import';
+                    const notes = notesIdx !== -1 ? columns[notesIdx] : '';
+
+                    if (!contact_name && !phone && !email) continue;
+
+                    leadsToInsert.push({
+                        title: title || contact_name || 'Imported Lead',
+                        contact_name: contact_name || 'Unknown',
+                        phone: phone || null,
+                        email: email || null,
+                        source: source || 'CSV Import',
+                        status: 'new',
+                        pipeline_stage: 'new',
+                        notes: notes,
+                        created_by: user.id,
+                        assigned_to: user.id,
+                    });
+                }
+
+                if (leadsToInsert.length === 0) {
+                    toast.error("No valid rows found to import.");
+                    return;
+                }
+
+                const { data, error } = await supabase.from('crm_leads').insert(leadsToInsert).select();
+                if (error) throw error;
+
+                toast.success(`Successfully imported ${data.length} leads!`);
+                onSave(data);
+                onClose();
+            } catch (err) {
+                toast.error(err.message);
+            } finally {
+                setUploading(false);
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex">
+            <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <motion.div
+                initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                className="w-full max-w-md bg-white flex flex-col h-full shadow-2xl"
+            >
+                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-900">Import Leads</h2>
+                        <p className="text-xs text-gray-400 mt-0.5">Bulk upload via CSV</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors"><X size={18} className="text-gray-500" /></button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-5 space-y-6">
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
+                        <h3 className="font-bold text-indigo-900 mb-1 text-sm">1. Download Template</h3>
+                        <p className="text-xs text-indigo-700 mb-3">Use our CSV template to ensure your columns are formatted correctly.</p>
+                        <button onClick={handleDownloadTemplate} className="inline-flex items-center gap-2 bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition-colors">
+                            <Download size={14} /> Download CSV Template
+                        </button>
+                    </div>
+
+                    <div className="space-y-3">
+                        <h3 className="font-bold text-gray-900 text-sm">2. Upload File</h3>
+                        <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer relative">
+                            <input 
+                                type="file" 
+                                accept=".csv" 
+                                onChange={(e) => setFile(e.target.files[0])}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            <UploadCloud size={32} className="text-gray-400 mb-2" />
+                            <p className="text-sm font-semibold text-gray-700">
+                                {file ? file.name : "Click or drag CSV here"}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">Maximum 500 rows recommended</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-5 border-t border-gray-100 flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition-all">Cancel</button>
+                    <button onClick={handleUpload} disabled={!file || uploading} className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2">
+                        {uploading ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Uploading…</> : 'Import Leads'}
+                    </button>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+}
 
 function AddLeadDrawer({ onClose, onSave }) {
     const { user } = useAuth();
@@ -170,6 +314,7 @@ export default function LeadsPage() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [showAdd, setShowAdd] = useState(false);
+    const [showImport, setShowImport] = useState(false);
     const [selectedLead, setSelectedLead] = useState(null);
 
     const fetchLeads = useCallback(async () => {
@@ -204,12 +349,14 @@ export default function LeadsPage() {
     );
 
     const handleLeadAdded = (newLead) => setLeads(prev => [newLead, ...prev]);
+    const handleLeadsImported = (newLeads) => setLeads(prev => [...newLeads, ...prev]);
     const handleLeadUpdated = (updated) => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l));
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-5 min-h-screen">
             <AnimatePresence>
                 {showAdd && <AddLeadDrawer onClose={() => setShowAdd(false)} onSave={handleLeadAdded} />}
+                {showImport && <ImportLeadsDrawer onClose={() => setShowImport(false)} onSave={handleLeadsImported} />}
                 {selectedLead && <UpdateStatusDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdate={handleLeadUpdated} />}
             </AnimatePresence>
 
@@ -219,9 +366,12 @@ export default function LeadsPage() {
                     <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Leads</h1>
                     <p className="text-sm text-gray-500 mt-0.5">{filtered.length} lead{filtered.length !== 1 ? 's' : ''} · tap a row to update status</p>
                 </div>
-                <div className="flex gap-2">
-                    <button onClick={fetchLeads} className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors">
+                <div className="flex flex-wrap gap-2">
+                    <button onClick={fetchLeads} className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors shadow-sm">
                         <RefreshCw size={16} className="text-gray-500" />
+                    </button>
+                    <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm">
+                        <UploadCloud size={16} /> Import CSV
                     </button>
                     <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 text-sm">
                         <Plus size={16} /> New Lead

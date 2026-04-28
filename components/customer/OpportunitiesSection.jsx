@@ -48,6 +48,15 @@ const opportunities = [
         link: '/merchant-apply',
         cta: 'Apply Now',
         badge: 'Instant Approval'
+    },
+    {
+        title: 'Join Our Team',
+        description: 'Work as Freelancer, Field Agent or DSA Partner and grow with InTrust',
+        icon: Users,
+        color: 'from-violet-500 to-purple-600',
+        link: '/career',
+        cta: 'View Open Roles',
+        badge: 'Now Hiring'
     }
 ];
 
@@ -108,7 +117,7 @@ export default function CustomerOpportunitiesSection() {
                     </p>
                 </motion.div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {opportunities.map((opportunity, index) => {
                         const Icon = opportunity.icon;
                         return (
