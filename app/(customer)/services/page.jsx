@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import Link from 'next/link';
-import HeroIllustrativeAd from '@/components/customer/shop/HeroIllustrativeAd';
+import { useRouter } from 'next/navigation';
+import FeatureAdvertiser from '@/components/ui/FeatureAdvertiser';
 import {
     Zap, Banknote, ShoppingBag, Headphones,
     Smartphone, Tv, Car, Flame, Wallet, CreditCard,
@@ -17,6 +18,7 @@ export default function ServicesPage() {
     const [activeTab, setActiveTab] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const tabsContainerRef = useRef(null);
+    const router = useRouter();
 
     const tabs = [
         { id: 'all', label: 'All', icon: LayoutGrid },
@@ -44,6 +46,13 @@ export default function ServicesPage() {
 
                 {/* Header Section */}
                 <div className="mb-4">
+                    {/* Breadcrumbs */}
+                    <nav className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 mb-6">
+                        <button onClick={() => router.push('/dashboard')} className="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Dashboard</button>
+                        <ChevronRight size={14} />
+                        <span className="text-gray-900 dark:text-white font-bold">Services</span>
+                    </nav>
+
                     <h1 className="text-3xl md:text-4xl font-bold text-[#171A21] dark:text-gray-100 mb-3 tracking-tight">
                         Services
                     </h1>
@@ -53,7 +62,7 @@ export default function ServicesPage() {
 
                     {/* Ad Banner */}
                     <div className="mb-8">
-                        <HeroIllustrativeAd />
+                        <FeatureAdvertiser />
                     </div>
 
                     {/* Premium Search Bar */}

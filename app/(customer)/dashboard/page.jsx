@@ -32,6 +32,7 @@ import SolarPromoCard from '@/components/customer/dashboard/SolarPromoCard';
 import CareerOpportunityCard from '@/components/customer/dashboard/CareerOpportunityCard';
 import AdvertisementModal from '@/components/home/AdvertisementModal';
 import KYCPopup from '@/components/kyc/KYCPopup';
+import FeatureAdvertiser from '@/components/ui/FeatureAdvertiser';
 import { useKYCPopup } from '@/hooks/useKYCPopup';
 
 const OpportunitiesSection = dynamic(() => import('@/components/customer/OpportunitiesSection'), { ssr: false });
@@ -503,6 +504,10 @@ export default function CustomerDashboardPage() {
                     <AdBannerCarousel />
 
                     <DashboardStats stats={stats} />
+
+                    <div className="mb-8">
+                        <FeatureAdvertiser />
+                    </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
                         {/* Main Content Area */}

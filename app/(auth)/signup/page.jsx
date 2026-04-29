@@ -35,17 +35,9 @@ export default function SignupPage() {
     }, []);
 
     // ─── Google ─────────────────────────────────────────────────────────────────
-    const handleGoogleSignIn = async () => {
+    const handleGoogleSignIn = () => {
         setGoogleLoading(true);
-        setError('');
-        const { error: googleError } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: `${window.location.origin}/auth/callback` }
-        });
-        if (googleError) {
-            toast.error(googleError.message || 'Google sign in failed');
-            setGoogleLoading(false);
-        }
+        window.location.href = '/api/auth/google';
     };
 
     // ─── Phone OTP flow ─────────────────────────────────────────────────────────

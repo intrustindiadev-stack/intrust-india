@@ -7,8 +7,8 @@ import { NextResponse } from 'next/server';
  */
 export async function GET(request) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    const host = request.headers.get('host');
-    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const host = request.headers.get('host') || 'localhost:3000';
+    const protocol = (host.includes('localhost') || host.includes('127.0.0.1')) ? 'http' : 'https';
     const appUrl = `${protocol}://${host}`;
     const redirectUri = `${appUrl}/api/auth/google/callback`;
 

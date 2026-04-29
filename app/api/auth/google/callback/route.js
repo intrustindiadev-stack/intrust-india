@@ -64,8 +64,8 @@ export async function GET(request) {
     const requestUrl = new URL(request.url);
     const code  = requestUrl.searchParams.get('code');
     const state = requestUrl.searchParams.get('state');
-    const host  = request.headers.get('host');
-    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const host  = request.headers.get('host') || 'localhost:3000';
+    const protocol = (host.includes('localhost') || host.includes('127.0.0.1')) ? 'http' : 'https';
     const appUrl   = `${protocol}://${host}`;
 
     if (!code) {
