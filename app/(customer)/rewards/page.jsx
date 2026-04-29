@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import ScratchCard from '@/components/ui/ScratchCard';
+import Confetti from 'react-confetti';
 
 const tierIcons = {
     bronze: <Star size={20} className="text-amber-700" />,
@@ -28,6 +29,13 @@ const tierColors = {
     platinum: 'bg-violet-100 text-violet-800 border-violet-200'
 };
 
+const tierBackgrounds = {
+    bronze: 'from-amber-600 via-orange-600 to-amber-800 shadow-amber-900/40 border-amber-500/20',
+    silver: 'from-gray-400 via-slate-500 to-gray-600 shadow-slate-500/20 border-gray-300/20',
+    gold: 'from-yellow-500 via-amber-500 to-orange-500 shadow-yellow-500/20 border-yellow-300/30',
+    platinum: 'from-violet-600 via-purple-600 to-indigo-700 shadow-purple-500/20 border-white/10'
+};
+
 export default function RewardsDashboardPage() {
     const { user } = useAuth();
     const router = useRouter();
@@ -39,6 +47,17 @@ export default function RewardsDashboardPage() {
     const [historyTxns, setHistoryTxns] = useState([]);
     const [convertAmount, setConvertAmount] = useState('');
     const [converting, setConverting] = useState(false);
+    const [rank, setRank] = useState(null);
+    const [showPromotion, setShowPromotion] = useState(false);
+    const [promotedTier, setPromotedTier] = useState(null);
+    const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+
+    useEffect(() => {
+        setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+        const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -61,6 +80,19 @@ export default function RewardsDashboardPage() {
                 // Fetch next tier config
                 const tiers = ['bronze', 'silver', 'gold', 'platinum'];
                 const currentTierIndex = tiers.indexOf(balanceData?.tier || 'bronze');
+                
+                // Tier promotion logic
+                const lastTier = localStorage.getItem('intrust_last_tier');
+                const lastTierIndex = lastTier ? tiers.indexOf(lastTier) : currentTierIndex;
+
+                if (lastTier && currentTierIndex > lastTierIndex) {
+                    setPromotedTier(balanceData.tier);
+                    setShowPromotion(true);
+                }
+                
+                // Always update local storage to the latest tier
+                localStorage.setItem('intrust_last_tier', balanceData?.tier || 'bronze');
+
                 const nextTierName = tiers[currentTierIndex + 1];
                 setNextTier(nextTierName);
 
@@ -86,6 +118,20 @@ export default function RewardsDashboardPage() {
                     const history = txns.filter(t => t.points <= 0 || t.is_scratched).slice(0, 5);
                     setUnscratchedTxns(unscratched);
                     setHistoryTxns(history);
+                }
+
+                // Fetch rank
+                try {
+                    const rankRes = await fetch('/api/rewards/leaderboard');
+                    if (rankRes.ok) {
+                        const rankData = await rankRes.json();
+                        if (rankData.success) {
+                            const userRank = rankData.leaderboard.findIndex(u => u.userId === user.id) + 1;
+                            setRank(userRank > 0 ? userRank : '50+');
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error fetching rank:', e);
                 }
             } catch (err) {
                 console.error('Error fetching reward data:', err);
@@ -207,9 +253,15 @@ export default function RewardsDashboardPage() {
                     </div>
                     <button
                         onClick={() => router.push('/rewards/leaderboard')}
-                        className="p-3 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-full shadow-sm hover:scale-105 transition-transform"
+                        className="p-3 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-full shadow-sm hover:scale-105 transition-all flex items-center gap-2 group relative"
                     >
-                        <Trophy size={20} className="text-yellow-500" />
+                        <Trophy size={20} className="text-yellow-500 group-hover:scale-110 transition-transform" />
+                        {rank && (
+                            <span className="font-bold text-sm text-gray-700 dark:text-gray-300 pr-1">
+                                #{rank}
+                            </span>
+                        )}
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-[#121212] animate-pulse" />
                     </button>
                 </motion.div>
 
@@ -218,7 +270,7 @@ export default function RewardsDashboardPage() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.1 }}
-                    className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-purple-500/20 mb-8 text-white border border-white/10"
+                    className={`relative overflow-hidden bg-gradient-to-br ${tierBackgrounds[balance?.tier || 'bronze']} rounded-3xl p-6 sm:p-8 shadow-2xl mb-8 text-white border`}
                 >
                     {/* Background Orbs */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
@@ -470,6 +522,56 @@ export default function RewardsDashboardPage() {
                     </button>
                 </motion.div>
             </div>
+
+            {/* Promotion Modal */}
+            <AnimatePresence>
+                {showPromotion && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                    >
+                        <Confetti
+                            width={windowSize.width}
+                            height={windowSize.height}
+                            recycle={false}
+                            numberOfPieces={500}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.8, y: 50, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.8, y: 50, opacity: 0 }}
+                            transition={{ type: "spring", damping: 20, stiffness: 100 }}
+                            className="bg-white dark:bg-[#1A1A1A] w-full max-w-sm rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden border border-white/10"
+                        >
+                            <div className={`absolute top-0 left-0 w-full h-32 bg-gradient-to-br ${tierBackgrounds[promotedTier || 'bronze']} opacity-20`} />
+                            
+                            <div className="relative z-10">
+                                <div className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center mb-6 shadow-xl bg-gradient-to-br ${tierBackgrounds[promotedTier || 'bronze']}`}>
+                                    <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white">
+                                        {tierIcons[promotedTier || 'bronze']}
+                                    </div>
+                                </div>
+                                
+                                <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2 uppercase tracking-tight">
+                                    Tier Unlocked!
+                                </h2>
+                                <p className="text-gray-500 dark:text-gray-400 mb-8">
+                                    Congratulations! You've been promoted to <span className="font-bold text-gray-900 dark:text-white capitalize">{promotedTier}</span> tier. Keep up the great work!
+                                </p>
+                                
+                                <button
+                                    onClick={() => setShowPromotion(false)}
+                                    className={`w-full py-4 rounded-2xl font-bold text-white bg-gradient-to-r ${tierBackgrounds[promotedTier || 'bronze']} shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all`}
+                                >
+                                    Awesome!
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <CustomerBottomNav />
         </div>
