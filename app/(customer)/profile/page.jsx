@@ -22,7 +22,7 @@ import RecentShoppingOrders from '@/components/customer/RecentShoppingOrders';
 import AccountSummaryCard from '@/components/customer/profile/AccountSummaryCard';
 
 // ── Icons & Utils ──
-import { Check, X, Star, Gift, ArrowRight, Trophy } from 'lucide-react';
+import { Check, X, Star, Gift, ArrowRight, Trophy, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { createClient } from '@/lib/supabaseClient';
 import LiveButton from '@/components/merchant/LiveButton';
@@ -364,7 +364,28 @@ function CustomerProfileContent() {
                                 </button>
                             </motion.div>
 
-                            {/* Stats Summary */}
+                            {/* WhatsApp Connect shortcut */}
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.35 }}
+                            >
+                                <button
+                                    onClick={() => router.push('/profile/whatsapp')}
+                                    className="w-full flex items-center gap-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-[2.5rem] px-6 py-4 shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all"
+                                >
+                                    <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                                        <MessageCircle size={20} className="text-white" />
+                                    </div>
+                                    <div className="text-left flex-1">
+                                        <p className="font-black text-sm">WhatsApp</p>
+                                        <p className="text-white/70 text-xs">Connect for instant support</p>
+                                    </div>
+                                    <ArrowRight size={18} className="text-white/70 flex-shrink-0" />
+                                </button>
+                            </motion.div>
+
+
                             <AccountSummaryCard
                                 purchaseCount={purchaseCount}
                                 totalSavedPaise={totalSavedPaise}

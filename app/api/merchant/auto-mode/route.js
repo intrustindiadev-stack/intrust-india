@@ -1,5 +1,6 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { getPricingSettings } from '@/app/(admin)/admin/settings/actions';
 
 export async function POST(request) {
     try {
@@ -79,7 +80,8 @@ export async function POST(request) {
                 });
             } else {
                 // Charge the merchant via Atomic RPC
-                const costRupees = (merchant.auto_mode_months_paid || 0) === 0 ? 999 : 1999;
+                const pricing = await getPricingSettings();
+                const costRupees = (merchant.auto_mode_months_paid || 0) === 0 ? pricing.autoFirst : pricing.autoRenewal;
                 const costPaise = costRupees * 100;
 
                 const { data, error: rpcError } = await supabase.rpc('merchant_activate_auto_mode', {

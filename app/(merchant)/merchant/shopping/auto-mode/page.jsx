@@ -10,6 +10,7 @@ import {
 import Link from 'next/link';
 import { useSubscription } from '@/components/merchant/SubscriptionContext';
 import LiveButton from '@/components/merchant/LiveButton';
+import { getPricingSettings } from '@/app/(admin)/admin/settings/actions';
 
 // ─── Mini Bar Chart ──────────────────────────────────────────────────────────
 function MiniBarChart({ data }) {
@@ -111,6 +112,7 @@ export default function AutoModePage() {
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [merchant, setMerchant] = useState(null);
+    const [pricing, setPricing] = useState({ autoFirst: 999, autoRenewal: 1999 });
     const [orders, setOrders] = useState([]);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
@@ -147,6 +149,9 @@ export default function AutoModePage() {
 
                 setOrders(ordersData || []);
             }
+
+            const pricingSettings = await getPricingSettings();
+            setPricing(pricingSettings);
 
             const walletRes = await fetch('/api/wallet/balance', {
                 headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store'
@@ -263,7 +268,7 @@ export default function AutoModePage() {
 
     const isAutoModeActive = merchant?.auto_mode === true;
     const isFirstMonth = (merchant?.auto_mode_months_paid || 0) === 0;
-    const subscriptionPrice = isFirstMonth ? 999 : 1999;
+    const subscriptionPrice = isFirstMonth ? pricing.autoFirst : pricing.autoRenewal;
 
     const handleToggleAutoMode = async () => {
         performAction(async () => {
@@ -778,7 +783,7 @@ export default function AutoModePage() {
                                     {processing ? <Activity size={16} className="animate-spin" /> : <>Pay & Activate <ChevronRight size={16} strokeWidth={3} /></>}
                                 </button>
                             )}
-                            {isFirstMonth && <p className="text-center text-slate-500 text-[10px] uppercase tracking-wider font-bold mt-3">Renews at ₹1999/month</p>}
+                            {isFirstMonth && <p className="text-center text-slate-500 text-[10px] uppercase tracking-wider font-bold mt-3">Renews at ₹{pricing.autoRenewal}/month</p>}
                         </motion.div>
                     </motion.div>
                 )}
