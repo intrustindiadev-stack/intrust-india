@@ -348,8 +348,11 @@ export async function GET(request) {
                 .eq('id', user.id)
                 .maybeSingle();
 
-            if (profile?.role === 'admin' || profile?.role === 'super_admin')    redirectPath = '/admin';
+            if (profile?.role === 'admin' || profile?.role === 'super_admin') redirectPath = '/admin';
             else if (profile?.role === 'merchant') redirectPath = '/merchant/dashboard';
+            else if (profile?.role === 'hr' || profile?.role === 'hr_manager') redirectPath = '/hrm';
+            else if (profile?.role?.startsWith('sales_') || profile?.role === 'sales_exec' || profile?.role === 'sales_agent') redirectPath = '/crm';
+            else if (profile?.role === 'employee') redirectPath = '/employee';
         }
 
         // ── Step 4: Build redirect response and set session cookies ──────────────

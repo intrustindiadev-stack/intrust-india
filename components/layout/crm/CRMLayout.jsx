@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import CRMSidebar from './CRMSidebar';
 import CRMBottomNav from './CRMBottomNav';
-import { Menu } from 'lucide-react';
+import { Menu, LogOut } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import { supabase } from '@/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
 
 export default function CRMLayout({ children, userProfile }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -46,6 +48,18 @@ export default function CRMLayout({ children, userProfile }) {
                         <div className="flex items-center gap-3 shrink-0">
                             {/* Notifications */}
                             <NotificationBell apiPath="/api/crm/notifications" />
+
+                            {/* Logout */}
+                            <button
+                                onClick={async () => {
+                                    await supabase.auth.signOut();
+                                    window.location.href = '/login';
+                                }}
+                                className="p-2 rounded-xl text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100"
+                                title="Logout"
+                            >
+                                <LogOut size={20} />
+                            </button>
 
                             {/* Profile Badge */}
                             <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-gray-200">

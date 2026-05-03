@@ -1,27 +1,46 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Clock, Calendar, Briefcase, ArrowRight, TrendingUp, UserCheck } from 'lucide-react';
+import { 
+    Users, Clock, Calendar, Briefcase, ArrowRight, TrendingUp, 
+    UserCheck, Bell, Zap, MoreHorizontal, UserPlus, Filter, 
+    Download, Building, Plus, DollarSign, CheckCircle2, Star 
+} from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
-function StatCard({ label, value, icon: Icon, gradient, href, delay = 0 }) {
+function StatCard({ label, value, icon: Icon, color, subValue, trend, delay = 0 }) {
+    const COLOR_VARIANTS = {
+        emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
+        blue: 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800',
+        amber: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
+        violet: 'bg-violet-50 text-violet-600 border-violet-100 dark:bg-violet-900/20 dark:text-violet-400 dark:border-violet-800',
+    };
+
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay }}
-            whileHover={{ y: -4, scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
+            className="bg-white dark:bg-gray-800 rounded-[2rem] p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-none transition-all group"
         >
-            <Link href={href || '#'} className={`block relative overflow-hidden rounded-3xl p-5 text-white bg-gradient-to-br ${gradient} shadow-lg hover:shadow-2xl transition-all duration-300`}>
-                <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
-                <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full blur-2xl" />
-                <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center mb-4 relative z-10"><Icon size={22} /></div>
-                <p className="text-white/70 text-xs font-bold uppercase tracking-widest relative z-10">{label}</p>
-                <p className="text-4xl font-black mt-1 relative z-10">{value}</p>
-            </Link>
+            <div className="flex items-start justify-between mb-4">
+                <div className={`p-3 rounded-2xl ${COLOR_VARIANTS[color]} shadow-inner group-hover:scale-110 transition-transform`}>
+                    <Icon size={20} />
+                </div>
+                {trend && (
+                    <span className="flex items-center gap-1 text-[10px] font-black text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full uppercase tracking-tighter">
+                        <TrendingUp size={10} /> {trend}
+                    </span>
+                )}
+            </div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{label}</p>
+            <div className="flex items-end justify-between">
+                <div>
+                    <p className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">{value}</p>
+                    <p className="text-[10px] font-bold text-gray-400 mt-1">{subValue}</p>
+                </div>
+            </div>
         </motion.div>
     );
 }
@@ -36,15 +55,17 @@ export default function HRMDashboard() {
         try {
             const today = new Date().toISOString().split('T')[0];
             const [empRes, leaveRes, appRes, attRes] = await Promise.allSettled([
-                supabase.from('user_profiles').select('id', { count: 'exact' }).in('role', ['employee', 'sales_exec', 'sales_manager', 'hr_manager', 'crm_user']),
-                supabase.from('leave_requests').select('id, leave_type, from_date, to_date, user_profiles(full_name)').eq('status', 'pending').order('created_at', { ascending: false }).limit(5),
-                supabase.from('career_applications').select('id, full_name, role_category, status').in('status', ['pending', 'under_review']).order('created_at', { ascending: false }).limit(4),
+                supabase.from('user_profiles').select('id', { count: 'exact' }).in('role', ['employee', 'sales_exec', 'sales_manager', 'hr_manager']),
+                supabase.from('leave_requests').select('id, leave_type, from_date, to_date, status, created_at, user_profiles(full_name, avatar_url)').eq('status', 'pending').order('created_at', { ascending: false }).limit(5),
+                supabase.from('career_applications').select('id, full_name, role_category, status, created_at').in('status', ['pending', 'under_review']).order('created_at', { ascending: false }).limit(4),
                 supabase.from('attendance').select('id', { count: 'exact' }).eq('date', today).eq('status', 'present'),
             ]);
+            
             const empCount = empRes.status === 'fulfilled' ? (empRes.value.count || 0) : 0;
             const leaves = leaveRes.status === 'fulfilled' ? (leaveRes.value.data || []) : [];
             const apps = appRes.status === 'fulfilled' ? (appRes.value.data || []) : [];
             const presentCount = attRes.status === 'fulfilled' ? (attRes.value.count || 0) : 0;
+
             setStats({ employees: empCount, presentToday: presentCount, pendingLeaves: leaves.length, newApplications: apps.length });
             setPendingLeaves(leaves);
             setRecentApps(apps);
@@ -54,137 +75,152 @@ export default function HRMDashboard() {
 
     useEffect(() => { fetchStats(); }, [fetchStats]);
 
-    const STATS = [
-        { label: 'Total Employees', value: isLoading ? '…' : stats.employees, icon: Users, gradient: 'from-emerald-500 to-teal-600', href: '/hrm/employees' },
-        { label: 'Present Today', value: isLoading ? '…' : stats.presentToday, icon: UserCheck, gradient: 'from-sky-500 to-blue-600', href: '/hrm/attendance' },
-        { label: 'Leave Queue', value: isLoading ? '…' : stats.pendingLeaves, icon: Calendar, gradient: 'from-amber-500 to-orange-500', href: '/hrm/leaves' },
-        { label: 'New Applications', value: isLoading ? '…' : stats.newApplications, icon: Briefcase, gradient: 'from-violet-500 to-purple-600', href: '/hrm/recruitment' },
-    ];
-
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-6 min-h-screen">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-gray-50/30 dark:bg-gray-900/30">
+            
+            {/* Header Area */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">HR Dashboard</h1>
-                    <p className="text-sm text-gray-500 mt-1">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                </div>
-                <div className="flex gap-2">
-                    <Link href="/hrm/recruitment" className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-violet-500/30 hover:from-violet-500 transition-all">
-                        <Briefcase size={16} /> Recruitment
-                    </Link>
-                    <Link href="/hrm/employees" className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/30 hover:from-emerald-500 transition-all">
-                        <Users size={16} /> Employees
-                    </Link>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {STATS.map((s, i) => <StatCard key={s.label} {...s} delay={i * 0.05} />)}
-            </div>
-
-            {/* Dashboard Preview Banner */}
-            <motion.div
-                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                className="relative overflow-hidden rounded-3xl h-40 sm:h-52 shadow-xl group cursor-default"
-            >
-                <Image
-                    src="/images/hrm-preview.png"
-                    alt="HR Management Dashboard"
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/80 via-emerald-900/40 to-transparent" />
-                <div className="absolute inset-0 flex flex-col justify-center px-8">
-                    <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">InTrust HR Suite</p>
-                    <p className="text-white text-2xl sm:text-3xl font-black">People. Data. Results.</p>
-                    <p className="text-white/60 text-sm mt-1">Everything HR in one place.</p>
-                </div>
-            </motion.div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Pending Leaves */}
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="flex justify-between items-center p-5 border-b border-gray-100">
-                        <h2 className="text-base font-bold text-gray-900">Pending Leave Requests</h2>
-                        <Link href="/hrm/leaves" className="text-sm font-semibold text-emerald-600 flex items-center gap-1">View All <ArrowRight size={14} /></Link>
+                    <div className="flex items-center gap-3 mb-2">
+                        <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-emerald-200/50">
+                            <Zap size={12} fill="currentColor" /> HR Hub
+                        </span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</span>
                     </div>
-                    <div className="divide-y divide-gray-50">
-                        {isLoading ? [...Array(3)].map((_, i) => <div key={i} className="h-16 mx-5 my-2 animate-pulse bg-gray-100 rounded-xl" />) :
-                         pendingLeaves.length === 0 ? (
-                            <div className="p-10 text-center">
-                                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3"><Calendar size={22} className="text-emerald-500" /></div>
-                                <p className="text-sm font-semibold text-gray-700">All caught up!</p>
-                                <p className="text-xs text-gray-400 mt-1">No pending leave requests</p>
+                    <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight leading-none">
+                        Personnel <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600">Command</span>
+                    </h1>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                    <button className="p-3 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-500 hover:text-emerald-500 transition-all shadow-sm">
+                        <Download size={20} />
+                    </button>
+                    <Link href="/hrm/recruitment" className="inline-flex items-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3 rounded-2xl font-black text-sm shadow-xl shadow-gray-200 dark:shadow-none hover:bg-gray-800 dark:hover:bg-gray-100 transition-all active:scale-95">
+                        <UserPlus size={18} /> New Hire
+                    </Link>
+                </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard label="Total Force" value={stats.employees} color="blue" subValue="Active Personnel" trend="+2.4%" delay={0} icon={Users} />
+                <StatCard label="Attendance" value={stats.presentToday} color="emerald" subValue="Clocked in today" trend="98%" delay={0.1} icon={UserCheck} />
+                <StatCard label="Pending Leaves" value={stats.pendingLeaves} color="amber" subValue="Action Required" delay={0.2} icon={Calendar} />
+                <StatCard label="New Leads" value={stats.newApplications} color="violet" subValue="Talent Pipeline" trend="+12" delay={0.3} icon={Briefcase} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Pending Actions */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                        <div className="p-8 border-b border-gray-50 dark:border-gray-700/50 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Leave Approvals</h3>
+                                <p className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest">Pending Requests</p>
                             </div>
-                        ) : pendingLeaves.map(req => (
-                            <div key={req.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-amber-50/30 transition-colors">
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-sm flex-shrink-0">
-                                        {(req.user_profiles?.full_name || '?').charAt(0).toUpperCase()}
+                            <Link href="/hrm/leaves" className="text-xs font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1 group">
+                                View Full Queue <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                            </Link>
+                        </div>
+                        <div className="p-2">
+                            {pendingLeaves.length > 0 ? (
+                                <div className="space-y-1">
+                                    {pendingLeaves.map((leave) => (
+                                        <div key={leave.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-900/50 rounded-2xl transition-all group">
+                                            <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-900 overflow-hidden shrink-0 text-center flex items-center justify-center">
+                                                {leave.user_profiles?.avatar_url ? (
+                                                    <Image src={leave.user_profiles.avatar_url} alt={leave.user_profiles.full_name} width={48} height={48} className="object-cover" />
+                                                ) : (
+                                                    <span className="text-sm font-bold text-gray-400">{leave.user_profiles?.full_name?.charAt(0)}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-black text-gray-900 dark:text-white truncate">{leave.user_profiles?.full_name}</p>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{leave.leave_type} · {new Date(leave.from_date).toLocaleDateString()}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-600 font-black text-[10px] uppercase hover:bg-emerald-600 hover:text-white transition-all">Approve</button>
+                                                <button className="px-4 py-2 rounded-xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase hover:bg-rose-600 hover:text-white transition-all">Reject</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-12 text-center">
+                                    <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <CheckCircle2 size={24} className="text-gray-300" />
                                     </div>
-                                    <div className="min-w-0">
-                                        <p className="font-semibold text-gray-900 text-sm truncate">{req.user_profiles?.full_name || 'Employee'}</p>
-                                        <p className="text-xs text-gray-400">{req.leave_type} · {req.from_date} → {req.to_date}</p>
+                                    <p className="text-sm font-bold text-gray-400">All caught up! No pending requests.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Link href="/hrm/recruitment" className="relative group overflow-hidden rounded-[2.5rem] aspect-[16/9] sm:aspect-auto sm:h-48 bg-gray-900">
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-8 flex flex-col justify-end z-10">
+                                <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-1">Pipeline</p>
+                                <h4 className="text-2xl font-black text-white tracking-tight">Talent Acquisition</h4>
+                                <div className="mt-4 flex items-center gap-2">
+                                    <div className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-bold text-white uppercase tracking-widest">
+                                        {stats.newApplications} Active Leads
                                     </div>
                                 </div>
-                                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-100 flex-shrink-0">Pending</span>
                             </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* New Applications */}
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="flex justify-between items-center p-5 border-b border-gray-100">
-                        <h2 className="text-base font-bold text-gray-900">New Applications</h2>
-                        <Link href="/hrm/recruitment" className="text-sm font-semibold text-violet-600 flex items-center gap-1">Review All <ArrowRight size={14} /></Link>
-                    </div>
-                    <div className="divide-y divide-gray-50">
-                        {isLoading ? [...Array(3)].map((_, i) => <div key={i} className="h-16 mx-5 my-2 animate-pulse bg-gray-100 rounded-xl" />) :
-                         recentApps.length === 0 ? (
-                            <div className="p-10 text-center">
-                                <div className="w-12 h-12 bg-violet-50 rounded-2xl flex items-center justify-center mx-auto mb-3"><Briefcase size={22} className="text-violet-500" /></div>
-                                <p className="text-sm font-semibold text-gray-700">No new applications</p>
-                                <p className="text-xs text-gray-400 mt-1">New career applications will appear here</p>
-                            </div>
-                        ) : recentApps.map(app => (
-                            <div key={app.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-violet-50/30 transition-colors">
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-violet-700 font-bold text-sm flex-shrink-0">
-                                        {(app.full_name || '?').charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="font-semibold text-gray-900 text-sm truncate">{app.full_name}</p>
-                                        <p className="text-xs text-gray-400">{app.role_category || 'General Application'}</p>
-                                    </div>
-                                </div>
-                                <span className={`text-xs font-bold px-2.5 py-1 rounded-lg flex-shrink-0 ${app.status === 'pending' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
-                                    {app.status === 'under_review' ? 'In Review' : 'New'}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-800 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl -mr-20 -mt-20" />
-                <h2 className="text-sm font-bold mb-5 opacity-70 uppercase tracking-widest relative z-10">Quick Actions</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 relative z-10">
-                    {[
-                        { href: '/hrm/attendance', icon: Clock, label: 'Attendance' },
-                        { href: '/hrm/leaves', icon: Calendar, label: 'Leave Queue' },
-                        { href: '/hrm/salary', icon: TrendingUp, label: 'Payroll' },
-                        { href: '/hrm/recruitment', icon: Briefcase, label: 'Recruitment' },
-                    ].map(({ href, icon: Icon, label }) => (
-                        <Link key={href} href={href} className="flex flex-col items-center gap-2 p-4 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 transition-all group">
-                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Icon size={20} className="text-emerald-200" />
-                            </div>
-                            <span className="text-xs font-semibold">{label}</span>
                         </Link>
-                    ))}
+
+                        <Link href="/hrm/training" className="relative group overflow-hidden rounded-[2.5rem] aspect-[16/9] sm:aspect-auto sm:h-48 bg-emerald-900">
+                            <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/80 via-transparent to-transparent p-8 flex flex-col justify-end z-10">
+                                <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-1">Growth</p>
+                                <h4 className="text-2xl font-black text-white tracking-tight">Upskilling Portal</h4>
+                                <div className="mt-4 flex items-center gap-2 text-white/60">
+                                    <Star size={16} fill="currentColor" />
+                                    <Star size={16} fill="currentColor" />
+                                    <Star size={16} fill="currentColor" />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest ml-1">4.8 Avg Rating</span>
+                                </div>
+                            </div>
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Live Operations Feed */}
+                <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm p-8 space-y-8">
+                    <div>
+                        <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Live Ops</h3>
+                        <p className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest">Real-time Activity</p>
+                    </div>
+
+                    <div className="space-y-8 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-gray-100 dark:before:bg-gray-700">
+                        {recentApps.map((app, i) => (
+                            <div key={app.id} className="relative pl-10">
+                                <div className={`absolute left-0 top-1.5 w-5 h-5 rounded-full border-4 border-white dark:border-gray-800 shadow-sm ${app.status === 'pending' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                                <div className="space-y-1">
+                                    <p className="text-sm font-black text-gray-900 dark:text-white">{app.full_name}</p>
+                                    <p className="text-xs font-bold text-gray-400">Applied for {app.role_category}</p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <span className="text-[10px] font-black bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded text-gray-500 uppercase tracking-widest">
+                                            {app.status}
+                                        </span>
+                                        <span className="text-[10px] font-bold text-gray-300">
+                                            {new Date(app.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+
+                        {recentApps.length === 0 && (
+                            <div className="text-center py-12">
+                                <p className="text-sm font-bold text-gray-300 italic">No recent activity detected.</p>
+                            </div>
+                        )}
+                    </div>
+
+                    <Link href="/hrm/activity" className="block w-full py-4 text-center rounded-2xl bg-gray-50 dark:bg-gray-900 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all uppercase tracking-widest">
+                        Full Audit Logs
+                    </Link>
                 </div>
             </div>
         </div>

@@ -20,6 +20,7 @@ export default async function EmployeeRootLayout({ children }) {
 
     // Any valid internal role can access the employee portal
     const validRoles = ['employee', 'sales_exec', 'sales_manager', 'hr_manager', 'admin', 'super_admin'];
+
     if (!validRoles.includes(profile?.role)) {
         return <UnauthorizedRedirect to="/" message="Employee Access Required. Redirecting..." />;
     }
