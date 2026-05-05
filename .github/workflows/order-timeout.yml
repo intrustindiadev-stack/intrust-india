@@ -1,3 +1,15 @@
+# ─── Required GitHub Repository Secrets ──────────────────────────────────────
+# Configure these in: GitHub → Settings → Secrets and variables → Actions
+#
+# SUPABASE_SERVICE_ROLE_KEY  — Supabase service role key
+# OMNIFLOW_API_TOKEN         — Omniflow API token (WhatsApp)
+# OMNIFLOW_WEBHOOK_SECRET    — Omniflow webhook signature secret
+# META_WABA_ID               — Meta WhatsApp Business Account ID
+# META_PHONE_NUMBER_ID       — Meta WhatsApp Phone Number ID
+# META_ACCESS_TOKEN          — Meta permanent system user access token
+# META_WEBHOOK_VERIFY_TOKEN  — Meta webhook verification token
+# CRON_SECRET                — Bearer token for protected cron API routes
+# ─────────────────────────────────────────────────────────────────────────────
 name: Takeover Stale Orders
 
 on:

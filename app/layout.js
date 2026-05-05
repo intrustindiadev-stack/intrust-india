@@ -6,6 +6,9 @@ import PWAInstallPrompt from '@/components/ui/PWAInstallPrompt';
 import StructuredData from "@/components/seo/StructuredData";
 import { Toaster } from 'react-hot-toast';
 import { ConfettiProvider } from '@/components/ui/ConfettiProvider';
+import { ChatProvider } from '@/components/chat/ChatProvider';
+import ChatBubble from '@/components/chat/ChatBubble';
+import ChatWindow from '@/components/chat/ChatWindow';
 
 
 const inter = Inter({
@@ -131,10 +134,14 @@ export default function RootLayout({ children }) {
         <ConfettiProvider>
           <ThemeProvider>
             <AuthProvider>
-              <StructuredData />
-              {children}
-              <Toaster position="top-center" reverseOrder={false} />
-              <PWAInstallPrompt />
+              <ChatProvider>
+                <StructuredData />
+                {children}
+                <ChatBubble />
+                <ChatWindow />
+                <Toaster position="top-center" reverseOrder={false} />
+                <PWAInstallPrompt />
+              </ChatProvider>
             </AuthProvider>
           </ThemeProvider>
         </ConfettiProvider>

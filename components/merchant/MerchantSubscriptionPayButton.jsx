@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { MERCHANT_SUBSCRIPTION_PLANS } from '@/lib/constants';
 
 export default function MerchantSubscriptionPayButton({
     merchantId,
@@ -11,11 +10,12 @@ export default function MerchantSubscriptionPayButton({
     payerEmail,
     payerMobile,
     isRenewal = false,
-    subscriptionExpiresAt = null
+    subscriptionExpiresAt = null,
+    plans = []
 }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [selectedPlan, setSelectedPlan] = useState(MERCHANT_SUBSCRIPTION_PLANS[0]);
+    const [selectedPlan, setSelectedPlan] = useState(plans[0] || null);
 
     const currentExpiry = subscriptionExpiresAt ? new Date(subscriptionExpiresAt) : null;
     const isExpired = currentExpiry && currentExpiry < new Date();
@@ -126,8 +126,8 @@ export default function MerchantSubscriptionPayButton({
 
                     {/* ── Plan Selector ── */}
                     <div className="grid grid-cols-3 gap-3 mb-6">
-                        {MERCHANT_SUBSCRIPTION_PLANS.map((plan) => {
-                            const isActive = selectedPlan.key === plan.key;
+                        {plans.map((plan) => {
+                            const isActive = selectedPlan?.key === plan.key;
                             return (
                                 <button
                                     key={plan.key}
@@ -207,7 +207,7 @@ export default function MerchantSubscriptionPayButton({
                             <>
                                 <span className="material-icons-round text-xl">lock</span>
                                 <span>
-                                    Pay ₹{selectedPlan.price.toLocaleString('en-IN')} — {selectedPlan.label}
+                                    {selectedPlan ? `Pay ₹${selectedPlan.price.toLocaleString('en-IN')} — ${selectedPlan.label}` : 'Select a Plan'}
                                 </span>
                             </>
                         )}
