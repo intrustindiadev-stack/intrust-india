@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { checkTemplateStatus } from '@/lib/omniflow';
+import { getAllTemplateStatuses } from '@/lib/omniflow';
 
 /**
  * GET /api/admin/whatsapp-health
@@ -20,7 +20,7 @@ export async function GET(req) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 
-  const templateStatus = await checkTemplateStatus();
+  const templateStatus = await getAllTemplateStatuses();
 
   return NextResponse.json({
     omniflow_configured: !!process.env.OMNIFLOW_API_TOKEN,

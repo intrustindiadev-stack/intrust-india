@@ -84,6 +84,21 @@ export async function POST(request) {
             );
         }
 
+        // 5.5 Build Merchant Tree Path if referred
+        if (existingMerchant.referred_by_merchant_id) {
+            try {
+                const { error: rpcError } = await adminSupabase.rpc('build_merchant_tree_path', {
+                    p_new_merchant_id: existingMerchant.id,
+                    p_parent_merchant_id: existingMerchant.referred_by_merchant_id
+                });
+                if (rpcError) {
+                    console.error('Error building merchant tree path:', rpcError);
+                }
+            } catch (err) {
+                console.error('Unexpected error building merchant tree path:', err);
+            }
+        }
+
         // 6. Assign 'merchant' role in user_profiles
         const { error: roleError } = await adminSupabase
             .from('user_profiles')

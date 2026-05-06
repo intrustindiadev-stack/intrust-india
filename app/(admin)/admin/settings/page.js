@@ -34,6 +34,7 @@ export default function SettingsPage() {
         sub12m: 3999,
         autoFirst: 999,
         autoRenewal: 1999,
+        merchantReferralPrize: 500,
     });
 
     useEffect(() => {
@@ -77,6 +78,16 @@ export default function SettingsPage() {
         setSaving(true);
         setMessage({ text: '', type: '' });
 
+        if (
+            !Number.isInteger(pricingSettings.merchantReferralPrize) ||
+            pricingSettings.merchantReferralPrize < 0 ||
+            pricingSettings.merchantReferralPrize > 10000
+        ) {
+            setMessage({ text: 'Referral prize must be an integer between 0 and 10000.', type: 'error' });
+            setSaving(false);
+            return;
+        }
+
         const payload = {
             business_name: generalSettings.siteName,
             business_email: generalSettings.supportEmail,
@@ -93,6 +104,7 @@ export default function SettingsPage() {
             merchant_sub_price_12m:  String(pricingSettings.sub12m),
             auto_mode_price_first:   String(pricingSettings.autoFirst),
             auto_mode_price_renewal: String(pricingSettings.autoRenewal),
+            merchant_referral_prize_paise: String(Math.round(pricingSettings.merchantReferralPrize * 100)),
         };
 
         const result = await updateAdminSettings(payload);
@@ -400,6 +412,22 @@ export default function SettingsPage() {
                                         onChange={(e) => setPricingSettings({ ...pricingSettings, autoRenewal: Number(e.target.value) })}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Merchant Referral Prize (₹)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="10000"
+                                        value={pricingSettings.merchantReferralPrize}
+                                        onChange={(e) => setPricingSettings({ ...pricingSettings, merchantReferralPrize: Number(e.target.value) })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Credited to a merchant's wallet when their referred merchant activates their subscription.
+                                    </p>
                                 </div>
                             </div>
                         </div>

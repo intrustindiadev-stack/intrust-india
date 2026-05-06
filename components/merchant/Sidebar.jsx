@@ -24,6 +24,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { label: "NFC Card", href: "/merchant/nfc-service", icon: "contactless" },
         { label: "Lockin Portfolio", href: "/merchant/lockin", icon: "lock_clock" },
         { label: "Wallet", href: "/merchant/wallet", icon: "account_balance_wallet" },
+        { label: "My Network", href: "/merchant/referrals", icon: "share" },
         { label: "Shopping Orders", href: "/merchant/shopping/orders", icon: "shopping_basket" },
         { label: "Auto Mode", href: "/merchant/shopping/auto-mode", icon: "offline_bolt" },
         { label: "Ratings", href: "/merchant/ratings", icon: "star" },

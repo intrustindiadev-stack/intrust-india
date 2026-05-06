@@ -3,8 +3,12 @@ import { NextResponse } from 'next/server';
 
 // GET /api/merchant/notifications — merchant's notifications
 // PATCH /api/merchant/notifications — mark notifications as read
-export async function GET() {
+export async function GET(request) {
     try {
+        const { searchParams } = new URL(request.url);
+        const limit = parseInt(searchParams.get('limit') || '30');
+        const offset = parseInt(searchParams.get('offset') || '0');
+
         const supabase = await createServerSupabaseClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
@@ -12,18 +16,34 @@ export async function GET() {
         }
 
         const admin = createAdminClient();
-        const { data, error } = await admin
+
+        // 1. Get notifications with pagination
+        const { data, error, count } = await admin
             .from('notifications')
-            .select('*')
+            .select('*', { count: 'exact' })
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
-            .limit(30);
+            .range(offset, offset + limit - 1);
 
         if (error) throw error;
-        const unreadCount = (data || []).filter(n => !n.read).length;
-        return NextResponse.json({ notifications: data || [], unreadCount });
+
+        // 2. Get TOTAL unread count (not just for this page)
+        const { count: unreadCount, error: countError } = await admin
+            .from('notifications')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('read', false);
+
+        if (countError) throw countError;
+
+        return NextResponse.json({
+            notifications: data || [],
+            unreadCount: unreadCount || 0,
+            totalCount: count || 0,
+            hasMore: (offset + (data?.length || 0)) < (count || 0)
+        });
     } catch (error) {
-        console.error('[API] Notifications GET Error:', error);
+        console.error('[API] Merchant Notifications GET Error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
@@ -37,7 +57,6 @@ export async function PATCH(request) {
         }
 
         const body = await request.json();
-        // body.id = specific notification id OR body.all = true for mark all read
         const admin = createAdminClient();
 
         if (body.all) {
@@ -58,7 +77,7 @@ export async function PATCH(request) {
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('[API] Notifications PATCH Error:', error);
+        console.error('[API] Merchant Notifications PATCH Error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

@@ -143,6 +143,37 @@ export async function POST(req) {
                 console.error('Error in reward tree / distribution flow — onboarding will still complete:', rewardError);
                 // Don't fail onboarding if reward distribution fails
             }
+
+            // Send in-app notifications to both users about the referral
+            try {
+                // Fetch names for personalisation
+                const [{ data: newUserProfile }, { data: referrerProfile }] = await Promise.all([
+                    supabaseAdmin.from('user_profiles').select('full_name').eq('id', userId).single(),
+                    supabaseAdmin.from('user_profiles').select('full_name').eq('id', referredById).single(),
+                ]);
+                const newUserName = newUserProfile?.full_name || 'A new user';
+                const referrerName = referrerProfile?.full_name || 'your referrer';
+
+                await supabaseAdmin.from('notifications').insert([
+                    {
+                        user_id: userId,
+                        title: 'Welcome to the Network! 🌱',
+                        body: `You've joined ${referrerName}'s referral network. Earn reward points as your network grows.`,
+                        type: 'success',
+                        reference_type: 'referral_joined',
+                    },
+                    {
+                        user_id: referredById,
+                        title: 'New Referral! 🤝',
+                        body: `${newUserName} joined using your referral code. Your network is growing!`,
+                        type: 'success',
+                        reference_type: 'referral_new_member',
+                    },
+                ]);
+            } catch (notifErr) {
+                console.error('Error sending referral notifications:', notifErr);
+                // Non-fatal
+            }
         }
 
         // 4. Ensure user has a reward_points_balance record

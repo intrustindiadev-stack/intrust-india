@@ -124,6 +124,19 @@ export async function POST(request) {
             }
         }
 
+        // Notify the target user about the adjustment
+        try {
+            await supabase.from('notifications').insert({
+                user_id,
+                title: 'Reward Points Updated',
+                body: 'Your Intrust Reward Points balance has been adjusted by an admin.',
+                type: 'info',
+                reference_type: 'reward_adjustment',
+            });
+        } catch {
+            // Non-fatal
+        }
+
         return NextResponse.json({ success: true, new_balance: newBalance });
     } catch (err) {
         console.error('[rewards/adjust] unexpected error:', err);

@@ -233,7 +233,27 @@ export async function POST(req) {
             .update({ is_used: true })
             .eq('id', otpRecord.id);
 
-          const confirmMsg = '✅ Your WhatsApp is now linked to your InTrust account. You can now ask about your wallet balance and KYC status anytime!';
+          // Insert in-app notification for WhatsApp linking
+          try {
+            await admin.from('notifications').insert({
+              user_id: otpRecord.user_id,
+              title: 'WhatsApp Connected ✅',
+              body: "Your WhatsApp number has been linked. You'll now receive order updates and alerts via WhatsApp.",
+              type: 'success',
+              reference_type: 'whatsapp_connected',
+            });
+          } catch {
+            // Non-fatal
+          }
+
+          const confirmMsg =
+            '✅ Your WhatsApp has been successfully linked to your InTrust India account.\n\n' +
+            'You can now use this chat to:\n' +
+            '• Check your wallet balance\n' +
+            '• View your KYC verification status\n' +
+            '• Review recent transactions\n\n' +
+            'Simply send us a message and our assistant will respond instantly.\n' +
+            'For detailed account management, visit: intrustindia.com';
           await sendWhatsAppMessage(normalised, confirmMsg);
           await logMessage({
             userId: otpRecord.user_id,
@@ -261,7 +281,7 @@ export async function POST(req) {
     // FLOW B: Regular chat message
     // -------------------------------------------------------------------
 
-    // Lookup binding
+    // Lookup binding (needed by both quick-reply and chat handlers)
     const { data: binding } = await admin
       .from('user_channel_bindings')
       .select('user_id')
@@ -277,7 +297,50 @@ export async function POST(req) {
 
     const userId = binding.user_id;
 
-    // Fetch financial context
+    // -------------------------------------------------------------------
+    // FLOW B.1: Quick Reply button responses (instant — no AI call needed)
+    // -------------------------------------------------------------------
+    const quickReplyMap = {
+      'check balance':      null, // handled below with live data
+      'my kyc status':      null, // handled below with live data
+      'not me':             '⚠️ We have flagged this activity. Please visit intrustindia.com/profile immediately to secure your account and contact our support team.',
+      'view details':       null, // handled below with live data
+      'this was me':        '✅ Great, no action needed. Stay safe and keep your account secure!',
+      'secure my account':  '🔐 Please visit intrustindia.com/profile right away to review your security settings and active sessions.',
+    };
+
+    const msgLower = trimmedMessage.toLowerCase();
+
+    if (msgLower in quickReplyMap) {
+      let quickReply = quickReplyMap[msgLower];
+
+      // For responses that need live data, fetch financial context
+      if (!quickReply) {
+        const { walletBalance, kycStatus } = await getFinancialContext(userId);
+        const balanceRs = (walletBalance / 100).toFixed(2);
+
+        if (msgLower === 'check balance' || msgLower === 'view details') {
+          quickReply = `💰 Your current InTrust wallet balance is *₹${balanceRs}*. For full transaction history, visit intrustindia.com/wallet`;
+        } else if (msgLower === 'my kyc status') {
+          const statusEmoji = { Verified: '✅', Pending: '⏳', Rejected: '❌' }[kycStatus] || '❓';
+          quickReply = `📋 Your KYC verification status is: *${kycStatus}* ${statusEmoji}. For more details, visit intrustindia.com/profile`;
+        }
+      }
+
+      if (quickReply) {
+        await sendWhatsAppMessage(normalised, quickReply);
+        await logMessage({
+          userId,
+          phoneHash,
+          direction: 'outbound',
+          channel: 'whatsapp',
+          status: 'delivered',
+          contentPreview: quickReply,
+        });
+        return new NextResponse('OK', { status: 200 });
+      }
+    }
+
     const { contextBlock, walletBalance, kycStatus } = await getFinancialContext(userId);
 
     // Intent enforcement (fast path — no AI call needed for recognized intents)

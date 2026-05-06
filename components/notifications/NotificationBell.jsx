@@ -155,8 +155,42 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
         setOpen(prev => !prev);
     };
 
-    /** @param {string} type */
-    const typeIcon = (type) => {
+    /** 
+     * @param {string} type 
+     * @param {string} referenceType
+     */
+    const typeIcon = (type, referenceType) => {
+        // First priority: Specific icons for reference types
+        switch (referenceType) {
+            case 'chatbot_connected': return 'smart_toy';
+            case 'whatsapp_connected': return 'chat';
+            case 'reward_conversion': return 'redeem';
+            case 'reward_adjustment': return 'account_balance_wallet';
+            case 'referral_joined': return 'person_add';
+            case 'referral_new_member': return 'group_add';
+            case 'merchant_application': return 'storefront';
+            case 'merchant_approved': return 'verified';
+            case 'merchant_subscription': return 'card_membership';
+            case 'order':
+            case 'shopping_order': return 'shopping_bag';
+            case 'wallet':
+            case 'wallet_adjustment': return 'payments';
+            case 'payout_request':
+            case 'bank_verification': return 'account_balance';
+            case 'udhari_request': return 'request_quote';
+            case 'udhari_approved':
+            case 'udhari_denied':
+            case 'udhari_completed':
+            case 'udhari_reminder': return 'credit_score';
+            case 'gift_card_purchase': return 'card_giftcard';
+            case 'custom_product_submission':
+            case 'product_approved':
+            case 'product_rejected': return 'inventory_2';
+            case 'admin_task': return 'assignment';
+            default: break;
+        }
+
+        // Fallback to general type icons
         if (type === 'success') return 'check_circle';
         if (type === 'error') return 'cancel';
         if (type === 'warning') return 'warning';
@@ -304,9 +338,30 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                 }
                 break;
 
-            // ── Fallback ─────────────────────────────────────────────────────
+            // Chatbot
+            case 'chatbot_connected':
+                break;
+
+            // WhatsApp
+            case 'whatsapp_connected':
+                router.push('/profile/whatsapp');
+                break;
+
+            // Rewards
+            case 'reward_conversion':
+            case 'reward_adjustment':
+                if (isMerchant) router.push('/merchant/dashboard');
+                else router.push('/rewards');
+                break;
+
+            // Referrals
+            case 'referral_joined':
+            case 'referral_new_member':
+                if (isMerchant) router.push('/merchant/dashboard');
+                else router.push('/refer');
+                break;
+
             default:
-                // No known route — do nothing (notification is still marked read)
                 break;
         }
     };
@@ -349,8 +404,8 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                             onClick={() => handleNotificationClick(n)}
                             className={`w-full text-left px-4 py-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors flex gap-3 items-start ${!n.read ? 'bg-[#D4AF37]/5' : ''}`}
                         >
-                            <span className={`material-icons-round text-lg mt-0.5 flex-shrink-0 ${typeColor(n.type)}`}>
-                                {typeIcon(n.type)}
+                             <span className={`material-icons-round text-lg mt-0.5 flex-shrink-0 ${typeColor(n.type)}`}>
+                                {typeIcon(n.type, n.reference_type)}
                             </span>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-2">

@@ -15,14 +15,13 @@ import {
     Save,
     LogOut,
     Loader2,
-    CheckCircle2,
-    AlertCircle,
     ChevronRight,
     Briefcase,
     Globe,
     Image as ImageIcon
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
     const [uploading, setUploading] = useState(false);
@@ -94,8 +93,6 @@ export default function ProfilePage() {
 
     const [saving, setSaving] = useState(false);
     const [uploadingBanner, setUploadingBanner] = useState(false);
-    const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error'
-    const [errorMessage, setErrorMessage] = useState('');
     const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     useEffect(() => {
@@ -122,8 +119,6 @@ export default function ProfilePage() {
             const filePath = `${fileName}`;
 
             setUploadingBanner(true);
-            setSaveStatus(null);
-            setErrorMessage('');
 
             const { error: uploadError } = await supabase.storage
                 .from('merchant_banners')
@@ -141,12 +136,10 @@ export default function ProfilePage() {
                 .update({ shopping_banner_url: publicUrl })
                 .eq('user_id', merchant.user_id);
 
-            setSaveStatus('success');
-            setTimeout(() => setSaveStatus(null), 3000);
+            toast.success('Banner updated!');
         } catch (error) {
             console.error('Error uploading banner:', error);
-            setSaveStatus('error');
-            setErrorMessage(error.message || 'Failed to upload banner');
+            toast.error(error.message || 'Failed to upload banner');
         } finally {
             setUploadingBanner(false);
         }
@@ -157,14 +150,11 @@ export default function ProfilePage() {
 
         // 1. Validation for "intrust"
         if (formData.business_name.trim().toLowerCase() === 'intrust') {
-            setSaveStatus('error');
-            setErrorMessage('Business name cannot be "intrust" (Reserved Name)');
+            toast.error('Business name cannot be "intrust" (Reserved Name)');
             return;
         }
 
         setSaving(true);
-        setSaveStatus(null);
-        setErrorMessage('');
 
         try {
             // Update Merchants Table
@@ -194,12 +184,10 @@ export default function ProfilePage() {
 
             if (profileUpdateError) throw profileUpdateError;
 
-            setSaveStatus('success');
-            setTimeout(() => setSaveStatus(null), 3000);
+            toast.success('Profile updated successfully!');
         } catch (err) {
             console.error('Error updating profile:', err);
-            setSaveStatus('error');
-            setErrorMessage(err.message || 'Failed to update profile');
+            toast.error(err.message || 'Failed to update profile');
         } finally {
             setSaving(false);
         }
@@ -275,7 +263,7 @@ export default function ProfilePage() {
                                 avatarUrl={formData.avatar_url}
                                 displayName={formData.owner_name || merchant.business_name}
                                 onUpload={(url, err) => {
-                                    if (err) { setSaveStatus('error'); setErrorMessage(err); }
+                                    if (err) toast.error(err);
                                     else if (url) setFormData(prev => ({ ...prev, avatar_url: url }));
                                 }}
                             />
@@ -459,20 +447,6 @@ export default function ProfilePage() {
                         </div>
 
                         {/* Status Messages & Save */}
-                        <AnimatePresence>
-                            {saveStatus && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                                    className={`p-4 rounded-2xl flex items-center gap-3 border ${saveStatus === 'success'
-                                            ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20 text-emerald-600'
-                                            : 'bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20 text-red-600'
-                                        }`}
-                                >
-                                    {saveStatus === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-                                    <p className="text-sm font-black">{saveStatus === 'success' ? 'Profile updated successfully!' : errorMessage}</p>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
 
                         <div className="flex justify-end gap-4 pt-4">
                             <button

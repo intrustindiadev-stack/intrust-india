@@ -28,6 +28,7 @@ export async function POST(request) {
             bankAccount,
             ifscCode,
             panCard,
+            merchantReferralCode,
         } = formData;
 
         // Validate required fields
@@ -78,6 +79,49 @@ export async function POST(request) {
             }
         }
 
+        let referrerMerchantId = null;
+        if (merchantReferralCode) {
+            const code = merchantReferralCode.trim().toUpperCase();
+            const { data: referrerData, error: referrerError } = await supabase
+                .from('merchants')
+                .select('id, user_id')
+                .eq('referral_code', code)
+                .eq('status', 'approved')
+                .single();
+
+            if (!referrerData || referrerError) {
+                return NextResponse.json(
+                    { error: 'Invalid or inactive merchant referral code.' },
+                    { status: 400 }
+                );
+            }
+
+            if (referrerData.user_id === user.id) {
+                return NextResponse.json(
+                    { error: 'You cannot use your own referral code.' },
+                    { status: 400 }
+                );
+            }
+
+            referrerMerchantId = referrerData.id;
+        }
+
+        // Generate unique referral code
+        const adminSupabase = createAdminClient();
+        let generatedCode = '';
+        let isUnique = false;
+        while (!isUnique) {
+            generatedCode = crypto.randomUUID().split('-')[0].slice(0, 6).toUpperCase();
+            const { data: existingCode } = await adminSupabase
+                .from('merchants')
+                .select('id')
+                .eq('referral_code', generatedCode)
+                .maybeSingle();
+            if (!existingCode) {
+                isUnique = true;
+            }
+        }
+
         // Create merchant record with approved status since API checks passed
         const { data: merchant, error: merchantError } = await supabase
             .from('merchants')
@@ -100,6 +144,8 @@ export async function POST(request) {
                     pan_data: null,
                     bank_data: null,
                     gstin_data: gstResult?.data || null,
+                    referred_by_merchant_id: referrerMerchantId,
+                    referral_code: generatedCode,
                 }
             ])
             .select()
@@ -115,7 +161,6 @@ export async function POST(request) {
 
         // Notify admins about the new application
         try {
-            const adminSupabase = createAdminClient();
             const { data: admins } = await adminSupabase
                 .from('user_profiles')
                 .select('id')

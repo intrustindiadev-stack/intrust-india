@@ -3,98 +3,177 @@
 import { usePathname } from 'next/navigation';
 import { useChat } from './ChatProvider';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { CHAT_HIDDEN_PATHS } from './hiddenPaths';
 
 /**
  * ChatBubble
  * Fixed floating button at bottom-right. Visible only to authenticated
- * users and hidden on auth pages.
+ * users and hidden on auth/admin pages (see hiddenPaths.js).
  */
-
-const AUTH_PATHS = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify'];
-
 export default function ChatBubble() {
   const pathname = usePathname();
   const { isOpen, toggleChat, hasUnread } = useChat();
   const { user } = useAuth();
 
-  // Hide on auth pages or when not logged in
-  const isAuthPage = AUTH_PATHS.some((p) => pathname?.startsWith(p));
-  if (!user || isAuthPage) return null;
+  const isHidden = CHAT_HIDDEN_PATHS.some((p) => pathname?.startsWith(p));
+  if (!user || isHidden) return null;
 
   return (
     <>
       <style>{`
-        .chat-bubble {
+        .chat-bubble-btn {
           position: fixed;
-          bottom: 24px;
-          right: 24px;
-          z-index: 50;
-          width: 56px;
-          height: 56px;
+          bottom: 28px;
+          right: 28px;
+          z-index: 9999;
+          width: 80px;
+          height: 80px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #1a73e8, #0d47a1);
+          background: transparent;
           border: none;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 4px 20px rgba(26, 115, 232, 0.45);
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          transition: transform 0.5s cubic-bezier(0.34, 1.7, 0.64, 1);
           outline: none;
+          animation: bubble-float 3s ease-in-out infinite;
+          padding: 0;
         }
-        .chat-bubble:hover {
+        .chat-bubble-btn.is-open {
+          transform: scale(0.9) rotate(0deg);
+          animation: none;
+        }
+        .chat-bubble-btn:hover {
           transform: scale(1.1);
-          box-shadow: 0 6px 28px rgba(26, 115, 232, 0.6);
+          animation: none;
         }
-        .chat-bubble:active {
-          transform: scale(0.95);
+        .chat-bubble-btn:active {
+          transform: scale(0.94);
         }
-        .chat-bubble svg {
-          width: 26px;
-          height: 26px;
-          fill: #fff;
-          transition: transform 0.25s ease;
+        @keyframes bubble-float {
+          0%, 100% { transform: translateY(0); }
+          50%       { transform: translateY(-8px); }
         }
-        .chat-bubble.open svg {
-          transform: rotate(90deg);
+        .chat-bubble-content {
+          width: 100%;
+          height: 100%;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
+        
+        /* Persistent stack for smooth transitions */
+        .chat-mascot-wrapper, .chat-close-wrapper {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.5s cubic-bezier(0.34, 1.7, 0.64, 1);
+        }
+
+        .chat-mascot-wrapper {
+          opacity: 1;
+          transform: scale(1) rotate(0deg);
+        }
+        .chat-bubble-btn.is-open .chat-mascot-wrapper {
+          opacity: 0;
+          transform: scale(0.4) rotate(90deg);
+          pointer-events: none;
+        }
+
+        .chat-close-wrapper {
+          opacity: 0;
+          transform: scale(0.4) rotate(-90deg);
+          pointer-events: none;
+        }
+        .chat-bubble-btn.is-open .chat-close-wrapper {
+          opacity: 1;
+          transform: scale(1) rotate(0deg);
+          pointer-events: auto;
+        }
+
+        .chat-close-icon-inner {
+          background: linear-gradient(145deg, #1565c0, #1e88e5);
+          width: 52px;
+          height: 52px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .chat-mascot-img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          filter: drop-shadow(0 8px 16px rgba(0,0,0,0.15));
+        }
+
         .chat-bubble-badge {
           position: absolute;
-          top: -2px;
-          right: -2px;
-          width: 14px;
-          height: 14px;
-          background: #e53935;
+          top: 5px;
+          right: 5px;
+          width: 16px;
+          height: 16px;
+          background: #ef5350;
           border-radius: 50%;
-          border: 2px solid #fff;
-          animation: pulse-badge 1.5s infinite;
+          border: 2.5px solid #fff;
+          animation: badge-pulse 1.5s ease-in-out infinite;
+          z-index: 10000;
+          transition: opacity 0.3s ease;
         }
-        @keyframes pulse-badge {
+        .chat-bubble-btn.is-open .chat-bubble-badge {
+          opacity: 0;
+        }
+
+        @keyframes badge-pulse {
           0%, 100% { transform: scale(1); }
-          50%       { transform: scale(1.25); }
+          50%       { transform: scale(1.3); }
+        }
+        @media (max-width: 768px) {
+          .chat-bubble-btn {
+            bottom: 105px;
+            right: 16px;
+            width: 75px;
+            height: 75px;
+          }
         }
       `}</style>
 
       <button
         id="chat-bubble-btn"
-        className={`chat-bubble${isOpen ? ' open' : ''}`}
+        className={`chat-bubble-btn ${isOpen ? 'is-open' : ''}`}
         onClick={toggleChat}
         aria-label={isOpen ? 'Close chat' : 'Open InTrust Assistant'}
         title={isOpen ? 'Close chat' : 'InTrust Assistant'}
       >
-        {isOpen ? (
-          /* Close (×) icon */
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18 6L6 18M6 6l12 12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
-          </svg>
-        ) : (
-          /* Chat bubble icon */
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2zm-2 10H6v-2h12v2zm0-3H6V7h12v2z"/>
-          </svg>
-        )}
+        <div className="chat-bubble-content">
+          {/* ── Robot mascot wrapper ── */}
+          <div className="chat-mascot-wrapper">
+            <img
+              src="/robot-mascot-nobg.png"
+              alt="InTrust Mascot"
+              className="chat-mascot-img"
+            />
+          </div>
+
+          {/* ── Close icon wrapper ── */}
+          <div className="chat-close-wrapper">
+            <div className="chat-close-icon-inner">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6l12 12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
         {hasUnread && <span className="chat-bubble-badge" aria-hidden="true" />}
       </button>
+
     </>
   );
 }

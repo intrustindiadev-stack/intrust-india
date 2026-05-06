@@ -13,6 +13,7 @@ import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCardSkeleton from '@/components/customer/shop/ProductCardSkeleton';
 import MerchantProfileCard from '@/components/customer/shop/MerchantProfileCard';
+import FlashSale from '@/components/customer/shop/FlashSale';
 
 export default function StorefrontV2Client({ merchant, initialInventory, customer }) {
     const router = useRouter();
@@ -294,6 +295,15 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     const secondaryColor = '#60a5fa'; // Blue-400
     const avatarUrl = merchant?.user_profiles?.avatar_url || (Array.isArray(merchant?.user_profiles) ? merchant?.user_profiles[0]?.avatar_url : null);
 
+    const flashSaleItems = useMemo(() => {
+        if (liveMerchant?.id !== 'official') return [];
+        return initialInventory.filter(item => {
+            const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || item.retail_price_paise || 0;
+            const price = item.retail_price_paise || 0;
+            return mrp > price;
+        }).slice(0, 3);
+    }, [initialInventory, liveMerchant?.id]);
+
     return (
         <div className={`relative min-h-screen flex flex-col transition-all duration-700`}>
 
@@ -398,6 +408,19 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                         totalItems={initialInventory.length} 
                         isStoreOpen={isStoreOpen}
                     />
+
+                    {/* FLASH SALE */}
+                    {liveMerchant?.id === 'official' && flashSaleItems.length > 0 && (
+                        <FlashSale
+                            items={flashSaleItems}
+                            cart={cart}
+                            onAdd={addToCart}
+                            onRemove={removeFromCart}
+                            isStoreOpen={isStoreOpen}
+                            primaryColor={primaryColor}
+                            secondaryColor={secondaryColor}
+                        />
+                    )}
 
                     {/* Store Closed Browsing Note */}
                     {!isStoreOpen && (

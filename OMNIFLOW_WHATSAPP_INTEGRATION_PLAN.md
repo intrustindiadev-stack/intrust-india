@@ -564,28 +564,17 @@ Assumptions: single mid-level full-stack developer, familiar with the existing I
 
 ---
 
+---
+
 ## 8. Shared Utility: Intent Enforcer
 
-**File:** `lib/intentEnforcer.js`
+> ⚠️ **DEPRECATED for the Web Chat channel** — see Section 10 for the current web chat implementation.
 
-**Function:** `enforceIntent(userMessage, userContext)`
+The intent enforcer (`lib/intentEnforcer.js`) has been reduced to a no-op shim for the web channel. `enforceIntent()` now always returns `null` and the web chat route no longer calls it.
 
-**Logic:**
-1. Simple keyword matching (case-insensitive):
-   - Balance keywords: `wallet`, `balance`, `how much`, `paisa`, `rupees`, `rs.`
-   - KYC keywords: `kyc`, `verification`, `verified`, `document`
-2. If balance intent → return:
-   > "Your current wallet balance is Rs.{balance}."
-3. If KYC intent → return:
-   > "Your KYC status is: {status}."
-4. If no recognized intent → return:
-   > "For further help, please visit intrustindia.com or contact our support team."
+**The WhatsApp webhook (`/api/webhooks/omniflow`) is a separate pipeline and retains its own narrower intent scope.** This section remains authoritative for that channel.
 
-**Note:** This runs **after** the AI call as an override layer. If Omniflow AI returns something off-topic or containing PII, the intent enforcer replaces it with a safe, scoped response. This ensures the bot never answers outside its 3 intents.
-
-**Alternative:** If Omniflow AI has built-in intent routing, configure those 3 intents in the Omniflow dashboard and skip this utility. Only implement if Omniflow AI is too permissive.
-
-**Estimated time:** 2 hours (included in total above)
+Original intent enforcement logic (balance / KYC / fallback) has been replaced in the web channel by Gemini's system instruction + account context + knowledge base, which can handle all three of those queries — plus dozens more — without hard-coded keyword matching.
 
 ---
 
@@ -595,6 +584,7 @@ Assumptions: single mid-level full-stack developer, familiar with the existing I
 - **If Omniflow provides an AI endpoint:** Use it. Pass the context string as a system prompt or pre-pended message.
 - **If Omniflow does not provide AI:** Bring your own OpenAI/Claude API key. Call it directly from `/api/webhooks/omniflow` and `/api/chat/message`.
 - **Decision needed before Step 6.**
+- **Web channel decision (implemented):** Gemini Flash via `@google/genai` SDK is used directly for the web chat channel.
 
 ### 9.2 Phone Number Source
 - The plan assumes `auth.users.phone` or `user_profiles.phone` exists and is verified.
@@ -621,4 +611,114 @@ The following are **not** part of this plan and should not be built:
 
 ---
 
+## 10. Web Chat (Gemini) — Implemented Scope
+
+> This section supersedes Sections 2.3, 7, and 8 **for the web channel only**.
+> WhatsApp sections remain authoritative for the WhatsApp pipeline.
+
+### 10.1 Architecture
+
+Omniflow does **not** provide a web chat AI. The web chat channel uses **Google Gemini** (`@google/genai` SDK) directly, with a curated account snapshot and a website knowledge base injected into the system instruction.
+
+```
+POST /api/chat/message
+  ↓ auth check (Supabase cookie)
+  ↓ buildUserContext() — parallel Supabase queries
+  ↓ buildSystemInstruction(context + INTRUST_KNOWLEDGE_BASE)
+  ↓ GoogleGenAI.chats.create({ systemInstruction, history }).sendMessage(message)
+  ↓ maskPII(reply)               ← in-place masking, not whole-reply wipe
+  ↓ whatsapp_message_logs insert (best-effort)
+  → { reply, firstName }
+```
+
+### 10.2 Endpoint Contract
+
+**`POST /api/chat/message`**
+
+Request body:
+```json
+{
+  "message": "string (max 1000 chars)",
+  "history": [
+    { "role": "user",  "text": "previous user turn" },
+    { "role": "model", "text": "previous bot turn" }
+  ]
+}
+```
+- `history` is optional. Client sends last 8 turns. Server trims to 8 and validates shape.
+
+Response:
+```json
+{
+  "reply": "string",
+  "firstName": "string"
+}
+```
+
+### 10.3 Feature Surface (What the Bot Can Answer)
+
+| Topic | Grounding | Page |
+|---|---|---|
+| Wallet balance | Live `customer_wallets.balance_paise` | /customer/wallet |
+| KYC status | Live `user_profiles.kyc_status` | /customer/profile/kyc |
+| Recent transactions | Last 5 from `customer_wallet_transactions` | /customer/transactions |
+| Reward points | Live `reward_points.points_balance` | /customer/rewards |
+| Active gift cards | Count + total from `customer_gift_cards` | /customer/my-giftcards |
+| Recent orders | Last 3 from `customer_orders` | /customer/orders |
+| Referral code | Live `user_profiles.referral_code` | /customer/refer |
+| Store credits | Live `customer_store_credits.balance_paise` | /customer/store-credits |
+| How gift cards work | Knowledge base | /customer/gift-cards |
+| How to add money | Knowledge base | /customer/wallet |
+| How rewards work | Knowledge base | /customer/rewards |
+| How to refer a friend | Knowledge base | /customer/refer |
+| NFC service overview | Knowledge base | /customer/nfc-service |
+| Solar services overview | Knowledge base | /customer/solar |
+| Shopping & orders | Knowledge base | /customer/shop, /customer/orders |
+| KYC documents required | Knowledge base | /customer/profile/kyc |
+| Merchant apply | Knowledge base | /customer/merchant-apply |
+| Contact / support | Knowledge base | /contact |
+
+### 10.4 PII Safety Policy
+
+- **In-place masking** (`maskPII()`): detected Aadhaar/PAN substrings are masked in-place.
+  - Aadhaar → `XXXX XXXX 1234` (last 4 digits visible).
+  - PAN → `XXXXX1234X` (middle 4 digits visible).
+- **Client-side defence-in-depth** (`sanitizeOnClient()` in `ChatWindow.jsx`): if PII slips through, the full message is replaced with the fallback string before display.
+- **Account context** never includes raw Aadhaar or PAN numbers.
+- **Knowledge base** never includes secrets, keys, or raw account numbers.
+
+### 10.5 Explicitly Out of Scope (Web Chat)
+
+- File/image uploads in chat
+- Payments or cart actions initiated via chat
+- Admin / merchant actions via chat
+- Human agent escalation
+- Persistent chat history (in-memory session only)
+
+### 10.6 Required Environment Variables
+
+| Variable | Required | Default | Notes |
+|---|---|---|---|
+| `GEMINI_API_KEY` | **Yes** | — | Get from [aistudio.google.com](https://aistudio.google.com/app/apikey). Must be in `.env.local`. |
+| `GEMINI_MODEL` | No | `gemini-flash-latest` | Swap to `gemini-2.0-flash` or `gemini-1.5-pro` without code changes. |
+
+### 10.7 Files Changed
+
+| File | Change |
+|---|---|
+| `app/api/chat/message/route.js` | Full rewrite — `@google/genai` SDK, multi-turn history, rich context |
+| `lib/chat/knowledgeBase.js` | NEW — website feature encyclopedia |
+| `lib/chat/promptTemplates.js` | NEW — system instruction builder + WELCOME_MESSAGE |
+| `lib/chat/buildContext.js` | NEW — parallel account snapshot fetcher |
+| `lib/piiFilter.js` | Upgraded — added `maskPII()`, tightened Aadhaar regex |
+| `lib/intentEnforcer.js` | Gutted to no-op shim (deprecated for web) |
+| `components/chat/hiddenPaths.js` | NEW — single source of truth for hidden paths |
+| `components/chat/ChatBubble.jsx` | Uses shared `CHAT_HIDDEN_PATHS` |
+| `components/chat/ChatWindow.jsx` | Sends history, 6 quick replies, 1000 char limit |
+| `package.json` | `@google/generative-ai` → `@google/genai` |
+| `.env.example` | Added `GEMINI_MODEL` optional var |
+
+---
+
 **End of Document**
+

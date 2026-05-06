@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
@@ -38,6 +38,21 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
+        // Insert in-app notification for points redemption
+        try {
+            const admin = createAdminClient();
+            const rupees = (parsedResult.rupee_paise / 100).toFixed(2);
+            await admin.from('notifications').insert({
+                user_id: user.id,
+                title: 'Points Redeemed 🎉',
+                body: `You converted ${parsedResult.points_deducted} Intrust Reward Points to ₹${rupees} wallet cash.`,
+                type: 'success',
+                reference_type: 'reward_conversion',
+            });
+        } catch {
+            // Non-fatal
+        }
+
         return NextResponse.json({
             success: true,
             rupee_paise: parsedResult.rupee_paise,
@@ -50,3 +65,4 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
+

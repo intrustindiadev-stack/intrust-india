@@ -280,7 +280,7 @@ export default function ActiveOrdersOverlay() {
                     exit={{ x: 20, opacity: 0 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                     onClick={handleOpen}
-                    className="pointer-events-auto ml-auto flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-500 dark:to-indigo-500 text-white pl-2 pr-4 py-2 rounded-full shadow-[0_8px_16px_rgba(59,130,246,0.3)] hover:shadow-lg hover:scale-105 transition-all mb-1"
+                    className="pointer-events-auto mr-auto flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-500 dark:to-indigo-500 text-white pl-2 pr-4 py-2 rounded-full shadow-[0_8px_16px_rgba(59,130,246,0.3)] hover:shadow-lg hover:scale-105 transition-all mb-1"
                 >
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center ${theme.iconBg}`}>
                          <StatusIcon className={`w-3.5 h-3.5 ${theme.accentColor}`} strokeWidth={2.5} />

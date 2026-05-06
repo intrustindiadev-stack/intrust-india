@@ -34,6 +34,8 @@ import {
     Briefcase,
     UserCheck,
     BarChart3,
+    User,
+    Bell,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
@@ -43,6 +45,7 @@ const navigationGroups = [
         items: [
             { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
             { name: 'Tasks', href: '/admin/tasks', icon: ClipboardList },
+            { name: 'Notifications', href: '/admin/notifications', icon: Bell },
         ]
     },
     {
@@ -88,6 +91,7 @@ const navigationGroups = [
             { name: 'Partnership Growth', href: '/admin/lockin', icon: Clock },
             { name: 'Banners', href: '/admin/banners', icon: ImageIcon },
             { name: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
+            { name: 'My Profile', href: '/admin/profile', icon: User },
             { name: 'Settings', href: '/admin/settings', icon: Settings },
         ]
     }

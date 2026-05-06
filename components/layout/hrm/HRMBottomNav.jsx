@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Clock, Calendar } from 'lucide-react';
+import { Home, Users, Clock, Calendar, UserCircle, Settings } from 'lucide-react';
 
 export default function HRMBottomNav({ isSidebarOpen }) {
     const pathname = usePathname();
@@ -11,7 +11,8 @@ export default function HRMBottomNav({ isSidebarOpen }) {
         { label: 'Home', icon: Home, href: '/hrm' },
         { label: 'Users', icon: Users, href: '/hrm/employees' },
         { label: 'Clock', icon: Clock, href: '/hrm/attendance' },
-        { label: 'Leaves', icon: Calendar, href: '/hrm/leaves' },
+        { label: 'Profile', icon: UserCircle, href: '/hrm/profile' },
+        { label: 'Settings', icon: Settings, href: '/hrm/settings' },
     ];
 
     if (isSidebarOpen) return null;

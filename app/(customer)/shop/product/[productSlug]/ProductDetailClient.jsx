@@ -168,6 +168,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
         }))
     ].filter(o => o.stock > 0).sort((a, b) => a.retail_price_paise - b.retail_price_paise);
 
+    const isOutOfStock = allOffers.length === 0;
     const selectedOffer = allOffers[0] || platformOffer;
 
     const isStoreOpen = selectedOffer.is_platform_direct 
@@ -499,16 +500,18 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                 >
                                     <button
                                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:bg-slate-100'}`}
+                                        disabled={isOutOfStock}
+                                        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${isOutOfStock ? 'opacity-30 cursor-not-allowed' : (isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:bg-slate-100')}`}
                                     >
                                         <Minus size={16} strokeWidth={3} />
                                     </button>
-                                    <span className={`w-10 text-center font-black text-lg ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                    <span className={`w-10 text-center font-black text-lg ${isDark ? 'text-white' : 'text-slate-900'} ${isOutOfStock ? 'opacity-30' : ''}`}>
                                         {quantity}
                                     </span>
                                     <button
                                         onClick={() => setQuantity(quantity + 1)}
-                                        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:bg-slate-100'}`}
+                                        disabled={isOutOfStock}
+                                        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${isOutOfStock ? 'opacity-30 cursor-not-allowed' : (isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:bg-slate-100')}`}
                                     >
                                         <Plus size={16} strokeWidth={3} />
                                     </button>
@@ -519,10 +522,10 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                     whileTap={{ scale: 0.97 }}
                                     whileHover={{ scale: 1.02 }}
                                     onClick={addToCart}
-                                    disabled={loading}
+                                    disabled={loading || isOutOfStock}
                                     animate={{
                                         x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0,
-                                        backgroundColor: isStoreOpen ? (addedToCart ? '#10b981' : primaryColor) : '#ef4444'
+                                        backgroundColor: isOutOfStock ? '#64748b' : (isStoreOpen ? (addedToCart ? '#10b981' : primaryColor) : '#ef4444')
                                     }}
                                     transition={{
                                         x: { type: 'keyframes', duration: 0.4 },
@@ -531,7 +534,12 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                     className="flex-1 h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2.5 text-white transition-all disabled:opacity-80 overflow-hidden relative shadow-lg"
                                 >
                                     <AnimatePresence mode="wait">
-                                        {!isStoreOpen ? (
+                                        {isOutOfStock ? (
+                                            <motion.div key="outofstock" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 line-clamp-1 px-2">
+                                                <Package size={18} strokeWidth={2.5} />
+                                                <span>OUT OF STOCK</span>
+                                            </motion.div>
+                                        ) : !isStoreOpen ? (
                                             <motion.div key="closed" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 line-clamp-1 px-2">
                                                 <Store size={18} strokeWidth={2.5} />
                                                 <span>STORE CLOSED</span>
@@ -561,11 +569,11 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                 whileTap={{ scale: 0.97 }}
                                 whileHover={{ scale: 1.01 }}
                                 onClick={buyNow}
-                                disabled={buyNowLoading}
+                                disabled={buyNowLoading || isOutOfStock}
                                 animate={{
                                     x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0,
-                                    borderColor: isStoreOpen ? (isDark ? 'rgba(255,255,255,0.1)' : 'transparent') : '#ef4444',
-                                    backgroundColor: isStoreOpen ? (isDark ? 'rgba(255,255,255,0.06)' : '#0f172a') : '#ef4444'
+                                    borderColor: isOutOfStock ? 'transparent' : (isStoreOpen ? (isDark ? 'rgba(255,255,255,0.1)' : 'transparent') : '#ef4444'),
+                                    backgroundColor: isOutOfStock ? '#475569' : (isStoreOpen ? (isDark ? 'rgba(255,255,255,0.06)' : '#0f172a') : '#ef4444')
                                 }}
                                 transition={{
                                     x: { type: 'keyframes', duration: 0.4 },
@@ -574,7 +582,9 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                 className={`w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2.5 transition-all border-2 text-white`}
                             >
                                 {buyNowLoading ? (
-                                    <><Loader2 className="animate-spin" size={18} /><span>Processing...</span></>
+                                    <><Loader2 className="animate-spin" size={18} /><span className="ml-1">Processing...</span></>
+                                ) : isOutOfStock ? (
+                                    <><Package size={18} strokeWidth={2.5} /><span className="ml-1">Out of Stock</span></>
                                 ) : !isStoreOpen ? (
                                     <><Store size={18} strokeWidth={2.5} /><span>NOT ACCEPTING ORDERS</span></>
                                 ) : (
@@ -610,13 +620,15 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                             <div className="text-right shrink-0 ml-2">
                                 <div className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider`}
                                     style={{
-                                        backgroundColor: isDark ? `${primaryColor}20` : `${primaryColor}10`,
-                                        color: primaryColor
+                                        backgroundColor: isOutOfStock 
+                                            ? (isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)')
+                                            : (isDark ? `${primaryColor}20` : `${primaryColor}10`),
+                                        color: isOutOfStock ? '#ef4444' : primaryColor
                                     }}
                                 >
-                                    In Stock
+                                    {isOutOfStock ? 'Out of Stock' : 'In Stock'}
                                 </div>
-                                <p className={`text-[9px] font-bold mt-0.5 ${isDark ? 'text-white/20' : 'text-slate-500'}`}>{selectedOffer.stock} left</p>
+                                {!isOutOfStock && <p className={`text-[9px] font-bold mt-0.5 ${isDark ? 'text-white/20' : 'text-slate-500'}`}>{selectedOffer.stock} left</p>}
                             </div>
                         </div>
 
@@ -719,14 +731,16 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                             <div className="flex items-center gap-1">
                                 <button
                                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                    className={`w-6 h-6 flex items-center justify-center rounded-md text-xs font-black ${isDark ? 'bg-white/[0.08] text-white/60' : 'bg-slate-100 text-slate-600'}`}
+                                    disabled={isOutOfStock}
+                                    className={`w-6 h-6 flex items-center justify-center rounded-md text-xs font-black ${isOutOfStock ? 'opacity-20' : (isDark ? 'bg-white/[0.08] text-white/60' : 'bg-slate-100 text-slate-600')}`}
                                 >
                                     <Minus size={12} strokeWidth={3} />
                                 </button>
-                                <span className={`text-xs font-black w-5 text-center ${isDark ? 'text-white/70' : 'text-slate-700'}`}>{quantity}</span>
+                                <span className={`text-xs font-black w-5 text-center ${isOutOfStock ? 'opacity-20' : (isDark ? 'text-white/70' : 'text-slate-700')}`}>{quantity}</span>
                                 <button
                                     onClick={() => setQuantity(quantity + 1)}
-                                    className={`w-6 h-6 flex items-center justify-center rounded-md text-xs font-black ${isDark ? 'bg-white/[0.08] text-white/60' : 'bg-slate-100 text-slate-600'}`}
+                                    disabled={isOutOfStock}
+                                    className={`w-6 h-6 flex items-center justify-center rounded-md text-xs font-black ${isOutOfStock ? 'opacity-20' : (isDark ? 'bg-white/[0.08] text-white/60' : 'bg-slate-100 text-slate-600')}`}
                                 >
                                     <Plus size={12} strokeWidth={3} />
                                 </button>
@@ -743,10 +757,10 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={addToCart}
-                        disabled={loading}
+                        disabled={loading || isOutOfStock}
                         animate={{
                             x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0,
-                            backgroundColor: isStoreOpen ? (addedToCart ? '#10b981' : primaryColor) : '#ef4444'
+                            backgroundColor: isOutOfStock ? '#64748b' : (isStoreOpen ? (addedToCart ? '#10b981' : primaryColor) : '#ef4444')
                         }}
                         transition={{
                             x: { type: 'keyframes', duration: 0.4 },
@@ -760,7 +774,12 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                         }}
                     >
                         <AnimatePresence mode="wait">
-                            {!isStoreOpen ? (
+                            {isOutOfStock ? (
+                                <motion.div key="outofstock" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5">
+                                    <Package size={18} strokeWidth={2.5} />
+                                    <span>SOLD OUT</span>
+                                </motion.div>
+                            ) : !isStoreOpen ? (
                                 <motion.div key="closed" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5">
                                     <Store size={18} strokeWidth={2.5} />
                                     <span>CLOSED</span>
@@ -787,14 +806,18 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={buyNow}
-                        disabled={buyNowLoading}
-                        className={`h-12 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all border-2 shrink-0 ${isDark
-                                ? 'bg-white/[0.08] text-white border-white/10'
-                                : 'bg-slate-900 text-white border-slate-900'
+                        disabled={buyNowLoading || isOutOfStock}
+                        className={`h-12 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all border-2 shrink-0 ${isOutOfStock
+                                ? 'bg-slate-700/50 text-white/50 border-transparent'
+                                : (isDark
+                                    ? 'bg-white/[0.08] text-white border-white/10'
+                                    : 'bg-slate-900 text-white border-slate-900')
                             }`}
                     >
                         {buyNowLoading ? (
                             <Loader2 className="animate-spin" size={15} />
+                        ) : isOutOfStock ? (
+                            <><Package size={15} strokeWidth={2.5} /><span>Out</span></>
                         ) : (
                             <><CreditCard size={15} strokeWidth={2.5} /><span>Buy Now</span></>
                         )}

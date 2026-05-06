@@ -12,6 +12,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
 
 export default async function MerchantStorefrontPage({ params }) {
     const { merchantSlug } = await params;
+    console.log("---- DEBUG: Hitting MerchantStorefrontPage with slug:", merchantSlug);
     const supabase = await createServerSupabaseClient();
     
     const { data: { user } } = await supabase.auth.getUser();
@@ -20,7 +21,10 @@ export default async function MerchantStorefrontPage({ params }) {
     let mergedInventory = [];
     let customerResult = { data: null };
 
-    if (merchantSlug === 'official') {
+    const normalizedSlug = merchantSlug?.toLowerCase();
+
+    if (normalizedSlug === 'official') {
+        console.log("---- DEBUG: Handling 'official' branch");
         const [platformProductsResult, officialCustomerResult, platformSettingsResult] = await Promise.all([
             supabase
                 .from('shopping_products')
@@ -70,6 +74,7 @@ export default async function MerchantStorefrontPage({ params }) {
             shopping_products: p
         }));
     } else {
+        console.log("---- DEBUG: Handling custom merchant branch with slug:", merchantSlug);
         // If the segment looks like a UUID, this is a legacy URL — redirect to slug-based URL
         if (UUID_REGEX.test(merchantSlug)) {
             const { data: legacyMerchant } = await supabase
@@ -100,6 +105,7 @@ export default async function MerchantStorefrontPage({ params }) {
             .single();
 
         if (merchantError || !fetchedMerchant) {
+            console.error("---- DEBUG: Merchant Error:", merchantError, "fetchedMerchant:", fetchedMerchant);
             return (
                 <div className="p-20 text-center">
                     <h1 className="text-3xl font-bold text-red-500">Merchant Not Found</h1>

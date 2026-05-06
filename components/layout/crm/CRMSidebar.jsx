@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, BarChart2, Briefcase, X } from 'lucide-react';
+import { Home, Users, BarChart2, Briefcase, X, UserCircle, Settings } from 'lucide-react';
 
 export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
     const pathname = usePathname();
@@ -18,6 +18,9 @@ export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
     if (isManager) {
         menuItems.push({ name: 'Reports', icon: BarChart2, path: '/crm/reports' });
     }
+
+    menuItems.push({ name: 'My Profile', icon: UserCircle, path: '/crm/profile' });
+    menuItems.push({ name: 'Settings', icon: Settings, path: '/crm/settings' });
 
     return (
         <>

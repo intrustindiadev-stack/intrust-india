@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Briefcase } from 'lucide-react';
+import { Home, Users, Briefcase, UserCircle, Settings } from 'lucide-react';
 
 export default function CRMBottomNav({ isSidebarOpen }) {
     const pathname = usePathname();
@@ -11,6 +11,8 @@ export default function CRMBottomNav({ isSidebarOpen }) {
         { label: 'Home', icon: Home, href: '/crm' },
         { label: 'Leads', icon: Users, href: '/crm/leads' },
         { label: 'Pipeline', icon: Briefcase, href: '/crm/pipeline' },
+        { label: 'Profile', icon: UserCircle, href: '/crm/profile' },
+        { label: 'Settings', icon: Settings, href: '/crm/settings' },
     ];
 
     if (isSidebarOpen) return null;

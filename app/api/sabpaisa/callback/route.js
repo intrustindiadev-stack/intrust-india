@@ -817,6 +817,20 @@ export async function POST(request) {
                         .eq('id', existingTxn.user_id);
 
                     if (roleUpdateErr) throw roleUpdateErr;
+
+                    // 2.5 Distribute Referral Reward
+                    try {
+                        const { data: rewardData, error: rewardError } = await supabaseAdmin.rpc('distribute_merchant_referral_reward', {
+                            p_new_merchant_id: merchantId
+                        });
+                        if (rewardError) {
+                            console.error('[Callback] Error distributing merchant referral reward:', rewardError);
+                        } else {
+                            console.log('[Callback] Merchant referral reward result:', rewardData);
+                        }
+                    } catch (err) {
+                        console.error('[Callback] Unexpected error distributing merchant referral reward:', err);
+                    }
                 }
 
                 // 3. Notify Success

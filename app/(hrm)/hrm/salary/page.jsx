@@ -20,8 +20,7 @@ function ProcessModal({ record, onClose, onSave }) {
     const handleProcess = async () => {
         setSaving(true);
         try {
-            const { error } = await supabase.from('salary_records').upsert({
-                id: record?.salary_id,
+            const payload = {
                 employee_id: record.id,
                 month: new Date().getMonth() + 1,
                 year: new Date().getFullYear(),
@@ -29,7 +28,10 @@ function ProcessModal({ record, onClose, onSave }) {
                 net_salary: net,
                 status: 'processed',
                 processed_at: new Date().toISOString(),
-            });
+            };
+            if (record?.salary_id) payload.id = record.salary_id;
+
+            const { error } = await supabase.from('salary_records').upsert(payload, { onConflict: 'employee_id,month,year' });
             if (error) throw error;
             toast.success(`Salary processed for ${record.full_name}`);
             onSave(record.id, { ...form, net_salary: net });

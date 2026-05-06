@@ -364,7 +364,7 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
                                 </span>
                             )}
                         </div>
-                        <span className="font-bold text-amber-600 dark:text-amber-400">−₹{(orderCommission / 100).toLocaleString("en-IN")}</span>
+                        <span className="font-bold text-amber-600 dark:text-amber-400">₹{(orderCommission / 100).toLocaleString("en-IN")}</span>
                     </div>
                     <div className="pt-3 mt-1 border-t border-slate-100 dark:border-white/5 flex justify-between items-center">
                         <div>

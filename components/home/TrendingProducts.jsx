@@ -168,18 +168,32 @@ export default function TrendingProducts() {
             try {
                 const { data, error } = await supabase
                     .from('shopping_products')
-                    .select('id, title, category, suggested_retail_price_paise, mrp_paise, product_images, slug')
+                    .select('id, title, category, suggested_retail_price_paise, mrp_paise, product_images, slug, admin_stock')
                     .eq('is_active', true)
                     .is('deleted_at', null)
                     .not('product_images', 'is', null)
                     .order('created_at', { ascending: false })
-                    .limit(8);
+                    .limit(16);
 
                 if (error || !data?.length) return;
 
-                // Filter to only those with at least one image
-                const withImages = data.filter(p => p.product_images?.length > 0);
-                if (withImages.length >= 4) setProducts(withImages);
+                // 2. Fetch active inventory for these product IDs
+                const productIds = data.map(p => p.id);
+                const { data: inventoryData } = await supabase
+                    .from('merchant_inventory')
+                    .select('product_id')
+                    .in('product_id', productIds)
+                    .eq('is_active', true)
+                    .gt('stock_quantity', 0);
+
+                const activeInventorySet = new Set(inventoryData?.map(i => i.product_id) || []);
+
+                // 3. Filter products: keep if p.product_images exists AND (admin_stock > 0 OR has active inventory)
+                const filtered = data
+                    .filter(p => p.product_images?.length > 0 && (p.admin_stock > 0 || activeInventorySet.has(p.id)))
+                    .slice(0, 8);
+
+                if (filtered.length >= 4) setProducts(filtered);
             } catch {
                 // silently fall back to static data
             } finally {

@@ -197,7 +197,7 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                                 </span>
                                             )}
                                         </div>
-                                        <span className="font-bold text-amber-600 dark:text-amber-500/90">−₹{(orderCommission / 100).toLocaleString("en-IN")}</span>
+                                        <span className="font-bold text-amber-600 dark:text-amber-500/90">₹{(orderCommission / 100).toLocaleString("en-IN")}</span>
                                     </div>
                                     <div className="pt-4 mt-2 border-t border-slate-100 dark:border-white/[0.05] flex justify-between items-center">
                                         <div>
@@ -533,7 +533,7 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                     {[
                         { label: "Gross Revenue", value: (stats.totalRevenue || 0) / 100, icon: DollarSign, color: "text-slate-900 dark:text-white", bg: "bg-slate-100 dark:bg-white/10", border: "border-slate-200 dark:border-white/10", sub: `${stats.totalOrders} total orders` },
                         { label: "Sales Profit", value: (stats.totalGrossProfit || 0) / 100, icon: TrendingUp, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10 dark:bg-blue-500/20", border: "border-blue-200 dark:border-blue-500/30", sub: "Earned from products" },
-                        { label: "Platform Fee", value: -(stats.totalCommission || 0) / 100, icon: TrendingDown, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-500/20", border: "border-amber-200 dark:border-amber-500/30", sub: stats.totalRevenue > 0 ? `${((stats.totalCommission / stats.totalRevenue) * 100).toFixed(1)}% effective rate` : "Platform commission" },
+                        { label: "Platform Fee", value: (stats.totalCommission || 0) / 100, icon: TrendingDown, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-500/20", border: "border-amber-200 dark:border-amber-500/30", sub: stats.totalRevenue > 0 ? `${((stats.totalCommission / stats.totalRevenue) * 100).toFixed(1)}% effective rate` : "Platform commission" },
                         { label: "Net Earnings", value: (stats.totalNetProfit || 0) / 100, icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10 dark:bg-emerald-500/20", border: "border-emerald-200 dark:border-emerald-500/40", sub: `${stats.deliveredOrders} orders settled` },
                     ].map((s, idx) => (
                         <motion.div

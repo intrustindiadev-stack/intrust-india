@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Building2, FileText, Upload, CheckCircle, ArrowRight, Shield,
-    Loader2, ChevronLeft, Store, TrendingUp, Users, Check, Sparkles, CreditCard, Banknote, X, Home
+    Loader2, ChevronLeft, Store, TrendingUp, Users, Check, Sparkles, CreditCard, Banknote, X, Home, Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
@@ -93,6 +93,7 @@ export default function MerchantApplyPage() {
         businessName: '', gstNumber: '', ownerName: '',
         phone: '', email: '', address: '',
         bankAccount: '', ifscCode: '', panCard: '',
+        merchantReferralCode: '',
     });
 
     const [error, setError] = useState('');
@@ -450,6 +451,12 @@ export default function MerchantApplyPage() {
                                         <SmoothInput label="Email Address" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} icon={Building2} />
                                     </div>
                                     <SmoothTextArea label="Registered Address" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
+                                    <SmoothInput 
+                                        label="Referral Code (Optional)" 
+                                        value={formData.merchantReferralCode} 
+                                        onChange={e => setFormData({ ...formData, merchantReferralCode: e.target.value })} 
+                                        icon={Share2} 
+                                    />
                                 </div>
                             </motion.div>
                         )}

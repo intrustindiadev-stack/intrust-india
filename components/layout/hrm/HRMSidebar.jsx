@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Calendar, Clock, DollarSign, BookOpen, Shield, X, Briefcase } from 'lucide-react';
+import { Home, Users, Calendar, Clock, DollarSign, BookOpen, Shield, X, Briefcase, UserCircle, Settings } from 'lucide-react';
 
 export default function HRMSidebar({ isOpen, setIsOpen, userProfile }) {
     const pathname = usePathname();
@@ -17,6 +17,8 @@ export default function HRMSidebar({ isOpen, setIsOpen, userProfile }) {
         { name: 'Salary', icon: DollarSign, path: '/hrm/salary' },
         { name: 'Training', icon: BookOpen, path: '/hrm/training' },
         { name: 'Audit Logs', icon: Shield, path: '/hrm/audit' },
+        { name: 'My Profile', icon: UserCircle, path: '/hrm/profile' },
+        { name: 'Settings', icon: Settings, path: '/hrm/settings' },
     ];
 
     return (

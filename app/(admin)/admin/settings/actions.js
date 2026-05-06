@@ -69,6 +69,7 @@ export async function getPricingSettings() {
                 'merchant_sub_price_12m',
                 'auto_mode_price_first',
                 'auto_mode_price_renewal',
+                'merchant_referral_prize_paise',
             ]);
 
         if (error) {
@@ -81,14 +82,15 @@ export async function getPricingSettings() {
         }, {});
 
         return {
-            sub1m:        Number(map['merchant_sub_price_1m'])   || 499,
-            sub6m:        Number(map['merchant_sub_price_6m'])   || 1999,
-            sub12m:       Number(map['merchant_sub_price_12m'])  || 3999,
-            autoFirst:    Number(map['auto_mode_price_first'])   || 999,
-            autoRenewal:  Number(map['auto_mode_price_renewal']) || 1999,
+            sub1m:                 Number(map['merchant_sub_price_1m'])   || 499,
+            sub6m:                 Number(map['merchant_sub_price_6m'])   || 1999,
+            sub12m:                Number(map['merchant_sub_price_12m'])  || 3999,
+            autoFirst:             Number(map['auto_mode_price_first'])   || 999,
+            autoRenewal:           Number(map['auto_mode_price_renewal']) || 1999,
+            merchantReferralPrize: Number(map['merchant_referral_prize_paise']) / 100 || 500,
         };
     } catch (err) {
         console.error('getPricingSettings caught error:', err);
-        return { sub1m: 499, sub6m: 1999, sub12m: 3999, autoFirst: 999, autoRenewal: 1999 };
+        return { sub1m: 499, sub6m: 1999, sub12m: 3999, autoFirst: 999, autoRenewal: 1999, merchantReferralPrize: 500 };
     }
 }

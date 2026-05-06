@@ -17,7 +17,8 @@ import {
     Store,
     CreditCard,
     Clock,
-    ShoppingBag
+    ShoppingBag,
+    Network
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -30,6 +31,7 @@ const navigation = [
     { name: 'NFC Card', href: '/merchant/nfc-service', icon: CreditCard },
     { name: 'Growth Portfolio', href: '/merchant/lockin', icon: Clock },
     { name: 'Wallet', href: '/merchant/wallet', icon: Wallet },
+    { name: 'My Network', href: '/merchant/referrals', icon: Network },
     { name: 'Withdrawals', href: '/merchant/wallet/withdrawals', icon: Wallet },
     { name: 'Analytics', href: '/merchant/analytics', icon: TrendingUp },
     { name: 'Profile', href: '/merchant/profile', icon: User },

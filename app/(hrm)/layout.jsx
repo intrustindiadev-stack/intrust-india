@@ -18,7 +18,7 @@ export default async function HRMRootLayout({ children }) {
         .eq('id', user.id)
         .single();
 
-    if (!['hr_manager', 'admin', 'super_admin'].includes(profile?.role)) {
+    if (!['hr', 'hr_manager', 'admin', 'super_admin'].includes(profile?.role)) {
         return <UnauthorizedRedirect to="/" message="HR Admin Access Required. Redirecting..." />;
     }
 

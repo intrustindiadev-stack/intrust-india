@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 // ── Layout & UI ──
 import Navbar from '@/components/layout/Navbar';
@@ -22,7 +23,7 @@ import RecentShoppingOrders from '@/components/customer/RecentShoppingOrders';
 import AccountSummaryCard from '@/components/customer/profile/AccountSummaryCard';
 
 // ── Icons & Utils ──
-import { Check, X, Star, Gift, ArrowRight, Trophy, MessageCircle } from 'lucide-react';
+import { Star, Gift, ArrowRight, Trophy, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { createClient } from '@/lib/supabaseClient';
 import LiveButton from '@/components/merchant/LiveButton';
@@ -54,25 +55,6 @@ function ProfileSkeleton() {
     );
 }
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
-function Toast({ msg, type }) {
-    return (
-        <AnimatePresence>
-            {msg && (
-                <motion.div
-                    initial={{ opacity: 0, y: -20, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -20, scale: 0.9 }}
-                    className={`fixed top-24 right-6 z-[100] px-6 py-3.5 rounded-2xl shadow-2xl text-white text-sm font-black flex items-center gap-3 backdrop-blur-xl border uppercase tracking-widest ${type === 'error' ? 'bg-red-500/90 border-red-400/20' : 'bg-green-600/90 border-green-500/20'
-                        }`}
-                >
-                    {type === 'error' ? <X size={16} /> : <Check size={16} />}
-                    {msg}
-                </motion.div>
-            )}
-        </AnimatePresence>
-    );
-}
 
 function CustomerProfileContent() {
     const router = useRouter();
@@ -87,11 +69,9 @@ function CustomerProfileContent() {
     const [totalSavedPaise, setTotalSavedPaise] = useState(0);
     const [graphData, setGraphData] = useState([]);
     const [profileLoading, setProfileLoading] = useState(true);
-    const [toast, setToast] = useState({ msg: '', type: 'success' });
-
     const showToast = useCallback((msg, type = 'success') => {
-        setToast({ msg, type });
-        setTimeout(() => setToast({ msg: '', type: 'success' }), 3500);
+        if (type === 'error') toast.error(msg);
+        else toast.success(msg);
     }, []);
 
     // ── Handle URL parameters for Identity Linking ──────────────────────────────
@@ -244,7 +224,6 @@ function CustomerProfileContent() {
         <div className="min-h-screen relative bg-gray-50 dark:bg-gray-950 transition-colors duration-700 selection:bg-blue-500/20 font-[family-name:var(--font-outfit)]">
             <ParticleBackground />
             <Navbar />
-            <Toast msg={toast.msg} type={toast.type} />
 
             {/* KYC auto-popup */}
             <KYCPopup
