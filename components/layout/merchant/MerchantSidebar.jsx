@@ -30,6 +30,7 @@ const navigation = [
     { name: 'Store Credits', href: '/merchant/udhari', icon: CreditCard },
     { name: 'NFC Card', href: '/merchant/nfc-service', icon: CreditCard },
     { name: 'Growth Portfolio', href: '/merchant/lockin', icon: Clock },
+    { name: 'Investments Hub', href: '/merchant/investments', icon: TrendingUp },
     { name: 'Wallet', href: '/merchant/wallet', icon: Wallet },
     { name: 'My Network', href: '/merchant/referrals', icon: Network },
     { name: 'Withdrawals', href: '/merchant/wallet/withdrawals', icon: Wallet },

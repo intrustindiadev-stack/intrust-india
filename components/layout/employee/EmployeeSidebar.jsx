@@ -1,11 +1,43 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, Clock, Calendar, FileText, BookOpen, User, X } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, Clock, Calendar, FileText, BookOpen, User, X, LogOut, Loader2, Shield, Users, LayoutDashboard } from 'lucide-react';
+import { useState } from 'react';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import { createClient } from '@/lib/supabaseClient';
 
 export default function EmployeeSidebar({ isOpen, setIsOpen, userProfile }) {
     const pathname = usePathname();
+    const router = useRouter();
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+    const handleLogout = () => {
+        setShowLogoutModal(true);
+    };
+
+    const confirmLogout = async () => {
+        setShowLogoutModal(false);
+        setIsLoggingOut(true);
+        try {
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            router.push('/login');
+        } catch (error) {
+            console.error('Logout error:', error);
+            window.location.href = '/login';
+        } finally {
+            setIsLoggingOut(false);
+        }
+    };
+
+    const getInitials = (name) => {
+        if (!name) return 'U';
+        return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    };
+
+    const userName = userProfile?.full_name || 'Employee';
 
     const menuItems = [
         { name: 'Dashboard', icon: Home, path: '/employee' },
@@ -15,6 +47,17 @@ export default function EmployeeSidebar({ isOpen, setIsOpen, userProfile }) {
         { name: 'Training', icon: BookOpen, path: '/employee/training' },
         { name: 'My Profile', icon: User, path: '/employee/profile' },
     ];
+
+    const role = userProfile?.role;
+    if (['admin', 'super_admin'].includes(role)) {
+        menuItems.push({ name: 'Admin Panel', icon: Shield, path: '/admin' });
+    }
+    if (['hr_manager', 'admin', 'super_admin'].includes(role)) {
+        menuItems.push({ name: 'HRM Panel', icon: Users, path: '/hrm' });
+    }
+    if (['sales_exec', 'sales_manager', 'admin', 'super_admin'].includes(role)) {
+        menuItems.push({ name: 'CRM Panel', icon: LayoutDashboard, path: '/crm' });
+    }
 
     return (
         <>
@@ -77,7 +120,47 @@ export default function EmployeeSidebar({ isOpen, setIsOpen, userProfile }) {
                         );
                     })}
                 </div>
+
+                {/* User Profile Footer */}
+                <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-200/60 shadow-sm">
+                            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold border-2 border-white overflow-hidden shadow-sm">
+                                {userProfile?.avatar_url ? (
+                                    <img src={userProfile.avatar_url} alt={userName} className="w-full h-full object-cover" />
+                                ) : (
+                                    getInitials(userName)
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="text-gray-900 font-bold text-sm truncate">{userName}</div>
+                                <div className="text-gray-500 text-xs font-medium truncate flex items-center gap-1">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {userProfile?.email || 'Online'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleLogout}
+                            disabled={isLoggingOut}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-gray-500 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-all font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            {isLoggingOut ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}
+                            {isLoggingOut ? 'Logging out...' : 'Logout'}
+                        </button>
+                    </div>
+                </div>
             </aside>
+
+            <ConfirmModal
+                isOpen={showLogoutModal}
+                onConfirm={confirmLogout}
+                onCancel={() => setShowLogoutModal(false)}
+                title="Confirm Logout"
+                message="Are you sure you want to log out?"
+                confirmLabel="Logout"
+                cancelLabel="Cancel"
+            />
         </>
     );
 }

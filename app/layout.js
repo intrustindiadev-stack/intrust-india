@@ -8,6 +8,7 @@ import { Toaster } from 'react-hot-toast';
 import { ConfettiProvider } from '@/components/ui/ConfettiProvider';
 import { ChatProvider } from '@/components/chat/ChatProvider';
 import GlobalChat from '@/components/chat/GlobalChat';
+import ErrorBoundary from '@/components/error/ErrorBoundary';
 
 
 const inter = Inter({
@@ -135,7 +136,9 @@ export default function RootLayout({ children }) {
             <AuthProvider>
               <ChatProvider>
                 <StructuredData />
-                {children}
+                <ErrorBoundary>
+                  {children}
+                </ErrorBoundary>
                 <GlobalChat />
                 <Toaster position="top-center" reverseOrder={false} />
                 <PWAInstallPrompt />
