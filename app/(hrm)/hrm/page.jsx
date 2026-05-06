@@ -10,6 +10,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
+import Skeleton from '@/components/ui/Skeleton';
+import EmptyState from '@/components/ui/EmptyState';
 
 function StatCard({ label, value, icon: Icon, color, subValue, trend, delay = 0 }) {
     const COLOR_VARIANTS = {
@@ -104,10 +106,16 @@ export default function HRMDashboard() {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard label="Total Force" value={stats.employees} color="blue" subValue="Active Personnel" trend="+2.4%" delay={0} icon={Users} />
-                <StatCard label="Attendance" value={stats.presentToday} color="emerald" subValue="Clocked in today" trend="98%" delay={0.1} icon={UserCheck} />
-                <StatCard label="Pending Leaves" value={stats.pendingLeaves} color="amber" subValue="Action Required" delay={0.2} icon={Calendar} />
-                <StatCard label="New Leads" value={stats.newApplications} color="violet" subValue="Talent Pipeline" trend="+12" delay={0.3} icon={Briefcase} />
+                {isLoading ? (
+                    [...Array(4)].map((_, i) => <Skeleton key={i} className="h-44" />)
+                ) : (
+                    <>
+                        <StatCard label="Total Force" value={stats.employees} color="blue" subValue="Active Personnel" trend="+2.4%" delay={0} icon={Users} />
+                        <StatCard label="Attendance" value={stats.presentToday} color="emerald" subValue="Clocked in today" trend="98%" delay={0.1} icon={UserCheck} />
+                        <StatCard label="Pending Leaves" value={stats.pendingLeaves} color="amber" subValue="Action Required" delay={0.2} icon={Calendar} />
+                        <StatCard label="New Leads" value={stats.newApplications} color="violet" subValue="Talent Pipeline" trend="+12" delay={0.3} icon={Briefcase} />
+                    </>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -124,7 +132,9 @@ export default function HRMDashboard() {
                             </Link>
                         </div>
                         <div className="p-2">
-                            {pendingLeaves.length > 0 ? (
+                            {isLoading ? (
+                                [...Array(3)].map((_, i) => <div key={i} className="p-4 flex items-center gap-4"><Skeleton className="w-12 h-12 rounded-xl" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-3 w-1/4" /></div></div>)
+                            ) : pendingLeaves.length > 0 ? (
                                 <div className="space-y-1">
                                     {pendingLeaves.map((leave) => (
                                         <div key={leave.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-900/50 rounded-2xl transition-all group">
@@ -147,12 +157,7 @@ export default function HRMDashboard() {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="p-12 text-center">
-                                    <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <CheckCircle2 size={24} className="text-gray-300" />
-                                    </div>
-                                    <p className="text-sm font-bold text-gray-400">All caught up! No pending requests.</p>
-                                </div>
+                                <EmptyState icon={CheckCircle2} title="All caught up!" description="No pending leave requests to review." className="m-4 border-none bg-transparent" />
                             )}
                         </div>
                     </div>
@@ -193,28 +198,28 @@ export default function HRMDashboard() {
                     </div>
 
                     <div className="space-y-8 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-gray-100 dark:before:bg-gray-700">
-                        {recentApps.map((app, i) => (
-                            <div key={app.id} className="relative pl-10">
-                                <div className={`absolute left-0 top-1.5 w-5 h-5 rounded-full border-4 border-white dark:border-gray-800 shadow-sm ${app.status === 'pending' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                                <div className="space-y-1">
-                                    <p className="text-sm font-black text-gray-900 dark:text-white">{app.full_name}</p>
-                                    <p className="text-xs font-bold text-gray-400">Applied for {app.role_category}</p>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className="text-[10px] font-black bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded text-gray-500 uppercase tracking-widest">
-                                            {app.status}
-                                        </span>
-                                        <span className="text-[10px] font-bold text-gray-300">
-                                            {new Date(app.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
+                        {isLoading ? (
+                            [...Array(4)].map((_, i) => <div key={i} className="relative pl-10 space-y-2"><div className="absolute left-0 top-1.5 w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-700" /><Skeleton className="h-4 w-1/2" /><Skeleton className="h-3 w-1/3" /></div>)
+                        ) : recentApps.length > 0 ? (
+                            recentApps.map((app, i) => (
+                                <div key={app.id} className="relative pl-10">
+                                    <div className={`absolute left-0 top-1.5 w-5 h-5 rounded-full border-4 border-white dark:border-gray-800 shadow-sm ${app.status === 'pending' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-black text-gray-900 dark:text-white">{app.full_name}</p>
+                                        <p className="text-xs font-bold text-gray-400">Applied for {app.role_category}</p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <span className="text-[10px] font-black bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded text-gray-500 uppercase tracking-widest">
+                                                {app.status}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-gray-300">
+                                                {new Date(app.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-
-                        {recentApps.length === 0 && (
-                            <div className="text-center py-12">
-                                <p className="text-sm font-bold text-gray-300 italic">No recent activity detected.</p>
-                            </div>
+                            ))
+                        ) : (
+                            <EmptyState icon={Zap} title="No recent activity" description="The live feed is currently quiet." className="py-8 border-none bg-transparent" />
                         )}
                     </div>
 

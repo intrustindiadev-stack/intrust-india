@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { motion } from 'framer-motion';
-import { Users, Briefcase, TrendingUp, Clock, ArrowRight, Plus, Phone, Mail, Zap, Target, CheckCircle, Calendar, DollarSign, Activity } from 'lucide-react';
+import { Users, Briefcase, TrendingUp, Clock, ArrowRight, Plus, Phone, Mail, Zap, Target, CheckCircle, Calendar, DollarSign, Activity, FileText } from 'lucide-react';
+import Skeleton from '@/components/ui/Skeleton';
+import EmptyState from '@/components/ui/EmptyState';
 import Link from 'next/link';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 
@@ -140,10 +142,16 @@ export default function CRMDashboard() {
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                <StatCard label="Pipeline Value" value={isLoading ? '…' : formatCurrency(stats.expectedRevenue)} icon={DollarSign} gradient="from-slate-800 to-slate-900" delay={0} trend="+12%" />
-                <StatCard label="Active Pipeline" value={isLoading ? '…' : stats.activePipeline} icon={Target} gradient="from-indigo-600 to-violet-600" delay={0.1} />
-                <StatCard label="Conversion" value={isLoading ? '…' : stats.convRate} icon={TrendingUp} gradient="from-emerald-500 to-teal-600" delay={0.2} trend="+2%" />
-                <StatCard label="Follow-ups" value={isLoading ? '…' : stats.followUps} icon={Clock} gradient="from-amber-500 to-orange-500" delay={0.3} />
+                {isLoading ? (
+                    [...Array(4)].map((_, i) => <Skeleton key={i} className="h-40" />)
+                ) : (
+                    <>
+                        <StatCard label="Pipeline Value" value={formatCurrency(stats.expectedRevenue)} icon={DollarSign} gradient="from-slate-800 to-slate-900" delay={0} trend="+12%" />
+                        <StatCard label="Active Pipeline" value={stats.activePipeline} icon={Target} gradient="from-indigo-600 to-violet-600" delay={0.1} />
+                        <StatCard label="Conversion" value={isLoading ? '…' : stats.convRate} icon={TrendingUp} gradient="from-emerald-500 to-teal-600" delay={0.2} trend="+2%" />
+                        <StatCard label="Follow-ups" value={isLoading ? '…' : stats.followUps} icon={Clock} gradient="from-amber-500 to-orange-500" delay={0.3} />
+                    </>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
@@ -160,7 +168,7 @@ export default function CRMDashboard() {
                         </div>
                         <div className="h-64 w-full">
                             {isLoading ? (
-                                <div className="w-full h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>
+                                <Skeleton className="w-full h-full" />
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -192,12 +200,9 @@ export default function CRMDashboard() {
                         </div>
                         <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
                             {isLoading ? (
-                                [...Array(4)].map((_, i) => <div key={i} className="p-4 h-16 animate-pulse bg-gray-50/50 dark:bg-gray-800" />)
+                                [...Array(4)].map((_, i) => <div key={i} className="p-5 flex items-center gap-4"><Skeleton className="w-10 h-10 rounded-xl" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-3 w-1/4" /></div></div>)
                             ) : leads.length === 0 ? (
-                                <div className="p-12 text-center text-gray-400 text-sm">
-                                    <Briefcase size={32} className="mx-auto mb-3 opacity-30" />
-                                    No leads yet. Start by adding one!
-                                </div>
+                                <EmptyState icon={Briefcase} title="No leads yet" description="Your pipeline is currently empty. Start by adding your first lead." className="m-4 border-none bg-transparent" />
                             ) : leads.map(lead => (
                                 <Link
                                     key={lead.id}
@@ -242,12 +247,9 @@ export default function CRMDashboard() {
                         
                         <div className="space-y-3 relative z-10">
                             {isLoading ? (
-                                [...Array(3)].map((_, i) => <div key={i} className="h-16 animate-pulse bg-gray-50 dark:bg-gray-700/50 rounded-xl" />)
+                                [...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)
                             ) : tasks.length === 0 ? (
-                                <div className="text-center py-6 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-                                    <CheckCircle size={24} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-                                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400">All caught up!</p>
-                                </div>
+                                <EmptyState icon={CheckCircle} title="All caught up!" description="No pending tasks for now." className="py-8 border-none bg-transparent" />
                             ) : (
                                 tasks.map(task => (
                                     <div key={task.id} className="p-3.5 bg-gray-50 dark:bg-gray-700/30 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-amber-200 dark:hover:border-amber-900/50 transition-colors group cursor-pointer">

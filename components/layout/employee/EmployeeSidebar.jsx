@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Clock, Calendar, FileText, BookOpen, User, X, LogOut, Loader2 } from 'lucide-react';
+import { Home, Clock, Calendar, FileText, BookOpen, User, X, LogOut, Loader2, Shield, Users, LayoutDashboard } from 'lucide-react';
 import { useState } from 'react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { createClient } from '@/lib/supabaseClient';
@@ -47,6 +47,17 @@ export default function EmployeeSidebar({ isOpen, setIsOpen, userProfile }) {
         { name: 'Training', icon: BookOpen, path: '/employee/training' },
         { name: 'My Profile', icon: User, path: '/employee/profile' },
     ];
+
+    const role = userProfile?.role;
+    if (['admin', 'super_admin'].includes(role)) {
+        menuItems.push({ name: 'Admin Panel', icon: Shield, path: '/admin' });
+    }
+    if (['hr_manager', 'admin', 'super_admin'].includes(role)) {
+        menuItems.push({ name: 'HRM Panel', icon: Users, path: '/hrm' });
+    }
+    if (['sales_exec', 'sales_manager', 'admin', 'super_admin'].includes(role)) {
+        menuItems.push({ name: 'CRM Panel', icon: LayoutDashboard, path: '/crm' });
+    }
 
     return (
         <>

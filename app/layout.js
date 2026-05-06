@@ -9,6 +9,7 @@ import { ConfettiProvider } from '@/components/ui/ConfettiProvider';
 import { ChatProvider } from '@/components/chat/ChatProvider';
 import ChatBubble from '@/components/chat/ChatBubble';
 import ChatWindow from '@/components/chat/ChatWindow';
+import ErrorBoundary from '@/components/error/ErrorBoundary';
 
 
 const inter = Inter({
@@ -136,7 +137,9 @@ export default function RootLayout({ children }) {
             <AuthProvider>
               <ChatProvider>
                 <StructuredData />
-                {children}
+                <ErrorBoundary>
+                  {children}
+                </ErrorBoundary>
                 <ChatBubble />
                 <ChatWindow />
                 <Toaster position="top-center" reverseOrder={false} />

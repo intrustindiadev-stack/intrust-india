@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Users, BarChart2, Briefcase, X, LogOut, Loader2 } from 'lucide-react';
+import { Home, Users, BarChart2, Briefcase, X, LogOut, Loader2, User } from 'lucide-react';
 import { useState } from 'react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { createClient } from '@/lib/supabaseClient';
@@ -50,6 +50,8 @@ export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
     if (isManager) {
         menuItems.push({ name: 'Reports', icon: BarChart2, path: '/crm/reports' });
     }
+
+    menuItems.push({ name: 'My Portal', icon: User, path: '/employee' });
 
     return (
         <>

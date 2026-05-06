@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Users, Calendar, Clock, DollarSign, BookOpen, Shield, X, Briefcase, LogOut, Loader2 } from 'lucide-react';
+import { Home, Users, Calendar, Clock, DollarSign, BookOpen, Shield, X, Briefcase, LogOut, Loader2, User } from 'lucide-react';
 import { useState } from 'react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { createClient } from '@/lib/supabaseClient';
@@ -49,6 +49,7 @@ export default function HRMSidebar({ isOpen, setIsOpen, userProfile }) {
         { name: 'Salary', icon: DollarSign, path: '/hrm/salary' },
         { name: 'Training', icon: BookOpen, path: '/hrm/training' },
         { name: 'Audit Logs', icon: Shield, path: '/hrm/audit' },
+        { name: 'My Portal', icon: User, path: '/employee' },
     ];
 
     return (

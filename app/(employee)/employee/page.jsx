@@ -1,12 +1,15 @@
 'use client';
 
-import { Clock, Calendar, FileText, CheckCircle2, ChevronRight, Star, Bell, ClipboardList, TrendingUp, Briefcase, User, MapPin, Zap } from 'lucide-react';
+import { Clock, Calendar, FileText, CheckCircle2, ChevronRight, Star, Bell, ClipboardList, TrendingUp, Briefcase, User, MapPin, Zap, Building, Plus, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import Skeleton from '@/components/ui/Skeleton';
+import Breadcrumbs from '@/components/ui/Breadcrumbs';
+import EmptyState from '@/components/ui/EmptyState';
 
 export default function EmployeeDashboard() {
     const { user, profile } = useAuth();
@@ -18,6 +21,7 @@ export default function EmployeeDashboard() {
     const [clocking, setClocking] = useState(false);
     const [latestPayslip, setLatestPayslip] = useState(null);
     const [stats, setStats] = useState({ leavesRemaining: 12, pendingTasks: 4, workingDays: 22 });
+    const [isLoading, setIsLoading] = useState(true);
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -47,6 +51,8 @@ export default function EmployeeDashboard() {
             }
         } catch (err) {
             console.error('Dashboard fetch error:', err);
+        } finally {
+            setIsLoading(false);
         }
     }, [user, today]);
 
@@ -116,6 +122,13 @@ export default function EmployeeDashboard() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-gray-50/30 dark:bg-gray-900/30">
+            {/* Top Bar / Breadcrumbs */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <Breadcrumbs />
+                <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{new Date().toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+            </div>
             
             {/* Dynamic Welcome Hub */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
@@ -207,33 +220,42 @@ export default function EmployeeDashboard() {
 
                 {/* Quick Stats Sidebar */}
                 <div className="space-y-6">
-                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Leave Balance</h3>
-                        <div className="flex items-end justify-between gap-4">
-                            <div>
-                                <p className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">{stats.leavesRemaining}</p>
-                                <p className="text-sm font-bold text-gray-500 mt-1">Days left this year</p>
-                            </div>
-                            <Link href="/employee/leaves" className="p-3 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
-                                <Plus size={20} />
-                            </Link>
-                        </div>
-                    </motion.div>
+                    {isLoading ? (
+                        <>
+                            <Skeleton className="h-44 rounded-[2.5rem]" />
+                            <Skeleton className="h-44 rounded-[2.5rem]" />
+                        </>
+                    ) : (
+                        <>
+                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
+                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Leave Balance</h3>
+                                <div className="flex items-end justify-between gap-4">
+                                    <div>
+                                        <p className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">{stats.leavesRemaining}</p>
+                                        <p className="text-sm font-bold text-gray-500 mt-1">Days left this year</p>
+                                    </div>
+                                    <Link href="/employee/leaves" className="p-3 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                                        <Plus size={20} />
+                                    </Link>
+                                </div>
+                            </motion.div>
 
-                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Team Tasks</h3>
-                        <div className="flex items-end justify-between gap-4">
-                            <div>
-                                <p className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">{stats.pendingTasks}</p>
-                                <p className="text-sm font-bold text-gray-500 mt-1">Pending actions</p>
-                            </div>
-                            <div className="p-3 rounded-2xl bg-violet-50 text-violet-600">
-                                <CheckCircle2 size={20} />
-                            </div>
-                        </div>
-                    </motion.div>
+                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
+                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Team Tasks</h3>
+                                <div className="flex items-end justify-between gap-4">
+                                    <div>
+                                        <p className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">{stats.pendingTasks}</p>
+                                        <p className="text-sm font-bold text-gray-500 mt-1">Pending actions</p>
+                                    </div>
+                                    <div className="p-3 rounded-2xl bg-violet-50 text-violet-600">
+                                        <CheckCircle2 size={20} />
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </>
+                    )}
                 </div>
             </div>
 
