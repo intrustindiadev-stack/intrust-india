@@ -495,6 +495,15 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                             <p className="text-slate-500 dark:text-gray-400 text-sm font-medium pl-1 hidden sm:block">Monitor your commerce performance and manage order fulfillment pipeline.</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
+                            {/* Live Indicator Pill */}
+                            <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md shadow-lg shadow-emerald-500/5 group/pill">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mt-[1px]">LIVE</span>
+                            </div>
+
                             <Link
                                 href="/merchant/shopping/wholesale"
                                 className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-sm font-black text-black transition-all shadow-xl shadow-emerald-500/20 active:scale-95"

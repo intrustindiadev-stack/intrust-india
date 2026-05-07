@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Package, Plus, Minus, Sparkles, Search } from 'lucide-react';
+import { Package, Plus, Minus, Sparkles, Search, ChevronRight, BadgeCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -10,6 +10,125 @@ import Link from 'next/link';
 import MerchantFloatingCart from '@/components/merchant/shopping/MerchantFloatingCart';
 import SuccessAnimation from '@/components/ui/SuccessAnimation';
 import WholesaleProductModal from '@/components/merchant/shopping/WholesaleProductModal';
+
+const PARTNERS = [
+    { name: 'AJIO', color: 'from-slate-900 to-slate-800', text: 'text-white', logo: 'https://cdn.iconscout.com/icon/free/png-256/free-ajio-3521255-2944669.png', desc: 'Fashion Hub', tag: 'Top Tier' },
+    { name: 'NYKAA', color: 'from-rose-500 to-pink-600', text: 'text-white', logo: 'https://upload.wikimedia.org/wikipedia/commons/d/d3/Nykaa_Logo.svg', desc: 'Beauty & Care', tag: 'Popular' },
+    { name: 'TATA CLiQ', color: 'from-red-600 to-rose-700', text: 'text-white', logo: 'https://logos-world.net/wp-content/uploads/2023/07/Tata-CLiQ-Logo.png', desc: 'Lifestyle', tag: 'Luxury' },
+    { name: 'RELIANCE', color: 'from-blue-700 to-indigo-800', text: 'text-white', logo: 'https://upload.wikimedia.org/wikipedia/commons/d/d3/Reliance_Industries_Logo.svg', desc: 'Retail Giant', tag: 'Essential' },
+    { name: 'AMAZON', color: 'from-amber-400 to-orange-500', text: 'text-black', logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg', desc: 'Bulk Sourcing', tag: 'Global' },
+    { name: 'FLIPKART', color: 'from-blue-500 to-sky-600', text: 'text-white', logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg', desc: 'Wholesale', tag: 'Value' },
+];
+
+function PartnerCarousel() {
+    // Duplicate partners for seamless loop
+    const marqueePartners = [...PARTNERS, ...PARTNERS, ...PARTNERS];
+
+    return (
+        <div className="space-y-6 mb-12 mt-2 overflow-hidden">
+            <style jsx>{`
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                
+                @keyframes marquee {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+                .animate-marquee {
+                    display: flex;
+                    width: max-content;
+                    animation: marquee 40s linear infinite;
+                }
+                .animate-marquee:hover {
+                    animation-play-state: paused;
+                }
+            `}</style>
+
+            <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-3">
+                    <div className="w-2 h-8 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-full shadow-lg shadow-blue-500/20" />
+                    <div>
+                        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Global Partners</h2>
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-white/30 uppercase tracking-[0.2em] mt-1">Live Sourcing Network</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div className="relative group">
+                {/* Fade Gradients for Edge Softening */}
+                <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-[#f7f8fa] dark:from-[#080a10] to-transparent z-20 pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[#f7f8fa] dark:from-[#080a10] to-transparent z-20 pointer-events-none" />
+
+                <div className="flex items-center gap-6 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory pb-4">
+                    <div className="animate-marquee hover:pause flex items-center gap-6">
+                        {marqueePartners.map((partner, i) => (
+                            <motion.div
+                                key={`${partner.name}-${i}`}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: (i % PARTNERS.length) * 0.1 }}
+                                whileHover={{ 
+                                    y: -12,
+                                    transition: { duration: 0.4, ease: "easeOut" }
+                                }}
+                                className="flex-shrink-0 group cursor-pointer snap-center"
+                            >
+                                <div className="relative w-[180px] sm:w-[220px] p-7 rounded-[3rem] bg-white dark:bg-[#0c0e16] border border-slate-100 dark:border-white/[0.05] shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] dark:shadow-none dark:hover:bg-white/[0.03] transition-all duration-500 overflow-hidden">
+                                    {/* Premium Gradient Overlay */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-blue-500/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                                    
+                                    {/* Ambient Glow Background */}
+                                    <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-colors" />
+                                    
+                                    {/* Logo Area */}
+                                    <div className="relative mb-6">
+                                        <div className={`w-20 h-20 rounded-[2rem] bg-white dark:bg-white flex items-center justify-center p-4 shadow-2xl shadow-black/10 group-hover:rotate-3 transition-transform duration-500 relative z-10`}>
+                                            <img 
+                                                src={partner.logo} 
+                                                alt={partner.name} 
+                                                className="w-full h-full object-contain"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                                        </div>
+                                        
+                                        <div className="absolute -bottom-1 -right-1 z-20">
+                                            <div className="relative flex h-6 w-6">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-20" />
+                                                <div className="relative bg-emerald-500 w-6 h-6 rounded-full border-[5px] border-white dark:border-[#0c0e16] shadow-xl" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Text Info */}
+                                    <div className="space-y-1.5 relative z-10">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-black text-lg text-slate-900 dark:text-white tracking-tight">{partner.name}</h3>
+                                            <div className="bg-blue-500/10 p-0.5 rounded-md">
+                                                <BadgeCheck size={14} className="text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                        </div>
+                                        <p className="text-[13px] font-bold text-slate-500 dark:text-white/40 tracking-tight leading-tight">{partner.desc}</p>
+                                    </div>
+
+                                    {/* Tag Overlay */}
+                                    <div className="mt-6 pt-6 border-t border-dashed border-slate-100 dark:border-white/5 flex items-center justify-between relative z-10">
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.2em] mb-0.5">Status</span>
+                                            <span className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-wider">{partner.tag}</span>
+                                        </div>
+                                        <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-white/5 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+                                            <Plus size={18} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function WholesaleClient({ products = [], merchant, categories = [] }) {
     const router = useRouter();
@@ -292,6 +411,22 @@ export default function WholesaleClient({ products = [], merchant, categories = 
             />
 
             <div className="space-y-6">
+                {/* Page Header */}
+                <div className="relative group">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                    <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white shadow-xl dark:shadow-none dark:bg-white/[0.02] border border-slate-100 dark:border-white/10 p-8 rounded-3xl backdrop-blur-md">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-blue-500/20 rounded-xl border border-blue-500/30">
+                                    <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <h1 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">Wholesale Hub</h1>
+                            </div>
+                            <p className="text-slate-500 dark:text-gray-400 text-sm font-medium pl-1 hidden sm:block">Source premium inventory from global partners and restock your digital shelves.</p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Products Area */}
                 <div className="space-y-6">
                     {/* Auto Mode Indicator */}
@@ -311,6 +446,9 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                             </div>
                         </motion.div>
                     )}
+
+                    {/* Partner Carousel Area */}
+                    <PartnerCarousel />
 
                     {/* Premium Sticky Search Bar */}
                     <div className="sticky top-[80px] pt-4 sm:pt-8 pb-4 z-[40] bg-[#f8f9fb]/90 dark:bg-[#0b0e14]/90 backdrop-blur-2xl -mx-4 px-4 sm:-mx-8 sm:px-8 transition-all">
