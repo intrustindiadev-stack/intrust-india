@@ -9,6 +9,7 @@ The goal is to provide the client with a professional, human-understandable summ
 3. **"Ironclad" Rewards & Wallet Integration**: Secure, idempotent reward issuance for all payment methods, including wallet-based transactions.
 4. **Optimized Daily User Engagement**: Normalized 50-point daily login rewards with instant, scratch-card-free claiming.
 5. **Premium UI & Visual Modernization**: Design overhaul of Shop and Wholesale interfaces for a premium experience.
+6. **Automated Referral & Network Growth System**: Sophisticated multi-level referral system with automated reward tree building and network-based earnings.
 
 ## Content Specification
 - **Tone**: Professional, value-oriented, and non-technical.

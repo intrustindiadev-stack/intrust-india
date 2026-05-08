@@ -39,6 +39,12 @@ def create_document():
             "update": "Significant design overhaul of the Shop and Wholesale interfaces.",
             "how": "We integrated dynamic brand marquees, interactive rating systems, and high-performance layouts that provide a 'premium mall' feel to the e-commerce experience.",
             "benefit": "Elevates the platform's brand perception to international standards, providing a world-class experience for both buyers and sellers."
+        },
+        {
+            "title": "6. Automated Referral & Network Growth System",
+            "update": "We have implemented a sophisticated multi-level referral system to accelerate organic growth.",
+            "how": "When a new user joins using a referral code, the system automatically builds a 'reward tree,' linking them to their referrer's network. This triggers immediate signup rewards and sets up a structure for long-term network-based earnings.",
+            "benefit": "Encourages organic growth through word-of-mouth, turning existing users into active advocates and rewarding them for building their own communities within the platform."
         }
     ]
     
