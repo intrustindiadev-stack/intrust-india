@@ -9,10 +9,12 @@ const SubscriptionContext = createContext();
 export function SubscriptionProvider({ isSubscribed, merchantData, children }) {
     const [showModal, setShowModal] = useState(false);
     const pathname = usePathname();
+    const isRenewal = merchantData?.subscription_status === 'active' || Boolean(merchantData?.subscription_expires_at);
 
     // Optionally auto-close modal on navigation
     useEffect(() => {
-        setShowModal(false);
+        const timeoutId = window.setTimeout(() => setShowModal(false), 0);
+        return () => window.clearTimeout(timeoutId);
     }, [pathname]);
 
     const performAction = (callback) => {
@@ -34,7 +36,7 @@ export function SubscriptionProvider({ isSubscribed, merchantData, children }) {
                 isOpen={showModal} 
                 onClose={() => setShowModal(false)}
                 merchantData={merchantData}
-                isRenewal={false} 
+                isRenewal={isRenewal} 
             />
         </SubscriptionContext.Provider>
     );

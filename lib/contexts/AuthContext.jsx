@@ -128,7 +128,39 @@ export function AuthProvider({ children }) {
         };
     }, []);
 
-    // Proactive session refresh: prevent auto-logout if tab is left open but inactive for hours
+    // 3. Proactive daily login reward trigger
+    useEffect(() => {
+        if (!user) return;
+
+        const triggerDailyReward = async () => {
+            try {
+                // We use a sessionStorage flag to avoid spamming the API in the same tab session
+                // The API itself has a 24h guard, but this reduces unnecessary network traffic.
+                const today = new Date().toISOString().split('T')[0];
+                const lastTrigger = sessionStorage.getItem('last_daily_reward_trigger');
+
+                if (lastTrigger === today) return;
+
+                console.log('[AUTH-CONTEXT] Triggering daily login reward check...');
+                const response = await fetch('/api/rewards/daily-login', { method: 'POST' });
+                const result = await response.json();
+
+                if (result.success && result.data?.total_distributed > 0) {
+                    console.log('[AUTH-CONTEXT] Daily reward claimed successfully!');
+                    // Optionally refresh profile to show new balance
+                    refreshProfile();
+                }
+                
+                sessionStorage.setItem('last_daily_reward_trigger', today);
+            } catch (err) {
+                console.error('[AUTH-CONTEXT] Failed to trigger daily reward:', err);
+            }
+        };
+
+        triggerDailyReward();
+    }, [user?.id]);
+
+    // 4. Proactive session refresh: prevent auto-logout if tab is left open but inactive for hours
     useEffect(() => {
         if (!user) return;
 

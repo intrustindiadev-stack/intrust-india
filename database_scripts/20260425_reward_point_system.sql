@@ -293,7 +293,7 @@ ON CONFLICT (config_key) DO NOTHING;
 
 INSERT INTO public.reward_configuration (config_key, config_value, config_type, description, is_active)
 VALUES 
-    ('eligibility', '{"require_kyc": true, "min_account_age_days": 0, "min_direct_referrals_for_earnings": 0}', 'eligibility', 'Minimum requirements to earn rewards', true)
+    ('eligibility', '{"require_kyc": true, "min_account_age_days": 0, "min_direct_referrals_for_earnings": 0, "events": {"signup": {"direct_require_kyc": false, "upline_require_kyc": true}, "daily_login": {"direct_require_kyc": false, "upline_require_kyc": true}, "purchase": {"direct_require_kyc": true, "upline_require_kyc": true}, "kyc_complete": {"direct_require_kyc": false, "upline_require_kyc": true}, "merchant_onboard": {"direct_require_kyc": true, "upline_require_kyc": true}, "subscription_renewal": {"direct_require_kyc": true, "upline_require_kyc": true}}}', 'eligibility', 'Minimum requirements to earn rewards', true)
 ON CONFLICT (config_key) DO NOTHING;
 
 -- ============================================================================

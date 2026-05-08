@@ -1,5 +1,6 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { notifyMerchantProductDecision } from '@/lib/notifications/merchantWhatsapp';
 
 export async function POST(request) {
     try {
@@ -103,6 +104,14 @@ export async function POST(request) {
                     reference_id: productId,
                     read: false
                 });
+
+                // WhatsApp Notification
+                notifyMerchantProductDecision({
+                    merchantUserId: targetUserId,
+                    title: existingProduct.title,
+                    decision: 'Approved ✅',
+                    reason: 'Your product is now live on the platform!'
+                });
             }
 
             // Log Action
@@ -143,6 +152,14 @@ export async function POST(request) {
                     reference_type: 'product_rejected',
                     reference_id: productId,
                     read: false
+                });
+
+                // WhatsApp Notification
+                notifyMerchantProductDecision({
+                    merchantUserId: targetUserId,
+                    title: existingProduct.title,
+                    decision: 'Rejected ❌',
+                    reason: rejectionReason || 'Does not meet platform guidelines'
                 });
             }
 

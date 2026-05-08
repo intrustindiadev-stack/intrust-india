@@ -31,3 +31,10 @@ export const CHAT_HIDDEN_PATHS = [
   '/merchant',
   '/employee',
 ];
+
+export const MERCHANT_CHAT_HIDDEN_PATHS = [
+  '/merchant-status/pending',
+  '/merchant-status/rejected',
+  '/merchant-status/suspended',
+  '/merchant-apply',
+];

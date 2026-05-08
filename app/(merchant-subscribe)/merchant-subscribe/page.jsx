@@ -21,7 +21,6 @@ export default async function MerchantSubscribePage() {
     if (merchant.status === 'pending') redirect('/merchant-status/pending');
     if (merchant.status === 'rejected') redirect('/merchant-status/rejected');
     if (merchant.status === 'suspended') redirect('/merchant-status/suspended');
-    if (merchant.subscription_status === 'active') redirect('/merchant/dashboard');
     if (merchant.status !== 'approved') redirect('/merchant-apply');
 
     const { data: profile } = await supabase
@@ -67,7 +66,7 @@ export default async function MerchantSubscribePage() {
                 payerName={profile?.full_name || 'Merchant User'}
                 payerEmail={profile?.email || 'merchant@example.com'}
                 payerMobile={profile?.phone || '9999999999'}
-                isRenewal={merchant.subscription_status === 'active'}
+                isRenewal={merchant.subscription_status === 'active' || Boolean(merchant.subscription_expires_at)}
                 subscriptionExpiresAt={merchant.subscription_expires_at}
                 plans={dynamicPlans}
             />

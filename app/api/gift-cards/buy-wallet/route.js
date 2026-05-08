@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { notifyMerchantGiftCardSold } from '@/lib/notifications/merchantWhatsapp';
+import { logRewardRpcResult } from '@/lib/rewardRpcResult';
 
 export async function POST(request) {
     const correlationId = crypto.randomUUID();
@@ -47,189 +49,106 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Missing couponId' }, { status: 400 });
         }
 
-        // 1. Fetch coupon details
-        const { data: coupon, error: couponError } = await supabaseAdmin
-            .from('coupons')
-            .select('*')
-            .eq('id', couponId)
-            .single();
-
-        if (couponError || !coupon) {
-            return NextResponse.json({ error: 'Coupon not found' }, { status: 404 });
-        }
-
-        if (coupon.status !== 'available') {
-            return NextResponse.json({ error: 'Gift card is no longer available' }, { status: 400 });
-        }
-
-        // Use selling_price_paise (paise) from DB, convert to rupees
-        const purchaseAmount = (coupon.selling_price_paise || coupon.face_value_paise || 0) / 100;
-
-        // 2. Fetch User Wallet
-        const { data: wallet, error: walletError } = await supabaseAdmin
-            .from('customer_wallets')
-            .select('id, balance_paise')
-            .eq('user_id', user.id)
-            .single();
-
-        if (walletError || !wallet) {
-            return NextResponse.json({ error: 'Wallet not found for this user' }, { status: 404 });
-        }
-
-        const purchaseAmountPaise = Math.round(purchaseAmount * 100);
-
-        if (wallet.balance_paise < purchaseAmountPaise) {
-            return NextResponse.json({ error: 'Insufficient wallet balance' }, { status: 400 });
-        }
-
-        // 3. Deduct Balance
-        const newBalancePaise = wallet.balance_paise - purchaseAmountPaise;
-        const { data: updatedWallet, error: deductError } = await supabaseAdmin
-            .from('customer_wallets')
-            .update({ balance_paise: newBalancePaise })
-            .eq('id', wallet.id)
-            .eq('balance_paise', wallet.balance_paise) // Optimistic locking
-            .select()
-            .single();
-
-        if (deductError || !updatedWallet) {
-            return NextResponse.json({ error: 'Failed to deduct wallet balance. Balance may have changed concurrently. Please try again.' }, { status: 409 });
-        }
-
-        // 4. Mark Coupon as Sold & Assign to User
-        const { data: updateData, error: updateCouponError } = await supabaseAdmin
-            .from('coupons')
-            .update({
-                status: 'sold',
-                purchased_by: user.id,
-                purchased_at: new Date().toISOString()
-            })
-            .eq('id', couponId)
-            .eq('status', 'available') // explicit lock guarantee
-            .select('id')
-            .single();
-
-        if (updateCouponError || !updateData) {
-            console.error(JSON.stringify({ correlationId, stage: 'coupon_update', userId, couponId, error: updateCouponError }));
-
-            // Rollback wallet deduction conceptually
-            const { error: rollbackError } = await supabaseAdmin.from('customer_wallets').update({ balance_paise: wallet.balance_paise }).eq('id', wallet.id);
-            if (rollbackError) {
-                console.error(JSON.stringify({ correlationId, stage: 'wallet_rollback_failed', userId, walletId: wallet.id, error: rollbackError, message: 'CRITICAL: Wallet rollback failed after coupon update error.' }));
-                return NextResponse.json({ error: 'Critical failure during recovery. Please contact support.', code: 'ROLLBACK_FAILED', correlationId }, { status: 500 });
+        // 2. Delegate the entire purchase to the atomic RPC.
+        // This RPC locks customer_wallets and coupons rows, performs the debit, marks
+        // the coupon sold, creates the order, writes the ledger row, and returns the
+        // order id and ledger snapshot — all inside a single database transaction so
+        // no compensating rollback is ever needed at the application layer.
+        const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+            'wallet_buy_gift_card',
+            {
+                p_user_id: user.id,
+                p_coupon_id: couponId
             }
-            return NextResponse.json({ error: 'This gift card is no longer available' }, { status: 409 });
+        );
+
+        if (rpcError) {
+            console.error(JSON.stringify({ correlationId, stage: 'wallet_buy_gift_card_rpc', userId, couponId, error: rpcError }));
+            // Translate DB-level guard errors into user-friendly messages
+            if (rpcError.message?.includes('Gift card is not available')) {
+                return NextResponse.json({ error: 'This gift card is no longer available' }, { status: 409 });
+            }
+            if (rpcError.message?.includes('Insufficient wallet balance')) {
+                return NextResponse.json({ error: 'Insufficient wallet balance' }, { status: 400 });
+            }
+            if (rpcError.message?.includes('Wallet not found')) {
+                return NextResponse.json({ error: 'Wallet not found for this user' }, { status: 404 });
+            }
+            return NextResponse.json({ error: 'Failed to process gift card purchase. Please try again.', correlationId }, { status: 500 });
         }
 
-        // 5. Create an order record so it appears on My Gift Cards page
-        const { data: orderData, error: orderError } = await supabaseAdmin
-            .from('orders')
-            .insert({
-                user_id: user.id,
-                merchant_id: coupon.merchant_id,
-                giftcard_id: couponId,
-                amount: purchaseAmountPaise,
-                payment_status: 'paid',
-                created_at: new Date().toISOString()
-            })
-            .select('id')
-            .single();
-
-        if (orderError || !orderData) {
-            console.error(JSON.stringify({ correlationId, stage: 'order_insert', userId, couponId, error: orderError }));
-            // Rollback the coupon status back to 'available'
-            const { error: rollbackCouponError } = await supabaseAdmin.from('coupons').update({
-                status: 'available',
-                purchased_by: null,
-                purchased_at: null
-            }).eq('id', couponId);
-
-            if (rollbackCouponError) {
-                console.error(JSON.stringify({ correlationId, stage: 'coupon_rollback_failed', userId, couponId, error: rollbackCouponError, message: 'CRITICAL: Coupon rollback failed after order insert error.' }));
-                return NextResponse.json({ error: 'Critical failure during recovery (coupon). Please contact support.', code: 'ROLLBACK_FAILED', correlationId }, { status: 500 });
-            }
-
-            // Refund the wallet
-            const { error: rollbackWalletError } = await supabaseAdmin.from('customer_wallets').update({ balance_paise: wallet.balance_paise }).eq('id', wallet.id);
-            if (rollbackWalletError) {
-                console.error(JSON.stringify({ correlationId, stage: 'wallet_rollback_failed', userId, walletId: wallet.id, error: rollbackWalletError, message: 'CRITICAL: Wallet rollback failed after order insert error.' }));
-                return NextResponse.json({ error: 'Critical failure during recovery (wallet). Please contact support.', code: 'ROLLBACK_FAILED', correlationId }, { status: 500 });
-            }
-            return NextResponse.json({ error: 'Failed to process order. Purchase reversed successfully.', correlationId }, { status: 500 });
+        if (!rpcResult || rpcResult.success === false) {
+            const msg = rpcResult?.message || 'Purchase could not be completed';
+            console.error(JSON.stringify({ correlationId, stage: 'wallet_buy_gift_card_rpc_failure', userId, couponId, message: msg }));
+            return NextResponse.json({ error: msg }, { status: 409 });
         }
 
-        // 6. Create transaction record for history (using correct wallet transaction table)
-        const { error: transactionError } = await supabaseAdmin.from('customer_wallet_transactions').insert({
-            wallet_id: wallet.id,
-            user_id: user.id,
-            type: 'DEBIT',
-            amount_paise: purchaseAmountPaise,
-            balance_before_paise: wallet.balance_paise,
-            balance_after_paise: newBalancePaise,
-            description: `Purchased Gift Card: ${coupon.title || 'Gift Card'}`,
-            reference_id: couponId,
-            reference_type: 'GIFT_CARD_PURCHASE'
-        });
+        const { order_id: orderId, merchant_id: merchantId, new_balance_paise: newBalancePaise, purchase_amount_paise: purchaseAmountPaise } = rpcResult;
+        const purchaseAmountRupees = (purchaseAmountPaise / 100).toFixed(2);
 
-        if (transactionError) {
-            console.error(JSON.stringify({ correlationId, stage: 'transaction_insert', userId, couponId, error: transactionError }));
-
-            // Rollback Order
-            const { error: rollbackOrderError } = await supabaseAdmin.from('orders').delete().eq('id', orderData.id);
-            if (rollbackOrderError) {
-                console.error(JSON.stringify({ correlationId, stage: 'order_rollback_failed', userId, orderId: orderData.id, error: rollbackOrderError, message: 'CRITICAL: Order rollback failed after transaction insert error.' }));
-                return NextResponse.json({ error: 'Critical failure during recovery (order). Please contact support.', code: 'ROLLBACK_FAILED', correlationId }, { status: 500 });
+        // 3. Distribute purchase rewards (non-blocking — must not fail the purchase)
+        // Uses the same contract as the gateway gift-card path in sabpaisa/callback/route.js:
+        //   p_reference_id   = couponId  (the gift card being purchased)
+        //   p_reference_type = 'gift_card_purchase'
+        try {
+            const { data: rewardData, error: rewardError } = await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
+                p_event_type: 'purchase',
+                p_source_user_id: user.id,
+                p_reference_id: couponId,
+                p_reference_type: 'gift_card_purchase',
+                p_amount_paise: purchaseAmountPaise
+            });
+            if (rewardError) {
+                console.error(JSON.stringify({ correlationId, stage: 'reward_rpc_error', userId, couponId, error: rewardError }));
+            } else {
+                logRewardRpcResult({
+                    event_type: 'purchase',
+                    source_user_id: user.id,
+                    reference_id: couponId,
+                    reference_type: 'gift_card_purchase',
+                }, rewardData);
             }
-
-            // Rollback Coupon
-            const { error: rollbackCouponError } = await supabaseAdmin.from('coupons').update({
-                status: 'available',
-                purchased_by: null,
-                purchased_at: null
-            }).eq('id', couponId);
-            if (rollbackCouponError) {
-                console.error(JSON.stringify({ correlationId, stage: 'coupon_rollback_failed', userId, couponId, error: rollbackCouponError, message: 'CRITICAL: Coupon rollback failed after transaction insert error.' }));
-                return NextResponse.json({ error: 'Critical failure during recovery (coupon). Please contact support.', code: 'ROLLBACK_FAILED', correlationId }, { status: 500 });
-            }
-
-            // Rollback Wallet
-            const { error: rollbackWalletError } = await supabaseAdmin.from('customer_wallets').update({ balance_paise: wallet.balance_paise }).eq('id', wallet.id);
-            if (rollbackWalletError) {
-                console.error(JSON.stringify({ correlationId, stage: 'wallet_rollback_failed', userId, walletId: wallet.id, error: rollbackWalletError, message: 'CRITICAL: Wallet rollback failed after transaction insert error.' }));
-                return NextResponse.json({ error: 'Critical failure during recovery (wallet). Please contact support.', code: 'ROLLBACK_FAILED', correlationId }, { status: 500 });
-            }
-
-            return NextResponse.json({ error: 'Failed to record transaction history. Purchase reversed successfully.', correlationId }, { status: 500 });
+        } catch (rewardErr) {
+            console.error(JSON.stringify({ correlationId, stage: 'reward_distribution_error', userId, couponId, error: rewardErr?.message }));
         }
 
-        // 7. Send Notifications
+        // 4. Send Notifications (non-blocking)
         try {
             // Customer Notification
             await supabaseAdmin.from('notifications').insert({
                 user_id: user.id,
                 title: 'Gift Card Purchased ✅',
-                body: `You successfully purchased a gift card worth ₹${purchaseAmount}.`,
+                body: `You successfully purchased a gift card worth ₹${purchaseAmountRupees}.`,
                 type: 'success',
-                reference_id: orderData.id,
+                reference_id: orderId,
                 reference_type: 'gift_card_purchase'
             });
 
             // Merchant Notification
-            const { data: merchantDetails } = await supabaseAdmin
-                .from('merchants')
-                .select('user_id')
-                .eq('id', coupon.merchant_id)
-                .single();
+            if (merchantId) {
+                const { data: merchantDetails } = await supabaseAdmin
+                    .from('merchants')
+                    .select('user_id')
+                    .eq('id', merchantId)
+                    .single();
 
-            if (merchantDetails?.user_id) {
-                await supabaseAdmin.from('notifications').insert({
-                    user_id: merchantDetails.user_id,
-                    title: 'Gift Card Sold 💳',
-                    body: `A customer purchased a gift card worth ₹${purchaseAmount}.`,
-                    type: 'success',
-                    reference_id: orderData.id,
-                    reference_type: 'gift_card_purchase'
-                });
+                if (merchantDetails?.user_id) {
+                    await supabaseAdmin.from('notifications').insert({
+                        user_id: merchantDetails.user_id,
+                        title: 'Gift Card Sold 💳',
+                        body: `A customer purchased a gift card worth ₹${purchaseAmountRupees}.`,
+                        type: 'success',
+                        reference_id: orderId,
+                        reference_type: 'gift_card_purchase'
+                    });
+
+                    // WhatsApp Notification (fire-and-forget)
+                    notifyMerchantGiftCardSold({
+                        merchantUserId: merchantDetails.user_id,
+                        amountRs: purchaseAmountRupees,
+                        brand: rpcResult.coupon_title || 'Gift Card'
+                    });
+                }
             }
         } catch (notificationError) {
             console.error('[Buy-Wallet] Gift card notifications failed:', notificationError.message);

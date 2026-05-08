@@ -33,6 +33,6 @@ export async function GET(req) {
     meta_token_configured:
       !!process.env.META_ACCESS_TOKEN &&
       process.env.META_ACCESS_TOKEN !== 'your_permanent_access_token_here',
-    otp_template: templateStatus,
+    templates: templateStatus,
   });
 }

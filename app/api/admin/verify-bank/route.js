@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
 import { getAuthUser } from '@/lib/apiAuth';
+import { notifyMerchantBankVerified } from '@/lib/notifications/merchantWhatsapp';
 
 export async function POST(request) {
     try {
@@ -59,6 +60,15 @@ export async function POST(request) {
                 reference_type: 'bank_verification',
                 reference_id: merchantId,
             });
+
+            // Best-effort WhatsApp notification (Fire-and-forget)
+            try {
+                notifyMerchantBankVerified({
+                    merchantUserId: merchantFull.user_id
+                });
+            } catch (e) {
+                console.error('[Verify Bank] WhatsApp dispatch failed:', e);
+            }
         }
 
         return NextResponse.json({ success: true, message: 'Bank account verified successfully' });

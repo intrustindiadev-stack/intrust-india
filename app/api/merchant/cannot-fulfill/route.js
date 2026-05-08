@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient, createAdminClient } from "@/lib/supabaseServer";
+import { notifyMerchantOrderCancelled } from "@/lib/notifications/merchantWhatsapp";
 
 export async function POST(req) {
     try {
@@ -81,6 +82,17 @@ export async function POST(req) {
                 reference_id: orderId
             }));
             await adminSupabase.from('notifications').insert(adminNotifs);
+
+            // Best-effort WhatsApp notification (Fire-and-forget)
+            try {
+                notifyMerchantOrderCancelled({
+                    merchantUserId: user.id,
+                    orderShortId: orderId.slice(0, 8).toUpperCase(),
+                    reason: 'Cannot fulfill — escalated to admin'
+                });
+            } catch (e) {
+                console.error('[Cannot Fulfill] WhatsApp dispatch failed:', e);
+            }
         }
 
         return NextResponse.json({ success: true, message: data.message });

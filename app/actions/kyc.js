@@ -14,6 +14,7 @@ import { revalidatePath } from 'next/cache';
 import { validateKYCForm, sanitizeKYCData } from '@/app/types/kyc';
 import { sprintVerify } from '@/lib/sprintVerify';
 import { encryptCouponCode as encryptData } from '@/lib/encryption';
+import { logRewardRpcResult } from '@/lib/rewardRpcResult';
 
 
 
@@ -221,6 +222,29 @@ export async function submitKYC(formData) {
 
         if (profileError) {
             console.warn('Failed to sync user_profiles.kyc_status:', profileError);
+        }
+
+        const previousVerificationStatus = existing?.verification_status || existing?.status || null;
+        const transitionedToVerified = finalStatus === 'verified' && previousVerificationStatus !== 'verified';
+
+        if (transitionedToVerified && result?.id) {
+            const { data: rewardData, error: rewardError } = await adminSupabase.rpc('calculate_and_distribute_rewards', {
+                p_event_type: 'kyc_complete',
+                p_source_user_id: user.id,
+                p_reference_id: result.id,
+                p_reference_type: 'kyc_record'
+            });
+
+            if (rewardError) {
+                console.error('[KYC] kyc_complete reward RPC failed (non-fatal):', rewardError);
+            } else {
+                logRewardRpcResult({
+                    event_type: 'kyc_complete',
+                    source_user_id: user.id,
+                    reference_id: result.id,
+                    reference_type: 'kyc_record',
+                }, rewardData);
+            }
         }
 
         revalidatePath('/profile/kyc');

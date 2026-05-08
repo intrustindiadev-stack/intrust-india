@@ -37,6 +37,7 @@ export async function GET(request) {
                 purchase_notifications: true,
                 sale_notifications: true,
                 marketing_updates: false,
+                whatsapp_notifications: true,
             },
         });
 
@@ -72,6 +73,7 @@ export async function PATCH(request) {
             purchase_notifications,
             sale_notifications,
             marketing_updates,
+            whatsapp_notifications,
         } = body;
 
         const updates = {
@@ -83,6 +85,7 @@ export async function PATCH(request) {
         if (purchase_notifications !== undefined) updates.purchase_notifications = purchase_notifications;
         if (sale_notifications !== undefined) updates.sale_notifications = sale_notifications;
         if (marketing_updates !== undefined) updates.marketing_updates = marketing_updates;
+        if (whatsapp_notifications !== undefined) updates.whatsapp_notifications = whatsapp_notifications;
 
         // Upsert
         const { data, error } = await supabaseAdmin

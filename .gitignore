@@ -64,3 +64,6 @@ e2e_tests/manual_checklist.txt
 # claude config
 claude.json
 
+
+# gemini config
+.gemini/

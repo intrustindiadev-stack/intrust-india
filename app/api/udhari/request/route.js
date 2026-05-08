@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { notifyMerchantStoreCreditRequest } from '@/lib/notifications/merchantWhatsapp';
 
 export async function POST(request) {
     const correlationId = crypto.randomUUID();
@@ -22,7 +23,7 @@ export async function POST(request) {
         // 2. KYC check
         const { data: userProfile, error: profileError } = await supabaseAdmin
             .from('user_profiles')
-            .select('kyc_status, created_at')
+            .select('kyc_status, created_at, full_name')
             .eq('id', user.id)
             .single();
 
@@ -133,6 +134,18 @@ export async function POST(request) {
             reference_id: udhariRequest.id,
             reference_type: 'udhari_request',
         });
+
+        // Best-effort WhatsApp notification (Fire-and-forget)
+        try {
+            notifyMerchantStoreCreditRequest({
+                merchantUserId: coupon.merchant.user_id,
+                customerName: userProfile.full_name,
+                amountRs: (purchaseAmountPaise / 100).toFixed(2),
+                item: coupon.title || coupon.brand || 'Gift Card'
+            });
+        } catch (e) {
+            console.error('[Udhari Request] WhatsApp dispatch failed:', e);
+        }
 
         if (notifError) {
             console.error(JSON.stringify({ correlationId, stage: 'notification_insert', error: notifError }));

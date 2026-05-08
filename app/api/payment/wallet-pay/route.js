@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { CustomerWalletService } from '@/lib/wallet/customerWalletService';
+import { notifyMerchantSubscriptionStatus } from '@/lib/notifications/merchantWhatsapp';
 
 export async function POST(request) {
     try {
@@ -113,6 +114,17 @@ export async function POST(request) {
             reference_type: 'merchant_subscription',
             reference_id: packageId
         }]);
+
+        // Send WhatsApp Notification
+        Promise.resolve().then(() => {
+            notifyMerchantSubscriptionStatus({
+                merchantUserId: user.id,
+                status: 'Active ✅',
+                expiry: newExpiryDate.toLocaleDateString('en-IN')
+            }).catch(err => {
+                console.error('[WalletPay] WhatsApp notification error:', err);
+            });
+        });
 
         return NextResponse.json({
             success: true,

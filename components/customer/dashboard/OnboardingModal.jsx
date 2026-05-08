@@ -75,8 +75,8 @@ export default function OnboardingModal({ userId, onComplete }) {
                 throw new Error(data.error || 'Failed to save onboarding data');
             }
 
-            if (data.referralApplied) {
-                setSuccessMessage('🎉 Referral Bonus Applied! ₹100 added to your wallet.');
+            if (data.rewardApplied) {
+                setSuccessMessage('Eligible reward points were added to your Intrust Rewards balance.');
                 setTimeout(() => onComplete(), 2500);
             } else {
                 onComplete();
@@ -242,7 +242,7 @@ export default function OnboardingModal({ userId, onComplete }) {
                                     <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mb-4 sm:mb-6 shadow-inner">
                                         <Gift className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-600 dark:text-emerald-400 animate-bounce" />
                                     </div>
-                                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium mb-6">Enter a friend's referral code to instantly receive <span className="font-bold text-emerald-600 dark:text-emerald-400">₹100</span> in your wallet.</p>
+                                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium mb-6">Enter a referral code from a friend to claim eligible Intrust Reward Points.</p>
                                 </div>
 
                                 <div className="max-w-xs mx-auto">

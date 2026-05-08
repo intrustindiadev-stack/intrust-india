@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { notifyMerchantStoreCreditPaid } from '@/lib/notifications/merchantWhatsapp';
 
 export async function POST(request) {
     const correlationId = crypto.randomUUID();
@@ -121,6 +122,17 @@ export async function POST(request) {
                 reference_id: requestId,
                 reference_type: 'udhari_completed',
             });
+
+            // Best-effort WhatsApp notification (Fire-and-forget)
+            try {
+                notifyMerchantStoreCreditPaid({
+                    merchantUserId: merchantData.user_id,
+                    amountRs: (totalAmountPaise / 100).toFixed(2),
+                    item: udhariRequest.coupon?.title || udhariRequest.coupon?.brand || 'Gift Card'
+                });
+            } catch (e) {
+                console.error('[Udhari Pay] WhatsApp dispatch failed:', e);
+            }
         }
 
         // 10.1 ADDED: Notify Customer

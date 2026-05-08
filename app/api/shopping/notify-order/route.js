@@ -1,5 +1,6 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { notifyMerchantNewOrder } from '@/lib/notifications/merchantWhatsapp';
 
 export async function POST(request) {
     try {
@@ -84,7 +85,7 @@ export async function POST(request) {
             
             const { data: merchants } = await admin
                 .from('merchants')
-                .select('user_id')
+                .select('id, user_id')
                 .in('id', merchantIds);
 
             if (merchants && merchants.length > 0) {
@@ -100,6 +101,21 @@ export async function POST(request) {
                 const { error: merchantNotifyErr } = await admin.from('notifications').insert(merchantNotifs);
                 if (merchantNotifyErr) {
                     console.error('[Notify Order] Failed to notify merchants:', merchantNotifyErr.message);
+                }
+
+                // Best-effort WhatsApp notification (Fire-and-forget)
+                try {
+                    merchants.forEach(m => {
+                        const itemCount = orderItems.filter(i => i.seller_id === m.id).length;
+                        notifyMerchantNewOrder({
+                            merchantUserId: m.user_id,
+                            orderShortId: group_id.slice(0, 8).toUpperCase(),
+                            amountRs: formattedAmount,
+                            itemCount
+                        });
+                    });
+                } catch (e) {
+                    console.error('[Notify Order] WhatsApp dispatch failed:', e);
                 }
             }
         }

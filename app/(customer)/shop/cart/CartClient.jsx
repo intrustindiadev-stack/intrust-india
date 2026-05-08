@@ -331,19 +331,24 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
       }
 
       if (paymentMode === 'wallet') {
-        const { data, error: rpcError } = await supabase.rpc("customer_checkout_v4", { p_customer_id: userId });
-        if (rpcError) throw rpcError;
+        // Use the server-owned endpoint so purchase rewards are distributed
+        // with the service role immediately after the checkout commits —
+        // no client trust required, no reward skip.
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch('/api/shopping/wallet-checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
+          },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Checkout failed');
         if (data.success) {
-          fetch('/api/shopping/notify-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ group_id: data.group_id, amount_paise: finalPayable })
-          }).catch(console.error);
-
           setOrderSuccess(true);
           setTimeout(() => router.push("/orders?success=true"), 3000);
         } else {
-          setError(data.message || "Checkout failed");
+          setError(data.error || "Checkout failed");
         }
       } else if (paymentMode === 'gateway') {
         const { data, error: rpcError } = await supabase.rpc("draft_cart_orders", { p_customer_id: userId });

@@ -1,6 +1,7 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 import { sendTemplateMessage, KYC_UPDATE_TEMPLATE } from '@/lib/omniflow';
+import { notifyMerchantApproved } from '@/lib/notifications/merchantWhatsapp';
 import crypto from 'crypto';
 
 export async function POST(request) {
@@ -182,6 +183,17 @@ export async function POST(request) {
             }
         } catch (waErr) {
             console.error('[approve-merchant] WhatsApp KYC alert failed (non-blocking):', waErr.message);
+        }
+
+        // Best-effort Merchant WhatsApp notification (Fire-and-forget)
+        try {
+            notifyMerchantApproved({
+                merchantUserId: targetUserId,
+                businessName: existingMerchant.business_name,
+                nextStep: 'Complete your subscription to activate your merchant panel'
+            });
+        } catch (e) {
+            console.error('[Approve Merchant] Merchant WhatsApp dispatch failed:', e);
         }
 
         // 8. Log Action

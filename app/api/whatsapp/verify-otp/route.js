@@ -94,6 +94,7 @@ export async function POST(req) {
       .from('user_channel_bindings')
       .select('id')
       .eq('user_id', user.id)
+      .eq('audience', 'customer')
       .maybeSingle();
 
     if (existingBinding) {
@@ -117,11 +118,12 @@ export async function POST(req) {
         {
           user_id: user.id,
           phone,
+          audience: 'customer',
           whatsapp_opt_in: true,
           linked_at: linkedAt,
           updated_at: linkedAt,
         },
-        { onConflict: 'user_id' }
+        { onConflict: 'user_id,audience' }
       );
 
     if (bindError) {

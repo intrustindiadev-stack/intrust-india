@@ -1,5 +1,6 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { logRewardRpcResult } from '@/lib/rewardRpcResult';
 
 export async function POST(req) {
     try {
@@ -83,13 +84,19 @@ export async function POST(req) {
             if (treePathError) throw treePathError;
 
             // 4C. RPC calculate_and_distribute_rewards with p_event_type: 'signup'
-            const { error: rewardDistError } = await adminClient.rpc('calculate_and_distribute_rewards', {
+            const { data: rewardData, error: rewardDistError } = await adminClient.rpc('calculate_and_distribute_rewards', {
                 p_event_type: 'signup',
                 p_source_user_id: userId,
                 p_reference_id: userId,
                 p_reference_type: 'user_profile'
             });
             if (rewardDistError) throw rewardDistError;
+            logRewardRpcResult({
+                event_type: 'signup',
+                source_user_id: userId,
+                reference_id: userId,
+                reference_type: 'user_profile',
+            }, rewardData);
 
             // 4D. RPC update_reward_tree_stats for all ancestors + the caller
             // Fetch ancestors

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
 import { createClient } from '@supabase/supabase-js'
+import { logRewardRpcResult } from '@/lib/rewardRpcResult'
 
 export async function POST(request) {
     try {
@@ -67,13 +68,23 @@ export async function POST(request) {
                 .single();
 
             if (coupon?.selling_price_paise) {
-                await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
+                const { data: rewardData, error: rewardError } = await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
                     p_event_type: 'purchase',
                     p_source_user_id: user.id,
                     p_reference_id: coupon_id,
                     p_reference_type: 'coupon_purchase',
                     p_amount_paise: coupon.selling_price_paise
                 });
+                if (rewardError) {
+                    console.error('[Purchase] Reward RPC error:', rewardError);
+                } else {
+                    logRewardRpcResult({
+                        event_type: 'purchase',
+                        source_user_id: user.id,
+                        reference_id: coupon_id,
+                        reference_type: 'coupon_purchase',
+                    }, rewardData);
+                }
             }
         } catch (rewardErr) {
             console.error('[Purchase] Reward distribution error:', rewardErr);

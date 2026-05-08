@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
+import { notifyMerchantPayoutStatus } from '@/lib/notifications/merchantWhatsapp';
 
 // PATCH /api/admin/payout-requests/[id]
 // body: { action: 'approved' | 'rejected' | 'released', admin_note?: string }
@@ -134,6 +135,19 @@ export async function PATCH(request, { params }) {
             reference_id: id,
             reference_type: 'payout_request',
         });
+
+        // Best-effort WhatsApp notification (Fire-and-forget)
+        try {
+            const statusMap = { approved: 'Approved', rejected: 'Rejected', released: 'Paid' };
+            notifyMerchantPayoutStatus({
+                merchantUserId: merchant.user_id,
+                amountRs: Number(payoutReq.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+                status: statusMap[action],
+                note: admin_note || ''
+            });
+        } catch (e) {
+            console.error('[Payout PATCH] WhatsApp dispatch failed:', e);
+        }
 
         return NextResponse.json({
             success: true,

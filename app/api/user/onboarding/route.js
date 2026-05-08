@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
+import { logRewardRpcResult } from '@/lib/rewardRpcResult';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +22,20 @@ export async function POST(req) {
         const body = await req.json();
         const { services, occupation, referral_source, referral_code_entered } = body;
 
+        const { data: existingProfile, error: existingProfileError } = await supabaseAdmin
+            .from('user_profiles')
+            .select('referred_by, completed_onboarding')
+            .eq('id', userId)
+            .single();
+
+        if (existingProfileError) {
+            console.error('Error fetching existing profile for onboarding:', existingProfileError);
+            return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
+        }
+
+        const firstOnboardingCompletion = !existingProfile?.completed_onboarding;
+        let signupRewardApplied = false;
+
         // 1. Process Referral Logic BEFORE marking onboarding as complete
         let referredById = null;
         let referralApplied = false;
@@ -41,17 +56,7 @@ export async function POST(req) {
             } else if (referrer.id === userId) {
                 console.warn(`User tried to use their own referral code: ${codeToFind}`);
             } else {
-                // Check whether this user has already been referred (prevent double-dipping)
-                // This guard runs regardless of completed_onboarding status so re-submissions are handled
-                const { data: existingProfile, error: profileError } = await supabaseAdmin
-                    .from('user_profiles')
-                    .select('referred_by')
-                    .eq('id', userId)
-                    .single();
-
-                if (profileError) {
-                    console.error('Error fetching existing profile for referral guard:', profileError);
-                } else if (existingProfile && !existingProfile.referred_by) {
+                if (existingProfile && !existingProfile.referred_by) {
                     // Only link if they haven't already been referred
                     referredById = referrer.id;
                     referralApplied = true;
@@ -88,7 +93,8 @@ export async function POST(req) {
             return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
         }
 
-        // 3. Build tree path and distribute rewards if this is a fresh referral
+        // 3. Build tree path when this is a fresh referral. Signup reward emission
+        // is handled separately so non-referred first-time onboarding still earns.
         if (referralApplied && referredById) {
             try {
                 // 3A. Build the tree path in reward_tree_paths
@@ -99,19 +105,6 @@ export async function POST(req) {
                 if (treePathError) {
                     console.error('build_reward_tree_path RPC failed:', treePathError);
                     throw treePathError;
-                }
-
-                // 3B. Distribute signup rewards to upline
-                // p_event_type must match the reward_event_type enum value 'signup'
-                const { error: rewardDistError } = await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
-                    p_event_type: 'signup',
-                    p_source_user_id: userId,
-                    p_reference_id: userId,
-                    p_reference_type: 'user_profile'
-                });
-                if (rewardDistError) {
-                    console.error('calculate_and_distribute_rewards RPC failed:', rewardDistError);
-                    throw rewardDistError;
                 }
 
                 // 3C. Update tree stats for all ancestors
@@ -161,7 +154,35 @@ export async function POST(req) {
                 console.error('Error in reward tree / distribution flow — onboarding will still complete:', rewardError);
                 // Don't fail onboarding if reward distribution fails
             }
+        }
 
+        if (firstOnboardingCompletion) {
+            try {
+                const { data: rewardData, error: rewardDistError } = await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
+                    p_event_type: 'signup',
+                    p_source_user_id: userId,
+                    p_reference_id: userId,
+                    p_reference_type: 'user_profile'
+                });
+                if (rewardDistError) {
+                    console.error('calculate_and_distribute_rewards RPC failed:', rewardDistError);
+                    throw rewardDistError;
+                }
+
+                const rewardResult = logRewardRpcResult({
+                    event_type: 'signup',
+                    source_user_id: userId,
+                    reference_id: userId,
+                    reference_type: 'user_profile',
+                }, rewardData);
+                signupRewardApplied = rewardResult.totalDistributed > 0;
+            } catch (rewardError) {
+                console.error('Error in signup reward distribution flow - onboarding will still complete:', rewardError);
+                // Don't fail onboarding if reward distribution fails
+            }
+        }
+
+        if (referralApplied && referredById) {
             // Send in-app notifications to both users about the referral
             try {
                 // Fetch names for personalisation
@@ -214,8 +235,9 @@ export async function POST(req) {
         return NextResponse.json({
             success: true,
             referralApplied: referralApplied,
-            message: referralApplied
-                ? 'Onboarding complete. Referral bonus applied via Intrust Reward Points!'
+            rewardApplied: signupRewardApplied,
+            message: signupRewardApplied
+                ? 'Onboarding complete. Eligible reward points were applied.'
                 : 'Onboarding complete.'
         });
 

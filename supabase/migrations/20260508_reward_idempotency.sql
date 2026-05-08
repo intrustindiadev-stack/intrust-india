@@ -10,6 +10,11 @@
 --   Note: manual_credit, manual_debit, wallet_conversion, expiry, and
 --   daily_login events are excluded from this constraint because they either
 --   have no reference_id or legitimately recur without a reference.
+--
+--   For recurring business events such as subscription_renewal, callers must
+--   pass the payment/order UUID as reference_id rather than the merchant UUID.
+--   That keeps callback retries idempotent for one payment while allowing
+--   separate renewal payments for the same merchant.
 -- ============================================================================
 
 -- Partial unique index: only applies when reference_id is not null and

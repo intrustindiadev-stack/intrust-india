@@ -49,6 +49,7 @@ export async function POST() {
       .from('user_channel_bindings')
       .select('id, phone')
       .eq('user_id', user.id)
+      .eq('audience', 'customer')
       .maybeSingle();
 
     if (existingBinding) {

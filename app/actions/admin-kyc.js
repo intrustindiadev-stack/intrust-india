@@ -11,6 +11,7 @@
 
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
+import { logRewardRpcResult } from '@/lib/rewardRpcResult';
 
 /**
  * Approves a pending KYC record
@@ -54,7 +55,7 @@ export async function approveKYC(kycId) {
         // Ensure the record has a sprint_verify_ref_id to satisfy the automated_review_consistency constraint
         const { data: existingRecord } = await adminClient
             .from('kyc_records')
-            .select('sprint_verify_ref_id')
+            .select('sprint_verify_ref_id, verification_status, status')
             .eq('id', kycId)
             .single();
 
@@ -97,17 +98,27 @@ export async function approveKYC(kycId) {
             .update({ kyc_status: 'verified' })
             .eq('id', data.user_id);
 
-        // Distribute kyc_complete reward points to referral upline (non-fatal)
-        try {
-            await adminClient.rpc('calculate_and_distribute_rewards', {
+        const previousVerificationStatus = existingRecord?.verification_status || existingRecord?.status || null;
+        const transitionedToVerified = data.verification_status === 'verified' && previousVerificationStatus !== 'verified';
+
+        if (transitionedToVerified) {
+            const { data: rewardData, error: rewardError } = await adminClient.rpc('calculate_and_distribute_rewards', {
                 p_event_type: 'kyc_complete',
                 p_source_user_id: data.user_id,
                 p_reference_id: kycId,
                 p_reference_type: 'kyc_record'
             });
-            console.log(`[admin-kyc] kyc_complete rewards distributed for user ${data.user_id}`);
-        } catch (rewardErr) {
-            console.error('[admin-kyc] kyc_complete reward distribution error (non-fatal):', rewardErr.message);
+
+            if (rewardError) {
+                console.error('[admin-kyc] kyc_complete reward RPC failed (non-fatal):', rewardError);
+            } else {
+                logRewardRpcResult({
+                    event_type: 'kyc_complete',
+                    source_user_id: data.user_id,
+                    reference_id: kycId,
+                    reference_type: 'kyc_record',
+                }, rewardData);
+            }
         }
 
         revalidatePath('/admin/users');

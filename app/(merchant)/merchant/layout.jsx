@@ -4,6 +4,8 @@ import { headers } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import MerchantLayout from '@/components/layout/merchant/MerchantLayout';
 import MerchantBottomNav from '@/components/layout/merchant/MerchantBottomNav';
+import MerchantGlobalChat from '@/components/chat/merchant/MerchantGlobalChat';
+
 
 import { SubscriptionProvider } from '@/components/merchant/SubscriptionContext';
 
@@ -54,6 +56,7 @@ export default async function MerchantRootLayout({ children }) {
                     <MerchantLayout>
                         {children}
                     </MerchantLayout>
+                    <MerchantGlobalChat />
                     <MerchantBottomNav />
                 </>
             </SubscriptionProvider>
@@ -116,6 +119,7 @@ export default async function MerchantRootLayout({ children }) {
                 <MerchantLayout>
                     {children}
                 </MerchantLayout>
+                <MerchantGlobalChat />
                 <MerchantBottomNav />
             </>
         </SubscriptionProvider>

@@ -7,6 +7,8 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import { CHAT_HIDDEN_PATHS } from './hiddenPaths';
 
+import { WELCOME_MESSAGE } from '@/lib/chat/promptTemplates';
+
 // Client-side PII regex (mirrors lib/piiFilter.js — kept as a defence-in-depth layer)
 const AADHAAR_RE = /(?<!\d)(\d{4}[\s-]?\d{4}[\s-]?\d{4})(?!\d)/g;
 const PAN_RE = /\b([A-Z]{5}[0-9]{4}[A-Z])\b/g;
@@ -33,11 +35,6 @@ function formatTime(date) {
   });
 }
 
-// Welcome message — mirrors WELCOME_MESSAGE() from lib/chat/promptTemplates.js
-function buildWelcomeMessage(firstName = 'there') {
-  return `Hi ${firstName} 👋 I'm your InTrust Assistant — powered by AI. Ask me about your wallet, KYC status, gift cards, reward points, orders, or anything else about InTrust!`;
-}
-
 const MAX_MESSAGES = 20;
 // Number of most-recent message pairs sent as history to the API
 const HISTORY_WINDOW = 8;
@@ -57,7 +54,16 @@ const QUICK_REPLIES = [
  * Slide-up animation, typing indicator, auto-scroll, mobile full-screen.
  * Sends multi-turn conversation history on every request.
  */
-export default function ChatWindow() {
+export function BaseChatWindow({
+  apiPath = "/api/chat/message",
+  historyPath = "/api/chat/history",
+  welcomeMessageBuilder = WELCOME_MESSAGE,
+  quickReplies = QUICK_REPLIES,
+  assistantTitle = "InTrust Assistant",
+  assistantSubtitle = "Online · Always here to help",
+  hiddenPaths = CHAT_HIDDEN_PATHS,
+  accentColor = "#1a73e8"
+}) {
   const { isOpen, closeChat, setHasUnread } = useChat();
   const { user, profile } = useAuth();
 
@@ -180,7 +186,7 @@ export default function ChatWindow() {
     async (text, currentMessages) => {
       const history = buildHistory(currentMessages);
 
-      const res = await fetch('/api/chat/message', {
+      const res = await fetch(apiPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, history, sessionId }),
@@ -202,13 +208,13 @@ export default function ChatWindow() {
         
       const fetchHistory = async () => {
         if (!user) {
-          addBotMessage(buildWelcomeMessage(name));
+          addBotMessage(welcomeMessageBuilder(name));
           return;
         }
 
         setHistoryLoading(true);
         try {
-          const res = await fetch('/api/chat/history?limit=50');
+          const res = await fetch(`${historyPath}?limit=50`);
           if (!res.ok) throw new Error('Failed to fetch history');
           const data = await res.json();
           
@@ -223,11 +229,11 @@ export default function ChatWindow() {
             setMessages(mapped);
             setSessionId(data.sessionId);
           } else {
-            addBotMessage(buildWelcomeMessage(name));
+            addBotMessage(welcomeMessageBuilder(name));
           }
         } catch (err) {
           console.error('History fetch error:', err);
-          addBotMessage(buildWelcomeMessage(name));
+          addBotMessage(welcomeMessageBuilder(name));
         } finally {
           setHistoryLoading(false);
         }
@@ -306,7 +312,7 @@ export default function ChatWindow() {
   };
 
   const pathname = usePathname();
-  const isHidden = CHAT_HIDDEN_PATHS.some((p) => pathname?.startsWith(p));
+  const isHidden = hiddenPaths.some((p) => pathname?.startsWith(p));
   if (isHidden) return null;
 
   return (
@@ -357,7 +363,7 @@ export default function ChatWindow() {
           align-items: center;
           gap: 10px;
           padding: 16px;
-          background: linear-gradient(135deg, #1a73e8, #0d47a1);
+          background: ${accentColor};
           color: #fff;
           flex-shrink: 0;
         }
@@ -445,7 +451,7 @@ export default function ChatWindow() {
           text-decoration: underline;
         }
         .chat-msg.user .chat-bubble-text {
-          background: linear-gradient(135deg, #1a73e8, #1557b0);
+          background: ${accentColor};
           color: #fff;
           border-radius: 18px 18px 4px 18px;
         }
@@ -475,7 +481,7 @@ export default function ChatWindow() {
         .chat-typing span {
           width: 7px;
           height: 7px;
-          background: #1a73e8;
+          background: ${accentColor};
           border-radius: 50%;
           animation: bounce-dot 1.2s infinite ease-in-out;
         }
@@ -510,12 +516,12 @@ export default function ChatWindow() {
           max-height: 100px;
           overflow-y: auto;
         }
-        .chat-input:focus { border-color: #1a73e8; background: #fff; }
+        .chat-input:focus { border-color: ${accentColor}; background: #fff; }
         .chat-send-btn {
           width: 38px;
           height: 38px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #1a73e8, #0d47a1);
+          background: ${accentColor};
           border: none;
           cursor: pointer;
           display: flex;
@@ -523,11 +529,11 @@ export default function ChatWindow() {
           justify-content: center;
           flex-shrink: 0;
           transition: transform 0.15s, box-shadow 0.15s;
-          box-shadow: 0 2px 8px rgba(26,115,232,0.3);
+          box-shadow: 0 2px 8px ${accentColor}4d;
         }
         .chat-send-btn:hover:not(:disabled) {
           transform: scale(1.08);
-          box-shadow: 0 4px 14px rgba(26,115,232,0.45);
+          box-shadow: 0 4px 14px ${accentColor}73;
         }
         .chat-send-btn:disabled {
           opacity: 0.45;
@@ -550,9 +556,9 @@ export default function ChatWindow() {
           color: #64748b;
         }
         .chat-mic-btn:hover {
-          border-color: #1a73e8;
-          color: #1a73e8;
-          background: #eff6ff;
+          border-color: ${accentColor};
+          color: ${accentColor};
+          background: ${accentColor}15;
         }
         .chat-mic-btn.listening {
           border-color: #ef4444;
@@ -578,10 +584,10 @@ export default function ChatWindow() {
           padding: 8px 14px;
           font-size: 12.5px;
           font-weight: 500;
-          border: 1.5px solid #1a73e8;
+          border: 1.5px solid ${accentColor};
           border-radius: 20px;
           background: #fff;
-          color: #1a73e8;
+          color: ${accentColor};
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.34, 1.7, 0.64, 1);
           white-space: nowrap;
@@ -596,15 +602,15 @@ export default function ChatWindow() {
         .chat-qr-chip:nth-child(6) { animation-delay: 0.35s; }
 
         .chat-qr-chip:hover {
-          background: #1a73e8;
+          background: ${accentColor};
           color: #fff;
           transform: translateY(-2px) scale(1.05);
-          box-shadow: 0 4px 12px rgba(26,115,232,0.25);
+          box-shadow: 0 4px 12px ${accentColor}40;
         }
         .chat-qr-chip:active { transform: scale(0.95); }
       `}</style>
 
-      <div className={`chat-window-overlay ${isOpen ? 'is-open' : ''}`} role="dialog" aria-label="InTrust Assistant Chat">
+      <div className={`chat-window-overlay ${isOpen ? 'is-open' : ''}`} role="dialog" aria-label={`${assistantTitle} Chat`}>
         {/* Header */}
         <div className="chat-header">
           <div className="chat-header-avatar" aria-hidden="true">
@@ -613,8 +619,8 @@ export default function ChatWindow() {
             </svg>
           </div>
           <div className="chat-header-info">
-            <h3>InTrust Assistant</h3>
-            <p>Online · Always here to help</p>
+            <h3>{assistantTitle}</h3>
+            <p>{assistantSubtitle}</p>
           </div>
           <button
             className="chat-close-btn"
@@ -650,7 +656,7 @@ export default function ChatWindow() {
               {/* Quick reply chips — shown only after welcome message, before user sends anything */}
               {messages.length === 1 && !loading && (
                 <div className="chat-quick-replies" role="group" aria-label="Quick reply suggestions">
-                  {QUICK_REPLIES.map((qr) => (
+                  {quickReplies.map((qr) => (
                     <button
                       key={qr.text}
                       className="chat-qr-chip"
@@ -733,4 +739,8 @@ export default function ChatWindow() {
       </div>
     </>
   );
+}
+
+export default function ChatWindow() {
+  return <BaseChatWindow />;
 }

@@ -19,6 +19,7 @@ export async function GET() {
       .from('user_channel_bindings')
       .select('phone, whatsapp_opt_in, linked_at')
       .eq('user_id', user.id)
+      .eq('audience', 'customer')
       .maybeSingle();
 
     if (error) {

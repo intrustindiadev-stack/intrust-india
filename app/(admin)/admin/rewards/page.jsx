@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
     Settings, Save, Trophy, Layers, Gift,
@@ -37,8 +37,29 @@ const defaultLevelState = {
     level_settings: { max_levels: 5, levels: { L1: { percentage: 0 }, L2: { percentage: 0 }, L3: { percentage: 0 }, L4: { percentage: 0 }, L5: { percentage: 0 }, L6: { percentage: 0 }, L7: { percentage: 0 } } }
 };
 const defaultEligibilityState = {
-    eligibility: { require_kyc: true, min_account_age_days: 0, min_direct_referrals_for_earnings: 0 }
+    eligibility: {
+        require_kyc: true,
+        min_account_age_days: 0,
+        min_direct_referrals_for_earnings: 0,
+        events: {
+            signup: { direct_require_kyc: false, upline_require_kyc: true },
+            daily_login: { direct_require_kyc: false, upline_require_kyc: true },
+            purchase: { direct_require_kyc: true, upline_require_kyc: true },
+            kyc_complete: { direct_require_kyc: false, upline_require_kyc: true },
+            merchant_onboard: { direct_require_kyc: true, upline_require_kyc: true },
+            subscription_renewal: { direct_require_kyc: true, upline_require_kyc: true }
+        }
+    }
 };
+
+const eligibilityEvents = [
+    { key: 'signup', label: 'Signup' },
+    { key: 'daily_login', label: 'Daily login' },
+    { key: 'purchase', label: 'Purchase' },
+    { key: 'kyc_complete', label: 'KYC complete' },
+    { key: 'merchant_onboard', label: 'Merchant onboard' },
+    { key: 'subscription_renewal', label: 'Subscription renewal' }
+];
 
 export default function AdminRewardsPage() {
     const { user } = useAuth();
@@ -53,11 +74,7 @@ export default function AdminRewardsPage() {
 
     const [sectionSaving, setSectionSaving] = useState({ tier: false, event: false, global: false, level: false, eligibility: false });
 
-    useEffect(() => {
-        fetchConfigs();
-    }, []);
-
-    const initStateFromConfigs = (fetchedConfigs) => {
+    const initStateFromConfigs = useCallback((fetchedConfigs) => {
         const nextTierState = JSON.parse(JSON.stringify(defaultTierState));
         const nextEventState = JSON.parse(JSON.stringify(defaultEventState));
         const nextGlobalState = JSON.parse(JSON.stringify(defaultGlobalState));
@@ -80,7 +97,14 @@ export default function AdminRewardsPage() {
             } else if (config_type === 'level' && nextLevelState[config_key]) {
                 nextLevelState[config_key] = { ...nextLevelState[config_key], ...config_value };
             } else if (config_type === 'eligibility' && nextEligibilityState[config_key]) {
-                nextEligibilityState[config_key] = { ...nextEligibilityState[config_key], ...config_value };
+                nextEligibilityState[config_key] = {
+                    ...nextEligibilityState[config_key],
+                    ...config_value,
+                    events: {
+                        ...nextEligibilityState[config_key].events,
+                        ...(config_value?.events || {})
+                    }
+                };
             }
         });
 
@@ -89,9 +113,9 @@ export default function AdminRewardsPage() {
         setGlobalState(nextGlobalState);
         setLevelState(nextLevelState);
         setEligibilityState(nextEligibilityState);
-    };
+    }, []);
 
-    const fetchConfigs = async () => {
+    const fetchConfigs = useCallback(async () => {
         try {
             const response = await fetch('/api/admin/rewards/config');
             const data = await response.json();
@@ -105,7 +129,11 @@ export default function AdminRewardsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [initStateFromConfigs]);
+
+    useEffect(() => {
+        fetchConfigs();
+    }, [fetchConfigs]);
 
     const saveSection = async (configType, keysAndValues) => {
         setSectionSaving(prev => ({ ...prev, [configType]: true }));
@@ -512,7 +540,7 @@ export default function AdminRewardsPage() {
                         <div className="flex items-center justify-between p-4 border border-gray-100 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-800/50">
                             <div>
                                 <h3 className="font-bold text-gray-900 dark:text-white">Require KYC to earn</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Users must complete KYC before earning points</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Default KYC rule used when an event has no explicit override</p>
                             </div>
                             <button
                                 type="button"
@@ -524,6 +552,49 @@ export default function AdminRewardsPage() {
                             >
                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${eligibilityState.eligibility?.require_kyc ? 'translate-x-6' : 'translate-x-1'}`} />
                             </button>
+                        </div>
+                        <div className="border border-gray-100 dark:border-gray-700 rounded-xl overflow-x-auto">
+                            <div className="min-w-[520px]">
+                            <div className="grid grid-cols-[1fr_140px_140px] gap-4 px-4 py-3 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-100 dark:border-gray-700">
+                                <div className="text-sm font-bold text-gray-700 dark:text-gray-300">Event</div>
+                                <div className="text-sm font-bold text-gray-700 dark:text-gray-300 text-center">Direct KYC</div>
+                                <div className="text-sm font-bold text-gray-700 dark:text-gray-300 text-center">Upline KYC</div>
+                            </div>
+                            {eligibilityEvents.map(event => {
+                                const eventRule = eligibilityState.eligibility?.events?.[event.key] || {};
+                                return (
+                                    <div key={event.key} className="grid grid-cols-[1fr_140px_140px] gap-4 px-4 py-3 items-center border-b last:border-b-0 border-gray-100 dark:border-gray-700">
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900 dark:text-white">{event.label}</h3>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">Level 0 direct payout and referral upline payout eligibility</p>
+                                        </div>
+                                        {['direct_require_kyc', 'upline_require_kyc'].map(ruleKey => (
+                                            <div key={ruleKey} className="flex justify-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEligibilityState(prev => ({
+                                                        ...prev,
+                                                        eligibility: {
+                                                            ...prev.eligibility,
+                                                            events: {
+                                                                ...prev.eligibility?.events,
+                                                                [event.key]: {
+                                                                    ...prev.eligibility?.events?.[event.key],
+                                                                    [ruleKey]: !prev.eligibility?.events?.[event.key]?.[ruleKey]
+                                                                }
+                                                            }
+                                                        }
+                                                    }))}
+                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${eventRule[ruleKey] ? 'bg-violet-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                                                >
+                                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${eventRule[ruleKey] ? 'translate-x-6' : 'translate-x-1'}`} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })}
+                            </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div>

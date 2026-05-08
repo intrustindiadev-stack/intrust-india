@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabaseServer';
 import { hashOTP } from '@/lib/otpUtils';
-import { sendWhatsAppMessage, sendMessageToAgent, normalisePhone, sendTemplateMessage, WELCOME_TEMPLATE } from '@/lib/omniflow';
+import { sendWhatsAppMessage, sendMessageToAgent, normalisePhone, sendTemplateMessage, WELCOME_TEMPLATE, MERCHANT_WELCOME_LINKED_TEMPLATE } from '@/lib/omniflow';
 import { sanitizeMessage } from '@/lib/piiFilter';
 import { enforceIntent } from '@/lib/intentEnforcer';
+import { buildMerchantContext, formatMerchantContextForPrompt } from '@/lib/chat/merchantBuildContext';
 
 /**
  * OMNIFLOW / META WEBHOOK REGISTRATION SETUP
@@ -20,6 +21,11 @@ import { enforceIntent } from '@/lib/intentEnforcer';
  *    - Verify Token: Must match the META_WEBHOOK_VERIFY_TOKEN env var.
  *    - Required Template: Create 'intrust_otp_verification' (Language: en) 
  *      with one body variable {{1}} for the OTP code. Submit for approval.
+ * 
+ * CHANNEL ASYMMETRY DOCUMENTATION:
+ * - Web Chat (Merchant Dashboard): Uses Gemini AI directly via /api/merchant/chat/message.
+ * - WhatsApp Channel (Merchant & Customer): Uses Omniflow Agent via sendMessageToAgent.
+ * This is intentional to leverage Omniflow's WhatsApp-native automation and session management.
  */
 
 /**
@@ -27,14 +33,14 @@ import { enforceIntent } from '@/lib/intentEnforcer';
  *
  * Receives all inbound WhatsApp events from Omniflow.
  * Handles two distinct flows:
- *  A) OTP reply → complete phone linking (WhatsApp verified)
- *  B) Regular chat message → fetch context → AI reply → intent enforce → PII filter → send
+ *  A) OTP reply -> complete phone linking (WhatsApp verified)
+ *  B) Regular chat message -> fetch context -> AI reply (Omniflow Agent) -> PII filter -> send
  *
  * Security:
  *  - HMAC-SHA256 signature validation on every request
  *  - Idempotency via wamid dedup in whatsapp_message_logs
  *  - PII sanitisation on all outbound AI text
- *  - Intent enforcement (3 allowed topics only)
+ *  - Audience resolution: Prefer merchant if role matches; fallback to customer.
  */
 
 // Supabase admin client (bypasses RLS — service role only)
@@ -123,7 +129,7 @@ async function getFinancialContext(userId) {
 // -------------------------------------------------------------------
 // Log helper
 // -------------------------------------------------------------------
-async function logMessage({ userId, phoneHash, wamid, direction, channel, status, contentPreview }) {
+async function logMessage({ userId, phoneHash, wamid, direction, channel, status, contentPreview, audience = 'customer' }) {
   const admin = getAdmin();
   await admin.from('whatsapp_message_logs').insert({
     user_id: userId || null,
@@ -134,6 +140,167 @@ async function logMessage({ userId, phoneHash, wamid, direction, channel, status
     channel,
     status,
     content_preview: contentPreview ? contentPreview.substring(0, 100) : null,
+    audience,
+  });
+}
+
+// -------------------------------------------------------------------
+// Merchant Inbound Handler
+// -------------------------------------------------------------------
+async function handleMerchantInbound({ userId, normalised, phoneHash, trimmedMessage }) {
+  let contextBlock = "Merchant context unavailable.";
+  let ctx = null;
+
+  try {
+    ctx = await buildMerchantContext(getAdmin(), userId);
+    contextBlock = formatMerchantContextForPrompt(ctx);
+  } catch (err) {
+    console.error('[omniflow-webhook] Merchant context build failed:', err);
+  }
+
+  // Merchant Quick Replies
+  const MERCHANT_QUICK_REPLIES = {
+    "today's orders": (c) => `📦 *Today's Orders:* ${c.recentOrders.length} orders found.\nPending Fulfillments: ${c.pendingFulfillmentsCount}\n\nManage here: intrustindia.com/merchant/shopping/orders`,
+    "todays orders": (c) => `📦 *Today's Orders:* ${c.recentOrders.length} orders found.\nPending Fulfillments: ${c.pendingFulfillmentsCount}\n\nManage here: intrustindia.com/merchant/shopping/orders`,
+    "my orders": (c) => `📦 *Recent Orders:* ${c.recentOrders.length} total orders.\nPending Fulfillments: ${c.pendingFulfillmentsCount}\n\nManage here: intrustindia.com/merchant/shopping/orders`,
+    "my payouts": (c) => `💰 *Payout Status:* \n- Pending Payouts: ${c.pendingPayoutsCount}\n- Total Pending: ₹${c.pendingPayoutsTotalRs}\n- Last Payout: ${c.lastPayoutStatus}\n\nView wallet: intrustindia.com/merchant/wallet`,
+    "payout": (c) => `💰 *Payout Status:* \n- Pending Payouts: ${c.pendingPayoutsCount}\n- Total Pending: ₹${c.pendingPayoutsTotalRs}\n- Last Payout: ${c.lastPayoutStatus}\n\nView wallet: intrustindia.com/merchant/wallet`,
+    "withdrawal": (c) => `💰 *Payout Status:* \n- Pending Payouts: ${c.pendingPayoutsCount}\n- Total Pending: ₹${c.pendingPayoutsTotalRs}\n- Last Payout: ${c.lastPayoutStatus}\n\nView wallet: intrustindia.com/merchant/wallet`,
+    "sales summary": (c) => `📈 *Sales Summary:* \n- Wallet Balance: ₹${c.walletBalanceRs}\n- Total Commission Paid: ₹${c.totalCommissionPaidRs}\n- Recent Orders: ${c.recentOrders.length}\n\nAnalytics: intrustindia.com/merchant/analytics`,
+    "sales": (c) => `📈 *Sales Summary:* \n- Wallet Balance: ₹${c.walletBalanceRs}\n- Total Commission Paid: ₹${c.totalCommissionPaidRs}\n- Recent Orders: ${c.recentOrders.length}\n\nAnalytics: intrustindia.com/merchant/analytics`,
+    "low stock": (c) => `🛡️ *Inventory:* \n- Live Items: ${c.liveInventoryCount}\n- Low Stock Alerts: ${c.lowStockCount}\n\nManage Stock: intrustindia.com/merchant/shopping/inventory`,
+    "inventory": (c) => `🛡️ *Inventory:* \n- Live Items: ${c.liveInventoryCount}\n- Low Stock Alerts: ${c.lowStockCount}\n\nManage Stock: intrustindia.com/merchant/shopping/inventory`,
+    "subscription status": (c) => `⭐ *Subscription:* \n- Plan: ${c.subscriptionStatus}\n\nManage: intrustindia.com/merchant/settings`,
+    "subscription": (c) => `⭐ *Subscription:* \n- Plan: ${c.subscriptionStatus}\n\nManage: intrustindia.com/merchant/settings`,
+    "plan": (c) => `⭐ *Subscription:* \n- Plan: ${c.subscriptionStatus}\n\nManage: intrustindia.com/merchant/settings`,
+    "kyc status": (c) => `🆔 *Identity Verification:* \n- KYC Status: ${c.kycStatus}\n- Bank Verified: ${c.bankVerified ? '✅' : '❌'}\n\nProfile: intrustindia.com/merchant/profile`,
+    "kyc": (c) => `🆔 *Identity Verification:* \n- KYC Status: ${c.kycStatus}\n- Bank Verified: ${c.bankVerified ? '✅' : '❌'}\n\nProfile: intrustindia.com/merchant/profile`,
+    "bank status": (c) => `🆔 *Identity Verification:* \n- KYC Status: ${c.kycStatus}\n- Bank Verified: ${c.bankVerified ? '✅' : '❌'}\n\nProfile: intrustindia.com/merchant/profile`,
+    "bank": (c) => `🆔 *Identity Verification:* \n- KYC Status: ${c.kycStatus}\n- Bank Verified: ${c.bankVerified ? '✅' : '❌'}\n\nProfile: intrustindia.com/merchant/profile`,
+  };
+
+  const msgLower = trimmedMessage.toLowerCase();
+  const matchedKey = Object.keys(MERCHANT_QUICK_REPLIES).find(key => msgLower.includes(key));
+
+  if (matchedKey && ctx) {
+    const reply = MERCHANT_QUICK_REPLIES[matchedKey](ctx);
+    await sendWhatsAppMessage(normalised, reply);
+    await logMessage({
+      userId,
+      phoneHash,
+      direction: 'outbound',
+      channel: 'whatsapp',
+      status: 'delivered',
+      contentPreview: reply,
+      audience: 'merchant',
+    });
+    return;
+  }
+
+  // AI Fallback
+  try {
+    const aiReply = await sendMessageToAgent(normalised, contextBlock, trimmedMessage);
+    const sanitized = sanitizeMessage(aiReply);
+    await sendWhatsAppMessage(normalised, sanitized);
+    await logMessage({
+      userId,
+      phoneHash,
+      direction: 'outbound',
+      channel: 'whatsapp',
+      status: 'delivered',
+      contentPreview: sanitized,
+      audience: 'merchant',
+    });
+  } catch (err) {
+    console.error('[omniflow-webhook] Merchant AI call failed:', err);
+    const fallback = "For help with your merchant account, please visit intrustindia.com/merchant or contact our support team.";
+    await sendWhatsAppMessage(normalised, fallback);
+    await logMessage({
+      userId,
+      phoneHash,
+      direction: 'outbound',
+      channel: 'whatsapp',
+      status: 'delivered',
+      contentPreview: fallback,
+      audience: 'merchant',
+    });
+  }
+}
+
+// -------------------------------------------------------------------
+// Customer Inbound Handler
+// -------------------------------------------------------------------
+async function handleCustomerInbound({ userId, normalised, phoneHash, trimmedMessage }) {
+  const quickReplyMap = {
+    'check balance':      null, // handled below with live data
+    'my kyc status':      null, // handled below with live data
+    'not me':             '⚠️ We have flagged this activity. Please visit intrustindia.com/profile immediately to secure your account and contact our support team.',
+    'view details':       null, // handled below with live data
+    'this was me':        '✅ Great, no action needed. Stay safe and keep your account secure!',
+    'secure my account':  '🔐 Please visit intrustindia.com/profile right away to review your security settings and active sessions.',
+  };
+
+  const msgLower = trimmedMessage.toLowerCase();
+
+  if (msgLower in quickReplyMap) {
+    let quickReply = quickReplyMap[msgLower];
+
+    if (!quickReply) {
+      const { walletBalance, kycStatus } = await getFinancialContext(userId);
+      const balanceRs = (walletBalance / 100).toFixed(2);
+
+      if (msgLower === 'check balance' || msgLower === 'view details') {
+        quickReply = `💰 Your current InTrust wallet balance is *₹${balanceRs}*. For full transaction history, visit intrustindia.com/wallet`;
+      } else if (msgLower === 'my kyc status') {
+        const statusEmoji = { Verified: '✅', Pending: '⏳', Rejected: '❌' }[kycStatus] || '❓';
+        quickReply = `📋 Your KYC verification status is: *${kycStatus}* ${statusEmoji}. For more details, visit intrustindia.com/profile`;
+      }
+    }
+
+    if (quickReply) {
+      await sendWhatsAppMessage(normalised, quickReply);
+      await logMessage({
+        userId,
+        phoneHash,
+        direction: 'outbound',
+        channel: 'whatsapp',
+        status: 'delivered',
+        contentPreview: quickReply,
+        audience: 'customer',
+      });
+      return;
+    }
+  }
+
+  const { contextBlock, walletBalance, kycStatus } = await getFinancialContext(userId);
+  const intentResponse = enforceIntent(trimmedMessage, { walletBalance, kycStatus });
+
+  let finalReply;
+
+  if (intentResponse) {
+    finalReply = intentResponse;
+  } else {
+    try {
+      const aiReply = await sendMessageToAgent(normalised, contextBlock, trimmedMessage);
+      const sanitized = sanitizeMessage(aiReply);
+      finalReply = enforceIntent(sanitized, { walletBalance, kycStatus }) || sanitized;
+    } catch (aiErr) {
+      console.error('[omniflow-webhook] Customer AI call failed:', aiErr);
+      finalReply = 'For further help, please visit intrustindia.com or contact our support team.';
+    }
+  }
+
+  finalReply = sanitizeMessage(finalReply);
+
+  await sendWhatsAppMessage(normalised, finalReply);
+  await logMessage({
+    userId,
+    phoneHash,
+    direction: 'outbound',
+    channel: 'whatsapp',
+    status: 'delivered',
+    contentPreview: finalReply,
+    audience: 'customer',
   });
 }
 
@@ -181,15 +348,8 @@ export async function POST(req) {
       }
     }
 
-    // --- Log inbound message ---
-    await logMessage({
-      phoneHash,
-      wamid,
-      direction: 'inbound',
-      channel: 'whatsapp',
-      status: 'delivered',
-      contentPreview: userMessage,
-    });
+    // Idempotency check must remain before inbound log
+
 
     // -------------------------------------------------------------------
     // FLOW A: Check if this is an OTP reply for phone linking
@@ -209,16 +369,39 @@ export async function POST(req) {
         .maybeSingle();
 
       if (!otpError && otpRecord && new Date(otpRecord.expires_at) > new Date()) {
+        // Fetch role to determine audience
+        const { data: userProfile } = await admin
+          .from('user_profiles')
+          .select('role')
+          .eq('id', otpRecord.user_id)
+          .single();
+        const role = userProfile?.role || 'customer';
+        const isMerchant = ['merchant', 'admin', 'super_admin'].includes(role);
+        const audience = isMerchant ? 'merchant' : 'customer';
+
+        // Log inbound with resolved audience
+        await logMessage({
+          userId: otpRecord.user_id,
+          phoneHash,
+          wamid,
+          direction: 'inbound',
+          channel: 'whatsapp',
+          status: 'delivered',
+          contentPreview: userMessage,
+          audience,
+        });
+
         // Valid OTP — link the phone
         const { error: bindError } = await admin
           .from('user_channel_bindings')
           .upsert({
             user_id: otpRecord.user_id,
             phone: normalised,
+            audience,
             whatsapp_opt_in: true,
             linked_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-          }, { onConflict: 'user_id' });
+          }, { onConflict: 'user_id,audience' });
 
         if (bindError) {
           console.error('[omniflow-webhook] Binding insert error:', bindError);
@@ -247,6 +430,16 @@ export async function POST(req) {
           }
 
           // Send welcome template (plain text won't work — no 24-hour window yet)
+          const template = audience === 'merchant'
+            ? MERCHANT_WELCOME_LINKED_TEMPLATE
+            : WELCOME_TEMPLATE;
+
+          await sendTemplateMessage(
+            normalised,
+            template.name,
+            template.language,
+            template.buildComponents()
+          );
           const confirmMsg =
             '✅ Your WhatsApp has been successfully linked to your InTrust India account.\n\n' +
             'You can now use this chat to:\n' +
@@ -255,12 +448,7 @@ export async function POST(req) {
             '• Review recent transactions\n\n' +
             'Simply send us a message and our assistant will respond instantly.\n' +
             'For detailed account management, visit: intrustindia.com';
-          await sendTemplateMessage(
-            normalised,
-            WELCOME_TEMPLATE.name,
-            WELCOME_TEMPLATE.language,
-            WELCOME_TEMPLATE.buildComponents()
-          );
+
           await logMessage({
             userId: otpRecord.user_id,
             phoneHash,
@@ -268,6 +456,7 @@ export async function POST(req) {
             channel: 'whatsapp',
             status: 'delivered',
             contentPreview: confirmMsg,
+            audience,
           });
         }
 
@@ -288,101 +477,57 @@ export async function POST(req) {
     // -------------------------------------------------------------------
 
     // Lookup binding (needed by both quick-reply and chat handlers)
-    const { data: binding } = await admin
+    const { data: bindings } = await admin
       .from('user_channel_bindings')
-      .select('user_id')
-      .eq('phone', normalised)
-      .maybeSingle();
+      .select('user_id, audience')
+      .eq('phone', normalised);
 
-    if (!binding) {
+    if (!bindings || bindings.length === 0) {
       const notLinkedMsg = 'Please link your WhatsApp first by visiting intrustindia.com → Profile → Connect WhatsApp.';
       await sendWhatsAppMessage(normalised, notLinkedMsg);
       await logMessage({ phoneHash, direction: 'outbound', channel: 'whatsapp', status: 'delivered', contentPreview: notLinkedMsg });
       return new NextResponse('OK', { status: 200 });
     }
 
-    const userId = binding.user_id;
+    let chosen = bindings[0];
+    if (bindings.length > 1) {
+      // Resolve preference by querying user_profiles.role
+      const userIds = bindings.map(b => b.user_id);
+      const { data: profiles } = await admin
+        .from('user_profiles')
+        .select('id, role')
+        .in('id', userIds);
 
-    // -------------------------------------------------------------------
-    // FLOW B.1: Quick Reply button responses (instant — no AI call needed)
-    // -------------------------------------------------------------------
-    const quickReplyMap = {
-      'check balance':      null, // handled below with live data
-      'my kyc status':      null, // handled below with live data
-      'not me':             '⚠️ We have flagged this activity. Please visit intrustindia.com/profile immediately to secure your account and contact our support team.',
-      'view details':       null, // handled below with live data
-      'this was me':        '✅ Great, no action needed. Stay safe and keep your account secure!',
-      'secure my account':  '🔐 Please visit intrustindia.com/profile right away to review your security settings and active sessions.',
-    };
-
-    const msgLower = trimmedMessage.toLowerCase();
-
-    if (msgLower in quickReplyMap) {
-      let quickReply = quickReplyMap[msgLower];
-
-      // For responses that need live data, fetch financial context
-      if (!quickReply) {
-        const { walletBalance, kycStatus } = await getFinancialContext(userId);
-        const balanceRs = (walletBalance / 100).toFixed(2);
-
-        if (msgLower === 'check balance' || msgLower === 'view details') {
-          quickReply = `💰 Your current InTrust wallet balance is *₹${balanceRs}*. For full transaction history, visit intrustindia.com/wallet`;
-        } else if (msgLower === 'my kyc status') {
-          const statusEmoji = { Verified: '✅', Pending: '⏳', Rejected: '❌' }[kycStatus] || '❓';
-          quickReply = `📋 Your KYC verification status is: *${kycStatus}* ${statusEmoji}. For more details, visit intrustindia.com/profile`;
-        }
-      }
-
-      if (quickReply) {
-        await sendWhatsAppMessage(normalised, quickReply);
-        await logMessage({
-          userId,
-          phoneHash,
-          direction: 'outbound',
-          channel: 'whatsapp',
-          status: 'delivered',
-          contentPreview: quickReply,
-        });
-        return new NextResponse('OK', { status: 200 });
+      const hasMerchant = profiles?.some(p => ['merchant', 'admin', 'super_admin'].includes(p.role));
+      if (hasMerchant) {
+        chosen = bindings.find(b => b.audience === 'merchant') || chosen;
+      } else {
+        chosen = bindings.find(b => b.audience === 'customer') || chosen;
       }
     }
 
-    const { contextBlock, walletBalance, kycStatus } = await getFinancialContext(userId);
+    const userId = chosen.user_id;
+    const audience = chosen.audience || 'customer';
 
-    // Intent enforcement (fast path — no AI call needed for recognized intents)
-    const intentResponse = enforceIntent(userMessage, { walletBalance, kycStatus });
-
-    let finalReply;
-
-    if (intentResponse) {
-      // Use intent-enforced response directly (no AI call)
-      finalReply = intentResponse;
-    } else {
-      // Fallback: call Omniflow AI agent
-      try {
-        const aiReply = await sendMessageToAgent(normalised, contextBlock, userMessage);
-        // PII sanitize + intent check on AI response
-        const sanitized = sanitizeMessage(aiReply);
-        finalReply = enforceIntent(sanitized, { walletBalance, kycStatus }) || sanitized;
-      } catch (aiErr) {
-        console.error('[omniflow-webhook] AI call failed:', aiErr);
-        finalReply = 'For further help, please visit intrustindia.com or contact our support team.';
-      }
-    }
-
-    // Apply PII filter as final safety net
-    finalReply = sanitizeMessage(finalReply);
-
-    await sendWhatsAppMessage(normalised, finalReply);
+    // Log inbound with resolved audience
     await logMessage({
       userId,
       phoneHash,
-      direction: 'outbound',
+      wamid,
+      direction: 'inbound',
       channel: 'whatsapp',
       status: 'delivered',
-      contentPreview: finalReply,
+      contentPreview: userMessage,
+      audience,
     });
 
+    if (audience === 'merchant') {
+      await handleMerchantInbound({ userId, normalised, phoneHash, trimmedMessage });
+      return new NextResponse('OK', { status: 200 });
+    }
+
+    // falls through to handleCustomerInbound
+    await handleCustomerInbound({ userId, normalised, phoneHash, trimmedMessage });
     return new NextResponse('OK', { status: 200 });
   } catch (err) {
     console.error('[omniflow-webhook] Unhandled error:', err);

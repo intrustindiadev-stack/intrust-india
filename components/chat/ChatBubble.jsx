@@ -10,12 +10,18 @@ import { CHAT_HIDDEN_PATHS } from './hiddenPaths';
  * Fixed floating button at bottom-right. Visible only to authenticated
  * users and hidden on auth/admin pages (see hiddenPaths.js).
  */
-export default function ChatBubble() {
+export function BaseChatBubble({
+  hiddenPaths = CHAT_HIDDEN_PATHS,
+  bubbleImage = "/robot-mascot-nobg.png",
+  closeAccentColor = "#1565c0",
+  ariaLabel = "Open InTrust Assistant",
+  assistantTitle = "InTrust Assistant"
+}) {
   const pathname = usePathname();
   const { isOpen, toggleChat, hasUnread } = useChat();
   const { user } = useAuth();
 
-  const isHidden = CHAT_HIDDEN_PATHS.some((p) => pathname?.startsWith(p));
+  const isHidden = hiddenPaths.some((p) => pathname?.startsWith(p));
   if (!user || isHidden) return null;
 
   return (
@@ -96,7 +102,7 @@ export default function ChatBubble() {
         }
 
         .chat-close-icon-inner {
-          background: linear-gradient(145deg, #1565c0, #1e88e5);
+          background: ${closeAccentColor};
           width: 52px;
           height: 52px;
           border-radius: 50%;
@@ -148,15 +154,15 @@ export default function ChatBubble() {
         id="chat-bubble-btn"
         className={`chat-bubble-btn ${isOpen ? 'is-open' : ''}`}
         onClick={toggleChat}
-        aria-label={isOpen ? 'Close chat' : 'Open InTrust Assistant'}
-        title={isOpen ? 'Close chat' : 'InTrust Assistant'}
+        aria-label={isOpen ? 'Close chat' : ariaLabel}
+        title={isOpen ? 'Close chat' : assistantTitle}
       >
         <div className="chat-bubble-content">
           {/* ── Robot mascot wrapper ── */}
           <div className="chat-mascot-wrapper">
             <img
-              src="/robot-mascot-nobg.png"
-              alt="InTrust Mascot"
+              src={bubbleImage}
+              alt={`${assistantTitle} Mascot`}
               className="chat-mascot-img"
             />
           </div>
@@ -176,4 +182,8 @@ export default function ChatBubble() {
 
     </>
   );
+}
+
+export default function ChatBubble() {
+  return <BaseChatBubble />;
 }
