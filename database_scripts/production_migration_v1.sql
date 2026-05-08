@@ -18,7 +18,6 @@
 
 ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'sales_exec';
 ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'sales_manager';
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'hr_admin';
 ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'employee';
 ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'crm_user';
 
@@ -196,7 +195,7 @@ CREATE POLICY "hr_manage_all_leaves"
     EXISTS (
       SELECT 1 FROM public.user_profiles
       WHERE id = auth.uid()
-        AND role::text IN ('admin','super_admin','hr_admin')
+        AND role::text IN ('admin','super_admin','hr_manager')
     )
   );
 
@@ -224,7 +223,7 @@ CREATE POLICY "hr_manage_all_attendance"
     EXISTS (
       SELECT 1 FROM public.user_profiles
       WHERE id = auth.uid()
-        AND role::text IN ('admin','super_admin','hr_admin')
+        AND role::text IN ('admin','super_admin','hr_manager')
     )
   );
 
@@ -242,7 +241,7 @@ CREATE POLICY "hr_manage_all_salary"
     EXISTS (
       SELECT 1 FROM public.user_profiles
       WHERE id = auth.uid()
-        AND role::text IN ('admin','super_admin','hr_admin')
+        AND role::text IN ('admin','super_admin','hr_manager')
     )
   );
 
@@ -279,7 +278,7 @@ CREATE POLICY "hr_manage_training"
     EXISTS (
       SELECT 1 FROM public.user_profiles
       WHERE id = auth.uid()
-        AND role::text IN ('admin','super_admin','hr_admin')
+        AND role::text IN ('admin','super_admin','hr_manager')
     )
   );
 

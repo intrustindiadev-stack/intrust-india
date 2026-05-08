@@ -8,7 +8,7 @@ export async function POST(request) {
 
     try {
         const { role } = await request.json();
-        if (!['admin', 'hr', 'merchant', 'customer'].includes(role)) {
+        if (!['admin', 'hr_manager', 'merchant', 'customer'].includes(role)) {
             return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
         }
 

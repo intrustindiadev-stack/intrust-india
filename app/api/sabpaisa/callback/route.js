@@ -133,6 +133,28 @@ export async function POST(request) {
             }
         }
 
+        // ── Idempotency: Persist gateway_success BEFORE fulfillment ──────────
+        // Writing the status to the DB now means any concurrent or retried
+        // callback will find wasAlreadySuccess=true and skip all fulfillment
+        // blocks, preventing double-crediting of rewards/wallets.
+        if (existingTxn && internalStatus === 'gateway_success' && !wasAlreadySuccess && !fulfillmentFailed) {
+            try {
+                await updateTransaction(clientTxnId, {
+                    status: internalStatus,
+                    sabpaisa_txn_id: sabpaisaTxnId,
+                    paid_amount: amount,
+                    sabpaisa_message: result.transMsg || status,
+                    bank_txn_id: result.bankTxnId,
+                    payment_mode: result.paymentMode,
+                    status_code: result.statusCode || status
+                });
+                console.log(`[Callback] Pre-fulfillment status persisted as gateway_success for txn ${clientTxnId}`);
+            } catch (preUpdateErr) {
+                console.error(`[Callback] Failed to pre-persist gateway_success for txn ${clientTxnId}:`, preUpdateErr.message);
+                // Non-fatal: fulfillment will still proceed; the final update at end will retry.
+            }
+        }
+
         // 5. Handle Wallet Credit for WALLET_TOPUP safely
         if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'WALLET_TOPUP' && !wasAlreadySuccess) {
             try {
@@ -432,10 +454,13 @@ export async function POST(request) {
                     process.env.SUPABASE_SERVICE_ROLE_KEY
                 );
                 const groupId = existingTxn.udf2;
+                // Guard: never overwrite an already-paid/completed row with failure.
+                // finalize_gateway_orders sets payment_status='paid', so checking that is sufficient.
                 await supabaseAdmin
                     .from('shopping_order_groups')
-                    .update({ status: 'failed' })
-                    .eq('id', groupId);
+                    .update({ status: 'failed', payment_status: 'failed' })
+                    .eq('id', groupId)
+                    .neq('payment_status', 'paid');
                 console.log(`[Callback] Cart checkout marked as failed/aborted for txn ${clientTxnId}`);
 
                 // 5e.1 ADDED: Notify Customer of Payment Failure
@@ -831,6 +856,34 @@ export async function POST(request) {
                     } catch (err) {
                         console.error('[Callback] Unexpected error distributing merchant referral reward:', err);
                     }
+
+                    // 2.6 Distribute merchant_onboard reward points to customer referral upline
+                    try {
+                        await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
+                            p_event_type: 'merchant_onboard',
+                            p_source_user_id: existingTxn.user_id,
+                            p_reference_id: merchantId,
+                            p_reference_type: 'merchant'
+                        });
+                        console.log(`[Callback] merchant_onboard rewards distributed for merchant ${merchantId}`);
+                    } catch (rewardErr) {
+                        console.error('[Callback] merchant_onboard reward distribution error (non-fatal):', rewardErr.message);
+                    }
+                }
+
+                // 2.7 Distribute subscription_renewal reward points to customer referral upline
+                if (isRenewal) {
+                    try {
+                        await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
+                            p_event_type: 'subscription_renewal',
+                            p_source_user_id: existingTxn.user_id,
+                            p_reference_id: merchantId,
+                            p_reference_type: 'merchant_subscription'
+                        });
+                        console.log(`[Callback] subscription_renewal rewards distributed for merchant ${merchantId}`);
+                    } catch (rewardErr) {
+                        console.error('[Callback] subscription_renewal reward distribution error (non-fatal):', rewardErr.message);
+                    }
                 }
 
                 // 3. Notify Success
@@ -872,8 +925,10 @@ export async function POST(request) {
             }
         }
 
-        // 4. Update Transaction Status
-        if (clientTxnId && (!fulfillmentFailed || internalStatus !== 'gateway_success')) {
+        // 4. Update Transaction Status (for non-success paths or if pre-update was skipped)
+        // gateway_success was already persisted before fulfillment above; only re-write
+        // for failure/pending/aborted outcomes or when pre-update was not applicable.
+        if (clientTxnId && internalStatus !== 'gateway_success') {
             try {
                 await updateTransaction(clientTxnId, {
                     status: internalStatus,

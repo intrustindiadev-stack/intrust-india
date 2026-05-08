@@ -1,5 +1,31 @@
-import { createAdminClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+
+/**
+ * Verifies the caller is authenticated and holds admin or super_admin role.
+ * Returns { user, profile } on success or a NextResponse error on failure.
+ */
+async function requireAdmin(request) {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+    }
+
+    const supabaseAdmin = createAdminClient();
+    const { data: profile, error: profileError } = await supabaseAdmin
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    if (profileError || !profile || !['admin', 'super_admin'].includes(profile.role)) {
+        return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+    }
+
+    return { user, profile };
+}
 
 /**
  * POST /api/admin/rewards/adjust
@@ -10,6 +36,9 @@ import { NextResponse } from 'next/server';
  */
 export async function POST(request) {
     try {
+        const auth = await requireAdmin(request);
+        if (auth.error) return auth.error;
+
         const body = await request.json();
         const { user_id, points, operation, reason } = body;
 

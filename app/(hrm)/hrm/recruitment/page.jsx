@@ -41,19 +41,28 @@ function CandidateDrawer({ app, onClose, onUpdate }) {
     const handleSave = async () => {
         setSaving(true);
         try {
-            const updates = {
-                status: stage,
-                ...form,
-                interview_date: form.interview_date ? new Date(form.interview_date).toISOString() : null,
-                offered_salary: form.offered_salary ? Number(form.offered_salary) : null,
-                commission_percent: form.commission_percent ? Number(form.commission_percent) : null,
-                joining_bonus: form.joining_bonus ? Number(form.joining_bonus) : null,
-                hired_at: stage === 'hired' ? new Date().toISOString() : null,
-                status_history: supabase.rpc ? undefined : [],
+            const payload = {
+                applicationId: app.id,
+                stage: stage,
+                panelAccessGranted: form.panel_access_granted,
+                offeredSalary: form.offered_salary,
+                commissionPercent: form.commission_percent,
+                joiningBonus: form.joining_bonus,
+                offerLetterNotes: form.offer_letter_notes,
+                interviewDate: form.interview_date,
+                interviewNotes: form.interview_notes
             };
 
-            const { error } = await supabase.from('career_applications').update(updates).eq('id', app.id);
-            if (error) throw error;
+            const response = await fetch('/api/hrm/hire-candidate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to update application');
+            }
             
             // If HR marks as hired, it requires Admin to actually update user profile
             if (stage === 'hired') {
@@ -62,6 +71,16 @@ function CandidateDrawer({ app, onClose, onUpdate }) {
                 toast.success('Application updated');
             }
             
+            const updates = {
+                status: stage,
+                ...form,
+                interview_date: form.interview_date ? new Date(form.interview_date).toISOString() : null,
+                offered_salary: form.offered_salary ? Number(form.offered_salary) : null,
+                commission_percent: form.commission_percent ? Number(form.commission_percent) : null,
+                joining_bonus: form.joining_bonus ? Number(form.joining_bonus) : null,
+                hired_at: stage === 'hired' ? new Date().toISOString() : null,
+            };
+
             onUpdate({ ...app, ...updates, status: stage });
             onClose();
         } catch (err) { toast.error(err.message); }

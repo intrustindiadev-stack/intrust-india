@@ -35,6 +35,26 @@ function ReviewModal({ request, onClose, onSave }) {
             }).eq('id', request.id);
             if (error) throw error;
             toast.success(`Leave ${action} successfully`);
+
+            // Audit Log Insert
+            supabase.auth.getUser().then(({ data: { user } }) => {
+                if (user) {
+                    supabase.from('audit_logs_hrm').insert({
+                        actor_id: user.id,
+                        actor_name: user.user_metadata?.full_name || 'System',
+                        action: `Leave ${action}`,
+                        table_name: 'leave_requests',
+                        record_id: request.id,
+                        old_data: { status: request.status },
+                        new_data: { status: action, review_note: note },
+                        module: 'Leaves',
+                        severity: 'low'
+                    }).then(({ error: auditError }) => {
+                        if (auditError) console.warn('Audit log failed:', auditError);
+                    });
+                }
+            });
+
             onSave(request.id, action);
             onClose();
         } catch (err) { toast.error(err.message); }

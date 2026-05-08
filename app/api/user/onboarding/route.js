@@ -1,23 +1,25 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// We need a service account client to bypass RLS and update profiles & wallets safely
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 
 export const runtime = 'nodejs';
 
 export async function POST(req) {
     try {
-        const body = await req.json();
-        const { userId, services, occupation, referral_source, referral_code_entered } = body;
+        // 0. Authenticate the caller — derive userId from session, never trust the body.
+        const supabaseUser = await createServerSupabaseClient();
+        const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
 
-        const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/i;
-        if (!userId || !uuidRegex.test(userId)) {
-            return NextResponse.json({ error: 'Valid User ID (UUID) is required' }, { status: 400 });
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+
+        const userId = user.id;
+
+        // We need a service account client to bypass RLS and update profiles & wallets safely
+        const supabaseAdmin = createAdminClient();
+
+        const body = await req.json();
+        const { services, occupation, referral_source, referral_code_entered } = body;
 
         // 1. Process Referral Logic BEFORE marking onboarding as complete
         let referredById = null;
@@ -128,6 +130,14 @@ export async function POST(req) {
                         if (statsError) {
                             console.error(`update_reward_tree_stats failed for ancestor ${ancestor.ancestor_id}:`, statsError);
                         }
+
+                        // Recalculate tier for this ancestor
+                        const { error: tierError } = await supabaseAdmin.rpc('recalculate_user_tier', {
+                            p_user_id: ancestor.ancestor_id
+                        });
+                        if (tierError) {
+                            console.error(`recalculate_user_tier failed for ancestor ${ancestor.ancestor_id}:`, tierError);
+                        }
                     }
                 }
 
@@ -137,6 +147,14 @@ export async function POST(req) {
                 });
                 if (selfStatsError) {
                     console.error(`update_reward_tree_stats failed for new user ${userId}:`, selfStatsError);
+                }
+
+                // Recalculate tier for the new user themselves
+                const { error: selfTierError } = await supabaseAdmin.rpc('recalculate_user_tier', {
+                    p_user_id: userId
+                });
+                if (selfTierError) {
+                    console.error(`recalculate_user_tier failed for new user ${userId}:`, selfTierError);
                 }
 
             } catch (rewardError) {

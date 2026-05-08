@@ -1,15 +1,172 @@
 -- ==========================================
--- HRM Schema (HR & Employees)
+-- HRM Schema (HR & Employees) - LIVE DESIGN
 -- ==========================================
-
--- Employee Status ENUM
-CREATE TYPE employee_status AS ENUM ('active', 'inactive', 'terminated');
+--
+-- ARCHITECTURE NOTE:
+-- The HRM module uses the `user_profiles` table as the employee identity source
+-- (not a separate `employees` table).
+--
+-- HRM-specific fields (department, employee_id, joining_date, employment_type, city, base_salary)
+-- are columns on `user_profiles`.
+--
+-- `attendance`, `leave_requests`, and `salary_records` use `employee_id UUID REFERENCES public.user_profiles(id)`.
+--
+-- The `employees`, `attendance_logs`, `leave_balances`, `audit_logs_hrm` tables exist in the DB
+-- but are NOT used by the current application and should be considered for future migration or removal.
+-- ==========================================
 
 -- Leave Status ENUM
 CREATE TYPE leave_status AS ENUM ('pending', 'approved', 'rejected');
 
 -- Leave Type ENUM
 CREATE TYPE leave_type AS ENUM ('casual', 'sick', 'earned', 'unpaid');
+
+-- Attendance Table (Live)
+CREATE TABLE public.attendance (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    employee_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    check_in TIMESTAMPTZ,
+    check_out TIMESTAMPTZ,
+    status TEXT DEFAULT 'present' NOT NULL,
+    override_by UUID REFERENCES public.user_profiles(id),
+    override_reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(employee_id, date)
+);
+
+-- Leave Requests Table (Live)
+CREATE TABLE public.leave_requests (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    employee_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    leave_type leave_type NOT NULL,
+    from_date DATE NOT NULL,
+    to_date DATE NOT NULL,
+    reason TEXT NOT NULL,
+    status leave_status DEFAULT 'pending' NOT NULL,
+    reviewed_by UUID REFERENCES public.user_profiles(id),
+    review_note TEXT,
+    reviewed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Salary Records Table (Live)
+CREATE TABLE public.salary_records (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    employee_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    month INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    base_salary NUMERIC DEFAULT 0,
+    hra NUMERIC DEFAULT 0,
+    allowances NUMERIC DEFAULT 0,
+    deductions NUMERIC DEFAULT 0,
+    net_salary NUMERIC DEFAULT 0,
+    status TEXT DEFAULT 'pending',
+    payslip_url TEXT,
+    processed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(employee_id, month, year)
+);
+
+-- Training Materials Table (Live)
+CREATE TABLE public.training_materials (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title TEXT NOT NULL,
+    category TEXT,
+    type TEXT NOT NULL, -- e.g., 'pdf', 'video', 'link'
+    url TEXT NOT NULL,
+    description TEXT,
+    uploaded_by UUID REFERENCES auth.users(id),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Career Job Roles Table (Live)
+CREATE TABLE public.career_job_roles (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title TEXT NOT NULL,
+    department TEXT NOT NULL,
+    location TEXT NOT NULL,
+    type TEXT NOT NULL,
+    description TEXT,
+    requirements TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Career Applications Table (Live)
+CREATE TABLE public.career_applications (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    job_role_id UUID REFERENCES public.career_job_roles(id) ON DELETE CASCADE,
+    full_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT,
+    resume_url TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.leave_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.salary_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.training_materials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.career_job_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.career_applications ENABLE ROW LEVEL SECURITY;
+
+-- ==========================================
+-- HRM RLS Policies (Live)
+-- ==========================================
+
+-- Attendance
+CREATE POLICY "employee_insert_attendance"
+    ON public.attendance FOR INSERT
+    WITH CHECK (employee_id = auth.uid());
+
+CREATE POLICY "employee_view_own_attendance"
+    ON public.attendance FOR SELECT
+    USING (employee_id = auth.uid());
+
+CREATE POLICY "hr_all_attendance"
+    ON public.attendance FOR ALL
+    USING (
+        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr', 'hr_manager', 'admin', 'super_admin')
+    );
+
+-- Leave Requests
+CREATE POLICY "employee_insert_leave"
+    ON public.leave_requests FOR INSERT
+    WITH CHECK (employee_id = auth.uid());
+
+CREATE POLICY "employee_view_own_leaves"
+    ON public.leave_requests FOR SELECT
+    USING (employee_id = auth.uid());
+
+CREATE POLICY "hr_all_leaves"
+    ON public.leave_requests FOR ALL
+    USING (
+        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr', 'hr_manager', 'admin', 'super_admin')
+    );
+
+-- Salary Records
+CREATE POLICY "employee_view_own_salary"
+    ON public.salary_records FOR SELECT
+    USING (employee_id = auth.uid());
+
+CREATE POLICY "hr_all_salary"
+    ON public.salary_records FOR ALL
+    USING (
+        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr', 'hr_manager', 'admin', 'super_admin')
+    );
+
+
+-- ==========================================
+-- FUTURE / NOT DEPLOYED (Unused Tables)
+-- ==========================================
+
+-- Employee Status ENUM
+CREATE TYPE employee_status AS ENUM ('active', 'inactive', 'terminated');
 
 -- Attendance Status ENUM
 CREATE TYPE attendance_status AS ENUM ('present', 'late', 'absent', 'leave');
@@ -57,20 +214,6 @@ CREATE TABLE public.attendance_logs (
     UNIQUE(employee_id, date)
 );
 
--- Leave Requests Table
-CREATE TABLE public.leave_requests (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    employee_id UUID REFERENCES public.employees(id) ON DELETE CASCADE,
-    leave_type leave_type NOT NULL,
-    from_date DATE NOT NULL,
-    to_date DATE NOT NULL,
-    reason TEXT NOT NULL,
-    status leave_status DEFAULT 'pending' NOT NULL,
-    reviewed_by UUID REFERENCES auth.users(id),
-    reviewed_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
 -- Leave Balances Table
 CREATE TABLE public.leave_balances (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -86,36 +229,6 @@ CREATE TABLE public.leave_balances (
     UNIQUE(employee_id, year)
 );
 
--- Salary Records Table
-CREATE TABLE public.salary_records (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    employee_id UUID REFERENCES public.employees(id) ON DELETE CASCADE,
-    month INTEGER NOT NULL,
-    year INTEGER NOT NULL,
-    basic NUMERIC DEFAULT 0,
-    hra NUMERIC DEFAULT 0,
-    allowances NUMERIC DEFAULT 0,
-    deductions NUMERIC DEFAULT 0,
-    net_pay NUMERIC DEFAULT 0,
-    payslip_url TEXT,
-    created_by UUID REFERENCES auth.users(id),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(employee_id, month, year)
-);
-
--- Training Materials Table
-CREATE TABLE public.training_materials (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    title TEXT NOT NULL,
-    category TEXT,
-    type TEXT NOT NULL, -- e.g., 'pdf', 'video', 'link'
-    url TEXT NOT NULL,
-    description TEXT,
-    uploaded_by UUID REFERENCES auth.users(id),
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
 -- Audit Logs HRM Table
 CREATE TABLE public.audit_logs_hrm (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -127,140 +240,3 @@ CREATE TABLE public.audit_logs_hrm (
     new_data JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
--- Enable RLS
-ALTER TABLE public.employees ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.employee_documents ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.attendance_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.leave_requests ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.leave_balances ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.salary_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.training_materials ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.audit_logs_hrm ENABLE ROW LEVEL SECURITY;
-
--- ==========================================
--- HRM RLS Policies
--- ==========================================
-
--- Employees
-CREATE POLICY "Employees can view own profile, HR/Admins can view all"
-    ON public.employees FOR SELECT
-    USING (
-        user_id = auth.uid() OR 
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
-CREATE POLICY "HR/Admins can insert/update employees"
-    ON public.employees FOR ALL
-    USING (
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
--- Employee Documents
-CREATE POLICY "Employees can view own documents, HR/Admins can view all"
-    ON public.employee_documents FOR SELECT
-    USING (
-        EXISTS (SELECT 1 FROM public.employees e WHERE e.id = employee_id AND e.user_id = auth.uid()) OR 
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
-CREATE POLICY "HR/Admins can manage employee documents"
-    ON public.employee_documents FOR ALL
-    USING (
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
--- Attendance Logs
-CREATE POLICY "Employees can view own attendance, HR/Admins can view all"
-    ON public.attendance_logs FOR SELECT
-    USING (
-        EXISTS (SELECT 1 FROM public.employees e WHERE e.id = employee_id AND e.user_id = auth.uid()) OR 
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
-CREATE POLICY "Employees can insert own attendance"
-    ON public.attendance_logs FOR INSERT
-    WITH CHECK (
-        EXISTS (SELECT 1 FROM public.employees e WHERE e.id = employee_id AND e.user_id = auth.uid())
-    );
-
-CREATE POLICY "HR/Admins can update attendance"
-    ON public.attendance_logs FOR UPDATE
-    USING (
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
--- Leave Requests
-CREATE POLICY "Employees can view own leaves, HR/Admins can view all"
-    ON public.leave_requests FOR SELECT
-    USING (
-        EXISTS (SELECT 1 FROM public.employees e WHERE e.id = employee_id AND e.user_id = auth.uid()) OR 
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
-CREATE POLICY "Employees can insert own leaves"
-    ON public.leave_requests FOR INSERT
-    WITH CHECK (
-        EXISTS (SELECT 1 FROM public.employees e WHERE e.id = employee_id AND e.user_id = auth.uid())
-    );
-
-CREATE POLICY "HR/Admins can update leaves"
-    ON public.leave_requests FOR UPDATE
-    USING (
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
--- Leave Balances
-CREATE POLICY "Employees can view own leave balances, HR/Admins can view all"
-    ON public.leave_balances FOR SELECT
-    USING (
-        EXISTS (SELECT 1 FROM public.employees e WHERE e.id = employee_id AND e.user_id = auth.uid()) OR 
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
-CREATE POLICY "HR/Admins can manage leave balances"
-    ON public.leave_balances FOR ALL
-    USING (
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
--- Salary Records
-CREATE POLICY "Employees can view own salary records, HR/Admins can view all"
-    ON public.salary_records FOR SELECT
-    USING (
-        EXISTS (SELECT 1 FROM public.employees e WHERE e.id = employee_id AND e.user_id = auth.uid()) OR 
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
-CREATE POLICY "HR/Admins can manage salary records"
-    ON public.salary_records FOR ALL
-    USING (
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
--- Training Materials
-CREATE POLICY "All authenticated users can view active training materials"
-    ON public.training_materials FOR SELECT
-    USING (
-        is_active = true OR 
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
-CREATE POLICY "HR/Admins can manage training materials"
-    ON public.training_materials FOR ALL
-    USING (
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
--- Audit Logs HRM
-CREATE POLICY "HR/Admins can view audit logs"
-    ON public.audit_logs_hrm FOR SELECT
-    USING (
-        (SELECT role FROM public.user_profiles WHERE id = auth.uid()) IN ('hr_admin', 'admin', 'super_admin')
-    );
-
-CREATE POLICY "System can insert audit logs"
-    ON public.audit_logs_hrm FOR INSERT
-    WITH CHECK (
-        auth.role() = 'authenticated'
-    );

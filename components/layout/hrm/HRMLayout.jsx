@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import HRMSidebar from './HRMSidebar';
 import HRMBottomNav from './HRMBottomNav';
-import { Menu, LogOut } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
-import { supabase } from '@/lib/supabaseClient';
 
 export default function HRMLayout({ children, userProfile }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -48,17 +47,6 @@ export default function HRMLayout({ children, userProfile }) {
                             {/* Notifications */}
                             <NotificationBell apiPath="/api/hrm/notifications" />
 
-                            {/* Logout */}
-                            <button
-                                onClick={async () => {
-                                    await supabase.auth.signOut();
-                                    window.location.href = '/login';
-                                }}
-                                className="p-2 rounded-xl text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100"
-                                title="Logout"
-                            >
-                                <LogOut size={20} />
-                            </button>
 
                             {/* Profile Badge */}
                             <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-gray-200">

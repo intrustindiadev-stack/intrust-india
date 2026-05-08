@@ -1,8 +1,37 @@
-import { createAdminClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+
+/**
+ * Verifies the caller is authenticated and holds admin or super_admin role.
+ * Returns { user, profile } on success or a NextResponse error on failure.
+ */
+async function requireAdmin(request) {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+    }
+
+    const supabaseAdmin = createAdminClient();
+    const { data: profile, error: profileError } = await supabaseAdmin
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    if (profileError || !profile || !['admin', 'super_admin'].includes(profile.role)) {
+        return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+    }
+
+    return { user, profile };
+}
 
 export async function GET(request) {
     try {
+        const auth = await requireAdmin(request);
+        if (auth.error) return auth.error;
+
         const supabaseAdmin = createAdminClient();
 
         // Get all reward configurations
@@ -27,9 +56,12 @@ export async function GET(request) {
 
 export async function POST(request) {
     try {
+        const auth = await requireAdmin(request);
+        if (auth.error) return auth.error;
+
         const supabaseAdmin = createAdminClient();
         const body = await request.json();
-        const { config_key, config_value, config_type, description, is_active, admin_user_id } = body;
+        const { config_key, config_value, config_type, description, is_active } = body;
 
         if (!config_key || !config_value || !config_type) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -42,7 +74,7 @@ export async function POST(request) {
             .eq('config_key', config_key)
             .single();
 
-        // Upsert configuration
+        // Upsert configuration — created_by comes from the verified session, not request body
         const { data: config, error } = await supabaseAdmin
             .from('reward_configuration')
             .upsert({
@@ -51,7 +83,7 @@ export async function POST(request) {
                 config_type,
                 description,
                 is_active: is_active !== undefined ? is_active : true,
-                created_by: admin_user_id,
+                created_by: auth.user.id,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'config_key' })
             .select()
@@ -62,14 +94,14 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Failed to update configuration' }, { status: 500 });
         }
 
-        // Log to history
+        // Log to history — changed_by comes from the verified session
         await supabaseAdmin
             .from('reward_configuration_history')
             .insert({
                 config_key,
                 old_value: oldConfig?.config_value || null,
                 new_value: config_value,
-                changed_by: admin_user_id
+                changed_by: auth.user.id
             });
 
         return NextResponse.json({ success: true, config });

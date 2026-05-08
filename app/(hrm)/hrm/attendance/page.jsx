@@ -33,6 +33,27 @@ function OverrideModal({ record, onClose, onSave }) {
             }).eq('id', record.id);
             if (error) throw error;
             toast.success('Attendance overridden successfully');
+
+            // Audit Log Insert
+            supabase.auth.getUser().then(({ data: { user: authUser } }) => {
+                const actor = authUser || user;
+                if (actor) {
+                    supabase.from('audit_logs_hrm').insert({
+                        actor_id: actor.id,
+                        actor_name: actor.user_metadata?.full_name || 'System',
+                        action: 'Attendance overridden',
+                        table_name: 'attendance',
+                        record_id: record.id,
+                        old_data: { status: record.status },
+                        new_data: { status, override_reason: reason },
+                        module: 'Attendance',
+                        severity: 'medium'
+                    }).then(({ error: auditError }) => {
+                        if (auditError) console.warn('Audit log failed:', auditError);
+                    });
+                }
+            });
+
             onSave(record.id, status, reason);
             onClose();
         } catch (err) { toast.error(err.message); }

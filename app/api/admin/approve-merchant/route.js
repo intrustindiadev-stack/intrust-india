@@ -1,5 +1,7 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { sendTemplateMessage, KYC_UPDATE_TEMPLATE } from '@/lib/omniflow';
+import crypto from 'crypto';
 
 export async function POST(request) {
     try {
@@ -128,6 +130,59 @@ export async function POST(request) {
             reference_type: 'merchant_approved',
             read: false
         });
+
+        // 7.5 WhatsApp KYC Update alert
+        try {
+            const { data: binding } = await adminSupabase
+                .from('user_channel_bindings')
+                .select('phone')
+                .eq('user_id', targetUserId)
+                .eq('whatsapp_opt_in', true)
+                .maybeSingle();
+
+            if (binding?.phone) {
+                // Deduplication guard: 24-hour window, tagged with merchant ID.
+                const alertTag = `[template:intrust_kyc_update:${existingMerchant.id}]`;
+                const dedupeWindow = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+                const { data: alreadySent } = await adminSupabase
+                    .from('whatsapp_message_logs')
+                    .select('id')
+                    .eq('user_id', targetUserId)
+                    .eq('content_preview', alertTag)
+                    .gte('created_at', dedupeWindow)
+                    .limit(1)
+                    .maybeSingle();
+
+                if (alreadySent) {
+                    console.log(`[approve-merchant] Skipping duplicate KYC alert for merchant ${existingMerchant.id}`);
+                } else {
+                    await sendTemplateMessage(
+                        binding.phone,
+                        KYC_UPDATE_TEMPLATE.name,
+                        KYC_UPDATE_TEMPLATE.language,
+                        KYC_UPDATE_TEMPLATE.buildComponents(
+                            'Verified ✅',
+                            `Your merchant application for ${existingMerchant.business_name} has been approved. You are now fully verified. Complete your subscription to activate your merchant panel.`
+                        )
+                    );
+                    console.log(`[approve-merchant] WhatsApp KYC update sent to user ${targetUserId}`);
+                    const phoneHash = crypto.createHash('sha256').update(binding.phone).digest('hex');
+                    await adminSupabase.from('whatsapp_message_logs').insert({
+                        user_id: targetUserId,
+                        phone_hash: phoneHash,
+                        direction: 'outbound',
+                        message_type: 'template',
+                        channel: 'web',
+                        status: 'delivered',
+                        content_preview: alertTag,
+                    }).then(({ error }) => {
+                        if (error) console.warn('[approve-merchant] Failed to log KYC alert:', error.message);
+                    });
+                }
+            }
+        } catch (waErr) {
+            console.error('[approve-merchant] WhatsApp KYC alert failed (non-blocking):', waErr.message);
+        }
 
         // 8. Log Action
         const { error: auditError } = await adminSupabase.from('audit_logs').insert([

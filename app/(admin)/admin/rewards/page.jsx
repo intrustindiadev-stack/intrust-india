@@ -9,24 +9,30 @@ import {
 import { useAuth } from '@/lib/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
+// Canonical keys match what calculate_and_distribute_rewards() reads in SQL:
+// tier: 'tier_bronze', 'tier_silver', 'tier_gold', 'tier_platinum'
+// event: 'signup_reward', 'purchase_reward', 'kyc_complete_reward', etc.
 const defaultTierState = {
-    bronze: { min_tree_size: 0, min_active_referrals: 0, bonus_multiplier: 1 },
-    silver: { min_tree_size: 0, min_active_referrals: 0, bonus_multiplier: 1.1 },
-    gold: { min_tree_size: 0, min_active_referrals: 0, bonus_multiplier: 1.2 },
-    platinum: { min_tree_size: 0, min_active_referrals: 0, bonus_multiplier: 1.5 }
+    tier_bronze: { min_tree_size: 0, min_active_referrals: 0, bonus_multiplier: 1 },
+    tier_silver: { min_tree_size: 0, min_active_referrals: 0, bonus_multiplier: 1.2 },
+    tier_gold: { min_tree_size: 0, min_active_referrals: 0, bonus_multiplier: 1.5 },
+    tier_platinum: { min_tree_size: 0, min_active_referrals: 0, bonus_multiplier: 2.0 }
 };
 const defaultEventState = {
-    signup: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
-    purchase: { rate_per_100rs: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
-    kyc_complete: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
-    merchant_onboard: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
-    subscription_renewal: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
-    daily_login: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 }
+    signup_reward: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
+    purchase_reward: { rate_per_100rs: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
+    kyc_complete_reward: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
+    merchant_onboard_reward: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
+    subscription_renewal_reward: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
+    daily_login_reward: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 }
 };
 const defaultGlobalState = {
     daily_cap: { max_points: 0, max_transactions: 0 },
-    point_value: { points_per_rupee: 0, min_withdrawal_points: 0 }
+    point_value: { points_per_rupee: 0, min_withdrawal_points: 0 },
+    redemption_mode: 'instant'
 };
+// level_settings is stored in DB for informational purposes but is NOT read by
+// calculate_and_distribute_rewards() — level payouts are embedded per-event row.
 const defaultLevelState = {
     level_settings: { max_levels: 5, levels: { L1: { percentage: 0 }, L2: { percentage: 0 }, L3: { percentage: 0 }, L4: { percentage: 0 }, L5: { percentage: 0 }, L6: { percentage: 0 }, L7: { percentage: 0 } } }
 };
@@ -60,12 +66,17 @@ export default function AdminRewardsPage() {
 
         fetchedConfigs.forEach(c => {
             const { config_type, config_key, config_value } = c;
+            // config_key must match canonical SQL keys (tier_bronze, signup_reward, etc.)
             if (config_type === 'tier' && nextTierState[config_key]) {
                 nextTierState[config_key] = { ...nextTierState[config_key], ...config_value };
             } else if (config_type === 'event' && nextEventState[config_key]) {
                 nextEventState[config_key] = { ...nextEventState[config_key], ...config_value };
-            } else if (config_type === 'global' && nextGlobalState[config_key]) {
-                nextGlobalState[config_key] = { ...nextGlobalState[config_key], ...config_value };
+            } else if (config_type === 'global') {
+                if (config_key === 'redemption_mode') {
+                    nextGlobalState.redemption_mode = typeof config_value === 'string' ? config_value.replace(/^"|"$/g, '') : config_value;
+                } else if (nextGlobalState[config_key]) {
+                    nextGlobalState[config_key] = { ...nextGlobalState[config_key], ...config_value };
+                }
             } else if (config_type === 'level' && nextLevelState[config_key]) {
                 nextLevelState[config_key] = { ...nextLevelState[config_key], ...config_value };
             } else if (config_type === 'eligibility' && nextEligibilityState[config_key]) {
@@ -182,10 +193,10 @@ export default function AdminRewardsPage() {
                         </div>
                         <button
                             onClick={() => saveSection('tier', [
-                                { config_key: 'bronze', config_value: tierState.bronze },
-                                { config_key: 'silver', config_value: tierState.silver },
-                                { config_key: 'gold', config_value: tierState.gold },
-                                { config_key: 'platinum', config_value: tierState.platinum }
+                                { config_key: 'tier_bronze', config_value: tierState.tier_bronze },
+                                { config_key: 'tier_silver', config_value: tierState.tier_silver },
+                                { config_key: 'tier_gold', config_value: tierState.tier_gold },
+                                { config_key: 'tier_platinum', config_value: tierState.tier_platinum }
                             ])}
                             disabled={sectionSaving.tier}
                             className="bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-bold text-sm px-4 py-2 flex items-center gap-2 disabled:opacity-50"
@@ -202,10 +213,10 @@ export default function AdminRewardsPage() {
                             <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Bonus Multiplier</div>
                         </div>
                         {[
-                            { key: 'bronze', label: 'Bronze 🥉', bgClass: 'bg-amber-50 dark:bg-amber-900/20' },
-                            { key: 'silver', label: 'Silver 🥈', bgClass: 'bg-slate-100 dark:bg-slate-800' },
-                            { key: 'gold', label: 'Gold 🥇', bgClass: 'bg-yellow-50 dark:bg-yellow-900/20' },
-                            { key: 'platinum', label: 'Platinum 💎', bgClass: 'bg-violet-50 dark:bg-violet-900/20' }
+                            { key: 'tier_bronze', label: 'Bronze 🥉', bgClass: 'bg-amber-50 dark:bg-amber-900/20' },
+                            { key: 'tier_silver', label: 'Silver 🥈', bgClass: 'bg-slate-100 dark:bg-slate-800' },
+                            { key: 'tier_gold', label: 'Gold 🥇', bgClass: 'bg-yellow-50 dark:bg-yellow-900/20' },
+                            { key: 'tier_platinum', label: 'Platinum 💎', bgClass: 'bg-violet-50 dark:bg-violet-900/20' }
                         ].map(tier => (
                             <div key={tier.key} className={`grid grid-cols-[100px_1fr_1fr_1fr] gap-4 p-4 rounded-xl items-center ${tier.bgClass}`}>
                                 <div className="font-bold text-gray-900 dark:text-white capitalize">{tier.label}</div>
@@ -249,12 +260,12 @@ export default function AdminRewardsPage() {
                         </div>
                         <button
                             onClick={() => saveSection('event', [
-                                { config_key: 'signup', config_value: eventState.signup },
-                                { config_key: 'purchase', config_value: eventState.purchase },
-                                { config_key: 'kyc_complete', config_value: eventState.kyc_complete },
-                                { config_key: 'merchant_onboard', config_value: eventState.merchant_onboard },
-                                { config_key: 'subscription_renewal', config_value: eventState.subscription_renewal },
-                                { config_key: 'daily_login', config_value: eventState.daily_login }
+                                { config_key: 'signup_reward', config_value: eventState.signup_reward },
+                                { config_key: 'purchase_reward', config_value: eventState.purchase_reward },
+                                { config_key: 'kyc_complete_reward', config_value: eventState.kyc_complete_reward },
+                                { config_key: 'merchant_onboard_reward', config_value: eventState.merchant_onboard_reward },
+                                { config_key: 'subscription_renewal_reward', config_value: eventState.subscription_renewal_reward },
+                                { config_key: 'daily_login_reward', config_value: eventState.daily_login_reward }
                             ])}
                             disabled={sectionSaving.event}
                             className="bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-bold text-sm px-4 py-2 flex items-center gap-2 disabled:opacity-50"
@@ -264,14 +275,14 @@ export default function AdminRewardsPage() {
                         </button>
                     </div>
                     <div className="p-6 grid grid-cols-1 xl:grid-cols-2 gap-4">
-                        {['signup', 'purchase', 'kyc_complete', 'merchant_onboard', 'subscription_renewal', 'daily_login'].map(eventName => {
-                            const isPurchase = eventName === 'purchase';
+                        {['signup_reward', 'purchase_reward', 'kyc_complete_reward', 'merchant_onboard_reward', 'subscription_renewal_reward', 'daily_login_reward'].map(eventName => {
+                            const isPurchase = eventName === 'purchase_reward';
                             const firstKey = isPurchase ? 'rate_per_100rs' : 'direct';
                             const firstLabel = isPurchase ? 'Rate/₹100' : 'Direct';
                             return (
                                 <div key={eventName} className="border border-gray-100 dark:border-gray-700 rounded-xl p-4">
                                     <h3 className="font-bold text-gray-900 dark:text-white capitalize mb-4">
-                                        {eventName.replace(/_/g, ' ')}
+                                        {eventName.replace(/_reward$/, '').replace(/_/g, ' ')}
                                     </h3>
                                     <div className="flex flex-wrap gap-3">
                                         {[
@@ -320,7 +331,8 @@ export default function AdminRewardsPage() {
                         <button
                             onClick={() => saveSection('global', [
                                 { config_key: 'daily_cap', config_value: globalState.daily_cap },
-                                { config_key: 'point_value', config_value: globalState.point_value }
+                                { config_key: 'point_value', config_value: globalState.point_value },
+                                { config_key: 'redemption_mode', config_value: globalState.redemption_mode }
                             ])}
                             disabled={sectionSaving.global}
                             className="bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-bold text-sm px-4 py-2 flex items-center gap-2 disabled:opacity-50"
@@ -378,6 +390,28 @@ export default function AdminRewardsPage() {
                                 className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-gray-700 dark:bg-gray-800 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all w-full"
                             />
                         </div>
+                        <div className="col-span-full border-t border-gray-100 dark:border-gray-700 pt-6">
+                            <div className="flex items-center justify-between p-4 border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-800/50">
+                                <div>
+                                    <h3 className="font-bold text-gray-900 dark:text-white">Redemption Approval</h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                                        {globalState.redemption_mode === 'approval_required' 
+                                            ? 'Manual: Admin must approve each point-to-wallet request.' 
+                                            : 'Instant: Points are converted to wallet cash automatically.'}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setGlobalState(prev => ({
+                                        ...prev,
+                                        redemption_mode: prev.redemption_mode === 'approval_required' ? 'instant' : 'approval_required'
+                                    }))}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${globalState.redemption_mode === 'approval_required' ? 'bg-violet-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${globalState.redemption_mode === 'approval_required' ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </motion.div>
 
@@ -392,8 +426,8 @@ export default function AdminRewardsPage() {
                                 <Layers size={18} className="text-blue-600" />
                             </div>
                             <div>
-                                <h2 className="font-bold text-gray-900 dark:text-white">Level Settings</h2>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Configure global level depths and default percentages</p>
+                                        <h2 className="font-bold text-gray-900 dark:text-white">Level Settings</h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Reference only — per-event L1–L5 payouts are configured in Event Rewards above</p>
                             </div>
                         </div>
                         <button

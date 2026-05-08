@@ -5,6 +5,8 @@ import { Download, Calculator, CheckCircle2, AlertCircle, RefreshCw, TrendingUp,
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 function ProcessModal({ record, onClose, onSave }) {
     const [form, setForm] = useState({
@@ -34,6 +36,26 @@ function ProcessModal({ record, onClose, onSave }) {
             const { error } = await supabase.from('salary_records').upsert(payload, { onConflict: 'employee_id,month,year' });
             if (error) throw error;
             toast.success(`Salary processed for ${record.full_name}`);
+
+            // Audit Log Insert
+            supabase.auth.getUser().then(({ data: { user } }) => {
+                if (user) {
+                    supabase.from('audit_logs_hrm').insert({
+                        actor_id: user.id,
+                        actor_name: user.user_metadata?.full_name || 'System',
+                        action: 'Salary processed',
+                        table_name: 'salary_records',
+                        record_id: record.salary_id || record.id,
+                        old_data: record,
+                        new_data: payload,
+                        module: 'Payroll',
+                        severity: 'high'
+                    }).then(({ error: auditError }) => {
+                        if (auditError) console.warn('Audit log failed:', auditError);
+                    });
+                }
+            });
+
             onSave(record.id, { ...form, net_salary: net });
             onClose();
         } catch (err) { toast.error(err.message); }
@@ -107,6 +129,83 @@ export default function SalaryPage() {
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const handleSave = (empId, data) => setSalaryMap(prev => ({ ...prev, [empId]: { ...prev[empId], ...data, status: 'processed' } }));
+
+    const generatePayslip = async (emp, sal) => {
+        try {
+            const toastId = toast.loading('Generating payslip...');
+            
+            const doc = new jsPDF();
+            
+            doc.setFontSize(22);
+            doc.setTextColor(16, 185, 129); // Emerald
+            doc.text("Intrust India", 105, 20, { align: "center" });
+            
+            doc.setFontSize(14);
+            doc.setTextColor(40, 40, 40);
+            doc.text("Payslip", 105, 30, { align: "center" });
+
+            doc.setFontSize(10);
+            doc.text(`Employee Name: ${emp.full_name}`, 14, 45);
+            doc.text(`Department: ${emp.department || emp.role}`, 14, 52);
+            doc.text(`Month/Year: ${new Date(sal.year, sal.month - 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' })}`, 14, 59);
+            
+            const fmt = (v) => `Rs. ${Number(v || 0).toLocaleString('en-IN')}`;
+            const tableData = [
+                ["Basic Salary", fmt(sal.base_salary || emp.base_salary)],
+                ["HRA", fmt(sal.hra)],
+                ["Allowances", fmt(sal.allowances)],
+                ["Deductions", fmt(sal.deductions)],
+            ];
+
+            doc.autoTable({
+                startY: 70,
+                head: [['Component', 'Amount']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [16, 185, 129] },
+            });
+
+            const finalY = doc.lastAutoTable.finalY || 150;
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "bold");
+            doc.text(`Net Pay: ${fmt(sal.net_salary)}`, 14, finalY + 15);
+
+            const pdfBlob = doc.output('blob');
+            const fileName = `payslip_${emp.id}_${sal.month}_${sal.year}.pdf`;
+
+            if (!sal.payslip_url) {
+                const { error: uploadError } = await supabase.storage
+                    .from('payslips')
+                    .upload(fileName, pdfBlob, {
+                        contentType: 'application/pdf',
+                        upsert: true
+                    });
+
+                if (uploadError) throw uploadError;
+
+                const { error: updateError } = await supabase
+                    .from('salary_records')
+                    .update({ payslip_url: fileName })
+                    .eq('id', sal.id);
+
+                if (updateError) throw updateError;
+                
+                handleSave(emp.id, { payslip_url: fileName });
+            }
+
+            const url = URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Payslip_${emp.full_name.replace(/\s+/g, '_')}_${sal.month}_${sal.year}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            toast.success('Payslip generated successfully', { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to generate payslip: ' + err.message);
+        }
+    };
 
     const totalPayroll = Object.values(salaryMap).reduce((a, s) => a + (s.net_salary || 0), 0);
     const processed = Object.values(salaryMap).filter(s => s.status === 'processed').length;
@@ -184,10 +283,17 @@ export default function SalaryPage() {
                                                 )}
                                             </td>
                                             <td className="px-5 py-4">
-                                                <button onClick={() => setProcessing({ ...emp, salary_id: sal?.id, ...sal })}
-                                                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isProcessed ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100' : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100'}`}>
-                                                    {isProcessed ? <><Download size={12} /> Payslip</> : <><Calculator size={12} /> Process</>}
-                                                </button>
+                                                {isProcessed ? (
+                                                    <button onClick={() => generatePayslip(emp, sal)}
+                                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100">
+                                                        <Download size={12} /> Payslip
+                                                    </button>
+                                                ) : (
+                                                    <button onClick={() => setProcessing({ ...emp, salary_id: sal?.id, ...sal })}
+                                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100">
+                                                        <Calculator size={12} /> Process
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     );

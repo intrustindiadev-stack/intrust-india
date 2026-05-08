@@ -203,7 +203,13 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                         <div>
                                             <p className="text-[10px] text-slate-400 dark:text-gray-500 font-black uppercase tracking-tight mb-0.5">Final Net Credit</p>
                                             <p className="text-xs text-emerald-600 dark:text-emerald-500/70 font-medium italic">
-                                                {order.settlement_status === 'settled' ? 'Settled to your wallet' : 'Pending settlement'}
+                                                {order.settlement_status === 'settled'
+                                                    ? 'Settled to your wallet'
+                                                    : order.settlement_status === 'settled_zero'
+                                                    ? 'Settlement complete — ₹0 payout'
+                                                    : (order.settlement_status === 'pending' && orderNetProfit === 0)
+                                                    ? 'Awaiting payment confirmation'
+                                                    : 'Pending settlement'}
                                             </p>
                                         </div>
                                         <div className="text-right">
@@ -234,7 +240,13 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                     ⚠️ Admin Takeover — 30% Commission (Reduced)
                                 </div>
                             )}
-                            {order.settlement_status === 'pending' && order.delivery_status === 'pending' && (
+                            {order.settlement_status === 'settled_zero' && (
+                                <div className="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                                    <CheckCircle2 size={14} className="text-amber-500" />
+                                    ₹0 payout — no profit on this order. Settlement complete.
+                                </div>
+                            )}
+                            {order.payment_method !== 'store_credit' && order.settlement_status === 'pending' && order.delivery_status === 'pending' && (
                                 <div className="mt-4 p-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400">
                                     <Clock size={14} />
                                     ⏳ Pending Settlement — approve within 2 hours to keep 70%
@@ -370,7 +382,16 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                 schema: 'public',
                 table: 'shopping_order_groups',
                 filter: `merchant_id=eq.${merchantId}`,
-            }, () => {
+            }, (payload) => {
+                const row = payload.new;
+                // Ignore rows that the RPC now excludes:
+                // • Abandoned Sabpaisa gateway drafts
+                if (row.payment_method === 'gateway' && row.payment_status === 'pending') return;
+                // • Store-credit orders awaiting merchant approval (shown in StoreCreditRequestsTab)
+                if (row.delivery_status === 'pending_credit') return;
+                // • Failed / cancelled groups
+                if (row.status === 'failed' || row.status === 'cancelled') return;
+
                 toast.success('New order received! 🛒');
                 router.refresh();
             })
@@ -380,13 +401,19 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
                 table: 'shopping_order_groups',
                 filter: `merchant_id=eq.${merchantId}`,
             }, (payload) => {
-                setOrders(prev =>
-                    prev.map(o =>
+                setOrders(prev => {
+                    const exists = prev.some(o => o.id === payload.new.id);
+                    if (!exists) {
+                        // A previously-draft order just became payable — refresh to pull full RPC shape
+                        router.refresh();
+                        return prev;
+                    }
+                    return prev.map(o =>
                         o.id === payload.new.id
                             ? { ...o, ...payload.new }
                             : o
-                    )
-                );
+                    );
+                });
             })
             .subscribe();
 

@@ -1095,11 +1095,27 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
         <SabpaisaPaymentModal
           isOpen={isPaymentModalOpen}
           onClose={() => {
+            // Capture the draft ID before clearing it
+            const cancelTarget = draftGroupId;
             // Re-enable buttons when modal is dismissed without completing payment
             setIsPaymentModalOpen(false);
             setCheckingOut(false);
             // Clear draft so a fresh one is created if they retry
             setDraftGroupId(null);
+            // Fire-and-forget: tell the server to cancel the pending gateway draft
+            if (cancelTarget) {
+              supabase.auth.getSession().then(({ data: { session } }) => {
+                fetch('/api/shopping/cancel-draft-order', {
+                  method: 'POST',
+                  keepalive: true,
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`,
+                  },
+                  body: JSON.stringify({ groupId: cancelTarget }),
+                }).catch(console.error);
+              }).catch(console.error);
+            }
           }}
           amount={(draftAmount || finalPayable) / 100}
           user={{ id: userId, email: profile?.email || '', phone: profile?.phone || '' }}

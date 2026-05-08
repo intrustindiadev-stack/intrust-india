@@ -119,7 +119,7 @@ function LoginContent() {
             window.location.href = '/merchant/dashboard';
         } else if (role === 'admin' || role === 'super_admin') {
             window.location.href = '/admin';
-        } else if (role === 'hr' || role === 'hr_manager') {
+        } else if (role === 'hr_manager') {
             window.location.href = '/hrm';
         } else if (role?.startsWith('sales_') || role === 'sales_exec' || role === 'sales_agent') {
             window.location.href = '/crm';
@@ -612,7 +612,7 @@ function DevQuickLogin() {
 
             // 3. Redirect
             if (role === 'admin') window.location.href = '/admin';
-            else if (role === 'hr') window.location.href = '/hrm';
+            else if (role === 'hr_manager') window.location.href = '/hrm';
             else if (role === 'merchant') window.location.href = '/merchant/dashboard';
             else window.location.href = '/dashboard';
 
@@ -635,7 +635,7 @@ function DevQuickLogin() {
                     <button onClick={() => handleDevLogin('admin')} disabled={loading} className="px-4 py-2 text-sm bg-purple-100 hover:bg-purple-200 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 rounded-lg transition-colors font-medium text-left flex items-center gap-2 disabled:opacity-50">
                         🛡️ CRM / Admin
                     </button>
-                    <button onClick={() => handleDevLogin('hr')} disabled={loading} className="px-4 py-2 text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg transition-colors font-medium text-left flex items-center gap-2 disabled:opacity-50">
+                    <button onClick={() => handleDevLogin('hr_manager')} disabled={loading} className="px-4 py-2 text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg transition-colors font-medium text-left flex items-center gap-2 disabled:opacity-50">
                         👥 HRM Panel
                     </button>
                     <button onClick={() => handleDevLogin('merchant')} disabled={loading} className="px-4 py-2 text-sm bg-orange-100 hover:bg-orange-200 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 rounded-lg transition-colors font-medium text-left flex items-center gap-2 disabled:opacity-50">

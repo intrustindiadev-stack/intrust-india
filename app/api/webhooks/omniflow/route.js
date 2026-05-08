@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabaseServer';
 import { hashOTP } from '@/lib/otpUtils';
-import { sendWhatsAppMessage, sendMessageToAgent, normalisePhone } from '@/lib/omniflow';
+import { sendWhatsAppMessage, sendMessageToAgent, normalisePhone, sendTemplateMessage, WELCOME_TEMPLATE } from '@/lib/omniflow';
 import { sanitizeMessage } from '@/lib/piiFilter';
 import { enforceIntent } from '@/lib/intentEnforcer';
 
@@ -246,6 +246,7 @@ export async function POST(req) {
             // Non-fatal
           }
 
+          // Send welcome template (plain text won't work — no 24-hour window yet)
           const confirmMsg =
             '✅ Your WhatsApp has been successfully linked to your InTrust India account.\n\n' +
             'You can now use this chat to:\n' +
@@ -254,7 +255,12 @@ export async function POST(req) {
             '• Review recent transactions\n\n' +
             'Simply send us a message and our assistant will respond instantly.\n' +
             'For detailed account management, visit: intrustindia.com';
-          await sendWhatsAppMessage(normalised, confirmMsg);
+          await sendTemplateMessage(
+            normalised,
+            WELCOME_TEMPLATE.name,
+            WELCOME_TEMPLATE.language,
+            WELCOME_TEMPLATE.buildComponents()
+          );
           await logMessage({
             userId: otpRecord.user_id,
             phoneHash,

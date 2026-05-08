@@ -18,7 +18,7 @@ export async function getMerchantReferralData(merchantId) {
         ] = await Promise.all([
             adminSupabase
                 .from('merchants')
-                .select('referral_code')
+                .select('referral_code, referred_by_merchant_id')
                 .eq('id', merchantId)
                 .single(),
             adminSupabase
@@ -66,6 +66,7 @@ export async function getMerchantReferralData(merchantId) {
 
         return {
             referralCode: merchantData?.referral_code || null,
+            hasReferrer: !!merchantData?.referred_by_merchant_id,
             directReferrals,
             prizeHistory: prizeData || [],
             chainDepth

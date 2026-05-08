@@ -369,7 +369,15 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
                     <div className="pt-3 mt-1 border-t border-slate-100 dark:border-white/5 flex justify-between items-center">
                         <div>
                             <p className="text-[10px] text-slate-400 dark:text-gray-500 font-black uppercase tracking-tight mb-0.5">Final Net Credit</p>
-                            <p className="text-xs text-emerald-600 dark:text-emerald-500 font-medium">Settled to your wallet</p>
+                            <p className="text-xs text-emerald-600 dark:text-emerald-500 font-medium">
+                                {order.settlement_status === 'settled'
+                                    ? 'Settled to your wallet'
+                                    : order.settlement_status === 'settled_zero'
+                                    ? 'Settlement complete — ₹0 payout'
+                                    : (order.settlement_status === 'pending' && orderNetProfit === 0)
+                                    ? 'Awaiting payment confirmation'
+                                    : 'Pending settlement'}
+                            </p>
                         </div>
                         <span className="text-2xl font-black text-emerald-500 dark:text-emerald-400 tracking-tight">
                             ₹{(orderNetProfit / 100).toLocaleString("en-IN")}
@@ -381,6 +389,19 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
             {/* ── Action Bar ── */}
             {!isCancelled && (
                 <div className="space-y-3">
+                    {/* Status banners — mirror OrderCard logic */}
+                    {order.settlement_status === 'settled_zero' && (
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                            <CheckCircle2 size={14} className="text-amber-500" />
+                            <span>₹0 payout — no profit on this order. Settlement complete.</span>
+                        </div>
+                    )}
+                    {order.payment_method !== 'store_credit' && order.settlement_status === 'pending' && currentStatus === 'pending' && (
+                        <div className="flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-4 py-2.5 rounded-xl border border-blue-200 dark:border-blue-500/20">
+                            <Clock size={14} />
+                            <span>⏳ Pending Settlement — approve within 2 hours to keep 70%</span>
+                        </div>
+                    )}
                     <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-500 font-semibold bg-emerald-500/5 px-4 py-2 rounded-xl border border-emerald-500/10 w-fit">
                         <CheckCircle2 size={12} />
                         <span>Ready for next stage</span>
@@ -392,7 +413,11 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
                         >
                             <Download size={14} /> PDF INVOICE
                         </button>
-                        {currentStatus === 'pending' && order.settlement_status === 'pending' && (
+                        {currentStatus === 'pending'
+                            && order.settlement_status === 'pending'
+                            && order.settlement_status !== 'settled_zero'
+                            && order.payment_method !== 'store_credit'
+                            && (
                             <button
                                 onClick={() => setShowCannotFulfillModal(true)}
                                 disabled={cannotFulfillLoading}

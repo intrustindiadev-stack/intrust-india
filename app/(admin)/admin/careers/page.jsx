@@ -87,24 +87,23 @@ function ApplicationDrawer({ app, onClose, onUpdate }) {
             if (status === 'hired') {
                 updates.hired_at = new Date().toISOString();
             }
-            if ((status === 'hired' || status === 'offer_sent') && panelAccess) {
-                updates.access_granted_at = new Date().toISOString();
-                
-                // If the applicant is hired, panel access is granted, and they have an account, update their role
-                if (status === 'hired' && app.user_id) {
-                    const roleMap = {
-                        'crm': 'sales_exec',
-                        'employee': 'employee',
-                        'merchant': 'merchant'
-                    };
-                    const newRole = roleMap[panelAccess];
-                    if (newRole) {
-                        await supabase.from('user_profiles').update({ role: newRole }).eq('id', app.user_id);
-                    }
-                }
-            }
             const { error } = await supabase.from('career_applications').update(updates).eq('id', app.id);
             if (error) throw error;
+
+            if ((status === 'hired' || status === 'offer_sent') && panelAccess && app.user_id) {
+                const response = await fetch('/api/admin/grant-hire-role', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ applicationId: app.id, panelAccess })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Failed to assign role');
+                }
+                updates.access_granted_at = new Date().toISOString();
+            }
+
             toast.success('Application updated successfully');
             onUpdate({ ...app, ...updates });
             onClose();

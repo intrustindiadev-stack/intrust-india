@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const TYPE_CONFIG = {
     video: { icon: Video, color: 'bg-violet-50 text-violet-600' },
@@ -110,6 +111,7 @@ export default function HRMTrainingPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
+    const [pendingDeleteId, setPendingDeleteId] = useState(null);
 
     const fetchModules = useCallback(async () => {
         setIsLoading(true);
@@ -128,15 +130,26 @@ export default function HRMTrainingPage() {
 
     useEffect(() => { fetchModules(); }, [fetchModules]);
 
-    const handleDelete = async (id) => {
-        if (!confirm('Delete this training module? This cannot be undone.')) return;
+    const handleDelete = (id) => {
+        setPendingDeleteId(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!pendingDeleteId) return;
         try {
-            const { error } = await supabase.from('training_materials').delete().eq('id', id);
+            const { error } = await supabase.from('training_materials').delete().eq('id', pendingDeleteId);
             if (error) throw error;
-            setModules(prev => prev.filter(m => m.id !== id));
+            setModules(prev => prev.filter(m => m.id !== pendingDeleteId));
             toast.success('Module deleted');
+            setPendingDeleteId(null);
         } catch (err) { toast.error(err.message); }
     };
+
+    const cancelDelete = () => {
+        setPendingDeleteId(null);
+    };
+
+    const pendingModule = pendingDeleteId ? modules.find(m => m.id === pendingDeleteId) : null;
 
     const filtered = modules.filter(m =>
         !search || m.title?.toLowerCase().includes(search.toLowerCase()) || m.category?.toLowerCase().includes(search.toLowerCase())
@@ -147,6 +160,14 @@ export default function HRMTrainingPage() {
             <AnimatePresence>
                 {showAddModal && <AddModuleModal onClose={() => setShowAddModal(false)} onSave={fetchModules} />}
             </AnimatePresence>
+            <ConfirmModal
+                isOpen={pendingDeleteId !== null}
+                onConfirm={confirmDelete}
+                onCancel={cancelDelete}
+                title="Delete Training Module"
+                message={`Delete "${pendingModule?.title}"? This cannot be undone.`}
+                confirmLabel="Delete"
+            />
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>

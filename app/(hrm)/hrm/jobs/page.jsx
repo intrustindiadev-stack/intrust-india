@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const CATEGORY_OPTIONS = [
     { value: 'freelancer', label: 'Freelancer' },
@@ -22,6 +23,7 @@ export default function HRJobsPage() {
     const [search, setSearch] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingJob, setEditingJob] = useState(null);
+    const [pendingDeleteId, setPendingDeleteId] = useState(null);
     const [form, setForm] = useState({
         title: '',
         category: 'sales',
@@ -97,17 +99,28 @@ export default function HRJobsPage() {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!confirm('Are you sure you want to delete this job posting?')) return;
+    const handleDelete = (id) => {
+        setPendingDeleteId(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!pendingDeleteId) return;
         try {
-            const { error } = await supabase.from('career_job_roles').delete().eq('id', id);
+            const { error } = await supabase.from('career_job_roles').delete().eq('id', pendingDeleteId);
             if (error) throw error;
             toast.success('Job posting deleted');
-            setJobs(jobs.filter(j => j.id !== id));
+            setJobs(jobs.filter(j => j.id !== pendingDeleteId));
+            setPendingDeleteId(null);
         } catch (err) {
             toast.error(err.message);
         }
     };
+
+    const cancelDelete = () => {
+        setPendingDeleteId(null);
+    };
+
+    const pendingJob = pendingDeleteId ? jobs.find(j => j.id === pendingDeleteId) : null;
 
     const filteredJobs = jobs.filter(j => 
         !search || 
@@ -167,6 +180,15 @@ export default function HRJobsPage() {
                     </div>
                 )}
             </div>
+
+            <ConfirmModal
+                isOpen={pendingDeleteId !== null}
+                onConfirm={confirmDelete}
+                onCancel={cancelDelete}
+                title="Delete Job Posting"
+                message={`Delete "${pendingJob?.title}"? This cannot be undone.`}
+                confirmLabel="Delete"
+            />
 
             <AnimatePresence>
                 {isModalOpen && (

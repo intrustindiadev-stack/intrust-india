@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
 import { createServerClient } from '@supabase/ssr';
+import { sendTemplateMessage, LOGIN_ALERT_TEMPLATE } from '@/lib/omniflow';
+import crypto from 'crypto';
 
 const MAX_ATTEMPTS = 5;
 const LOCK_DURATION_MINUTES = 15;
@@ -182,6 +184,63 @@ export async function POST(request) {
                 metadata: { email }
             });
         } catch (e) { /* non-fatal */ }
+
+        // 7. WhatsApp login security alert (non-blocking, dedup: 5-min cooldown)
+        try {
+            // user_channel_bindings schema: { user_id, phone, whatsapp_opt_in, linked_at }
+            const { data: binding } = await admin
+                .from('user_channel_bindings')
+                .select('phone')
+                .eq('user_id', existing.id)
+                .eq('whatsapp_opt_in', true)
+                .maybeSingle();
+
+            if (binding?.phone) {
+                // Deduplication guard: skip if a login alert was already sent within the last 5 minutes.
+                const dedupeWindow = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+                const { data: recentAlert } = await admin
+                    .from('whatsapp_message_logs')
+                    .select('id')
+                    .eq('user_id', existing.id)
+                    .eq('content_preview', '[template:intrust_login_alert]')
+                    .gte('created_at', dedupeWindow)
+                    .limit(1)
+                    .maybeSingle();
+
+                if (recentAlert) {
+                    console.log(`[signin] Skipping duplicate login alert for user ${existing.id} (sent within 5 min)`);
+                } else {
+                    const ua = request.headers.get('user-agent') || 'Unknown device';
+                    const deviceInfo = ua.length > 80 ? ua.slice(0, 77) + '...' : ua;
+                    const now = new Date().toLocaleString('en-IN', {
+                        timeZone: 'Asia/Kolkata',
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', hour12: true
+                    }) + ' IST';
+                    await sendTemplateMessage(
+                        binding.phone,
+                        LOGIN_ALERT_TEMPLATE.name,
+                        LOGIN_ALERT_TEMPLATE.language,
+                        LOGIN_ALERT_TEMPLATE.buildComponents(deviceInfo, now)
+                    );
+                    // Record the sent alert so the next call within 5 min is deduped
+                    const phoneHash = crypto.createHash('sha256').update(binding.phone).digest('hex');
+                    await admin.from('whatsapp_message_logs').insert({
+                        user_id: existing.id,
+                        phone_hash: phoneHash,
+                        direction: 'outbound',
+                        message_type: 'template',
+                        channel: 'web',
+                        status: 'delivered',
+                        content_preview: '[template:intrust_login_alert]',
+                    }).then(({ error }) => {
+                        if (error) console.warn('[signin] Failed to log login alert to whatsapp_message_logs:', error.message);
+                    });
+                }
+            }
+        } catch (waErr) {
+            console.error('[signin] WhatsApp login alert failed (non-blocking):', waErr.message);
+        }
 
         return response;
 

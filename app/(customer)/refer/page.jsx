@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Gift, Share2, Copy, CheckCircle, ChevronLeft, ChevronRight,
-    Users, Coins, Network
+    Users, Coins, Network, Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -146,6 +146,12 @@ export default function ReferAndEarnPage() {
     const [copied, setCopied] = useState(false);
     const [loading, setLoading] = useState(true);
     const [networkData, setNetworkData] = useState(null);
+    const [hasReferrer, setHasReferrer] = useState(false);
+    
+    // Referral application state
+    const [enterCode, setEnterCode] = useState('');
+    const [applyingCode, setApplyingCode] = useState(false);
+    const [codeApplied, setCodeApplied] = useState(false);
 
     useEffect(() => {
         if (!user && !loading) {
@@ -161,11 +167,12 @@ export default function ReferAndEarnPage() {
                 // Fetch referral code
                 const { data: profile } = await supabase
                     .from('user_profiles')
-                    .select('referral_code')
+                    .select('referral_code, referred_by')
                     .eq('id', user.id)
                     .single();
 
                 if (profile?.referral_code) setReferralCode(profile.referral_code);
+                setHasReferrer(!!profile?.referred_by);
 
                 // Fetch referral network tree + stats
                 const res = await fetch('/api/referral/network');
@@ -206,6 +213,42 @@ export default function ReferAndEarnPage() {
             }
         } catch (err) {
             console.error('Share error:', err);
+        }
+    };
+
+    const handleApplyCode = async () => {
+        if (!enterCode.trim()) {
+            toast.error('Please enter a referral code');
+            return;
+        }
+
+        setApplyingCode(true);
+        try {
+            const res = await fetch('/api/referral/apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ referral_code_entered: enterCode })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                toast.success('Referral code applied successfully!');
+                setCodeApplied(true);
+                // Re-fetch network data to show the new tree
+                const networkRes = await fetch('/api/referral/network');
+                if (networkRes.ok) {
+                    const networkData = await networkRes.json();
+                    setNetworkData(networkData);
+                }
+            } else {
+                toast.error(data.error || 'Failed to apply referral code');
+            }
+        } catch (err) {
+            console.error('Error applying referral code:', err);
+            toast.error('An unexpected error occurred');
+        } finally {
+            setApplyingCode(false);
         }
     };
 
@@ -263,6 +306,39 @@ export default function ReferAndEarnPage() {
                     </p>
                 </motion.div>
 
+                {/* Promotional Banner */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.05 }}
+                    className="bg-gradient-to-r from-emerald-900 to-teal-900 dark:from-[#020617] dark:to-emerald-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-emerald-900/20 border border-emerald-500/30 dark:border-emerald-500/20 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 mb-8"
+                >
+                    <div className="absolute -right-10 -top-10 text-emerald-400 opacity-10 pointer-events-none">
+                        <Gift size={220} />
+                    </div>
+                    
+                    <div className="relative z-10 flex-1 text-center md:text-left">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-widest mb-3">
+                            <Sparkles size={14} />
+                            Unlimited Potential
+                        </div>
+                        <h2 className="text-2xl sm:text-3xl font-black mb-2 text-white leading-tight">
+                            Earn <span className="text-emerald-400">Reward Points</span> For Every Referral!
+                        </h2>
+                        <p className="text-emerald-100/80 max-w-xl text-sm sm:text-base mx-auto md:mx-0 font-medium">
+                            Invite friends to join InTrust India using your unique referral code. You'll earn points not just from your direct referrals, but from their referrals too—up to 7 levels deep!
+                            <span className="block mt-2 font-bold text-emerald-300 text-base sm:text-lg">Earn up to ₹50,000 per month!</span>
+                        </p>
+                    </div>
+                    
+                    <div className="relative z-10 shrink-0 bg-gradient-to-br from-emerald-400 to-teal-300 text-teal-950 px-8 py-5 rounded-2xl font-black text-center shadow-[0_0_20px_rgba(52,211,153,0.3)] border border-emerald-200 flex flex-col items-center justify-center min-w-[160px]">
+                        <div className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Network Depth</div>
+                        <div className="text-4xl flex items-center drop-shadow-sm">
+                            7 Levels
+                        </div>
+                    </div>
+                </motion.div>
+
                 {/* Referral Code Box */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -298,6 +374,67 @@ export default function ReferAndEarnPage() {
                         Share Now
                     </button>
                 </motion.div>
+
+                {/* Enter Referral Code Section - Only if they don't have a referrer */}
+                {!hasReferrer && !codeApplied && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.12 }}
+                        className="bg-white dark:bg-white/5 rounded-3xl p-6 border border-gray-100 dark:border-white/10 shadow-xl mb-8 overflow-hidden relative"
+                    >
+                        {/* Decorative background */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl rounded-full -mr-16 -mt-16" />
+                        
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                <Gift size={20} />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-gray-900 dark:text-white">Have a referral code?</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Join a network and start your chain</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <input
+                                type="text"
+                                value={enterCode}
+                                onChange={(e) => setEnterCode(e.target.value.toUpperCase())}
+                                placeholder="ENTER CODE"
+                                className="w-full bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-2xl p-4 text-center text-2xl font-mono font-black tracking-[0.2em] text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all uppercase"
+                                maxLength={10}
+                            />
+                            
+                            <button
+                                onClick={handleApplyCode}
+                                disabled={applyingCode || !enterCode.trim()}
+                                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-gray-400 disabled:to-gray-500 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                            >
+                                {applyingCode ? (
+                                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <>Apply Code</>
+                                )}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Success Banner if code just applied */}
+                {codeApplied && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-3xl p-6 text-center mb-8"
+                    >
+                        <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-3 text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle size={28} />
+                        </div>
+                        <h3 className="font-bold text-emerald-900 dark:text-emerald-100 text-lg">You've joined the network!</h3>
+                        <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Your tree has been updated successfully.</p>
+                    </motion.div>
+                )}
 
                 {/* Network Summary Bar */}
                 <motion.div
@@ -379,7 +516,7 @@ export default function ReferAndEarnPage() {
 
                         {[
                             { num: '1', title: 'Share your code', desc: 'Send your unique code to friends through any app.' },
-                            { num: '2', title: 'Friend signs up', desc: 'They use your code during onboarding and join your chain.' },
+                            { num: '2', title: 'Friend signs up', desc: 'They use your code during sign-up or on their Network page and join your chain.' },
                             { num: '3', title: 'Earn reward points', desc: 'You earn points from their activity — up to 7 levels deep!' },
                         ].map((step, i) => (
                             <div key={i} className="flex gap-4 relative z-10">

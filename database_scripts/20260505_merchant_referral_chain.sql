@@ -38,10 +38,12 @@ END $$;
 INSERT INTO public.platform_settings (key, value, description)
 VALUES (
     'merchant_referral_prize_paise',
-    '50000',
-    'Wallet prize (in paise) credited to referring merchant on referral activation. Default ₹500.'
+    '2000',
+    'Wallet prize (in paise) credited to referring merchant on referral activation. Default ₹20.'
 )
-ON CONFLICT (key) DO NOTHING;
+ON CONFLICT (key) DO UPDATE 
+SET value = '2000', 
+    description = 'Wallet prize (in paise) credited to referring merchant on referral activation. Default ₹20.';
 
 -- Step 5 — Create RPC build_merchant_tree_path
 CREATE OR REPLACE FUNCTION public.build_merchant_tree_path(p_new_merchant_id UUID, p_parent_merchant_id UUID)

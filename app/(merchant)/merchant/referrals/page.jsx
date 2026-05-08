@@ -1,7 +1,8 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { getMerchantReferralData } from './actions';
 import ReferralCodeCard from '@/components/merchant/ReferralCodeCard';
-import { Network, Users, Calendar, Coins } from 'lucide-react';
+import EnterReferralCodeSection from '@/components/merchant/EnterReferralCodeSection';
+import { Network, Users, Calendar, Coins, Gift, Sparkles } from 'lucide-react';
 import { redirect } from 'next/navigation';
 
 export const metadata = {
@@ -66,7 +67,7 @@ export default async function MerchantReferralsPage() {
         redirect('/merchant-apply');
     }
 
-    const { referralCode, directReferrals, prizeHistory, chainDepth } = await getMerchantReferralData(merchant.id);
+    const { referralCode, hasReferrer, directReferrals, prizeHistory, chainDepth } = await getMerchantReferralData(merchant.id);
 
     return (
         <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-8 pb-24 lg:pb-8">
@@ -82,8 +83,38 @@ export default async function MerchantReferralsPage() {
                 </div>
             </div>
 
+            {/* Promotional Banner */}
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 dark:from-[#020617] dark:to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-lg border border-slate-700/50 dark:border-white/10 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="absolute -right-10 -top-10 text-[#D4AF37] opacity-[0.08] pointer-events-none">
+                    <Gift size={220} />
+                </div>
+                
+                <div className="relative z-10 flex-1 text-center md:text-left">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-bold uppercase tracking-widest mb-3">
+                        <Sparkles size={14} />
+                        Limited Time Offer
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-black mb-2 text-white leading-tight">
+                        Earn <span className="text-[#D4AF37]">₹20</span> For Every Referral!
+                    </h2>
+                    <p className="text-slate-300 max-w-xl text-sm sm:text-base mx-auto md:mx-0">
+                        Invite other merchants to join InTrust India using your unique referral code. When they activate their subscription, you instantly receive ₹20 directly in your wallet!
+                    </p>
+                </div>
+                
+                <div className="relative z-10 shrink-0 bg-gradient-to-br from-[#D4AF37] to-[#F3E5AB] text-slate-900 px-8 py-5 rounded-xl font-black text-center shadow-[0_0_20px_rgba(212,175,55,0.3)] border border-[#fce48a] flex flex-col items-center justify-center min-w-[160px]">
+                    <div className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Instant Reward</div>
+                    <div className="text-4xl flex items-center drop-shadow-sm">
+                        ₹20
+                    </div>
+                </div>
+            </div>
+
             {/* Section 1: Referral Code Card */}
             <ReferralCodeCard referralCode={referralCode} />
+
+            {/* Section 1.5: Enter Referral Code */}
+            <EnterReferralCodeSection hasReferrer={hasReferrer} />
 
             {/* Section 2: My Network */}
             <section className="bg-white dark:bg-[#020617] rounded-2xl shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">

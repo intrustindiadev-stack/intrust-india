@@ -18,7 +18,7 @@ export default async function HRMRootLayout({ children }) {
         .eq('id', user.id)
         .single();
 
-    const validRoles = ['hr', 'hr_manager', 'admin', 'super_admin'];
+    const validRoles = ['hr_manager', 'admin', 'super_admin'];
 
     if (!validRoles.includes(profile?.role)) {
 

@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const ROLE_LABELS = {
     employee: 'Employee', sales_exec: 'Sales Executive', sales_manager: 'Sales Manager',
-    hr_manager: 'HR Manager', crm_user: 'CRM User', admin: 'Admin', super_admin: 'Super Admin',
+    hr_manager: 'HR Manager', admin: 'Admin', super_admin: 'Super Admin',
 };
 
 const ROLE_COLOR = {
@@ -16,7 +16,6 @@ const ROLE_COLOR = {
     sales_exec: 'bg-violet-50 text-violet-700 border-violet-100',
     sales_manager: 'bg-purple-50 text-purple-700 border-purple-100',
     hr_manager: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    crm_user: 'bg-indigo-50 text-indigo-700 border-indigo-100',
 };
 
 function EmployeeDrawer({ employee, onClose, onSave }) {
@@ -38,6 +37,26 @@ function EmployeeDrawer({ employee, onClose, onSave }) {
             const { error } = await supabase.from('user_profiles').update(form).eq('id', employee.id);
             if (error) throw error;
             toast.success('Employee profile updated');
+
+            // Audit Log Insert
+            supabase.auth.getUser().then(({ data: { user } }) => {
+                if (user) {
+                    supabase.from('audit_logs_hrm').insert({
+                        actor_id: user.id,
+                        actor_name: user.user_metadata?.full_name || 'System',
+                        action: 'Employee profile updated',
+                        table_name: 'user_profiles',
+                        record_id: employee.id,
+                        old_data: employee,
+                        new_data: form,
+                        module: 'Core HR',
+                        severity: 'medium'
+                    }).then(({ error: auditError }) => {
+                        if (auditError) console.warn('Audit log failed:', auditError);
+                    });
+                }
+            });
+
             onSave({ ...employee, ...form });
             onClose();
         } catch (err) { toast.error(err.message); }
@@ -128,7 +147,7 @@ export default function EmployeesPage() {
         try {
             const { data, error } = await supabase.from('user_profiles')
                 .select('id, full_name, email, phone, role, department, employee_id, joining_date, employment_type, city, base_salary, avatar_url, created_at')
-                .in('role', ['employee', 'sales_exec', 'sales_manager', 'hr_manager', 'crm_user'])
+                .in('role', ['employee', 'sales_exec', 'sales_manager', 'hr_manager'])
                 .order('created_at', { ascending: false });
             if (error) throw error;
             setEmployees(data || []);

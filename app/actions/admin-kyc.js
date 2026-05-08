@@ -97,6 +97,19 @@ export async function approveKYC(kycId) {
             .update({ kyc_status: 'verified' })
             .eq('id', data.user_id);
 
+        // Distribute kyc_complete reward points to referral upline (non-fatal)
+        try {
+            await adminClient.rpc('calculate_and_distribute_rewards', {
+                p_event_type: 'kyc_complete',
+                p_source_user_id: data.user_id,
+                p_reference_id: kycId,
+                p_reference_type: 'kyc_record'
+            });
+            console.log(`[admin-kyc] kyc_complete rewards distributed for user ${data.user_id}`);
+        } catch (rewardErr) {
+            console.error('[admin-kyc] kyc_complete reward distribution error (non-fatal):', rewardErr.message);
+        }
+
         revalidatePath('/admin/users');
 
         return {

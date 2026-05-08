@@ -165,7 +165,11 @@ export default function RewardsDashboardPage() {
             const result = await response.json();
 
             if (result.success) {
-                toast.success(result.message);
+                if (result.mode === 'approval_required') {
+                    toast.success(result.message, { duration: 6000 });
+                } else {
+                    toast.success(result.message);
+                }
                 setConvertAmount('');
                 // Refresh balance
                 const { data: newBalance } = await supabase

@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
+import { toast } from 'react-hot-toast';
 
 function StatCard({ label, value, icon: Icon, color, subValue, trend, delay = 0 }) {
     const COLOR_VARIANTS = {
@@ -74,6 +75,47 @@ export default function HRMDashboard() {
         } catch (err) { console.error(err); }
         finally { setIsLoading(false); }
     }, []);
+
+    const handleLeaveAction = async (leaveId, action) => {
+        const originalLeaves = [...pendingLeaves];
+        setPendingLeaves(prev => prev.filter(l => l.id !== leaveId));
+        setStats(prev => ({ ...prev, pendingLeaves: Math.max(0, prev.pendingLeaves - 1) }));
+
+        try {
+            const { error } = await supabase.from('leave_requests').update({
+                status: action,
+                reviewed_at: new Date().toISOString(),
+            }).eq('id', leaveId);
+            
+            if (error) throw error;
+            toast.success(`Leave ${action} successfully`);
+
+            // Audit log
+            supabase.auth.getUser().then(({ data: { user } }) => {
+                if (user) {
+                    supabase.from('audit_logs_hrm').insert({
+                        actor_id: user.id,
+                        actor_name: user.user_metadata?.full_name || 'System',
+                        action: `Leave ${action}`,
+                        table_name: 'leave_requests',
+                        record_id: leaveId,
+                        old_data: { status: 'pending' },
+                        new_data: { status: action },
+                        module: 'Leaves',
+                        severity: 'low'
+                    }).then(({ error: auditError }) => {
+                        if (auditError) console.warn('Audit log failed:', auditError);
+                    });
+                }
+            });
+
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message || `Failed to ${action} leave`);
+            setPendingLeaves(originalLeaves);
+            setStats(prev => ({ ...prev, pendingLeaves: prev.pendingLeaves + 1 }));
+        }
+    };
 
     useEffect(() => { fetchStats(); }, [fetchStats]);
 
@@ -150,8 +192,8 @@ export default function HRMDashboard() {
                                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{leave.leave_type} · {new Date(leave.from_date).toLocaleDateString()}</p>
                                             </div>
                                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-600 font-black text-[10px] uppercase hover:bg-emerald-600 hover:text-white transition-all">Approve</button>
-                                                <button className="px-4 py-2 rounded-xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase hover:bg-rose-600 hover:text-white transition-all">Reject</button>
+                                                <button onClick={() => handleLeaveAction(leave.id, 'approved')} className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-600 font-black text-[10px] uppercase hover:bg-emerald-600 hover:text-white transition-all">Approve</button>
+                                                <button onClick={() => handleLeaveAction(leave.id, 'rejected')} className="px-4 py-2 rounded-xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase hover:bg-rose-600 hover:text-white transition-all">Reject</button>
                                             </div>
                                         </div>
                                     ))}
@@ -223,7 +265,7 @@ export default function HRMDashboard() {
                         )}
                     </div>
 
-                    <Link href="/hrm/activity" className="block w-full py-4 text-center rounded-2xl bg-gray-50 dark:bg-gray-900 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all uppercase tracking-widest">
+                    <Link href="/hrm/audit" className="block w-full py-4 text-center rounded-2xl bg-gray-50 dark:bg-gray-900 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all uppercase tracking-widest">
                         Full Audit Logs
                     </Link>
                 </div>

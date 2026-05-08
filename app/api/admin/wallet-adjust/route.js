@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import { CustomerWalletService } from '@/lib/wallet/customerWalletService';
 import { WalletService } from '@/lib/wallet/walletService';
 import { WalletAuditService } from '@/lib/wallet/walletAuditService';
+import { sendTemplateMessage, TRANSACTION_ALERT_TEMPLATE } from '@/lib/omniflow';
+import crypto from 'crypto';
 
 // --- Constants ---
 const MAX_AMOUNT_RUPEES_DEFAULT = 100_000;       // ₹1,00,000 per txn
@@ -311,6 +313,59 @@ export async function POST(request) {
         } catch (notifErr) {
             console.error('[wallet-adjust] Failed to insert notification (Exception):', notifErr);
             // Non-blocking: we still return success for the adjustment
+        }
+
+        // ──────────────────────────────────────────
+        // 10.5 WHATSAPP TRANSACTION ALERT
+        // ──────────────────────────────────────────
+        try {
+            const { data: binding } = await supabase
+                .from('user_channel_bindings')
+                .select('phone')
+                .eq('user_id', userId)
+                .eq('whatsapp_opt_in', true)
+                .maybeSingle();
+
+            if (binding?.phone) {
+                // Deduplication guard: use the auditLogId as an exact-match key.
+                const alertTag = `[template:intrust_transaction_alert:${auditLogId}]`;
+                const { data: alreadySent } = await supabase
+                    .from('whatsapp_message_logs')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .eq('content_preview', alertTag)
+                    .limit(1)
+                    .maybeSingle();
+
+                if (alreadySent) {
+                    console.log(`[wallet-adjust] Skipping duplicate transaction alert for audit ${auditLogId}`);
+                } else {
+                    const newBalanceRs = ((newBalancePaise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+                    const amountRs = parsedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+                    const direction = operation === 'credit' ? 'credited to' : 'debited from';
+                    await sendTemplateMessage(
+                        binding.phone,
+                        TRANSACTION_ALERT_TEMPLATE.name,
+                        TRANSACTION_ALERT_TEMPLATE.language,
+                        TRANSACTION_ALERT_TEMPLATE.buildComponents(amountRs, direction, newBalanceRs)
+                    );
+                    console.log(`[wallet-adjust] WhatsApp transaction alert sent to user ${userId}`);
+                    const phoneHash = crypto.createHash('sha256').update(binding.phone).digest('hex');
+                    await supabase.from('whatsapp_message_logs').insert({
+                        user_id: userId,
+                        phone_hash: phoneHash,
+                        direction: 'outbound',
+                        message_type: 'template',
+                        channel: 'web',
+                        status: 'delivered',
+                        content_preview: alertTag,
+                    }).then(({ error }) => {
+                        if (error) console.warn('[wallet-adjust] Failed to log transaction alert:', error.message);
+                    });
+                }
+            }
+        } catch (waErr) {
+            console.error('[wallet-adjust] WhatsApp transaction alert failed (non-blocking):', waErr.message);
         }
 
         // ──────────────────────────────────────────

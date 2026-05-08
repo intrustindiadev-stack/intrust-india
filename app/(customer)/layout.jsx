@@ -14,15 +14,34 @@ export default async function CustomerLayout({ children }) {
         const { data } = await Promise.race([getUserPromise, timeoutPromise]);
         user = data?.user;
     } catch (error) {
-        console.error('Customer layout auth timeout:', error.message);
+        redirect('/login');
     }
+
+    if (!user) {
+        redirect('/login');
+    }
+
     // If logged in, check role
     if (user) {
-        const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
+        let profile = null;
+        try {
+            const getProfilePromise = supabase
+                .from('user_profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Profile timeout')), 3000)
+            );
+            const { data, error } = await Promise.race([getProfilePromise, timeoutPromise]);
+            if (error) {
+                console.error('Profile fetch error:', error);
+                throw new Error('Failed to fetch profile');
+            }
+            profile = data;
+        } catch (error) {
+            redirect('/login');
+        }
 
         // If admin tries to access customer routes, redirect to admin panel
         if (profile?.role === 'admin' || profile?.role === 'super_admin') {

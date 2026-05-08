@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 import { motion } from 'framer-motion';
 import { Settings, Shield, Bell, Lock, Key } from 'lucide-react';
@@ -10,6 +11,8 @@ export default function HRMSettingsPage() {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState(null);
     const [activeTab, setActiveTab] = useState('security');
+    const [notifications, setNotifications] = useState({ email: true, push: true, sms: false });
+    const router = useRouter();
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -20,6 +23,29 @@ export default function HRMSettingsPage() {
         };
         fetchUser();
     }, []);
+
+    useEffect(() => {
+        const savedPrefs = localStorage.getItem('hrm_notification_prefs');
+        if (savedPrefs) {
+            try {
+                setNotifications(JSON.parse(savedPrefs));
+            } catch (e) {
+                console.error('Failed to parse notification preferences', e);
+            }
+        }
+    }, []);
+
+    const handleSignOutAllDevices = async () => {
+        try {
+            const supabase = createClient();
+            const { error } = await supabase.auth.signOut({ scope: 'global' });
+            if (error) throw error;
+            toast.success('Signed out from all devices.');
+            router.push('/login');
+        } catch (error) {
+            toast.error(error.message || 'Failed to sign out.');
+        }
+    };
 
     const handleResetPassword = async () => {
         try {
@@ -125,6 +151,7 @@ export default function HRMSettingsPage() {
                                     </p>
                                 </div>
                                 <button 
+                                    onClick={handleSignOutAllDevices}
                                     className="px-6 py-3 bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-300 dark:hover:bg-white/20 transition-all flex-shrink-0"
                                 >
                                     Sign out all devices
@@ -153,11 +180,28 @@ export default function HRMSettingsPage() {
                                         <p className="text-sm text-slate-500 mt-1 font-medium">{item.desc}</p>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" className="sr-only peer" defaultChecked={item.id !== 'sms'} />
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer" 
+                                            checked={notifications[item.id] || false}
+                                            onChange={(e) => setNotifications(prev => ({ ...prev, [item.id]: e.target.checked }))}
+                                        />
                                         <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
                                     </label>
                                 </div>
                             ))}
+                        </div>
+
+                        <div className="flex justify-end pt-4">
+                            <button
+                                onClick={() => {
+                                    localStorage.setItem('hrm_notification_prefs', JSON.stringify(notifications));
+                                    toast.success('Notification preferences saved!');
+                                }}
+                                className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all"
+                            >
+                                Save Preferences
+                            </button>
                         </div>
                     </motion.div>
                 )}
