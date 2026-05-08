@@ -4,14 +4,15 @@
 The goal is to provide the client with a professional, human-understandable summary of recent platform updates. This document will be delivered as a `.docx` file.
 
 ## Features to Document
-1. **Intelligent Merchant WhatsApp Assistant**: Automated WhatsApp chatbot for merchant orders, payouts, and inventory.
-2. **Mera Paisa (Growth Fund) Integration**: Investment module for merchants and admins.
-3. **Enhanced Wallet Reward System**: Secure reward issuance for wallet-based transactions with idempotency guards.
-4. **Streamlined Daily Engagement Rewards**: Normalized 50-point daily login rewards with instant claiming.
+1. **Multi-Audience WhatsApp & AI Chatbot System**: Specialized AI interactions for both Customers and Merchants, with business-aware capabilities for merchants.
+2. **Dynamic "Mera Paisa" (Growth Fund) Ecosystem**: Investment module with merchant dashboards and admin management tools.
+3. **"Ironclad" Rewards & Wallet Integration**: Secure, idempotent reward issuance for all payment methods, including wallet-based transactions.
+4. **Optimized Daily User Engagement**: Normalized 50-point daily login rewards with instant, scratch-card-free claiming.
+5. **Premium UI & Visual Modernization**: Design overhaul of Shop and Wholesale interfaces for a premium experience.
 
 ## Content Specification
 - **Tone**: Professional, value-oriented, and non-technical.
-- **Structure**: Title -> Section per feature (Update, How it Works, Benefit).
+- **Structure**: Title -> Section per feature (The Update, How it Works, Benefit).
 
 ## Implementation Approach
 1. **Library**: Use `python-docx` to generate the file.
