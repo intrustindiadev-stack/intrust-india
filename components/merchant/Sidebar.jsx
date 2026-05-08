@@ -23,6 +23,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { label: "Store Credits", href: "/merchant/udhari", icon: "credit_score" },
         { label: "NFC Card", href: "/merchant/nfc-service", icon: "contactless" },
         { label: "Lockin Portfolio", href: "/merchant/lockin", icon: "lock_clock" },
+        { label: "Mera Paisa", href: "/merchant/investments", icon: "savings" },
         { label: "Wallet", href: "/merchant/wallet", icon: "account_balance_wallet" },
         { label: "My Network", href: "/merchant/referrals", icon: "share" },
         { label: "Shopping Orders", href: "/merchant/shopping/orders", icon: "shopping_basket" },

@@ -20,7 +20,24 @@ export async function GET(request) {
 
         if (error) throw error;
 
-        return NextResponse.json({ data });
+        // Enrich with order counts + total profit paid
+        const investmentIds = (data || []).map(i => i.id);
+        let orders = [];
+        if (investmentIds.length > 0) {
+            const { data: orderData } = await supabase
+                .from('merchant_investment_orders')
+                .select('investment_id, profit_paise')
+                .in('investment_id', investmentIds);
+            orders = orderData || [];
+        }
+
+        const enriched = (data || []).map(inv => {
+            const invOrders = orders.filter(o => o.investment_id === inv.id);
+            const totalPaid = invOrders.reduce((s, o) => s + (o.profit_paise || 0), 0);
+            return { ...inv, total_profit_paid_paise: totalPaid, order_count: invOrders.length };
+        });
+
+        return NextResponse.json({ data: enriched });
     } catch (err) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
@@ -34,16 +51,15 @@ export async function PATCH(request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { id, status } = await request.json();
+        const { id, status, interest_rate_percent } = await request.json();
         if (!id || !status) return NextResponse.json({ error: 'ID and Status are required' }, { status: 400 });
 
-        const updateData = {
-            status,
-            updated_at: new Date().toISOString()
-        };
+        const updateData = { status, updated_at: new Date().toISOString() };
+        if (interest_rate_percent) updateData.interest_rate_percent = Number(interest_rate_percent);
 
         if (status === 'active') {
-            updateData.approved_at = new Date().toISOString();
+            const approvedAt = new Date().toISOString();
+            updateData.approved_at = approvedAt;
             updateData.admin_id = user.id;
         }
 
@@ -73,8 +89,10 @@ export async function PATCH(request) {
             if (merchant) {
                 await supabase.from('notifications').insert({
                     user_id: merchant.user_id,
-                    title: `Investment ${status.charAt(0).toUpperCase() + status.slice(1)}`,
-                    body: `Your investment request for ₹${(investment.amount_paise / 100).toLocaleString('en-IN')} has been ${status}.`,
+                    title: status === 'active' ? 'Aapka Paisa Kaam Pe Laga! 🎉' : 'Investment Update',
+                    body: status === 'active'
+                        ? `Badhai ho! Aapka ₹${(investment.amount_paise / 100).toLocaleString('en-IN')} ka investment approve ho gaya. Abhi se returns milna shuru honge.`
+                        : `Aapki ₹${(investment.amount_paise / 100).toLocaleString('en-IN')} ki request ${status} ho gayi.`,
                     type: status === 'active' ? 'success' : 'info',
                     reference_id: id,
                     reference_type: 'investment'
@@ -98,12 +116,13 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { merchantId, amountRupees, description } = await request.json();
+        const { merchantId, amountRupees, description, interestRatePercent, durationDays } = await request.json();
         if (!merchantId || !amountRupees) {
             return NextResponse.json({ error: 'Merchant ID and Amount are required' }, { status: 400 });
         }
 
         const amountPaise = Math.round(Number(amountRupees) * 100);
+        const approvedAt = new Date().toISOString();
 
         const { data, error } = await supabase
             .from('merchant_investments')
@@ -112,8 +131,10 @@ export async function POST(request) {
                 amount_paise: amountPaise,
                 description: description || 'Directly added by admin',
                 status: 'active',
-                approved_at: new Date().toISOString(),
-                admin_id: user.id
+                approved_at: approvedAt,
+                admin_id: user.id,
+                interest_rate_percent: Number(interestRatePercent) || 12.0,
+                duration_days: Number(durationDays) || 365,
             })
             .select()
             .single();
@@ -131,8 +152,8 @@ export async function POST(request) {
             if (merchant) {
                 await supabase.from('notifications').insert({
                     user_id: merchant.user_id,
-                    title: 'New Investment Deployed',
-                    body: `Admin has deployed a new investment of ₹${Number(amountRupees).toLocaleString('en-IN')} for your business.`,
+                    title: 'Naya Paisa Aaya! 💰',
+                    body: `InTrust ne aapke account mein ₹${Number(amountRupees).toLocaleString('en-IN')} ka investment deploy kiya. Aapka paisa ab kaam pe laga hai!`,
                     type: 'success',
                     reference_id: data.id,
                     reference_type: 'investment'
