@@ -83,13 +83,13 @@ function NetworkNode({ node, depth = 0 }) {
                                 L{node.level}
                             </span>
                         )}
-                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border
+                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border flex items-center gap-1
                             ${kycVerified
                                 ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30'
                                 : 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30'
                             }`}
                         >
-                            {kycVerified ? 'KYC ✓' : 'KYC ⏳'}
+                            {kycVerified ? <><CheckCircle size={10} /> KYC Verified</> : <><Clock size={10} /> KYC Pending</>}
                         </span>
                         {!isRoot && node.joined_at && (
                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
@@ -147,7 +147,7 @@ export default function ReferAndEarnPage() {
     const [loading, setLoading] = useState(true);
     const [networkData, setNetworkData] = useState(null);
     const [hasReferrer, setHasReferrer] = useState(false);
-    
+
     // Referral application state
     const [enterCode, setEnterCode] = useState('');
     const [applyingCode, setApplyingCode] = useState(false);
@@ -291,7 +291,7 @@ export default function ReferAndEarnPage() {
                     className="text-center mb-8 relative"
                 >
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/20 to-teal-400/20 blur-[80px] -z-10 rounded-full" />
-                    <motion.div 
+                    <motion.div
                         animate={{ y: [0, -10, 0] }}
                         transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                         className="w-24 h-24 mx-auto bg-gradient-to-br from-emerald-400 to-teal-500 rounded-3xl shadow-2xl shadow-emerald-500/30 flex items-center justify-center mb-6 rotate-12 ring-1 ring-white/20"
@@ -299,7 +299,7 @@ export default function ReferAndEarnPage() {
                         <Network size={44} className="text-white -rotate-12" />
                     </motion.div>
                     <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">
-                        🤝 Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">Network</span>
+                        Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">Network</span>
                     </h1>
                     <p className="text-slate-500 dark:text-gray-400 sm:text-lg max-w-sm mx-auto font-medium">
                         Share your code and watch your passive income grow
@@ -316,7 +316,7 @@ export default function ReferAndEarnPage() {
                     <div className="absolute -right-10 -top-10 text-emerald-400 opacity-10 pointer-events-none">
                         <Gift size={220} />
                     </div>
-                    
+
                     <div className="relative z-10 flex-1 text-center md:text-left">
                         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-widest mb-3">
                             <Sparkles size={14} />
@@ -330,7 +330,7 @@ export default function ReferAndEarnPage() {
                             <span className="block mt-2 font-bold text-emerald-300 text-base sm:text-lg">Earn up to ₹50,000 per month!</span>
                         </p>
                     </div>
-                    
+
                     <div className="relative z-10 shrink-0 bg-gradient-to-br from-emerald-400 to-teal-300 text-teal-950 px-8 py-5 rounded-2xl font-black text-center shadow-[0_0_20px_rgba(52,211,153,0.3)] border border-emerald-200 flex flex-col items-center justify-center min-w-[160px]">
                         <div className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Network Depth</div>
                         <div className="text-4xl flex items-center drop-shadow-sm">
@@ -385,7 +385,7 @@ export default function ReferAndEarnPage() {
                     >
                         {/* Decorative background */}
                         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl rounded-full -mr-16 -mt-16" />
-                        
+
                         <div className="flex items-center gap-3 mb-6">
                             <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                                 <Gift size={20} />
@@ -405,7 +405,7 @@ export default function ReferAndEarnPage() {
                                 className="w-full bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-2xl p-4 text-center text-2xl font-mono font-black tracking-[0.2em] text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all uppercase"
                                 maxLength={10}
                             />
-                            
+
                             <button
                                 onClick={handleApplyCode}
                                 disabled={applyingCode || !enterCode.trim()}
@@ -482,12 +482,12 @@ export default function ReferAndEarnPage() {
                             <NetworkNode node={networkData.tree} depth={0} />
                         ) : (
                             <div className="text-center py-12">
-                                <motion.div 
+                                <motion.div
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                                    className="w-20 h-20 mx-auto bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center mb-4"
+                                    className="w-20 h-20 mx-auto bg-gray-50 dark:bg-white/5 rounded-[2rem] flex items-center justify-center mb-6 border border-gray-100 dark:border-white/10"
                                 >
-                                    <span className="text-4xl">🌱</span>
+                                    <Network size={40} className="text-gray-200 dark:text-gray-700" />
                                 </motion.div>
                                 <p className="font-bold text-gray-900 dark:text-white text-lg mb-1">No network yet</p>
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400 max-w-[200px] mx-auto">

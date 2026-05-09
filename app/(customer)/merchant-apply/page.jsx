@@ -213,7 +213,7 @@ export default function MerchantApplyPage() {
             toast.error("Please enter your PAN Number.");
             return "Please enter your PAN Number.";
         }
-        
+
         const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
         if (!panRegex.test(formData.panCard)) {
             toast.error("Invalid PAN format.");
@@ -255,7 +255,7 @@ export default function MerchantApplyPage() {
 
         return (
             <div className="h-screen w-full bg-white dark:bg-[#020617] font-[family-name:var(--font-outfit)] overflow-hidden relative flex flex-col md:flex-row transition-colors">
-                 {/* Desktop: Left Side Brand Panel (Hidden on Mobile) */}
+                {/* Desktop: Left Side Brand Panel (Hidden on Mobile) */}
                 <div className="hidden md:flex w-1/2 lg:w-[45%] bg-slate-900 dark:bg-[#0F1419] h-full relative overflow-hidden flex-col justify-between p-12 text-white transition-colors">
                     <div className="absolute inset-0 opacity-20">
                         <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500 rounded-full blur-[100px] animate-pulse-slow" />
@@ -304,15 +304,14 @@ export default function MerchantApplyPage() {
                         <p className="text-slate-500 dark:text-slate-400 text-lg mb-8">
                             You need to verify your identity (KYC) before you can apply to become a merchant on Intrust.
                         </p>
-                        
-                        <div className={`p-4 rounded-xl text-left mb-8 font-medium shadow-sm border ${
-                            isPending ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20' :
-                            isRejected ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20' :
-                            'bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 border-black/5 dark:border-white/10'
-                        }`}>
+
+                        <div className={`p-4 rounded-xl text-left mb-8 font-medium shadow-sm border ${isPending ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20' :
+                                isRejected ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20' :
+                                    'bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 border-black/5 dark:border-white/10'
+                            }`}>
                             {isPending ? "Your KYC is under review. You'll be able to apply once it's approved." :
-                             isRejected ? "Your KYC was rejected. Please resubmit with correct details." :
-                             "Complete your KYC verification — it takes less than 2 minutes."}
+                                isRejected ? "Your KYC was rejected. Please resubmit with correct details." :
+                                    "Complete your KYC verification — it takes less than 2 minutes."}
                         </div>
 
                         <div className="space-y-4">
@@ -451,11 +450,11 @@ export default function MerchantApplyPage() {
                                         <SmoothInput label="Email Address" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} icon={Building2} />
                                     </div>
                                     <SmoothTextArea label="Registered Address" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
-                                    <SmoothInput 
-                                        label="Referral Code (Optional)" 
-                                        value={formData.merchantReferralCode} 
-                                        onChange={e => setFormData({ ...formData, merchantReferralCode: e.target.value })} 
-                                        icon={Share2} 
+                                    <SmoothInput
+                                        label="Referral Code (Optional)"
+                                        value={formData.merchantReferralCode}
+                                        onChange={e => setFormData({ ...formData, merchantReferralCode: e.target.value })}
+                                        icon={Share2}
                                     />
                                 </div>
                             </motion.div>
@@ -486,36 +485,36 @@ export default function MerchantApplyPage() {
                                         </div>
                                     </div>
 
+                                    <SmoothInput
+                                        label="Account Number"
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={formData.bankAccount}
+                                        onChange={e => {
+                                            setFormData({ ...formData, bankAccount: e.target.value });
+                                        }}
+                                        autoFocus
+                                        icon={CreditCard}
+                                    />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                         <SmoothInput
-                                            label="Account Number"
-                                            type="text"
-                                            inputMode="numeric"
-                                            pattern="[0-9]*"
-                                            value={formData.bankAccount}
+                                            label="IFSC Code"
+                                            value={formData.ifscCode}
                                             onChange={e => {
-                                                setFormData({ ...formData, bankAccount: e.target.value });
+                                                setFormData({ ...formData, ifscCode: e.target.value });
                                             }}
-                                            autoFocus
-                                            icon={CreditCard}
+                                            icon={Banknote}
                                         />
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                            <SmoothInput
-                                                label="IFSC Code"
-                                                value={formData.ifscCode}
-                                                onChange={e => {
-                                                    setFormData({ ...formData, ifscCode: e.target.value });
-                                                }}
-                                                icon={Banknote}
-                                            />
-                                            <SmoothInput
-                                                label="PAN Number"
-                                                value={formData.panCard}
-                                                onChange={e => {
-                                                    setFormData({ ...formData, panCard: e.target.value.toUpperCase() });
-                                                }}
-                                                icon={FileText}
-                                            />
-                                        </div>
+                                        <SmoothInput
+                                            label="PAN Number"
+                                            value={formData.panCard}
+                                            onChange={e => {
+                                                setFormData({ ...formData, panCard: e.target.value.toUpperCase() });
+                                            }}
+                                            icon={FileText}
+                                        />
+                                    </div>
 
                                     {error && (
                                         <div className="p-4 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium border border-red-100 dark:border-red-500/20">

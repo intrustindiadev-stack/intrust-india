@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Briefcase, MapPin, ChevronRight, Search, Users, TrendingUp, Building2, Sparkles, ArrowRight, Star } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
-import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+    Heart, BookOpen, Clock, Laptop, TrendingUp, Award,
+    Search, Sparkles, ArrowRight, Star, Briefcase, MapPin, ChevronRight, Users, Building2 
+} from 'lucide-react';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
 
 const DEPT_COLORS = {
     freelancer: 'bg-violet-50 text-violet-700 border-violet-100',
@@ -17,12 +20,12 @@ const DEPT_COLORS = {
 };
 
 const BENEFITS = [
-    { icon: '🏥', label: 'Health Insurance', desc: 'Full family coverage' },
-    { icon: '📚', label: 'Learning Budget', desc: '₹25,000/year' },
-    { icon: '🏖️', label: 'Flexible Leaves', desc: '24 days/year' },
-    { icon: '💻', label: 'Remote Friendly', desc: 'Hybrid options' },
-    { icon: '📈', label: 'Stock Options', desc: 'ESOP program' },
-    { icon: '🎯', label: 'Performance Bonus', desc: 'Quarterly payouts' },
+    { icon: Heart, label: 'Health Insurance', desc: 'Full family coverage', color: 'text-rose-500', bg: 'bg-rose-50' },
+    { icon: BookOpen, label: 'Learning Budget', desc: '₹25,000/year', color: 'text-blue-500', bg: 'bg-blue-50' },
+    { icon: Clock, label: 'Flexible Leaves', desc: '24 days/year', color: 'text-amber-500', bg: 'bg-amber-50' },
+    { icon: Laptop, label: 'Remote Friendly', desc: 'Hybrid options', color: 'text-indigo-500', bg: 'bg-indigo-50' },
+    { icon: TrendingUp, label: 'Stock Options', desc: 'ESOP program', color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    { icon: Award, label: 'Performance Bonus', desc: 'Quarterly payouts', color: 'text-purple-500', bg: 'bg-purple-50' },
 ];
 
 const TESTIMONIALS = [
@@ -108,10 +111,10 @@ export default function CareerPage() {
                 {/* Background image */}
                 <div className="absolute inset-0">
                     <Image
-                        src="/images/career-hero.png"
+                        src="/images/career/hero.png"
                         alt="InTrust team at work"
                         fill
-                        className={`object-cover transition-opacity duration-700 ${imgLoaded ? 'opacity-20' : 'opacity-0'}`}
+                        className={`object-cover transition-opacity duration-1000 ${imgLoaded ? 'opacity-30' : 'opacity-0'}`}
                         onLoad={() => setImgLoaded(true)}
                         priority
                     />
@@ -195,16 +198,19 @@ export default function CareerPage() {
                         className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center mb-10">
                         Why people love working here
                     </motion.p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
                         {BENEFITS.map((b, i) => (
                             <motion.div key={b.label}
                                 initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }} transition={{ delay: i * 0.06 }}
-                                whileHover={{ y: -4 }}
-                                className="flex flex-col items-center gap-2 text-center p-4 rounded-2xl hover:bg-indigo-50 transition-all cursor-default">
-                                <div className="text-3xl">{b.icon}</div>
-                                <p className="text-sm font-bold text-gray-800">{b.label}</p>
-                                <p className="text-xs text-gray-400">{b.desc}</p>
+                                whileHover={{ y: -8, scale: 1.05 }}
+                                className="flex flex-col items-center gap-3 text-center p-6 rounded-[2rem] bg-white border border-gray-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all cursor-default group"
+                            >
+                                <div className={`w-14 h-14 rounded-2xl ${b.bg} flex items-center justify-center transition-transform duration-300 group-hover:rotate-6`}>
+                                    <b.icon size={28} className={b.color} />
+                                </div>
+                                <p className="text-sm font-black text-gray-900">{b.label}</p>
+                                <p className="text-xs text-gray-500 font-medium leading-tight">{b.desc}</p>
                             </motion.div>
                         ))}
                     </div>
@@ -265,10 +271,13 @@ export default function CareerPage() {
                     </div>
                 ) : filtered.length === 0 ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        className="bg-white rounded-3xl border border-gray-100 p-20 text-center">
-                        <div className="text-6xl mb-4">🔍</div>
-                        <p className="text-xl font-bold text-gray-800">No open positions right now</p>
-                        <p className="text-gray-500 mt-2">We're always growing. Check back soon!</p>
+                        className="bg-white rounded-[3rem] border border-gray-100 p-20 text-center shadow-inner"
+                    >
+                        <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                            <Search size={40} className="text-gray-300" />
+                        </div>
+                        <p className="text-2xl font-black text-gray-900 tracking-tight">No open positions right now</p>
+                        <p className="text-gray-500 mt-2 font-medium">We're always growing. Check back soon!</p>
                     </motion.div>
                 ) : (
                     <AnimatePresence mode="popLayout">
@@ -283,17 +292,25 @@ export default function CareerPage() {
 
                 {/* Open Application CTA */}
                 <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                    className="mt-12 relative overflow-hidden bg-gradient-to-br from-indigo-900 to-violet-900 rounded-3xl p-8 sm:p-10 text-white text-center">
-                    <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-violet-400/20 rounded-full blur-3xl" />
+                    className="mt-16 relative overflow-hidden bg-gradient-to-br from-indigo-950 via-violet-900 to-purple-900 rounded-[3rem] p-10 sm:p-16 text-white text-center shadow-2xl"
+                >
+                    <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-violet-400/20 rounded-full blur-[100px]" />
+                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-400/20 rounded-full blur-[100px]" />
+                    
                     <div className="relative z-10">
-                        <div className="text-4xl mb-4">👋</div>
-                        <h3 className="text-2xl font-black mb-2">Don't see your role?</h3>
-                        <p className="text-white/70 mb-6 max-w-md mx-auto">Drop your CV and we'll reach out when the right role opens up.</p>
-                        <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                        <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/20">
+                            <Sparkles size={32} className="text-violet-300" />
+                        </div>
+                        <h3 className="text-3xl sm:text-4xl font-black mb-4 tracking-tight">Don't see your role?</h3>
+                        <p className="text-white/70 mb-10 max-w-lg mx-auto text-lg leading-relaxed font-medium">
+                            We're always looking for exceptional talent. Drop your CV and we'll reach out when the right opportunity arrives.
+                        </p>
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                             <Link href="/career/apply"
-                                className="inline-flex items-center gap-2 bg-white text-indigo-700 font-bold px-7 py-3.5 rounded-2xl hover:bg-indigo-50 transition-all shadow-xl text-sm">
-                                Send Open Application <ChevronRight size={16} />
+                                className="inline-flex items-center gap-3 bg-white text-indigo-950 font-black px-10 py-5 rounded-2xl hover:shadow-2xl hover:shadow-white/10 transition-all text-sm uppercase tracking-widest"
+                            >
+                                Send Open Application <ChevronRight size={20} />
                             </Link>
                         </motion.div>
                     </div>

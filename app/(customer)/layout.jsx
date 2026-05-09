@@ -17,9 +17,8 @@ export default async function CustomerLayout({ children }) {
         redirect('/login');
     }
 
-    if (!user) {
-        redirect('/login');
-    }
+    // Removed global redirect to allow public access to /services and /shop
+    // Authentication is now enforced at the (protected) layout level or page level
 
     // If logged in, check role
     if (user) {

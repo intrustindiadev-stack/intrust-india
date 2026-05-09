@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import {
     Wallet, Package, TrendingUp, Gift, Heart, Star,
-    Smartphone, ShoppingCart, Tv, Store, CreditCard, ScanLine, Grid,
-    CheckCircle, Clock, ChevronRight, Check, Lock, Calendar, AlertCircle, X, Shield, Sparkles, Sun
+    CheckCircle, Clock, ChevronRight, Check, Lock, Calendar, AlertCircle, X, Shield, Sparkles, Sun,
+    CreditCard as CreditCardIcon, ShoppingBag, Zap as ZapIcon, Coins, Smartphone, ShoppingCart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
@@ -205,14 +205,14 @@ export default function CustomerDashboardPage() {
             value: ((c.selling_price_paise || 0) / 100).toFixed(2),
             status: 'success',
             type: 'GIFT_CARD',
-            logo: '🎁'
+            logo: <Gift size={24} className="text-purple-500" />
         }));
 
         const normalizedWallet = (walletTxs || []).map(w => {
-            let logo = '💳';
-            if (w.type === 'TOPUP') logo = '💰';
-            if (w.type === 'CASHBACK') logo = '✨';
-            if (w.type === 'DEBIT') logo = '🛍️';
+            let logo = <CreditCardIcon size={24} className="text-blue-500" />;
+            if (w.type === 'TOPUP') logo = <Coins size={24} className="text-amber-500" />;
+            if (w.type === 'CASHBACK') logo = <ZapIcon size={24} className="text-emerald-500" />;
+            if (w.type === 'DEBIT') logo = <ShoppingBag size={24} className="text-rose-500" />;
 
             return {
                 id: `wallet-${w.id}`,

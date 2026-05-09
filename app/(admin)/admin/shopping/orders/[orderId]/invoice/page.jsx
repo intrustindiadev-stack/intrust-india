@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabaseServer";
 import { notFound } from "next/navigation";
-import InvoiceClient from "@/app/(customer)/orders/[orderId]/invoice/InvoiceClient";
+import InvoiceClient from "@/app/(customer)/(protected)/orders/[orderId]/invoice/InvoiceClient";
 import { getPlatformConfig } from "@/lib/config/platform-server";
 
 export default async function AdminInvoicePage({ params }) {

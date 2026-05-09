@@ -171,7 +171,7 @@ export function BaseChatBubble({
           <div className="chat-close-wrapper">
             <div className="chat-close-icon-inner">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M18 6L6 18M6 6l12 12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/>
+                <path d="M18 6L6 18M6 6l12 12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
               </svg>
             </div>
           </div>

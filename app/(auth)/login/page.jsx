@@ -575,86 +575,10 @@ function LoginContent() {
     );
 }
 
-function DevQuickLogin() {
-    const [loading, setLoading] = useState(false);
-    const router = useRouter();
-
-    const handleDevLogin = async (role) => {
-        if (loading) return;
-        setLoading(true);
-        const toastId = toast.loading(`Provisioning ${role} account...`);
-
-        try {
-            // 1. Provision account
-            const res = await fetch('/api/dev/provision', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ role })
-            });
-            const data = await res.json();
-
-            if (!res.ok) throw new Error(data.error || 'Failed to provision');
-
-            toast.loading(`Logging in as ${role}...`, { id: toastId });
-
-            // 2. Sign in via API route (using email signin route to set cookies correctly)
-            const signInRes = await fetch('/api/auth/email/signin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: data.email, password: data.password })
-            });
-
-            const signInData = await signInRes.json();
-            
-            if (!signInRes.ok) throw new Error(signInData.error || 'Login failed');
-
-            toast.success(`Successfully logged in as ${role}`, { id: toastId });
-
-            // 3. Redirect
-            if (role === 'admin') window.location.href = '/admin';
-            else if (role === 'hr_manager') window.location.href = '/hrm';
-            else if (role === 'merchant') window.location.href = '/merchant/dashboard';
-            else window.location.href = '/dashboard';
-
-        } catch (err) {
-            toast.error(err.message, { id: toastId });
-            setLoading(false);
-        }
-    };
-
-    if (process.env.NODE_ENV !== 'development') return null;
-
-    return (
-        <div className="fixed bottom-4 right-4 z-50 animate-fadeIn">
-            <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-[var(--border-color)]">
-                <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3 flex items-center justify-between">
-                    <span>Dev Backdoor</span>
-                    {loading && <Loader2 size={12} className="animate-spin text-blue-500" />}
-                </h3>
-                <div className="flex flex-col gap-2">
-                    <button onClick={() => handleDevLogin('admin')} disabled={loading} className="px-4 py-2 text-sm bg-purple-100 hover:bg-purple-200 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 rounded-lg transition-colors font-medium text-left flex items-center gap-2 disabled:opacity-50">
-                        🛡️ CRM / Admin
-                    </button>
-                    <button onClick={() => handleDevLogin('hr_manager')} disabled={loading} className="px-4 py-2 text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg transition-colors font-medium text-left flex items-center gap-2 disabled:opacity-50">
-                        👥 HRM Panel
-                    </button>
-                    <button onClick={() => handleDevLogin('merchant')} disabled={loading} className="px-4 py-2 text-sm bg-orange-100 hover:bg-orange-200 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 rounded-lg transition-colors font-medium text-left flex items-center gap-2 disabled:opacity-50">
-                        🏪 Merchant Panel
-                    </button>
-                    <button onClick={() => handleDevLogin('customer')} disabled={loading} className="px-4 py-2 text-sm bg-emerald-100 hover:bg-emerald-200 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 rounded-lg transition-colors font-medium text-left flex items-center gap-2 disabled:opacity-50">
-                        👤 Customer Panel
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
 export default function LoginPage() {
     return (
         <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[var(--bg-secondary)]"><Loader2 className="animate-spin text-[#92BCEA]" size={32} /></div>}>
             <LoginContent />
-            {process.env.NODE_ENV === 'development' && <DevQuickLogin />}
         </Suspense>
     );
 }

@@ -63,34 +63,34 @@ export default function TransactionsPage() {
         const normalizedWallet = (walletTxs || [])
             .filter(w => w.reference_type !== 'GIFT_CARD_PURCHASE')
             .map(w => {
-            let logo = <Wallet size={20} />;
-            let isSpent = false;
-            let isCashback = false;
-            let isAdminAdjustment = w.reference_type === 'ADMIN_ADJUSTMENT' || w.type === 'ADMIN_ADJUSTMENT';
+                let logo = <Wallet size={20} />;
+                let isSpent = false;
+                let isCashback = false;
+                let isAdminAdjustment = w.reference_type === 'ADMIN_ADJUSTMENT' || w.type === 'ADMIN_ADJUSTMENT';
 
-            if (w.type === 'TOPUP') logo = <Wallet size={20} />;
-            if (w.type === 'CASHBACK') {
-                logo = <TrendingUp size={20} />;
-                isCashback = true;
-            }
-            if (w.type === 'DEBIT') {
-                logo = <Gift size={20} />; // Treat wallet debits mostly as purchases
-                if (isAdminAdjustment) logo = <Wallet size={20} />;
-                isSpent = true;
-            }
+                if (w.type === 'TOPUP') logo = <Wallet size={20} />;
+                if (w.type === 'CASHBACK') {
+                    logo = <TrendingUp size={20} />;
+                    isCashback = true;
+                }
+                if (w.type === 'DEBIT') {
+                    logo = <Gift size={20} />; // Treat wallet debits mostly as purchases
+                    if (isAdminAdjustment) logo = <Wallet size={20} />;
+                    isSpent = true;
+                }
 
-            return {
-                id: `wallet-${w.id}`,
-                rawDate: new Date(w.created_at).getTime(),
-                brand: isAdminAdjustment ? 'Admin Adjustment' : (w.reference_type === 'UDHARI_PAYMENT' ? 'Store Credit Settled' : (w.type === 'TOPUP' ? 'Wallet Added' : (w.type === 'CASHBACK' ? 'Cashback Earned' : 'Gift Card Paid'))),
-                description: w.description || w.type,
-                amount: (w.amount_paise || 0) / 100,
-                status: 'success',
-                type: isAdminAdjustment && !isSpent ? 'TOPUP' : (isCashback ? 'CASHBACK' : (isSpent ? 'SPENT' : 'TOPUP')),
-                category: isAdminAdjustment ? 'ADMIN' : (w.reference_type === 'UDHARI_PAYMENT' ? 'UDHARI' : 'WALLET'),
-                logo
-            };
-        });
+                return {
+                    id: `wallet-${w.id}`,
+                    rawDate: new Date(w.created_at).getTime(),
+                    brand: isAdminAdjustment ? 'Admin Adjustment' : (w.reference_type === 'UDHARI_PAYMENT' ? 'Store Credit Settled' : (w.type === 'TOPUP' ? 'Wallet Added' : (w.type === 'CASHBACK' ? 'Cashback Earned' : 'Gift Card Paid'))),
+                    description: w.description || w.type,
+                    amount: (w.amount_paise || 0) / 100,
+                    status: 'success',
+                    type: isAdminAdjustment && !isSpent ? 'TOPUP' : (isCashback ? 'CASHBACK' : (isSpent ? 'SPENT' : 'TOPUP')),
+                    category: isAdminAdjustment ? 'ADMIN' : (w.reference_type === 'UDHARI_PAYMENT' ? 'UDHARI' : 'WALLET'),
+                    logo
+                };
+            });
 
         // Filter out duplicate 'DEBIT' entries from wallet if we already have the 'GIFT_CARD' entry 
         // to avoid double counting "Spent" on the chart. 

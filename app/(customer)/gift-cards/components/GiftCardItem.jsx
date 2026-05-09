@@ -102,7 +102,7 @@ const GiftCardItem = memo(function GiftCardItem({ coupon, index = 0 }) {
                                 Only {coupon.stock} left
                             </div>
                         )}
-                        
+
                         {/* Pay Later / Request Badges */}
                         {coupon.requestStatus === 'pending' ? (
                             <div className="bg-blue-500/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1.5 animate-pulse">
@@ -134,7 +134,7 @@ const GiftCardItem = memo(function GiftCardItem({ coupon, index = 0 }) {
 
                 {/* Card Body - Premium */}
                 <div className="p-3 sm:p-5 flex-1 flex flex-col bg-white dark:bg-gray-900 border-t border-[#92BCEA]/20 dark:border-[#92BCEA]/30">
-                    
+
                     {/* Card Title Label */}
                     <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 line-clamp-1">
                         {coupon.title || coupon.brand}

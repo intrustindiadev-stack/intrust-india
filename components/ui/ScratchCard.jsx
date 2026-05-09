@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { useConfetti } from './ConfettiProvider';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ScratchCard({ children, onComplete, isScratched = false }) {
     const canvasRef = useRef(null);
@@ -16,18 +16,49 @@ export default function ScratchCard({ children, onComplete, isScratched = false 
 
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const img = new Image();
-        img.src = '/images/scratch-texture.png'; // Premium dark-grey gold texture
-
-        img.onload = () => {
-            // Set canvas size to match container
+        
+        // Premium Geometric Pattern for the cover
+        const drawPattern = () => {
             const rect = containerRef.current.getBoundingClientRect();
             canvas.width = rect.width;
             canvas.height = rect.height;
 
-            // Fill with image
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            // Base gradient
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#1E293B'); // Slate-900
+            gradient.addColorStop(1, '#0F172A'); // Slate-950
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Subtle Pattern (Geometric Lines)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = -canvas.width; i < canvas.width * 2; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + canvas.height, canvas.height);
+                ctx.stroke();
+            }
+
+            // Draw Logo
+            const logo = new Image();
+            logo.src = '/icon.png';
+            logo.onload = () => {
+                const logoSize = Math.min(canvas.width, canvas.height) * 0.4;
+                const x = (canvas.width - logoSize) / 2;
+                const y = (canvas.height - logoSize) / 2;
+                
+                // Shadow for logo
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                ctx.shadowBlur = 20;
+                ctx.drawImage(logo, x, y, logoSize, logoSize);
+                
+                // Reset shadow
+                ctx.shadowBlur = 0;
+            };
         };
+
+        drawPattern();
     }, [isScratched, scratched]);
 
     const getCoordinates = (e) => {
@@ -46,29 +77,23 @@ export default function ScratchCard({ children, onComplete, isScratched = false 
 
     const handleScratchStart = (e) => {
         if (scratched) return;
-        // Prevent scrolling while scratching
-        if (e.type === 'touchstart') e.preventDefault();
-        
         setIsDrawing(true);
         const { x, y } = getCoordinates(e);
         const ctx = canvasRef.current.getContext('2d');
         ctx.globalCompositeOperation = 'destination-out';
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
-        ctx.lineWidth = 40; // Scratch brush size
+        ctx.lineWidth = 50; 
         ctx.beginPath();
         ctx.moveTo(x, y);
     };
 
     const handleScratchMove = (e) => {
         if (!isDrawing || scratched) return;
-        if (e.type === 'touchmove') e.preventDefault();
-
         const { x, y } = getCoordinates(e);
         const ctx = canvasRef.current.getContext('2d');
         ctx.lineTo(x, y);
         ctx.stroke();
-
         checkPercentage();
     };
 
@@ -82,64 +107,57 @@ export default function ScratchCard({ children, onComplete, isScratched = false 
         const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         
         let transparentPixels = 0;
-        const totalPixels = pixels.length / 4; // 4 channels per pixel (RGBA)
+        const totalPixels = pixels.length / 4;
 
-        // Check alpha channel (index 3, 7, 11...)
         for (let i = 3; i < pixels.length; i += 4) {
-            if (pixels[i] === 0) {
-                transparentPixels++;
-            }
+            if (pixels[i] === 0) transparentPixels++;
         }
 
         const percentage = (transparentPixels / totalPixels) * 100;
 
-        // If 40% is scratched, reveal the whole thing
-        if (percentage > 40 && !scratched) {
+        if (percentage > 45 && !scratched) {
             setScratched(true);
             triggerConfetti();
             if (onComplete) onComplete();
-            
-            // Animate canvas fading out
-            canvas.style.transition = 'opacity 0.5s ease-out';
-            canvas.style.opacity = '0';
         }
     };
 
-    if (isScratched) {
-        return <div className="relative w-full h-full">{children}</div>;
-    }
-
     return (
-        <div ref={containerRef} className="relative w-full h-full rounded-2xl overflow-hidden shadow-xl ring-1 ring-white/10 select-none">
+        <div ref={containerRef} className="relative w-full h-full rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10 select-none group">
             {/* The Hidden Content */}
             <div className="absolute inset-0 z-0">
                 {children}
             </div>
             
             {/* The Scratchable Canvas */}
-            {!scratched && (
-                <canvas
-                    ref={canvasRef}
-                    className="absolute inset-0 z-10 w-full h-full cursor-pointer touch-none"
-                    onMouseDown={handleScratchStart}
-                    onMouseMove={handleScratchMove}
-                    onMouseUp={handleScratchEnd}
-                    onMouseLeave={handleScratchEnd}
-                    onTouchStart={handleScratchStart}
-                    onTouchMove={handleScratchMove}
-                    onTouchEnd={handleScratchEnd}
-                />
-            )}
+            <AnimatePresence>
+                {!scratched && (
+                    <motion.canvas
+                        key="scratch-canvas"
+                        ref={canvasRef}
+                        exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)' }}
+                        transition={{ duration: 0.5 }}
+                        className="absolute inset-0 z-10 w-full h-full cursor-crosshair touch-none"
+                        onMouseDown={handleScratchStart}
+                        onMouseMove={handleScratchMove}
+                        onMouseUp={handleScratchEnd}
+                        onMouseLeave={handleScratchEnd}
+                        onTouchStart={handleScratchStart}
+                        onTouchMove={handleScratchMove}
+                        onTouchEnd={handleScratchEnd}
+                    />
+                )}
+            </AnimatePresence>
             
-            {/* Optional "Scratch Me" overlay helper text */}
+            {/* Overlay Helper */}
             {!scratched && (
                 <motion.div 
-                    initial={{ opacity: 0.5 }}
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+                    initial={{ opacity: 0.8 }}
+                    animate={{ opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                    className="absolute inset-0 z-20 flex items-end justify-center pointer-events-none pb-8"
                 >
-                    <span className="bg-black/40 backdrop-blur-md text-white/90 px-4 py-2 rounded-full text-sm font-medium tracking-wide border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                    <span className="bg-white/10 backdrop-blur-xl text-white/90 px-5 py-2.5 rounded-2xl text-xs font-black tracking-widest border border-white/20 shadow-2xl uppercase">
                         ✨ Scratch to Reveal
                     </span>
                 </motion.div>

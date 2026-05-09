@@ -40,12 +40,12 @@ const MAX_MESSAGES = 20;
 const HISTORY_WINDOW = 8;
 
 const QUICK_REPLIES = [
-  { label: '💰 Check Balance',               text: 'What is my wallet balance?' },
-  { label: '✅ KYC Status',                   text: 'What is my KYC status?' },
-  { label: '🎁 How do gift cards work?',      text: 'How do gift cards work on InTrust?' },
-  { label: '🏆 Explain reward points',        text: 'How do reward points work?' },
-  { label: '👥 How do I refer a friend?',     text: 'How do I refer a friend and earn rewards?' },
-  { label: '📦 Track my orders',              text: 'Where can I track my orders?' },
+  { label: '💰 Check Balance', text: 'What is my wallet balance?' },
+  { label: '✅ KYC Status', text: 'What is my KYC status?' },
+  { label: '🎁 How do gift cards work?', text: 'How do gift cards work on InTrust?' },
+  { label: '🏆 Explain reward points', text: 'How do reward points work?' },
+  { label: '👥 How do I refer a friend?', text: 'How do I refer a friend and earn rewards?' },
+  { label: '📦 Track my orders', text: 'Where can I track my orders?' },
 ];
 
 /**
@@ -205,7 +205,7 @@ export function BaseChatWindow({
         profile?.full_name?.split(' ')[0] ||
         user?.user_metadata?.full_name?.split(' ')[0] ||
         firstName;
-        
+
       const fetchHistory = async () => {
         if (!user) {
           addBotMessage(welcomeMessageBuilder(name));
@@ -217,7 +217,7 @@ export function BaseChatWindow({
           const res = await fetch(`${historyPath}?limit=50`);
           if (!res.ok) throw new Error('Failed to fetch history');
           const data = await res.json();
-          
+
           if (data.messages && data.messages.length > 0) {
             const mapped = data.messages.map(msg => ({
               id: msg.id,
@@ -245,7 +245,7 @@ export function BaseChatWindow({
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 400);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, hasWelcomed, profile, user, firstName, addBotMessage]);
 
   const handleSend = useCallback(async () => {
@@ -615,7 +615,7 @@ export function BaseChatWindow({
         <div className="chat-header">
           <div className="chat-header-avatar" aria-hidden="true">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="white"/>
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="white" />
             </svg>
           </div>
           <div className="chat-header-info">
@@ -629,7 +629,7 @@ export function BaseChatWindow({
             id="chat-close-btn"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M18 6L6 18M6 6l12 12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M18 6L6 18M6 6l12 12" stroke="white" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
         </div>
@@ -693,18 +693,18 @@ export function BaseChatWindow({
             {isListening ? (
               /* Waveform / stop indicator */
               <svg viewBox="0 0 24 24" fill="currentColor">
-                <rect x="3" y="7" width="3" height="10" rx="1.5"/>
-                <rect x="8" y="4" width="3" height="16" rx="1.5"/>
-                <rect x="13" y="7" width="3" height="10" rx="1.5"/>
-                <rect x="18" y="9" width="3" height="6" rx="1.5"/>
+                <rect x="3" y="7" width="3" height="10" rx="1.5" />
+                <rect x="8" y="4" width="3" height="16" rx="1.5" />
+                <rect x="13" y="7" width="3" height="10" rx="1.5" />
+                <rect x="18" y="9" width="3" height="6" rx="1.5" />
               </svg>
             ) : (
               /* Microphone icon */
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="9" y="2" width="6" height="12" rx="3"/>
-                <path d="M19 10a7 7 0 0 1-14 0"/>
-                <line x1="12" y1="19" x2="12" y2="22"/>
-                <line x1="8" y1="22" x2="16" y2="22"/>
+                <rect x="9" y="2" width="6" height="12" rx="3" />
+                <path d="M19 10a7 7 0 0 1-14 0" />
+                <line x1="12" y1="19" x2="12" y2="22" />
+                <line x1="8" y1="22" x2="16" y2="22" />
               </svg>
             )}
           </button>
@@ -731,8 +731,8 @@ export function BaseChatWindow({
           >
             {/* Paper plane icon */}
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22 2L11 13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M22 2L11 13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>

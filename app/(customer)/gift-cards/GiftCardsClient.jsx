@@ -46,8 +46,8 @@ const transformCouponData = (coupon) => {
     };
 
     const udhariSettings = coupon.merchant?.merchant_udhari_settings;
-    const udhariEnabled = Array.isArray(udhariSettings) 
-        ? udhariSettings[0]?.udhari_enabled 
+    const udhariEnabled = Array.isArray(udhariSettings)
+        ? udhariSettings[0]?.udhari_enabled
         : udhariSettings?.udhari_enabled;
 
     return {
@@ -81,7 +81,7 @@ export default function GiftCardsClient({ initialCoupons }) {
     const [merchantFilter, setMerchantFilter] = useState('all');
     const [userRequests, setUserRequests] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    
+
     // Theme context
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -188,7 +188,7 @@ export default function GiftCardsClient({ initialCoupons }) {
                 <div className="max-w-7xl mx-auto">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                         <Breadcrumbs items={[{ label: 'Gift Cards' }]} />
-                        <Link 
+                        <Link
                             href="/my-giftcards"
                             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 active:translate-y-0"
                         >
