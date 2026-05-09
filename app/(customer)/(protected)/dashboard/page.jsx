@@ -266,7 +266,7 @@ export default function CustomerDashboardPage() {
 
                 // Race the fetch bundle against timeout
                 const mainFetch = Promise.allSettled([
-                    supabase.from('user_profiles').select('full_name, role, is_gold_verified, subscription_expiry, kyc_status, completed_onboarding, referral_code').eq('id', user.id).single(),
+                    supabase.from('user_profiles').select('full_name, role, is_gold_verified, subscription_expiry, kyc_status, completed_onboarding, referral_code, reward_points').eq('id', user.id).single(),
                     supabase.from('kyc_records').select('status, verification_status').eq('user_id', user.id).maybeSingle(),
                     supabase.from('customer_wallets').select('balance_paise').eq('user_id', user.id).maybeSingle(),
                     // Query through orders table (same as My Gift Cards page) for accurate counts
@@ -304,12 +304,6 @@ export default function CustomerDashboardPage() {
 
                 // 3. Process Orders → Coupons (matches My Gift Cards logic)
                 let coupons = [];
-                console.log('[DASHBOARD] Orders query result:', {
-                    status: couponsResult.status,
-                    data: couponsResult.status === 'fulfilled' ? couponsResult.value.data : null,
-                    error: couponsResult.status === 'fulfilled' ? couponsResult.value.error : couponsResult.reason,
-                    count: couponsResult.status === 'fulfilled' ? couponsResult.value.data?.length : 0,
-                });
                 if (couponsResult.status === 'fulfilled' && couponsResult.value.data) {
                     // Flatten: extract coupon from each order, attach order info
                     coupons = couponsResult.value.data
@@ -320,7 +314,6 @@ export default function CustomerDashboardPage() {
                             purchased_at: order.coupons.purchased_at || order.created_at,
                         }));
                 }
-                console.log('[DASHBOARD] Processed coupons:', coupons.length, 'Active check results:', coupons.map(c => ({ id: c.id, status: c.status, valid_until: c.valid_until, isActive: c.status === 'sold' && new Date(c.valid_until) > new Date() })));
 
                 let totalSavings = 0;
                 let activeCards = 0;
@@ -348,16 +341,6 @@ export default function CustomerDashboardPage() {
                 let walletBalance = 0.00;
                 if (walletResult.status === 'fulfilled' && walletResult.value.data) {
                     walletBalance = (walletResult.value.data.balance_paise || 0) / 100;
-                } else if (walletResult.status === 'rejected' || walletResult.value?.error) {
-                    // Auto-create wallet if missing (PGRST116) or throwing 403 due to RLS + no row
-                    console.log('[DASHBOARD] Wallet not found. Attempting auto-creation...');
-                    const { data: newWallet } = await supabase.from('customer_wallets')
-                        .insert([{ user_id: user.id }])
-                        .select('balance_paise')
-                        .single();
-                    if (newWallet) {
-                        walletBalance = (newWallet.balance_paise || 0) / 100;
-                    }
                 }
 
                 // 5. Build Recent Activity
@@ -365,8 +348,9 @@ export default function CustomerDashboardPage() {
                 if (walletTxResult.status === 'fulfilled' && walletTxResult.value.data) {
                     walletTxs = walletTxResult.value.data;
                 }
-                // Send top 5 coupons and wallet txs to be formatted
                 processActivityFeed(coupons.slice(0, 5), walletTxs);
+
+                const rewardPoints = profile?.reward_points?.total_earned || 0;
 
                 setUserData({
                     name: profile?.full_name || user.email?.split('@')[0] || 'User',
@@ -376,6 +360,7 @@ export default function CustomerDashboardPage() {
                     isGoldVerified: profile?.is_gold_verified || false,
                     subscriptionExpiry: profile?.subscription_expiry || null,
                     walletBalance,
+                    rewardPoints,
                     activeCards,
                     completedOnboarding: profile?.completed_onboarding ?? true,
                     referralCode: profile?.referral_code || null,
@@ -394,7 +379,6 @@ export default function CustomerDashboardPage() {
         let walletSub;
         let activitySub;
         if (!authLoading) {
-            console.log('[DASHBOARD] Auth finished. User:', user?.id);
             if (user) {
                 fetchDashboardData();
 
@@ -418,26 +402,25 @@ export default function CustomerDashboardPage() {
                     .channel('dashboard_activity')
                     .on(
                         'postgres_changes',
+                        { event: '*', schema: 'public', table: 'user_profiles', filter: `id=eq.${user.id}` },
+                        (payload) => {
+                             if (payload.new && payload.new.reward_points) {
+                                setUserData(prev => ({
+                                    ...prev,
+                                    rewardPoints: payload.new.reward_points.total_earned || 0
+                                }));
+                             }
+                        }
+                    )
+                    .on(
+                        'postgres_changes',
                         { event: 'INSERT', schema: 'public', table: 'customer_wallet_transactions', filter: `user_id=eq.${user.id}` },
-                        () => fetchDashboardData()
-                    )
-                    .on(
-                        'postgres_changes',
-                        { event: '*', schema: 'public', table: 'orders', filter: `user_id=eq.${user.id}` },
-                        () => fetchDashboardData()
-                    )
-                    .on(
-                        'postgres_changes',
-                        { event: '*', schema: 'public', table: 'coupons', filter: `purchased_by=eq.${user.id}` },
                         () => fetchDashboardData()
                     )
                     .subscribe();
             } else {
-                console.log('[DASHBOARD] No user, stopping loading.');
                 setLoading(false);
             }
-        } else {
-            console.log('[DASHBOARD] Waiting for auth...');
         }
 
         return () => {
@@ -455,8 +438,15 @@ export default function CustomerDashboardPage() {
 
     const stats = [
         { label: 'Wallet Balance', value: `₹${userData.walletBalance.toFixed(2)}`, icon: Wallet, color: 'from-blue-600 to-indigo-600' },
-        { label: 'Total Savings', value: `₹${userData.totalSavings.toFixed(2)}`, icon: TrendingUp, color: 'from-emerald-500 to-teal-500' },
-        { label: 'Active Cards', value: userData.activeCards.toString(), icon: Gift, color: 'from-purple-500 to-pink-500' }
+        { 
+            label: 'Reward Points', 
+            value: userData.rewardPoints?.toLocaleString() || '0', 
+            subValue: `₹${(userData.rewardPoints / 100).toFixed(2)}`, 
+            icon: Coins, 
+            color: 'from-emerald-500 to-teal-500',
+            href: '/rewards' 
+        },
+        { label: 'Total Savings', value: `₹${userData.totalSavings.toFixed(2)}`, icon: TrendingUp, color: 'from-amber-500 to-orange-500' },
     ];
 
     if (authLoading || loading) {

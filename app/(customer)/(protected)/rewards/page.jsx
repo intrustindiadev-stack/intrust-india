@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Trophy, Coins, ArrowRight, ChevronLeft, ChevronRight, Wallet,
-    TrendingUp, Users, Zap, History, Star, Medal, Crown
+    Trophy, Gift, Star, ChevronRight, History, TrendingUp,
+    Info, ArrowUpRight, Sparkles, Coins, Wallet, CreditCard,
+    Lock, CheckCircle, ChevronLeft, Zap, Target, Palette, X,
+    Archive, Clock, Calendar
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -13,585 +15,522 @@ import toast from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import ScratchCard from '@/components/ui/ScratchCard';
-import Confetti from 'react-confetti';
-import RewardsInfoModal from '@/components/rewards/RewardsInfoModal';
-import { HelpCircle } from 'lucide-react';
+import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 
-const tierIcons = {
-    bronze: <Star size={20} className="text-amber-700" />,
-    silver: <Medal size={20} className="text-gray-400" />,
-    gold: <Trophy size={20} className="text-yellow-500" />,
-    platinum: <Crown size={20} className="text-violet-500" />
-};
+// ─── Constants ──────────────────────────────────────────────────────────────
+const POINTS_PER_RUPEE = 100;
 
-const tierColors = {
-    bronze: 'bg-amber-100 text-amber-800 border-amber-200',
-    silver: 'bg-gray-100 text-gray-700 border-gray-200',
-    gold: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    platinum: 'bg-violet-100 text-violet-800 border-violet-200'
-};
+const TIERS = [
+    { name: 'Bronze', minPoints: 0, color: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: <Star size={16} />, perks: 'Basic Rewards' },
+    { name: 'Silver', minPoints: 1000, color: 'text-slate-400', bg: 'bg-slate-400/10', border: 'border-slate-400/20', icon: <Star size={16} />, perks: '2% Extra Points' },
+    { name: 'Gold', minPoints: 5000, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: <Trophy size={16} />, perks: '5% Extra Points' },
+    { name: 'Platinum', minPoints: 15000, color: 'text-indigo-500', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20', icon: <Zap size={16} />, perks: 'Priority Support' },
+    { name: 'Diamond', minPoints: 50000, color: 'text-sky-500', bg: 'bg-sky-500/10', border: 'border-sky-500/20', icon: <Target size={16} />, perks: 'Elite Concierge' },
+];
 
-const tierBackgrounds = {
-    bronze: 'from-amber-500 to-orange-600 shadow-amber-900/40 border-amber-500/20',
-    silver: 'from-slate-400 to-gray-600 shadow-slate-500/20 border-gray-300/20',
-    gold: 'from-yellow-400 via-amber-500 to-orange-500 shadow-yellow-500/20 border-yellow-300/30',
-    platinum: 'from-violet-500 via-purple-600 to-indigo-600 shadow-purple-500/20 border-white/10'
-};
-
-export default function RewardsDashboardPage() {
+export default function RewardsPage() {
     const { user } = useAuth();
     const router = useRouter();
+
     const [loading, setLoading] = useState(true);
-    const [balance, setBalance] = useState(null);
-    const [nextTier, setNextTier] = useState(null);
-    const [nextTierConfig, setNextTierConfig] = useState(null);
-    const [unscratchedTxns, setUnscratchedTxns] = useState([]);
-    const [historyTxns, setHistoryTxns] = useState([]);
-    const [convertAmount, setConvertAmount] = useState('');
-    const [converting, setConverting] = useState(false);
-    const [rank, setRank] = useState(null);
-    const [showPromotion, setShowPromotion] = useState(false);
-    const [promotedTier, setPromotedTier] = useState(null);
-    const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
-    const [showInfoModal, setShowInfoModal] = useState(false);
+    const [points, setPoints] = useState(0);
+    const [history, setHistory] = useState([]);
+    const [currentTier, setCurrentTier] = useState(TIERS[0]);
+    const [nextTier, setNextTier] = useState(TIERS[1]);
+    const [progress, setProgress] = useState(0);
+
+    // Modal state
+    const [selectedCard, setSelectedCard] = useState(null);
+    const [showRedeemModal, setShowRedeemModal] = useState(false);
+
+    // Scratch card state
+    const [dailyLoot, setDailyLoot] = useState([
+        { id: 'sc1', title: 'Today\'s Bonus', type: 'Common', status: 'available', prize: '10-50 Points', color: 'emerald', date: 'TODAY' },
+        { id: 'sc_stored_1', title: 'Yesterday\'s Loot', type: 'Rare', status: 'available', prize: '20-100 Points', color: 'blue', date: 'MAY 08', isStored: true },
+        { id: 'sc_stored_2', title: 'Weekly Special', type: 'Epic', status: 'available', prize: 'Up to ₹50', color: 'purple', date: 'MAY 05', isStored: true },
+    ]);
 
     useEffect(() => {
-        setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-        const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    useEffect(() => {
-        if (!loading && !user) {
+        if (!user && !loading) {
             router.push('/login');
-            return;
         }
+    }, [user, loading, router]);
 
-        const fetchData = async () => {
-            if (!user) return;
+    useEffect(() => {
+        if (!user) return;
+
+        const fetchRewardsData = async () => {
             try {
-                // Fetch balance
-                const { data: balanceData } = await supabase
-                    .from('reward_points_balance')
-                    .select('*')
-                    .eq('user_id', user.id)
+                // Fetch points
+                const { data: profile } = await supabase
+                    .from('user_profiles')
+                    .select('reward_points')
+                    .eq('id', user.id)
                     .single();
 
-                setBalance(balanceData);
+                const userPoints = profile?.reward_points?.total_earned || 0;
+                setPoints(userPoints);
 
-                // Fetch next tier config
-                const tiers = ['bronze', 'silver', 'gold', 'platinum'];
-                const currentTierIndex = tiers.indexOf(balanceData?.tier || 'bronze');
-
-                // Tier promotion logic
-                const lastTier = localStorage.getItem('intrust_last_tier');
-                const lastTierIndex = lastTier ? tiers.indexOf(lastTier) : currentTierIndex;
-
-                if (lastTier && currentTierIndex > lastTierIndex) {
-                    setPromotedTier(balanceData.tier);
-                    setShowPromotion(true);
+                // Calculate tier
+                let tierIndex = 0;
+                for (let i = TIERS.length - 1; i >= 0; i--) {
+                    if (userPoints >= TIERS[i].minPoints) {
+                        tierIndex = i;
+                        break;
+                    }
+                }
+                setCurrentTier(TIERS[tierIndex]);
+                
+                if (tierIndex < TIERS.length - 1) {
+                    const next = TIERS[tierIndex + 1];
+                    setNextTier(next);
+                    const range = next.minPoints - TIERS[tierIndex].minPoints;
+                    const currentInRange = userPoints - TIERS[tierIndex].minPoints;
+                    setProgress(Math.min(100, (currentInRange / range) * 100));
+                } else {
+                    setNextTier(null);
+                    setProgress(100);
                 }
 
-                // Always update local storage to the latest tier
-                localStorage.setItem('intrust_last_tier', balanceData?.tier || 'bronze');
-
-                const nextTierName = tiers[currentTierIndex + 1];
-                setNextTier(nextTierName);
-
-                if (nextTierName) {
-                    const { data: tierConfig } = await supabase
-                        .from('reward_configuration')
-                        .select('config_value')
-                        .eq('config_key', `tier_${nextTierName}`)
-                        .single();
-                    setNextTierConfig(tierConfig?.config_value);
-                }
-
-                // Fetch recent transactions (positive points are scratchable if not scratched)
-                const { data: txns } = await supabase
+                // Fetch history (preview for card)
+                const { data: txs } = await supabase
                     .from('reward_transactions')
                     .select('*')
                     .eq('user_id', user.id)
                     .order('created_at', { ascending: false })
-                    .limit(50); // Get more to separate scratched vs unscratched
+                    .limit(5);
+                
+                setHistory(txs || []);
 
-                if (txns) {
-                    const unscratched = txns.filter(t => t.points > 0 && !t.is_scratched);
-                    const history = txns.filter(t => t.points <= 0 || t.is_scratched).slice(0, 5);
-                    setUnscratchedTxns(unscratched);
-                    setHistoryTxns(history);
-                }
-
-                // Fetch rank
-                try {
-                    const rankRes = await fetch('/api/rewards/leaderboard');
-                    if (rankRes.ok) {
-                        const rankData = await rankRes.json();
-                        if (rankData.success) {
-                            const userRank = rankData.leaderboard.findIndex(u => u.userId === user.id) + 1;
-                            setRank(userRank > 0 ? userRank : '50+');
-                        }
-                    }
-                } catch (e) {
-                    console.error('Error fetching rank:', e);
-                }
             } catch (err) {
-                console.error('Error fetching reward data:', err);
+                console.error('Error fetching rewards:', err);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchData();
-    }, [user, loading, router]);
+        fetchRewardsData();
+    }, [user]);
 
-    const handleConvert = async () => {
-        const points = parseInt(convertAmount);
-        if (!points || points <= 0) {
-            toast.error('Please enter a valid amount');
-            return;
-        }
-        if (points > (balance?.current_balance || 0)) {
-            toast.error('Insufficient points');
-            return;
-        }
-
-        setConverting(true);
-        try {
-            const response = await fetch('/api/rewards/convert', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ points })
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                if (result.mode === 'approval_required') {
-                    toast.success(result.message, { duration: 6000 });
-                } else {
-                    toast.success(result.message);
-                }
-                setConvertAmount('');
-                // Refresh balance
-                const { data: newBalance } = await supabase
-                    .from('reward_points_balance')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .single();
-                setBalance(newBalance);
-            } else {
-                toast.error(result.message || 'Conversion failed');
-            }
-        } catch (err) {
-            console.error('Convert error:', err);
-            toast.error('Conversion failed');
-        } finally {
-            setConverting(false);
-        }
-    };
-
-    const handleScratchComplete = async (txn) => {
-        try {
-            // Optimistically update UI
-            setUnscratchedTxns(prev => prev.filter(t => t.id !== txn.id));
-            setHistoryTxns(prev => [txn, ...prev].slice(0, 5));
-
-            // Mark as scratched in DB
-            await fetch('/api/rewards/scratch', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ transactionId: txn.id })
-            });
-        } catch (error) {
-            console.error("Failed to update scratch status", error);
-        }
-    };
-
-    const getTierProgress = () => {
-        if (!nextTierConfig || !balance) return 0;
-        const minTree = nextTierConfig.min_tree_size || 0;
-        const minActive = nextTierConfig.min_active_referrals || 0;
-        const treeProgress = Math.min((balance.tree_size / minTree) * 50, 50);
-        const activeProgress = Math.min((balance.active_downline / minActive) * 50, 50);
-        return Math.round(treeProgress + activeProgress);
+    const handleScratchComplete = (cardId, pointsWon) => {
+        toast.success(`Empire Success! Won ${pointsWon} Points!`);
+        setPoints(prev => prev + pointsWon);
+        
+        // Remove from list or mark as scratched
+        setDailyLoot(prev => prev.filter(c => c.id !== cardId));
+        
+        // In real app, update DB
+        setTimeout(() => setSelectedCard(null), 2500);
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#121212] font-[family-name:var(--font-outfit)] flex flex-col items-center justify-center">
-                <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin"></div>
+            <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#121212] flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
             </div>
         );
     }
 
+    const pointsInRupees = (points / POINTS_PER_RUPEE).toLocaleString('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 2
+    });
+
+    const storedCards = dailyLoot.filter(c => c.isStored);
+    const todayCard = dailyLoot.find(c => !c.isStored);
+
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#121212] font-[family-name:var(--font-outfit)] pb-24">
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#121212] font-[family-name:var(--font-outfit)] pb-24 overflow-x-hidden">
             <Navbar />
 
-            <div className="pt-[10vh] px-4 sm:hidden">
-                <button onClick={() => router.back()} className="w-10 h-10 flex items-center justify-center bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-full shadow-sm">
-                    <ChevronLeft size={20} className="text-gray-700 dark:text-gray-300" />
-                </button>
-            </div>
-
-            <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-4 sm:pt-[15vh]">
-                {/* Breadcrumbs */}
-                <nav className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 mb-6">
-                    <button onClick={() => router.push('/dashboard')} className="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Dashboard</button>
-                    <ChevronRight size={14} />
-                    <span className="text-gray-900 dark:text-white font-bold">Rewards</span>
-                </nav>
+            <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-[12vh]">
+                <Breadcrumbs items={[{ label: 'My Rewards' }]} />
 
                 {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-8 flex justify-between items-end"
-                >
+                <div className="flex items-center justify-between mb-8 px-1">
                     <div>
-                        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                            Intrust <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-purple-600">Rewards</span>
-                        </h1>
-                        <p className="text-slate-500 dark:text-gray-400 mt-2">
-                            Manage your points and unwrap your rewards
-                        </p>
+                        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">Empire Rewards</h1>
+                        <p className="text-sm text-slate-500 dark:text-gray-400 font-medium">Earn, track and redeem your benefits</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => router.push('/rewards/leaderboard')}
-                            className="p-3 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-full shadow-sm hover:scale-105 transition-all flex items-center gap-2 group relative"
-                        >
-                            <Trophy size={20} className="text-yellow-500 group-hover:scale-110 transition-transform" />
-                            {rank && (
-                                <span className="font-bold text-sm text-gray-700 dark:text-gray-300 pr-1">
-                                    #{rank}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setShowInfoModal(true)}
-                            className="p-3 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-full shadow-sm hover:scale-105 transition-all group"
-                        >
-                            <HelpCircle size={20} className="text-violet-500 group-hover:scale-110 transition-transform" />
-                        </button>
-                    </div>
-                </motion.div>
-
-                {/* Points Card (Glassmorphic) */}
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.1 }}
-                    className={`relative overflow-hidden bg-gradient-to-br ${tierBackgrounds[balance?.tier || 'bronze']} rounded-3xl p-6 sm:p-8 shadow-2xl mb-8 text-white border`}
-                >
-                    {/* Background Orbs */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
-                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/30 blur-2xl rounded-full -translate-x-1/2 translate-y-1/2" />
-
-                    <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                                <Coins size={20} className="text-white/80" />
-                                <span className="text-white/90 font-medium tracking-wide">Current Balance</span>
-                            </div>
-                            <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${tierColors[balance?.tier || 'bronze']} bg-white/20 text-white border-white/30 backdrop-blur-md`}>
-                                {tierIcons[balance?.tier || 'bronze']}
-                                <span className="capitalize">{balance?.tier || 'bronze'}</span>
-                            </div>
-                        </div>
-                        <p className="text-5xl sm:text-6xl font-black mb-2 tracking-tight">
-                            {(balance?.current_balance || 0).toLocaleString('en-IN')}
-                        </p>
-                        <p className="text-white/70 text-sm font-medium">Intrust Reward Points</p>
-
-                        <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/20">
-                            <div>
-                                <p className="text-white/60 text-xs mb-1 uppercase tracking-wider font-semibold">Total Earned</p>
-                                <p className="text-xl font-bold">{(balance?.total_earned || 0).toLocaleString('en-IN')}</p>
-                            </div>
-                            <div>
-                                <p className="text-white/60 text-xs mb-1 uppercase tracking-wider font-semibold">Total Redeemed</p>
-                                <p className="text-xl font-bold">{(balance?.total_redeemed || 0).toLocaleString('en-IN')}</p>
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Scratch Cards Section */}
-                <AnimatePresence>
-                    {unscratchedTxns.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="mb-8"
-                        >
-                            <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                New Rewards Available
-                            </h3>
-
-                            <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
-                                {unscratchedTxns.map((txn, index) => (
-                                    <motion.div
-                                        key={txn.id}
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: index * 0.1 }}
-                                        className="snap-start flex-shrink-0 w-48 h-48 sm:w-56 sm:h-56"
-                                    >
-                                        <ScratchCard onComplete={() => handleScratchComplete(txn)}>
-                                            <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-600 rounded-2xl p-4 flex flex-col items-center justify-center text-white text-center border border-white/20 shadow-inner">
-                                                <Trophy size={32} className="mb-2 text-yellow-300 drop-shadow-md" />
-                                                <p className="text-sm font-medium text-emerald-50 mb-1 capitalize">
-                                                    {txn.event_type.replace(/_/g, ' ')}
-                                                </p>
-                                                <p className="text-4xl font-black drop-shadow-lg">+{txn.points}</p>
-                                                <p className="text-xs text-emerald-100 mt-2 font-medium">Points Added</p>
-                                            </div>
-                                        </ScratchCard>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Tier Progress */}
-                {nextTier && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.15 }}
-                        className="bg-white dark:bg-white/5 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-white/10 mb-8 backdrop-blur-xl"
+                    <motion.div 
+                        whileHover={{ rotate: 15, scale: 1.1 }}
+                        className="w-14 h-14 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-white/20"
                     >
-                        <div className="flex items-center justify-between mb-4">
-                            <div>
-                                <p className="font-bold text-gray-900 dark:text-white">Next Tier: <span className="capitalize">{nextTier}</span></p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    {balance?.tree_size || 0} / {nextTierConfig?.min_tree_size || 0} tree size &middot; {balance?.active_downline || 0} / {nextTierConfig?.min_active_referrals || 0} active
-                                </p>
-                            </div>
-                            <div className={`px-3 py-1 rounded-full text-xs font-bold border ${tierColors[nextTier]}`}>
-                                {tierIcons[nextTier]}
-                                <span className="capitalize ml-1">{nextTier}</span>
-                            </div>
-                        </div>
-                        <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${getTierProgress()}%` }}
-                                transition={{ duration: 1, delay: 0.3 }}
-                                className="h-full bg-gradient-to-r from-violet-400 to-purple-500 rounded-full"
-                            />
-                        </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                            {nextTierConfig?.bonus_multiplier}x bonus multiplier when you reach {nextTier}
-                        </p>
+                        <Gift className="text-white" size={28} />
                     </motion.div>
-                )}
+                </div>
 
-                {/* Quick Stats */}
+                {/* Main Points Card */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="grid grid-cols-3 gap-4 mb-8"
+                    className="relative bg-[#020617] dark:bg-black rounded-[3rem] p-8 text-white shadow-2xl mb-10 overflow-hidden group border border-white/5"
                 >
-                    <div className="bg-white dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm text-center backdrop-blur-xl">
-                        <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                            <Users size={18} className="text-emerald-600 dark:text-emerald-400" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-teal-500/10 opacity-50" />
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 blur-[100px] rounded-full -mr-32 -mt-32 animate-pulse" />
+                    
+                    <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-10">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-white/5 backdrop-blur-md flex items-center justify-center border border-white/10">
+                                    <Coins size={22} className="text-emerald-400" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400/60">Portfolio</p>
+                                    <p className="font-bold text-sm text-white/80">Growth Points</p>
+                                </div>
+                            </div>
+                            <div className={`px-4 py-1.5 rounded-full ${currentTier.bg} border ${currentTier.border} flex items-center gap-2 backdrop-blur-md shadow-lg`}>
+                                <div className={currentTier.color}>{currentTier.icon}</div>
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${currentTier.color}`}>{currentTier.name} Elite</span>
+                            </div>
                         </div>
-                        <p className="text-lg font-black text-gray-900 dark:text-white">{balance?.direct_referrals || 0}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Direct</p>
-                    </div>
-                    <div className="bg-white dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm text-center backdrop-blur-xl">
-                        <div className="w-10 h-10 bg-blue-50 dark:bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                            <TrendingUp size={18} className="text-blue-600 dark:text-blue-400" />
+
+                        <div className="flex flex-col items-center justify-center py-6">
+                            <motion.h2 
+                                key={points}
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="text-7xl sm:text-8xl font-black tracking-tighter mb-2 text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40"
+                            >
+                                {points.toLocaleString()}
+                            </motion.h2>
+                            <div className="flex items-center gap-2 px-6 py-2.5 bg-white/5 backdrop-blur-2xl rounded-full border border-white/10 shadow-2xl">
+                                <p className="text-emerald-400 font-black text-2xl tracking-tight">{pointsInRupees}</p>
+                                <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Liquid Cash</p>
+                            </div>
                         </div>
-                        <p className="text-lg font-black text-gray-900 dark:text-white">{balance?.tree_size || 0}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Tree Size</p>
-                    </div>
-                    <div className="bg-white dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm text-center backdrop-blur-xl">
-                        <div className="w-10 h-10 bg-amber-50 dark:bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                            <Zap size={18} className="text-amber-600 dark:text-amber-400" />
+
+                        <div className="mt-12 grid grid-cols-2 gap-4">
+                            <button
+                                onClick={() => setShowRedeemModal(true)}
+                                className="flex items-center justify-center gap-2 bg-emerald-500 text-white py-4.5 rounded-[2rem] font-black text-sm shadow-xl shadow-emerald-500/20 hover:bg-emerald-400 active:scale-95 transition-all"
+                            >
+                                <Palette size={18} />
+                                Redeem Store
+                            </button>
+                            <button
+                                onClick={() => router.push('/rewards/history')}
+                                className="flex items-center justify-center gap-2 bg-white/5 backdrop-blur-md text-white py-4.5 rounded-[2rem] font-black text-sm border border-white/10 hover:bg-white/10 active:scale-95 transition-all"
+                            >
+                                <History size={18} />
+                                Timeline
+                            </button>
                         </div>
-                        <p className="text-lg font-black text-gray-900 dark:text-white">{balance?.active_downline || 0}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Active</p>
                     </div>
                 </motion.div>
 
-                {/* Convert to Wallet */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25 }}
-                    className="bg-white dark:bg-white/5 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-white/10 mb-8 backdrop-blur-xl"
-                >
-                    <div className="flex items-center gap-2 mb-4">
-                        <Wallet size={20} className="text-violet-600 dark:text-violet-400" />
-                        <h3 className="font-bold text-gray-900 dark:text-white">Convert to Wallet</h3>
-                    </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                        Convert your Intrust Reward Points to wallet cash. Minimum 100 points.
-                    </p>
-                    <div className="flex gap-3">
-                        <input
-                            type="number"
-                            value={convertAmount}
-                            onChange={(e) => setConvertAmount(e.target.value)}
-                            placeholder="Enter points"
-                            className="flex-1 px-4 py-3 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
-                            min="100"
-                        />
-                        <button
-                            onClick={handleConvert}
-                            disabled={converting || !convertAmount}
-                            className="px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg shadow-violet-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
-                        >
-                            {converting ? '...' : 'Convert'}
-                        </button>
-                    </div>
-                </motion.div>
-
-                {/* Recent Transactions */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-white dark:bg-white/5 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-white/10 mb-8 backdrop-blur-xl"
-                >
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <History size={20} className="text-violet-600 dark:text-violet-400" />
-                            <h3 className="font-bold text-gray-900 dark:text-white">Recent Activity</h3>
+                {/* Daily Loot Section */}
+                <section className="mb-14">
+                    <div className="flex items-center justify-between mb-8 px-1">
+                        <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-ping shadow-[0_0_12px_rgba(16,185,129,0.8)]" />
+                            <h3 className="font-black text-2xl text-slate-900 dark:text-white tracking-tight leading-none">Daily Loot</h3>
                         </div>
-                        <button
-                            onClick={() => router.push('/rewards/transactions')}
-                            className="text-sm text-violet-600 dark:text-violet-400 font-medium flex items-center gap-1 hover:underline"
-                        >
-                            View All <ArrowRight size={14} />
-                        </button>
+                        {storedCards.length > 0 && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600">
+                                <Archive size={14} />
+                                <span className="text-[10px] font-black uppercase tracking-widest">{storedCards.length} Stored</span>
+                            </div>
+                        )}
                     </div>
 
-                    {historyTxns.length === 0 ? (
-                        <div className="text-center py-8">
-                            <Coins size={40} className="text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">No transactions yet</p>
-                            <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Start referring to earn points!</p>
+                    <div className="flex gap-5 overflow-x-auto pb-6 -mx-1 px-1 snap-x no-scrollbar">
+                        {dailyLoot.map((card, idx) => (
+                            <motion.div
+                                key={card.id}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.2 + idx * 0.1 }}
+                                onClick={() => setSelectedCard(card)}
+                                className={`snap-center shrink-0 w-[240px] h-[340px] relative rounded-[2.5rem] p-6 border transition-all cursor-pointer group overflow-hidden bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 shadow-lg hover:shadow-2xl hover:-translate-y-2`}
+                            >
+                                {/* Card Glow Overlay */}
+                                <div className={`absolute -top-20 -right-20 w-40 h-40 bg-${card.color}-500/10 blur-[60px] rounded-full pointer-events-none group-hover:bg-${card.color}-500/20 transition-all`} />
+
+                                <div className="h-full flex flex-col justify-between relative z-10">
+                                    <div>
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className={`px-3 py-1 rounded-full bg-${card.color}-500/10 border border-${card.color}-500/20 flex items-center gap-1.5`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full bg-${card.color}-500 animate-pulse`} />
+                                                <span className={`text-[10px] font-black uppercase tracking-[0.2em] text-${card.color}-500`}>{card.type}</span>
+                                            </div>
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{card.date}</span>
+                                        </div>
+                                        <h4 className="font-black text-xl text-slate-900 dark:text-white mb-2 leading-tight tracking-tight">{card.title}</h4>
+                                        <p className="text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-widest">Potential: {card.prize}</p>
+                                    </div>
+
+                                    <div className="mt-auto">
+                                        <div className="w-full aspect-square rounded-[2rem] bg-gradient-to-br from-slate-100 to-slate-200 dark:from-white/10 dark:to-white/5 flex items-center justify-center border border-gray-200 dark:border-white/10 group-hover:scale-105 transition-transform shadow-inner overflow-hidden relative">
+                                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
+                                            <div className="text-center relative z-10">
+                                                <Sparkles className={`mx-auto mb-2 text-${card.color}-400 group-hover:animate-bounce`} size={24} />
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tap to</p>
+                                                <p className={`text-sm font-black text-${card.color}-600 dark:text-${card.color}-400 uppercase tracking-[0.2em]`}>Unbox</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+
+                        {dailyLoot.length === 0 && (
+                            <div className="w-full py-12 text-center bg-gray-50 dark:bg-white/5 rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-white/10">
+                                <div className="w-16 h-16 bg-white dark:bg-black/20 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
+                                    <Clock size={32} />
+                                </div>
+                                <h4 className="font-black text-slate-400 uppercase tracking-widest text-sm">All Loot Claimed</h4>
+                                <p className="text-[10px] font-bold text-slate-500 mt-1">Check back tomorrow for fresh rewards!</p>
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                {/* Tier Journey */}
+                <section className="mb-16">
+                    <div className="flex items-center gap-4 mb-10 px-1">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20 shadow-lg shadow-indigo-500/5">
+                            <Target size={26} />
                         </div>
-                    ) : (
-                        <div className="space-y-3">
-                            <AnimatePresence>
-                                {historyTxns.map((txn) => (
-                                    <motion.div
-                                        key={txn.id}
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-transparent dark:border-white/5"
+                        <div>
+                            <h3 className="font-black text-2xl text-slate-900 dark:text-white tracking-tight">The Road to Diamond</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Ascend your status</p>
+                        </div>
+                    </div>
+
+                    <div className="relative space-y-4">
+                        {TIERS.map((tier, idx) => {
+                            const isCurrent = currentTier.name === tier.name;
+                            const isCompleted = points >= tier.minPoints;
+                            const isNext = nextTier?.name === tier.name;
+
+                            return (
+                                <motion.div 
+                                    key={tier.name}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.1 * idx }}
+                                    className={`relative p-6 rounded-[2rem] border transition-all duration-500 overflow-hidden group
+                                        ${isCompleted 
+                                            ? 'bg-white dark:bg-white/5 border-emerald-500/20 shadow-xl shadow-emerald-500/5' 
+                                            : 'bg-white/40 dark:bg-white/[0.02] border-gray-100 dark:border-white/5 opacity-50'}`}
+                                >
+                                    {isCurrent && (
+                                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-transparent to-transparent animate-pulse" />
+                                    )}
+
+                                    <div className="flex items-center gap-5 relative z-10">
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border-2 transition-all duration-500 ${
+                                            isCompleted 
+                                                ? 'bg-emerald-500 border-emerald-400 text-white shadow-2xl shadow-emerald-500/40 rotate-3 group-hover:rotate-6' 
+                                                : 'bg-white dark:bg-black border-gray-100 dark:border-white/10 text-gray-400'
+                                        }`}>
+                                            {isCompleted ? <CheckCircle size={28} /> : tier.icon}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <h4 className={`font-black text-xl tracking-tight ${isCompleted ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
+                                                    {tier.name}
+                                                </h4>
+                                                <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${isCompleted ? 'bg-emerald-500/10 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
+                                                    {tier.minPoints.toLocaleString()} PTS
+                                                </span>
+                                            </div>
+                                            <p className={`text-xs font-bold uppercase tracking-widest ${isCompleted ? 'text-emerald-500' : 'text-gray-400'}`}>
+                                                {tier.perks}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {isNext && (
+                                        <div className="mt-6 pt-6 border-t border-gray-100 dark:border-white/5">
+                                            <div className="flex justify-between text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-2.5">
+                                                <span>Ascension Progress</span>
+                                                <span>{Math.round(progress)}%</span>
+                                            </div>
+                                            <div className="h-3 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden shadow-inner p-0.5">
+                                                <motion.div 
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${progress}%` }}
+                                                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                </section>
+
+                {/* Timeline Card */}
+                <section className="mb-16">
+                    <div className="flex items-center justify-between mb-8 px-1">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-600 dark:text-slate-400 border border-slate-200/50">
+                                <History size={26} />
+                            </div>
+                            <div>
+                                <h3 className="font-black text-2xl text-slate-900 dark:text-white tracking-tight">Recent Activity</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Live earning feed</p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => router.push('/rewards/history')}
+                            className="text-[10px] font-black uppercase tracking-widest text-emerald-600"
+                        >
+                            View Full Timeline
+                        </button>
+                    </div>
+
+                    <div className="bg-white dark:bg-white/5 rounded-[3rem] border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden backdrop-blur-3xl">
+                        {history.length > 0 ? (
+                            <div className="divide-y divide-gray-50 dark:divide-white/5">
+                                {history.map((tx, idx) => (
+                                    <div
+                                        key={tx.id}
+                                        className="flex items-center justify-between p-6 hover:bg-gray-50/50 dark:hover:bg-white/10 transition-colors group"
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${txn.points > 0 ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'}`}>
-                                                {txn.points > 0 ? <TrendingUp size={14} /> : <Wallet size={14} />}
+                                        <div className="flex items-center gap-5">
+                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110 ${
+                                                tx.amount > 0 
+                                                    ? 'bg-emerald-500/10 text-emerald-600 shadow-emerald-500/5' 
+                                                    : 'bg-rose-500/10 text-rose-600 shadow-rose-500/5'
+                                            }`}>
+                                                {tx.amount > 0 ? <ArrowUpRight size={22} /> : <ArrowUpRight size={22} className="rotate-90" />}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                                                    {txn.event_type.replace(/_/g, ' ')}
-                                                </p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                    {txn.level ? `Level ${txn.level}` : 'Direct'} &middot; {new Date(txn.created_at).toLocaleDateString()}
+                                                <p className="font-black text-slate-900 dark:text-white tracking-tight group-hover:text-emerald-600 transition-colors">{tx.description}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
+                                                    {new Date(tx.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                 </p>
                                             </div>
                                         </div>
-                                        <p className={`font-bold ${txn.points > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-                                            {txn.points > 0 ? '+' : ''}{txn.points}
-                                        </p>
-                                    </motion.div>
+                                        <div className="text-right">
+                                            <p className={`font-black text-xl tracking-tight ${tx.amount > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                {tx.amount > 0 ? '+' : ''}{tx.amount}
+                                            </p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Points</p>
+                                        </div>
+                                    </div>
                                 ))}
-                            </AnimatePresence>
-                        </div>
-                    )}
-                </motion.div>
-
-                {/* Quick Links */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.35 }}
-                >
-                    <button
-                        onClick={() => router.push('/refer')}
-                        className="w-full bg-white dark:bg-white/5 p-5 rounded-3xl border border-gray-100 dark:border-white/10 shadow-sm hover:shadow-md transition-all flex items-center gap-4 group backdrop-blur-xl"
-                    >
-                        <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                            <Users size={18} className="text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div className="text-left">
-                            <p className="font-bold text-gray-900 dark:text-white">Refer Friends</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Share your code &amp; view your network chain</p>
-                        </div>
-                        <ArrowRight size={18} className="text-gray-400 dark:text-gray-500 ml-auto flex-shrink-0 group-hover:translate-x-1 transition-transform" />
-                    </button>
-                </motion.div>
+                            </div>
+                        ) : (
+                            <div className="py-20 text-center">
+                                <p className="font-black text-slate-400 uppercase tracking-widest text-xs">No activity yet</p>
+                            </div>
+                        )}
+                    </div>
+                </section>
             </div>
 
-            {/* Promotion Modal */}
+            {/* Premium Reward Scratch Modal */}
             <AnimatePresence>
-                {showPromotion && (
+                {selectedCard && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                        className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl"
                     >
-                        <Confetti
-                            width={windowSize.width}
-                            height={windowSize.height}
-                            recycle={false}
-                            numberOfPieces={500}
-                        />
                         <motion.div
-                            initial={{ scale: 0.8, y: 50, opacity: 0 }}
-                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.8, y: 50, opacity: 0 }}
-                            transition={{ type: "spring", damping: 20, stiffness: 100 }}
-                            className="bg-white dark:bg-[#1A1A1A] w-full max-w-sm rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden border border-white/10"
+                            initial={{ scale: 0.8, y: 50, rotateX: 20 }}
+                            animate={{ scale: 1, y: 0, rotateX: 0 }}
+                            exit={{ scale: 0.8, y: 50, rotateX: 20 }}
+                            className="relative w-full max-w-md bg-gradient-to-b from-[#0F172A] to-black rounded-[3rem] p-1 shadow-2xl border border-white/10 overflow-hidden"
                         >
-                            <div className={`absolute top-0 left-0 w-full h-32 bg-gradient-to-br ${tierBackgrounds[promotedTier || 'bronze']} opacity-20`} />
+                            <div className="relative bg-black/40 rounded-[2.9rem] p-8 overflow-hidden">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" />
+                                <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
 
-                            <div className="relative z-10">
-                                <div className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center mb-6 shadow-xl bg-gradient-to-br ${tierBackgrounds[promotedTier || 'bronze']}`}>
-                                    <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white">
-                                        {tierIcons[promotedTier || 'bronze']}
-                                    </div>
+                                <button 
+                                    onClick={() => setSelectedCard(null)}
+                                    className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors border border-white/10 z-20"
+                                >
+                                    <X size={20} />
+                                </button>
+
+                                <div className="text-center mb-10 relative z-10 pt-4">
+                                    <h3 className="text-3xl font-black text-white mb-2 tracking-tighter italic">Empire Loot Box</h3>
+                                    <p className="text-emerald-400 font-bold uppercase tracking-[0.3em] text-[10px]">Scratch to Reveal Prize</p>
                                 </div>
 
-                                <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2 uppercase tracking-tight">
-                                    Tier Unlocked!
-                                </h2>
-                                <p className="text-gray-500 dark:text-gray-400 mb-8">
-                                    Congratulations! You've been promoted to <span className="font-bold text-gray-900 dark:text-white capitalize">{promotedTier}</span> tier. Keep up the great work!
-                                </p>
+                                <div className="relative aspect-[4/5] w-full rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl ring-4 ring-emerald-500/5">
+                                    <ScratchCard 
+                                        id={selectedCard.id}
+                                        prizePoints={Math.floor(Math.random() * 40) + 10}
+                                        onComplete={(pts) => handleScratchComplete(selectedCard.id, pts)}
+                                    />
+                                </div>
 
-                                <button
-                                    onClick={() => setShowPromotion(false)}
-                                    className={`w-full py-4 rounded-2xl font-bold text-white bg-gradient-to-r ${tierBackgrounds[promotedTier || 'bronze']} shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all`}
-                                >
-                                    Awesome!
-                                </button>
+                                <div className="mt-10 text-center relative z-10">
+                                    <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em] mb-6 italic">Verified Rewards System</p>
+                                    <div className="flex items-center justify-center gap-3">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                                        <p className="text-emerald-400 text-sm font-black uppercase tracking-widest">Live Settlement</p>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            <RewardsInfoModal
-                isOpen={showInfoModal}
-                onClose={() => setShowInfoModal(false)}
-                userTier={balance?.tier || 'bronze'}
-            />
+            {/* Redemption Hub Modal */}
+            <AnimatePresence>
+                {showRedeemModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-md"
+                    >
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            className="relative w-full max-w-lg bg-white dark:bg-[#0F172A] rounded-t-[3rem] sm:rounded-[3rem] p-8 shadow-2xl border-t sm:border border-gray-100 dark:border-white/10 overflow-hidden"
+                        >
+                            <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Redeem Empire</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">Select a destination</p>
+                                </div>
+                                <button 
+                                    onClick={() => setShowRedeemModal(false)}
+                                    className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-white/5 flex items-center justify-center text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all"
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 mb-8">
+                                {[
+                                    { title: 'Shop', icon: <Gift size={24} />, desc: 'Marketplace', color: 'emerald' },
+                                    { title: 'Bank', icon: <Wallet size={24} />, desc: 'Instant Cashout', color: 'blue' },
+                                    { title: 'GiftCards', icon: <CreditCard size={24} />, desc: 'Premium Vouchers', color: 'purple' },
+                                    { title: 'Invest', icon: <TrendingUp size={24} />, desc: 'Grow Wealth', color: 'amber' },
+                                ].map((item) => (
+                                    <button
+                                        key={item.title}
+                                        className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 p-6 rounded-[2.5rem] text-left hover:shadow-xl hover:scale-[1.02] transition-all group relative overflow-hidden"
+                                    >
+                                        <div className={`w-12 h-12 rounded-2xl bg-${item.color}-500/10 text-${item.color}-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                                            {item.icon}
+                                        </div>
+                                        <h4 className="font-black text-slate-900 dark:text-white mb-1 tracking-tight">{item.title}</h4>
+                                        <p className="text-[10px] font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wider">{item.desc}</p>
+                                        <ArrowUpRight size={16} className="absolute top-6 right-6 text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                                    </button>
+                                ))}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <CustomerBottomNav />
         </div>

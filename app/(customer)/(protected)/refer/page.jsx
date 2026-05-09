@@ -5,15 +5,19 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Gift, Share2, Copy, CheckCircle, ChevronLeft, ChevronRight,
-    Users, Coins, Network, Sparkles
+    Users, Coins, Network, Sparkles, Clock, Zap, Target,
+    TrendingUp, Info, ArrowUpRight, ShieldCheck, PieChart, BarChart3, X
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 
-// ─── Avatar colours per level ────────────────────────────────────────────────
+// ─── Constants ──────────────────────────────────────────────────────────────
+const POINTS_PER_RUPEE = 100;
+
 const LEVEL_GRADIENTS = [
     'from-emerald-400 to-teal-500',     // root / You
     'from-amber-400 to-orange-500',     // L1
@@ -35,95 +39,85 @@ function NetworkNode({ node, depth = 0 }) {
 
     const initial = node.full_name?.charAt(0)?.toUpperCase() || '?';
     const kycVerified = node.kyc_status === 'verified' || node.kyc_status === 'approved';
+    const earnedPoints = node.reward_points?.total_earned || 0;
+    const earnedRupees = (earnedPoints / POINTS_PER_RUPEE).toFixed(2);
 
     return (
         <motion.div
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: depth * 0.05 }}
+            className="relative"
         >
-            {/* Node row */}
-            <div className={`flex items-center gap-3 p-3 rounded-2xl mb-2 border transition-all hover:scale-[1.01] cursor-pointer
+            {depth > 0 && (
+                <div className="absolute -left-4 top-0 bottom-0 w-[2px] bg-emerald-100 dark:bg-emerald-500/10" />
+            )}
+
+            <div className={`flex items-center gap-3 p-4 rounded-[2rem] mb-3 border transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer relative overflow-hidden group
                 ${isRoot
-                    ? 'bg-gradient-to-r from-emerald-500/10 to-teal-500/10 dark:from-emerald-900/30 dark:to-teal-900/30 border-emerald-500/20 shadow-sm shadow-emerald-500/10'
-                    : 'bg-white/50 dark:bg-white/5 border-gray-200/50 dark:border-white/10 hover:shadow-md backdrop-blur-sm'
+                    ? 'bg-[#020617] border-white/10 shadow-2xl text-white'
+                    : 'bg-white dark:bg-white/5 border-gray-100 dark:border-white/10 hover:shadow-xl backdrop-blur-xl'
                 }`}
                 onClick={() => setExpanded(e => !e)}
             >
-                {/* Toggle button / spacer */}
-                {hasChildren ? (
-                    <button
-                        className="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full bg-white dark:bg-black/20 hover:bg-gray-100 dark:hover:bg-black/40 transition-colors shadow-sm"
-                    >
-                        <ChevronRight size={14} className={`text-gray-500 dark:text-gray-400 transition-transform duration-300 ${expanded ? 'rotate-90' : ''}`} />
-                    </button>
-                ) : (
-                    <div className="w-6 flex-shrink-0 flex items-center justify-center">
-                        <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-700" />
-                    </div>
-                )}
-
                 {/* Avatar */}
-                <div className={`w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-br ${gradient(depth)} flex items-center justify-center text-white font-bold text-sm shadow-inner ring-2 ring-white/20`}>
+                <div className={`w-12 h-12 flex-shrink-0 rounded-2xl bg-gradient-to-br ${gradient(depth)} flex items-center justify-center text-white font-black text-lg shadow-lg ring-2 ring-white dark:ring-white/10 relative overflow-hidden`}>
+                    <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                     {node.avatar_url
-                        ? <img src={node.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                        ? <img src={node.avatar_url} alt="" className="w-full h-full object-cover" />
                         : initial
                     }
                 </div>
 
-                {/* Info */}
                 <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 dark:text-white text-sm sm:text-base truncate tracking-tight">
-                        {isRoot ? 'You' : node.full_name}
-                        {isRoot && <span className="text-emerald-600 dark:text-emerald-400 font-medium text-xs ml-1.5">(root)</span>}
-                    </p>
+                    <div className="flex items-center gap-2">
+                        <p className={`font-black text-sm sm:text-base truncate tracking-tight ${isRoot ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                            {isRoot ? 'Executive Master' : node.full_name}
+                        </p>
+                        {isRoot && (
+                            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        )}
+                    </div>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {!isRoot && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30">
+                            <span className="text-[9px] px-2 py-0.5 rounded-lg font-black bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200/50 dark:border-white/5 uppercase tracking-[0.1em]">
                                 L{node.level}
                             </span>
                         )}
-                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border flex items-center gap-1
+                        <span className={`text-[9px] px-2 py-0.5 rounded-lg font-black border flex items-center gap-1 uppercase tracking-widest
                             ${kycVerified
-                                ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30'
-                                : 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30'
+                                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20'
+                                : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-500/20'
                             }`}
                         >
-                            {kycVerified ? <><CheckCircle size={10} /> KYC Verified</> : <><Clock size={10} /> KYC Pending</>}
+                            {kycVerified ? <ShieldCheck size={10} /> : <Clock size={10} />}
+                            {kycVerified ? 'Verified' : 'Pending'}
                         </span>
-                        {!isRoot && node.joined_at && (
-                            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                                {new Date(node.joined_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                            </span>
-                        )}
                     </div>
                 </div>
 
-                {/* Points */}
-                <div className="text-right flex-shrink-0 pl-2 border-l border-gray-100 dark:border-white/10">
+                <div className={`text-right flex-shrink-0 pl-4 border-l ${isRoot ? 'border-white/10' : 'border-gray-100 dark:border-white/10'}`}>
                     {isRoot ? (
-                        <p className="text-sm font-black text-gray-400 dark:text-gray-600">—</p>
+                         <ChevronRight size={18} className={`text-white/40 transition-transform duration-500 ${expanded ? 'rotate-90' : ''}`} />
                     ) : (
-                        <>
-                            <p className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                                {(node.reward_points?.total_earned || 0).toLocaleString('en-IN')}
+                        <div className="flex flex-col items-end">
+                            <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 tracking-tight leading-none">
+                                {earnedPoints.toLocaleString()}
                             </p>
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wider">earned</p>
-                        </>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Pts</p>
+                        </div>
                     )}
                 </div>
             </div>
 
-            {/* Children */}
             <AnimatePresence initial={false}>
                 {expanded && hasChildren && (
                     <motion.div
-                        key="children"
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="ml-5 pl-4 border-l-[3px] border-emerald-100 dark:border-emerald-500/20 overflow-hidden"
+                        initial={{ height: 0, opacity: 0, x: -10 }}
+                        animate={{ height: 'auto', opacity: 1, x: 0 }}
+                        exit={{ height: 0, opacity: 0, x: -10 }}
+                        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                        className="ml-6 pl-4 border-l-2 border-emerald-500/10 dark:border-emerald-500/20 overflow-hidden"
                     >
                         <div className="pt-2">
                             {node.children.map(child => (
@@ -137,7 +131,6 @@ function NetworkNode({ node, depth = 0 }) {
     );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
 export default function ReferAndEarnPage() {
     const { user } = useAuth();
     const router = useRouter();
@@ -147,6 +140,10 @@ export default function ReferAndEarnPage() {
     const [loading, setLoading] = useState(true);
     const [networkData, setNetworkData] = useState(null);
     const [hasReferrer, setHasReferrer] = useState(false);
+    
+    // Modal & Sheet state
+    const [showStats, setShowStats] = useState(false);
+    const [showShareSheet, setShowShareSheet] = useState(false);
 
     // Referral application state
     const [enterCode, setEnterCode] = useState('');
@@ -164,7 +161,6 @@ export default function ReferAndEarnPage() {
 
         const fetchData = async () => {
             try {
-                // Fetch referral code
                 const { data: profile } = await supabase
                     .from('user_profiles')
                     .select('referral_code, referred_by')
@@ -174,7 +170,6 @@ export default function ReferAndEarnPage() {
                 if (profile?.referral_code) setReferralCode(profile.referral_code);
                 setHasReferrer(!!profile?.referred_by);
 
-                // Fetch referral network tree + stats
                 const res = await fetch('/api/referral/network');
                 if (res.ok) {
                     const data = await res.json();
@@ -194,31 +189,17 @@ export default function ReferAndEarnPage() {
         if (!referralCode) return;
         navigator.clipboard.writeText(referralCode);
         setCopied(true);
-        toast.success('Code copied to clipboard!');
+        toast.success('Empire Code copied!');
         setTimeout(() => setCopied(false), 2000);
     };
 
     const handleShare = async () => {
-        if (!referralCode) return;
-        const shareData = {
-            title: 'Join Intrust & Earn Reward Points!',
-            text: `Use my referral code ${referralCode} when you sign up on Intrust and earn Intrust Reward Points on every referral in your network!`,
-            url: window.location.origin
-        };
-        try {
-            if (navigator.share) {
-                await navigator.share(shareData);
-            } else {
-                handleCopy();
-            }
-        } catch (err) {
-            console.error('Share error:', err);
-        }
+        setShowShareSheet(true);
     };
 
     const handleApplyCode = async () => {
         if (!enterCode.trim()) {
-            toast.error('Please enter a referral code');
+            toast.error('Enter valid code');
             return;
         }
 
@@ -233,20 +214,18 @@ export default function ReferAndEarnPage() {
             const data = await res.json();
 
             if (res.ok) {
-                toast.success('Referral code applied successfully!');
+                toast.success('Joined successfully!');
                 setCodeApplied(true);
-                // Re-fetch network data to show the new tree
                 const networkRes = await fetch('/api/referral/network');
                 if (networkRes.ok) {
                     const networkData = await networkRes.json();
                     setNetworkData(networkData);
                 }
             } else {
-                toast.error(data.error || 'Failed to apply referral code');
+                toast.error(data.error || 'Failed to join');
             }
         } catch (err) {
-            console.error('Error applying referral code:', err);
-            toast.error('An unexpected error occurred');
+            console.error('Error:', err);
         } finally {
             setApplyingCode(false);
         }
@@ -254,287 +233,253 @@ export default function ReferAndEarnPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#121212] font-[family-name:var(--font-outfit)] flex flex-col items-center justify-center">
+            <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#121212] flex items-center justify-center">
                 <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
             </div>
         );
     }
 
     const hasNetwork = networkData?.tree?.children?.length > 0;
+    const totalPoints = networkData?.total_network_points_earned ?? 0;
+    const totalRupees = (totalPoints / POINTS_PER_RUPEE).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#121212] font-[family-name:var(--font-outfit)] pb-24 overflow-x-hidden">
             <Navbar />
 
-            {/* Back nav — mobile */}
-            <div className="pt-[10vh] px-4 sm:hidden">
-                <button
-                    onClick={() => router.back()}
-                    className="w-10 h-10 flex items-center justify-center bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-full shadow-sm"
-                >
-                    <ChevronLeft size={20} className="text-gray-700 dark:text-gray-300" />
-                </button>
-            </div>
+            <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-[12vh]">
+                <Breadcrumbs items={[{ label: 'Referral' }]} />
 
-            <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-4 sm:pt-[15vh]">
-                {/* Breadcrumbs */}
-                <nav className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 mb-6">
-                    <button onClick={() => router.push('/dashboard')} className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">Dashboard</button>
-                    <ChevronRight size={14} />
-                    <span className="text-gray-900 dark:text-white font-bold">Network</span>
-                </nav>
-
-                {/* Hero */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-8 relative"
-                >
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/20 to-teal-400/20 blur-[80px] -z-10 rounded-full" />
-                    <motion.div
-                        animate={{ y: [0, -10, 0] }}
-                        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                        className="w-24 h-24 mx-auto bg-gradient-to-br from-emerald-400 to-teal-500 rounded-3xl shadow-2xl shadow-emerald-500/30 flex items-center justify-center mb-6 rotate-12 ring-1 ring-white/20"
-                    >
-                        <Network size={44} className="text-white -rotate-12" />
-                    </motion.div>
-                    <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">
-                        Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">Network</span>
-                    </h1>
-                    <p className="text-slate-500 dark:text-gray-400 sm:text-lg max-w-sm mx-auto font-medium">
-                        Share your code and watch your passive income grow
-                    </p>
-                </motion.div>
-
-                {/* Promotional Banner */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 }}
-                    className="bg-gradient-to-r from-emerald-900 to-teal-900 dark:from-[#020617] dark:to-emerald-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-emerald-900/20 border border-emerald-500/30 dark:border-emerald-500/20 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 mb-8"
-                >
-                    <div className="absolute -right-10 -top-10 text-emerald-400 opacity-10 pointer-events-none">
-                        <Gift size={220} />
-                    </div>
-
-                    <div className="relative z-10 flex-1 text-center md:text-left">
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-widest mb-3">
-                            <Sparkles size={14} />
-                            Unlimited Potential
-                        </div>
-                        <h2 className="text-2xl sm:text-3xl font-black mb-2 text-white leading-tight">
-                            Earn <span className="text-emerald-400">Reward Points</span> For Every Referral!
-                        </h2>
-                        <p className="text-emerald-100/80 max-w-xl text-sm sm:text-base mx-auto md:mx-0 font-medium">
-                            Invite friends to join InTrust India using your unique referral code. You'll earn points not just from your direct referrals, but from their referrals too—up to 7 levels deep!
-                            <span className="block mt-2 font-bold text-emerald-300 text-base sm:text-lg">Earn up to ₹50,000 per month!</span>
-                        </p>
-                    </div>
-
-                    <div className="relative z-10 shrink-0 bg-gradient-to-br from-emerald-400 to-teal-300 text-teal-950 px-8 py-5 rounded-2xl font-black text-center shadow-[0_0_20px_rgba(52,211,153,0.3)] border border-emerald-200 flex flex-col items-center justify-center min-w-[160px]">
-                        <div className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Network Depth</div>
-                        <div className="text-4xl flex items-center drop-shadow-sm">
-                            7 Levels
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Referral Code Box */}
+                {/* Hero / Empire Section */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.1 }}
-                    className="relative bg-white dark:bg-white/5 rounded-3xl p-6 shadow-xl shadow-black/5 dark:shadow-none border border-gray-100 dark:border-white/10 mb-8 backdrop-blur-xl overflow-hidden"
+                    className="relative bg-gradient-to-br from-[#0F172A] to-black rounded-[3rem] p-10 text-white shadow-2xl mb-10 overflow-hidden group border border-white/5"
                 >
-                    {/* Decorative orb */}
-                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/20 blur-3xl rounded-full pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" />
+                    
+                    <div className="relative z-10 text-center sm:text-left flex flex-col sm:flex-row items-center gap-8">
+                        <motion.div
+                            whileHover={{ rotate: 12, scale: 1.1 }}
+                            className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-[2rem] flex items-center justify-center shadow-2xl border border-white/20 shrink-0"
+                        >
+                            <Network size={44} className="text-white" />
+                        </motion.div>
+                        
+                        <div>
+                            <h1 className="text-4xl sm:text-5xl font-black mb-3 tracking-tighter leading-none">Empire <span className="text-emerald-400">Builder</span></h1>
+                            <p className="text-slate-400 text-sm sm:text-base font-medium max-w-sm">Grow a 7-level deep network and unlock unlimited liquid rewards.</p>
+                        </div>
+                    </div>
+                </motion.div>
 
-                    <p className="text-center font-bold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">
-                        Your Referral Code
-                    </p>
-                    <div className="relative group">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-300" />
-                        <div className="relative bg-gray-50/80 dark:bg-black/40 backdrop-blur-md border border-emerald-200 dark:border-emerald-500/30 rounded-2xl p-4 sm:p-6 flex items-center justify-between shadow-inner">
-                            <span className="text-3xl sm:text-4xl font-mono font-black text-slate-800 dark:text-white tracking-[0.2em] ml-2 drop-shadow-sm">
-                                {referralCode || '------'}
-                            </span>
+                {/* Tactical Stats Grid */}
+                <div className="grid grid-cols-2 gap-4 mb-10">
+                    <button 
+                        onClick={() => setShowStats(true)}
+                        className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2.5rem] p-6 text-left hover:shadow-xl transition-all group relative overflow-hidden"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-4">
+                            <PieChart size={24} />
+                        </div>
+                        <h4 className="font-black text-slate-900 dark:text-white mb-1">Network Stats</h4>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{networkData?.total_network_size || 0} Total Members</p>
+                    </button>
+
+                    <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2.5rem] p-6 text-left relative overflow-hidden">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-4">
+                            <TrendingUp size={24} />
+                        </div>
+                        <h4 className="font-black text-slate-900 dark:text-white mb-1">Cash Value</h4>
+                        <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tighter leading-none">₹{totalRupees}</p>
+                    </div>
+                </div>
+
+                {/* Premium Invitation Passport */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-emerald-600 rounded-[3rem] p-8 sm:p-10 text-white shadow-2xl shadow-emerald-500/20 mb-10 relative overflow-hidden group"
+                >
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
+                    <div className="absolute -top-32 -right-32 w-80 h-80 bg-white/10 blur-[100px] rounded-full group-hover:bg-white/20 transition-all duration-700" />
+                    
+                    <div className="relative z-10 flex flex-col items-center">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
+                                <Target size={22} />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Invitation Code</span>
+                        </div>
+
+                        <div className="text-5xl sm:text-6xl font-mono font-black tracking-[0.3em] mb-10 drop-shadow-2xl select-all">
+                            {referralCode || '------'}
+                        </div>
+
+                        <div className="flex gap-4 w-full">
                             <button
                                 onClick={handleCopy}
-                                className="w-12 h-12 flex items-center justify-center bg-white dark:bg-white/10 rounded-xl shadow-sm border border-gray-200 dark:border-white/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-white/20 transition-all active:scale-95 group-hover:shadow-md"
+                                className="flex-1 flex items-center justify-center gap-2 bg-white text-emerald-700 py-4.5 rounded-[2rem] font-black text-sm shadow-xl hover:bg-emerald-50 active:scale-95 transition-all"
                             >
-                                {copied ? <CheckCircle size={22} className="text-emerald-500" /> : <Copy size={22} />}
+                                {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
+                                {copied ? 'Secured' : 'Secure Code'}
                             </button>
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleShare}
-                        className="mt-6 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-emerald-500/25 active:scale-[0.98] transition-all ring-1 ring-white/20"
-                    >
-                        <Share2 size={20} />
-                        Share Now
-                    </button>
-                </motion.div>
-
-                {/* Enter Referral Code Section - Only if they don't have a referrer */}
-                {!hasReferrer && !codeApplied && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.12 }}
-                        className="bg-white dark:bg-white/5 rounded-3xl p-6 border border-gray-100 dark:border-white/10 shadow-xl mb-8 overflow-hidden relative"
-                    >
-                        {/* Decorative background */}
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl rounded-full -mr-16 -mt-16" />
-
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                                <Gift size={20} />
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-gray-900 dark:text-white">Have a referral code?</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Join a network and start your chain</p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <input
-                                type="text"
-                                value={enterCode}
-                                onChange={(e) => setEnterCode(e.target.value.toUpperCase())}
-                                placeholder="ENTER CODE"
-                                className="w-full bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-2xl p-4 text-center text-2xl font-mono font-black tracking-[0.2em] text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all uppercase"
-                                maxLength={10}
-                            />
-
                             <button
-                                onClick={handleApplyCode}
-                                disabled={applyingCode || !enterCode.trim()}
-                                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-gray-400 disabled:to-gray-500 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                onClick={handleShare}
+                                className="w-16 h-16 flex items-center justify-center bg-black text-white rounded-[2rem] shadow-xl hover:bg-slate-900 active:scale-95 transition-all border border-white/10"
                             >
-                                {applyingCode ? (
-                                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    <>Apply Code</>
-                                )}
+                                <Share2 size={24} />
                             </button>
                         </div>
-                    </motion.div>
-                )}
-
-                {/* Success Banner if code just applied */}
-                {codeApplied && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-3xl p-6 text-center mb-8"
-                    >
-                        <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-3 text-emerald-600 dark:text-emerald-400">
-                            <CheckCircle size={28} />
-                        </div>
-                        <h3 className="font-bold text-emerald-900 dark:text-emerald-100 text-lg">You've joined the network!</h3>
-                        <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Your tree has been updated successfully.</p>
-                    </motion.div>
-                )}
-
-                {/* Network Summary Bar */}
-                <motion.div
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 }}
-                    className="grid grid-cols-3 gap-3 sm:gap-4 mb-8"
-                >
-                    {[
-                        { label: 'Direct', value: networkData?.direct_referrals ?? 0, icon: <Users size={16} className="text-emerald-600 dark:text-emerald-400" />, color: 'bg-emerald-50 dark:bg-emerald-500/10' },
-                        { label: 'Network', value: networkData?.total_network_size ?? 0, icon: <Network size={16} className="text-indigo-600 dark:text-indigo-400" />, color: 'bg-indigo-50 dark:bg-indigo-500/10' },
-                        {
-                            label: 'Points Earned',
-                            value: (networkData?.total_network_points_earned ?? 0).toLocaleString('en-IN'),
-                            icon: <Coins size={16} className="text-amber-600 dark:text-amber-400" />,
-                            color: 'bg-amber-50 dark:bg-amber-500/10'
-                        },
-                    ].map((item) => (
-                        <div key={item.label} className="bg-white dark:bg-white/5 rounded-2xl p-4 border border-gray-100 dark:border-white/10 shadow-sm text-center backdrop-blur-xl">
-                            <div className={`w-8 h-8 rounded-full ${item.color} flex items-center justify-center mx-auto mb-2`}>
-                                {item.icon}
-                            </div>
-                            <p className="text-xl font-black text-gray-900 dark:text-white leading-none tracking-tight mb-1">{item.value}</p>
-                            <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{item.label}</p>
-                        </div>
-                    ))}
-                </motion.div>
-
-                {/* Network Chain */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="mb-8"
-                >
-                    <div className="flex items-center justify-between mb-4">
-                        <p className="font-extrabold text-lg text-gray-900 dark:text-white flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            Live Network Tree
-                        </p>
-                    </div>
-
-                    <div className="bg-white dark:bg-white/5 rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-white/10 backdrop-blur-xl min-h-[200px]">
-                        {hasNetwork ? (
-                            <NetworkNode node={networkData.tree} depth={0} />
-                        ) : (
-                            <div className="text-center py-12">
-                                <motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                                    className="w-20 h-20 mx-auto bg-gray-50 dark:bg-white/5 rounded-[2rem] flex items-center justify-center mb-6 border border-gray-100 dark:border-white/10"
-                                >
-                                    <Network size={40} className="text-gray-200 dark:text-gray-700" />
-                                </motion.div>
-                                <p className="font-bold text-gray-900 dark:text-white text-lg mb-1">No network yet</p>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 max-w-[200px] mx-auto">
-                                    Share your code to start building your passive income chain!
-                                </p>
-                            </div>
-                        )}
                     </div>
                 </motion.div>
 
-                {/* How it works */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/10 dark:to-teal-900/10 rounded-3xl p-6 sm:p-8 border border-emerald-100 dark:border-emerald-900/30 relative overflow-hidden"
-                >
-                    <h3 className="font-black text-xl text-emerald-900 dark:text-emerald-100 mb-6 flex items-center gap-2">
-                        <Gift size={20} className="text-emerald-500" />
-                        How it works?
-                    </h3>
+                {/* Network Chain Tree */}
+                <section className="mb-14">
+                    <div className="flex items-center justify-between mb-8 px-1">
+                        <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.8)]" />
+                            <h3 className="font-black text-2xl text-slate-900 dark:text-white tracking-tight leading-none">Empire Chain</h3>
+                        </div>
+                        <div className="px-4 py-1.5 rounded-full bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest border border-white/10">7 Levels Deep</div>
+                    </div>
 
-                    <div className="space-y-6 relative">
-                        {/* Connecting Line */}
-                        <div className="absolute left-4 top-4 bottom-8 w-[2px] bg-gradient-to-b from-emerald-200 to-transparent dark:from-emerald-500/20" />
-
-                        {[
-                            { num: '1', title: 'Share your code', desc: 'Send your unique code to friends through any app.' },
-                            { num: '2', title: 'Friend signs up', desc: 'They use your code during sign-up or on their Network page and join your chain.' },
-                            { num: '3', title: 'Earn reward points', desc: 'You earn points from their activity — up to 7 levels deep!' },
-                        ].map((step, i) => (
-                            <div key={i} className="flex gap-4 relative z-10">
-                                <div className="flex flex-col items-center">
-                                    <div className="w-8 h-8 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md shadow-emerald-500/20 ring-4 ring-emerald-50 dark:ring-emerald-900/20">
-                                        {step.num}
+                    <div className="bg-white dark:bg-[#020617] rounded-[3rem] p-6 sm:p-10 border border-gray-100 dark:border-white/5 shadow-sm min-h-[400px] relative overflow-hidden">
+                        <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#10b981 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+                        
+                        <div className="relative z-10">
+                            {hasNetwork ? (
+                                <NetworkNode node={networkData.tree} depth={0} />
+                            ) : (
+                                <div className="text-center py-24">
+                                    <div className="w-24 h-24 mx-auto bg-gray-50 dark:bg-white/5 rounded-[2.5rem] flex items-center justify-center mb-8 border border-gray-100 dark:border-white/10 shadow-inner">
+                                        <Users size={40} className="text-gray-300 dark:text-gray-700" />
                                     </div>
+                                    <h4 className="font-black text-slate-900 dark:text-white text-xl mb-3 tracking-tight">Chain Empty</h4>
+                                    <p className="text-sm font-medium text-slate-400 max-w-[200px] mx-auto leading-relaxed">Your network empire starts with a single share.</p>
+                                    <button
+                                        onClick={handleShare}
+                                        className="mt-10 px-10 py-4 bg-emerald-500 text-white font-black rounded-[2rem] shadow-2xl shadow-emerald-500/20 hover:bg-emerald-400 transition-all active:scale-95 uppercase tracking-widest text-xs"
+                                    >
+                                        Initiate Share
+                                    </button>
                                 </div>
-                                <div className="pt-1">
-                                    <h4 className="font-bold text-gray-900 dark:text-emerald-100 mb-1">{step.title}</h4>
-                                    <p className="text-sm font-medium text-emerald-800/70 dark:text-emerald-100/60 leading-relaxed">{step.desc}</p>
-                                </div>
-                            </div>
-                        ))}
+                            )}
+                        </div>
                     </div>
-                </motion.div>
-
+                </section>
             </div>
+
+            {/* Stats Analysis Modal */}
+            <AnimatePresence>
+                {showStats && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-md bg-white dark:bg-[#020617] rounded-[3rem] p-8 shadow-2xl border border-gray-100 dark:border-white/10 overflow-hidden"
+                        >
+                            <button 
+                                onClick={() => setShowStats(false)}
+                                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-50 dark:bg-white/5 flex items-center justify-center text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
+                            >
+                                <X size={20} />
+                            </button>
+
+                            <div className="mb-10">
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Empire Analytics</h3>
+                                <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-2">Network breakdown</p>
+                            </div>
+
+                            <div className="space-y-6">
+                                {[
+                                    { label: 'Direct Referrals', value: networkData?.direct_referrals || 0, icon: <Users size={18} />, color: 'blue' },
+                                    { label: 'Secondary Chain', value: (networkData?.total_network_size || 0) - (networkData?.direct_referrals || 0), icon: <Network size={18} />, color: 'purple' },
+                                    { label: 'Lifetime Earnings', value: totalPoints, icon: <Coins size={18} />, color: 'amber' },
+                                ].map((stat) => (
+                                    <div key={stat.label} className="flex items-center justify-between p-5 rounded-[2rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-12 h-12 rounded-2xl bg-${stat.color}-500/10 text-${stat.color}-500 flex items-center justify-center`}>
+                                                {stat.icon}
+                                            </div>
+                                            <span className="font-bold text-slate-600 dark:text-slate-400 text-sm">{stat.label}</span>
+                                        </div>
+                                        <span className="font-black text-xl text-slate-900 dark:text-white">{stat.value.toLocaleString()}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-10 p-6 bg-[#020617] rounded-[2rem] text-center border border-white/5">
+                                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-2">Passive Potential</p>
+                                <p className="text-2xl font-black text-white italic">Level 7 Unlocked</p>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Premium Share Sheet (Bottom Sheet) */}
+            <AnimatePresence>
+                {showShareSheet && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[150] flex items-end justify-center p-0 bg-slate-950/40 backdrop-blur-sm"
+                        onClick={() => setShowShareSheet(false)}
+                    >
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative w-full max-w-lg bg-white dark:bg-[#0F172A] rounded-t-[3rem] p-10 shadow-2xl border-t border-gray-100 dark:border-white/10"
+                        >
+                            <div className="w-16 h-1.5 bg-gray-200 dark:bg-white/10 rounded-full mx-auto mb-8" />
+                            
+                            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter mb-2 italic">Broadcast Empire</h3>
+                            <p className="text-sm font-medium text-slate-500 dark:text-gray-400 mb-10">Select your preferred encrypted channel</p>
+
+                            <div className="grid grid-cols-2 gap-4 mb-10">
+                                {[
+                                    { label: 'WhatsApp', icon: <Share2 size={24} />, color: 'emerald' },
+                                    { label: 'Telegram', icon: <Zap size={24} />, color: 'blue' },
+                                    { label: 'Instagram', icon: <Target size={24} />, color: 'pink' },
+                                    { label: 'X / Twitter', icon: <Network size={24} />, color: 'slate' },
+                                ].map((channel) => (
+                                    <button
+                                        key={channel.label}
+                                        onClick={() => {
+                                            toast.success(`Opening ${channel.label}...`);
+                                            setShowShareSheet(false);
+                                        }}
+                                        className="flex flex-col items-center gap-3 p-6 rounded-[2.5rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-all active:scale-95"
+                                    >
+                                        <div className={`w-14 h-14 rounded-full bg-${channel.color}-500/10 text-${channel.color}-500 flex items-center justify-center shadow-inner`}>
+                                            {channel.icon}
+                                        </div>
+                                        <span className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">{channel.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button 
+                                onClick={handleCopy}
+                                className="w-full py-5 bg-emerald-500 text-white font-black rounded-[2rem] shadow-2xl shadow-emerald-500/20 active:scale-95 transition-all uppercase tracking-[0.2em] text-xs"
+                            >
+                                Copy Private Link
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <CustomerBottomNav />
         </div>
