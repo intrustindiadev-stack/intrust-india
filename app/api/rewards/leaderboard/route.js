@@ -17,7 +17,7 @@ export async function GET() {
             .from('reward_points_balance')
             .select('user_id, current_balance, tier')
             .order('current_balance', { ascending: false })
-            .limit(50);
+            .limit(10);
 
         if (pointsError) {
             console.error('Error fetching top points:', pointsError);
