@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { logRewardRpcResult } from '@/lib/rewardRpcResult';
+import { logRewardRpcResult, logRewardRpcFailure } from '@/lib/rewardRpcResult';
 
 export async function POST(request) {
     try {
         // 1. Get authenticated user
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -47,6 +47,10 @@ export async function POST(request) {
 
         if (rewardError) {
             console.error('[DAILY-LOGIN-REWARD] RPC Error:', rewardError);
+            logRewardRpcFailure({
+                event_type: 'daily_login',
+                source_user_id: user.id
+            }, rewardError);
             return NextResponse.json({ success: false, error: rewardError.message }, { status: 500 });
         }
 

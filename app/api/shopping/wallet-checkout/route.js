@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { logRewardRpcResult } from '@/lib/rewardRpcResult';
+import { logRewardRpcResult, logRewardRpcFailure } from '@/lib/rewardRpcResult';
 
 /**
  * POST /api/shopping/wallet-checkout
@@ -98,13 +98,19 @@ export async function POST(request) {
 
             if (rewardError) {
                 console.error(JSON.stringify({ correlationId, stage: 'reward_rpc_error', userId, groupId, error: rewardError }));
+                logRewardRpcFailure({
+                    event_type: 'purchase',
+                    source_user_id: userId,
+                    reference_id: groupId,
+                    reference_type: 'shopping_order',
+                }, rewardError, { correlationId, amountPaise });
             } else {
                 logRewardRpcResult({
                     event_type: 'purchase',
                     source_user_id: userId,
                     reference_id: groupId,
                     reference_type: 'shopping_order',
-                }, rewardData);
+                }, rewardData, { correlationId, amountPaise });
             }
         } catch (rewardErr) {
             console.error(JSON.stringify({ correlationId, stage: 'reward_distribution_error', userId, groupId, error: rewardErr?.message }));
@@ -126,7 +132,10 @@ export async function POST(request) {
 
             fetch(notifyUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Internal-Token': process.env.INTERNAL_API_TOKEN ?? ''
+                },
                 body: JSON.stringify({
                     group_id: groupId,
                     amount_paise: orderGroup?.total_amount_paise ?? 0

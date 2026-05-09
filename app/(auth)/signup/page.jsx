@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithOTP, verifyOTP } from '@/lib/supabase';
 import { supabase } from '@/lib/supabaseClient';
 import { Phone, ArrowRight, Loader2, ShieldCheck, User, Sparkles, Mail, CheckCircle, Eye, EyeOff } from 'lucide-react';
@@ -10,8 +10,10 @@ import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import AccountLinkingPrompt from '@/components/auth/AccountLinkingPrompt';
 
-export default function SignupPage() {
+// Inner component that uses useSearchParams (must be wrapped in Suspense)
+function SignupPageInner() {
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     // ─── Shared state ───────────────────────────────────────────────────────────
     const [step, setStep] = useState('email-form'); // 'choice' removed, defaults to 'email-form'
@@ -32,7 +34,18 @@ export default function SignupPage() {
 
     useEffect(() => {
         sessionStorage.removeItem('intrust_adv_seen');
-    }, []);
+
+        // ── Referral attribution via ?ref= URL param ────────────────────────────
+        // Persist the referral code to sessionStorage BEFORE any OAuth/OTP
+        // redirect so it survives the round-trip back to the onboarding modal.
+        const refCode = searchParams.get('ref');
+        if (refCode) {
+            const normalised = refCode.toUpperCase().trim();
+            if (normalised.length > 0) {
+                sessionStorage.setItem('intrust_pending_ref', normalised);
+            }
+        }
+    }, [searchParams]);
 
     // ─── Google ─────────────────────────────────────────────────────────────────
     const handleGoogleSignIn = () => {
@@ -461,5 +474,14 @@ export default function SignupPage() {
 
             </div>
         </div>
+    );
+}
+
+// Default export wraps in Suspense so useSearchParams works in Next.js App Router
+export default function SignupPage() {
+    return (
+        <Suspense fallback={null}>
+            <SignupPageInner />
+        </Suspense>
     );
 }

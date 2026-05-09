@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
-import { logRewardRpcResult } from '@/lib/rewardRpcResult';
+import { logRewardRpcResult, logRewardRpcFailure } from '@/lib/rewardRpcResult';
 
 export const runtime = 'nodejs';
 
 export async function POST(req) {
+    const correlationId = crypto.randomUUID();
     try {
         // 0. Authenticate the caller — derive userId from session, never trust the body.
         const supabaseUser = await createServerSupabaseClient();
@@ -103,7 +104,10 @@ export async function POST(req) {
                     p_parent_id: referredById
                 });
                 if (treePathError) {
-                    console.error('build_reward_tree_path RPC failed:', treePathError);
+                    console.error(JSON.stringify({
+                        correlationId, stage: 'tree_build_failed', userId, referredById,
+                        pg_code: treePathError.code, pg_message: treePathError.message
+                    }));
                     throw treePathError;
                 }
 
@@ -114,14 +118,21 @@ export async function POST(req) {
                     .eq('descendant_id', userId);
 
                 if (ancestorFetchError) {
-                    console.error('Error fetching ancestor list for stats update:', ancestorFetchError);
+                    console.error(JSON.stringify({
+                        correlationId, stage: 'tree_ancestor_fetch_failed', userId, referredById,
+                        pg_code: ancestorFetchError.code, pg_message: ancestorFetchError.message
+                    }));
                 } else if (ancestors) {
                     for (const ancestor of ancestors) {
                         const { error: statsError } = await supabaseAdmin.rpc('update_reward_tree_stats', {
                             p_user_id: ancestor.ancestor_id
                         });
                         if (statsError) {
-                            console.error(`update_reward_tree_stats failed for ancestor ${ancestor.ancestor_id}:`, statsError);
+                            console.error(JSON.stringify({
+                                correlationId, stage: 'tree_stats_failed', userId, referredById,
+                                ancestor_id: ancestor.ancestor_id,
+                                pg_code: statsError.code, pg_message: statsError.message
+                            }));
                         }
 
                         // Recalculate tier for this ancestor
@@ -129,7 +140,11 @@ export async function POST(req) {
                             p_user_id: ancestor.ancestor_id
                         });
                         if (tierError) {
-                            console.error(`recalculate_user_tier failed for ancestor ${ancestor.ancestor_id}:`, tierError);
+                            console.error(JSON.stringify({
+                                correlationId, stage: 'tier_recalc_failed', userId, referredById,
+                                ancestor_id: ancestor.ancestor_id,
+                                pg_code: tierError.code, pg_message: tierError.message
+                            }));
                         }
                     }
                 }
@@ -139,7 +154,11 @@ export async function POST(req) {
                     p_user_id: userId
                 });
                 if (selfStatsError) {
-                    console.error(`update_reward_tree_stats failed for new user ${userId}:`, selfStatsError);
+                    console.error(JSON.stringify({
+                        correlationId, stage: 'tree_stats_failed', userId, referredById,
+                        ancestor_id: userId,
+                        pg_code: selfStatsError.code, pg_message: selfStatsError.message
+                    }));
                 }
 
                 // Recalculate tier for the new user themselves
@@ -147,11 +166,18 @@ export async function POST(req) {
                     p_user_id: userId
                 });
                 if (selfTierError) {
-                    console.error(`recalculate_user_tier failed for new user ${userId}:`, selfTierError);
+                    console.error(JSON.stringify({
+                        correlationId, stage: 'tier_recalc_failed', userId, referredById,
+                        ancestor_id: userId,
+                        pg_code: selfTierError.code, pg_message: selfTierError.message
+                    }));
                 }
 
             } catch (rewardError) {
-                console.error('Error in reward tree / distribution flow — onboarding will still complete:', rewardError);
+                console.error(JSON.stringify({
+                    correlationId, stage: 'reward_tree_sequence_failed', userId, referredById,
+                    error: rewardError?.message || String(rewardError)
+                }));
                 // Don't fail onboarding if reward distribution fails
             }
         }
@@ -165,7 +191,16 @@ export async function POST(req) {
                     p_reference_type: 'user_profile'
                 });
                 if (rewardDistError) {
-                    console.error('calculate_and_distribute_rewards RPC failed:', rewardDistError);
+                    console.error(JSON.stringify({
+                        correlationId, stage: 'signup_distribute_failed', userId, referredById,
+                        pg_code: rewardDistError.code, pg_message: rewardDistError.message
+                    }));
+                    logRewardRpcFailure({
+                        event_type: 'signup',
+                        source_user_id: userId,
+                        reference_id: userId,
+                        reference_type: 'user_profile',
+                    }, rewardDistError, { correlationId });
                     throw rewardDistError;
                 }
 
@@ -174,10 +209,13 @@ export async function POST(req) {
                     source_user_id: userId,
                     reference_id: userId,
                     reference_type: 'user_profile',
-                }, rewardData);
+                }, rewardData, { correlationId });
                 signupRewardApplied = rewardResult.totalDistributed > 0;
             } catch (rewardError) {
-                console.error('Error in signup reward distribution flow - onboarding will still complete:', rewardError);
+                console.error(JSON.stringify({
+                    correlationId, stage: 'signup_distribute_failed', userId, referredById,
+                    error: rewardError?.message || String(rewardError)
+                }));
                 // Don't fail onboarding if reward distribution fails
             }
         }

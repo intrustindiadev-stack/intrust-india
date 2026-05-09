@@ -18,7 +18,8 @@ import {
     CreditCard,
     Clock,
     ShoppingBag,
-    Network
+    Network,
+    MessageCircle
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -37,6 +38,7 @@ const navigation = [
     { name: 'Analytics', href: '/merchant/analytics', icon: TrendingUp },
     { name: 'Profile', href: '/merchant/profile', icon: User },
     { name: 'Settings', href: '/merchant/settings', icon: Settings },
+    { name: 'WhatsApp', href: '/merchant/whatsapp', icon: MessageCircle },
 ];
 
 export default function MerchantSidebar({ isOpen, setIsOpen }) {

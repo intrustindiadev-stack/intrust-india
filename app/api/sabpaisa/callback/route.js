@@ -186,6 +186,29 @@ export async function POST(request) {
                     reference_type: 'wallet_topup',
                     reference_id: clientTxnId
                 }]);
+
+                // 5.2 Distribute wallet_topup reward (non-blocking — must not fail the credit)
+                try {
+                    const { data: rewardData, error: rewardError } = await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
+                        p_event_type: 'wallet_topup',
+                        p_source_user_id: existingTxn.user_id,
+                        p_reference_id: existingTxn.id,
+                        p_reference_type: 'wallet_topup',
+                        p_amount_paise: Math.round(parseFloat(amount) * 100)
+                    });
+                    if (rewardError) {
+                        console.error('[Callback] Wallet topup reward RPC error:', rewardError);
+                    } else {
+                        logRewardRpcResult({
+                            event_type: 'wallet_topup',
+                            source_user_id: existingTxn.user_id,
+                            reference_id: existingTxn.id,
+                            reference_type: 'wallet_topup',
+                        }, rewardData);
+                    }
+                } catch (rewardErr) {
+                    console.error('[Callback] Wallet topup reward distribution error:', rewardErr.message);
+                }
             } catch (walletError) {
                 console.error('[Callback] Failed to credit wallet:', walletError.message);
                 fulfillmentFailed = true;
@@ -376,219 +399,6 @@ export async function POST(request) {
         }
 
 
-        // 5. Handle Wallet Credit for WALLET_TOPUP safely
-        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'WALLET_TOPUP' && !wasAlreadySuccess) {
-            try {
-                await CustomerWalletService.creditWallet(
-                    existingTxn.user_id,
-                    amount,
-                    'TOPUP',
-                    `Wallet Topup via Sabpaisa (${result.paymentMode || 'Gateway'})`,
-                    { id: clientTxnId, type: 'TOPUP' }
-                );
-                console.log(`[Callback] Wallet credited for txn ${clientTxnId}`);
-
-                // 5.1 ADDED: Notify Customer
-                const supabaseAdmin = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL,
-                    process.env.SUPABASE_SERVICE_ROLE_KEY
-                );
-                await supabaseAdmin.from('notifications').insert([{
-                    user_id: existingTxn.user_id,
-                    title: 'Wallet Topped Up ✅',
-                    body: `Your wallet has been credited with ₹${amount}.`,
-                    type: 'success',
-                    reference_type: 'wallet_topup',
-                    reference_id: clientTxnId
-                }]);
-            } catch (walletError) {
-                console.error('[Callback] Failed to credit wallet:', walletError.message);
-                fulfillmentFailed = true;
-                internalStatus = 'failed';
-                result.transMsg = 'Wallet credit failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-            }
-        }
-
-        // 5b. Handle Merchant Wallet Credit for MERCHANT_TOPUP safely
-        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'MERCHANT_TOPUP' && !wasAlreadySuccess) {
-            try {
-                const supabaseAdmin = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL,
-                    process.env.SUPABASE_SERVICE_ROLE_KEY
-                );
-
-                // Check for idempotency
-                const { data: existingCredit } = await supabaseAdmin
-                    .from('merchant_transactions')
-                    .select('id')
-                    .eq('metadata->>id', clientTxnId)
-                    .eq('metadata->>type', 'MERCHANT_TOPUP')
-                    .maybeSingle();
-
-                if (existingCredit) {
-                    console.log(`[Callback] Merchant Wallet credit already applied for txn ${clientTxnId}`);
-                } else {
-                    // Get merchant ID for user
-                    const { data: merchant, error: merchantErr } = await supabaseAdmin
-                        .from('merchants')
-                        .select('id, wallet_balance_paise')
-                        .eq('user_id', existingTxn.user_id)
-                        .single();
-
-                    if (merchantErr) throw merchantErr;
-
-                    if (merchant) {
-                        const amountPaise = Math.round(parseFloat(amount) * 100);
-                        const newBalance = merchant.wallet_balance_paise + amountPaise;
-
-                        // Update balance
-                        const { error: balanceUpdateErr } = await supabaseAdmin
-                            .from('merchants')
-                            .update({
-                                wallet_balance_paise: newBalance,
-                                updated_at: new Date().toISOString()
-                            })
-                            .eq('id', merchant.id);
-
-                        if (balanceUpdateErr) throw balanceUpdateErr;
-
-                        // Insert transaction
-                        const { error: txInsertErr } = await supabaseAdmin
-                            .from('merchant_transactions')
-                            .insert({
-                                merchant_id: merchant.id,
-                                transaction_type: 'wallet_topup',
-                                amount_paise: amountPaise,
-                                commission_paise: 0,
-                                balance_after_paise: newBalance,
-                                description: `Wallet Topup via Sabpaisa (${result.paymentMode || 'Gateway'})`,
-                                metadata: { id: clientTxnId, type: 'MERCHANT_TOPUP' }
-                            });
-
-                        if (txInsertErr) {
-                            console.error('[Callback] History insert failed, rolling back merchant balance:', txInsertErr.message);
-                            // Rollback
-                            await supabaseAdmin
-                                .from('merchants')
-                                .update({
-                                    wallet_balance_paise: merchant.wallet_balance_paise,
-                                    updated_at: new Date().toISOString()
-                                })
-                                .eq('id', merchant.id);
-                            throw txInsertErr;
-                        }
-
-                        console.log(`[Callback] Merchant Wallet credited for txn ${clientTxnId}`);
-
-                        // 5b.1 ADDED: Notify Merchant
-                        await supabaseAdmin.from('notifications').insert([{
-                            user_id: existingTxn.user_id,
-                            title: 'Wallet Funded ✅',
-                            body: `Your merchant wallet has been credited with ₹${amount}.`,
-                            type: 'success',
-                            reference_type: 'merchant_wallet_topup',
-                            reference_id: clientTxnId
-                        }]);
-                    } else {
-                        console.error('[Callback] Merchant not found for topup:', existingTxn.user_id);
-                        fulfillmentFailed = true;
-                        internalStatus = 'failed';
-                        result.transMsg = 'Merchant account not found. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-                    }
-                }
-            } catch (walletError) {
-                console.error('[Callback] Failed to credit merchant wallet:', walletError.message);
-                fulfillmentFailed = true;
-                internalStatus = 'failed';
-                result.transMsg = 'Merchant wallet credit error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-            }
-        }
-
-        // 5c. Handle Udhari Payment Settlement via SabPaisa (gateway-funded)
-        // NOTE: Uses settle_udhari_gateway_payment — NOT settle_udhari_payment.
-        // The gateway already collected funds, so we must NOT debit the customer wallet.
-        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'UDHARI_PAYMENT' && !wasAlreadySuccess) {
-            try {
-                const supabaseAdmin = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL,
-                    process.env.SUPABASE_SERVICE_ROLE_KEY
-                );
-
-                const udhariRequestId = existingTxn.udf2;
-                const merchantId = existingTxn.udf3;
-
-                // Idempotency check — has this udhari already been settled?
-                const { data: existingSettlement } = await supabaseAdmin
-                    .from('udhari_requests')
-                    .select('id, status')
-                    .eq('id', udhariRequestId)
-                    .eq('status', 'completed')
-                    .maybeSingle();
-
-                if (existingSettlement) {
-                    console.log(`[Callback] Udhari already settled for txn ${clientTxnId}`);
-                } else {
-                    // Convert gateway amount to paise
-                    const amountPaise = Math.round(parseFloat(amount) * 100);
-
-                    // Call the gateway-specific settlement RPC:
-                    //   - marks coupon sold
-                    //   - creates order
-                    //   - credits merchant wallet
-                    //   - writes merchant ledger
-                    //   - marks udhari completed
-                    //   - does NOT touch customer_wallets
-                    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
-                        'settle_udhari_gateway_payment',
-                        {
-                            p_udhari_request_id: udhariRequestId,
-                            p_customer_user_id: existingTxn.user_id,
-                            p_amount_paise: amountPaise,
-                            p_customer_email: existingTxn.payer_email || null
-                        }
-                    );
-
-                    if (rpcError) {
-                        console.error('[Callback] Udhari gateway settlement RPC error:', rpcError.message);
-                        fulfillmentFailed = true;
-                        internalStatus = 'failed';
-                        result.transMsg = 'Udhari settlement failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-                    } else {
-                        console.log(`[Callback] Udhari settled (gateway) for txn ${clientTxnId}`, rpcResult);
-
-                        // Notify merchant of payment receipt
-                        const { data: merchant } = await supabaseAdmin
-                            .from('merchants')
-                            .select('user_id')
-                            .eq('id', merchantId)
-                            .single();
-
-                        if (merchant) {
-                            await supabaseAdmin.from('notifications').insert({
-                                user_id: merchant.user_id,
-                                title: 'Store Credit Payment Received ✅',
-                                body: `A store credit payment of ₹${amount} has been received via UPI/Card.`,
-                                type: 'success',
-                                reference_id: udhariRequestId,
-                                reference_type: 'udhari_completed'
-                            });
-
-                            // 5c.1 WhatsApp Notification (Non-blocking)
-                            notifyMerchantStoreCreditPaid({
-                                merchantUserId: merchant.user_id,
-                                amountRs: amount,
-                                item: udhariRequestId.slice(0, 8).toUpperCase()
-                            }).catch(e => console.error('[Callback] Udhari WhatsApp notification failed:', e));
-                        }
-                    }
-                }
-            } catch (udhariError) {
-                console.error('[Callback] Udhari payment processing error:', udhariError.message);
-                fulfillmentFailed = true;
-                internalStatus = 'failed';
-                result.transMsg = 'Udhari processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-            }
-        }
 
         // 5d. Handle Cart Checkout
         if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'CART_CHECKOUT' && !wasAlreadySuccess) {

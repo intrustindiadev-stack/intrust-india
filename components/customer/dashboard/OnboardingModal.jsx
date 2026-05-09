@@ -41,6 +41,14 @@ export default function OnboardingModal({ userId, onComplete }) {
     const [referralSource, setReferralSource] = useState('');
     const [referralCode, setReferralCode] = useState('');
 
+    // Pre-fill referral code from URL attribution stored in sessionStorage
+    useEffect(() => {
+        const pending = sessionStorage.getItem('intrust_pending_ref');
+        if (pending) {
+            setReferralCode(pending.toUpperCase().trim());
+        }
+    }, []);
+
     const toggleService = (id) => {
         setSelectedServices(prev =>
             prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
@@ -74,6 +82,10 @@ export default function OnboardingModal({ userId, onComplete }) {
             if (!res.ok) {
                 throw new Error(data.error || 'Failed to save onboarding data');
             }
+
+            // Clear the pending referral key on success so it doesn't persist
+            // to a future signup session in the same browser.
+            sessionStorage.removeItem('intrust_pending_ref');
 
             if (data.rewardApplied) {
                 setSuccessMessage('Eligible reward points were added to your Intrust Rewards balance.');
@@ -253,7 +265,12 @@ export default function OnboardingModal({ userId, onComplete }) {
                                         placeholder="ENTER CODE"
                                         className="w-full px-4 py-5 sm:py-6 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 hover:border-emerald-300 focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-900 rounded-2xl text-center text-2xl sm:text-3xl font-mono font-bold tracking-[0.2em] outline-none transition-all dark:text-white placeholder:text-gray-300 dark:placeholder:text-gray-600 uppercase shadow-sm"
                                     />
-                                    <p className="text-center text-xs text-gray-400 font-medium mt-3 uppercase tracking-wider">Optional</p>
+                                    <p className="text-center text-xs font-semibold mt-3 uppercase tracking-wider">
+                                        {referralCode
+                                            ? <span className="text-emerald-600 dark:text-emerald-400">🎁 Referral code applied — earn signup bonus points!</span>
+                                            : <span className="text-gray-400">Have a friend's code? Enter it to earn bonus reward points.</span>
+                                        }
+                                    </p>
                                 </div>
 
                                 <AnimatePresence>

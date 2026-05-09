@@ -74,6 +74,13 @@ export async function PATCH(request) {
             sale_notifications,
             marketing_updates,
             whatsapp_notifications,
+            whatsapp_order_alerts,
+            whatsapp_payout_alerts,
+            whatsapp_store_credit_alerts,
+            whatsapp_kyc_alerts,
+            whatsapp_subscription_alerts,
+            whatsapp_product_alerts,
+            whatsapp_marketing,
         } = body;
 
         const updates = {
@@ -85,7 +92,38 @@ export async function PATCH(request) {
         if (purchase_notifications !== undefined) updates.purchase_notifications = purchase_notifications;
         if (sale_notifications !== undefined) updates.sale_notifications = sale_notifications;
         if (marketing_updates !== undefined) updates.marketing_updates = marketing_updates;
-        if (whatsapp_notifications !== undefined) updates.whatsapp_notifications = whatsapp_notifications;
+        
+        if (whatsapp_notifications !== undefined) {
+            updates.whatsapp_notifications = whatsapp_notifications;
+            
+            // Fan-out logic for WhatsApp sub-flags
+            if (whatsapp_notifications === false) {
+                updates.whatsapp_order_alerts = false;
+                updates.whatsapp_payout_alerts = false;
+                updates.whatsapp_store_credit_alerts = false;
+                updates.whatsapp_kyc_alerts = false;
+                updates.whatsapp_subscription_alerts = false;
+                updates.whatsapp_product_alerts = false;
+                updates.whatsapp_marketing = false;
+            } else if (whatsapp_notifications === true) {
+                updates.whatsapp_order_alerts = true;
+                updates.whatsapp_payout_alerts = true;
+                updates.whatsapp_store_credit_alerts = true;
+                updates.whatsapp_kyc_alerts = true;
+                updates.whatsapp_subscription_alerts = true;
+                updates.whatsapp_product_alerts = true;
+                // Leave whatsapp_marketing unchanged for opt-in
+            }
+        }
+
+        // Individual toggles override fan-out if provided
+        if (whatsapp_order_alerts !== undefined) updates.whatsapp_order_alerts = whatsapp_order_alerts;
+        if (whatsapp_payout_alerts !== undefined) updates.whatsapp_payout_alerts = whatsapp_payout_alerts;
+        if (whatsapp_store_credit_alerts !== undefined) updates.whatsapp_store_credit_alerts = whatsapp_store_credit_alerts;
+        if (whatsapp_kyc_alerts !== undefined) updates.whatsapp_kyc_alerts = whatsapp_kyc_alerts;
+        if (whatsapp_subscription_alerts !== undefined) updates.whatsapp_subscription_alerts = whatsapp_subscription_alerts;
+        if (whatsapp_product_alerts !== undefined) updates.whatsapp_product_alerts = whatsapp_product_alerts;
+        if (whatsapp_marketing !== undefined) updates.whatsapp_marketing = whatsapp_marketing;
 
         // Upsert
         const { data, error } = await supabaseAdmin

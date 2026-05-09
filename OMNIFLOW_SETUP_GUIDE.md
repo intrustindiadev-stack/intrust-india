@@ -27,6 +27,9 @@ META_WABA_ID=your_waba_id_here
 META_PHONE_NUMBER_ID=your_phone_number_id_here
 META_ACCESS_TOKEN=your_permanent_access_token_here
 META_WEBHOOK_VERIFY_TOKEN=your_random_verify_token_here
+
+# Internal server-to-server auth (wallet-checkout → notify-order)
+INTERNAL_API_TOKEN=your_32_char_random_string_here
 ```
 
 ---
@@ -290,3 +293,36 @@ These templates are designed for a premium merchant experience. Create them in t
 - **Buttons**:
   - [Quick Reply] `View Product`
   - [Quick Reply] `Edit Catalog`
+
+---
+
+## Diagnostics
+
+### Test a merchant WhatsApp template directly
+
+Use this endpoint to verify that Omniflow can deliver a template to a specific merchant's linked phone, without waiting for an organic event.
+
+**Requires:** admin or super_admin role (pass your Supabase session JWT as a Bearer token).
+
+```bash
+curl -X POST https://intrustindia.com/api/admin/whatsapp-test-merchant \
+  -H "Authorization: Bearer <YOUR_ADMIN_JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "merchantUserId": "fffaeff7-eaf7-48da-a0e9-7801108a38b1",
+    "templateName": "intrust_merchant_new_order",
+    "args": ["TESTORDER", "99.00", "1"]
+  }'
+```
+
+**Success response (200):**
+```json
+{ "success": true, "phone": "+916232809817", "sentAt": "2026-05-09T12:00:00.000Z" }
+```
+
+**Failure response (502):**
+```json
+{ "success": false, "error": "..." }
+```
+
+Every attempt (success or failure) is recorded in `whatsapp_message_logs` with `content_preview` starting with `[ADMIN_TEST:...]` for easy filtering.

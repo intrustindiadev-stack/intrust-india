@@ -24,7 +24,8 @@ const defaultEventState = {
     kyc_complete_reward: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
     merchant_onboard_reward: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
     subscription_renewal_reward: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
-    daily_login_reward: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 }
+    daily_login_reward: { direct: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 },
+    wallet_topup_reward: { rate_per_100rs: 1, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0 }
 };
 const defaultGlobalState = {
     daily_cap: { max_points: 0, max_transactions: 0 },
@@ -47,7 +48,8 @@ const defaultEligibilityState = {
             purchase: { direct_require_kyc: true, upline_require_kyc: true },
             kyc_complete: { direct_require_kyc: false, upline_require_kyc: true },
             merchant_onboard: { direct_require_kyc: true, upline_require_kyc: true },
-            subscription_renewal: { direct_require_kyc: true, upline_require_kyc: true }
+            subscription_renewal: { direct_require_kyc: true, upline_require_kyc: true },
+            wallet_topup: { direct_require_kyc: false, upline_require_kyc: true }
         }
     }
 };
@@ -58,7 +60,8 @@ const eligibilityEvents = [
     { key: 'purchase', label: 'Purchase' },
     { key: 'kyc_complete', label: 'KYC complete' },
     { key: 'merchant_onboard', label: 'Merchant onboard' },
-    { key: 'subscription_renewal', label: 'Subscription renewal' }
+    { key: 'subscription_renewal', label: 'Subscription renewal' },
+    { key: 'wallet_topup', label: 'Wallet topup' }
 ];
 
 export default function AdminRewardsPage() {
@@ -293,7 +296,8 @@ export default function AdminRewardsPage() {
                                 { config_key: 'kyc_complete_reward', config_value: eventState.kyc_complete_reward },
                                 { config_key: 'merchant_onboard_reward', config_value: eventState.merchant_onboard_reward },
                                 { config_key: 'subscription_renewal_reward', config_value: eventState.subscription_renewal_reward },
-                                { config_key: 'daily_login_reward', config_value: eventState.daily_login_reward }
+                                { config_key: 'daily_login_reward', config_value: eventState.daily_login_reward },
+                                { config_key: 'wallet_topup_reward', config_value: eventState.wallet_topup_reward }
                             ])}
                             disabled={sectionSaving.event}
                             className="bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-bold text-sm px-4 py-2 flex items-center gap-2 disabled:opacity-50"
@@ -303,10 +307,10 @@ export default function AdminRewardsPage() {
                         </button>
                     </div>
                     <div className="p-6 grid grid-cols-1 xl:grid-cols-2 gap-4">
-                        {['signup_reward', 'purchase_reward', 'kyc_complete_reward', 'merchant_onboard_reward', 'subscription_renewal_reward', 'daily_login_reward'].map(eventName => {
-                            const isPurchase = eventName === 'purchase_reward';
-                            const firstKey = isPurchase ? 'rate_per_100rs' : 'direct';
-                            const firstLabel = isPurchase ? 'Rate/₹100' : 'Direct';
+                        {['signup_reward', 'purchase_reward', 'kyc_complete_reward', 'merchant_onboard_reward', 'subscription_renewal_reward', 'daily_login_reward', 'wallet_topup_reward'].map(eventName => {
+                            const isRateBased = ['purchase_reward', 'wallet_topup_reward'].includes(eventName);
+                            const firstKey = isRateBased ? 'rate_per_100rs' : 'direct';
+                            const firstLabel = isRateBased ? 'Rate/₹100' : 'Direct';
                             return (
                                 <div key={eventName} className="border border-gray-100 dark:border-gray-700 rounded-xl p-4">
                                     <h3 className="font-bold text-gray-900 dark:text-white capitalize mb-4">

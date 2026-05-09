@@ -3,6 +3,7 @@ import { CustomerWalletService } from '../../../lib/wallet/customerWalletService
 import { decrypt } from '../../../lib/sabpaisa/encrypt';
 import { mapStatusToInternal } from '../../../lib/sabpaisa/utils';
 import { createClient } from '@supabase/supabase-js';
+import { logRewardRpcResult } from '../../../lib/rewardRpcResult';
 
 /**
  * Validates that the request IP is from a trusted source.
@@ -140,6 +141,33 @@ export default async function handler(req, res) {
                         { id: clientTxnId, type: 'TOPUP' }
                     );
                     console.log(`[Callback] Wallet credited for txn ${clientTxnId}`);
+
+                    // Distribute wallet_topup reward (non-blocking — must not fail the wallet credit)
+                    try {
+                        const supabaseAdmin = createClient(
+                            process.env.NEXT_PUBLIC_SUPABASE_URL,
+                            process.env.SUPABASE_SERVICE_ROLE_KEY
+                        );
+                        const { data: rewardData, error: rewardError } = await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
+                            p_event_type: 'wallet_topup',
+                            p_source_user_id: existingTxn.user_id,
+                            p_reference_id: existingTxn.id,
+                            p_reference_type: 'wallet_topup',
+                            p_amount_paise: Math.round(parseFloat(amount) * 100)
+                        });
+                        if (rewardError) {
+                            console.error('[Callback] Wallet topup reward RPC error:', rewardError);
+                        } else {
+                            logRewardRpcResult({
+                                event_type: 'wallet_topup',
+                                source_user_id: existingTxn.user_id,
+                                reference_id: existingTxn.id,
+                                reference_type: 'wallet_topup',
+                            }, rewardData);
+                        }
+                    } catch (rewardErr) {
+                        console.error('[Callback] Wallet topup reward distribution error:', rewardErr.message);
+                    }
                 } catch (walletError) {
                     console.error('[Callback] Failed to credit wallet:', walletError.message);
                 }

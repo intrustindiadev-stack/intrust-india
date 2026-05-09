@@ -129,6 +129,33 @@ export async function POST(req) {
       );
     }
 
+    // Step 2: Eager row creation for notification settings
+    try {
+      const { data: merchantData } = await admin
+        .from('merchants')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (merchantData?.id) {
+        await admin
+          .from('merchant_notification_settings')
+          .upsert({
+            merchant_id: merchantData.id,
+            whatsapp_order_alerts: true,
+            whatsapp_payout_alerts: true,
+            whatsapp_store_credit_alerts: true,
+            whatsapp_kyc_alerts: true,
+            whatsapp_subscription_alerts: true,
+            whatsapp_product_alerts: true,
+            whatsapp_marketing: false,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'merchant_id' });
+      }
+    } catch (settingsErr) {
+      console.warn('[merchant/whatsapp/verify-otp] Settings eager creation failed (non-fatal):', settingsErr);
+    }
+
     await admin
       .from('whatsapp_otp_codes')
       .update({ is_used: true })
@@ -161,7 +188,7 @@ export async function POST(req) {
           phone_hash: phoneHash,
           direction: 'outbound',
           message_type: 'template',
-          channel: 'web',
+          channel: 'whatsapp',
           status: 'delivered',
           content_preview: `[template:${MERCHANT_WELCOME_LINKED_TEMPLATE.name}]`,
           audience: 'merchant'
@@ -171,6 +198,22 @@ export async function POST(req) {
       }
     } catch (waErr) {
       console.warn('[merchant/whatsapp/verify-otp] Confirmation WA template send failed (non-fatal):', waErr);
+      // 3b. Best-effort failed log for observability
+      try {
+        const phoneHash = crypto.createHash('sha256').update(phone).digest('hex');
+        await admin.from('whatsapp_message_logs').insert({
+          user_id: user.id,
+          phone_hash: phoneHash,
+          direction: 'outbound',
+          message_type: 'template',
+          channel: 'whatsapp',
+          audience: 'merchant',
+          status: 'failed',
+          content_preview: '[FAILED] ' + MERCHANT_WELCOME_LINKED_TEMPLATE.name + ' :: ' + waErr.message.slice(0, 150)
+        });
+      } catch {
+        // non-fatal — swallow
+      }
     }
 
     return NextResponse.json({

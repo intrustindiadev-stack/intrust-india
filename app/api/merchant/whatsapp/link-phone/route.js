@@ -80,8 +80,7 @@ export async function POST(req) {
     await admin
       .from('whatsapp_otp_codes')
       .delete()
-      .eq('user_id', user.id)
-      .eq('phone', normalised);
+      .eq('user_id', user.id);
 
     const otp = generateOTP();
     const otpHash = hashOTP(otp);

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { logRewardRpcResult } from '@/lib/rewardRpcResult';
 
 export async function POST(req) {
+    const correlationId = crypto.randomUUID();
     try {
         // 1. Authenticate the caller
         const supabase = await createServerSupabaseClient();
@@ -81,7 +82,13 @@ export async function POST(req) {
                 p_new_user_id: userId,
                 p_parent_id: referredById
             });
-            if (treePathError) throw treePathError;
+            if (treePathError) {
+                console.error(JSON.stringify({
+                    correlationId, stage: 'tree_build_failed', userId, referredById,
+                    pg_code: treePathError.code, pg_message: treePathError.message
+                }));
+                throw treePathError;
+            }
 
             // 4C. RPC calculate_and_distribute_rewards with p_event_type: 'signup'
             const { data: rewardData, error: rewardDistError } = await adminClient.rpc('calculate_and_distribute_rewards', {
@@ -90,7 +97,13 @@ export async function POST(req) {
                 p_reference_id: userId,
                 p_reference_type: 'user_profile'
             });
-            if (rewardDistError) throw rewardDistError;
+            if (rewardDistError) {
+                console.error(JSON.stringify({
+                    correlationId, stage: 'signup_distribute_failed', userId, referredById,
+                    pg_code: rewardDistError.code, pg_message: rewardDistError.message
+                }));
+                throw rewardDistError;
+            }
             logRewardRpcResult({
                 event_type: 'signup',
                 source_user_id: userId,
@@ -107,26 +120,54 @@ export async function POST(req) {
 
             if (ancestors) {
                 for (const ancestor of ancestors) {
-                    await adminClient.rpc('update_reward_tree_stats', {
+                    const { error: statsError } = await adminClient.rpc('update_reward_tree_stats', {
                         p_user_id: ancestor.ancestor_id
                     });
+                    if (statsError) {
+                        console.error(JSON.stringify({
+                            correlationId, stage: 'tree_stats_failed', userId, referredById,
+                            ancestor_id: ancestor.ancestor_id,
+                            pg_code: statsError.code, pg_message: statsError.message
+                        }));
+                    }
 
                     // Recalculate tier for this ancestor
-                    await adminClient.rpc('recalculate_user_tier', {
+                    const { error: tierError } = await adminClient.rpc('recalculate_user_tier', {
                         p_user_id: ancestor.ancestor_id
-                    }).catch(err => console.error(`recalculate_user_tier failed for ancestor ${ancestor.ancestor_id}:`, err));
+                    });
+                    if (tierError) {
+                        console.error(JSON.stringify({
+                            correlationId, stage: 'tier_recalc_failed', userId, referredById,
+                            ancestor_id: ancestor.ancestor_id,
+                            pg_code: tierError.code, pg_message: tierError.message
+                        }));
+                    }
                 }
             }
 
             // Update caller stats
-            await adminClient.rpc('update_reward_tree_stats', {
+            const { error: callerStatsError } = await adminClient.rpc('update_reward_tree_stats', {
                 p_user_id: userId
             });
+            if (callerStatsError) {
+                console.error(JSON.stringify({
+                    correlationId, stage: 'tree_stats_failed', userId, referredById,
+                    ancestor_id: userId,
+                    pg_code: callerStatsError.code, pg_message: callerStatsError.message
+                }));
+            }
 
             // Recalculate tier for the caller
-            await adminClient.rpc('recalculate_user_tier', {
+            const { error: callerTierError } = await adminClient.rpc('recalculate_user_tier', {
                 p_user_id: userId
-            }).catch(err => console.error(`recalculate_user_tier failed for caller ${userId}:`, err));
+            });
+            if (callerTierError) {
+                console.error(JSON.stringify({
+                    correlationId, stage: 'tier_recalc_failed', userId, referredById,
+                    ancestor_id: userId,
+                    pg_code: callerTierError.code, pg_message: callerTierError.message
+                }));
+            }
 
             // 4E. Insert two notifications rows
             const { data: callerProfile } = await adminClient.from('user_profiles').select('full_name').eq('id', userId).single();
@@ -150,7 +191,10 @@ export async function POST(req) {
             ]);
 
         } catch (sequenceError) {
-            console.error('Error in referral sequence (non-fatal for the link itself):', sequenceError);
+            console.error(JSON.stringify({
+                correlationId, stage: 'referral_sequence_failed', userId, referredById,
+                error: sequenceError?.message || String(sequenceError)
+            }));
             // We return success anyway because the primary link (referred_by) is already done
         }
 

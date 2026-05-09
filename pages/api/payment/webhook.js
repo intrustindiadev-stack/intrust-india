@@ -2,6 +2,7 @@ import SabpaisaClient from '../../../lib/sabpaisa/client';
 import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '../../../lib/supabase/queries';
 import { CustomerWalletService } from '../../../lib/wallet/customerWalletService';
 import { createClient } from '@supabase/supabase-js';
+import { logRewardRpcResult } from '../../../lib/rewardRpcResult';
 
 /**
  * Validates that the request IP is from a trusted source.
@@ -104,6 +105,33 @@ export default async function handler(req, res) {
                     `Wallet Topup via Sabpaisa Webhook (${paymentMode || 'Gateway'})`,
                     { id: clientTxnId, type: 'TOPUP' }
                 );
+
+                // Distribute wallet_topup reward (non-blocking — must not fail the wallet credit)
+                try {
+                    const supabaseAdmin = createClient(
+                        process.env.NEXT_PUBLIC_SUPABASE_URL,
+                        process.env.SUPABASE_SERVICE_ROLE_KEY
+                    );
+                    const { data: rewardData, error: rewardError } = await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
+                        p_event_type: 'wallet_topup',
+                        p_source_user_id: currentTxn.user_id,
+                        p_reference_id: currentTxn.id,
+                        p_reference_type: 'wallet_topup',
+                        p_amount_paise: Math.round(parseFloat(amount || currentTxn.amount) * 100)
+                    });
+                    if (rewardError) {
+                        console.error('[Webhook] Wallet topup reward RPC error:', rewardError);
+                    } else {
+                        logRewardRpcResult({
+                            event_type: 'wallet_topup',
+                            source_user_id: currentTxn.user_id,
+                            reference_id: currentTxn.id,
+                            reference_type: 'wallet_topup',
+                        }, rewardData);
+                    }
+                } catch (rewardErr) {
+                    console.error('[Webhook] Wallet topup reward distribution error:', rewardErr.message);
+                }
             } catch (walletError) {
                 console.error('Webhook: Failed to credit wallet:', walletError);
             }

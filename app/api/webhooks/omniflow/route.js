@@ -51,6 +51,46 @@ function getAdmin() {
 }
 
 // -------------------------------------------------------------------
+// Normalize helper — lowercase, strip punctuation, collapse whitespace
+// -------------------------------------------------------------------
+function normalize(str) {
+  return str
+    .toLowerCase()
+    .replace(/['.!?,]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// -------------------------------------------------------------------
+// Merchant quick-reply map (module-level, built once)
+// -------------------------------------------------------------------
+const MERCHANT_QUICK_REPLIES = {
+  "today's orders": (c) => `📦 *Today's Orders:* ${c.recentOrders.length} orders found.\nPending Fulfillments: ${c.pendingFulfillmentsCount}\n\nManage here: intrustindia.com/merchant/shopping/orders`,
+  "todays orders": (c) => `📦 *Today's Orders:* ${c.recentOrders.length} orders found.\nPending Fulfillments: ${c.pendingFulfillmentsCount}\n\nManage here: intrustindia.com/merchant/shopping/orders`,
+  "my orders": (c) => `📦 *Recent Orders:* ${c.recentOrders.length} total orders.\nPending Fulfillments: ${c.pendingFulfillmentsCount}\n\nManage here: intrustindia.com/merchant/shopping/orders`,
+  "my payouts": (c) => `💰 *Payout Status:* \n- Pending Payouts: ${c.pendingPayoutsCount}\n- Total Pending: ₹${c.pendingPayoutsTotalRs}\n- Last Payout: ${c.lastPayoutStatus}\n\nView wallet: intrustindia.com/merchant/wallet`,
+  "payout": (c) => `💰 *Payout Status:* \n- Pending Payouts: ${c.pendingPayoutsCount}\n- Total Pending: ₹${c.pendingPayoutsTotalRs}\n- Last Payout: ${c.lastPayoutStatus}\n\nView wallet: intrustindia.com/merchant/wallet`,
+  "withdrawal": (c) => `💰 *Payout Status:* \n- Pending Payouts: ${c.pendingPayoutsCount}\n- Total Pending: ₹${c.pendingPayoutsTotalRs}\n- Last Payout: ${c.lastPayoutStatus}\n\nView wallet: intrustindia.com/merchant/wallet`,
+  "sales summary": (c) => `📈 *Sales Summary:* \n- Wallet Balance: ₹${c.walletBalanceRs}\n- Total Commission Paid: ₹${c.totalCommissionPaidRs}\n- Recent Orders: ${c.recentOrders.length}\n\nAnalytics: intrustindia.com/merchant/analytics`,
+  "sales": (c) => `📈 *Sales Summary:* \n- Wallet Balance: ₹${c.walletBalanceRs}\n- Total Commission Paid: ₹${c.totalCommissionPaidRs}\n- Recent Orders: ${c.recentOrders.length}\n\nAnalytics: intrustindia.com/merchant/analytics`,
+  "low stock": (c) => `🛡️ *Inventory:* \n- Live Items: ${c.liveInventoryCount}\n- Low Stock Alerts: ${c.lowStockCount}\n\nManage Stock: intrustindia.com/merchant/shopping/inventory`,
+  "inventory": (c) => `🛡️ *Inventory:* \n- Live Items: ${c.liveInventoryCount}\n- Low Stock Alerts: ${c.lowStockCount}\n\nManage Stock: intrustindia.com/merchant/shopping/inventory`,
+  "subscription status": (c) => `⭐ *Subscription:* \n- Plan: ${c.subscriptionStatus}\n\nManage: intrustindia.com/merchant/settings`,
+  "subscription": (c) => `⭐ *Subscription:* \n- Plan: ${c.subscriptionStatus}\n\nManage: intrustindia.com/merchant/settings`,
+  "plan": (c) => `⭐ *Subscription:* \n- Plan: ${c.subscriptionStatus}\n\nManage: intrustindia.com/merchant/settings`,
+  "kyc status": (c) => `🆔 *Identity Verification:* \n- KYC Status: ${c.kycStatus}\n- Bank Verified: ${c.bankVerified ? '✅' : '❌'}\n\nProfile: intrustindia.com/merchant/profile`,
+  "kyc": (c) => `🆔 *Identity Verification:* \n- KYC Status: ${c.kycStatus}\n- Bank Verified: ${c.bankVerified ? '✅' : '❌'}\n\nProfile: intrustindia.com/merchant/profile`,
+  "bank status": (c) => `🆔 *Identity Verification:* \n- KYC Status: ${c.kycStatus}\n- Bank Verified: ${c.bankVerified ? '✅' : '❌'}\n\nProfile: intrustindia.com/merchant/profile`,
+  "bank": (c) => `🆔 *Identity Verification:* \n- KYC Status: ${c.kycStatus}\n- Bank Verified: ${c.bankVerified ? '✅' : '❌'}\n\nProfile: intrustindia.com/merchant/profile`,
+};
+
+// Pre-normalised key → handler pairs, computed once at module load
+const NORMALISED_MERCHANT_KEYS = Object.entries(MERCHANT_QUICK_REPLIES).map(
+  ([key, handler]) => [normalize(key), handler]
+);
+
+
+// -------------------------------------------------------------------
 // Signature validation
 // -------------------------------------------------------------------
 async function validateSignature(req, rawBody) {
@@ -158,32 +198,30 @@ async function handleMerchantInbound({ userId, normalised, phoneHash, trimmedMes
     console.error('[omniflow-webhook] Merchant context build failed:', err);
   }
 
-  // Merchant Quick Replies
-  const MERCHANT_QUICK_REPLIES = {
-    "today's orders": (c) => `📦 *Today's Orders:* ${c.recentOrders.length} orders found.\nPending Fulfillments: ${c.pendingFulfillmentsCount}\n\nManage here: intrustindia.com/merchant/shopping/orders`,
-    "todays orders": (c) => `📦 *Today's Orders:* ${c.recentOrders.length} orders found.\nPending Fulfillments: ${c.pendingFulfillmentsCount}\n\nManage here: intrustindia.com/merchant/shopping/orders`,
-    "my orders": (c) => `📦 *Recent Orders:* ${c.recentOrders.length} total orders.\nPending Fulfillments: ${c.pendingFulfillmentsCount}\n\nManage here: intrustindia.com/merchant/shopping/orders`,
-    "my payouts": (c) => `💰 *Payout Status:* \n- Pending Payouts: ${c.pendingPayoutsCount}\n- Total Pending: ₹${c.pendingPayoutsTotalRs}\n- Last Payout: ${c.lastPayoutStatus}\n\nView wallet: intrustindia.com/merchant/wallet`,
-    "payout": (c) => `💰 *Payout Status:* \n- Pending Payouts: ${c.pendingPayoutsCount}\n- Total Pending: ₹${c.pendingPayoutsTotalRs}\n- Last Payout: ${c.lastPayoutStatus}\n\nView wallet: intrustindia.com/merchant/wallet`,
-    "withdrawal": (c) => `💰 *Payout Status:* \n- Pending Payouts: ${c.pendingPayoutsCount}\n- Total Pending: ₹${c.pendingPayoutsTotalRs}\n- Last Payout: ${c.lastPayoutStatus}\n\nView wallet: intrustindia.com/merchant/wallet`,
-    "sales summary": (c) => `📈 *Sales Summary:* \n- Wallet Balance: ₹${c.walletBalanceRs}\n- Total Commission Paid: ₹${c.totalCommissionPaidRs}\n- Recent Orders: ${c.recentOrders.length}\n\nAnalytics: intrustindia.com/merchant/analytics`,
-    "sales": (c) => `📈 *Sales Summary:* \n- Wallet Balance: ₹${c.walletBalanceRs}\n- Total Commission Paid: ₹${c.totalCommissionPaidRs}\n- Recent Orders: ${c.recentOrders.length}\n\nAnalytics: intrustindia.com/merchant/analytics`,
-    "low stock": (c) => `🛡️ *Inventory:* \n- Live Items: ${c.liveInventoryCount}\n- Low Stock Alerts: ${c.lowStockCount}\n\nManage Stock: intrustindia.com/merchant/shopping/inventory`,
-    "inventory": (c) => `🛡️ *Inventory:* \n- Live Items: ${c.liveInventoryCount}\n- Low Stock Alerts: ${c.lowStockCount}\n\nManage Stock: intrustindia.com/merchant/shopping/inventory`,
-    "subscription status": (c) => `⭐ *Subscription:* \n- Plan: ${c.subscriptionStatus}\n\nManage: intrustindia.com/merchant/settings`,
-    "subscription": (c) => `⭐ *Subscription:* \n- Plan: ${c.subscriptionStatus}\n\nManage: intrustindia.com/merchant/settings`,
-    "plan": (c) => `⭐ *Subscription:* \n- Plan: ${c.subscriptionStatus}\n\nManage: intrustindia.com/merchant/settings`,
-    "kyc status": (c) => `🆔 *Identity Verification:* \n- KYC Status: ${c.kycStatus}\n- Bank Verified: ${c.bankVerified ? '✅' : '❌'}\n\nProfile: intrustindia.com/merchant/profile`,
-    "kyc": (c) => `🆔 *Identity Verification:* \n- KYC Status: ${c.kycStatus}\n- Bank Verified: ${c.bankVerified ? '✅' : '❌'}\n\nProfile: intrustindia.com/merchant/profile`,
-    "bank status": (c) => `🆔 *Identity Verification:* \n- KYC Status: ${c.kycStatus}\n- Bank Verified: ${c.bankVerified ? '✅' : '❌'}\n\nProfile: intrustindia.com/merchant/profile`,
-    "bank": (c) => `🆔 *Identity Verification:* \n- KYC Status: ${c.kycStatus}\n- Bank Verified: ${c.bankVerified ? '✅' : '❌'}\n\nProfile: intrustindia.com/merchant/profile`,
-  };
+  // Merchant Quick Replies — tokenised contiguous-span matcher
+  const NEGATION_TOKENS = new Set(['not', 'dont', 'no']);
+  const normMsg = normalize(trimmedMessage);
+  const msgTokens = normMsg.split(' ');
+  const leadingWindow = msgTokens.slice(0, 3);
 
-  const msgLower = trimmedMessage.toLowerCase();
-  const matchedKey = Object.keys(MERCHANT_QUICK_REPLIES).find(key => msgLower.includes(key));
+  let matchedEntry = null;
 
-  if (matchedKey && ctx) {
-    const reply = MERCHANT_QUICK_REPLIES[matchedKey](ctx);
+  if (!leadingWindow.some(t => NEGATION_TOKENS.has(t))) {
+    matchedEntry = NORMALISED_MERCHANT_KEYS.find(([normKey]) => {
+      const keyTokens = normKey.split(' ');
+      if (keyTokens.length > msgTokens.length) return false;
+      // Check contiguous span starting at index 0, OR exact full-message match
+      return keyTokens.every((kt, i) => msgTokens[i] === kt);
+    });
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.debug('[merchant-quickreply]', { message: trimmedMessage, matchedKey: matchedEntry ? matchedEntry[0] : null });
+  }
+
+  if (matchedEntry && ctx) {
+    const reply = matchedEntry[1](ctx);
+
     await sendWhatsAppMessage(normalised, reply);
     await logMessage({
       userId,
