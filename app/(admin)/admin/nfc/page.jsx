@@ -396,8 +396,12 @@ export default function NFCAdminPage() {
                                             <span>₹{cardPrice}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                                            <span>GST ({gstPercentage}%)</span>
-                                            <span>₹{(cardPrice * gstPercentage / 100).toFixed(2)}</span>
+                                            <span>SGST ({gstPercentage / 2}%)</span>
+                                            <span>₹{(cardPrice * gstPercentage / 200).toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                            <span>CGST ({gstPercentage / 2}%)</span>
+                                            <span>₹{(cardPrice * gstPercentage / 200).toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-[11px] font-bold text-slate-500 dark:text-slate-400">
                                             <span>Delivery</span>

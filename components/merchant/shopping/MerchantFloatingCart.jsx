@@ -28,12 +28,18 @@ export default function MerchantFloatingCart({
 }) {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const commission = showCommission ? subtotalInRupees * commissionRate : 0;
-    // GST breakdown (weighted avg across items)
-    const gstTotal = cartItems.reduce((sum, item) => {
+    // SGST/CGST breakdown
+    const sgstTotal = cartItems.reduce((sum, item) => {
         const itemTotal = (item.unit_price || 0) * (item.quantity || 1);
         const gstRate = (item.gst_percentage || 0) / 100;
-        return sum + itemTotal * gstRate;
+        return sum + (itemTotal * gstRate) / 2;
     }, 0);
+    const cgstTotal = cartItems.reduce((sum, item) => {
+        const itemTotal = (item.unit_price || 0) * (item.quantity || 1);
+        const gstRate = (item.gst_percentage || 0) / 100;
+        return sum + (itemTotal * gstRate) / 2;
+    }, 0);
+    const gstTotal = sgstTotal + cgstTotal;
     const total = subtotalInRupees + commission + gstTotal;
     const isInsufficient = total > merchantBalance;
     const itemCount = cartItems.length;
@@ -124,10 +130,16 @@ export default function MerchantFloatingCart({
                                 <span>Wholesale Cost</span>
                                 <span>₹{subtotalInRupees.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                             </div>
-                            {gstTotal > 0 && (
+                            {sgstTotal > 0 && (
                                 <div className="flex justify-between text-teal-300/80 font-medium">
-                                    <span>GST</span>
-                                    <span>₹{gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    <span>SGST</span>
+                                    <span>₹{sgstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
+                            {cgstTotal > 0 && (
+                                <div className="flex justify-between text-teal-300/80 font-medium">
+                                    <span>CGST</span>
+                                    <span>₹{cgstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 </div>
                             )}
                             <div className="flex justify-between text-blue-300/70 font-medium">
@@ -146,10 +158,16 @@ export default function MerchantFloatingCart({
                                 <span>Base Price (excl. GST)</span>
                                 <span>₹{baseSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                             </div>
-                            {gstTotal > 0 && (
+                            {sgstTotal > 0 && (
                                 <div className="flex justify-between text-teal-300/80 font-medium">
-                                    <span>GST (avg {((gstTotal / subtotalInRupees) * 100).toFixed(1)}%)</span>
-                                    <span>₹{gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    <span>SGST (avg {((sgstTotal / subtotalInRupees) * 100).toFixed(1)}%)</span>
+                                    <span>₹{sgstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
+                            {cgstTotal > 0 && (
+                                <div className="flex justify-between text-teal-300/80 font-medium">
+                                    <span>CGST (avg {((cgstTotal / subtotalInRupees) * 100).toFixed(1)}%)</span>
+                                    <span>₹{cgstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 </div>
                             )}
                             <div className="flex justify-between text-blue-300/70 font-medium">

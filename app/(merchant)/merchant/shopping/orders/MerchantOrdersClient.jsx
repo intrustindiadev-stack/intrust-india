@@ -152,13 +152,15 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                                             <Store size={8} /> STORE
                                                         </span>
                                                         <span className="text-[9px] text-slate-500 dark:text-gray-500 font-bold uppercase tracking-tight">× {item.quantity} units</span>
-                                                        {gstRate > 0 && <span className="text-[9px] text-teal-600 dark:text-teal-400/80 font-black">GST {gstRate}%</span>}
+                                                        {gstRate > 0 && <span className="text-[9px] text-teal-600 dark:text-teal-400/80 font-black">SGST {gstRate / 2}% | CGST {gstRate / 2}%</span>}
                                                     </div>
                                                     {gstRate > 0 && (
                                                         <div className="flex items-center gap-3 text-[10px] text-slate-400 dark:text-gray-600 font-medium">
                                                             <span>Base: ₹{(baseTaxable / 100).toFixed(2)}</span>
                                                             <span className="opacity-30">|</span>
-                                                            <span>Tax: ₹{(gstAmount / 100).toFixed(2)}</span>
+                                                            <span>SGST: ₹{(gstAmount / 200).toFixed(2)}</span>
+                                                            <span className="opacity-30">|</span>
+                                                            <span>CGST: ₹{(gstAmount / 200).toFixed(2)}</span>
                                                         </div>
                                                     )}
                                                 </div>

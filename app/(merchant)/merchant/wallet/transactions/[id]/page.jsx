@@ -510,7 +510,10 @@ export default function TransactionDetailPage() {
                                                     ₹{Number(wholesaleAmount > 0 ? wholesaleAmount : (item.amount_paise / 100)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                                 </p>
                                                 {gstAmount > 0 && (
-                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">+ ₹{Number(gstAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} GST</p>
+                                                    <>
+                                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">+ ₹{Number(gstAmount / 2).toLocaleString('en-IN', { minimumFractionDigits: 2 })} SGST</p>
+                                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">+ ₹{Number(gstAmount / 2).toLocaleString('en-IN', { minimumFractionDigits: 2 })} CGST</p>
+                                                    </>
                                                 )}
                                             </div>
                                         </div>
@@ -526,8 +529,12 @@ export default function TransactionDetailPage() {
                                         <span>₹{(subtotalPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm font-bold text-slate-600 dark:text-slate-400">
-                                        <span>Total GST</span>
-                                        <span>₹{(gstPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                        <span>SGST</span>
+                                        <span>₹{(gstPaise / 200).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm font-bold text-slate-600 dark:text-slate-400">
+                                        <span>CGST</span>
+                                        <span>₹{(gstPaise / 200).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="h-px bg-slate-200 dark:bg-slate-800 my-4" />
                                     <div className="flex justify-between items-center">
@@ -573,7 +580,10 @@ export default function TransactionDetailPage() {
                                                     ₹{Number(item.unit_price_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                                 </p>
                                                 {item.gst_amount_paise > 0 && (
-                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">+ ₹{Number(item.gst_amount_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })} GST</p>
+                                                    <>
+                                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">+ ₹{Number(item.gst_amount_paise / 200).toLocaleString('en-IN', { minimumFractionDigits: 2 })} SGST</p>
+                                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">+ ₹{Number(item.gst_amount_paise / 200).toLocaleString('en-IN', { minimumFractionDigits: 2 })} CGST</p>
+                                                    </>
                                                 )}
                                             </div>
                                         </div>
@@ -588,8 +598,12 @@ export default function TransactionDetailPage() {
                                         <span>₹{(subtotalPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm font-bold text-slate-600 dark:text-slate-400">
-                                        <span>GST</span>
-                                        <span>₹{(gstPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                        <span>SGST</span>
+                                        <span>₹{(gstPaise / 200).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm font-bold text-slate-600 dark:text-slate-400">
+                                        <span>CGST</span>
+                                        <span>₹{(gstPaise / 200).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm font-bold text-slate-600 dark:text-slate-400">
                                         <span>Delivery Fee</span>

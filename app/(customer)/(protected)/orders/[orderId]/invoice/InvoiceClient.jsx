@@ -155,8 +155,10 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
                                     <th className="py-2.5 px-3 text-[9px] font-bold uppercase tracking-wider">HSN/SAC</th>
                                     <th className="py-2.5 px-3 text-[9px] font-bold uppercase tracking-wider text-right">Qty</th>
                                     <th className="py-2.5 px-3 text-[9px] font-bold uppercase tracking-wider text-right">Unit Price</th>
-                                    <th className="py-2.5 px-3 text-[9px] font-bold uppercase tracking-wider text-right">GST%</th>
-                                    <th className="py-2.5 px-3 text-[9px] font-bold uppercase tracking-wider text-right">GST Amt</th>
+                                    <th className="py-2.5 px-3 text-[9px] font-bold uppercase tracking-wider text-center">SGST%</th>
+                                    <th className="py-2.5 px-3 text-[9px] font-bold uppercase tracking-wider text-right">SGST</th>
+                                    <th className="py-2.5 px-3 text-[9px] font-bold uppercase tracking-wider text-center">CGST%</th>
+                                    <th className="py-2.5 px-3 text-[9px] font-bold uppercase tracking-wider text-right">CGST</th>
                                     <th className="py-2.5 px-3 text-[9px] font-bold uppercase tracking-wider text-right">Total (₹)</th>
                                 </tr>
                             </thead>
@@ -166,13 +168,14 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
                                         <td className="py-3 px-3 font-bold text-center">{row.sNo}</td>
                                         <td className="py-3 px-3">
                                             <p className="font-bold text-slate-900">{row.description}</p>
-                                            <p className="text-[9px] text-slate-400">GST: {row.gstRate}%</p>
                                         </td>
                                         <td className="py-3 px-3 text-center">{row.hsnCode}</td>
                                         <td className="py-3 px-3 text-right">{row.qty}</td>
                                         <td className="py-3 px-3 text-right font-bold">Rs. {formatCurrency((row.taxableAmount) / row.qty)}</td>
-                                        <td className="py-3 px-3 text-center">{row.gstRate}%</td>
-                                        <td className="py-3 px-3 text-right">Rs. {formatCurrency(row.cgstAmount + row.sgstAmount)}</td>
+                                        <td className="py-3 px-3 text-center">{row.gstRate / 2}%</td>
+                                        <td className="py-3 px-3 text-right">Rs. {formatCurrency(row.sgstAmount)}</td>
+                                        <td className="py-3 px-3 text-center">{row.gstRate / 2}%</td>
+                                        <td className="py-3 px-3 text-right">Rs. {formatCurrency(row.cgstAmount)}</td>
                                         <td className="py-3 px-3 text-right font-bold text-slate-900">Rs. {formatCurrency(row.totalAmount)}</td>
                                     </tr>
                                 ))}
@@ -183,6 +186,8 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
                                         <td className="py-3 px-3 text-center">9971</td>
                                         <td className="py-3 px-3 text-right">1</td>
                                         <td className="py-3 px-3 text-right font-bold">Rs. {formatCurrency(deliveryFee)}</td>
+                                        <td className="py-3 px-3 text-center">0%</td>
+                                        <td className="py-3 px-3 text-right">Rs. 0.00</td>
                                         <td className="py-3 px-3 text-center">0%</td>
                                         <td className="py-3 px-3 text-right">Rs. 0.00</td>
                                         <td className="py-3 px-3 text-right font-bold text-slate-900">Rs. {formatCurrency(deliveryFee)}</td>
@@ -200,8 +205,12 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
                                 <span className="text-xs font-bold text-slate-800">Rs. {formatCurrency(totalTaxableValue)}</span>
                             </div>
                             <div className="px-4 py-2.5 flex justify-between border-b border-blue-100">
-                                <span className="text-xs text-slate-500 font-medium">Total GST</span>
-                                <span className="text-xs font-bold text-slate-800">Rs. {formatCurrency(totalCgst + totalSgst)}</span>
+                                <span className="text-xs text-slate-500 font-medium">Total SGST</span>
+                                <span className="text-xs font-bold text-slate-800">Rs. {formatCurrency(totalSgst)}</span>
+                            </div>
+                            <div className="px-4 py-2.5 flex justify-between border-b border-blue-100">
+                                <span className="text-xs text-slate-500 font-medium">Total CGST</span>
+                                <span className="text-xs font-bold text-slate-800">Rs. {formatCurrency(totalCgst)}</span>
                             </div>
                             {deliveryFee > 0 && (
                                 <div className="px-4 py-2.5 flex justify-between border-b border-blue-100">

@@ -437,8 +437,10 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
     acc.mrpTotal += (finalMrp * item.quantity);
     acc.sellingTotal += (sellingPrice * item.quantity);
     acc.gstTotal += gstAmount;
+    acc.sgstTotal += Math.round(gstAmount / 2);
+    acc.cgstTotal += Math.round(gstAmount / 2);
     return acc;
-  }, { mrpTotal: 0, sellingTotal: 0, gstTotal: 0 });
+  }, { mrpTotal: 0, sellingTotal: 0, gstTotal: 0, sgstTotal: 0, cgstTotal: 0 });
 
   const totalDiscount = billDetails.mrpTotal > billDetails.sellingTotal ? billDetails.mrpTotal - billDetails.sellingTotal : 0;
   const deliveryFee = 9900; // Fixed ₹99 delivery fee
@@ -854,8 +856,12 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span>GST (Calculated)</span>
-                    <span>₹{(billDetails.gstTotal / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    <span>SGST (Calculated)</span>
+                    <span>₹{(billDetails.sgstTotal / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>CGST (Calculated)</span>
+                    <span>₹{(billDetails.cgstTotal / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Delivery Fee</span>
