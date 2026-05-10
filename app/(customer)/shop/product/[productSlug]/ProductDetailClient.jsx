@@ -171,8 +171,8 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const isOutOfStock = allOffers.length === 0;
     const selectedOffer = allOffers[0] || platformOffer;
 
-    const isStoreOpen = selectedOffer.is_platform_direct 
-        ? isPlatformOpen 
+    const isStoreOpen = selectedOffer.is_platform_direct
+        ? isPlatformOpen
         : (merchantStatuses.get(inventory.find(i => i.id === selectedOffer.id)?.merchant_id) ?? true);
 
     const triggerClosedAnimation = () => {
@@ -426,12 +426,12 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                             type="button"
                                             onClick={() => setSelectedImageIndex(idx)}
                                             className={`shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${idx === selectedImageIndex
-                                                    ? isDark
-                                                        ? 'border-white/40 scale-105'
-                                                        : 'border-slate-700 scale-105'
-                                                    : isDark
-                                                        ? 'border-white/10 opacity-60 hover:opacity-100'
-                                                        : 'border-slate-200 opacity-70 hover:opacity-100'
+                                                ? isDark
+                                                    ? 'border-white/40 scale-105'
+                                                    : 'border-slate-700 scale-105'
+                                                : isDark
+                                                    ? 'border-white/10 opacity-60 hover:opacity-100'
+                                                    : 'border-slate-200 opacity-70 hover:opacity-100'
                                                 }`}
                                             style={idx === selectedImageIndex ? { borderColor: primaryColor } : {}}
                                         >
@@ -620,7 +620,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                             <div className="text-right shrink-0 ml-2">
                                 <div className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider`}
                                     style={{
-                                        backgroundColor: isOutOfStock 
+                                        backgroundColor: isOutOfStock
                                             ? (isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)')
                                             : (isDark ? `${primaryColor}20` : `${primaryColor}10`),
                                         color: isOutOfStock ? '#ef4444' : primaryColor
@@ -808,10 +808,10 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                         onClick={buyNow}
                         disabled={buyNowLoading || isOutOfStock}
                         className={`h-12 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all border-2 shrink-0 ${isOutOfStock
-                                ? 'bg-slate-700/50 text-white/50 border-transparent'
-                                : (isDark
-                                    ? 'bg-white/[0.08] text-white border-white/10'
-                                    : 'bg-slate-900 text-white border-slate-900')
+                            ? 'bg-slate-700/50 text-white/50 border-transparent'
+                            : (isDark
+                                ? 'bg-white/[0.08] text-white border-white/10'
+                                : 'bg-slate-900 text-white border-slate-900')
                             }`}
                     >
                         {buyNowLoading ? (

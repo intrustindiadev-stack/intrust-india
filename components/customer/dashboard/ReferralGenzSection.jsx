@@ -61,7 +61,7 @@ export default function ReferralGenzSection({ referralCode }) {
                 <div className="flex flex-col lg:flex-row gap-6 lg:items-center">
                     <div className="flex-1">
                         <p className="text-slate-400 font-normal text-sm sm:text-base leading-relaxed mb-5 max-w-lg">
-                            Earn <span className="text-white font-semibold">₹100 premium credit</span> for every successful invitation to your network.
+                            Earn <span className="text-white font-semibold">1,000 Reward Points (₹10)</span> for every successful verified invitation to your network.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-3">

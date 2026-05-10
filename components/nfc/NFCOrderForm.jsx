@@ -166,14 +166,14 @@ export default function NFCOrderForm({ setIsSuccess }) {
                                 <div key={s} className="flex items-center flex-1 last:flex-none">
                                     <div className="flex flex-col items-center gap-1.5">
                                         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-black transition-all duration-300 ${isComplete ? "bg-blue-600 text-white" :
-                                                isActive ? "bg-blue-600 text-white ring-4 ring-blue-600/20" :
-                                                    isDark ? "bg-white/[0.04] text-white/25 border border-white/[0.06]" : "bg-slate-100 text-slate-400 border border-slate-200"
+                                            isActive ? "bg-blue-600 text-white ring-4 ring-blue-600/20" :
+                                                isDark ? "bg-white/[0.04] text-white/25 border border-white/[0.06]" : "bg-slate-100 text-slate-400 border border-slate-200"
                                             }`}>
                                             {isComplete ? <Check size={14} strokeWidth={3} /> : s}
                                         </div>
                                         <span className={`text-[9px] font-black uppercase tracking-widest hidden sm:block ${isActive ? 'text-blue-600' :
-                                                isComplete ? (isDark ? 'text-white/50' : 'text-slate-500') :
-                                                    isDark ? 'text-white/20' : 'text-slate-400'
+                                            isComplete ? (isDark ? 'text-white/50' : 'text-slate-500') :
+                                                isDark ? 'text-white/20' : 'text-slate-400'
                                             }`}>{label}</span>
                                     </div>
                                     {s < 3 && (
@@ -359,8 +359,8 @@ export default function NFCOrderForm({ setIsSuccess }) {
 
                     {/* Delivery Timeline Notice */}
                     <div className={`mt-6 flex items-start gap-3 px-4 py-3.5 rounded-xl border ${isDark
-                            ? 'bg-amber-500/[0.05] border-amber-500/20 text-amber-400/80'
-                            : 'bg-amber-50 border-amber-200 text-amber-700'
+                        ? 'bg-amber-500/[0.05] border-amber-500/20 text-amber-400/80'
+                        : 'bg-amber-50 border-amber-200 text-amber-700'
                         }`}>
                         <Truck size={15} className={`mt-0.5 shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
                         <p className="text-[11px] font-bold leading-relaxed tracking-wide">

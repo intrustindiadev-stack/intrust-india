@@ -14,7 +14,7 @@ export default function OrderSection({ setIsSuccess }) {
             </div>
 
             <div className="max-w-7xl mx-auto relative z-10">
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
@@ -32,7 +32,7 @@ export default function OrderSection({ setIsSuccess }) {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
                     {/* The Hub Form */}
                     <div className="lg:col-span-8 lg:col-start-3">
-                         <NFCOrderForm setIsSuccess={setIsSuccess} />
+                        <NFCOrderForm setIsSuccess={setIsSuccess} />
                     </div>
                 </div>
             </div>

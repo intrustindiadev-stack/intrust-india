@@ -47,19 +47,19 @@ const WHY_SOLAR = [
 
 // Status config
 const STATUS_STEPS = [
-    { key: 'new',        label: 'Request Received',   icon: Bell,         color: 'text-sky-400',     bg: 'bg-sky-500/15',     border: 'border-sky-500/30' },
-    { key: 'contacted',  label: 'Team Contacted You', icon: PhoneCall,    color: 'text-amber-400',   bg: 'bg-amber-500/15',   border: 'border-amber-500/30' },
-    { key: 'site_visit', label: 'Site Survey Done',   icon: CalendarCheck,color: 'text-violet-400',  bg: 'bg-violet-500/15',  border: 'border-violet-500/30' },
-    { key: 'quoted',     label: 'Quote Sent',         icon: CheckCircle,  color: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/30' },
-    { key: 'converted',  label: 'Installation Done',  icon: Sun,          color: 'text-yellow-400',  bg: 'bg-yellow-500/15',  border: 'border-yellow-500/30' },
+    { key: 'new', label: 'Request Received', icon: Bell, color: 'text-sky-400', bg: 'bg-sky-500/15', border: 'border-sky-500/30' },
+    { key: 'contacted', label: 'Team Contacted You', icon: PhoneCall, color: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/30' },
+    { key: 'site_visit', label: 'Site Survey Done', icon: CalendarCheck, color: 'text-violet-400', bg: 'bg-violet-500/15', border: 'border-violet-500/30' },
+    { key: 'quoted', label: 'Quote Sent', icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/30' },
+    { key: 'converted', label: 'Installation Done', icon: Sun, color: 'text-yellow-400', bg: 'bg-yellow-500/15', border: 'border-yellow-500/30' },
 ];
 
 const BILL_LABEL = {
-    less_1500:  '< ₹1,500',
-    '1500_2500':'₹1,500–2,500',
-    '2500_4000':'₹2,500–4,000',
-    '4000_8000':'₹4,000–8,000',
-    more_8000:  '> ₹8,000',
+    less_1500: '< ₹1,500',
+    '1500_2500': '₹1,500–2,500',
+    '2500_4000': '₹2,500–4,000',
+    '4000_8000': '₹4,000–8,000',
+    more_8000: '> ₹8,000',
 };
 
 export default function SolarServicePage() {
@@ -124,9 +124,16 @@ export default function SolarServicePage() {
         const supabase = createClient();
         try {
             const { data: { user } } = await supabase.auth.getUser();
+            
+            if (!user) {
+                toast.error('Please login to request a solar quote');
+                router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+                return;
+            }
+
             const { error } = await supabase.from('solar_leads').insert([{
                 ...form,
-                user_id: user?.id || null,
+                user_id: user.id,
                 source: 'website',
             }]);
             if (error) throw error;
@@ -159,14 +166,12 @@ export default function SolarServicePage() {
                 initial={{ opacity: 0, y: -12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
-                className={`mx-4 mt-24 mb-2 rounded-[2rem] border overflow-hidden ${
-                    isDark ? 'bg-white/[0.04] border-white/10' : 'bg-white border-slate-200'
-                } shadow-xl`}
+                className={`mx-4 mt-24 mb-2 rounded-[2rem] border overflow-hidden ${isDark ? 'bg-white/[0.04] border-white/10' : 'bg-white border-slate-200'
+                    } shadow-xl`}
             >
                 {/* Header strip */}
-                <div className={`flex items-center gap-3 px-5 py-4 border-b ${
-                    isDark ? 'bg-white/[0.03] border-white/10' : 'bg-slate-50 border-slate-100'
-                }`}>
+                <div className={`flex items-center gap-3 px-5 py-4 border-b ${isDark ? 'bg-white/[0.03] border-white/10' : 'bg-slate-50 border-slate-100'
+                    }`}>
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${currentStep.bg} border ${currentStep.border}`}>
                         <currentStep.icon size={16} className={currentStep.color} />
                     </div>
@@ -176,11 +181,10 @@ export default function SolarServicePage() {
                             {isClosed ? 'Request Closed' : currentStep.label}
                         </p>
                     </div>
-                    <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                        isConverted ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                        : isClosed  ? 'bg-red-500/15 border-red-500/30 text-red-400'
-                        :             'bg-amber-500/15 border-amber-500/30 text-amber-400'
-                    }`}>
+                    <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${isConverted ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                            : isClosed ? 'bg-red-500/15 border-red-500/30 text-red-400'
+                                : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                        }`}>
                         {isConverted ? '✓ Done' : isClosed ? 'Closed' : 'In Progress'}
                     </div>
                 </div>
@@ -194,19 +198,17 @@ export default function SolarServicePage() {
                                 const active = i === currentIdx;
                                 return (
                                     <div key={s.key} className="flex items-center flex-1 last:flex-none">
-                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-2 transition-all ${
-                                            done
+                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-2 transition-all ${done
                                                 ? `${s.bg} ${s.border} ${s.color}`
                                                 : isDark ? 'bg-white/5 border-white/10 text-white/20' : 'bg-slate-100 border-slate-200 text-slate-300'
-                                        } ${active ? 'ring-2 ring-offset-1 ring-amber-400/50' : ''}`}>
+                                            } ${active ? 'ring-2 ring-offset-1 ring-amber-400/50' : ''}`}>
                                             <s.icon size={13} />
                                         </div>
                                         {i < STATUS_STEPS.filter(s => s.key !== 'closed').length - 1 && (
-                                            <div className={`flex-1 h-0.5 mx-1 rounded-full ${
-                                                i < currentIdx
+                                            <div className={`flex-1 h-0.5 mx-1 rounded-full ${i < currentIdx
                                                     ? 'bg-amber-400'
                                                     : isDark ? 'bg-white/10' : 'bg-slate-200'
-                                            }`} />
+                                                }`} />
                                         )}
                                     </div>
                                 );
@@ -227,17 +229,15 @@ export default function SolarServicePage() {
 
                 {/* Note from team */}
                 {existingLead.notes && (
-                    <div className={`mx-4 mb-4 p-3 rounded-2xl text-xs font-medium leading-relaxed border ${
-                        isDark ? 'bg-sky-500/10 border-sky-500/20 text-sky-300' : 'bg-sky-50 border-sky-200 text-sky-700'
-                    }`}>
+                    <div className={`mx-4 mb-4 p-3 rounded-2xl text-xs font-medium leading-relaxed border ${isDark ? 'bg-sky-500/10 border-sky-500/20 text-sky-300' : 'bg-sky-50 border-sky-200 text-sky-700'
+                        }`}>
                         <span className="font-black">💬 Team Note: </span>{existingLead.notes}
                     </div>
                 )}
 
                 {/* Standard contact note */}
-                <div className={`flex items-center gap-2 mx-4 mb-4 p-3 rounded-2xl border ${
-                    isDark ? 'bg-emerald-500/8 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'
-                }`}>
+                <div className={`flex items-center gap-2 mx-4 mb-4 p-3 rounded-2xl border ${isDark ? 'bg-emerald-500/8 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'
+                    }`}>
                     <PhoneCall size={14} className="text-emerald-500 shrink-0" />
                     <p className={`text-xs font-medium ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
                         Our SolarSquare team will contact you at <span className="font-black">{existingLead.mobile}</span> within 24 hours for a free consultation.
@@ -332,9 +332,8 @@ export default function SolarServicePage() {
                                                 { icon: '⚡', label: '₹0 Down Payment' },
                                                 { icon: '🌟', label: '25-Year Warranty' },
                                             ].map((b, i) => (
-                                                <div key={i} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold ${
-                                                    isDark ? 'bg-white/5 border-white/10 text-white/70' : 'bg-white border-slate-200 text-slate-700'
-                                                } shadow-sm`}>
+                                                <div key={i} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold ${isDark ? 'bg-white/5 border-white/10 text-white/70' : 'bg-white border-slate-200 text-slate-700'
+                                                    } shadow-sm`}>
                                                     <span>{b.icon}</span> {b.label}
                                                 </div>
                                             ))}
