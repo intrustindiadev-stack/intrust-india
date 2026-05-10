@@ -31,6 +31,26 @@ function SignupPageInner() {
     const [showConfirm, setShowConfirm] = useState(false);
     const [conflictProvider, setConflictProvider] = useState('');
     const [resendLoading, setResendLoading] = useState(false);
+    const [timer, setTimer] = useState(0);
+    const [canResend, setCanResend] = useState(true);
+
+    useEffect(() => {
+        let interval;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        } else {
+            setCanResend(true);
+            clearInterval(interval);
+        }
+        return () => clearInterval(interval);
+    }, [timer]);
+
+    const startTimer = () => {
+        setTimer(30);
+        setCanResend(false);
+    };
 
     useEffect(() => {
         sessionStorage.removeItem('intrust_adv_seen');
@@ -83,6 +103,7 @@ function SignupPageInner() {
         const { error: otpError } = await signInWithOTP(formattedPhone);
         if (otpError) { toast.error(otpError.message || 'Failed to send OTP.'); setLoading(false); return; }
         setStep('otp');
+        startTimer();
         setLoading(false);
     };
 
@@ -414,8 +435,8 @@ function SignupPageInner() {
                             </button>
 
                             <div className="flex flex-col gap-4 text-center">
-                                <button type="button" onClick={handleSendOTP} disabled={loading} className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors">
-                                    Resend Code
+                                <button type="button" onClick={(e) => { if (canResend) handleSendOTP(e); }} disabled={loading || !canResend} className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors disabled:opacity-50">
+                                    {canResend ? 'Resend Code' : `Resend in ${timer}s`}
                                 </button>
                                 <button type="button" onClick={() => setStep('phone')} className="text-sm font-semibold text-[#92BCEA] hover:underline">
                                     Update Number

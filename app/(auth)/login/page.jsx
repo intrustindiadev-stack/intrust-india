@@ -84,6 +84,26 @@ function LoginContent() {
     const [otp, setOtp] = useState('');
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
+    const [timer, setTimer] = useState(0);
+    const [canResend, setCanResend] = useState(true);
+
+    useEffect(() => {
+        let interval;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        } else {
+            setCanResend(true);
+            clearInterval(interval);
+        }
+        return () => clearInterval(interval);
+    }, [timer]);
+
+    const startTimer = () => {
+        setTimer(30);
+        setCanResend(false);
+    };
 
     // ─── Email-specific ──────────────────────────────────────────────────────────
     const [emailAddress, setEmailAddress] = useState('');
@@ -172,6 +192,7 @@ function LoginContent() {
             return;
         }
         setStep('otp');
+        startTimer();
         setLoading(false);
     };
 
@@ -276,6 +297,7 @@ function LoginContent() {
         }
 
         setStep('email-otp');
+        startTimer();
         setLoading(false);
     };
 
@@ -468,11 +490,11 @@ function LoginContent() {
 
                         <div className="space-y-3">
                             <button
-                                onClick={handleSendOTP}
-                                disabled={loading}
+                                onClick={(e) => { if (canResend) handleSendOTP(e); }}
+                                disabled={loading || !canResend}
                                 className="w-full py-3.5 border border-[var(--border-color)] rounded-xl flex items-center justify-center gap-3 text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-all disabled:opacity-50"
                             >
-                                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Resend code'}
+                                {loading ? <Loader2 className="animate-spin" size={20} /> : canResend ? 'Resend code' : `Resend in ${timer}s`}
                             </button>
                             <button
                                 onClick={handleVerifyOTP}
@@ -559,18 +581,16 @@ function LoginContent() {
 
                             <button
                                 type="button"
-                                onClick={(e) => { handleSendOTP(e); }}
-                                disabled={loading}
-                                className="w-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm transition-colors"
+                                onClick={(e) => { if (canResend) handleSendOTP(e); }}
+                                disabled={loading || !canResend}
+                                className="w-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm transition-colors disabled:opacity-50"
                             >
-                                Didn't receive OTP? <span className="underline font-semibold">Resend</span>
+                                Didn't receive OTP? <span className="underline font-semibold">{canResend ? 'Resend' : `Resend in ${timer}s`}</span>
                             </button>
                         </div>
                     </div>
                 )}
             </div>
-
-            {/* Terms text is outside the card, absolutely positioned or just below? Unmentioned, I will omit because wrapper has items-center justify-center min-h-screen p-4, if I put it below it breaks the pure card centering unless put inside a flex col. The plan only specifies the card wrapper structure. */}
         </div>
     );
 }
