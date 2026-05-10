@@ -77,6 +77,8 @@ const mapTransactionToCard = (tx) => {
                 .toUpperCase()
             : 'TODAY',
         isStored,
+        event_type: tx.event_type,
+        created_at: tx.created_at,
     };
 };
 

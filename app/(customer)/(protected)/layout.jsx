@@ -1,6 +1,7 @@
 import { createServerSupabaseClient }   from '@/lib/supabaseServer';
 import { redirect }                       from 'next/navigation';
 import { RewardsRealtimeProvider }        from '@/lib/contexts/RewardsRealtimeContext';
+import GlobalScratchCardPopup             from '@/components/rewards/GlobalScratchCardPopupLoader';
 
 export default async function ProtectedCustomerLayout({ children }) {
     const supabase = await createServerSupabaseClient();
@@ -30,6 +31,7 @@ export default async function ProtectedCustomerLayout({ children }) {
     return (
         <RewardsRealtimeProvider>
             {children}
+            <GlobalScratchCardPopup />
         </RewardsRealtimeProvider>
     );
 }

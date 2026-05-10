@@ -24,12 +24,16 @@ export function BaseChatBubble({
   const isHidden = hiddenPaths.some((p) => pathname?.startsWith(p));
   if (!user || isHidden) return null;
 
+  // On /shop/[merchantSlug] pages the FloatingCart bar sits at bottom-0 on desktop
+  // (≈ 64 px tall). Shift the bubble above it so they don't overlap.
+  const isShopPage = /^\/shop\/[^/]+/.test(pathname ?? '');
+
   return (
     <>
       <style>{`
         .chat-bubble-btn {
           position: fixed;
-          bottom: 28px;
+          bottom: 28px; /* overridden on shop pages by .on-shop-page */
           right: 28px;
           z-index: 9999;
           width: 80px;
@@ -140,19 +144,24 @@ export function BaseChatBubble({
           0%, 100% { transform: scale(1); }
           50%       { transform: scale(1.3); }
         }
+        /* Lift bubble above the desktop FloatingCart bar on shop pages */
+        .chat-bubble-btn.on-shop-page {
+          bottom: 96px;
+        }
         @media (max-width: 768px) {
           .chat-bubble-btn {
-            bottom: 105px;
+            bottom: 165px;
             right: 16px;
             width: 75px;
             height: 75px;
           }
+          /* On mobile the FloatingCart is at bottom-[92px], bubble is already at 165px — no change needed */
         }
       `}</style>
 
       <button
         id="chat-bubble-btn"
-        className={`chat-bubble-btn ${isOpen ? 'is-open' : ''}`}
+        className={`chat-bubble-btn ${isOpen ? 'is-open' : ''} ${isShopPage ? 'on-shop-page' : ''}`}
         onClick={toggleChat}
         aria-label={isOpen ? 'Close chat' : ariaLabel}
         title={isOpen ? 'Close chat' : assistantTitle}

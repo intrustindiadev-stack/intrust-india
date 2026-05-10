@@ -397,7 +397,7 @@ export function BaseChatWindow({
       <style>{`
         @media (max-width: 640px) {
           .chat-window-overlay {
-            bottom: 110px;
+            bottom: 165px;
             right: 16px;
             left: 16px;
             width: auto;
