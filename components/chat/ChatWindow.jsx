@@ -73,22 +73,46 @@ export function BaseChatWindow({
   const [firstName, setFirstName] = useState('there');
   const [hasWelcomed, setHasWelcomed] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [micError, setMicError] = useState(null); // user-facing STT error message
   const [sessionId, setSessionId] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const endRef = useRef(null);
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
+  // Accumulated finalized transcript across multiple result events
+  const finalizedTranscriptRef = useRef('');
+
+  // --- Preflight: detect STT environment support once ---
+  const isSttSupported =
+    typeof window !== 'undefined' &&
+    typeof window.isSecureContext !== 'undefined' &&
+    window.isSecureContext &&
+    !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  // Helper: cleanly stop the active recognizer and reset state
+  const stopRecognition = useCallback(() => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.abort();
+      } catch (_) { /* ignore if already stopped */ }
+      recognitionRef.current = null;
+    }
+    finalizedTranscriptRef.current = '';
+    setIsListening(false);
+  }, []);
 
   // Speech-to-text using Web SpeechRecognition API
   const handleMic = useCallback(() => {
-    const SpeechRecognition =
-      typeof window !== 'undefined' &&
-      (window.SpeechRecognition || window.webkitSpeechRecognition);
-
-    if (!SpeechRecognition) {
-      alert('Speech recognition is not supported in your browser. Try Chrome or Safari.');
+    // --- Preflight checks (Comment 3) ---
+    if (!isSttSupported) {
+      setMicError('Voice input requires a secure connection (HTTPS) and a supported browser such as Chrome or Safari.');
       return;
     }
+
+    setMicError(null);
 
     // Stop if already listening
     if (isListening && recognitionRef.current) {
@@ -96,37 +120,90 @@ export function BaseChatWindow({
       return;
     }
 
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-IN';
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     recognitionRef.current = recognition;
+    // Reset accumulator for this new session
+    finalizedTranscriptRef.current = '';
 
-    recognition.onstart = () => setIsListening(true);
+    recognition.onstart = () => {
+      setIsListening(true);
+      setMicError(null);
+    };
 
+    // --- Comment 1: accumulate finalized + interim segments ---
     recognition.onresult = (event) => {
-      let transcript = '';
+      // Accumulate any newly finalized segments that precede resultIndex
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalizedTranscriptRef.current += event.results[i][0].transcript;
+        }
       }
-      setInput(transcript);
+      // Build the display value: all finalized text + current interim word(s)
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (!event.results[i].isFinal) {
+          interim += event.results[i][0].transcript;
+        }
+      }
+      setInput(finalizedTranscriptRef.current + interim);
     };
 
     recognition.onend = () => {
-      setIsListening(false);
       recognitionRef.current = null;
+      finalizedTranscriptRef.current = '';
+      setIsListening(false);
       // Auto-focus input so user can edit or send
       setTimeout(() => inputRef.current?.focus(), 100);
     };
 
+    // --- Comment 3: user-facing error messages for known error codes ---
     recognition.onerror = (e) => {
       console.error('[STT] Error:', e.error);
-      setIsListening(false);
+      let userMessage = null;
+      switch (e.error) {
+        case 'not-allowed':
+        case 'service-not-allowed':
+          userMessage = 'Microphone access was denied. Please allow mic permissions in your browser settings, then try again.';
+          break;
+        case 'audio-capture':
+          userMessage = 'No microphone was found. Please connect a mic and try again.';
+          break;
+        case 'network':
+          userMessage = 'A network error occurred during speech recognition. Check your connection and try again.';
+          break;
+        case 'no-speech':
+          userMessage = 'No speech detected. Please speak clearly and try again.';
+          break;
+        default:
+          userMessage = `Voice input error: ${e.error}. Please type your message instead.`;
+      }
+      setMicError(userMessage);
       recognitionRef.current = null;
+      finalizedTranscriptRef.current = '';
+      setIsListening(false);
     };
 
     recognition.start();
-  }, [isListening]);
+  }, [isListening, isSttSupported]);
+
+  // --- Comment 2: Stop recognition when chat closes or component unmounts ---
+  useEffect(() => {
+    if (!isOpen && isListening) {
+      stopRecognition();
+    }
+  }, [isOpen, isListening, stopRecognition]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopRecognition();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Scroll to bottom on new message
   useEffect(() => {
@@ -680,8 +757,37 @@ export function BaseChatWindow({
         </div>
 
         {/* Input */}
-        <div className="chat-input-area">
-          {/* Mic button */}
+        <div className="chat-input-area" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 0 }}>
+          {/* Mic error banner (Comment 3) */}
+          {micError && (
+            <div
+              role="alert"
+              style={{
+                fontSize: '11.5px',
+                color: '#b91c1c',
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '10px',
+                padding: '6px 10px',
+                marginBottom: '6px',
+                lineHeight: 1.4,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '6px',
+              }}
+            >
+              <span aria-hidden="true" style={{ flexShrink: 0 }}>🎙️</span>
+              <span>{micError} <strong>Type your message below.</strong></span>
+              <button
+                onClick={() => setMicError(null)}
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#b91c1c', fontSize: '13px', flexShrink: 0 }}
+                aria-label="Dismiss mic error"
+              >✕</button>
+            </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Mic button — hidden when STT is unsupported (Comment 3) */}
+          {isSttSupported && (
           <button
             id="chat-mic-btn"
             className={`chat-mic-btn${isListening ? ' listening' : ''}`}
@@ -708,6 +814,7 @@ export function BaseChatWindow({
               </svg>
             )}
           </button>
+          )}
 
           <input
             ref={inputRef}
@@ -735,6 +842,7 @@ export function BaseChatWindow({
               <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
+          </div>
         </div>
       </div>
     </>
