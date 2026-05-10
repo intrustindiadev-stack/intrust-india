@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function MerchantSubscriptionPayButton({
@@ -16,6 +16,13 @@ export default function MerchantSubscriptionPayButton({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [selectedPlan, setSelectedPlan] = useState(plans[0] || null);
+    
+    // Ensure a plan is selected if the plans prop updates or initializes
+    useEffect(() => {
+        if (!selectedPlan && plans.length > 0) {
+            setSelectedPlan(plans[0]);
+        }
+    }, [plans, selectedPlan]);
 
     const currentExpiry = subscriptionExpiresAt ? new Date(subscriptionExpiresAt) : null;
     const isExpired = currentExpiry && currentExpiry < new Date();
@@ -24,6 +31,11 @@ export default function MerchantSubscriptionPayButton({
         : null;
 
     const handleSubscribe = async () => {
+        if (!selectedPlan) {
+            setError('Please select a subscription plan.');
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
@@ -189,7 +201,7 @@ export default function MerchantSubscriptionPayButton({
                     {/* Pay Button */}
                     <button
                         onClick={handleSubscribe}
-                        disabled={loading}
+                        disabled={loading || !selectedPlan}
                         className="group relative w-full py-4 rounded-2xl bg-gradient-to-r from-[#D4AF37] to-amber-500 text-slate-900 font-extrabold text-lg shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 overflow-hidden"
                     >
                         {/* Button hover gleam */}

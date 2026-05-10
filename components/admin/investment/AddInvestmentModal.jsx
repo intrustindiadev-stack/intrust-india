@@ -17,8 +17,6 @@ export default function AddInvestmentModal({ onClose }) {
     const [search, setSearch] = useState('');
     const [selectedMerchant, setSelectedMerchant] = useState(null);
     const [amountRupees, setAmountRupees] = useState('');
-    const [interestRatePercent, setInterestRatePercent] = useState('12');
-    const [durationDays, setDurationDays] = useState('365');
     const [description, setDescription] = useState('');
 
     useEffect(() => {
@@ -52,7 +50,7 @@ export default function AddInvestmentModal({ onClose }) {
             const res = await fetch('/api/admin/investments', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-                body: JSON.stringify({ merchantId: selectedMerchant.id, amountRupees, description, interestRatePercent, durationDays })
+                body: JSON.stringify({ merchantId: selectedMerchant.id, amountRupees, description })
             });
 
             const result = await res.json();
@@ -67,9 +65,6 @@ export default function AddInvestmentModal({ onClose }) {
         }
     };
 
-    const projectedReturn = amountRupees && interestRatePercent && durationDays
-        ? (Number(amountRupees) * (Number(interestRatePercent) / 100) * (Number(durationDays) / 365)).toFixed(0)
-        : null;
 
     const filteredMerchants = merchants.filter(m =>
         m.business_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -158,39 +153,6 @@ export default function AddInvestmentModal({ onClose }) {
                         </div>
                     </div>
 
-                    {/* Interest Rate + Duration */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Rate (% p.a.)</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-amber-500">
-                                    <Percent size={16} />
-                                </div>
-                                <input type="number" step="0.1" min="0" max="100" value={interestRatePercent}
-                                    onChange={(e) => setInterestRatePercent(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-black focus:border-indigo-500 focus:bg-white outline-none transition-all" />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Duration (Days)</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400">
-                                    <Calendar size={16} />
-                                </div>
-                                <input type="number" min="30" max="1825" value={durationDays}
-                                    onChange={(e) => setDurationDays(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-black focus:border-indigo-500 focus:bg-white outline-none transition-all" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Projected Return */}
-                    {projectedReturn && Number(projectedReturn) > 0 && (
-                        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center justify-between">
-                            <p className="text-xs font-black text-emerald-600">Projected Merchant Return</p>
-                            <p className="text-lg font-black text-emerald-700">₹{Number(projectedReturn).toLocaleString('en-IN')}</p>
-                        </div>
-                    )}
 
                     {/* Description */}
                     <div className="space-y-2">

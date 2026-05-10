@@ -82,7 +82,7 @@ export default function AdminInvestmentsPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Growth Fund Management</h1>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Mera Paisa Management</h1>
                         <p className="text-sm text-slate-500 font-medium mt-1">Manage capital deployments and performance feeds</p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -141,7 +141,7 @@ export default function AdminInvestmentsPage() {
                                 <tr className="bg-slate-50/50 border-b border-slate-100">
                                     <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Merchant</th>
                                     <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
-                                    <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Rate</th>
+                                    <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Profit Shared</th>
                                     <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Paid Out</th>
                                     <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
                                     <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
@@ -170,10 +170,8 @@ export default function AdminInvestmentsPage() {
                                             </div>
                                         </td>
                                         <td className="px-8 py-5 text-right font-black text-slate-900 text-sm">₹{(inv.amount_paise / 100).toLocaleString('en-IN')}</td>
-                                        <td className="px-8 py-5 text-center">
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-[10px] font-black border border-indigo-100">
-                                                <Percent size={10} />{inv.interest_rate_percent || 12}%
-                                            </span>
+                                        <td className="px-8 py-5 text-right font-black text-indigo-600 text-sm">
+                                            ₹{((inv.total_profit_paid_paise || 0) / 100).toLocaleString('en-IN')}
                                         </td>
                                         <td className="px-8 py-5 text-right font-black text-emerald-600 text-sm">
                                             ₹{((inv.total_profit_paid_paise || 0) / 100).toLocaleString('en-IN')}

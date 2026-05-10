@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Building2, FileText, Upload, CheckCircle, ArrowRight, Shield,
     Loader2, ChevronLeft, Store, TrendingUp, Users, Check, Sparkles, CreditCard, Banknote, X, Home, Share2
@@ -46,7 +46,20 @@ const Confetti = () => {
 };
 
 export default function MerchantApplyPage() {
+    return (
+        <Suspense fallback={
+            <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-[#020617] transition-colors">
+                <Loader2 className="animate-spin text-[#D4AF37]" size={32} />
+            </div>
+        }>
+            <MerchantApplyPageInner />
+        </Suspense>
+    );
+}
+
+function MerchantApplyPageInner() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user, profile, loading: authLoading, refreshProfile } = useAuth();
     const supabase = createClient();
     const [step, setStep] = useState(1);
@@ -86,6 +99,17 @@ export default function MerchantApplyPage() {
             }
         }
     }, [user, authLoading, router, supabase]);
+    
+    // Auto-fill referral code from URL
+    useEffect(() => {
+        const ref = searchParams.get('ref');
+        if (ref) {
+            setFormData(prev => ({
+                ...prev,
+                merchantReferralCode: ref.toUpperCase().trim()
+            }));
+        }
+    }, [searchParams]);
 
 
     // Form State

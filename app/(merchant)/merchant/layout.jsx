@@ -8,9 +8,38 @@ import MerchantGlobalChat from '@/components/chat/merchant/MerchantGlobalChat';
 
 
 import { SubscriptionProvider } from '@/components/merchant/SubscriptionContext';
+import { getPricingSettings } from '@/app/(admin)/admin/settings/actions';
 
 export default async function MerchantRootLayout({ children }) {
     const supabase = await createServerSupabaseClient();
+    const pricing = await getPricingSettings();
+
+    const dynamicPlans = [
+        {
+            key: 'MSUB_1M',
+            label: '1 Month',
+            price: pricing.sub1m,
+            priceFormatted: pricing.sub1m.toFixed(2),
+            durationDays: 30,
+            description: null,
+        },
+        {
+            key: 'MSUB_6M',
+            label: '6 Months',
+            price: pricing.sub6m,
+            priceFormatted: pricing.sub6m.toFixed(2),
+            durationDays: 180,
+            description: 'Best Value',
+        },
+        {
+            key: 'MSUB_12M',
+            label: '12 Months',
+            price: pricing.sub12m,
+            priceFormatted: pricing.sub12m.toFixed(2),
+            durationDays: 365,
+            description: 'Most Savings',
+        },
+    ];
 
     // 1. Check User
     const {
@@ -51,7 +80,7 @@ export default async function MerchantRootLayout({ children }) {
             : { id: 'admin-bypass', business_name: 'Admin View', status: 'approved', user_profiles: profile };
 
         return (
-            <SubscriptionProvider isSubscribed={true} merchantData={merchantWithProfile}>
+            <SubscriptionProvider isSubscribed={true} merchantData={merchantWithProfile} plans={dynamicPlans}>
                 <>
                     <MerchantLayout>
                         {children}
@@ -114,7 +143,7 @@ export default async function MerchantRootLayout({ children }) {
 
     // 5. Render Layout (Authorized to View, Interactions handled by SubscriptionProvider)
     return (
-        <SubscriptionProvider isSubscribed={isSubscribed} merchantData={merchantWithProfile}>
+        <SubscriptionProvider isSubscribed={isSubscribed} merchantData={merchantWithProfile} plans={dynamicPlans}>
             <>
                 <MerchantLayout>
                     {children}

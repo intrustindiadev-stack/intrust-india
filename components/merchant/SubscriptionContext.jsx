@@ -6,7 +6,7 @@ import SubscriptionGuardModal from './SubscriptionGuardModal';
 
 const SubscriptionContext = createContext();
 
-export function SubscriptionProvider({ isSubscribed, merchantData, children }) {
+export function SubscriptionProvider({ isSubscribed, merchantData, plans = [], children }) {
     const [showModal, setShowModal] = useState(false);
     const pathname = usePathname();
     const isRenewal = merchantData?.subscription_status === 'active' || Boolean(merchantData?.subscription_expires_at);
@@ -37,6 +37,7 @@ export function SubscriptionProvider({ isSubscribed, merchantData, children }) {
                 onClose={() => setShowModal(false)}
                 merchantData={merchantData}
                 isRenewal={isRenewal} 
+                plans={plans}
             />
         </SubscriptionContext.Provider>
     );

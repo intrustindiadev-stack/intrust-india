@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import MerchantSubscriptionPayButton from './MerchantSubscriptionPayButton';
 
-export default function SubscriptionGuardModal({ isOpen, onClose, merchantData, isRenewal = false }) {
+export default function SubscriptionGuardModal({ isOpen, onClose, merchantData, plans = [], isRenewal = false }) {
     // Prevent scrolling when modal is open
     useEffect(() => {
         if (isOpen) {
@@ -43,6 +43,7 @@ export default function SubscriptionGuardModal({ isOpen, onClose, merchantData, 
                         payerMobile={merchantData.user_profiles?.phone || '9999999999'}
                         isRenewal={isRenewal}
                         subscriptionExpiresAt={merchantData.subscription_expires_at}
+                        plans={plans}
                     />
                 </div>
             </div>

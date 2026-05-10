@@ -14,6 +14,23 @@ export default function ReferralCodeCard({ referralCode }) {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const handleShare = async () => {
+        if (!referralCode) return;
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Join InTrust India as a Partner',
+                    text: `Grow your business with InTrust India! Use my referral code: ${referralCode}`,
+                    url: shareUrl,
+                });
+            } catch (err) {
+                console.error('Error sharing:', err);
+            }
+        } else {
+            handleCopy();
+        }
+    };
+
     return (
         <div className="bg-gradient-to-br from-[#1a1c23] to-[#2d3748] rounded-2xl p-6 shadow-xl border border-white/10 relative overflow-hidden">
             {/* Subtle glow effect */}
@@ -32,23 +49,34 @@ export default function ReferralCodeCard({ referralCode }) {
                     {referralCode || 'Generating...'}
                 </div>
                 
-                <button
-                    onClick={handleCopy}
-                    disabled={!referralCode}
-                    className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-[#D4AF37] text-[#020617] hover:bg-[#B8860B] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {copied ? (
-                        <>
-                            <Check size={18} />
-                            Copied!
-                        </>
-                    ) : (
-                        <>
-                            <Copy size={18} />
-                            Copy Link
-                        </>
-                    )}
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                    <button
+                        onClick={handleCopy}
+                        disabled={!referralCode}
+                        className="flex-1 sm:flex-initial px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-white/5 text-white border border-white/10 hover:bg-white/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {copied ? (
+                            <>
+                                <Check size={18} />
+                                Copied!
+                            </>
+                        ) : (
+                            <>
+                                <Copy size={18} />
+                                Copy Link
+                            </>
+                        )}
+                    </button>
+                    
+                    <button
+                        onClick={handleShare}
+                        disabled={!referralCode}
+                        className="flex-1 sm:flex-initial px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-[#D4AF37] text-[#020617] hover:bg-[#B8860B] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#D4AF37]/20"
+                    >
+                        <Share2 size={18} />
+                        Share Link
+                    </button>
+                </div>
             </div>
             
             <div className="mt-4 text-xs text-gray-500 font-mono break-all text-center sm:text-left">

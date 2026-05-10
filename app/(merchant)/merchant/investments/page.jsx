@@ -5,7 +5,7 @@ import { animate, motionValue, motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
 import {
     TrendingUp, ShieldCheck, Plus, AlertTriangle, CheckCircle2,
-    Eye, EyeOff, RefreshCw, MapPin, Tag, Clock, Info, Percent
+    Eye, EyeOff, RefreshCw, MapPin, Tag, Clock, Info, Percent, Sparkles
 } from 'lucide-react';
 
 const STATUS_LABELS = { pending: 'Review Mein', active: 'Active', completed: 'Completed', rejected: 'Rejected' };
@@ -67,22 +67,19 @@ export default function MerchantInvestmentsPage() {
 
     useEffect(() => { fetchData(); }, []);
 
-    // Calculate interest-based returns (not from order profit sums)
-    const calcInterest = (inv) => {
-        if (inv.status !== 'active' || !inv.approved_at) return 0;
-        const principal = inv.amount_paise / 100;
-        const rate = (inv.interest_rate_percent || 12) / 100;
-        const daysElapsed = Math.max(0, (Date.now() - new Date(inv.approved_at)) / (1000 * 60 * 60 * 24));
-        return principal * (rate / 365) * daysElapsed;
+    // Calculate profit based on actual orders fed by admin
+    const calcProfit = (inv) => {
+        const invOrders = allOrders.filter(o => o.investment_id === inv.id);
+        const totalProfitPaise = invOrders.reduce((sum, order) => sum + (order.profit_paise || 0), 0);
+        return totalProfitPaise / 100;
     };
 
     const stats = useMemo(() => {
         const active = investments.filter(i => i.status === 'active');
         const totalDeployed = active.reduce((s, i) => s + i.amount_paise / 100, 0);
-        const totalInterestEarned = active.reduce((s, i) => s + calcInterest(i), 0);
-        const avgRate = active.length ? active.reduce((s, i) => s + (i.interest_rate_percent || 12), 0) / active.length : 12;
-        return { totalDeployed, totalProfit: totalInterestEarned, activeCount: active.length, avgRate };
-    }, [investments]);
+        const totalProfit = allOrders.reduce((s, o) => s + (o.profit_paise || 0), 0) / 100;
+        return { totalDeployed, totalProfit, activeCount: active.length };
+    }, [investments, allOrders]);
 
     const currentOrders = useMemo(() => {
         if (!selectedInv) return allOrders;
@@ -199,12 +196,12 @@ export default function MerchantInvestmentsPage() {
                                     <p className="text-2xl font-extrabold text-white">₹{isRevealed ? stats.totalDeployed.toLocaleString('en-IN') : '• • • •'}</p>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <p className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest">Interest Accrued</p>
-                                    <p className="text-2xl font-extrabold text-emerald-400">₹{isRevealed ? stats.totalProfit.toFixed(2) : '• • • •'}</p>
+                                    <p className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest">Total Profit</p>
+                                    <p className="text-2xl font-extrabold text-emerald-400">₹{isRevealed ? stats.totalProfit.toLocaleString('en-IN') : '• • • •'}</p>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <p className="text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest">Interest Rate</p>
-                                    <p className="text-2xl font-extrabold text-indigo-300">{stats.avgRate.toFixed(1)}% p.a.</p>
+                                    <p className="text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest">Model</p>
+                                    <p className="text-2xl font-extrabold text-indigo-300 uppercase tracking-tight">Profit Share</p>
                                 </div>
                             </div>
                         </div>
@@ -214,15 +211,15 @@ export default function MerchantInvestmentsPage() {
                         <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm flex flex-col justify-between group hover:border-indigo-400 transition-all flex-1">
                             <div className="flex items-center justify-between">
                                 <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                                    <Percent size={24} />
+                                    <TrendingUp size={24} />
                                 </div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Avg Rate</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dynamic Model</span>
                             </div>
                             <div className="mt-6">
-                                <p className="text-5xl font-extrabold text-slate-900 tracking-tighter">{stats.avgRate.toFixed(1)}%<span className="text-[11px] text-indigo-500 font-bold ml-2 tracking-widest uppercase">p.a.</span></p>
+                                <p className="text-4xl font-extrabold text-slate-900 tracking-tighter uppercase">Profit Sharing</p>
                                 <div className="mt-2 flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                                    <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-tight">Guaranteed Returns</p>
+                                    <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-tight">Trade Performance Returns</p>
                                 </div>
                             </div>
                         </div>
@@ -242,7 +239,7 @@ export default function MerchantInvestmentsPage() {
                                 </div>
                             </div>
                             <p className="text-slate-400 text-[11px] font-medium leading-relaxed relative z-10 mt-6 pt-6 border-t border-white/5 opacity-80">
-                                Your capital is deployed into verified supply chain orders, generating fixed returns.
+                                Your capital is deployed into verified supply chain orders, generating profit-based returns.
                             </p>
                         </div>
                     </div>
@@ -283,10 +280,9 @@ export default function MerchantInvestmentsPage() {
                                                     {STATUS_LABELS[inv.status] || inv.status}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-4 text-[11px] font-bold">
-                                                <span className="text-indigo-600">{inv.interest_rate_percent || 12}% p.a.</span>
-                                                <span className="text-slate-300">|</span>
-                                                <span className="text-emerald-600">+₹{calcInterest(inv).toFixed(2)} accrued</span>
+                                            <div className="flex items-center gap-4 text-[11px] font-bold text-emerald-600">
+                                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                <span>₹{calcProfit(inv).toLocaleString('en-IN')} total profit earned</span>
                                             </div>
                                             <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between">
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(inv.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
@@ -314,12 +310,28 @@ export default function MerchantInvestmentsPage() {
 
                             <div className="max-h-[520px] overflow-y-auto divide-y divide-slate-50">
                                 {currentOrders.length === 0 ? (
-                                    <div className="p-20 text-center flex flex-col items-center gap-4">
-                                        <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center">
-                                            <TrendingUp size={28} className="text-slate-200" />
+                                    <div className="p-24 text-center flex flex-col items-center gap-6">
+                                        <div className="w-20 h-20 bg-indigo-50 rounded-[2.5rem] flex items-center justify-center relative overflow-hidden group">
+                                            <div className="absolute inset-0 bg-indigo-600/10 scale-0 group-hover:scale-100 transition-transform duration-500 rounded-full" />
+                                            <Sparkles size={32} className="text-indigo-400 relative z-10" />
                                         </div>
-                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Waiting for order feed...</p>
-                                        <p className="text-xs text-slate-300 font-medium max-w-xs">Orders will appear here once admin allocates your capital to supply chain movements</p>
+                                        <div className="space-y-2">
+                                            <h4 className="text-lg font-black text-slate-800 tracking-tight">
+                                                {investments.length === 0 ? "Start Your Growth Journey" : "Select Active Funds to Check Orders"}
+                                            </h4>
+                                            <p className="text-sm text-slate-400 font-medium max-w-[280px] mx-auto leading-relaxed">
+                                                {investments.length === 0 
+                                                    ? "Create your first fund request to start earning profit-based returns through our trade network."
+                                                    : "Tap on one of your active growth funds to see exactly where your capital is powering trade today."
+                                                }
+                                            </p>
+                                        </div>
+                                        {investments.length > 0 && (
+                                            <div className="flex items-center gap-2 px-4 py-2 bg-slate-900/5 rounded-full border border-slate-900/5">
+                                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Real-time Trade Tracking</span>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     currentOrders.map(order => (
@@ -376,7 +388,7 @@ export default function MerchantInvestmentsPage() {
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Amount (₹)</label>
                                     <input type="number" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="Min ₹10,000"
                                         className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 text-xl font-black focus:border-indigo-500 focus:bg-white outline-none transition-all" />
-                                    <p className="text-[10px] text-slate-400 font-bold ml-1">Expected rate: ~12% p.a. (admin may adjust)</p>
+                                    <p className="text-[10px] text-slate-400 font-bold ml-1">Dynamic profit-sharing model (no fixed interest).</p>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Notes (Optional)</label>

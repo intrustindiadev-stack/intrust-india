@@ -185,12 +185,55 @@ export default function ReferAndEarnPage() {
         fetchData();
     }, [user]);
 
+    const shareUrl = `https://intrustindia.com/signup?ref=${referralCode}`;
+    const shareText = `Join my InTrust Empire! Use my code ${referralCode} to unlock exclusive rewards.`;
+
     const handleCopy = () => {
         if (!referralCode) return;
-        navigator.clipboard.writeText(referralCode);
+        navigator.clipboard.writeText(shareUrl);
         setCopied(true);
-        toast.success('Empire Code copied!');
         setTimeout(() => setCopied(false), 2000);
+        toast.success("Referral link copied to neural link!");
+    };
+
+    const handleMainShare = async () => {
+        if (!referralCode) return;
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'InTrust Empire Invitation',
+                    text: shareText,
+                    url: shareUrl,
+                });
+            } catch (err) {
+                console.error('Error sharing:', err);
+                setShowShareSheet(true);
+            }
+        } else {
+            setShowShareSheet(true);
+        }
+    };
+
+    const handleChannelShare = (channel) => {
+        let url = '';
+        switch (channel) {
+            case 'WhatsApp':
+                url = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+                break;
+            case 'Telegram':
+                url = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+                break;
+            case 'Instagram':
+                navigator.clipboard.writeText(shareUrl);
+                toast.success("Link copied! Opening Instagram...");
+                url = 'https://instagram.com';
+                break;
+            case 'X / Twitter':
+                url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+                break;
+        }
+        if (url) window.open(url, '_blank');
+        setShowShareSheet(false);
     };
 
     const handleShare = async () => {
@@ -216,6 +259,7 @@ export default function ReferAndEarnPage() {
             if (res.ok) {
                 toast.success('Joined successfully!');
                 setCodeApplied(true);
+                setHasReferrer(true);
                 const networkRes = await fetch('/api/referral/network');
                 if (networkRes.ok) {
                     const networkData = await networkRes.json();
@@ -344,15 +388,43 @@ export default function ReferAndEarnPage() {
                                 {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
                                 {copied ? 'Secured' : 'Secure Code'}
                             </button>
-                            <button
-                                onClick={handleShare}
-                                className="w-16 h-16 flex items-center justify-center bg-black text-white rounded-[2rem] shadow-xl hover:bg-slate-900 active:scale-95 transition-all border border-white/10"
-                            >
-                                <Share2 size={24} />
-                            </button>
+                                <button
+                                    onClick={handleMainShare}
+                                    className="p-4 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all active:scale-95"
+                                >
+                                    <Share2 size={24} />
+                                </button>
                         </div>
                     </div>
                 </motion.div>
+
+                {/* Enter Referral Code Section */}
+                {!hasReferrer && !codeApplied && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white dark:bg-[#020617] rounded-[3rem] p-8 border border-gray-100 dark:border-white/5 shadow-sm mb-10"
+                    >
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Enter Invite Code</h3>
+                        <p className="text-xs text-slate-500 mb-6">Received an invite? Enter it here to join an empire.</p>
+                        <div className="flex gap-3">
+                            <input
+                                type="text"
+                                value={enterCode}
+                                onChange={(e) => setEnterCode(e.target.value.toUpperCase())}
+                                placeholder="Neural Code"
+                                className="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 font-mono font-bold text-lg focus:border-emerald-500 outline-none transition-all uppercase"
+                            />
+                            <button
+                                onClick={handleApplyCode}
+                                disabled={applyingCode}
+                                className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-emerald-600 transition-all disabled:opacity-50"
+                            >
+                                {applyingCode ? <RefreshCw className="animate-spin" size={18} /> : 'Connect'}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* Network Chain Tree */}
                 <section className="mb-14">
@@ -475,10 +547,7 @@ export default function ReferAndEarnPage() {
                                 ].map((channel) => (
                                     <button
                                         key={channel.label}
-                                        onClick={() => {
-                                            toast.success(`Opening ${channel.label}...`);
-                                            setShowShareSheet(false);
-                                        }}
+                                        onClick={() => handleChannelShare(channel.label)}
                                         className="flex flex-col items-center gap-3 p-6 rounded-[2.5rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-all active:scale-95"
                                     >
                                         <div className={`w-14 h-14 rounded-full bg-${channel.color}-500/10 text-${channel.color}-500 flex items-center justify-center shadow-inner`}>

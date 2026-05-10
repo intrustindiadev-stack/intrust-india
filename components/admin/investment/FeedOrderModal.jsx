@@ -28,10 +28,8 @@ export default function FeedOrderModal({ investment, onClose }) {
 
     const filteredCities = CITY_SUGGESTIONS.filter(c => c.toLowerCase().includes(location.toLowerCase()) && location.length > 0);
 
-    // Auto-calculate profit if amount is set (based on investment rate / 365 for 1 day)
-    const autoProfitSuggestion = amountRupees && investment?.interest_rate_percent
-        ? ((Number(amountRupees) * (investment.interest_rate_percent / 100)) / 365).toFixed(2)
-        : null;
+    // No auto-suggestion as it's purely profit-sharing now
+    const autoProfitSuggestion = null;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -99,8 +97,8 @@ export default function FeedOrderModal({ investment, onClose }) {
                         </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-[10px] font-black text-slate-400 uppercase">Rate</p>
-                        <p className="text-sm font-black text-amber-600">{investment.interest_rate_percent || 12}% p.a.</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase">Model</p>
+                        <p className="text-sm font-black text-emerald-600">Profit Sharing</p>
                     </div>
                 </div>
 
