@@ -317,7 +317,7 @@ export default function AdminOrderDetailClient({ order: initialOrder, sellerDeta
                                                 <p className="font-bold text-slate-900 text-sm leading-tight">{item.product_title}</p>
                                                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                                                     {item.hsn_code && <span className="text-[9px] font-bold text-slate-400">HSN: {item.hsn_code}</span>}
-                                                    {gstRate > 0 && <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">GST {gstRate}%</span>}
+                                                    {gstRate > 0 && <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">SGST {gstRate / 2}% | CGST {gstRate / 2}%</span>}
                                                     <span className="text-[9px] font-bold text-slate-400">× {item.quantity}</span>
                                                 </div>
                                             </div>
@@ -357,10 +357,16 @@ export default function AdminOrderDetailClient({ order: initialOrder, sellerDeta
                             </div>
                         )}
                         {totalGst > 0 && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-500 font-medium">GST</span>
-                                <span className="font-bold text-slate-900">{fmt(totalGst)}</span>
-                            </div>
+                            <>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-500 font-medium">SGST</span>
+                                    <span className="font-bold text-slate-900">{fmt(totalGst / 2)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-500 font-medium">CGST</span>
+                                    <span className="font-bold text-slate-900">{fmt(totalGst / 2)}</span>
+                                </div>
+                            </>
                         )}
                         <div className="pt-3 border-t border-dashed border-slate-200 flex justify-between">
                             <span className="font-black text-slate-900">Grand Total</span>

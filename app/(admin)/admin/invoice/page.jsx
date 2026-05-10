@@ -78,8 +78,10 @@ export default function ManualInvoiceGeneratorPage() {
     // Calculations
     const calculateItemTotal = (item) => {
         const base = item.quantity * item.unit_price;
-        const gst = base * (item.gst_percent / 100);
-        return { base, gst, total: base + gst };
+        const totalGst = base * (item.gst_percent / 100);
+        const sgst = totalGst / 2;
+        const cgst = totalGst / 2;
+        return { base, gst: totalGst, sgst, cgst, total: base + totalGst };
     };
 
     const totals = items.reduce(
@@ -87,11 +89,13 @@ export default function ManualInvoiceGeneratorPage() {
             const calc = calculateItemTotal(item);
             return {
                 subtotal: acc.subtotal + calc.base,
+                totalSgst: acc.totalSgst + calc.sgst,
+                totalCgst: acc.totalCgst + calc.cgst,
                 totalGst: acc.totalGst + calc.gst,
                 grandTotal: acc.grandTotal + calc.total,
             };
         },
-        { subtotal: 0, totalGst: 0, grandTotal: 0 }
+        { subtotal: 0, totalSgst: 0, totalCgst: 0, totalGst: 0, grandTotal: 0 }
     );
 
     const handleGenerate = async () => {
@@ -475,9 +479,15 @@ export default function ManualInvoiceGeneratorPage() {
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="text-slate-500 font-medium flex items-center gap-1">
-                                            <Percent size={11} /> Total GST
+                                            <Percent size={11} /> SGST ({(items[0]?.gst_percent / 2) || 0}%)
                                         </span>
-                                        <span className="font-bold text-emerald-600">Rs. {formatCurrency(totals.totalGst)}</span>
+                                        <span className="font-bold text-emerald-600">Rs. {formatCurrency(totals.totalSgst)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-500 font-medium flex items-center gap-1">
+                                            <Percent size={11} /> CGST ({(items[0]?.gst_percent / 2) || 0}%)
+                                        </span>
+                                        <span className="font-bold text-emerald-600">Rs. {formatCurrency(totals.totalCgst)}</span>
                                     </div>
                                 </div>
 

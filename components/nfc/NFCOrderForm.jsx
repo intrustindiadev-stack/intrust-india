@@ -273,8 +273,12 @@ export default function NFCOrderForm({ setIsSuccess }) {
                                                 <span className={`text-sm font-black italic ${isDark ? 'text-white' : 'text-slate-900'}`}>₹{price}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className={`text-sm font-medium tracking-tight ${isDark ? 'text-white/50' : 'text-slate-600'}`}>GST ({gstPercent}%)</span>
-                                                <span className={`text-sm font-black italic ${isDark ? 'text-white' : 'text-slate-900'}`}>₹{gstAmount.toFixed(0)}</span>
+                                                <span className={`text-sm font-medium tracking-tight ${isDark ? 'text-white/50' : 'text-slate-600'}`}>SGST ({gstPercent / 2}%)</span>
+                                                <span className={`text-sm font-black italic ${isDark ? 'text-white' : 'text-slate-900'}`}>₹{(gstAmount / 2).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className={`text-sm font-medium tracking-tight ${isDark ? 'text-white/50' : 'text-slate-600'}`}>CGST ({gstPercent / 2}%)</span>
+                                                <span className={`text-sm font-black italic ${isDark ? 'text-white' : 'text-slate-900'}`}>₹{(gstAmount / 2).toFixed(2)}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className={`text-sm font-medium tracking-tight ${isDark ? 'text-white/50' : 'text-slate-600'}`}>Delivery</span>

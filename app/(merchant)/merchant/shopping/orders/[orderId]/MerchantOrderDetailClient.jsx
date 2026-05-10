@@ -324,12 +324,12 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
                                         </span>
                                         <span className="text-[9px] text-slate-500 dark:text-gray-500 font-bold">× {item.quantity} units</span>
                                         {item.gst_percentage > 0 && (
-                                            <span className="text-[9px] text-teal-600 dark:text-teal-400 font-black">GST {item.gst_percentage}%</span>
+                                            <span className="text-[9px] text-teal-600 dark:text-teal-400 font-black">SGST {item.gst_percentage / 2}% | CGST {item.gst_percentage / 2}%</span>
                                         )}
                                     </div>
                                     {item.gst_percentage > 0 && (
                                         <p className="text-[10px] text-slate-400 dark:text-gray-600 mt-1">
-                                            Base: ₹{((item.total_price_paise || 0) / 100).toFixed(2)} · Tax: ₹{(gstAmt / 100).toFixed(2)}
+                                            Base: ₹{((item.total_price_paise || 0) / 100).toFixed(2)} · SGST: ₹{(gstAmt / 200).toFixed(2)} · CGST: ₹{(gstAmt / 200).toFixed(2)}
                                         </p>
                                     )}
                                 </div>

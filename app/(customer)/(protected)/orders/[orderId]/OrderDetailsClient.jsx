@@ -462,8 +462,12 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                         )}
 
                         <div className="flex justify-between items-center">
-                            <span className={isDark ? 'text-white/40' : 'text-slate-500'}>GST (Calculated)</span>
-                            <span>₹{(billDetails.gstTotal / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            <span className={isDark ? 'text-white/40' : 'text-slate-500'}>SGST (Calculated)</span>
+                            <span>₹{(billDetails.gstTotal / 200).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className={isDark ? 'text-white/40' : 'text-slate-500'}>CGST (Calculated)</span>
+                            <span>₹{(billDetails.gstTotal / 200).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
 
                         <div className="flex justify-between items-center">

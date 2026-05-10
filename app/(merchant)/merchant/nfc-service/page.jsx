@@ -197,7 +197,10 @@ export default function MerchantNFCServicePage() {
                                 <span>Card Price</span><span className="font-bold text-slate-700 dark:text-slate-200">₹{price}</span>
                             </div>
                             <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
-                                <span>GST ({gstPercent}%)</span><span className="font-bold text-slate-700 dark:text-slate-200">₹{gstAmount.toFixed(0)}</span>
+                                <span>SGST ({gstPercent / 2}%)</span><span className="font-bold text-slate-700 dark:text-slate-200">₹{(gstAmount / 2).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+                                <span>CGST ({gstPercent / 2}%)</span><span className="font-bold text-slate-700 dark:text-slate-200">₹{(gstAmount / 2).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
                                 <span>Delivery</span><span className="font-bold text-emerald-600">₹{deliveryPrice}</span>
@@ -335,7 +338,8 @@ export default function MerchantNFCServicePage() {
 
                                         <div className="bg-[#D4AF37]/5 rounded-xl border border-[#D4AF37]/10 p-4 space-y-2">
                                             <div className="flex justify-between text-xs"><span className="text-slate-500">Card Price</span><span className="font-bold text-slate-700 dark:text-slate-300">₹{price}</span></div>
-                                            <div className="flex justify-between text-xs"><span className="text-slate-500">GST ({gstPercent}%)</span><span className="font-bold text-slate-700 dark:text-slate-300">₹{gstAmount.toFixed(0)}</span></div>
+                                            <div className="flex justify-between text-xs"><span className="text-slate-500">SGST ({gstPercent / 2}%)</span><span className="font-bold text-slate-700 dark:text-slate-300">₹{(gstAmount / 2).toFixed(2)}</span></div>
+                                            <div className="flex justify-between text-xs"><span className="text-slate-500">CGST ({gstPercent / 2}%)</span><span className="font-bold text-slate-700 dark:text-slate-300">₹{(gstAmount / 2).toFixed(2)}</span></div>
                                             <div className="flex justify-between text-xs"><span className="text-slate-500">Delivery</span><span className="font-bold text-emerald-600">₹{deliveryPrice}</span></div>
                                             <div className="border-t border-[#D4AF37]/10 pt-2 flex justify-between">
                                                 <span className="text-xs font-bold text-[#D4AF37]">Total Payable</span>
