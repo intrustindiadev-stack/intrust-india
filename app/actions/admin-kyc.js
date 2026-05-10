@@ -12,6 +12,7 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
 import { logRewardRpcResult } from '@/lib/rewardRpcResult';
+import { notifyRewardEarned } from '@/lib/rewardNotifications';
 
 /**
  * Approves a pending KYC record
@@ -112,12 +113,21 @@ export async function approveKYC(kycId) {
             if (rewardError) {
                 console.error('[admin-kyc] kyc_complete reward RPC failed (non-fatal):', rewardError);
             } else {
-                logRewardRpcResult({
+                const rewardResult = logRewardRpcResult({
                     event_type: 'kyc_complete',
                     source_user_id: data.user_id,
                     reference_id: kycId,
                     reference_type: 'kyc_record',
                 }, rewardData);
+
+                await notifyRewardEarned({
+                    supabaseAdmin: adminClient,
+                    userId: data.user_id,
+                    eventType: 'kyc_complete',
+                    totalDistributed: rewardResult.totalDistributed,
+                    referenceId: kycId,
+                    referenceType: 'kyc_record',
+                });
             }
         }
 

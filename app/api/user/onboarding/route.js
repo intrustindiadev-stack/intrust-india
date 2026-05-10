@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { logRewardRpcResult, logRewardRpcFailure } from '@/lib/rewardRpcResult';
+import { notifyRewardEarned } from '@/lib/rewardNotifications';
 
 export const runtime = 'nodejs';
 
@@ -211,6 +212,15 @@ export async function POST(req) {
                     reference_type: 'user_profile',
                 }, rewardData, { correlationId });
                 signupRewardApplied = rewardResult.totalDistributed > 0;
+
+                await notifyRewardEarned({
+                    supabaseAdmin,
+                    userId,
+                    eventType: 'signup',
+                    totalDistributed: rewardResult.totalDistributed,
+                    referenceId: userId,
+                    referenceType: 'user_profile'
+                });
             } catch (rewardError) {
                 console.error(JSON.stringify({
                     correlationId, stage: 'signup_distribute_failed', userId, referredById,

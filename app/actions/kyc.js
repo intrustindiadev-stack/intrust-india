@@ -15,6 +15,7 @@ import { validateKYCForm, sanitizeKYCData } from '@/app/types/kyc';
 import { sprintVerify } from '@/lib/sprintVerify';
 import { encryptCouponCode as encryptData } from '@/lib/encryption';
 import { logRewardRpcResult } from '@/lib/rewardRpcResult';
+import { notifyRewardEarned } from '@/lib/rewardNotifications';
 
 
 
@@ -238,12 +239,21 @@ export async function submitKYC(formData) {
             if (rewardError) {
                 console.error('[KYC] kyc_complete reward RPC failed (non-fatal):', rewardError);
             } else {
-                logRewardRpcResult({
+                const rewardResult = logRewardRpcResult({
                     event_type: 'kyc_complete',
                     source_user_id: user.id,
                     reference_id: result.id,
                     reference_type: 'kyc_record',
                 }, rewardData);
+
+                await notifyRewardEarned({
+                    supabaseAdmin: adminSupabase,
+                    userId: user.id,
+                    eventType: 'kyc_complete',
+                    totalDistributed: rewardResult.totalDistributed,
+                    referenceId: result.id,
+                    referenceType: 'kyc_record',
+                });
             }
         }
 

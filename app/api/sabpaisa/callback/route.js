@@ -11,6 +11,7 @@ import {
     notifyMerchantGiftCardSold,
     notifyMerchantStoreCreditPaid
 } from '@/lib/notifications/merchantWhatsapp';
+import { notifyRewardEarned } from '@/lib/rewardNotifications';
 import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '@/lib/supabase/queries';
 import { CustomerWalletService } from '@/lib/wallet/customerWalletService';
 import { mapStatusToInternal } from '@/lib/sabpaisa/utils';
@@ -205,6 +206,14 @@ export async function POST(request) {
                             reference_id: existingTxn.id,
                             reference_type: 'wallet_topup',
                         }, rewardData);
+                        await notifyRewardEarned({
+                            supabaseAdmin,
+                            userId: existingTxn.user_id,
+                            eventType: 'wallet_topup',
+                            totalDistributed: rewardData?.total_distributed,
+                            referenceId: existingTxn.id,
+                            referenceType: 'wallet_topup'
+                        }).catch(() => {});
                     }
                 } catch (rewardErr) {
                     console.error('[Callback] Wallet topup reward distribution error:', rewardErr.message);
@@ -448,6 +457,14 @@ export async function POST(request) {
                                 reference_id: groupId,
                                 reference_type: 'shopping_order',
                             }, rewardData);
+                            await notifyRewardEarned({
+                                supabaseAdmin,
+                                userId: existingTxn.user_id,
+                                eventType: 'purchase',
+                                totalDistributed: rewardData?.total_distributed,
+                                referenceId: groupId,
+                                referenceType: 'shopping_order'
+                            }).catch(() => {});
                         }
                     } catch (rewardErr) {
                         console.error('[Callback] Cart checkout reward distribution error:', rewardErr.message);
@@ -718,6 +735,14 @@ export async function POST(request) {
                                                 reference_id: couponId,
                                                 reference_type: 'gift_card_purchase',
                                             }, rewardData);
+                                            await notifyRewardEarned({
+                                                supabaseAdmin,
+                                                userId: existingTxn.user_id,
+                                                eventType: 'purchase',
+                                                totalDistributed: rewardData?.total_distributed,
+                                                referenceId: couponId,
+                                                referenceType: 'gift_card_purchase'
+                                            }).catch(() => {});
                                         }
                                     } catch (rewardErr) {
                                         console.error('[Callback] Gift card reward distribution error:', rewardErr.message);

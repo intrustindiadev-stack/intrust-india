@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabaseServer';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { logRewardRpcResult, logRewardRpcFailure } from '@/lib/rewardRpcResult';
+import { notifyRewardEarned } from '@/lib/rewardNotifications';
 
 export async function POST(request) {
     try {
@@ -60,6 +61,15 @@ export async function POST(request) {
             reference_id: null,
             reference_type: null,
         }, data);
+
+        await notifyRewardEarned({
+            supabaseAdmin,
+            userId: user.id,
+            eventType: 'daily_login',
+            totalDistributed: rewardResult.totalDistributed,
+            referenceId: null,
+            referenceType: null,
+        });
 
         return NextResponse.json({
             success: rewardResult.success,

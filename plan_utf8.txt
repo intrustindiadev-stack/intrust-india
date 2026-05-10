@@ -1,0 +1,9 @@
+﻿<USER_REQUEST>
+I have created the following plan after thorough exploration and analysis of the codebase. Follow the below plan verbatim. Trust the files and references. Do not re-verify what's written in the plan. Explore only when absolutely necessary. First implement all the proposed file changes and then I'll review all the changes together at the end.
+
+## Observations
+
+- Live Supabase MCP confirmed: `reward_transactions` is **not** in `supabase_realtime` (empty row), `relreplident = 'd'` (DEFAULT), and **3 stuck unscratched cards** exist for user `00b88767-â€¦` â€” exactly matching the ticket's premise.
+- `public.notifications` has a strict CHECK: `type IN ('info','success','warning','error')` â€” so `'reward'` will be rejected; we must use `'success'` per the ticket's fallback.
+- The bell already exists (`components/notifications/NotificationBell.jsx`) and uses a switch on `reference_type` inside `handleNotificationClick` â€” only a new `case 'reward_scratch_card'` is needed.
+<truncated 18445 bytes>

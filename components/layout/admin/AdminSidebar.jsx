@@ -89,7 +89,6 @@ const navigationGroups = [
         title: 'Growth & Setup',
         items: [
             { name: 'Rewards', href: '/admin/rewards', icon: Trophy },
-            { name: 'Redemptions', href: '/admin/rewards/redemptions', icon: Activity },
             { name: 'Partnership Growth', href: '/admin/lockin', icon: Clock },
             { name: 'Banners', href: '/admin/banners', icon: ImageIcon },
             { name: 'Analytics', href: '/admin/analytics', icon: TrendingUp },

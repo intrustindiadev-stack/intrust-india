@@ -1,5 +1,6 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
-import { redirect } from 'next/navigation';
+import { createServerSupabaseClient }   from '@/lib/supabaseServer';
+import { redirect }                       from 'next/navigation';
+import { RewardsRealtimeProvider }        from '@/lib/contexts/RewardsRealtimeContext';
 
 export default async function ProtectedCustomerLayout({ children }) {
     const supabase = await createServerSupabaseClient();
@@ -22,6 +23,13 @@ export default async function ProtectedCustomerLayout({ children }) {
 
     // Role-based redirection is already handled in the parent (customer) layout
     // This layout specifically enforces session presence for protected routes
-
-    return children;
+    //
+    // RewardsRealtimeProvider is mounted here so every protected customer page
+    // shares a single Supabase realtime channel and unscratched-card list.
+    // The bottom-nav badge and the rewards page both consume this context.
+    return (
+        <RewardsRealtimeProvider>
+            {children}
+        </RewardsRealtimeProvider>
+    );
 }

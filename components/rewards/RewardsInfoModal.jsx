@@ -30,7 +30,7 @@ export default function RewardsInfoModal({ isOpen, onClose, userTier = 'bronze' 
                         <div>
                             <h3 className="text-xl font-black text-gray-900 dark:text-white mb-3">What are Intrust Reward Points?</h3>
                             <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                                Intrust Reward Points are loyalty points you collect for using the Intrust ecosystem. They live in your Rewards dashboard and can be converted to wallet cash anytime — <span className="font-bold text-gray-900 dark:text-white">1 point = ₹1</span>.
+                                Intrust Reward Points are loyalty points you collect for using the Intrust ecosystem. They live in your Rewards dashboard and can be converted to wallet cash anytime — <span className="font-bold text-gray-900 dark:text-white">100 points = ₹1</span>.
                             </p>
                         </div>
                         <div className="space-y-3">
@@ -134,7 +134,7 @@ export default function RewardsInfoModal({ isOpen, onClose, userTier = 'bronze' 
                     <div className="space-y-6">
                         <div>
                             <h3 className="text-xl font-black text-gray-900 dark:text-white mb-3">Redeeming Points</h3>
-                            <p className="text-gray-600 dark:text-gray-400 text-sm">Convert your points to wallet cash instantly at <span className="font-bold text-gray-900 dark:text-white">1 point = ₹1</span>.</p>
+                            <p className="text-gray-600 dark:text-gray-400 text-sm">Convert your points to wallet cash instantly at <span className="font-bold text-gray-900 dark:text-white">100 points = ₹1</span>.</p>
                         </div>
                         <div className="space-y-4">
                             {[
@@ -241,7 +241,7 @@ export default function RewardsInfoModal({ isOpen, onClose, userTier = 'bronze' 
 
                         {/* Footer */}
                         <div className="p-6 sm:p-8 bg-gray-50 dark:bg-white/5 border-t border-gray-100 dark:border-white/10 flex items-center justify-between">
-                            <p className="text-xs text-gray-400 font-medium">1 Point = ₹1 Rupee</p>
+                            <p className="text-xs text-gray-400 font-medium">100 Points = ₹1 Rupee</p>
                             <button
                                 onClick={onClose}
                                 className={`px-6 py-2.5 rounded-xl font-black text-sm text-white bg-gradient-to-r ${tierGradients[userTier]} shadow-lg active:scale-95 transition-all`}

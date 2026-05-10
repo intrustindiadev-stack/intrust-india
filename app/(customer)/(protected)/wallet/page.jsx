@@ -188,7 +188,7 @@ export default function CustomerWalletPage() {
                                 </span>
                                 <div className="mt-2 flex items-baseline gap-2">
                                     <BalanceReveal
-                                        value={`₹${balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+                                        value={`₹${balance.toLocaleString('en-IN', { minimumFractionDigits: balance % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 })}`}
                                         className="text-5xl font-black tabular-nums"
                                     />
                                 </div>
@@ -281,7 +281,7 @@ export default function CustomerWalletPage() {
                                                         ? 'text-gray-900 dark:text-white'
                                                         : 'text-green-500'
                                                 }`}>
-                                                {tx.type === 'DEBIT' && !['failed', 'ERROR', 'aborted'].includes(tx.status) ? '-' : '+'} ₹{(tx.amount_paise / 100).toFixed(2)}
+                                                {tx.type === 'DEBIT' && !['failed', 'ERROR', 'aborted'].includes(tx.status) ? '-' : '+'} ₹{Number.isInteger(tx.amount_paise / 100) ? (tx.amount_paise / 100) : (tx.amount_paise / 100).toFixed(2)}
                                             </p>
                                             <p className={`text-[10px] mt-0.5 uppercase font-bold tracking-widest ${['failed', 'ERROR', 'aborted'].includes(tx.status)
                                                 ? 'text-red-500'

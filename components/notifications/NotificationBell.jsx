@@ -162,6 +162,7 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
     const typeIcon = (type, referenceType) => {
         // First priority: Specific icons for reference types
         switch (referenceType) {
+            case 'reward_scratch_card': return 'star';
             case 'chatbot_connected': return 'smart_toy';
             case 'whatsapp_connected': return 'chat';
             case 'reward_conversion': return 'redeem';
@@ -348,6 +349,7 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                 break;
 
             // Rewards
+            case 'reward_scratch_card':
             case 'reward_conversion':
             case 'reward_adjustment':
                 if (isMerchant) router.push('/merchant/dashboard');

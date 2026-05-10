@@ -4,6 +4,7 @@ import { decrypt } from '../../../lib/sabpaisa/encrypt';
 import { mapStatusToInternal } from '../../../lib/sabpaisa/utils';
 import { createClient } from '@supabase/supabase-js';
 import { logRewardRpcResult } from '../../../lib/rewardRpcResult';
+import { notifyRewardEarned } from '../../../lib/rewardNotifications';
 
 /**
  * Validates that the request IP is from a trusted source.
@@ -158,12 +159,21 @@ export default async function handler(req, res) {
                         if (rewardError) {
                             console.error('[Callback] Wallet topup reward RPC error:', rewardError);
                         } else {
-                            logRewardRpcResult({
+                            const rewardResult = logRewardRpcResult({
                                 event_type: 'wallet_topup',
                                 source_user_id: existingTxn.user_id,
                                 reference_id: existingTxn.id,
                                 reference_type: 'wallet_topup',
                             }, rewardData);
+
+                            await notifyRewardEarned({
+                                supabaseAdmin,
+                                userId: existingTxn.user_id,
+                                eventType: 'wallet_topup',
+                                totalDistributed: rewardResult?.totalDistributed || 0,
+                                referenceId: existingTxn.id,
+                                referenceType: 'wallet_topup',
+                            });
                         }
                     } catch (rewardErr) {
                         console.error('[Callback] Wallet topup reward distribution error:', rewardErr.message);

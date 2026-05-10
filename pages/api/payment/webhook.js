@@ -3,6 +3,7 @@ import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } f
 import { CustomerWalletService } from '../../../lib/wallet/customerWalletService';
 import { createClient } from '@supabase/supabase-js';
 import { logRewardRpcResult } from '../../../lib/rewardRpcResult';
+import { notifyRewardEarned } from '../../../lib/rewardNotifications';
 
 /**
  * Validates that the request IP is from a trusted source.
@@ -122,12 +123,21 @@ export default async function handler(req, res) {
                     if (rewardError) {
                         console.error('[Webhook] Wallet topup reward RPC error:', rewardError);
                     } else {
-                        logRewardRpcResult({
+                        const rewardResult = logRewardRpcResult({
                             event_type: 'wallet_topup',
                             source_user_id: currentTxn.user_id,
                             reference_id: currentTxn.id,
                             reference_type: 'wallet_topup',
                         }, rewardData);
+
+                        await notifyRewardEarned({
+                            supabaseAdmin,
+                            userId: currentTxn.user_id,
+                            eventType: 'wallet_topup',
+                            totalDistributed: rewardResult?.totalDistributed || 0,
+                            referenceId: currentTxn.id,
+                            referenceType: 'wallet_topup',
+                        });
                     }
                 } catch (rewardErr) {
                     console.error('[Webhook] Wallet topup reward distribution error:', rewardErr.message);

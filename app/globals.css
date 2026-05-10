@@ -508,15 +508,17 @@ html {
 }
 
 /* No Scrollbar Utility */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 
-.no-scrollbar {
-  -ms-overflow-style: none;
-  /* IE and Edge */
-  scrollbar-width: none;
-  /* Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
 }
 
 /* ── Android / Mobile Support ── */

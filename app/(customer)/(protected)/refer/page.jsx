@@ -250,6 +250,25 @@ export default function ReferAndEarnPage() {
             <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-[12vh]">
                 <Breadcrumbs items={[{ label: 'Referral' }]} />
 
+                {/* Cross-navigation to Rewards */}
+                <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={() => router.push('/rewards')}
+                    className="w-full flex items-center justify-between px-6 py-4 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] mb-6 group transition-all hover:border-emerald-500/30"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                            <Gift size={16} />
+                        </div>
+                        <div className="text-left">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400/60">Portfolio</p>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">My Rewards</p>
+                        </div>
+                    </div>
+                    <ChevronRight size={16} className="text-slate-400 dark:text-white/40 group-hover:translate-x-1 transition-transform" />
+                </motion.button>
+
                 {/* Hero / Empire Section */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}

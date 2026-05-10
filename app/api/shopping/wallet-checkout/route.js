@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { logRewardRpcResult, logRewardRpcFailure } from '@/lib/rewardRpcResult';
+import { notifyRewardEarned } from '@/lib/rewardNotifications';
 
 /**
  * POST /api/shopping/wallet-checkout
@@ -111,6 +112,14 @@ export async function POST(request) {
                     reference_id: groupId,
                     reference_type: 'shopping_order',
                 }, rewardData, { correlationId, amountPaise });
+                await notifyRewardEarned({
+                    supabaseAdmin,
+                    userId,
+                    eventType: 'purchase',
+                    totalDistributed: rewardData?.total_distributed,
+                    referenceId: groupId,
+                    referenceType: 'shopping_order'
+                }).catch(() => {});
             }
         } catch (rewardErr) {
             console.error(JSON.stringify({ correlationId, stage: 'reward_distribution_error', userId, groupId, error: rewardErr?.message }));

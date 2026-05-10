@@ -1,6 +1,7 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 import { logRewardRpcResult } from '@/lib/rewardRpcResult';
+import { notifyRewardEarned } from '@/lib/rewardNotifications';
 
 export async function POST(req) {
     const correlationId = crypto.randomUUID();
@@ -104,12 +105,23 @@ export async function POST(req) {
                 }));
                 throw rewardDistError;
             }
-            logRewardRpcResult({
+            const rewardResult = logRewardRpcResult({
                 event_type: 'signup',
                 source_user_id: userId,
                 reference_id: userId,
                 reference_type: 'user_profile',
             }, rewardData);
+
+            if (rewardResult?.totalDistributed > 0) {
+                await notifyRewardEarned({
+                    supabaseAdmin: adminClient,
+                    userId,
+                    eventType: 'signup',
+                    totalDistributed: rewardResult.totalDistributed,
+                    referenceId: userId,
+                    referenceType: 'user_profile',
+                });
+            }
 
             // 4D. RPC update_reward_tree_stats for all ancestors + the caller
             // Fetch ancestors

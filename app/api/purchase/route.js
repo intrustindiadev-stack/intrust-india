@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
 import { createClient } from '@supabase/supabase-js'
 import { logRewardRpcResult } from '@/lib/rewardRpcResult'
+import { notifyRewardEarned } from '@/lib/rewardNotifications'
 
 export async function POST(request) {
     try {
@@ -78,12 +79,21 @@ export async function POST(request) {
                 if (rewardError) {
                     console.error('[Purchase] Reward RPC error:', rewardError);
                 } else {
-                    logRewardRpcResult({
+                    const rewardResult = logRewardRpcResult({
                         event_type: 'purchase',
                         source_user_id: user.id,
                         reference_id: coupon_id,
                         reference_type: 'coupon_purchase',
                     }, rewardData);
+
+                    await notifyRewardEarned({
+                        supabaseAdmin,
+                        userId: user.id,
+                        eventType: 'purchase',
+                        totalDistributed: rewardResult.totalDistributed,
+                        referenceId: coupon_id,
+                        referenceType: 'coupon_purchase',
+                    });
                 }
             }
         } catch (rewardErr) {

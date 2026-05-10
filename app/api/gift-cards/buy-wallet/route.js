@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { notifyMerchantGiftCardSold } from '@/lib/notifications/merchantWhatsapp';
 import { logRewardRpcResult } from '@/lib/rewardRpcResult';
+import { notifyRewardEarned } from '@/lib/rewardNotifications';
 
 export async function POST(request) {
     const correlationId = crypto.randomUUID();
@@ -107,6 +108,14 @@ export async function POST(request) {
                     reference_id: couponId,
                     reference_type: 'gift_card_purchase',
                 }, rewardData);
+                await notifyRewardEarned({
+                    supabaseAdmin,
+                    userId: user.id,
+                    eventType: 'purchase',
+                    totalDistributed: rewardData?.total_distributed,
+                    referenceId: couponId,
+                    referenceType: 'gift_card_purchase'
+                }).catch(() => {});
             }
         } catch (rewardErr) {
             console.error(JSON.stringify({ correlationId, stage: 'reward_distribution_error', userId, couponId, error: rewardErr?.message }));
