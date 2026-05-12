@@ -21,8 +21,6 @@ export function BaseChatBubble({
   const { isOpen, toggleChat, hasUnread } = useChat();
   const { user } = useAuth();
 
-  const isHidden = hiddenPaths.some((p) => pathname?.startsWith(p));
-  if (!user || isHidden) return null;
 
   // On /shop/[merchantSlug] pages the FloatingCart bar sits at bottom-0 on desktop
   // (≈ 64 px tall). Shift the bubble above it so they don't overlap.
