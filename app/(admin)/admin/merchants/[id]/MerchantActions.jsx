@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { CheckCircle, XCircle, ShieldOff, ShieldCheck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export default function MerchantActions({ merchantId, userId, status }) {
+export default function MerchantActions({ merchantId, userId, status, hasBankData, bankVerified }) {
     const [isApproving, setIsApproving] = useState(false);
     const [isRejecting, setIsRejecting] = useState(false);
     const [isTogglingSuspend, setIsTogglingSuspend] = useState(false);
+    const [isVerifyingBank, setIsVerifyingBank] = useState(false);
     const router = useRouter();
 
     const isPending = status === 'pending';
@@ -138,15 +139,38 @@ export default function MerchantActions({ merchantId, userId, status }) {
         }
     };
 
+    const handleVerifyBank = async () => {
+        if (!confirm('Confirm bank account as verified for this merchant?')) return;
+        setIsVerifyingBank(true);
+        const toastId = toast.loading('Verifying bank account...');
+        try {
+            const response = await fetch('/api/admin/verify-bank', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ merchantId }),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed');
+            toast.success('Bank account verified!', { id: toastId });
+            router.refresh();
+        } catch (err) {
+            toast.error(err.message, { id: toastId });
+        } finally {
+            setIsVerifyingBank(null);
+        }
+    };
+
     return (
-        <div className="flex flex-row gap-3 w-full lg:w-auto mt-4 lg:mt-0">
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto mt-4 lg:mt-0">
             {/* Pending: Reject + Approve buttons */}
             {isPending && (
                 <>
                     <button
                         onClick={handleReject}
                         disabled={isApproving || isRejecting}
-                        className="flex-1 lg:flex-none px-4 sm:px-6 py-3.5 bg-white text-red-600 text-sm font-bold rounded-2xl border border-red-100 hover:bg-red-50 transition-all flex items-center justify-center gap-2 shadow-sm group disabled:opacity-50"
+                        className="w-full sm:w-auto px-6 py-3.5 bg-white text-red-600 text-sm font-bold rounded-2xl border border-red-100 hover:bg-red-50 transition-all flex items-center justify-center gap-2 shadow-sm group disabled:opacity-50"
                     >
                         {isRejecting ? (
                             <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
@@ -159,7 +183,7 @@ export default function MerchantActions({ merchantId, userId, status }) {
                     <button
                         onClick={handleApprove}
                         disabled={isApproving || isRejecting}
-                        className="flex-1 lg:flex-none px-6 sm:px-8 py-3.5 bg-blue-600 text-white text-sm font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+                        className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 text-white text-sm font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
                     >
                         {isApproving ? (
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -174,26 +198,50 @@ export default function MerchantActions({ merchantId, userId, status }) {
 
             {/* Approved / Suspended: Suspend / Unsuspend button */}
             {(isApproved || isSuspended) && (
-                <button
-                    onClick={handleToggleSuspend}
-                    disabled={isTogglingSuspend}
-                    className={`flex-1 lg:flex-none px-6 sm:px-8 py-3.5 text-sm font-bold rounded-2xl transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 ${isSuspended
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                        : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100'
-                        }`}
-                >
-                    {isTogglingSuspend ? (
-                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                    ) : isSuspended ? (
-                        <>
-                            <ShieldCheck size={18} strokeWidth={2.5} /> Unsuspend
-                        </>
-                    ) : (
-                        <>
-                            <ShieldOff size={18} strokeWidth={2.5} /> Suspend
-                        </>
+                <div className="flex flex-col sm:flex-row gap-3 w-full">
+                    <button
+                        onClick={handleToggleSuspend}
+                        disabled={isTogglingSuspend}
+                        className={`flex-1 px-8 py-3.5 text-sm font-bold rounded-2xl transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 ${isSuspended
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                            : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100'
+                            }`}
+                    >
+                        {isTogglingSuspend ? (
+                            <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                        ) : isSuspended ? (
+                            <>
+                                <ShieldCheck size={18} strokeWidth={2.5} /> Unsuspend Account
+                            </>
+                        ) : (
+                            <>
+                                <ShieldOff size={18} strokeWidth={2.5} /> Suspend Account
+                            </>
+                        )}
+                    </button>
+
+                    {isApproved && hasBankData && !bankVerified && (
+                        <button
+                            onClick={handleVerifyBank}
+                            disabled={isVerifyingBank}
+                            className="flex-1 px-8 py-3.5 bg-blue-600 text-white text-sm font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+                        >
+                            {isVerifyingBank ? (
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                <>
+                                    <CheckCircle size={18} strokeWidth={2.5} /> Verify Bank Registry
+                                </>
+                            )}
+                        </button>
                     )}
-                </button>
+
+                    {isApproved && bankVerified && (
+                        <div className="flex-1 px-8 py-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl text-sm font-black flex items-center justify-center gap-2 shadow-inner">
+                            <CheckCircle size={18} strokeWidth={2.5} /> Bank Verified
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     );

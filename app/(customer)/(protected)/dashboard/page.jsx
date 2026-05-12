@@ -404,12 +404,12 @@ export default function CustomerDashboardPage() {
                         'postgres_changes',
                         { event: '*', schema: 'public', table: 'user_profiles', filter: `id=eq.${user.id}` },
                         (payload) => {
-                             if (payload.new && payload.new.reward_points) {
+                            if (payload.new && payload.new.reward_points) {
                                 setUserData(prev => ({
                                     ...prev,
                                     rewardPoints: payload.new.reward_points.total_earned || 0
                                 }));
-                             }
+                            }
                         }
                     )
                     .on(
@@ -438,13 +438,13 @@ export default function CustomerDashboardPage() {
 
     const stats = [
         { label: 'Wallet Balance', value: `₹${userData.walletBalance.toFixed(2)}`, icon: Wallet, color: 'from-blue-600 to-indigo-600' },
-        { 
-            label: 'Reward Points', 
-            value: userData.rewardPoints?.toLocaleString() || '0', 
-            subValue: `₹${(userData.rewardPoints / 100).toFixed(2)}`, 
-            icon: Coins, 
+        {
+            label: 'Reward Points',
+            value: userData.rewardPoints?.toLocaleString() || '0',
+            subValue: `₹${(userData.rewardPoints / 100).toFixed(2)}`,
+            icon: Coins,
             color: 'from-emerald-500 to-teal-500',
-            href: '/rewards' 
+            href: '/rewards'
         },
         { label: 'Total Savings', value: `₹${userData.totalSavings.toFixed(2)}`, icon: TrendingUp, color: 'from-amber-500 to-orange-500' },
     ];
