@@ -141,7 +141,7 @@ function ActionRow({ request, onAction, processing, siblingPending }) {
 
                     <div>
                         <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">
-                            Admin Note {action === 'rejected' ? '(required for rejection)' : '(optional)'}
+                            Admin Note (required for rejection, optional otherwise)
                         </label>
                         <textarea
                             value={note}

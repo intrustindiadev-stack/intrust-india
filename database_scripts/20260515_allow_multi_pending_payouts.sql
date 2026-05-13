@@ -43,6 +43,7 @@ DECLARE
     v_rows              integer;
     v_request_id        uuid;
     v_new_balance       bigint;
+    v_balance_before    bigint;
     v_bank_account      text;
     v_bank_ifsc         text;
     v_bank_holder       text;
@@ -166,6 +167,8 @@ BEGIN
 
     -- 10. Source-specific debit / contract lock
     IF p_source = 'wallet' THEN
+        v_balance_before := v_merchant.wallet_balance_paise;
+
         UPDATE merchants
         SET    wallet_balance_paise = wallet_balance_paise - p_amount_paise
         WHERE  id                  = v_merchant.id
@@ -215,7 +218,8 @@ BEGIN
         SET    status = 'payout_requested'
         WHERE  id     = p_reference_id;
 
-        v_new_balance := NULL;
+        v_balance_before := NULL;
+        v_new_balance    := NULL;
 
     ELSE
         RETURN jsonb_build_object('success', false, 'error', 'invalid_source');
@@ -237,13 +241,13 @@ BEGIN
 
     -- 12. Insert payout_request
     INSERT INTO payout_requests (
-        merchant_id, user_id, amount, amount_paise, status,
+        merchant_id, user_id, amount, status,
         bank_account_number, bank_ifsc, bank_account_holder, bank_name,
         payout_source, reference_id,
         idempotency_key, requested_ip, requested_user_agent
     )
     VALUES (
-        v_merchant.id, p_user_id, (p_amount_paise::numeric / 100), p_amount_paise, 'pending',
+        v_merchant.id, p_user_id, (p_amount_paise::numeric / 100), 'pending',
         v_bank_account, v_bank_ifsc, v_bank_holder, v_bank_name,
         p_source, p_reference_id,
         p_idempotency_key, p_requested_ip, p_requested_user_agent
@@ -254,6 +258,7 @@ BEGIN
     IF p_source = 'wallet' THEN
         INSERT INTO wallet_transactions (
             user_id, merchant_id, transaction_type, amount,
+            balance_before, balance_after,
             description, reference_type, reference_id
         )
         VALUES (
@@ -261,6 +266,8 @@ BEGIN
             v_merchant.id,
             'DEBIT',
             (p_amount_paise::numeric / 100),
+            (v_balance_before::numeric / 100),
+            (v_new_balance::numeric  / 100),
             'Wallet payout request #' || UPPER(LEFT(v_request_id::text, 8)) || ' submitted',
             'payout_request',
             v_request_id
