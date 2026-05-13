@@ -5,12 +5,16 @@ import { Plus, Minus, Package, BadgeCheck, Check, Heart, Store } from 'lucide-re
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { isStorefrontItemOOS } from '@/lib/shopping/stock';
+import OutOfStockOverlay from '@/components/ui/OutOfStockOverlay';
+import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 
 export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#000000', secondaryColor = '#1e293b', isWishlisted = false, onWishlist, isStoreOpen = true }) {
     const router = useRouter();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const product = item.shopping_products;
+    const oos = isStorefrontItemOOS(item);
     const [justAdded, setJustAdded] = useState(false);
     const [isClosedAnimation, setIsClosedAnimation] = useState(false);
 
@@ -92,9 +96,10 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                         />
                     </button>
 
+                    {oos && <OutOfStockOverlay />}
                 </div>
 
-                <div className="flex flex-col flex-1 text-left px-1">
+                <div className={`flex flex-col flex-1 text-left px-1 ${oos ? 'opacity-50' : ''}`}>
                     <div className="flex items-center justify-between gap-1 mb-1.5">
                         <div className="flex items-center gap-1.5 min-w-0">
                             <p className="text-[11px] font-black uppercase tracking-wider truncate" style={{ color: isDark ? `${primaryColor}CC` : primaryColor }}>
@@ -135,104 +140,109 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
 
             {/* Action Bar */}
             <div className={`p-2 w-full pt-1 border-t ${isDark ? 'border-white/[0.04]' : 'border-slate-100'}`}>
-                <AnimatePresence mode="wait">
-                    {justAdded ? (
-                        <motion.div
-                            key="success"
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.8, opacity: 0 }}
-                            transition={{ type: 'spring', stiffness: 450, damping: 22 }}
-                            className="flex items-center justify-center gap-1.5 text-white shadow-sm h-9 md:h-10 w-full rounded-xl"
-                            style={{ background: 'linear-gradient(135deg, #10b981, #34d399)', boxShadow: '0 4px 16px rgba(16,185,129,0.40)' }}
-                        >
+                {oos ? (
+                    <div className="flex items-center justify-center h-9 md:h-10 w-full">
+                        <OutOfStockBadge variant="soft" size="sm" />
+                    </div>
+                ) : (
+                    <AnimatePresence mode="wait">
+                        {justAdded ? (
                             <motion.div
-                                initial={{ scale: 0, rotate: -45 }}
-                                animate={{ scale: 1, rotate: 0 }}
-                                transition={{ type: "spring", stiffness: 400, damping: 18, delay: 0.08 }}
-                            >
-                                <Check size={16} strokeWidth={3} />
-                            </motion.div>
-                            <motion.span
-                                initial={{ opacity: 0, x: -6 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.12 }}
-                                className="text-xs font-black"
-                            >
-                                Added!
-                            </motion.span>
-                        </motion.div>
-                    ) : cartItem ? (
-                        <motion.div
-                            key="qty"
-                            initial={{ width: "60%", opacity: 0 }}
-                            animate={{ width: "100%", opacity: 1 }}
-                            exit={{ width: "60%", opacity: 0 }}
-                            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                            className="mx-auto flex items-center justify-between text-white rounded-xl overflow-hidden shadow-sm h-9 md:h-10 w-full"
-                            style={{
-                                background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-                                boxShadow: isDark ? `0 4px 16px ${primaryColor}30` : `0 2px 8px ${primaryColor}25`
-                            }}
-                        >
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onRemove(); }}
-                                className="w-10 h-full flex items-center justify-center hover:bg-black/10 transition-colors active:bg-black/20"
-                            >
-                                <Minus size={14} strokeWidth={3} />
-                            </button>
-                            <motion.span
-                                key={cartItem.quantity}
-                                initial={{ scale: 1.4, opacity: 0 }}
+                                key="success"
+                                initial={{ scale: 0.8, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
-                                className="text-sm font-black w-8 text-center bg-black/10 h-full flex flex-col justify-center shadow-inner"
+                                exit={{ scale: 0.8, opacity: 0 }}
+                                transition={{ type: 'spring', stiffness: 450, damping: 22 }}
+                                className="flex items-center justify-center gap-1.5 text-white shadow-sm h-9 md:h-10 w-full rounded-xl"
+                                style={{ background: 'linear-gradient(135deg, #10b981, #34d399)', boxShadow: '0 4px 16px rgba(16,185,129,0.40)' }}
                             >
-                                {cartItem.quantity}
-                            </motion.span>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onAdd(); }}
-                                className="w-10 h-full flex items-center justify-center hover:bg-black/10 transition-colors active:bg-black/20"
+                                <motion.div
+                                    initial={{ scale: 0, rotate: -45 }}
+                                    animate={{ scale: 1, rotate: 0 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 18, delay: 0.08 }}
+                                >
+                                    <Check size={16} strokeWidth={3} />
+                                </motion.div>
+                                <motion.span
+                                    initial={{ opacity: 0, x: -6 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.12 }}
+                                    className="text-xs font-black"
+                                >
+                                    Added!
+                                </motion.span>
+                            </motion.div>
+                        ) : cartItem ? (
+                            <motion.div
+                                key="qty"
+                                initial={{ width: "60%", opacity: 0 }}
+                                animate={{ width: "100%", opacity: 1 }}
+                                exit={{ width: "60%", opacity: 0 }}
+                                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                                className="mx-auto flex items-center justify-between text-white rounded-xl overflow-hidden shadow-sm h-9 md:h-10 w-full"
+                                style={{
+                                    background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                                    boxShadow: isDark ? `0 4px 16px ${primaryColor}30` : `0 2px 8px ${primaryColor}25`
+                                }}
                             >
-                                <Plus size={14} strokeWidth={3} />
-                            </button>
-                        </motion.div>
-                    ) : (
-                        <motion.button
-                            key="add"
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ 
-                                scale: 1, 
-                                opacity: 1,
-                                x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0
-                            }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            whileTap={{ scale: 0.94 }}
-                            whileHover={{ scale: 1.02 }}
-                            transition={{ 
-                                x: { type: 'keyframes', duration: 0.4 },
-                                default: { type: 'spring', stiffness: 400, damping: 25 }
-                            }}
-                            onClick={handleAdd}
-                            className={`w-full h-9 md:h-10 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-all active:scale-95 ${
-                                isDark
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                                    className="w-10 h-full flex items-center justify-center hover:bg-black/10 transition-colors active:bg-black/20"
+                                >
+                                    <Minus size={14} strokeWidth={3} />
+                                </button>
+                                <motion.span
+                                    key={cartItem.quantity}
+                                    initial={{ scale: 1.4, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="text-sm font-black w-8 text-center bg-black/10 h-full flex flex-col justify-center shadow-inner"
+                                >
+                                    {cartItem.quantity}
+                                </motion.span>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onAdd(); }}
+                                    className="w-10 h-full flex items-center justify-center hover:bg-black/10 transition-colors active:bg-black/20"
+                                >
+                                    <Plus size={14} strokeWidth={3} />
+                                </button>
+                            </motion.div>
+                        ) : (
+                            <motion.button
+                                key="add"
+                                initial={{ scale: 0.95, opacity: 0 }}
+                                animate={{
+                                    scale: 1,
+                                    opacity: 1,
+                                    x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0
+                                }}
+                                exit={{ scale: 0.95, opacity: 0 }}
+                                whileTap={{ scale: 0.94 }}
+                                whileHover={{ scale: 1.02 }}
+                                transition={{
+                                    x: { type: 'keyframes', duration: 0.4 },
+                                    default: { type: 'spring', stiffness: 400, damping: 25 }
+                                }}
+                                onClick={handleAdd}
+                                className={`w-full h-9 md:h-10 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-all active:scale-95 ${isDark
                                     ? 'border text-white hover:bg-white/[0.08]'
                                     : 'border shadow-sm hover:brightness-110 text-white'
-                            }`}
-                            style={{
-                                borderColor: isClosedAnimation ? '#ef4444' : `${primaryColor}40`,
-                                backgroundColor: isClosedAnimation ? '#ef4444' : (isDark ? 'transparent' : primaryColor),
-                                color: isClosedAnimation ? 'white' : (isDark ? primaryColor : 'white'),
-                            }}
-                        >
-                            <span className="font-black tracking-wide">{isClosedAnimation ? 'CLOSED' : 'ADD'}</span>
-                            {isClosedAnimation ? (
-                                <Store size={13} strokeWidth={3} />
-                            ) : (
-                                <Plus size={13} strokeWidth={3} />
-                            )}
-                        </motion.button>
-                    )}
-                </AnimatePresence>
+                                    }`}
+                                style={{
+                                    borderColor: isClosedAnimation ? '#ef4444' : `${primaryColor}40`,
+                                    backgroundColor: isClosedAnimation ? '#ef4444' : (isDark ? 'transparent' : primaryColor),
+                                    color: isClosedAnimation ? 'white' : (isDark ? primaryColor : 'white'),
+                                }}
+                            >
+                                <span className="font-black tracking-wide">{isClosedAnimation ? 'CLOSED' : 'ADD'}</span>
+                                {isClosedAnimation ? (
+                                    <Store size={13} strokeWidth={3} />
+                                ) : (
+                                    <Plus size={13} strokeWidth={3} />
+                                )}
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
+                )}
             </div>
         </motion.div>
     );

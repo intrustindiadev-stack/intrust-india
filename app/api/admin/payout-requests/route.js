@@ -30,17 +30,25 @@ export async function GET(request) {
                     bank_data,
                     wallet_balance_paise
                 )
-            `)
+            `, { count: 'exact' })
             .order('requested_at', { ascending: false });
 
         if (statusFilter && statusFilter !== 'all') {
             query = query.eq('status', statusFilter);
         }
 
-        const { data, error } = await query;
+        const { data, error, count } = await query;
         if (error) throw error;
 
-        return NextResponse.json({ requests: data || [] });
+        // Mask full account number — expose only last 4 digits
+        const masked = (data || []).map(r => ({
+            ...r,
+            bank_account_last4:  r.bank_account_number?.slice(-4) ?? null,
+            bank_account_number: undefined,
+        }));
+
+        return NextResponse.json({ requests: masked, total: count });
+
     } catch (error) {
         console.error('[API] Admin Payout GET Error:', error);
         return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });

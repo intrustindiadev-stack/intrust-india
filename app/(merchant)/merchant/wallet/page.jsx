@@ -25,6 +25,9 @@ function WalletContent() {
     const [tapping, setTapping] = useState(false);
     const [displayBalance, setDisplayBalance] = useState(0);
     const [txFilter, setTxFilter] = useState('ALL');
+    const [payoutMinAmountPaise, setPayoutMinAmountPaise] = useState(10000);
+    const [payoutMaxPendingCount, setPayoutMaxPendingCount] = useState(null);
+    const [pendingPayouts, setPendingPayouts] = useState([]);
     const animFrameRef = useRef(null);
 
     const balance = wallet?.balance ?? 0;
@@ -99,6 +102,32 @@ function WalletContent() {
                 console.error('Error fetching merchant data:', merchantError);
             }
             setMerchantData(merchant);
+
+            // Fetch payout velocity settings + pending payout requests (non-critical)
+            try {
+                const [settingsRes, payoutsRes] = await Promise.all([
+                    fetch('/api/merchant/payout-settings', {
+                        headers: { Authorization: `Bearer ${session.access_token}` },
+                        cache: 'no-store',
+                    }),
+                    fetch('/api/merchant/payout-request', {
+                        headers: { Authorization: `Bearer ${session.access_token}` },
+                        cache: 'no-store',
+                    }),
+                ]);
+                if (settingsRes.ok) {
+                    const settingsData = await settingsRes.json();
+                    setPayoutMinAmountPaise(settingsData.payout_min_amount_paise ?? 10000);
+                    setPayoutMaxPendingCount(settingsData.payout_max_pending_count ?? null);
+                }
+                if (payoutsRes.ok) {
+                    const payoutsData = await payoutsRes.json();
+                    const pendingWallet = (payoutsData.requests || []).filter(
+                        r => r.status === 'pending' && r.payout_source === 'wallet'
+                    );
+                    setPendingPayouts(pendingWallet);
+                }
+            } catch (_) { /* non-critical */ }
 
         } catch (err) {
             setError(err.message);
@@ -313,6 +342,9 @@ function WalletContent() {
                         {merchantData?.bank_verified ? (
                             <WithdrawalForm
                                 merchant={merchantData}
+                                minAmountPaise={payoutMinAmountPaise}
+                                pendingRequests={pendingPayouts}
+                                maxPendingCount={payoutMaxPendingCount}
                                 onSuccess={() => {
                                     setShowWithdrawal(false);
                                     fetchWalletData();

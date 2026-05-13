@@ -29,8 +29,7 @@ export default async function MerchantStorefrontPage({ params }) {
             supabase
                 .from('shopping_products')
                 .select('id, slug, title, description, product_images, category, mrp_paise, suggested_retail_price_paise, admin_stock, is_active')
-                .eq('is_active', true)
-                .gt('admin_stock', 0),
+                .eq('is_active', true),
             user
                 ? supabase.from('user_profiles').select('*').eq('id', user.id).single()
                 : Promise.resolve({ data: null }),
@@ -135,8 +134,7 @@ export default async function MerchantStorefrontPage({ params }) {
                 .from('merchant_inventory')
                 .select(`id, retail_price_paise, stock_quantity, merchant_id, product_id, is_active, custom_title, custom_description, shopping_products!inner (id, slug, title, description, product_images, category, mrp_paise, suggested_retail_price_paise)`)
                 .eq('merchant_id', fetchedMerchant.id)
-                .eq('is_active', true)
-                .gt('stock_quantity', 0),
+                .eq('is_active', true),
             // Customer profile
             user
                 ? supabase.from('user_profiles').select('*').eq('id', user.id).single()

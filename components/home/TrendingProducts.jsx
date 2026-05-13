@@ -177,20 +177,8 @@ export default function TrendingProducts() {
 
                 if (error || !data?.length) return;
 
-                // 2. Fetch active inventory for these product IDs
-                const productIds = data.map(p => p.id);
-                const { data: inventoryData } = await supabase
-                    .from('merchant_inventory')
-                    .select('product_id')
-                    .in('product_id', productIds)
-                    .eq('is_active', true)
-                    .gt('stock_quantity', 0);
-
-                const activeInventorySet = new Set(inventoryData?.map(i => i.product_id) || []);
-
-                // 3. Filter products: keep if p.product_images exists AND (admin_stock > 0 OR has active inventory)
                 const filtered = data
-                    .filter(p => p.product_images?.length > 0 && (p.admin_stock > 0 || activeInventorySet.has(p.id)))
+                    .filter(p => p.product_images?.length > 0)
                     .slice(0, 8);
 
                 if (filtered.length >= 4) setProducts(filtered);

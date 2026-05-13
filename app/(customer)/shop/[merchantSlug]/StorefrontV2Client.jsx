@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ProductCardSkeleton from '@/components/customer/shop/ProductCardSkeleton';
 import MerchantProfileCard from '@/components/customer/shop/MerchantProfileCard';
 import FlashSale from '@/components/customer/shop/FlashSale';
+import { isStorefrontItemOOS } from '@/lib/shopping/stock';
 
 export default function StorefrontV2Client({ merchant, initialInventory, customer }) {
     const router = useRouter();
@@ -27,6 +28,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingCartItem, setPendingCartItem] = useState(null);
     const [liveMerchant, setLiveMerchant] = useState(merchant);
+    const [liveInventory, setLiveInventory] = useState(initialInventory);
 
     useEffect(() => {
         setLiveMerchant(merchant);
@@ -64,6 +66,53 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
             supabase.removeChannel(channel);
         };
     }, [liveMerchant?.id]);
+
+    useEffect(() => {
+        if (!liveInventory || liveInventory.length === 0) return;
+
+        const productIds = Array.from(new Set(liveInventory.map(i => i.product_id)));
+        
+        const productsChannel = supabase
+            .channel('realtime_stock_products')
+            .on('postgres_changes', { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'shopping_products', 
+                filter: `id=in.(${productIds.join(',')})` 
+            }, (payload) => {
+                if (payload.new) {
+                    setLiveInventory(prev => prev.map(item => 
+                        item.product_id === payload.new.id 
+                            ? { ...item, shopping_products: { ...item.shopping_products, admin_stock: payload.new.admin_stock } }
+                            : item
+                    ));
+                }
+            })
+            .subscribe();
+
+        const inventoryChannel = supabase
+            .channel('realtime_stock_inventory')
+            .on('postgres_changes', { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'merchant_inventory', 
+                filter: `merchant_id=eq.${liveMerchant.id}` 
+            }, (payload) => {
+                if (payload.new) {
+                    setLiveInventory(prev => prev.map(item => 
+                        item.id === payload.new.id 
+                            ? { ...item, stock_quantity: payload.new.stock_quantity, is_active: payload.new.is_active }
+                            : item
+                    ));
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(productsChannel);
+            supabase.removeChannel(inventoryChannel);
+        };
+    }, [liveMerchant?.id, liveInventory.length]);
 
     const isStoreOpen = useMemo(() => {
         return !!liveMerchant.is_open;
@@ -134,7 +183,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
 
         if (data) {
             const mappedCart = data.map(item => {
-                const inventoryItem = initialInventory.find(i =>
+                const inventoryItem = liveInventory.find(i =>
                     item.is_platform_item ? (i.product_id === item.product_id && i.is_platform_direct) : (i.id === item.inventory_id)
                 );
                 return { ...inventoryItem, quantity: item.quantity, cart_row_id: item.id };
@@ -144,6 +193,10 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     };
 
     const addToCart = useCallback(async (item) => {
+        if (isStorefrontItemOOS(item)) {
+            toast.error('This item is currently out of stock');
+            return;
+        }
         if (!isStoreOpen) {
             toast.error("Store is currently closed and not accepting orders.");
             return;
@@ -256,8 +309,8 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     }, [cart, supabase]);
 
     const merchantCategories = useMemo(() => {
-        return ['All', ...new Set(initialInventory.map(item => item.shopping_products?.category || 'Other'))];
-    }, [initialInventory]);
+        return ['All', ...new Set(liveInventory.map(item => item.shopping_products?.category || 'Other'))];
+    }, [liveInventory]);
 
     const getCategoryIcon = (category) => {
         const cat = category.toLowerCase();
@@ -272,7 +325,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
         return <Package size={14} />;
     };
 
-    const filteredItems = initialInventory.filter(item => {
+    const filteredItems = liveInventory.filter(item => {
         const titleMatch = item.shopping_products?.title?.toLowerCase().includes(searchQuery.toLowerCase());
         const subMatch = activeSubCategory === 'All' || item.shopping_products?.category === activeSubCategory;
         return titleMatch && subMatch;
@@ -295,14 +348,6 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     const secondaryColor = '#60a5fa'; // Blue-400
     const avatarUrl = merchant?.user_profiles?.avatar_url || (Array.isArray(merchant?.user_profiles) ? merchant?.user_profiles[0]?.avatar_url : null);
 
-    const flashSaleItems = useMemo(() => {
-        if (liveMerchant?.id !== 'official') return [];
-        return initialInventory.filter(item => {
-            const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || item.retail_price_paise || 0;
-            const price = item.retail_price_paise || 0;
-            return mrp > price;
-        }).slice(0, 3);
-    }, [initialInventory, liveMerchant?.id]);
 
     return (
         <div className={`relative min-h-screen flex flex-col transition-all duration-700`}>
@@ -405,14 +450,13 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                     {/* MERCHANT PROFILE HEADER (Mobile-First) */}
                     <MerchantProfileCard 
                         merchant={liveMerchant} 
-                        totalItems={initialInventory.length} 
+                        totalItems={liveInventory.length} 
                         isStoreOpen={isStoreOpen}
                     />
 
                     {/* FLASH SALE */}
-                    {liveMerchant?.id === 'official' && flashSaleItems.length > 0 && (
+                    {liveMerchant?.id === 'official' && (
                         <FlashSale
-                            items={flashSaleItems}
                             cart={cart}
                             onAdd={addToCart}
                             onRemove={removeFromCart}

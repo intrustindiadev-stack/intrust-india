@@ -32,6 +32,8 @@ import { useRouter } from "next/navigation";
 import SabpaisaPaymentModal from "@/components/payment/SabpaisaPaymentModal";
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
+import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
+import OutOfStockBanner from '@/components/ui/OutOfStockBanner';
 
 const CartClient = ({ userId, initialPlatformStatus }) => {
   const [cartItems, setCartItems] = useState([]);
@@ -95,29 +97,38 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
 
       if (cart && cart.length > 0) {
         const warnings = new Map();
-        const platformProductIds = cart.filter(i => i.is_platform_item).map(i => i.shopping_products?.id).filter(Boolean);
-        const merchantInventoryIds = cart.filter(i => !i.is_platform_item).map(i => i.inventory_id).filter(Boolean);
-
-        const [platformStockRes, merchantStockRes] = await Promise.all([
-          platformProductIds.length > 0
-            ? supabase.from('shopping_products').select('id, admin_stock').in('id', platformProductIds)
-            : Promise.resolve({ data: [] }),
-          merchantInventoryIds.length > 0
-            ? supabase.from('merchant_inventory').select('id, stock_quantity').in('id', merchantInventoryIds)
-            : Promise.resolve({ data: [] })
-        ]);
-
-        const platformStockMap = new Map((platformStockRes.data || []).map(p => [p.id, p.admin_stock || 0]));
-        const merchantStockMap = new Map((merchantStockRes.data || []).map(m => [m.id, m.stock_quantity || 0]));
-
-        for (const item of cart) {
-          const liveStock = item.is_platform_item
-            ? platformStockMap.get(item.shopping_products?.id) || 0
-            : merchantStockMap.get(item.inventory_id) || 0;
-
-          if (liveStock < item.quantity || liveStock === 0) {
-            warnings.set(item.id, liveStock);
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const validateRes = await fetch('/api/cart/validate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token}`
+            },
+            body: JSON.stringify({
+              items: cart.map(i => ({
+                product_id: i.shopping_products?.id,
+                inventory_id: i.inventory_id ?? null,
+                is_platform_item: i.is_platform_item,
+                quantity: i.quantity
+              }))
+            })
+          });
+          
+          if (validateRes.ok) {
+            const results = await validateRes.json();
+            for (let i = 0; i < cart.length; i++) {
+              const item = cart[i];
+              const result = results[i];
+              if (result && result.status !== 'ok') {
+                warnings.set(item.id, result.available);
+              }
+            }
+          } else {
+            console.error('Cart validate failed:', await validateRes.text());
           }
+        } catch (err) {
+          console.error('Error calling cart validate:', err);
         }
         setStockWarnings(warnings);
 
@@ -207,6 +218,64 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
   };
 
   useEffect(() => { fetchData(); }, [userId]);
+
+  const cartItemsRef = React.useRef(cartItems);
+  useEffect(() => {
+    cartItemsRef.current = cartItems;
+  }, [cartItems]);
+
+  const revalidateStock = async () => {
+    const currentCart = cartItemsRef.current;
+    if (!currentCart || currentCart.length === 0) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const validateRes = await fetch('/api/cart/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({
+          items: currentCart.map(i => ({
+            product_id: i.shopping_products?.id,
+            inventory_id: i.inventory_id ?? null,
+            is_platform_item: i.is_platform_item,
+            quantity: i.quantity
+          }))
+        })
+      });
+      if (validateRes.ok) {
+        const results = await validateRes.json();
+        const warnings = new Map();
+        for (let i = 0; i < currentCart.length; i++) {
+          const item = currentCart[i];
+          const result = results[i];
+          if (result && result.status !== 'ok') {
+            warnings.set(item.id, result.available);
+          }
+        }
+        setStockWarnings(warnings);
+      }
+    } catch (err) {
+      console.error('Error revalidating stock:', err);
+    }
+  };
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        revalidateStock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', revalidateStock);
+    const interval = setInterval(revalidateStock, 60_000);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', revalidateStock);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Real-time synchronization for store status
   useEffect(() => {
@@ -653,6 +722,17 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
           )}
         </AnimatePresence>
 
+        {(() => {
+          const fullyOOSCount = cartItems.filter(item => stockWarnings.get(item.id) === 0).length;
+          const oosItemIds = cartItems.filter(item => stockWarnings.get(item.id) === 0).map(item => item.id);
+          return fullyOOSCount > 0 && (
+            <OutOfStockBanner
+              count={fullyOOSCount}
+              onRemoveAll={() => oosItemIds.forEach(id => removeItem(id))}
+            />
+          );
+        })()}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
 
           {/* LEFT: Address + Items */}
@@ -768,10 +848,22 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                               </div>
                             )}
                             {hasStockIssue && (
-                              <div className="mt-1">
-                                <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${isDark ? 'bg-red-900/20 text-red-400 border border-red-800/30' : 'bg-red-50 text-red-600 border border-red-100'}`}>
-                                  {liveStock === 0 ? 'Out of Stock' : `Only ${liveStock} left`}
-                                </span>
+                              <div className="mt-1 flex items-center gap-2">
+                                {liveStock === 0 ? (
+                                  <>
+                                    <OutOfStockBadge variant="soft" size="sm" />
+                                    <button 
+                                      onClick={() => removeItem(item.id)}
+                                      className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 active:scale-95 transition-all"
+                                    >
+                                      Remove
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${isDark ? 'bg-red-900/20 text-red-400 border border-red-800/30' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                                    Only {liveStock} left
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
@@ -799,7 +891,11 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                           </div>
 
                           <div className={`flex items-center rounded-lg overflow-hidden h-7 ${isDark ? 'bg-blue-900/20 text-blue-400 border border-blue-800/20' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}>
-                            <button onClick={() => updateQuantity(item.id, -1)} className="w-7 h-full flex items-center justify-center hover:bg-black/5 active:scale-90 transition-all">
+                            <button 
+                              onClick={() => updateQuantity(item.id, -1)}
+                              disabled={liveStock === 0}
+                              className={`w-7 h-full flex items-center justify-center transition-all ${liveStock === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-black/5 active:scale-90'}`}
+                            >
                               <Minus size={12} strokeWidth={3} />
                             </button>
                             <motion.span
@@ -812,8 +908,8 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                             </motion.span>
                             <button
                               onClick={() => updateQuantity(item.id, 1)}
-                              disabled={hasStockIssue && item.quantity >= liveStock}
-                              className={`w-7 h-full flex items-center justify-center transition-all ${hasStockIssue && item.quantity >= liveStock
+                              disabled={liveStock === 0 || (hasStockIssue && item.quantity >= liveStock)}
+                              className={`w-7 h-full flex items-center justify-center transition-all ${liveStock === 0 || (hasStockIssue && item.quantity >= liveStock)
                                   ? 'opacity-30 cursor-not-allowed'
                                   : 'hover:bg-black/5 active:scale-90'
                                 }`}
@@ -822,6 +918,16 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
                             </button>
                           </div>
                         </div>
+                        {liveStock > 0 && liveStock < item.quantity && (
+                          <div className="mt-1 flex justify-end">
+                            <button 
+                              onClick={() => updateQuantity(item.id, liveStock - item.quantity)}
+                              className="text-[10px] font-black text-blue-600 underline cursor-pointer"
+                            >
+                              Update to {liveStock}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   );

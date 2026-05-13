@@ -1,14 +1,18 @@
 'use client';
 import { useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Heart, ShoppingCart, Trash2, Package, Loader2, Store, ArrowLeft } from 'lucide-react';
+import { Heart, ShoppingCart, Trash2, Package, Loader2, Store, ArrowLeft, Ban } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { isPlatformProductOOS, isInventoryRowOOS } from '@/lib/shopping/stock';
+import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
+import OutOfStockOverlay from '@/components/ui/OutOfStockOverlay';
+import NotifyMeButton from '@/components/ui/NotifyMeButton';
 
-export default function WishlistClient({ userId, initialItems }) {
+export default function WishlistClient({ userId, userEmail, initialItems }) {
   const [items, setItems] = useState(initialItems);
   const [movingId, setMovingId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
@@ -43,6 +47,15 @@ export default function WishlistClient({ userId, initialItems }) {
   };
 
   const moveToCart = async (item) => {
+    const isOOS = item.is_platform_item 
+      ? isPlatformProductOOS(item.shopping_products)
+      : isInventoryRowOOS(item.merchant_inventory);
+
+    if (isOOS) {
+      toast.error('This item is out of stock and cannot be added to cart');
+      return;
+    }
+
     setMovingId(item.id);
     try {
       const { data, error } = await supabase.rpc('add_to_shopping_cart', {
@@ -72,9 +85,20 @@ export default function WishlistClient({ userId, initialItems }) {
   };
 
   const addAllToCart = async (group) => {
+    const availableItems = group.items.filter(item => {
+      return item.is_platform_item 
+        ? !isPlatformProductOOS(item.shopping_products)
+        : !isInventoryRowOOS(item.merchant_inventory);
+    });
+
+    if (availableItems.length === 0) {
+      toast.error('All items in this group are currently out of stock');
+      return;
+    }
+
     setAddingAllGroupKey(group.label);
     try {
-      const [first, ...rest] = group.items;
+      const [first, ...rest] = availableItems;
       const { data, error } = await supabase.rpc('add_to_shopping_cart', {
         p_customer_id: userId,
         p_inventory_id: first.is_platform_item ? null : first.inventory_id,
@@ -195,6 +219,11 @@ export default function WishlistClient({ userId, initialItems }) {
                   const price = item.is_platform_item 
                     ? product?.suggested_retail_price_paise 
                     : (item.merchant_inventory?.retail_price_paise || product?.suggested_retail_price_paise);
+                  
+                  const isOOS = item.is_platform_item 
+                    ? isPlatformProductOOS(product)
+                    : isInventoryRowOOS(item.merchant_inventory);
+
                   return (
                     <motion.div
                       key={item.id}
@@ -205,29 +234,43 @@ export default function WishlistClient({ userId, initialItems }) {
                       transition={{ delay: idx * 0.04 }}
                       className="flex gap-4 p-4 rounded-2xl mb-3 bg-white border border-slate-100 shadow-sm"
                     >
-                      <Link href={`/shop/product/${product?.slug}`} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50 border border-slate-100">
+                      <Link href={`/shop/product/${product?.slug}`} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50 border border-slate-100 relative">
                         {product?.product_images?.[0] ? (
                           <img src={product.product_images[0]} alt={product.title} className="w-full h-full object-contain" />
                         ) : (
                           <Package size={20} className="text-slate-200" />
                         )}
+                        {isOOS && <OutOfStockOverlay />}
                       </Link>
 
-                      <div className="flex-1 min-w-0">
+                      <div className={`flex-1 min-w-0 ${isOOS ? 'opacity-50' : ''}`}>
                         <p className="text-[9px] uppercase tracking-widest font-black mb-0.5 text-slate-400">{product?.category || 'General'}</p>
                         <h3 className="text-sm font-bold line-clamp-2 leading-tight text-slate-800">{product?.title}</h3>
                         {price && <p className="text-sm font-black mt-1 text-slate-900">₹{(price / 100).toLocaleString('en-IN')}</p>}
                       </div>
 
                       <div className="flex flex-col gap-2 shrink-0">
-                        <button
-                          onClick={() => moveToCart(item)}
-                          disabled={!!movingId}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
-                        >
-                          {movingId === item.id ? <Loader2 size={12} className="animate-spin" /> : <ShoppingCart size={12} />}
-                          Add to Cart
-                        </button>
+                        {isOOS ? (
+                          <div className="flex flex-col gap-2 items-center">
+                            <OutOfStockBadge variant="soft" size="sm" />
+                            <NotifyMeButton 
+                              productId={product?.id} 
+                              inventoryId={item.inventory_id}
+                              email={userEmail}
+                              variant="outline"
+                              className="h-8"
+                            />
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => moveToCart(item)}
+                            disabled={!!movingId}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
+                          >
+                            {movingId === item.id ? <Loader2 size={12} className="animate-spin" /> : <ShoppingCart size={12} />}
+                            Add to Cart
+                          </button>
+                        )}
                         <button
                           onClick={() => removeFromWishlist(item.id)}
                           disabled={!!removingId}

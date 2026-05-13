@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
+import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
+import { OOS_LABEL } from '@/lib/shopping/stock';
 
 export default function MerchantInventoryClient({ initialInventory, merchant }) {
     const [inventory, setInventory] = useState(initialInventory);
@@ -25,7 +27,8 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
         const matchesFilter =
             filterType === 'all' ||
             (filterType === 'platform' && item.is_platform_product) ||
-            (filterType === 'custom' && !item.is_platform_product);
+            (filterType === 'custom' && !item.is_platform_product) ||
+            (filterType === 'oos' && item.stock_quantity <= 0);
         return matchesSearch && matchesFilter;
     });
 
@@ -151,16 +154,16 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
 
                 {/* Type Filter */}
                 <div className="flex items-center p-1 bg-white dark:bg-white/5 rounded-2xl border border-white dark:border-white/10 shadow-lg shadow-slate-200/50 dark:shadow-none flex-shrink-0">
-                    {['all', 'platform', 'custom'].map(type => (
+                    {['all', 'platform', 'custom', 'oos'].map(type => (
                         <button
                             key={type}
                             onClick={() => setFilterType(type)}
                             className={`flex-1 sm:flex-none px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filterType === type
-                                ? 'bg-[#1e3a5f] text-white shadow-lg shadow-blue-900/20'
+                                ? (type === 'oos' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'bg-[#1e3a5f] text-white shadow-lg shadow-blue-900/20')
                                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                                 }`}
                         >
-                            {type === 'all' ? 'All' : type === 'platform' ? 'Platform' : 'Custom'}
+                            {type === 'all' ? 'All' : type === 'platform' ? 'Platform' : type === 'custom' ? 'Custom' : OOS_LABEL}
                         </button>
                     ))}
                 </div>
@@ -280,13 +283,17 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
 
                                         {/* Stock badge */}
                                         <div className="absolute top-3 right-3">
-                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest backdrop-blur-sm shadow-sm ${item.stock_quantity <= 5
-                                                ? 'bg-amber-500/90 text-white'
-                                                : 'bg-black/40 text-white'
-                                                }`}>
-                                                {item.stock_quantity <= 5 && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
-                                                {item.stock_quantity} in stock
-                                            </span>
+                                            {item.stock_quantity <= 0 ? (
+                                                <OutOfStockBadge variant="solid" size="sm" />
+                                            ) : (
+                                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest backdrop-blur-sm shadow-sm ${item.stock_quantity <= 5
+                                                    ? 'bg-amber-500/90 text-white'
+                                                    : 'bg-black/40 text-white'
+                                                    }`}>
+                                                    {item.stock_quantity <= 5 && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
+                                                    {item.stock_quantity} in stock
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 

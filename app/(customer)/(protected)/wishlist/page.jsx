@@ -15,9 +15,9 @@ export default async function WishlistPage() {
     .from('user_wishlists')
     .select(`
       id, added_at, is_platform_item, inventory_id,
-      shopping_products ( id, slug, title, product_images, category, suggested_retail_price_paise, mrp_paise ),
+      shopping_products ( id, slug, title, product_images, category, suggested_retail_price_paise, mrp_paise, admin_stock ),
       merchants ( id, business_name ),
-      merchant_inventory ( retail_price_paise )
+      merchant_inventory ( retail_price_paise, stock_quantity, is_active )
     `)
     .eq('user_id', user.id)
     .order('added_at', { ascending: false });
@@ -27,7 +27,7 @@ export default async function WishlistPage() {
   return (
     <main className="min-h-screen pb-20 md:pb-0 bg-[#f7f8fa]">
       <Navbar />
-      <WishlistClient userId={user.id} initialItems={wishlistItems || []} />
+      <WishlistClient userId={user.id} userEmail={user.email} initialItems={wishlistItems || []} />
       <CustomerBottomNav />
     </main>
   );

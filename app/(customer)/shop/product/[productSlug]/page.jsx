@@ -31,7 +31,7 @@ export default async function ProductDetailPage({ params }) {
         .select(`
             id, title, description, product_images, mrp_paise,
             suggested_retail_price_paise, category_id, category, slug,
-            is_active, gst_percentage, hsn_code, approval_status, created_at,
+            is_active, admin_stock, gst_percentage, hsn_code, approval_status, created_at,
             shopping_categories(name, color_primary, color_secondary)
         `)
         .eq('slug', productSlug)
@@ -51,7 +51,6 @@ export default async function ProductDetailPage({ params }) {
             merchants(id, business_name, business_address, is_open)
         `)
         .eq('product_id', product.id)
-        .eq('is_active', true)
         .limit(5);
 
     // 3. Get current customer
@@ -144,7 +143,7 @@ export default async function ProductDetailPage({ params }) {
                     inventory={inventory || []}
                     customer={customerProfile}
                     recommendedProducts={recommendedProducts}
-                    platformStatus={platformStatus}
+                    initialPlatformStatus={platformStatus}
                 />
             </main>
         </div>

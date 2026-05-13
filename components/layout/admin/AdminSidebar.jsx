@@ -35,6 +35,7 @@ import {
     UserCheck,
     BarChart3,
     User,
+    Zap,
     Bell,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
@@ -90,6 +91,7 @@ const navigationGroups = [
         items: [
             { name: 'Rewards', href: '/admin/rewards', icon: Trophy },
             { name: 'Partnership Growth', href: '/admin/lockin', icon: Clock },
+            { name: 'Flash Sale', href: '/admin/flash-sale', icon: Zap },
             { name: 'Banners', href: '/admin/banners', icon: ImageIcon },
             { name: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
             { name: 'My Profile', href: '/admin/profile', icon: User },

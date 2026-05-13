@@ -3,13 +3,15 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import {
-    ShoppingBag, Plus, Package, TrendingUp, DollarSign,
+    ShoppingBag, Plus, Package, PackageX, TrendingUp, DollarSign,
     ChevronRight, Tags, ClipboardList, Store, Edit,
     ToggleLeft, ToggleRight, Search, Filter, Clock,
     CheckCircle2, AlertTriangle, Trash2, ShieldCheck, RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
+import { isInventoryRowOOS, OOS_LABEL } from '@/lib/shopping/stock';
+import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 
 const TAB_PLATFORM = "platform";
 const TAB_CUSTOM = "custom";
@@ -20,6 +22,7 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
     const [activeTab, setActiveTab] = useState(TAB_PLATFORM);
     const [search, setSearch] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("all");
+    const [oosOnly, setOosOnly] = useState(false);
     const [stockEdits, setStockEdits] = useState({});
     const [savingStock, setSavingStock] = useState(new Set());
     const [deletingId, setDeletingId] = useState(null);
@@ -156,7 +159,18 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
             (p.merchant_inventory?.find(inv => inv.is_platform_product === false)?.merchants?.business_name || "").toLowerCase().includes(search.toLowerCase());
         const cat = p.category || p.shopping_categories?.name;
         const matchesCat = categoryFilter === "all" || cat === categoryFilter;
-        return matchesSearch && matchesCat;
+        
+        let matchesOos = true;
+        if (oosOnly) {
+            const isMerchantProduct = p.merchant_inventory?.some(inv => inv.is_platform_product === false);
+            if (!isMerchantProduct) {
+                matchesOos = (p.admin_stock ?? 0) <= 0;
+            } else {
+                matchesOos = p.merchant_inventory?.every(inv => isInventoryRowOOS(inv)) ?? false;
+            }
+        }
+        
+        return matchesSearch && matchesCat && matchesOos;
     });
 
     return (
@@ -291,6 +305,17 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                         <option value="all">Category: All</option>
                         {categories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
+                    <button
+                        onClick={() => setOosOnly(!oosOnly)}
+                        className={`flex items-center gap-1.5 rounded-[1.2rem] px-3 py-3 font-black text-[10px] uppercase tracking-widest transition-all ${
+                            oosOnly
+                                ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
+                                : "bg-white border border-slate-200 text-slate-500"
+                        }`}
+                    >
+                        <PackageX size={12} className={oosOnly ? "text-white" : "text-slate-400"} />
+                        {OOS_LABEL} Only
+                    </button>
                 </div>
             </div>
 
@@ -321,6 +346,9 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                         const categoryName = product.shopping_categories?.name || product.category || "General";
                         const currentStock = stockEdits[product.id] !== undefined ? parseInt(stockEdits[product.id]) || 0 : (product.admin_stock || 0);
                         const lowStock = currentStock < 5;
+                        const isOOS = !isMerchantProduct
+                            ? currentStock <= 0
+                            : product.merchant_inventory?.every(inv => isInventoryRowOOS(inv));
 
                         return (
                             <div
@@ -339,6 +367,7 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                                 {/* Details */}
                                 <div className="flex-1 min-w-0 py-1">
                                     <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                                        {isOOS && <OutOfStockBadge variant="soft" size="sm" />}
                                         {isMerchantProduct && product.approval_status === 'pending_approval' ? (
                                             <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border bg-amber-50 text-amber-600 border-amber-100">
                                                 Pending Admin

@@ -1,54 +1,162 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ArrowRight, X } from 'lucide-react';
-
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useDebounce } from '@/hooks/useDebounce';
+import SearchDropdown from '@/components/search/SearchDropdown';
 
 export default function SearchBar({ className = '' }) {
+    const router = useRouter();
+
     const [searchQuery, setSearchQuery] = useState('');
-    const [searchFocused, setSearchFocused] = useState(false);
     const inputRef = useRef(null);
 
-    const suggestions = [
-        'Personal Loans',
-        'Gift Cards',
-        'Mobile Recharge',
-        'Solar Solutions',
-    ];
+    const debouncedQuery = useDebounce(searchQuery, 300);
+    const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [highlightIndex, setHighlightIndex] = useState(-1);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
 
-    const handleSearch = (e) => {
+    const wrapperRef = useRef(null);
+
+    useEffect(() => {
+        const handler = (e) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        document.addEventListener('touchstart', handler);
+        return () => {
+            document.removeEventListener('mousedown', handler);
+            document.removeEventListener('touchstart', handler);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (debouncedQuery.trim().length === 0) {
+            setResults([]);
+            setLoading(false);
+            setDropdownOpen(false);
+            return;
+        }
+
+        const controller = new AbortController();
+        setLoading(true);
+        setError(null);
+        setDropdownOpen(true);
+
+        fetch('/api/search?q=' + encodeURIComponent(debouncedQuery) + '&type=all&limit=10', {
+            signal: controller.signal
+        })
+            .then(res => {
+                if (!res.ok) throw new Error('Search failed');
+                return res.json();
+            })
+            .then(data => {
+                setResults(data.results ?? []);
+                setDropdownOpen(true);
+            })
+            .catch(err => {
+                if (err.name !== 'AbortError') {
+                    setError('Search failed');
+                    setResults([]);
+                }
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+
+        return () => controller.abort();
+    }, [debouncedQuery]);
+
+    useEffect(() => {
+        setHighlightIndex(-1);
+    }, [results]);
+
+    const handleFocus = () => {
+        setIsFocused(true);
+        if (searchQuery.trim().length > 0) {
+            setDropdownOpen(true);
+        }
+    };
+
+    const handleBlur = (e) => {
+        if (wrapperRef.current && !wrapperRef.current.contains(e.relatedTarget)) {
+            setDropdownOpen(false);
+            setIsFocused(false);
+        }
+    };
+
+    const handleKeyDown = (e) => {
+        if (!dropdownOpen) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHighlightIndex(i => Math.min(i + 1, results.length - 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHighlightIndex(i => Math.max(i - 1, -1));
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlightIndex >= 0 && results[highlightIndex]) {
+                router.push(results[highlightIndex].url);
+            } else if (searchQuery.trim()) {
+                router.push('/search?q=' + encodeURIComponent(searchQuery.trim()));
+            }
+            setDropdownOpen(false);
+            inputRef.current?.blur();
+        } else if (e.key === 'Escape') {
+            setDropdownOpen(false);
+            inputRef.current?.blur();
+        }
+    };
+
+    const onSubmit = (e) => {
         e.preventDefault();
         if (searchQuery.trim()) {
-            console.log('Searching for:', searchQuery);
-            // Implement search logic here
+            router.push('/search?q=' + encodeURIComponent(searchQuery.trim()));
+            setDropdownOpen(false);
+            inputRef.current?.blur();
         }
     };
 
     const clearSearch = () => {
         setSearchQuery('');
+        setResults([]);
+        setDropdownOpen(false);
+        setHighlightIndex(-1);
         inputRef.current?.focus();
     };
 
     return (
-        <div className={`relative z-50 ${className}`}>
+        <div
+            className={`relative z-50 ${className}`}
+            ref={wrapperRef}
+            onBlur={handleBlur}
+        >
             <motion.div
                 initial={false}
-                animate={searchFocused ? { scale: 1.02 } : { scale: 1 }}
+                animate={isFocused ? { scale: 1.02 } : { scale: 1 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                 className="relative group"
             >
                 {/* Ambient Glow Effect */}
                 <motion.div
                     animate={{
-                        opacity: searchFocused ? 0.4 : 0,
-                        scale: searchFocused ? 1.05 : 0.95,
+                        opacity: isFocused ? 0.4 : 0,
+                        scale: isFocused ? 1.05 : 0.95,
                     }}
                     transition={{ duration: 0.4 }}
                     className="absolute -inset-1 bg-gradient-to-r from-[#92BCEA] via-[#AFB3F7] to-[#5E7CE2] rounded-full blur-xl -z-10"
                 />
 
-                <form onSubmit={handleSearch} className="relative">
+                <form onSubmit={onSubmit} className="relative">
                     <div
                         className={`
                             relative flex items-center
@@ -58,7 +166,7 @@ export default function SearchBar({ className = '' }) {
                             rounded-full
                             shadow-[0_8px_30px_rgb(0,0,0,0.04)]
                             hover:shadow-[0_15px_30px_rgb(0,0,0,0.08)]
-                            ${searchFocused
+                            ${isFocused
                                 ? 'border-[#92BCEA] shadow-[0_0_0_4px_rgba(146,188,234,0.1)] bg-white/95 dark:bg-gray-800/95'
                                 : 'border-white/50 dark:border-gray-700/50 hover:border-white/80 dark:hover:border-gray-600/80'
                             }
@@ -69,7 +177,7 @@ export default function SearchBar({ className = '' }) {
                         <Search
                             size={22}
                             strokeWidth={2}
-                            className={`flex-shrink-0 transition-colors duration-300 mr-3 ${searchFocused ? 'text-[#92BCEA]' : 'text-slate-400'
+                            className={`flex-shrink-0 transition-colors duration-300 mr-3 ${isFocused ? 'text-[#92BCEA]' : 'text-slate-400'
                                 }`}
                         />
 
@@ -78,9 +186,14 @@ export default function SearchBar({ className = '' }) {
                             ref={inputRef}
                             type="text"
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onFocus={() => setSearchFocused(true)}
-                            onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                if (!dropdownOpen && e.target.value.trim().length > 0) {
+                                    setDropdownOpen(true);
+                                }
+                            }}
+                            onFocus={handleFocus}
+                            onKeyDown={handleKeyDown}
                             placeholder="Search for services, offers, and more..."
                             className="
                                 flex-1 w-full
@@ -133,52 +246,18 @@ export default function SearchBar({ className = '' }) {
                     </div>
                 </form>
 
-                {/* Suggestions Dropdown */}
-                <AnimatePresence>
-                    {searchFocused && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                            transition={{ duration: 0.2 }}
-                            className="
-                                absolute top-full left-0 right-0 mt-4
-                                p-2
-                                bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl
-                                border border-white/50 dark:border-gray-700/50
-                                rounded-3xl
-                                shadow-2xl shadow-blue-900/5
-                                overflow-hidden
-                            "
-                        >
-                            <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                Popular Searches
-                            </div>
-                            <div className="flex flex-col gap-1">
-                                {suggestions.map((suggestion, index) => (
-                                    <motion.button
-                                        key={suggestion}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: index * 0.05 }}
-                                        className="
-                                            flex items-center gap-3
-                                            w-full px-4 py-3
-                                            rounded-2xl
-                                            text-left text-slate-700 dark:text-gray-300
-                                            hover:bg-blue-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400
-                                            transition-colors group
-                                        "
-                                        onClick={() => setSearchQuery(suggestion)}
-                                    >
-                                        <Search size={16} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
-                                        <span className="font-medium">{suggestion}</span>
-                                    </motion.button>
-                                ))}
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {dropdownOpen && (
+                    <SearchDropdown
+                        query={searchQuery}
+                        results={results}
+                        loading={loading}
+                        error={error}
+                        highlightIndex={highlightIndex}
+                        onHighlight={setHighlightIndex}
+                        onSelect={(result) => { router.push(result.url); setDropdownOpen(false); inputRef.current?.blur(); }}
+                        onSeeAll={() => { router.push('/search?q=' + encodeURIComponent(searchQuery)); setDropdownOpen(false); inputRef.current?.blur(); }}
+                    />
+                )}
             </motion.div>
         </div>
     );
