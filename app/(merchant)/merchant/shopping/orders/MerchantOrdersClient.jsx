@@ -7,7 +7,7 @@ import {
     TrendingUp, TrendingDown, DollarSign, ShoppingBag,
     ChevronDown, ChevronUp, MapPin, ArrowUpRight, AlertTriangle,
     RotateCcw, Receipt, Store, Filter, Calendar, ExternalLink,
-    MoreVertical, Download, X, Sparkles
+    MoreVertical, Download, X, Sparkles, Copy, Check
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -170,65 +170,100 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
                                 </div>
                             </div>
 
-                            {/* Financial Summary Ledger */}
-                            <div className="bg-gradient-to-br from-slate-50 to-white dark:from-white/[0.04] dark:to-transparent border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm dark:shadow-none">
-                                <div className="p-4 border-b border-slate-100 dark:border-white/[0.05] bg-slate-100/50 dark:bg-white/[0.03]">
-                                    <p className="text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                            {/* Financial Summary Ledger - Refactored for Mobile Responsiveness */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between px-1">
+                                    <p className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                         <Receipt size={12} className="text-slate-400 dark:text-gray-500" /> Transaction Ledger
                                     </p>
                                 </div>
-                                <div className="p-5 space-y-3">
-                                    <div className="flex justify-between items-center text-xs">
-                                        <span className="text-slate-500 dark:text-gray-500 font-medium tracking-wide">Gross Transaction Value</span>
-                                        <span className="font-bold text-slate-900 dark:text-white tracking-widest">₹{((order.total_amount_paise || 0) / 100).toLocaleString("en-IN")}</span>
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                    {/* Transaction ID Card */}
+                                    <div className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 group/id relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-2 opacity-0 group-hover/id:opacity-100 transition-opacity">
+                                            <button 
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(order.id);
+                                                    toast.success("Transaction ID copied!");
+                                                }}
+                                                className="p-1.5 rounded-lg bg-slate-100 dark:bg-white/10 hover:bg-emerald-500 hover:text-black transition-all"
+                                                title="Copy Transaction ID"
+                                            >
+                                                <Copy size={12} />
+                                            </button>
+                                        </div>
+                                        <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Transaction ID</p>
+                                        <p className="text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300 break-all leading-tight">
+                                            {order.id.toUpperCase()}
+                                        </p>
                                     </div>
-                                    <div className="flex justify-between items-center text-xs">
-                                        <span className="text-slate-500 dark:text-gray-500 font-medium tracking-wide">Gross Sale Value</span>
-                                        <span className="font-bold text-slate-900 dark:text-white">₹{(orderGrossProfit / 100).toLocaleString("en-IN")}</span>
+
+                                    {/* Gross Transaction Card */}
+                                    <div className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                                        <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Gross Revenue</p>
+                                        <p className="text-lg font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                                            ₹{((order.total_amount_paise || 0) / 100).toLocaleString("en-IN")}
+                                        </p>
                                     </div>
-                                    <div className="flex justify-between items-center text-xs">
-                                        <span className="text-slate-500 dark:text-gray-500 font-medium tracking-wide">Product Inventory Cost</span>
-                                        <span className="font-bold text-red-600 dark:text-red-400">−₹{(orderTotalCost / 100).toLocaleString("en-IN")}</span>
+
+                                    {/* Sales Profit Card */}
+                                    <div className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                                        <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Sales Profit</p>
+                                        <p className="text-lg font-black text-blue-600 dark:text-blue-400 tracking-tight leading-none">
+                                            ₹{(orderGrossProfit / 100).toLocaleString("en-IN")}
+                                        </p>
                                     </div>
-                                    <div className="flex justify-between items-center text-xs">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-slate-500 dark:text-gray-500 font-medium tracking-wide">Platform Fee</span>
+
+                                    {/* Platform Fee Card */}
+                                    <div className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest">Platform Fee</p>
                                             {calculatePlatformFeePercentage(order.commission_rate, orderCommission, orderGrossProfit) !== null && (
-                                                <span className="text-[9px] px-1 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 font-black">
+                                                <span className="text-[8px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 font-black">
                                                     {calculatePlatformFeePercentage(order.commission_rate, orderCommission, orderGrossProfit)}%
                                                 </span>
                                             )}
                                         </div>
-                                        <span className="font-bold text-amber-600 dark:text-amber-500/90">₹{(orderCommission / 100).toLocaleString("en-IN")}</span>
+                                        <p className="text-lg font-black text-amber-600 dark:text-amber-500/90 tracking-tight leading-none">
+                                            ₹{(orderCommission / 100).toLocaleString("en-IN")}
+                                        </p>
                                     </div>
-                                    <div className="pt-4 mt-2 border-t border-slate-100 dark:border-white/[0.05] flex justify-between items-center">
+
+                                    {/* Cost Card */}
+                                    <div className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                                        <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Inventory Cost</p>
+                                        <p className="text-lg font-black text-red-600 dark:text-red-400 tracking-tight leading-none">
+                                            ₹{(orderTotalCost / 100).toLocaleString("en-IN")}
+                                        </p>
+                                    </div>
+
+                                    {/* Pure Margin Card */}
+                                    <div className="p-4 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 shadow-sm shadow-emerald-500/5">
+                                        <div className="flex items-center gap-1.5 mb-1.5">
+                                            <Sparkles size={10} className="text-emerald-500" />
+                                            <p className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Pure Margin</p>
+                                        </div>
+                                        <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tracking-tight leading-none">
+                                            ₹{(orderPureProfit / 100).toLocaleString("en-IN")}
+                                        </p>
+                                    </div>
+
+                                    {/* Net Payout Card (Spans across or prominent) */}
+                                    <div className="sm:col-span-2 p-4 rounded-2xl bg-slate-900 dark:bg-white/10 border border-slate-800 dark:border-white/10 flex items-center justify-between">
                                         <div>
-                                            <p className="text-[10px] text-slate-400 dark:text-gray-500 font-black uppercase tracking-tight mb-0.5">Final Net Credit</p>
-                                            <p className="text-xs text-emerald-600 dark:text-emerald-500/70 font-medium italic">
+                                            <p className="text-[9px] text-slate-400 dark:text-gray-400 font-black uppercase tracking-widest mb-1">Final Net Payout</p>
+                                            <p className="text-[10px] text-emerald-500/80 font-bold italic">
                                                 {order.settlement_status === 'settled'
-                                                    ? 'Settled to your wallet'
+                                                    ? 'Settled to wallet'
                                                     : order.settlement_status === 'settled_zero'
-                                                    ? 'Settlement complete — ₹0 payout'
-                                                    : (order.settlement_status === 'pending' && orderNetProfit === 0)
-                                                    ? 'Awaiting payment confirmation'
+                                                    ? 'Settled (₹0 payout)'
                                                     : 'Pending settlement'}
                                             </p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-[10px] text-slate-400 dark:text-gray-500 font-black uppercase tracking-tight mb-0.5">Net Payout</p>
-                                            <span className="block text-xl font-black text-slate-900 dark:text-white tracking-tighter">₹{(orderNetProfit / 100).toLocaleString("en-IN")}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Pure Margin Highlight */}
-                                    <div className="mt-3 pt-3 border-t border-dashed border-emerald-500/20 bg-emerald-500/5 -mx-5 px-5 py-2">
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center gap-1.5">
-                                                <Sparkles size={12} className="text-emerald-500" />
-                                                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Pure Margin Profit</span>
-                                            </div>
-                                            <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
-                                                ₹{(orderPureProfit / 100).toLocaleString("en-IN")}
+                                            <span className="text-2xl font-black text-white tracking-tighter leading-none">
+                                                ₹{(orderNetProfit / 100).toLocaleString("en-IN")}
                                             </span>
                                         </div>
                                     </div>

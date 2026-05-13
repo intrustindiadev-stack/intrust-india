@@ -12,17 +12,9 @@ export default function GlobalScratchCardPopup() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     
-    // Context consumption with safety wrapper (mirroring CustomerBottomNav)
-    let rewardsContext;
-    try {
-        rewardsContext = useRewardsRealtime();
-    } catch (e) {
-        // Fallback for cases where context might not be available
-        return null;
-    }
-
-    const { lastArrival, markScratched } = rewardsContext;
-
+    // 1. All hooks must be at the top level
+    const rewardsContext = useRewardsRealtime(); // Assume it returns null/undefined if provider missing, or handle it inside
+    
     // State
     const [selectedCard, setSelectedCard] = useState(null);
     const [revealedCardIds, setRevealedCardIds] = useState(new Set());
@@ -31,20 +23,20 @@ export default function GlobalScratchCardPopup() {
     // Track last shown arrival to prevent loops/re-opens
     const hasShownForArrivalRef = useRef(null);
 
-    // Skip logic - Guard against conflicts
-    // 1. Rewards page handles its own modal
-    if (pathname === '/rewards') return null;
+    // 2. Define derived state and logic
+    const { lastArrival, markScratched } = rewardsContext || {};
+
+    // Skip logic - Determine if we should be hidden
+    const isRewardsPage = pathname === '/rewards';
+    const isOrdersSuccess = pathname === '/orders' && 
+                          searchParams.get('success') === 'true' && 
+                          lastArrival?.event_type === 'purchase';
     
-    // 2. Orders page handles purchase events on success redirect
-    if (pathname === '/orders' && 
-        searchParams.get('success') === 'true' && 
-        lastArrival?.event_type === 'purchase') {
-        return null;
-    }
+    const shouldSkip = !rewardsContext || isRewardsPage || isOrdersSuccess;
 
     // Auto-open effect
     useEffect(() => {
-        if (!lastArrival) return;
+        if (shouldSkip || !lastArrival) return;
         
         // Already shown this specific arrival
         if (hasShownForArrivalRef.current === lastArrival.id) return;
@@ -71,11 +63,11 @@ export default function GlobalScratchCardPopup() {
         setSelectedCard(lastArrival);
         toast.success("🎁 You've earned a new reward! Scratch to reveal.", { duration: 4000 });
         
-    }, [lastArrival, selectedCard]);
+    }, [lastArrival, selectedCard, shouldSkip]);
 
     // Scratch completion handler (mirrors rewards page but without wallet sync)
     const handleScratchComplete = useCallback(async (cardId) => {
-        if (isProcessingReveal) return;
+        if (isProcessingReveal || !markScratched) return;
         setIsProcessingReveal(true);
 
         try {
@@ -88,9 +80,6 @@ export default function GlobalScratchCardPopup() {
             if (!res.ok && data.code !== 'already_scratched') {
                 throw new Error(data.code || 'Failed to claim reward');
             }
-
-            // Note: We don't call applyServerBalance here as this is a global popup.
-            // The underlying context updates the unscratched count automatically.
 
             setRevealedCardIds(prev => new Set(prev).add(cardId));
             const pts = data.pointsWon ?? 0;
@@ -108,6 +97,8 @@ export default function GlobalScratchCardPopup() {
             setIsProcessingReveal(false);
         }
     }, [isProcessingReveal, markScratched]);
+
+    if (shouldSkip) return null;
 
     return (
         <AnimatePresence>
@@ -127,7 +118,7 @@ export default function GlobalScratchCardPopup() {
                         <div className="relative bg-black/40 rounded-[2.9rem] p-8 overflow-hidden">
                             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" />
                             <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
-
+ 
                             <button 
                                 onClick={() => !isProcessingReveal && setSelectedCard(null)}
                                 className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors border border-white/10 z-20 disabled:opacity-50"
@@ -135,12 +126,12 @@ export default function GlobalScratchCardPopup() {
                             >
                                 <X size={20} />
                             </button>
-
+ 
                             <div className="text-center mb-10 relative z-10 pt-4">
                                 <h3 className="text-3xl font-black text-white mb-2 tracking-tighter italic">Empire Loot Box</h3>
                                 <p className="text-emerald-400 font-bold uppercase tracking-[0.3em] text-[10px]">Scratch to Reveal Prize</p>
                             </div>
-
+ 
                             <div className="relative h-72 sm:h-80 w-full rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl ring-4 ring-emerald-500/5">
                                 <ScratchCard 
                                     id={selectedCard.id}
@@ -149,7 +140,7 @@ export default function GlobalScratchCardPopup() {
                                     revealed={revealedCardIds.has(selectedCard.id)}
                                 />
                             </div>
-
+ 
                             <div className="mt-10 text-center relative z-10">
                                 <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em] mb-6 italic">Verified Rewards System</p>
                                 <div className="flex items-center justify-center gap-3">

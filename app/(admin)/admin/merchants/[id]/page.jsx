@@ -230,7 +230,13 @@ export default async function AdminMerchantDetailPage({ params }) {
                     </div>
 
                     {/* Quick Access Actions / Stats */}
-                    {isPending && <MerchantActions merchantId={merchant.id} userId={merchant.user_id} status={merchant.status} />}
+                    <MerchantActions 
+                        merchantId={merchant.id} 
+                        userId={merchant.user_id} 
+                        status={merchant.status} 
+                        hasBankData={!!(merchant.bank_account_number || merchant.bank_data?.account_number)}
+                        bankVerified={merchant.bank_verified}
+                    />
 
                     {isApproved && (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 bg-slate-50/50 p-4 sm:p-6 rounded-3xl border border-slate-100 shadow-inner">

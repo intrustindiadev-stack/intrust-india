@@ -5,10 +5,13 @@ import ChatBubble from './ChatBubble';
 import ChatWindow from './ChatWindow';
 import { CHAT_HIDDEN_PATHS } from './hiddenPaths';
 
+import { useAuth } from '@/lib/contexts/AuthContext';
+
 export default function GlobalChat() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
-  const isChatDisabled = CHAT_HIDDEN_PATHS.some((path) => pathname?.startsWith(path));
+  const isChatDisabled = !user || CHAT_HIDDEN_PATHS.some((path) => pathname?.startsWith(path));
 
   if (isChatDisabled) {
     return null;
