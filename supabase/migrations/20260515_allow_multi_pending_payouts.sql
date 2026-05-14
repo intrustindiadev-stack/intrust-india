@@ -16,6 +16,7 @@
 -- ---------------------------------------------------------------------------
 -- A. merchant_request_payout (re-deploy with surgical edits)
 -- ---------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS merchant_request_payout(uuid, bigint, text, uuid, text, text, text);
 CREATE OR REPLACE FUNCTION merchant_request_payout(
     p_user_id              uuid,
     p_amount_paise         bigint,

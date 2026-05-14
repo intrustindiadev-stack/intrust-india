@@ -168,7 +168,12 @@ export default function ProductDetailClient({ product, inventory, customer, reco
         ...inventory.map(inv => ({
             id: inv.id,
             is_platform_direct: false,
-            retail_price_paise: inv.retail_price_paise,
+            // For platform-managed rows, use the authoritative price from shopping_products.
+            // retail_price_paise on merchant_inventory can be stale between admin updates.
+            // See migration: 20260514_sync_platform_inventory_retail_price.sql
+            retail_price_paise: inv.is_platform_product
+                ? (product.suggested_retail_price_paise ?? inv.retail_price_paise)
+                : inv.retail_price_paise,
             merchant_name: inv.merchants?.business_name || 'Merchant',
             merchant_location: inv.merchants?.business_address || '',
             stock: inv.stock_quantity,

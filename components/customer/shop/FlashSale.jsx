@@ -22,6 +22,9 @@ function FlashSaleCard({ item, cartItem, onAdd, onRemove, onExpire, isStoreOpen,
     const product = item.shopping_products || {};
     const imageUrl = item.thumbnail || product.product_images?.[0] || null;
     const mrp = (item.original_price ?? product.mrp_paise ?? product.suggested_retail_price_paise ?? 0) / 100;
+    // Flash-sale items are exempt from the platform-price override: sale_price is the
+    // canonical price for this surface and is set explicitly by the admin when creating
+    // the flash-sale entry. No need to defer to shopping_products.suggested_retail_price_paise here.
     const price = (item.sale_price ?? item.retail_price_paise ?? 0) / 100;
     const slug = item.url ? item.url.split('/').pop() : product.slug;
     const stock = item.stock_quantity ?? product.admin_stock ?? null;

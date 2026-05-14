@@ -70,6 +70,7 @@ export default async function MerchantStorefrontPage({ params }) {
             merchant_id: null,
             is_active: true,
             is_platform_direct: true,
+            is_platform_product: true,
             shopping_products: p
         }));
     } else {
@@ -132,7 +133,7 @@ export default async function MerchantStorefrontPage({ params }) {
             // Inventory
             supabase
                 .from('merchant_inventory')
-                .select(`id, retail_price_paise, stock_quantity, merchant_id, product_id, is_active, custom_title, custom_description, shopping_products!inner (id, slug, title, description, product_images, category, mrp_paise, suggested_retail_price_paise)`)
+                .select(`id, retail_price_paise, stock_quantity, merchant_id, product_id, is_active, is_platform_product, custom_title, custom_description, shopping_products!inner (id, slug, title, description, product_images, category, mrp_paise, suggested_retail_price_paise)`)
                 .eq('merchant_id', fetchedMerchant.id)
                 .eq('is_active', true),
             // Customer profile
