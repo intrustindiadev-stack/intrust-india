@@ -26,17 +26,7 @@ export async function POST(request) {
             .eq('config_key', 'redemption_mode')
             .maybeSingle();
 
-        let redemptionMode = 'instant';
-        if (modeConfig?.config_value) {
-            const cv = typeof modeConfig.config_value === 'string'
-                ? modeConfig.config_value
-                : JSON.stringify(modeConfig.config_value);
-            try {
-                redemptionMode = JSON.parse(cv);
-            } catch {
-                redemptionMode = cv.replace(/^"|"$/g, '');
-            }
-        }
+        const redemptionMode = String(modeConfig?.config_value ?? '"instant"').replace(/^"|"$/g, '');
 
         // ── approval_required mode: create a pending request ──────────────────
         if (redemptionMode === 'approval_required') {
@@ -47,17 +37,8 @@ export async function POST(request) {
                 .eq('config_key', 'points_per_rupee')
                 .maybeSingle();
 
-            let pointsPerRupee = 1;
-            if (ppcConfig?.config_value) {
-                const cv = typeof ppcConfig.config_value === 'string'
-                    ? ppcConfig.config_value
-                    : JSON.stringify(ppcConfig.config_value);
-                try {
-                    pointsPerRupee = JSON.parse(cv) || 1;
-                } catch {
-                    pointsPerRupee = 1;
-                }
-            }
+            const parsedPointsPerRupee = parseFloat(String(ppcConfig?.config_value ?? '1').replace(/^"|"$/g, ''));
+            const pointsPerRupee = isNaN(parsedPointsPerRupee) ? 1 : parsedPointsPerRupee;
 
             const rupee_value_paise = Math.round((points / pointsPerRupee) * 100);
 

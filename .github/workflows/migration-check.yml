@@ -1,0 +1,32 @@
+name: Migration Check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase instance
+        run: supabase start
+
+      - name: Check for missing or altered migrations
+        run: supabase db lint || exit 1
+
+      - name: Forbid new files in database_scripts
+        run: |
+          if git diff --name-only origin/main...HEAD | grep -q "^database_scripts/"; then
+            echo "Error: New files detected in database_scripts/."
+            echo "Please place schema migrations in supabase/migrations/ and operational scripts in supabase/operational-sql/."
+            exit 1
+          fi

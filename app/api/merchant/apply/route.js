@@ -1,6 +1,7 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 import { sprintVerify } from '@/lib/sprintVerify';
+import crypto from 'crypto';
 
 export async function POST(request) {
     try {
@@ -61,7 +62,8 @@ export async function POST(request) {
         let panVerified = false;
         let bankVerified = false;
         let gstVerified = false;
-        let finalStatus = 'pending'; // Changed to pending for manual review of PAN and Bank
+        // Status is always pending — PAN and Bank are under manual review.
+        const finalStatus = 'pending';
 
         // 1. Verify GSTIN (if provided)
         let gstResult = null;
@@ -70,7 +72,7 @@ export async function POST(request) {
             if (gstResult.valid === true) {
                 gstVerified = true;
             } else if (gstResult.valid === 'manual_review') {
-                finalStatus = 'pending';
+                // still pending — no change needed
             } else {
                 return NextResponse.json(
                     { error: `GSTIN Verification Failed: ${gstResult.message}` },
@@ -106,52 +108,66 @@ export async function POST(request) {
             referrerMerchantId = referrerData.id;
         }
 
-        // Generate unique referral code
+        // Generate referral code — the DB has a UNIQUE constraint so we rely on
+        // it as the final arbiter. We generate once and catch a collision (23505)
+        // to retry exactly once before giving up.
         const adminSupabase = createAdminClient();
-        let generatedCode = '';
-        let isUnique = false;
-        while (!isUnique) {
-            generatedCode = crypto.randomUUID().split('-')[0].slice(0, 6).toUpperCase();
-            const { data: existingCode } = await adminSupabase
+
+        const generateCode = () => crypto.randomUUID().split('-')[0].slice(0, 6).toUpperCase();
+
+        let generatedCode = generateCode();
+
+        // Attempt insert with idempotency loop for rare code collisions
+        let merchant = null;
+        let merchantError = null;
+
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const insertResult = await supabase
                 .from('merchants')
-                .select('id')
-                .eq('referral_code', generatedCode)
-                .maybeSingle();
-            if (!existingCode) {
-                isUnique = true;
+                .insert([
+                    {
+                        user_id: user.id,
+                        business_name: businessName,
+                        gst_number: gstNumber || null,
+                        owner_name: ownerName,
+                        business_phone: phone,
+                        business_email: email,
+                        business_address: address,
+                        bank_account_number: bankAccount,
+                        bank_ifsc_code: ifscCode,
+                        pan_number: panCard,
+                        status: finalStatus,
+                        pan_verified: panVerified,
+                        bank_verified: bankVerified,
+                        gstin_verified: gstVerified,
+                        pan_data: null,
+                        bank_data: null,
+                        gstin_data: gstResult?.data || null,
+                        referred_by_merchant_id: referrerMerchantId,
+                        referral_code: generatedCode,
+                    }
+                ])
+                .select()
+                .single();
+
+            if (!insertResult.error) {
+                merchant = insertResult.data;
+                merchantError = null;
+                break;
             }
+
+            // 23505 = unique_violation — referral code collision, retry once
+            if (insertResult.error.code === '23505' && attempt === 0) {
+                console.warn('[MerchantApply] Referral code collision, retrying with new code...');
+                generatedCode = generateCode();
+                continue;
+            }
+
+            merchantError = insertResult.error;
+            break;
         }
 
-        // Create merchant record with approved status since API checks passed
-        const { data: merchant, error: merchantError } = await supabase
-            .from('merchants')
-            .insert([
-                {
-                    user_id: user.id,
-                    business_name: businessName,
-                    gst_number: gstNumber || null,
-                    owner_name: ownerName,
-                    business_phone: phone,
-                    business_email: email,
-                    business_address: address,
-                    bank_account_number: bankAccount,
-                    bank_ifsc_code: ifscCode,
-                    pan_number: panCard,
-                    status: finalStatus,
-                    pan_verified: panVerified,
-                    bank_verified: bankVerified,
-                    gstin_verified: gstVerified,
-                    pan_data: null,
-                    bank_data: null,
-                    gstin_data: gstResult?.data || null,
-                    referred_by_merchant_id: referrerMerchantId,
-                    referral_code: generatedCode,
-                }
-            ])
-            .select()
-            .single();
-
-        if (merchantError) {
+        if (merchantError || !merchant) {
             console.error('Error creating merchant:', merchantError);
             return NextResponse.json(
                 { error: 'Failed to create merchant account. Please try again.' },
@@ -170,7 +186,7 @@ export async function POST(request) {
                 const notifications = admins.map(admin => ({
                     user_id: admin.id,
                     title: 'New Merchant Application 🏪',
-                    body: `${businessName} has applied to become a merchant. Status: ${finalStatus}`,
+                    body: `${businessName} has applied to become a merchant and is under manual review.`,
                     type: 'info',
                     reference_type: 'merchant_application',
                     reference_id: merchant.id,
@@ -180,45 +196,26 @@ export async function POST(request) {
                 if (notifInsertError) console.error('Error inserting admin notifications:', notifInsertError);
             }
 
-
-            // If they are auto-approved by KYC, give them a notification to pay
-            if (finalStatus === 'approved') {
-                await adminSupabase.from('notifications').insert({
-                    user_id: user.id,
-                    title: 'KYC Verified - Action Required 🎉',
-                    body: `Your merchant application for ${businessName} was automatically verified! Choose a subscription plan (starting ₹499/month) to activate your merchant panel.`,
-                    type: 'success',
-                    reference_type: 'merchant_approved',
-                    read: false
-                });
-            } else {
-                // Confirm submission for pending applications
-                await adminSupabase.from('notifications').insert({
-                    user_id: user.id,
-                    title: 'Application Received! 📝',
-                    body: `Your merchant application for ${businessName} has been received and is under review. We'll notify you once it's approved.`,
-                    type: 'info',
-                    reference_type: 'merchant_application',
-                    reference_id: merchant.id,
-                    read: false
-                });
-            }
+            // Confirm submission — status is always pending at this stage
+            await adminSupabase.from('notifications').insert({
+                user_id: user.id,
+                title: 'Application Received! 📝',
+                body: `Your merchant application for ${businessName} has been received and is under review. We'll notify you once it's approved.`,
+                type: 'info',
+                reference_type: 'merchant_application',
+                reference_id: merchant.id,
+                read: false
+            });
         } catch (notifError) {
             console.error('Error sending notifications:', notifError);
         }
 
-        // Log the merchant creation
-        console.log('✅ Merchant account created and verified via SprintVerify.');
-
-        // Create descriptive response
-        const message = finalStatus === 'approved'
-            ? 'Merchant account created and verified successfully!'
-            : 'Merchant application submitted. Some details are under manual review.';
+        console.log('✅ Merchant application submitted and queued for manual review.');
 
         return NextResponse.json(
             {
                 success: true,
-                message: message,
+                message: 'Merchant application submitted. Some details are under manual review.',
                 merchantId: merchant.id,
                 status: merchant.status,
             },

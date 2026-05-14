@@ -8,7 +8,7 @@ import { buildEncryptedPayload } from '@/lib/sabpaisa/payload';
 import { sabpaisaConfig, validateCallbackConfig } from '@/lib/sabpaisa/config';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
-import { MERCHANT_SUBSCRIPTION_PLANS } from '@/lib/constants';
+import { MERCHANT_SUBSCRIPTION_PLANS, GOLD_SUBSCRIPTION_PLANS } from '@/lib/constants';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -182,10 +182,55 @@ export async function POST(request) {
             }
 
             canonicalAmountPaise = nfcOrder.sale_price_paise;
+        } else if (udf1 === 'WHOLESALE_PURCHASE') {
+            // udf2 = wholesale_order_drafts.id
+            const { data: draft, error: draftErr } = await supabaseAdmin
+                .from('wholesale_order_drafts')
+                .select('total_amount_paise, status')
+                .eq('id', udf2)
+                .single();
+            if (draftErr || !draft) {
+                return failResponse(400, 'Invalid or missing wholesale draft ID.', correlationId, draftErr);
+            }
+            if (draft.status !== 'pending') {
+                return failResponse(400, 'Wholesale draft is not in a pending state.', correlationId);
+            }
+            canonicalAmountPaise = draft.total_amount_paise;
+        } else if (udf1 === 'GOLD_SUBSCRIPTION') {
+            // udf2 = packageId (e.g. GOLD_1M, GOLD_3M, GOLD_1Y)
+            const plan = GOLD_SUBSCRIPTION_PLANS.find(p => p.key === udf2);
+            if (!plan) {
+                return failResponse(400, 'Invalid Gold Subscription plan selection.', correlationId);
+            }
+            canonicalAmountPaise = Math.round(plan.price * 100);
+        } else if (udf1 === 'WALLET_TOPUP' || udf1 === 'MERCHANT_TOPUP') {
+            // Client-supplied amount — enforce a valid paise range
+            const clientPaise = Math.round(Number(orderData.amount) * 100);
+            const MIN_PAISE = 100;      // ₹1 minimum
+            const MAX_PAISE = 1_00_00_000; // ₹1,00,000 maximum
+            if (isNaN(clientPaise) || clientPaise < MIN_PAISE || clientPaise > MAX_PAISE) {
+                return failResponse(400, `Invalid topup amount. Must be between ₹${MIN_PAISE / 100} and ₹${MAX_PAISE / 100}.`, correlationId);
+            }
+            canonicalAmountPaise = clientPaise;
+        } else if (udf1 === 'UDHARI_PAYMENT') {
+            // udf2 = udhari_requests.id
+            const { data: udhariReq, error: udhariErr } = await supabaseAdmin
+                .from('udhari_requests')
+                .select('amount_paise, fee_paise, status, customer_id')
+                .eq('id', udf2)
+                .single();
+            if (udhariErr || !udhariReq) {
+                return failResponse(400, 'Invalid or missing store credit request ID.', correlationId, udhariErr);
+            }
+            if (udhariReq.status !== 'approved') {
+                return failResponse(400, 'Store credit request is not in an approved state.', correlationId);
+            }
+            if (udhariReq.customer_id !== user.id) {
+                return failResponse(403, 'Unauthorized: You do not own this store credit request.', correlationId);
+            }
+            canonicalAmountPaise = (udhariReq.amount_paise || 0) + (udhariReq.fee_paise || 0);
         } else {
-            // Variable price transactions (Wallet/Merchant Topups)
-            // We still derive it server-side from the input to ensure it is paise-clean
-            canonicalAmountPaise = Math.round(Number(orderData.amount) * 100);
+            return failResponse(400, 'Unsupported payment type.', correlationId, `Unknown udf1 value: "${udf1}"`);
         }
 
         if (canonicalAmountPaise <= 0 || isNaN(canonicalAmountPaise)) {

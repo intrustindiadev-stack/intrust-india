@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
 import { hashOTP, validatePhoneNumber } from '@/lib/otpUtils';
 import crypto from 'crypto';
-import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 
 export async function POST(request) {
@@ -58,7 +57,6 @@ export async function POST(request) {
 
         // 3. User Handling
         const authPhone = `+91${cleanPhone}`;
-        const tempPassword = crypto.randomBytes(16).toString('hex') + 'Aa1!';
         let userId = null;
 
         // Try to get user ID by RPC first
@@ -67,11 +65,15 @@ export async function POST(request) {
             userId = rpcUserId;
         }
 
-        // If not found, try to create or find existing
+        // If not found, create the user (new-user path only)
         if (!userId) {
+            // Generate a strong random password for new-user creation only —
+            // it is never used again (login uses admin createSession, not signInWithPassword).
+            const newUserPassword = crypto.randomBytes(16).toString('hex') + 'Aa1!';
+
             const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                 phone: authPhone,
-                password: tempPassword,
+                password: newUserPassword,
                 phone_confirm: true
             });
 
@@ -111,44 +113,29 @@ export async function POST(request) {
             return NextResponse.json({ success: false, error: 'Could not create or locate user.' }, { status: 500 });
         }
 
-        // 4. Update Credentials & Confirm Phone
+        // 4. Confirm Phone for existing users (no password rotation)
         const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
             userId,
-            { password: tempPassword, phone_confirm: true }
+            { phone_confirm: true }
         );
 
         if (updateError) {
-            return NextResponse.json({ success: false, error: 'Failed to update user credentials.' }, { status: 500 });
+            return NextResponse.json({ success: false, error: 'Failed to confirm user phone.' }, { status: 500 });
         }
 
-        // Also update name for existing users if provided (and not already done)
+        // Update name for existing users if provided
         if (full_name) {
             console.log(`[VERIFY-OTP] Ensuring name update for user ${userId}...`);
             const { error: finalUpdateError } = await supabaseAdmin.from('user_profiles').update({ full_name }).eq('id', userId);
             if (finalUpdateError) console.error('[VERIFY-OTP] Final name update failed:', finalUpdateError);
         }
 
-        // 5. Create Session
-        const tempClient = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-            {
-                auth: {
-                    persistSession: false,
-                    autoRefreshToken: false,
-                    detectSessionInUrl: false
-                }
-            }
-        );
+        // 5. Mint session directly via admin API — no password required
+        const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession({ user_id: userId });
 
-        const { data: signInData, error: signInError } = await tempClient.auth.signInWithPassword({
-            phone: authPhone,
-            password: tempPassword,
-        });
-
-        if (signInError || !signInData.session) {
-            console.log('[VERIFY-OTP] Sign in failed:', signInError);
-            return NextResponse.json({ success: false, error: `Sign in failed: ${signInError?.message}` }, { status: 500 });
+        if (sessionError || !sessionData?.session) {
+            console.log('[VERIFY-OTP] Session creation failed:', sessionError);
+            return NextResponse.json({ success: false, error: `Session creation failed: ${sessionError?.message}` }, { status: 500 });
         }
 
         console.log('[VERIFY-OTP] Success! User:', userId);
@@ -157,7 +144,7 @@ export async function POST(request) {
         // so Supabase writes sb-*-auth-token cookies directly onto the response.
         const response = NextResponse.json({
             success: true,
-            user: signInData.user   // session intentionally omitted — lives in cookie
+            user: sessionData.user   // session intentionally omitted — lives in cookie
         });
 
         const cookieServerClient = createServerClient(
@@ -188,7 +175,7 @@ export async function POST(request) {
         );
 
         // This call triggers setAll above, writing the sb-*-auth-token cookies.
-        await cookieServerClient.auth.setSession(signInData.session);
+        await cookieServerClient.auth.setSession(sessionData.session);
 
         return response;
 

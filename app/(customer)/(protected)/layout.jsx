@@ -8,14 +8,10 @@ export default async function ProtectedCustomerLayout({ children }) {
 
     let user = null;
     try {
-        const getUserPromise = supabase.auth.getUser();
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Auth timeout')), 3000)
-        );
-        const { data } = await Promise.race([getUserPromise, timeoutPromise]);
+        const { data } = await supabase.auth.getUser();
         user = data?.user;
     } catch (error) {
-        redirect('/login');
+        console.error('Auth check error in protected layout:', error);
     }
 
     if (!user) {

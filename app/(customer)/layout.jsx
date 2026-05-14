@@ -30,16 +30,16 @@ export default async function CustomerLayout({ children }) {
                 .eq('id', user.id)
                 .single();
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Profile timeout')), 3000)
+                setTimeout(() => reject(new Error('Profile timeout')), 5000)
             );
             const { data, error } = await Promise.race([getProfilePromise, timeoutPromise]);
-            if (error) {
-                console.error('Profile fetch error:', error);
-                throw new Error('Failed to fetch profile');
+            if (!error && data) {
+                profile = data;
+            } else {
+                console.warn('Profile fetch soft-failed, proceeding without profile:', error?.message);
             }
-            profile = data;
         } catch (error) {
-            redirect('/login');
+            console.warn('Profile fetch soft-failed, proceeding without profile:', error.message);
         }
 
         // If admin tries to access customer routes, redirect to admin panel

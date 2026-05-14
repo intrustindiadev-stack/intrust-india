@@ -86,142 +86,17 @@ export async function POST(request) {
                 return NextResponse.json({ error: 'This customer has defaulted on previous deferred payments and cannot be approved.' }, { status: 400 });
             }
 
-            // ========== TYPE-SPECIFIC APPROVAL LOGIC ==========
-            if (udhariRequest.source_type === 'gift_card') {
-                // Verify coupon is still available
-                if (udhariRequest.coupon?.status !== 'available') {
-                    return NextResponse.json({ error: 'This gift card is no longer available' }, { status: 400 });
-                }
+            // Call the atomic RPC to approve the request
+            const { error: rpcError } = await supabaseAdmin.rpc('merchant_approve_udhari_request', {
+                p_request_id: requestId,
+                p_duration_days: days,
+                p_merchant_note: merchantNote || null,
+                p_disclaimer_accepted: true
+            });
 
-                // Reserve the coupon — strict row-count check to handle race conditions.
-                const { data: reservedRows, error: couponUpdateError } = await supabaseAdmin
-                    .from('coupons')
-                    .update({ status: 'reserved' })
-                    .eq('id', udhariRequest.coupon_id)
-                    .eq('status', 'available')
-                    .select('id');
-
-                if (couponUpdateError) {
-                    console.error(JSON.stringify({ correlationId, stage: 'coupon_reserve', error: couponUpdateError }));
-                    return NextResponse.json({ error: 'Failed to reserve gift card. It may no longer be available.' }, { status: 409 });
-                }
-
-                if (!reservedRows || reservedRows.length !== 1) {
-                    console.error(JSON.stringify({ correlationId, stage: 'coupon_reserve', error: 'zero_rows_updated', coupon_id: udhariRequest.coupon_id }));
-                    return NextResponse.json({ error: 'Gift card was just taken by another request. Please try again.' }, { status: 409 });
-                }
-            } else if (udhariRequest.source_type === 'shop_order' && udhariRequest.shopping_order_group_id) {
-                // 1. Transition the order group to 'pending' (fulfillable)
-                const { error: groupUpdateError } = await supabaseAdmin
-                    .from('shopping_order_groups')
-                    .update({
-                        delivery_status: 'pending',
-                        payment_method: 'store_credit'
-                    })
-                    .eq('id', udhariRequest.shopping_order_group_id);
-
-                if (groupUpdateError) {
-                    console.error(JSON.stringify({ correlationId, stage: 'order_group_update', error: groupUpdateError }));
-                    return NextResponse.json({ error: 'Failed to update order status' }, { status: 500 });
-                }
-
-                // 2. Deduct inventory for each item in the order
-                const { data: orderItems, error: itemsError } = await supabaseAdmin
-                    .from('shopping_order_items')
-                    .select('product_id, quantity, inventory_id')
-                    .eq('group_id', udhariRequest.shopping_order_group_id);
-
-                if (itemsError) {
-                    console.error(JSON.stringify({ correlationId, stage: 'fetch_order_items', error: itemsError }));
-                } else if (orderItems && orderItems.length > 0) {
-                    // Update stock for each item
-                    for (const item of orderItems) {
-                        const { error: stockError } = await supabaseAdmin.rpc('decrement_inventory', {
-                            p_merchant_id: merchant.id,
-                            p_product_id: item.product_id,
-                            p_quantity: item.quantity
-                        });
-
-                        // If RPC doesn't exist, fallback to manual update (though RPC is safer)
-                        if (stockError && stockError.code === 'PGRST116') { // Function not found
-                            // Fetch current stock
-                            const { data: invData, error: invFetchError } = await supabaseAdmin
-                                .from('merchant_inventory')
-                                .select('stock_quantity')
-                                .eq('id', item.inventory_id)
-                                .single();
-
-                            if (invFetchError) {
-                                console.error(JSON.stringify({ correlationId, stage: 'inventory_fetch_fallback', error: invFetchError, item }));
-                                return NextResponse.json({ error: 'Failed to fetch inventory for item' }, { status: 500 });
-                            } else if (invData) {
-                                // Update stock
-                                const { data: invUpdateData, error: invUpdateError } = await supabaseAdmin
-                                    .from('merchant_inventory')
-                                    .update({ stock_quantity: invData.stock_quantity - item.quantity })
-                                    .eq('id', item.inventory_id)
-                                    .gte('stock_quantity', item.quantity) // Prevent going negative
-                                    .select('id');
-
-                                if (invUpdateError) {
-                                    console.error(JSON.stringify({ correlationId, stage: 'inventory_update_fallback', error: invUpdateError, item }));
-                                    return NextResponse.json({ error: 'Failed to update inventory' }, { status: 500 });
-                                }
-
-                                if (!invUpdateData || invUpdateData.length !== 1) {
-                                    console.error(JSON.stringify({ correlationId, stage: 'inventory_update_fallback_insufficient', error: 'zero_rows_updated', item }));
-                                    return NextResponse.json({ error: 'Insufficient stock or invalid item.' }, { status: 409 });
-                                }
-                            } else {
-                                return NextResponse.json({ error: 'Inventory not found for item.' }, { status: 404 });
-                            }
-                        } else if (stockError) {
-                            console.error(JSON.stringify({ correlationId, stage: 'inventory_decrement', error: stockError, item }));
-                            return NextResponse.json({ error: 'Failed to decrement inventory. Item may be out of stock.' }, { status: 409 });
-                        }
-                    }
-                }
-            }
-
-            // Update udhari request
-            const { error: updateError } = await supabaseAdmin
-                .from('udhari_requests')
-                .update({
-                    status: 'approved',
-                    due_date: dueDate,
-                    duration_days: days,
-                    disclaimer_accepted: true,
-                    merchant_note: merchantNote || null,
-                    responded_at: now,
-                })
-                .eq('id', requestId);
-
-            if (updateError) {
-                console.error(JSON.stringify({ correlationId, stage: 'udhari_approve', error: updateError }));
-                
-                // Rollback coupon if it was a gift card
-                if (udhariRequest.source_type === 'gift_card') {
-                    const { data: rollbackData, error: rollbackError } = await supabaseAdmin
-                        .from('coupons')
-                        .update({ status: 'available' })
-                        .eq('id', udhariRequest.coupon_id)
-                        .eq('status', 'reserved')
-                        .select('id');
-                    
-                    if (rollbackError || !rollbackData || rollbackData.length !== 1) {
-                        console.error(JSON.stringify({ 
-                            correlationId, 
-                            stage: 'coupon_rollback_failed', 
-                            level: 'HIGH_SEVERITY_INTEGRITY_EVENT',
-                            error: rollbackError || 'Rollback row count constraint failed', 
-                            udhari_request_id: requestId, 
-                            coupon_id: udhariRequest.coupon_id,
-                            reverted_count: rollbackData?.length || 0
-                        }));
-                        return NextResponse.json({ error: 'Failed to approve request. Manual intervention required.' }, { status: 500 });
-                    }
-                }
-                return NextResponse.json({ error: 'Failed to approve request' }, { status: 500 });
+            if (rpcError) {
+                console.error(JSON.stringify({ correlationId, stage: 'udhari_approve_rpc', error: rpcError }));
+                return NextResponse.json({ error: rpcError.message || 'Failed to approve request' }, { status: 500 });
             }
 
             // Notify customer

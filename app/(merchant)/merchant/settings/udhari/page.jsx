@@ -22,6 +22,7 @@ export default function MerchantUdhariSettingsPage() {
         udhari_enabled: false,
         max_duration_days: 15,
         max_credit_limit_paise: 500000,
+        convenience_fee_bps: 300,
     });
 
     useEffect(() => {
@@ -63,6 +64,7 @@ export default function MerchantUdhariSettingsPage() {
                         udhari_enabled: settings.udhari_enabled,
                         max_duration_days: parseInt(settings.max_duration_days),
                         max_credit_limit_paise: parseInt(settings.max_credit_limit_paise),
+                        convenience_fee_bps: parseInt(settings.convenience_fee_bps),
                     })
                 });
                 
@@ -164,6 +166,25 @@ export default function MerchantUdhariSettingsPage() {
                                 onChange={(e) => setSettings({ ...settings, max_credit_limit_paise: parseFloat(e.target.value) * 100 || 0 })}
                                 className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all font-medium"
                             />
+                        </div>
+                    </div>
+
+                    {/* Convenience Fee */}
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Convenience Fee (%)</label>
+                        <p className="text-xs text-gray-500 mb-2">Extra fee charged to the customer for deferred payment</p>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                required
+                                value={(settings.convenience_fee_bps || 0) / 100}
+                                onChange={(e) => setSettings({ ...settings, convenience_fee_bps: Math.round(parseFloat(e.target.value) * 100) || 0 })}
+                                className="w-full pl-4 pr-8 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all font-medium"
+                            />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">%</span>
                         </div>
                     </div>
                 </div>

@@ -35,16 +35,26 @@ export default function SubscriptionGuardModal({ isOpen, onClose, merchantData, 
                 </button>
 
                 <div className="w-full">
-                    <MerchantSubscriptionPayButton
-                        merchantId={merchantData.id}
-                        businessName={merchantData.business_name}
-                        payerName={merchantData.user_profiles?.full_name || 'Merchant User'}
-                        payerEmail={merchantData.user_profiles?.email || 'merchant@example.com'}
-                        payerMobile={merchantData.user_profiles?.phone || '9999999999'}
-                        isRenewal={isRenewal}
-                        subscriptionExpiresAt={merchantData.subscription_expires_at}
-                        plans={plans}
-                    />
+                    {(!merchantData.user_profiles?.email || !merchantData.user_profiles?.phone) ? (
+                        <div className="bg-white p-6 rounded-2xl shadow-xl text-center space-y-4">
+                            <h3 className="text-xl font-bold text-slate-800">Complete Your Profile</h3>
+                            <p className="text-slate-600 text-sm">Please complete your profile with a valid email and phone number before subscribing.</p>
+                            <a href="/merchant/profile" className="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors">
+                                Go to Profile
+                            </a>
+                        </div>
+                    ) : (
+                        <MerchantSubscriptionPayButton
+                            merchantId={merchantData.id}
+                            businessName={merchantData.business_name}
+                            payerName={merchantData.user_profiles?.full_name || 'Merchant User'}
+                            payerEmail={merchantData.user_profiles?.email}
+                            payerMobile={merchantData.user_profiles?.phone}
+                            isRenewal={isRenewal}
+                            subscriptionExpiresAt={merchantData.subscription_expires_at}
+                            plans={plans}
+                        />
+                    )}
                 </div>
             </div>
         </div>

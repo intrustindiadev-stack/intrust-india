@@ -51,7 +51,8 @@ export async function POST(request) {
             .single();
 
         const purchaseAmountPaise = udhariRequest.amount_paise;
-        const extraFeePaise = Math.round(purchaseAmountPaise * 0.03); // 3% convenience fee
+        const feeBps = settings?.convenience_fee_bps ?? 300;
+        const extraFeePaise = Math.round(purchaseAmountPaise * feeBps / 10000);
         const totalAmountPaise = purchaseAmountPaise + extraFeePaise;
 
         // 4. Fetch wallet

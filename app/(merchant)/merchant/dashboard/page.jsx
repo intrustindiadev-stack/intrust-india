@@ -46,7 +46,7 @@ export default async function MerchantDashboardPage() {
 
     if (merchant.status === 'pending') redirect('/merchant-status/pending');
     if (merchant.status === 'rejected') redirect('/merchant-status/rejected');
-    if (merchant.status === 'suspended') redirect('/merchant/suspended');
+    if (merchant.status === 'suspended') redirect('/merchant-status/suspended');
 
     // Comment 3: Use admin client for data queries to bypass RLS on shopping_order_items.
     // Merchant identity has already been verified above via the authenticated client.

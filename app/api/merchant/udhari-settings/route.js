@@ -42,6 +42,7 @@ export async function GET(request) {
                 udhari_enabled: false,
                 max_credit_limit_paise: 500000,
                 max_duration_days: 15,
+                convenience_fee_bps: 300,
                 extra_fee_paise: 0,
             },
         });
@@ -77,11 +78,18 @@ export async function PATCH(request) {
             udhari_enabled,
             max_credit_limit_paise,
             max_duration_days,
+            convenience_fee_bps,
         } = body;
 
         // Validate
         if (max_duration_days !== undefined && ![5, 10, 15].includes(max_duration_days)) {
             return NextResponse.json({ error: 'max_duration_days must be 5, 10, or 15' }, { status: 400 });
+        }
+
+        if (convenience_fee_bps !== undefined) {
+            if (convenience_fee_bps < 0 || convenience_fee_bps > 10000) {
+                return NextResponse.json({ error: 'convenience_fee_bps must be between 0 and 10000' }, { status: 400 });
+            }
         }
 
         if (max_credit_limit_paise !== undefined) {
@@ -101,6 +109,7 @@ export async function PATCH(request) {
         if (udhari_enabled !== undefined) updates.udhari_enabled = udhari_enabled;
         if (max_credit_limit_paise !== undefined) updates.max_credit_limit_paise = max_credit_limit_paise;
         if (max_duration_days !== undefined) updates.max_duration_days = max_duration_days;
+        if (convenience_fee_bps !== undefined) updates.convenience_fee_bps = convenience_fee_bps;
 
         // Upsert
         const { data, error } = await supabaseAdmin

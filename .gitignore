@@ -51,8 +51,10 @@ dump_error.log
 .agent*
 .agents*
 
-# generated docs
-docs/
+# dev tools and debug
+scratch/
+tmp/
+dev-tools/
 
 #zip
 .zip

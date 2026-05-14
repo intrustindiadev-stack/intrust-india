@@ -1,3 +1,4 @@
+// dev-tools/ is intentionally outside the Next.js build tree (not under app/, pages/, components/, lib/, or public/)
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {

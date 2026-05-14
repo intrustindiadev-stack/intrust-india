@@ -35,7 +35,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 import OutOfStockBanner from '@/components/ui/OutOfStockBanner';
 
-const CartClient = ({ userId, initialPlatformStatus }) => {
+const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, minOrderValuePaise = 49900 }) => {
   const [cartItems, setCartItems] = useState([]);
   const [stockWarnings, setStockWarnings] = useState(new Map());
   const [loading, setLoading] = useState(true);
@@ -506,19 +506,21 @@ const CartClient = ({ userId, initialPlatformStatus }) => {
     acc.mrpTotal += (finalMrp * item.quantity);
     acc.sellingTotal += (sellingPrice * item.quantity);
     acc.gstTotal += gstAmount;
-    acc.sgstTotal += Math.round(gstAmount / 2);
-    acc.cgstTotal += Math.round(gstAmount / 2);
+    const sgstThis = Math.floor(gstAmount / 2);
+    const cgstThis = gstAmount - sgstThis;
+    acc.sgstTotal += sgstThis;
+    acc.cgstTotal += cgstThis;
     return acc;
   }, { mrpTotal: 0, sellingTotal: 0, gstTotal: 0, sgstTotal: 0, cgstTotal: 0 });
 
   const totalDiscount = billDetails.mrpTotal > billDetails.sellingTotal ? billDetails.mrpTotal - billDetails.sellingTotal : 0;
-  const deliveryFee = 9900; // Fixed ₹99 delivery fee
+  const deliveryFee = deliveryFeePaise;
   const finalPayable = billDetails.sellingTotal > 0 ? billDetails.sellingTotal + billDetails.gstTotal + deliveryFee : 0;
   const itemCount = cartItems.reduce((a, i) => a + i.quantity, 0);
   const hasStockIssues = stockWarnings.size > 0;
   const hasValidAddress = profile && profile.address && profile.phone;
 
-  const MIN_ORDER_VALUE = 49900;
+  const MIN_ORDER_VALUE = minOrderValuePaise;
   const isMinOrderMet = finalPayable >= MIN_ORDER_VALUE;
 
   const hasSufficientBalance = paymentMode === 'wallet' ? walletBalance >= finalPayable : true;

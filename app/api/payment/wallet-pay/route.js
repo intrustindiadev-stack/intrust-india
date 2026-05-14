@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { CustomerWalletService } from '@/lib/wallet/customerWalletService';
 import { notifyMerchantSubscriptionStatus } from '@/lib/notifications/merchantWhatsapp';
+import { GOLD_SUBSCRIPTION_PLANS } from '@/lib/constants';
 
 export async function POST(request) {
     try {
         const body = await request.json().catch(() => ({}));
-        const { packageId, amount } = body;
+        // `amount` is intentionally ignored — price is derived server-side from the plan.
+        const { packageId } = body;
 
         // 1. Get User Session
         const authHeader = request.headers.get('Authorization');
@@ -28,20 +30,40 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!packageId || !amount) {
-            return NextResponse.json({ error: 'Missing package details' }, { status: 400 });
+        // 2. Idempotency header
+        const idempotencyKey = request.headers.get('Idempotency-Key') || null;
+
+        // 3. Look up canonical plan — reject unknown packageId
+        const plan = GOLD_SUBSCRIPTION_PLANS.find(p => p.key === packageId);
+        if (!plan) {
+            return NextResponse.json({ error: 'Invalid package selection.' }, { status: 400 });
         }
 
-        // 2. Process Subscription Logic
-        const monthsToAdd = packageId === 'GOLD_1M' ? 1 : packageId === 'GOLD_3M' ? 3 : 12;
+        const { price: priceRupees, durationMonths: monthsToAdd, cashback: cashbackAmount } = plan;
 
-        // 3. Create Admin Client
+        // 4. Admin client for privileged operations
         const supabaseAdmin = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
             process.env.SUPABASE_SERVICE_ROLE_KEY
         );
 
-        // 4. Verification Check
+        // 5. Idempotency check — return early if this key was already processed
+        if (idempotencyKey) {
+            const { data: existingDebit } = await supabaseAdmin
+                .from('customer_wallet_transactions')
+                .select('id')
+                .eq('reference_id', idempotencyKey)
+                .eq('reference_type', 'GOLD_SUBSCRIPTION')
+                .eq('transaction_type', 'DEBIT')
+                .maybeSingle();
+
+            if (existingDebit) {
+                console.log(`[WalletPay] Idempotent replay for key ${idempotencyKey}`);
+                return NextResponse.json({ success: true, replayed: true });
+            }
+        }
+
+        // 6. Determine new subscription expiry (extend if currently active)
         const { data: profile } = await supabaseAdmin
             .from('user_profiles')
             .select('is_gold_verified, subscription_expiry')
@@ -59,20 +81,21 @@ export async function POST(request) {
         const newExpiryDate = new Date(baseDate);
         newExpiryDate.setMonth(newExpiryDate.getMonth() + monthsToAdd);
 
-        // 5. Deduct from Wallet
-        const description = `Elite Gold ${packageId.replace('GOLD_', '')} Subscription Activation`;
+        // 7. Deduct from Wallet (canonical server-side price)
+        const description = `Elite Gold ${plan.label} Subscription Activation`;
+        const referenceId = idempotencyKey || packageId;
         try {
             await CustomerWalletService.debitWallet(
                 user.id,
-                amount,
+                priceRupees,
                 description,
-                { id: packageId, type: 'GOLD_SUBSCRIPTION' }
+                { id: referenceId, type: 'GOLD_SUBSCRIPTION' }
             );
         } catch (walletErr) {
             return NextResponse.json({ error: walletErr.message }, { status: 400 });
         }
 
-        // 6. Update User Profile
+        // 8. Update User Profile
         const { error: updateError } = await supabaseAdmin
             .from('user_profiles')
             .update({
@@ -87,25 +110,21 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Failed to update subscription status' }, { status: 500 });
         }
 
-        // 7. Add Cashback Reward (Matching gateway behavior)
-        let cashbackAmount = 1499.00;
-        if (packageId === 'GOLD_1M') cashbackAmount = 199.00;
-        else if (packageId === 'GOLD_3M') cashbackAmount = 499.00;
-
+        // 9. Credit Cashback Reward
         try {
             await CustomerWalletService.creditWallet(
                 user.id,
                 cashbackAmount,
                 'CASHBACK',
-                `Gold ${monthsToAdd}M Subscription Cashback Reward (Wallet Pay)`,
-                { id: packageId, type: 'SUBSCRIPTION', method: 'WALLET' }
+                `Gold ${plan.label} Subscription Cashback Reward (Wallet Pay)`,
+                { id: referenceId, type: 'SUBSCRIPTION', method: 'WALLET' }
             );
         } catch (cashbackErr) {
+            // Non-fatal — primary action (subscription) already succeeded
             console.error('[WalletPay] Cashback Error:', cashbackErr);
-            // We don't fail the whole request because the primary action (subscription) succeeded
         }
 
-        // 8. ADDED: Notify Merchant
+        // 10. Notify User
         await supabaseAdmin.from('notifications').insert([{
             user_id: user.id,
             title: 'Elite Gold Activated! 🎉',
@@ -115,7 +134,7 @@ export async function POST(request) {
             reference_id: packageId
         }]);
 
-        // Send WhatsApp Notification
+        // 11. WhatsApp Notification (fire-and-forget)
         Promise.resolve().then(() => {
             notifyMerchantSubscriptionStatus({
                 merchantUserId: user.id,

@@ -56,58 +56,27 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Unauthorized: Merchant identity mismatch' }, { status: 403 });
         }
 
-        // 3. Validate Stock and Calculate Total
-        let totalPaise = 0;
-        const validatedItems = [];
+        // 3. Create Draft securely via RPC
+        const { data: result, error: rpcError } = await supabaseAdmin.rpc('create_wholesale_draft', {
+            p_merchant_id: merchantId,
+            p_items: items
+        });
 
-        for (const item of items) {
-            const { data: product, error: prodErr } = await supabaseAdmin
-                .from('shopping_products')
-                .select('id, admin_stock, wholesale_price_paise, title, gst_percentage')
-                .eq('id', item.product_id)
-                .single();
-
-            if (prodErr || !product) {
-                return NextResponse.json({ error: `Product not found: ${item.product_id}` }, { status: 404 });
+        if (rpcError) {
+            console.error('[Wholesale Draft RPC Error]', rpcError);
+            if (rpcError.message && rpcError.message.includes('Insufficient stock')) {
+                return NextResponse.json({ error: rpcError.message }, { status: 400 });
             }
-
-            if (product.admin_stock < item.quantity) {
-                return NextResponse.json({ error: `Insufficient stock for ${product.title}` }, { status: 400 });
+            if (rpcError.message && rpcError.message.includes('Product not found')) {
+                return NextResponse.json({ error: rpcError.message }, { status: 404 });
             }
-
-            const basePaise = product.wholesale_price_paise * item.quantity;
-            const gstPaise = Math.round(basePaise * (product.gst_percentage || 0) / 100);
-            totalPaise += basePaise + gstPaise;
-            validatedItems.push({
-                product_id: product.id,
-                quantity: item.quantity,
-                unit_price_paise: product.wholesale_price_paise,
-                gst_amount_paise: gstPaise
-            });
-        }
-
-        // 4. Create Draft
-        const { data: draft, error: draftErr } = await supabaseAdmin
-            .from('wholesale_order_drafts')
-            .insert({
-                merchant_id: merchantId,
-                items: validatedItems,
-                total_amount_paise: totalPaise,
-                expected_amount_paise: totalPaise,
-                status: 'pending'
-            })
-            .select('id')
-            .single();
-
-        if (draftErr) {
-            console.error('[Wholesale Draft Error]', draftErr);
             return NextResponse.json({ error: 'Failed to create wholesale draft' }, { status: 500 });
         }
 
         return NextResponse.json({
             success: true,
-            draftId: draft.id,
-            totalPaise: totalPaise
+            draftId: result.draft_id,
+            totalPaise: result.total_amount_paise
         });
 
     } catch (error) {
