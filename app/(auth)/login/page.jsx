@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithOTP, verifyOTP } from '@/lib/supabase';
-import { supabase } from '@/lib/supabaseClient';
+import { redirectByRole } from '@/lib/auth';
 import { Phone, ArrowRight, Loader2, ShieldCheck, Mail, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -127,28 +127,8 @@ function LoginContent() {
     }, [verified, resetDone, merged, confirmed]);
 
     // ─── Role-based redirect helper ──────────────────────────────────────────────
-    const redirectByRole = async (user) => {
-        const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-        const role = profile?.role;
-        if (role === 'merchant') {
-            window.location.href = '/merchant/dashboard';
-        } else if (role === 'admin' || role === 'super_admin') {
-            window.location.href = '/admin';
-        } else if (role === 'hr_manager') {
-            window.location.href = '/hrm';
-        } else if (role?.startsWith('sales_') || role === 'sales_exec' || role === 'sales_agent') {
-            window.location.href = '/crm';
-        } else if (role === 'employee') {
-            window.location.href = '/employee';
-        } else {
-            window.location.href = '/dashboard';
-        }
-    };
+    // redirectByRole is imported from @/lib/auth — uses server-returned values,
+    // no client-side DB round-trip.
 
     // ─── Google ──────────────────────────────────────────────────────────────────
     const handleGoogleSignIn = () => {
@@ -211,7 +191,7 @@ function LoginContent() {
             }
             const user = data?.user;
             if (user) {
-                await redirectByRole(user);
+                await redirectByRole(user, data.role, data.is_suspended);
             } else {
                 toast.error('Login failed. Please try again.');
                 setLoading(false);
@@ -250,7 +230,7 @@ function LoginContent() {
 
             const user = data.user;
             if (user) {
-                await redirectByRole(user);
+                await redirectByRole(user, data.role, data.is_suspended);
             } else {
                 toast.error('Login failed. Please try again.');
                 setLoading(false);

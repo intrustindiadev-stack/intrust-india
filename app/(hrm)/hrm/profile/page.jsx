@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabaseClient';
+import { displayEmail } from '@/lib/auth';
 import {
     User,
     Mail,
@@ -299,7 +300,7 @@ export default function HRMProfilePage() {
                             <EditableRow 
                                 label="Email Address" 
                                 icon={Mail} 
-                                value={profile.email} 
+                                value={displayEmail(profile.email) ?? undefined} 
                                 readOnly
                             />
                         </div>

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithOTP, verifyOTP } from '@/lib/supabase';
 import { supabase } from '@/lib/supabaseClient';
+import { redirectByRole } from '@/lib/auth';
 import { Phone, ArrowRight, Loader2, ShieldCheck, User, Sparkles, Mail, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -115,7 +116,7 @@ function SignupPageInner() {
             const formattedPhone = `+91${phone}`;
             const { data, error: verifyError } = await verifyOTP(formattedPhone, otp, name);
             if (verifyError) { toast.error(verifyError.message || 'Invalid OTP.'); setLoading(false); return; }
-            window.location.href = '/dashboard';
+            await redirectByRole(data?.user, data?.role, data?.is_suspended);
         } catch (err) {
             console.error('[SIGNUP] Unexpected OTP error:', err);
             toast.error('An unexpected error occurred. Please try again.');

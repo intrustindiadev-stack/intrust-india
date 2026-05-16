@@ -4,6 +4,7 @@ import { Mail, Phone, Camera, Loader2, Star } from 'lucide-react';
 import GoldBadge from '@/components/ui/GoldBadge';
 import { useRef, useState } from 'react';
 import { createClient } from '@/lib/supabaseClient';
+import { displayName as authDisplayName, displayEmail, formatIndianPhone } from '@/lib/auth';
 
 const supabase = createClient();
 
@@ -68,7 +69,7 @@ function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
 }
 
 export default function ProfileHero({ user, profile, onAvatarUpload }) {
-    const displayName = profile?.full_name || user.email?.split('@')[0] || 'User';
+    const name = authDisplayName(profile, user);
     const joinYear = new Date(profile?.created_at || user.created_at).getFullYear();
     const isGold = !!profile?.is_gold_verified;
     const kycStatus = profile?.kyc_status || 'not_started';
@@ -94,13 +95,13 @@ export default function ProfileHero({ user, profile, onAvatarUpload }) {
             <AvatarUpload
                 userId={user.id}
                 avatarUrl={profile?.avatar_url}
-                displayName={displayName}
+                displayName={name}
                 onUpload={onAvatarUpload}
             />
 
             <div className={`text-center mb-8 pb-8 border-b ${isGold ? 'border-amber-500/10' : 'border-gray-50 dark:border-gray-800'}`}>
                 <h2 className={`text-3xl font-black tracking-tight flex items-center justify-center gap-3 mb-2 ${isGold ? 'text-transparent bg-clip-text bg-gradient-to-b from-amber-500 to-amber-700 dark:from-amber-200 dark:to-amber-500' : 'text-gray-900 dark:text-gray-100'}`}>
-                    {displayName}
+                    {name}
                     {isGold && <GoldBadge size="md" />}
                 </h2>
                 <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isGold ? 'text-amber-600 dark:text-amber-500/40' : 'text-gray-400 dark:text-gray-500'}`}>
@@ -131,7 +132,7 @@ export default function ProfileHero({ user, profile, onAvatarUpload }) {
                     <div className="flex-1 min-w-0">
                         <p className="text-[10px] uppercase font-black tracking-widest text-gray-400 dark:text-gray-500 mb-1">Primary Email</p>
                         <p className={`text-sm font-bold truncate ${isGold ? 'text-amber-900 dark:text-amber-100/90' : 'text-gray-900 dark:text-gray-100'}`}>
-                            {user.email}
+                            {displayEmail(user.email) || profile?.email || 'Not Linked'}
                         </p>
                     </div>
                 </div>
@@ -143,7 +144,7 @@ export default function ProfileHero({ user, profile, onAvatarUpload }) {
                     <div className="flex-1 min-w-0">
                         <p className="text-[10px] uppercase font-black tracking-widest text-gray-400 dark:text-gray-500 mb-1">Contact Number</p>
                         <p className={`text-sm font-bold truncate ${isGold ? 'text-amber-900 dark:text-amber-100/90' : 'text-gray-900 dark:text-gray-100'}`}>
-                            {profile?.phone || user.phone || 'Not Linked'}
+                            {formatIndianPhone(profile?.phone || user.phone) || 'Not Linked'}
                         </p>
                     </div>
                 </div>

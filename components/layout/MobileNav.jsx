@@ -6,6 +6,7 @@ import { X, ChevronRight, Moon, Sun, Gift, Sparkles, History, ShoppingBag, Credi
 import NotificationBell from '@/components/notifications/NotificationBell';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { displayInitial, displayEmail } from '@/lib/auth';
 
 export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, user, theme, toggleTheme, handleSignOut, menuItems, apiPath }) {
     const router = useRouter();
@@ -219,7 +220,7 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                                         <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                                     ) : (
                                                         <span className="font-bold text-[#7A93AC] text-sm">
-                                                            {profile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                                                            {displayInitial(profile, user)}
                                                         </span>
                                                     )}
                                                 </div>
@@ -228,7 +229,7 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                                 <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                                                     {profile?.full_name || 'Your Profile'}
                                                 </p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{displayEmail(user?.email) || profile?.phone || 'Phone user'}</p>
                                             </div>
                                             <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
                                         </motion.button>

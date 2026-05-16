@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "backfill:auth-phone": "node scripts/backfill_auth_phone.js"
   },
   "dependencies": {
     "@google/genai": "^1.52.0",

@@ -6,6 +6,7 @@ import { Menu, X, ChevronRight, User, Moon, Sun } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { displayInitial } from '@/lib/auth';
 
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
@@ -79,12 +80,7 @@ export default function Navbar() {
         { label: 'Contact', href: 'contact' },
     ];
 
-    // Get user display info
-    const getInitials = () => {
-        if (profile?.full_name) return profile.full_name.charAt(0).toUpperCase();
-        if (user?.email) return user.email.charAt(0).toUpperCase();
-        return 'U';
-    };
+    // Get user display info — delegates to shared helper that filters pseudo-emails
 
     const hasImage = profile?.avatar_url; // Assuming avatar_url might exist in future or logic update
 
@@ -218,7 +214,7 @@ export default function Navbar() {
                                                         />
                                                     ) : (
                                                         <span className="font-bold text-[#7A93AC] text-lg">
-                                                            {getInitials()}
+                                                            {displayInitial(profile, user)}
                                                         </span>
                                                     )}
                                                 </div>
@@ -260,7 +256,7 @@ export default function Navbar() {
                                                     />
                                                 ) : (
                                                     <span className="font-bold text-[#7A93AC] text-sm">
-                                                        {getInitials()}
+                                                        {displayInitial(profile, user)}
                                                     </span>
                                                 )}
                                             </div>
@@ -320,7 +316,7 @@ export default function Navbar() {
                                                     />
                                                 ) : (
                                                     <span className="font-bold text-[#7A93AC] text-sm">
-                                                        {getInitials()}
+                                                        {displayInitial(profile, user)}
                                                     </span>
                                                 )}
                                             </div>

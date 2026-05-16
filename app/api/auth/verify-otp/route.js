@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
-import { hashOTP, validatePhoneNumber } from '@/lib/otpUtils';
+import { hashOTP, validatePhoneNumber, getStablePhoneEmail, isPseudoEmail } from '@/lib/otpUtils';
 import crypto from 'crypto';
 import { createServerClient } from '@supabase/ssr';
 
@@ -69,14 +69,13 @@ export async function POST(request) {
 
         // If not found, create the user (new-user path only)
         if (!userId) {
-            // Generate a strong random password for new-user creation only —
-            // it is never used again (login uses admin createSession, not signInWithPassword).
-            const newUserPassword = crypto.randomBytes(16).toString('hex') + 'Aa1!';
+            const pseudoEmail = getStablePhoneEmail(cleanPhone);
 
             const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                 phone: authPhone,
-                password: newUserPassword,
-                phone_confirm: true
+                email: pseudoEmail,
+                phone_confirm: true,
+                email_confirm: true
             });
 
             if (createError) {
@@ -132,80 +131,60 @@ export async function POST(request) {
             if (finalUpdateError) console.error('[VERIFY-OTP] Final name update failed:', finalUpdateError);
         }
 
-        // 5. Mint session — createSession was removed in supabase-js v2.60+.
-        //    Strategy A: GoTrue admin REST token endpoint (works for phone-only users).
-        //    Strategy B: temp-email → generateLink → verifyOtp (fallback for existing-email users).
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-        let session = null;
-
-        // Strategy A — GoTrue admin REST token endpoint
-        const tokenRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}/token`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': serviceKey,
-                'Authorization': `Bearer ${serviceKey}`,
-            },
-            body: JSON.stringify({}),
-        });
-
-        if (tokenRes.ok) {
-            const tokenData = await tokenRes.json();
-            session = tokenData;
-            console.log('[VERIFY-OTP] Strategy A (admin REST token) succeeded.');
-        } else {
-            const errBody = await tokenRes.text();
-            console.warn(`[VERIFY-OTP] Strategy A failed (${tokenRes.status}): ${errBody}. Falling back to Strategy B.`);
-
-            // Strategy B — assign a temporary email, generateLink, exchange for session
-            const tempEmail = `phone-${userId}@intrust.internal`;
-
-            // Set temp email so generateLink can work
-            await supabaseAdmin.auth.admin.updateUserById(userId, { email: tempEmail });
-
-            const { data: generatedLink, error: genErr } = await supabaseAdmin.auth.admin.generateLink({
-                type: 'magiclink',
-                email: tempEmail,
-                options: { shouldCreateUser: false },
-            });
-
-            // Clear temp email immediately regardless of outcome
-            await supabaseAdmin.auth.admin.updateUserById(userId, { email: null }).catch(() => {});
-
-            if (genErr || !generatedLink?.properties?.hashed_token) {
-                console.error('[VERIFY-OTP] Strategy B generateLink failed:', genErr);
-                return NextResponse.json({ success: false, error: 'Session creation failed.' }, { status: 500 });
-            }
-
-            const { data: exchanged, error: exchangeErr } = await supabaseAdmin.auth.verifyOtp({
-                token_hash: generatedLink.properties.hashed_token,
-                type: 'magiclink',
-            });
-
-            if (exchangeErr || !exchanged?.session) {
-                console.error('[VERIFY-OTP] Strategy B token exchange failed:', exchangeErr);
-                return NextResponse.json({ success: false, error: 'Session creation failed.' }, { status: 500 });
-            }
-
-            session = exchanged.session;
-            console.log('[VERIFY-OTP] Strategy B (generateLink exchange) succeeded.');
+        // Back-fill stable pseudo-email for existing users if needed
+        const { data: userResp } = await supabaseAdmin.auth.admin.getUserById(userId);
+        const existingUser = userResp?.user || {};
+        const pseudoEmail = getStablePhoneEmail(cleanPhone);
+        
+        let stableEmail = existingUser.email;
+        if (!existingUser.email || (isPseudoEmail(existingUser.email) && existingUser.email !== pseudoEmail)) {
+            await supabaseAdmin.auth.admin.updateUserById(userId, { email: pseudoEmail, email_confirm: true });
+            console.log(`[VERIFY-OTP] Back-filled stable pseudo-email for user ${userId}`);
+            stableEmail = pseudoEmail;
+        } else if (isPseudoEmail(existingUser.email)) {
+            stableEmail = pseudoEmail;
         }
 
-        if (!session) {
+        // 5. Mint session
+        console.log(`[VERIFY-OTP] Minting session via generateLink for user ${userId}`);
+        
+        const { data: generatedLink, error: genErr } = await supabaseAdmin.auth.admin.generateLink({
+            type: 'magiclink',
+            email: stableEmail,
+            options: { shouldCreateUser: false },
+        });
+
+        if (genErr || !generatedLink?.properties?.hashed_token) {
+            console.error('[VERIFY-OTP] generateLink failed:', genErr);
             return NextResponse.json({ success: false, error: 'Session creation failed.' }, { status: 500 });
         }
 
-        console.log('[VERIFY-OTP] Session minted. User:', userId);
+        const { data: exchanged, error: exchangeErr } = await supabaseAdmin.auth.verifyOtp({
+            token_hash: generatedLink.properties.hashed_token,
+            type: 'magiclink',
+        });
 
-        // Build the response object first, then wire a createServerClient to it
-        // so Supabase writes sb-*-auth-token cookies directly onto the response.
+        if (exchangeErr || !exchanged?.session) {
+            console.error('[VERIFY-OTP] token exchange failed:', exchangeErr);
+            return NextResponse.json({ success: false, error: 'Session creation failed.' }, { status: 500 });
+        }
+
+        const session = exchanged.session;
+        console.log(`[VERIFY-OTP] Session minted successfully for user ${userId}`);
+
+        const { data: prof } = await supabaseAdmin
+            .from('user_profiles')
+            .select('role, is_suspended')
+            .eq('id', userId)
+            .single();
+
         const { data: finalUser } = await supabaseAdmin.auth.admin.getUserById(userId);
 
         const response = NextResponse.json({
             success: true,
-            user: finalUser?.user ?? { id: userId }
+            user: finalUser?.user ?? { id: userId },
+            role: prof?.role ?? null,
+            is_suspended: prof?.is_suspended ?? false
         });
 
         const cookieServerClient = createServerClient(

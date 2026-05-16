@@ -2,6 +2,7 @@
 
 import { User, Mail, Phone, MapPin, Building2, Shield } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { displayEmail } from '@/lib/auth';
 
 const ROLE_LABELS = {
     employee: 'Employee', sales_exec: 'Sales Executive', sales_manager: 'Sales Manager',
@@ -37,7 +38,7 @@ export default function EmployeeProfilePage() {
                 </div>
                 <div className="divide-y divide-gray-50">
                     {[
-                        { icon: Mail, label: 'Email', value: profile?.email || user?.email },
+                        { icon: Mail, label: 'Email', value: profile?.email || displayEmail(user?.email) || '—' },
                         { icon: Phone, label: 'Phone', value: profile?.phone || '—' },
                         { icon: MapPin, label: 'City', value: profile?.city || '—' },
                         { icon: Building2, label: 'Department', value: profile?.department || 'General' },

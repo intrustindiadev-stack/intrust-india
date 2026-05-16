@@ -157,10 +157,19 @@ export async function POST(request) {
             .update({ failed_login_attempts: 0, locked_until: null })
             .eq('id', existing.id);
 
+        // Fetch role and suspension status (service-role bypasses RLS — no cookie issue)
+        const { data: prof } = await admin
+            .from('user_profiles')
+            .select('role, is_suspended')
+            .eq('id', existing.id)
+            .single();
+
         // 5. Set auth cookie on the response
         const response = NextResponse.json({
             success: true,
-            user: signInData.user
+            user: signInData.user,
+            role: prof?.role ?? null,
+            is_suspended: prof?.is_suspended ?? false
         });
 
         // Replay collected cookies onto the response

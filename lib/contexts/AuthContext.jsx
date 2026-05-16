@@ -20,37 +20,46 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
     const [showAuthLoader, setShowAuthLoader] = useState(false);
 
-    // Fetch profile helper with timeout
+    // Fetch profile helper with timeout + one silent retry on AbortError.
+    // 8 s covers Vercel cold-start latency; two attempts give a ~16 s total budget.
     const fetchProfile = async (userId) => {
-        try {
-            // Add a timeout signal to prevent indefinite hanging
-            // Decreased to 3s for better UX on Vercel cold starts or RLS blocks
+        const attempt = async () => {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+            try {
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .select('*')
+                    .eq('id', userId)
+                    .single()
+                    .abortSignal(controller.signal);
 
-            const { data, error } = await supabase
-                .from('user_profiles')
-                .select('*')
-                .eq('id', userId)
-                .single()
-                .abortSignal(controller.signal); // Use Supabase's built-in abort support if available or just catch generic timeouts
+                clearTimeout(timeoutId);
 
-            clearTimeout(timeoutId);
-
-            if (error) {
-                console.warn('Error fetching profile:', error.message);
-                return null;
-            }
-            return data;
-        } catch (err) {
-            // Don't log abort errors as errors - they're expected timeouts
-            if (err.name === 'AbortError') {
-                console.warn('Profile fetch timed out, continuing without profile');
-            } else {
+                if (error) {
+                    console.warn('Error fetching profile:', error.message);
+                    return { data: null, timedOut: false };
+                }
+                return { data, timedOut: false };
+            } catch (err) {
+                clearTimeout(timeoutId);
+                if (err.name === 'AbortError') {
+                    return { data: null, timedOut: true };
+                }
                 console.error('Unexpected error fetching profile:', err);
+                return { data: null, timedOut: false };
             }
-            return null;
-        }
+        };
+
+        // Attempt 1
+        const result1 = await attempt();
+        if (!result1.timedOut) return result1.data;
+
+        // Attempt 1 timed out — one silent retry
+        console.warn('Profile fetch timed out, retrying once...');
+        const result2 = await attempt();
+        // Suppress retry abort silently; just return null
+        return result2.data;
     };
 
     useEffect(() => {
