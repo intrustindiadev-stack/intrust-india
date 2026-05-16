@@ -62,6 +62,7 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                         fill
                                         className="object-contain"
                                         priority
+                                        sizes="32px"
                                     />
                                 </div>
                                 <span className="text-lg font-bold bg-gradient-to-r from-[#7A93AC] to-[#92BCEA] bg-clip-text text-transparent font-[family-name:var(--font-outfit)]">

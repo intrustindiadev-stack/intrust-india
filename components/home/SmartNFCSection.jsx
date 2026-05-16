@@ -57,6 +57,7 @@ function NFCFlipCard() {
                             fill
                             className="object-cover"
                             priority
+                            sizes="(max-width: 768px) 90vw, 340px"
                         />
                     </div>
 
@@ -78,6 +79,7 @@ function NFCFlipCard() {
                             alt="InTrust NFC Card – Back"
                             fill
                             className="object-cover"
+                            sizes="(max-width: 768px) 90vw, 340px"
                         />
                     </div>
                 </motion.div>

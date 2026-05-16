@@ -194,7 +194,7 @@ function SignupPageInner() {
                 {step === 'email-form' && (
                     <div className="animate-fadeIn">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
-                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
                         <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Create an account</h1>
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">Please enter your details to create an account.</p>
@@ -322,7 +322,7 @@ function SignupPageInner() {
                 {step === 'details' && (
                     <div className="animate-fadeIn">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
-                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
                         <div className="flex items-center gap-3 mb-6 relative">
                             <button onClick={() => { setStep('email-form'); }} className="absolute -left-2 top-0 bottom-0 text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors p-2">
@@ -363,7 +363,7 @@ function SignupPageInner() {
                 {step === 'phone' && (
                     <div className="animate-fadeIn">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
-                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
                         <div className="flex items-center gap-3 mb-6 relative">
                             <button onClick={() => { setStep('details'); }} className="absolute -left-2 top-0 bottom-0 text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors p-2">
@@ -408,7 +408,7 @@ function SignupPageInner() {
                 {step === 'otp' && (
                     <div className="animate-fadeIn">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
-                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
                         <h2 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Secure Code</h2>
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">

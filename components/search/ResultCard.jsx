@@ -56,6 +56,7 @@ export default function ResultCard({ result, variant = 'default' }) {
                         unoptimized
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
                         onError={() => setImgError(true)}
+                        sizes="(max-width: 640px) 100vw, 220px"
                     />
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-4xl">

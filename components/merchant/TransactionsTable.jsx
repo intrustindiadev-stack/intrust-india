@@ -62,7 +62,7 @@ export default function TransactionsTable({ coupons }) {
                                         <div className="flex items-center space-x-3">
                                             <div className="relative w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-500/10 flex items-center justify-center border border-black/5 dark:border-slate-500/20 overflow-hidden shrink-0">
                                                 {coupon.imageUrl ? (
-                                                    <Image src={coupon.imageUrl} alt={coupon.brand} fill className="object-cover" />
+                                                    <Image src={coupon.imageUrl} alt={coupon.brand} fill className="object-cover" sizes="40px" />
                                                 ) : brandImage ? (
                                                     <img alt={coupon.brand} className="w-6 opacity-80" src={brandImage} />
                                                 ) : (

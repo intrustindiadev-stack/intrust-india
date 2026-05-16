@@ -50,6 +50,7 @@ export default function FeatureAdvertiser({ className = '' }) {
                             alt={feature.title}
                             fill
                             className="object-cover opacity-50 mix-blend-screen group-hover:scale-110 transition-transform duration-700 ease-in-out"
+                            sizes="(max-width: 640px) 100vw, 400px"
                         />
                     </div>
 

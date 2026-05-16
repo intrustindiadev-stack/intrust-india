@@ -50,7 +50,7 @@ export default function Footer() {
                     <div className="lg:col-span-3 flex flex-col items-start">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="relative w-9 h-9">
-                                <Image src="/icon.png" alt="INTRUST" fill className="object-contain" />
+                                <Image src="/icon.png" alt="INTRUST" fill className="object-contain" sizes="36px" />
                             </div>
                             <span className="text-xl font-bold text-[#171A21] dark:text-gray-100 tracking-tight">INTRUST</span>
                         </div>

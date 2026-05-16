@@ -1,4 +1,4 @@
-import { getServiceSupabase } from '../../../lib/supabase/client';
+import { createAdminClient } from '../../../lib/supabaseServer';
 
 export default async function handler(req, res) {
     if (req.method !== 'GET') {
@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     if (!authHeader) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
-    const supabase = getServiceSupabase();
+    const supabase = createAdminClient();
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 

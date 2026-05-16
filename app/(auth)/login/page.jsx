@@ -294,7 +294,7 @@ function LoginContent() {
                 {step === 'email' && (
                     <div className="animate-fadeIn">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
-                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
                         <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Login</h1>
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">Enter your details to login.</p>
@@ -451,7 +451,7 @@ function LoginContent() {
                 {step === 'email-otp' && (
                     <div className="animate-fadeIn">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
-                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
                         <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Check your email</h1>
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
@@ -491,7 +491,7 @@ function LoginContent() {
                 {step === 'phone' && (
                     <div className="animate-fadeIn">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
-                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
                         <div className="flex items-center gap-3 mb-6 relative">
                             <button onClick={() => { setStep('email'); }} className="absolute -left-2 top-0 bottom-0 text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors p-2">
@@ -532,7 +532,7 @@ function LoginContent() {
                 {step === 'otp' && (
                     <div className="animate-fadeIn">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
-                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
                         <h2 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Enter OTP</h2>
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-2">

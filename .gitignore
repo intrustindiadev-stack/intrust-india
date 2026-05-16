@@ -69,3 +69,6 @@ claude.json
 
 # gemini config
 .gemini/
+
+# project documentation
+BRD-Intrust.pdf

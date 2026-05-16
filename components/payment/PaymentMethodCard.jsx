@@ -29,7 +29,7 @@ export default function PaymentMethodCard({ method, icon, onClick, disabled, sel
                 `}>
                     {icon ? (
                         typeof icon === 'string' ?
-                            <Image src={icon} alt={method} fill className="object-contain p-2" />
+                            <Image src={icon} alt={method} fill className="object-contain p-2" sizes="48px" />
                             : <span className="[&>svg]:!w-5 [&>svg]:!h-5 [&>svg]:!text-current">{icon}</span>
                     ) : (
                         <span className="text-base font-bold">{method[0]}</span>
