@@ -35,7 +35,7 @@ REMOTE_APP_DIR = "/var/www/intrustindia.com/app"
 
 # What to include in the deployment package
 INCLUDE_PATHS  = [".next", "public", "package.json", "package-lock.json", "next.config.mjs"]
-EXCLUDE_DIRS   = [".next/cache"]
+EXCLUDE_DIRS   = [".next/cache", ".next/dev"]
 
 
 def divider(title):

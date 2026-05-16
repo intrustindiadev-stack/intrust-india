@@ -101,7 +101,7 @@ function LoginContent() {
     }, [timer]);
 
     const startTimer = () => {
-        setTimer(30);
+        setTimer(60);
         setCanResend(false);
     };
 
