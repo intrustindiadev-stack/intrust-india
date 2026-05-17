@@ -117,6 +117,10 @@ function LoginContent() {
     const merged = searchParams?.get('merged') === 'true';
     const confirmed = searchParams?.get('confirmed') === 'true';
 
+    // Safe post-login redirect (only internal paths, no open-redirect)
+    const rawRedirect = searchParams?.get('redirect') || '';
+    const postLoginRedirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : null;
+
     useEffect(() => {
         sessionStorage.removeItem('intrust_adv_seen');
 
@@ -191,7 +195,7 @@ function LoginContent() {
             }
             const user = data?.user;
             if (user) {
-                await redirectByRole(user, data.role, data.is_suspended);
+                await redirectByRole(user, data.role, data.is_suspended, postLoginRedirect);
             } else {
                 toast.error('Login failed. Please try again.');
                 setLoading(false);
@@ -230,7 +234,7 @@ function LoginContent() {
 
             const user = data.user;
             if (user) {
-                await redirectByRole(user, data.role, data.is_suspended);
+                await redirectByRole(user, data.role, data.is_suspended, postLoginRedirect);
             } else {
                 toast.error('Login failed. Please try again.');
                 setLoading(false);

@@ -11,6 +11,7 @@ export default function MerchantChatBubble() {
       ariaLabel="Open Merchant Assistant"
       assistantTitle="Merchant Assistant"
       closeAccentColor="#D4AF37"
+      mobileBottom="84px"
     />
   );
 }

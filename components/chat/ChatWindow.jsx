@@ -393,38 +393,26 @@ export function BaseChatWindow({
   return (
     <>
       <style>{`
-        @media (max-width: 640px) {
-          .chat-window-overlay {
-            bottom: 165px;
-            right: 16px;
-            left: 16px;
-            width: auto;
-            height: 65dvh;
-            border-radius: 20px;
-            transform-origin: bottom center;
-          }
-        }
+        /* ── Desktop window ────────────────────────────── */
         .chat-window-overlay {
           position: fixed;
-          bottom: 92px;
+          bottom: 112px;
           right: 24px;
-          width: 380px;
-          height: 520px;
+          width: 420px;
+          height: 560px;
           border-radius: 24px;
           background: #fff;
-          box-shadow: 0 12px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08);
+          box-shadow: 0 16px 56px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.08);
           display: flex;
           flex-direction: column;
           z-index: 99998;
           overflow: hidden;
-          border: 1px solid rgba(26,115,232,0.15);
-          
-          /* Premium Spring Animation */
+          border: 1px solid rgba(26,115,232,0.12);
           opacity: 0;
           visibility: hidden;
           transform: translateY(40px) scale(0.9) rotate(2deg);
           pointer-events: none;
-          transition: all 0.5s cubic-bezier(0.34, 1.7, 0.64, 1);
+          transition: all 0.48s cubic-bezier(0.34, 1.7, 0.64, 1);
           transform-origin: bottom right;
         }
         .chat-window-overlay.is-open {
@@ -433,24 +421,68 @@ export function BaseChatWindow({
           transform: translateY(0) scale(1) rotate(0deg);
           pointer-events: auto;
         }
+        /* ── Mobile: true full-screen ─────────────────── */
+        @media (max-width: 640px) {
+          .chat-window-overlay {
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            transform-origin: bottom center;
+          }
+          .chat-window-overlay.is-open {
+            transform: translateY(0) scale(1) rotate(0deg);
+          }
+          /* Swipe handle */
+          .chat-swipe-handle {
+            display: flex !important;
+          }
+        }
+        /* ── Swipe handle (hidden on desktop) ─────────── */
+        .chat-swipe-handle {
+          display: none;
+          justify-content: center;
+          align-items: center;
+          padding: 10px 0 4px;
+          background: #fff;
+          flex-shrink: 0;
+        }
+        .chat-swipe-handle-bar {
+          width: 40px;
+          height: 4px;
+          background: #d1d9e6;
+          border-radius: 4px;
+        }
+        /* ── Header ──────────────────────────────────── */
         .chat-header {
           display: flex;
           align-items: center;
-          gap: 10px;
-          padding: 16px;
-          background: ${accentColor};
+          gap: 12px;
+          padding: 14px 16px;
+          background: linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%);
           color: #fff;
           flex-shrink: 0;
+          box-shadow: 0 2px 12px ${accentColor}44;
         }
         .chat-header-avatar {
-          width: 36px;
-          height: 36px;
+          width: 40px;
+          height: 40px;
           border-radius: 50%;
-          background: rgba(255,255,255,0.2);
+          background: rgba(255,255,255,0.18);
+          border: 2px solid rgba(255,255,255,0.35);
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+          overflow: hidden;
+        }
+        .chat-header-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
         }
         .chat-header-info h3 {
           margin: 0;
@@ -459,9 +491,24 @@ export function BaseChatWindow({
           letter-spacing: 0.01em;
         }
         .chat-header-info p {
-          margin: 0;
+          margin: 2px 0 0;
           font-size: 11px;
-          opacity: 0.8;
+          opacity: 0.85;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
+        .chat-online-dot {
+          width: 7px;
+          height: 7px;
+          background: #4ade80;
+          border-radius: 50%;
+          display: inline-block;
+          animation: dot-pulse 2s ease-in-out infinite;
+        }
+        @keyframes dot-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%       { opacity: 0.55; transform: scale(0.8); }
         }
         .chat-close-btn {
           margin-left: auto;
@@ -646,12 +693,17 @@ export function BaseChatWindow({
           0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
           50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
         }
+        /* ── Quick reply chips ─────────────────────────── */
         .chat-quick-replies {
           display: flex;
-          flex-wrap: wrap;
+          flex-wrap: nowrap;
+          overflow-x: auto;
           gap: 8px;
-          padding: 8px 0;
+          padding: 8px 0 12px;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
         }
+        .chat-quick-replies::-webkit-scrollbar { display: none; }
         .chat-qr-chip {
           display: inline-flex;
           align-items: center;
@@ -666,6 +718,7 @@ export function BaseChatWindow({
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.34, 1.7, 0.64, 1);
           white-space: nowrap;
+          flex-shrink: 0;
           font-family: inherit;
           animation: msg-in 0.5s cubic-bezier(0.34, 1.7, 0.64, 1) both;
         }
@@ -675,7 +728,6 @@ export function BaseChatWindow({
         .chat-qr-chip:nth-child(4) { animation-delay: 0.25s; }
         .chat-qr-chip:nth-child(5) { animation-delay: 0.3s; }
         .chat-qr-chip:nth-child(6) { animation-delay: 0.35s; }
-
         .chat-qr-chip:hover {
           background: ${accentColor};
           color: #fff;
@@ -683,19 +735,27 @@ export function BaseChatWindow({
           box-shadow: 0 4px 12px ${accentColor}40;
         }
         .chat-qr-chip:active { transform: scale(0.95); }
+        /* ── Input area safe-area ─────────────────────── */
+        @media (max-width: 640px) {
+          .chat-input-area {
+            padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+          }
+        }
       `}</style>
 
       <div className={`chat-window-overlay ${isOpen ? 'is-open' : ''}`} role="dialog" aria-label={`${assistantTitle} Chat`}>
+        {/* Swipe handle — visible only on mobile */}
+        <div className="chat-swipe-handle" aria-hidden="true">
+          <div className="chat-swipe-handle-bar" />
+        </div>
         {/* Header */}
         <div className="chat-header">
           <div className="chat-header-avatar" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="white" />
-            </svg>
+            <img src="/robot-mascot-nobg.png" alt="Assistant" />
           </div>
           <div className="chat-header-info">
             <h3>{assistantTitle}</h3>
-            <p>{assistantSubtitle}</p>
+            <p><span className="chat-online-dot" />{assistantSubtitle}</p>
           </div>
           <button
             className="chat-close-btn"

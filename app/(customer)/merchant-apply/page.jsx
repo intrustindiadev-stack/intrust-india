@@ -93,7 +93,8 @@ function MerchantApplyPageInner() {
 
         if (!authLoading) {
             if (!user) {
-                setCheckingStatus(false);
+                // Not logged in — send to login with redirect-back param
+                router.replace('/login?redirect=/merchant-apply');
             } else {
                 checkMerchantStatus();
             }
