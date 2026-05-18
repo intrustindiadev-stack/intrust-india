@@ -18,6 +18,7 @@ import { usePayment } from '@/hooks/usePayment';
 import { supabase } from '@/lib/supabaseClient';
 import GoldBadge from '@/components/ui/GoldBadge';
 import { toast } from 'react-hot-toast';
+import { displayName } from '@/lib/auth';
 
 import DashboardStats from '@/components/customer/dashboard/DashboardStats';
 import QuickServices from '@/components/customer/dashboard/QuickServices';
@@ -92,6 +93,14 @@ export default function CustomerDashboardPage() {
         referralCode: null,
         merchantStatus: null
     });
+
+    // Populate name from AuthContext profile immediately (before async DB fetch completes)
+    useEffect(() => {
+        const name = displayName(profile, user);
+        if (name && name !== 'User') {
+            setUserData(prev => prev.name ? prev : { ...prev, name });
+        }
+    }, [profile, user]);
 
     const [recentActivity, setRecentActivity] = useState([]);
 
@@ -266,7 +275,7 @@ export default function CustomerDashboardPage() {
 
                 // Race the fetch bundle against timeout
                 const mainFetch = Promise.allSettled([
-                    supabase.from('user_profiles').select('full_name, role, is_gold_verified, subscription_expiry, kyc_status, completed_onboarding, referral_code, reward_points').eq('id', user.id).single(),
+                    supabase.from('user_profiles').select('full_name, role, is_gold_verified, subscription_expiry, kyc_status, completed_onboarding, referral_code').eq('id', user.id).single(),
                     supabase.from('kyc_records').select('status, verification_status').eq('user_id', user.id).maybeSingle(),
                     supabase.from('customer_wallets').select('balance_paise').eq('user_id', user.id).maybeSingle(),
                     // Query through orders table (same as My Gift Cards page) for accurate counts
@@ -277,7 +286,8 @@ export default function CustomerDashboardPage() {
                         )
                     `).eq('user_id', user.id).eq('payment_status', 'paid').order('created_at', { ascending: false }),
                     supabase.from('customer_wallet_transactions').select('id, type, amount_paise, description, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
-                    supabase.from('merchants').select('status, subscription_status').eq('user_id', user.id).maybeSingle()
+                    supabase.from('merchants').select('status, subscription_status').eq('user_id', user.id).maybeSingle(),
+                    supabase.from('reward_points_balance').select('total_earned').eq('user_id', user.id).maybeSingle()
                 ]);
 
                 const results = await Promise.race([mainFetch, timeoutTx]);
@@ -289,6 +299,7 @@ export default function CustomerDashboardPage() {
                 const couponsResult = results[3];
                 const walletTxResult = results[4];
                 const merchantResult = results[5];
+                const rewardsResult = results[6];
 
                 // 1. Process Profile
                 let profile = null;
@@ -350,10 +361,10 @@ export default function CustomerDashboardPage() {
                 }
                 processActivityFeed(coupons.slice(0, 5), walletTxs);
 
-                const rewardPoints = profile?.reward_points?.total_earned || 0;
+                const rewardPoints = rewardsResult.status === 'fulfilled' && rewardsResult.value.data ? rewardsResult.value.data.total_earned : 0;
 
                 setUserData({
-                    name: profile?.full_name || user.email?.split('@')[0] || 'User',
+                    name: displayName(profile, user),
                     totalPurchases,
                     totalSavings,
                     kycStatus,
@@ -402,12 +413,12 @@ export default function CustomerDashboardPage() {
                     .channel('dashboard_activity')
                     .on(
                         'postgres_changes',
-                        { event: '*', schema: 'public', table: 'user_profiles', filter: `id=eq.${user.id}` },
+                        { event: '*', schema: 'public', table: 'reward_points_balance', filter: `user_id=eq.${user.id}` },
                         (payload) => {
-                            if (payload.new && payload.new.reward_points) {
+                            if (payload.new && payload.new.total_earned !== undefined) {
                                 setUserData(prev => ({
                                     ...prev,
-                                    rewardPoints: payload.new.reward_points.total_earned || 0
+                                    rewardPoints: payload.new.total_earned || 0
                                 }));
                             }
                         }

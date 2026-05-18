@@ -1,14 +1,11 @@
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { WalletService } from '@/lib/wallet/walletService';
 
-export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
-
-    const authHeader = req.headers.authorization;
+export async function POST(request) {
+    const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -18,16 +15,15 @@ export default async function handler(req, res) {
     );
 
     const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
-
     if (authError || !user) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
-        const { amount, referenceId, referenceType, description } = req.body;
+        const { amount, referenceId, referenceType, description } = await request.json();
 
         if (!amount || amount <= 0) {
-            return res.status(400).json({ error: 'Invalid amount' });
+            return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
         }
 
         const result = await WalletService.debitWallet(
@@ -38,13 +34,14 @@ export default async function handler(req, res) {
             description
         );
 
-        res.status(200).json({ 
-            success: true, 
+        return NextResponse.json({
+            success: true,
             transaction: result.data ? result.data : result,
-            ...(result.data ? result : {})
+            ...(result.data ? result : {}),
         });
     } catch (error) {
         console.error('Wallet Debit Error:', error);
-        res.status(400).json({ error: error.message }); // 400 for business logic errors like insufficient funds
+        // 400 for business-logic errors like insufficient funds
+        return NextResponse.json({ error: error.message }, { status: 400 });
     }
 }

@@ -1,21 +1,18 @@
-import { createAdminClient } from '../../../lib/supabaseServer';
+import { NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabaseServer';
 
-export default async function handler(req, res) {
-    if (req.method !== 'GET') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
-
-    // 1. Authenticate User
-    const authHeader = req.headers.authorization;
+export async function GET(request) {
+    const authHeader = request.headers.get('authorization');
     if (!authHeader) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
     const supabase = createAdminClient();
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-        return res.status(401).json({ error: 'Invalid token' });
+        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     try {
@@ -27,9 +24,9 @@ export default async function handler(req, res) {
 
         if (error) throw error;
 
-        res.status(200).json({ transactions });
+        return NextResponse.json({ transactions });
     } catch (error) {
         console.error('Fetch History Error:', error);
-        res.status(500).json({ error: 'Failed to fetch transactions' });
+        return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 });
     }
 }

@@ -11,6 +11,22 @@ import { toast } from 'react-hot-toast';
 
 function OTPBoxInput({ value, onChange, onComplete }) {
     const refs = useRef([]);
+    // Lock prevents onComplete from firing multiple times (e.g. paste + auto-fill race)
+    const submittingRef = useRef(false);
+
+    const fireComplete = (completed) => {
+        if (completed.length === 6 && !submittingRef.current) {
+            submittingRef.current = true;
+            onComplete && onComplete(completed);
+        }
+    };
+
+    // Reset the lock whenever the value is cleared (e.g. after a failed attempt)
+    useEffect(() => {
+        if (!value || value.replace(/\s+/g, '').length < 6) {
+            submittingRef.current = false;
+        }
+    }, [value]);
 
     const handleChange = (e, index) => {
         const char = e.target.value.replace(/[^0-9]/g, '').slice(-1);
@@ -23,7 +39,7 @@ function OTPBoxInput({ value, onChange, onComplete }) {
             if (index < 5) {
                 refs.current[index + 1]?.focus();
             } else if (completed.length === 6) {
-                onComplete && onComplete(completed);
+                fireComplete(completed);
             }
         }
     };
@@ -47,7 +63,7 @@ function OTPBoxInput({ value, onChange, onComplete }) {
             onChange(pasted);
             if (pasted.length === 6) {
                 refs.current[5]?.focus();
-                onComplete && onComplete(pasted);
+                fireComplete(pasted);
             } else {
                 refs.current[pasted.length]?.focus();
             }
@@ -474,7 +490,7 @@ function LoginContent() {
 
                         <div className="space-y-3">
                             <button
-                                onClick={(e) => { if (canResend) handleSendOTP(e); }}
+                                onClick={(e) => { if (canResend) handleEmailOTPSend(e); }}
                                 disabled={loading || !canResend}
                                 className="w-full py-3.5 border border-[var(--border-color)] rounded-xl flex items-center justify-center gap-3 text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-all disabled:opacity-50"
                             >

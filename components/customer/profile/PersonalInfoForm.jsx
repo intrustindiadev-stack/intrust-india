@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { User, Mail, Phone, Calendar, Edit2, Check, X, Loader2, Lock, ShieldCheck, AlertCircle } from 'lucide-react';
 import { signInWithOTP } from '@/lib/supabase';
+import { displayEmail } from '@/lib/auth';
 
 function EditableRow({ label, value, icon: Icon, onSave, type = 'text', placeholder, readOnly = false, badge }) {
     const [editing, setEditing] = useState(false);
@@ -285,7 +286,127 @@ function PhoneVerification({ currentPhone, authPhone, userId, onVerified, showTo
     );
 }
 
+/**
+ * Shown only for phone-only accounts (no real email linked).
+ * Lets the user send a Supabase magic link to a real email address.
+ */
+function EmailLinkSection({ showToast, supabase }) {
+    const [step, setStep] = useState('idle');   // 'idle' | 'input' | 'sent'
+    const [email, setEmail] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleSend = async () => {
+        if (!email.includes('@')) { setError('Enter a valid email address.'); return; }
+        setError('');
+        setLoading(true);
+        try {
+            const { error: otpError } = await supabase.auth.signInWithOtp({
+                email,
+                options: { shouldCreateUser: false },
+            });
+            if (otpError) throw otpError;
+            setStep('sent');
+            showToast?.('Magic link sent! Check your inbox.');
+        } catch (err) {
+            setError(err.message || 'Could not send link. Try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (step === 'idle') {
+        return (
+            <div className="group flex items-start gap-5 py-5 border-b border-gray-100 dark:border-white/5 last:border-0">
+                <div className="mt-1 flex-shrink-0 w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                    <Mail size={18} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Primary Email</p>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-400 italic">Not Linked</p>
+                </div>
+                <button
+                    onClick={() => setStep('input')}
+                    className="mt-1 px-4 py-2 bg-[#1a1a1a] text-amber-500 text-[10px] font-black rounded-xl hover:bg-black transition-all border border-amber-500/20 uppercase tracking-widest active:scale-95 shadow-xl"
+                >
+                    Link Now
+                </button>
+            </div>
+        );
+    }
+
+    if (step === 'sent') {
+        return (
+            <div className="group flex items-start gap-5 py-5 border-b border-gray-100 dark:border-white/5 last:border-0">
+                <div className="mt-1 flex-shrink-0 w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                    <Mail size={18} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Primary Email</p>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                        Magic link sent to <span className="text-blue-500">{email}</span>
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-1">Open the link in this browser to complete linking.</p>
+                </div>
+                <button onClick={() => { setStep('idle'); setEmail(''); setError(''); }}
+                    className="mt-1 px-3 py-2 text-[10px] font-black text-gray-400 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 uppercase tracking-widest transition-all">
+                    Reset
+                </button>
+            </div>
+        );
+    }
+
+    // step === 'input'
+    return (
+        <div className="py-6 border-b border-gray-100 dark:border-white/5 last:border-0">
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                    <Mail size={20} />
+                </div>
+                <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Link Email Address</p>
+                    <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Receive a magic link to verify</p>
+                </div>
+            </div>
+            <div className="space-y-4">
+                <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSend()}
+                    placeholder="your@email.com"
+                    className="w-full text-sm bg-gray-50 dark:bg-white/5 border border-transparent focus:border-[#92BCEA] rounded-2xl px-5 py-3.5 text-gray-900 dark:text-gray-100 outline-none transition-all shadow-inner"
+                />
+                <div className="flex gap-3">
+                    <button
+                        onClick={handleSend}
+                        disabled={loading || !email.includes('@')}
+                        className="flex-1 py-3.5 bg-black text-white text-[11px] font-black rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-gray-900 transition-all uppercase tracking-[0.15em] shadow-2xl"
+                    >
+                        {loading ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+                        Send Magic Link
+                    </button>
+                    <button onClick={() => { setStep('idle'); setEmail(''); setError(''); }}
+                        className="px-6 py-3.5 bg-gray-100 dark:bg-white/5 text-gray-500 text-[11px] font-black rounded-2xl transition-all uppercase tracking-widest">
+                        Cancel
+                    </button>
+                </div>
+                {error && (
+                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                        <AlertCircle size={14} /> {error}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export default function PersonalInfoForm({ user, profile, onSave, onPhoneVerified, showToast, supabase }) {
+    // Mask pseudo-emails — phone-only users must never see their internal identifier
+    const safeEmail = displayEmail(user?.email);
+
     return (
         <div className="bg-white dark:bg-gray-900/50 backdrop-blur-xl rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-xl relative overflow-hidden transition-all duration-500">
             <div className="flex items-center gap-4 mb-10">
@@ -294,16 +415,20 @@ export default function PersonalInfoForm({ user, profile, onSave, onPhoneVerifie
                 </div>
                 <div>
                     <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Personal Information</h3>
-                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Legal Identity & Contact Details</p>
+                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Legal Identity &amp; Contact Details</p>
                 </div>
             </div>
 
             <div className="divide-y divide-gray-50 dark:divide-white/5">
                 <EditableRow label="Full Legal Name" icon={User} value={profile?.full_name} placeholder="Enter your full name" onSave={v => onSave('full_name', v)} />
 
-                <EditableRow label="Direct Email" icon={Mail} value={user.email} readOnly
-                    badge={<span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 uppercase tracking-widest border border-blue-500/20">Verified Email</span>}
-                />
+                {safeEmail ? (
+                    <EditableRow label="Primary Email" icon={Mail} value={safeEmail} readOnly
+                        badge={<span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 uppercase tracking-widest border border-blue-500/20">Verified</span>}
+                    />
+                ) : (
+                    <EmailLinkSection showToast={showToast} supabase={supabase} />
+                )}
 
                 <PhoneVerification
                     currentPhone={profile?.phone}
@@ -319,3 +444,4 @@ export default function PersonalInfoForm({ user, profile, onSave, onPhoneVerifie
         </div>
     );
 }
+

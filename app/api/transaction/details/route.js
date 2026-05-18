@@ -1,40 +1,37 @@
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-export default async function handler(req, res) {
-    if (req.method !== 'GET') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
+export async function GET(request) {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
 
-    const { id } = req.query;
     if (!id) {
-        return res.status(400).json({ error: 'Missing transaction ID' });
+        return NextResponse.json({ error: 'Missing transaction ID' }, { status: 400 });
     }
 
-    const authHeader = req.headers.authorization;
+    const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const token = authHeader.replace('Bearer ', '');
 
-    // Use user-scoped client so RLS (auth.uid() = user_id) is satisfied
+    // User-scoped client so RLS (auth.uid() = user_id) is satisfied
     const userClient = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         { global: { headers: { Authorization: `Bearer ${token}` } } }
     );
 
-    // Verify user is authenticated
     const { data: { user }, error: authError } = await userClient.auth.getUser();
     if (authError || !user) {
-        return res.status(401).json({ error: 'Invalid token' });
+        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     try {
-        // Try by UUID first, then by client_txn_id
         let transaction = null;
 
-        // Try UUID match
+        // Try UUID match first
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
         if (isUUID) {
             const { data } = await userClient
@@ -46,7 +43,7 @@ export default async function handler(req, res) {
             transaction = data;
         }
 
-        // Try client_txn_id match if not found by UUID
+        // Fall back to client_txn_id if not found by UUID
         if (!transaction) {
             const { data } = await userClient
                 .from('transactions')
@@ -58,9 +55,10 @@ export default async function handler(req, res) {
         }
 
         if (!transaction) {
-            return res.status(404).json({ error: 'Transaction not found' });
+            return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
         }
 
+        // Attach gift card metadata via admin client (bypasses RLS on coupons)
         if (transaction.udf1 === 'GIFT_CARD' && transaction.udf2) {
             const supabaseAdmin = createClient(
                 process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -76,9 +74,9 @@ export default async function handler(req, res) {
             }
         }
 
-        res.status(200).json({ transaction });
+        return NextResponse.json({ transaction });
     } catch (error) {
         console.error('Fetch Details Error:', error);
-        res.status(500).json({ error: 'Failed to fetch transaction details' });
+        return NextResponse.json({ error: 'Failed to fetch transaction details' }, { status: 500 });
     }
 }
