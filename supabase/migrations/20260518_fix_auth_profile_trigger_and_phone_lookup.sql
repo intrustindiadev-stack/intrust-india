@@ -85,6 +85,10 @@ END;
 $$;
 
 -- Section 3: public.get_user_id_by_phone(phone_number text)
+-- Priority-ordered lookup:
+--   1. Phone-only auth.users (email matches ^p[0-9]+@phone\.intrust\.internal)
+--   2. Any auth.users with matching phone (edge-case fallback)
+--   3. user_profiles.phone (Google users who linked phone)
 CREATE OR REPLACE FUNCTION public.get_user_id_by_phone(phone_number text)
 RETURNS uuid
 LANGUAGE plpgsql
@@ -92,20 +96,44 @@ SECURITY DEFINER
 SET search_path = public, auth
 AS $$
 DECLARE
-  _clean text;
+  _clean   text;
   _user_id uuid;
 BEGIN
   _clean := right(regexp_replace(phone_number, '\D', '', 'g'), 10);
-  
-  IF length(_clean) < 10 OR _clean IS NULL THEN
+
+  IF _clean IS NULL OR length(_clean) < 10 THEN
     RETURN NULL;
   END IF;
 
-  SELECT id INTO _user_id FROM (
-    SELECT id FROM auth.users WHERE right(regexp_replace(phone, '\D', '', 'g'), 10) = _clean AND phone IS NOT NULL
-    UNION ALL
-    SELECT id FROM public.user_profiles WHERE right(regexp_replace(phone, '\D', '', 'g'), 10) = _clean AND phone IS NOT NULL
-  ) sub LIMIT 1;
+  -- Priority 1: phone-only users (pseudo-email pattern)
+  SELECT id INTO _user_id
+  FROM auth.users
+  WHERE right(regexp_replace(phone, '\D', '', 'g'), 10) = _clean
+    AND phone IS NOT NULL
+    AND email ~ '^p[0-9]+@phone\.intrust\.internal$'
+  LIMIT 1;
+
+  IF _user_id IS NOT NULL THEN
+    RETURN _user_id;
+  END IF;
+
+  -- Priority 2: any auth.users with matching phone (fallback)
+  SELECT id INTO _user_id
+  FROM auth.users
+  WHERE right(regexp_replace(phone, '\D', '', 'g'), 10) = _clean
+    AND phone IS NOT NULL
+  LIMIT 1;
+
+  IF _user_id IS NOT NULL THEN
+    RETURN _user_id;
+  END IF;
+
+  -- Priority 3: user_profiles (Google users who linked phone)
+  SELECT id INTO _user_id
+  FROM public.user_profiles
+  WHERE right(regexp_replace(phone, '\D', '', 'g'), 10) = _clean
+    AND phone IS NOT NULL
+  LIMIT 1;
 
   RETURN _user_id;
 END;
@@ -116,3 +144,17 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Section 5: Cleanup — clear user_profiles.phone for Google/email users whose phone
+-- is already owned by a phone-only auth.users row, so Priority 3 never shadows them.
+UPDATE public.user_profiles up
+SET phone = NULL
+WHERE up.phone IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM auth.users au
+    WHERE right(regexp_replace(au.phone, '\D', '', 'g'), 10)
+          = right(regexp_replace(up.phone, '\D', '', 'g'), 10)
+      AND au.phone IS NOT NULL
+      AND au.email ~ '^p[0-9]+@phone\.intrust\.internal$'
+      AND au.id <> up.id
+  );

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signInWithOTP, verifyOTP } from '@/lib/supabase';
+import { signInWithOTP, verifyOTP, supabase } from '@/lib/supabase';
 import { redirectByRole } from '@/lib/auth';
 import { Phone, ArrowRight, Loader2, ShieldCheck, Mail, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
