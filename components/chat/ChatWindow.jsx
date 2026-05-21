@@ -35,6 +35,31 @@ function formatTime(date) {
   });
 }
 
+function isBotTurnComplete(text) {
+  if (!text) return true;
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+
+  // 1. Ends with a colon
+  if (trimmed.endsWith(':')) {
+    return false;
+  }
+
+  // 2. Odd count of '**'
+  const matches = trimmed.match(/\*\*/g);
+  const count = matches ? matches.length : 0;
+  if (count % 2 !== 0) {
+    return false;
+  }
+
+  // 3. Ends with a word character and has no sentence-ending punctuation
+  if (/\w$/.test(trimmed)) {
+    return false;
+  }
+
+  return true;
+}
+
 const MAX_MESSAGES = 20;
 // Number of most-recent message pairs sent as history to the API
 const HISTORY_WINDOW = 8;
@@ -250,7 +275,13 @@ export function BaseChatWindow({
   const buildHistory = useCallback(
     (currentMessages) =>
       currentMessages
-        .filter((m) => m.sender === 'user' || m.sender === 'bot')
+        .filter((m) => {
+          if (m.sender === 'user') return true;
+          if (m.sender === 'bot') {
+            return isBotTurnComplete(m.text);
+          }
+          return false;
+        })
         .map((m) => ({
           role: m.sender === 'bot' ? 'model' : 'user',
           text: m.text,

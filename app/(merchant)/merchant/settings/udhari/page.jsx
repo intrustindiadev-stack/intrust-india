@@ -9,6 +9,7 @@ import { Save, Loader2, ArrowLeft, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 
 import { useSubscription } from '@/components/merchant/SubscriptionContext';
+import { UDHARI_MAX_CONVENIENCE_FEE_BPS } from '@/lib/constants';
 
 export default function MerchantUdhariSettingsPage() {
     const { user, loading: authLoading } = useAuth();
@@ -169,7 +170,10 @@ export default function MerchantUdhariSettingsPage() {
                         </div>
                     </div>
 
-                    {/* Convenience Fee */}
+                    {/* Convenience Fee — max capped at UDHARI_MAX_CONVENIENCE_FEE_BPS (5000 bps = 50%).
+                         Keep in sync with:
+                           - supabase/migrations/20260517_add_udhari_convenience_fee_bps.sql (CHECK constraint)
+                           - app/api/merchant/udhari-settings/route.js (API validation) */}
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Convenience Fee (%)</label>
                         <p className="text-xs text-gray-500 mb-2">Extra fee charged to the customer for deferred payment</p>
@@ -177,7 +181,7 @@ export default function MerchantUdhariSettingsPage() {
                             <input
                                 type="number"
                                 min="0"
-                                max="100"
+                                max={UDHARI_MAX_CONVENIENCE_FEE_BPS / 100}
                                 step="0.01"
                                 required
                                 value={(settings.convenience_fee_bps || 0) / 100}
@@ -186,6 +190,7 @@ export default function MerchantUdhariSettingsPage() {
                             />
                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">%</span>
                         </div>
+                        <p className="text-xs text-gray-400 mt-1">Max {UDHARI_MAX_CONVENIENCE_FEE_BPS / 100}%</p>
                     </div>
                 </div>
 

@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
+import { UDHARI_MAX_CONVENIENCE_FEE_BPS } from '@/lib/constants';
 
 // GET — Fetch merchant's udhari settings
 export async function GET(request) {
@@ -86,9 +87,15 @@ export async function PATCH(request) {
             return NextResponse.json({ error: 'max_duration_days must be 5, 10, or 15' }, { status: 400 });
         }
 
+        /**
+         * Cap convenience fee at UDHARI_MAX_CONVENIENCE_FEE_BPS (5000 bps = 50%).
+         * Keep in sync with:
+         *   - supabase/migrations/20260517_add_udhari_convenience_fee_bps.sql (CHECK constraint)
+         *   - app/(merchant)/merchant/settings/udhari/page.jsx (UI input max)
+         */
         if (convenience_fee_bps !== undefined) {
-            if (convenience_fee_bps < 0 || convenience_fee_bps > 10000) {
-                return NextResponse.json({ error: 'convenience_fee_bps must be between 0 and 10000' }, { status: 400 });
+            if (convenience_fee_bps < 0 || convenience_fee_bps > UDHARI_MAX_CONVENIENCE_FEE_BPS) {
+                return NextResponse.json({ error: `convenience_fee_bps must be between 0 and ${UDHARI_MAX_CONVENIENCE_FEE_BPS}` }, { status: 400 });
             }
         }
 
