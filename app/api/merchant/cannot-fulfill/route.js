@@ -22,8 +22,8 @@ export async function POST(req) {
         const { data: merchant, error: mError } = await supabase
             .from("merchants")
             .select("id")
-            .eq("owner_id", user.id)
-            .single();
+            .eq("user_id", user.id)
+            .maybeSingle();
 
         if (mError || !merchant) {
             return NextResponse.json({ error: "Merchant record not found" }, { status: 403 });
@@ -35,7 +35,7 @@ export async function POST(req) {
             .from("shopping_order_groups")
             .select("id, merchant_id, delivery_status, settlement_status")
             .eq("id", orderId)
-            .single();
+            .maybeSingle();
 
         if (oError || !order) {
             return NextResponse.json({ error: "Order not found or access denied" }, { status: 404 });

@@ -71,12 +71,17 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
             if (error) throw error;
             if (data && !data.success) throw new Error(data.message);
 
+            // Find prev stock to guard against notification spam
+            const prevItem = inventory.find(i => i.id === item.id);
+            const prevStock = prevItem?.stock_quantity ?? Infinity;
+
             setInventory(prev =>
                 prev.map(i => i.id === item.id ? { ...i, stock_quantity: newStock } : i)
             );
             toast.success('Stock updated');
 
-            if (newStock <= 5) {
+            // Only notify when crossing the threshold from above (not on every update)
+            if (newStock <= 5 && prevStock > 5) {
                 const title = item.custom_title || item.shopping_products?.title;
                 supabase.from('notifications').insert({
                     user_id: merchant.user_id,

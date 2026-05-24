@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabaseClient";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, CheckCircle2, XCircle, Search, RefreshCw, AlertCircle } from "lucide-react";
+import toast from 'react-hot-toast';
 
 export default function StoreCreditRequestsTab({ merchantId }) {
     const supabase = createClient();
@@ -12,6 +13,8 @@ export default function StoreCreditRequestsTab({ merchantId }) {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [processingId, setProcessingId] = useState(null);
+    // Inline confirmation state: { id, action } | null
+    const [pendingConfirm, setPendingConfirm] = useState(null);
 
     useEffect(() => {
         fetchRequests();
@@ -45,8 +48,8 @@ export default function StoreCreditRequestsTab({ merchantId }) {
         }
     };
 
-    const handleAction = async (requestId, action) => {
-        if (!confirm(`Are you sure you want to ${action} this store credit request?`)) return;
+    const executeAction = async (requestId, action) => {
+        setPendingConfirm(null);
         setProcessingId(requestId);
         
         try {
@@ -62,18 +65,18 @@ export default function StoreCreditRequestsTab({ merchantId }) {
                 body: JSON.stringify({
                     requestId,
                     action: action === 'approve' ? 'approve' : 'deny',
-                    disclaimerAccepted: true // Confirmed by the browser confirm dialog
+                    disclaimerAccepted: true
                 })
             });
 
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || `Failed to ${action} request`);
             
-            // Re-fetch to update state
+            toast.success(action === 'approve' ? 'Credit request approved!' : 'Credit request denied.');
             await fetchRequests();
         } catch (err) {
             console.error(`Failed to ${action} request:`, err);
-            alert(`Failed to ${action} request: ${err.message}`);
+            toast.error(`Failed to ${action} request: ${err.message}`);
         } finally {
             setProcessingId(null);
         }
@@ -139,19 +142,19 @@ export default function StoreCreditRequestsTab({ merchantId }) {
                                         <div className={`p-3 rounded-xl flex items-center justify-center shrink-0 ${
                                             req.status === 'pending' ? 'bg-amber-100 text-amber-600' :
                                             req.status === 'approved' ? 'bg-blue-100 text-blue-600' :
-                                            req.status === 'settled' ? 'bg-emerald-100 text-emerald-600' :
+                                            req.status === 'completed' ? 'bg-emerald-100 text-emerald-600' :
                                             'bg-red-100 text-red-600'
                                         }`}>
                                             {req.status === 'pending' ? <Clock className="w-6 h-6" /> :
                                              req.status === 'approved' ? <CheckCircle2 className="w-6 h-6" /> :
-                                             req.status === 'settled' ? <CheckCircle2 className="w-6 h-6" /> :
+                                             req.status === 'completed' ? <CheckCircle2 className="w-6 h-6" /> :
                                              <XCircle className="w-6 h-6" />}
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className="font-bold text-sm">#{req.id.slice(0, 8).toUpperCase()}</span>
                                                 <span className="text-[10px] px-2 py-0.5 rounded-full uppercase font-black bg-slate-100 text-slate-600">
-                                                    {req.status}
+                                                    {req.status === 'settled' ? 'Completed' : req.status}
                                                 </span>
                                             </div>
                                             <div className="text-xs text-slate-500">
@@ -173,24 +176,47 @@ export default function StoreCreditRequestsTab({ merchantId }) {
                                         </div>
 
                                         {req.status === 'pending' && (
-                                            <div className="flex flex-col sm:flex-row gap-2">
-                                                <button
-                                                    onClick={() => handleAction(req.id, 'approve')}
-                                                    disabled={processingId === req.id}
-                                                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold rounded-xl transition-all disabled:opacity-50 flex items-center gap-2"
-                                                >
-                                                    {processingId === req.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                                                    APPROVE
-                                                </button>
-                                                <button
-                                                    onClick={() => handleAction(req.id, 'deny')}
-                                                    disabled={processingId === req.id}
-                                                    className="px-4 py-2 bg-slate-100 dark:bg-white/10 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 text-slate-700 dark:text-gray-300 text-xs font-bold rounded-xl transition-all disabled:opacity-50 flex items-center gap-2"
-                                                >
-                                                    <XCircle className="w-4 h-4" />
-                                                    DENY
-                                                </button>
-                                            </div>
+                                            pendingConfirm?.id === req.id ? (
+                                                // Inline confirmation prompt
+                                                <div className="flex flex-col gap-2 text-right">
+                                                    <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                                                        Confirm {pendingConfirm.action === 'approve' ? 'approval' : 'denial'}?
+                                                    </p>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => executeAction(req.id, pendingConfirm.action)}
+                                                            className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold rounded-lg transition-all"
+                                                        >
+                                                            Yes, {pendingConfirm.action}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setPendingConfirm(null)}
+                                                            className="px-3 py-1.5 bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg transition-all hover:bg-slate-200"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col sm:flex-row gap-2">
+                                                    <button
+                                                        onClick={() => setPendingConfirm({ id: req.id, action: 'approve' })}
+                                                        disabled={processingId === req.id}
+                                                        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold rounded-xl transition-all disabled:opacity-50 flex items-center gap-2"
+                                                    >
+                                                        {processingId === req.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                                        APPROVE
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setPendingConfirm({ id: req.id, action: 'deny' })}
+                                                        disabled={processingId === req.id}
+                                                        className="px-4 py-2 bg-slate-100 dark:bg-white/10 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 text-slate-700 dark:text-gray-300 text-xs font-bold rounded-xl transition-all disabled:opacity-50 flex items-center gap-2"
+                                                    >
+                                                        <XCircle className="w-4 h-4" />
+                                                        DENY
+                                                    </button>
+                                                </div>
+                                            )
                                         )}
                                     </div>
                                 </div>

@@ -57,8 +57,6 @@ export async function POST(request) {
             return NextResponse.json({ error: `This request has already been ${udhariRequest.status}` }, { status: 400 });
         }
 
-        const now = new Date().toISOString();
-
         // ========== APPROVE ==========
         if (action === 'approve') {
             if (!disclaimerAccepted) {
@@ -122,29 +120,15 @@ export async function POST(request) {
 
         // ========== DENY ==========
         if (action === 'deny') {
-            const { error: updateError } = await supabaseAdmin
-                .from('udhari_requests')
-                .update({
-                    status: 'denied',
-                    merchant_note: merchantNote || 'Request denied by merchant.',
-                    responded_at: now,
-                })
-                .eq('id', requestId);
+            // Use atomic RPC: locks udhari_requests + shopping_order_groups in one transaction
+            const { error: rpcError } = await supabaseAdmin.rpc('merchant_reject_udhari_request', {
+                p_request_id: requestId,
+                p_merchant_note: merchantNote || 'Request denied by merchant.',
+            });
 
-            if (updateError) {
-                console.error(JSON.stringify({ correlationId, stage: 'udhari_deny', error: updateError }));
-                return NextResponse.json({ error: 'Failed to deny request' }, { status: 500 });
-            }
-
-            // If it's a shop order, revert the order group back to pending so customer can pick another payment
-            if (udhariRequest.source_type === 'shop_order' && udhariRequest.shopping_order_group_id) {
-                await supabaseAdmin
-                    .from('shopping_order_groups')
-                    .update({
-                        payment_method: null,
-                        delivery_status: 'pending'
-                    })
-                    .eq('id', udhariRequest.shopping_order_group_id);
+            if (rpcError) {
+                console.error(JSON.stringify({ correlationId, stage: 'udhari_deny_rpc', error: rpcError }));
+                return NextResponse.json({ error: rpcError.message || 'Failed to deny request' }, { status: 500 });
             }
 
             // Notify customer

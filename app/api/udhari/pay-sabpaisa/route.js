@@ -42,15 +42,16 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Udhari request not found or not approved' }, { status: 404 });
         }
 
-        // 2. Fetch merchant settings (optional skeleton for future validation)
+        // 2. Fetch merchant settings — use convenience_fee_bps if present, else fall back to 300 bps (3%)
         const { data: settings } = await supabaseAdmin
             .from('merchant_udhari_settings')
-            .select('*')
+            .select('convenience_fee_bps')
             .eq('merchant_id', udhariRequest.merchant_id)
-            .single();
+            .maybeSingle();
 
         const purchaseAmountPaise = udhariRequest.amount_paise;
-        const extraFeePaise = Math.round(purchaseAmountPaise * 0.03); // 3% convenience fee
+        const feeBps = settings?.convenience_fee_bps ?? 300; // default 3%
+        const extraFeePaise = Math.round(purchaseAmountPaise * feeBps / 10000);
         const totalAmountPaise = purchaseAmountPaise + extraFeePaise;
         const totalAmountRupees = (totalAmountPaise / 100).toFixed(2);
 

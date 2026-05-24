@@ -97,7 +97,7 @@ export default async function MerchantRootLayout({ children }) {
         .from('merchants')
         .select('id, business_name, status, subscription_status, subscription_expires_at')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
     if (!merchant) {
         redirect('/merchant-apply');

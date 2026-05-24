@@ -16,7 +16,7 @@ export async function GET(request) {
             .from('merchants')
             .select('id')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
 
         if (!merchant) {
             return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
@@ -61,7 +61,7 @@ export async function PATCH(request) {
             .from('merchants')
             .select('id')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
 
         if (!merchant) {
             return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });

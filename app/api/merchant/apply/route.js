@@ -45,7 +45,7 @@ export async function POST(request) {
             .from('merchants')
             .select('id, status')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
 
         if (existingMerchant) {
             return NextResponse.json(

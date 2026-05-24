@@ -8,26 +8,30 @@ export async function GET(request) {
     try {
         const supabaseAdmin = createAdminClient();
 
+        // Always authenticate first — no unauthenticated access to any merchant's settings
+        const { user } = await getAuthUser(request);
+        if (!user) {
+            return NextResponse.json({ error: 'Missing authorization header' }, { status: 401 });
+        }
+
         const { searchParams } = new URL(request.url);
         let merchantId = searchParams.get('merchantId');
 
         if (!merchantId) {
-            const { user } = await getAuthUser(request);
-            if (!user) {
-                return NextResponse.json({ error: 'Missing authorization header' }, { status: 401 });
-            }
-
+            // Caller is the merchant themselves — resolve from their own record
             const { data: merchant } = await supabaseAdmin
                 .from('merchants')
                 .select('id')
                 .eq('user_id', user.id)
-                .single();
+                .maybeSingle();
 
             if (!merchant) {
                 return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
             }
             merchantId = merchant.id;
         }
+        // If merchantId provided, the user is a customer fetching a specific merchant's
+        // public udhari settings — auth check above already ran, so it's intentional.
 
         const { data: settings } = await supabaseAdmin
             .from('merchant_udhari_settings')
@@ -68,7 +72,7 @@ export async function PATCH(request) {
             .from('merchants')
             .select('id, status')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
 
         if (!merchant || merchant.status !== 'approved') {
             return NextResponse.json({ error: 'Approved merchant access required' }, { status: 403 });
