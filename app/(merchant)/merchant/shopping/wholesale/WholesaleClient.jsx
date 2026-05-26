@@ -14,12 +14,12 @@ import { generateOrderInvoice } from '@/lib/invoiceGenerator';
 import { PLATFORM_CONFIG } from '@/lib/config/platform';
 
 const PARTNERS = [
-    { name: 'AJIO', color: 'from-slate-900 to-slate-800', text: 'text-white', logo: '/partners/ajio.png', desc: 'Fashion Hub', tag: 'Top Tier' },
-    { name: 'NYKAA', color: 'from-rose-500 to-pink-600', text: 'text-white', logo: '/partners/nykaa.png', desc: 'Beauty & Care', tag: 'Popular' },
-    { name: 'TATA CLiQ', color: 'from-red-600 to-rose-700', text: 'text-white', logo: '/partners/tata-cliq.png', desc: 'Lifestyle', tag: 'Luxury' },
-    { name: 'RELIANCE', color: 'from-blue-700 to-indigo-800', text: 'text-white', logo: '/partners/reliance.png', desc: 'Retail Giant', tag: 'Essential' },
-    { name: 'AMAZON', color: 'from-amber-400 to-orange-500', text: 'text-black', logo: '/partners/amazon.png', desc: 'Bulk Sourcing', tag: 'Global' },
-    { name: 'FLIPKART', color: 'from-blue-500 to-sky-600', text: 'text-white', logo: '/partners/flipkart.png', desc: 'Wholesale', tag: 'Value' },
+    { name: 'AJIO', color: 'from-slate-900 to-slate-800', text: 'text-white', logo: '/logos/ajio.svg', desc: 'Fashion Hub', tag: 'Top Tier' },
+    { name: 'NYKAA', color: 'from-rose-500 to-pink-600', text: 'text-white', logo: '/logos/nykaa.svg', desc: 'Beauty & Care', tag: 'Popular' },
+    { name: 'TATA CLiQ', color: 'from-red-600 to-rose-700', text: 'text-white', logo: '/logos/tata-cliq.svg', desc: 'Lifestyle', tag: 'Luxury' },
+    { name: 'RELIANCE', color: 'from-blue-700 to-indigo-800', text: 'text-white', logo: '/logos/reliance.svg', desc: 'Retail Giant', tag: 'Essential' },
+    { name: 'AMAZON', color: 'from-amber-400 to-orange-500', text: 'text-black', logo: '/logos/amazon.svg', desc: 'Bulk Sourcing', tag: 'Global' },
+    { name: 'FLIPKART', color: 'from-blue-500 to-sky-600', text: 'text-white', logo: '/logos/flipkart.svg', desc: 'Wholesale', tag: 'Value' },
 ];
 
 function PartnerCard({ partner, i }) {
@@ -419,8 +419,6 @@ export default function WholesaleClient({ products = [], merchant, categories = 
             (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
         return matchesCategory && matchesSearch;
     });
-
-    const isAutoModeActive = merchant?.auto_mode;
 
     return (
         <>
