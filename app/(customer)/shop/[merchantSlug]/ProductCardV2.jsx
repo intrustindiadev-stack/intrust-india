@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Minus, Package, BadgeCheck, Check, Heart, Store } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -43,10 +44,7 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
     const discountPct = mrp > 0 ? Math.round((savings / mrp) * 100) : 0;
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+        <div
             className={`group relative flex flex-col h-full rounded-2xl overflow-hidden transition-all duration-300 ${isDark
                 ? 'bg-[#12151c] hover:bg-[#161a24] border shadow-lg'
                 : 'bg-white border-slate-200 shadow-sm hover:shadow-md border'
@@ -75,11 +73,14 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                     } : {}}
                 >
                     {product.product_images?.[0] ? (
-                        <img
+                        <Image
                             src={product.product_images[0]}
                             alt={product.title}
+                            fill
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                            className={`object-contain p-[7.5%] transition-transform duration-500 group-hover:scale-105 ${isDark ? '' : 'mix-blend-multiply'}`}
                             loading="lazy"
-                            className={`w-[85%] h-[85%] object-contain transition-transform duration-500 group-hover:scale-110 ${isDark ? '' : 'mix-blend-multiply'}`}
+                            quality={75}
                         />
                     ) : (
                         <div className={`w-full h-full flex items-center justify-center ${isDark ? 'text-white/10' : 'text-slate-200'}`}>
@@ -154,17 +155,17 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                         {justAdded ? (
                             <motion.div
                                 key="success"
-                                initial={{ scale: 0.8, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0.8, opacity: 0 }}
-                                transition={{ type: 'spring', stiffness: 450, damping: 22 }}
+                                initial={{ opacity: 0, scale: 0.98 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.98 }}
+                                transition={{ type: 'tween', duration: 0.2, ease: 'easeOut' }}
                                 className="flex items-center justify-center gap-1.5 text-white shadow-sm h-9 md:h-10 w-full rounded-xl"
                                 style={{ background: 'linear-gradient(135deg, #10b981, #34d399)', boxShadow: '0 4px 16px rgba(16,185,129,0.40)' }}
                             >
                                 <motion.div
-                                    initial={{ scale: 0, rotate: -45 }}
-                                    animate={{ scale: 1, rotate: 0 }}
-                                    transition={{ type: "spring", stiffness: 400, damping: 18, delay: 0.08 }}
+                                    initial={{ scale: 0.5, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    transition={{ type: "tween", duration: 0.2, delay: 0.05 }}
                                 >
                                     <Check size={16} strokeWidth={3} />
                                 </motion.div>
@@ -180,10 +181,10 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                         ) : cartItem ? (
                             <motion.div
                                 key="qty"
-                                initial={{ width: "60%", opacity: 0 }}
-                                animate={{ width: "100%", opacity: 1 }}
-                                exit={{ width: "60%", opacity: 0 }}
-                                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ type: 'tween', duration: 0.2, ease: 'easeOut' }}
                                 className="mx-auto flex items-center justify-between text-white rounded-xl overflow-hidden shadow-sm h-9 md:h-10 w-full"
                                 style={{
                                     background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
@@ -214,18 +215,16 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                         ) : (
                             <motion.button
                                 key="add"
-                                initial={{ scale: 0.95, opacity: 0 }}
+                                initial={{ opacity: 0 }}
                                 animate={{
-                                    scale: 1,
                                     opacity: 1,
                                     x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0
                                 }}
-                                exit={{ scale: 0.95, opacity: 0 }}
-                                whileTap={{ scale: 0.94 }}
-                                whileHover={{ scale: 1.02 }}
+                                exit={{ opacity: 0 }}
+                                whileTap={{ scale: 0.96 }}
                                 transition={{
-                                    x: { type: 'keyframes', duration: 0.4 },
-                                    default: { type: 'spring', stiffness: 400, damping: 25 }
+                                    x: { type: 'keyframes', duration: 0.3 },
+                                    default: { type: 'tween', duration: 0.2, ease: 'easeOut' }
                                 }}
                                 onClick={handleAdd}
                                 className={`w-full h-9 md:h-10 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-all active:scale-95 ${isDark
@@ -249,6 +248,6 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
                     </AnimatePresence>
                 )}
             </div>
-        </motion.div>
+        </div>
     );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { createClient } from "@/lib/supabaseClient";
 import {
   ShoppingBag,
@@ -29,7 +29,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import SabpaisaPaymentModal from "@/components/payment/SabpaisaPaymentModal";
+
+const SabpaisaPaymentModal = React.lazy(() => import("@/components/payment/SabpaisaPaymentModal"));
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
@@ -1211,37 +1212,39 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
       </div>
 
       {isPaymentModalOpen && (
-        <SabpaisaPaymentModal
-          isOpen={isPaymentModalOpen}
-          onClose={() => {
-            // Capture the draft ID before clearing it
-            const cancelTarget = draftGroupId;
-            // Re-enable buttons when modal is dismissed without completing payment
-            setIsPaymentModalOpen(false);
-            setCheckingOut(false);
-            // Clear draft so a fresh one is created if they retry
-            setDraftGroupId(null);
-            // Fire-and-forget: tell the server to cancel the pending gateway draft
-            if (cancelTarget) {
-              supabase.auth.getSession().then(({ data: { session } }) => {
-                fetch('/api/shopping/cancel-draft-order', {
-                  method: 'POST',
-                  keepalive: true,
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token}`,
-                  },
-                  body: JSON.stringify({ groupId: cancelTarget }),
+        <Suspense fallback={null}>
+          <SabpaisaPaymentModal
+            isOpen={isPaymentModalOpen}
+            onClose={() => {
+              // Capture the draft ID before clearing it
+              const cancelTarget = draftGroupId;
+              // Re-enable buttons when modal is dismissed without completing payment
+              setIsPaymentModalOpen(false);
+              setCheckingOut(false);
+              // Clear draft so a fresh one is created if they retry
+              setDraftGroupId(null);
+              // Fire-and-forget: tell the server to cancel the pending gateway draft
+              if (cancelTarget) {
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                  fetch('/api/shopping/cancel-draft-order', {
+                    method: 'POST',
+                    keepalive: true,
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${session?.access_token}`,
+                    },
+                    body: JSON.stringify({ groupId: cancelTarget }),
+                  }).catch(console.error);
                 }).catch(console.error);
-              }).catch(console.error);
-            }
-          }}
-          amount={(draftAmount || finalPayable) / 100}
-          user={{ id: userId, email: profile?.email || '', phone: profile?.phone || '' }}
-          productInfo={{ title: `${itemCount} Item${itemCount > 1 ? 's' : ''} in Cart` }}
-          metadata={{ type: 'cart_checkout', groupId: draftGroupId }}
-          initialMethod="gateway"
-        />
+              }
+            }}
+            amount={(draftAmount || finalPayable) / 100}
+            user={{ id: userId, email: profile?.email || '', phone: profile?.phone || '' }}
+            productInfo={{ title: `${itemCount} Item${itemCount > 1 ? 's' : ''} in Cart` }}
+            metadata={{ type: 'cart_checkout', groupId: draftGroupId }}
+            initialMethod="gateway"
+          />
+        </Suspense>
       )}
 
       {/* ADDRESS MODAL */}

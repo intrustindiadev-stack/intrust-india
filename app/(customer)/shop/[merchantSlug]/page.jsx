@@ -28,7 +28,7 @@ export default async function MerchantStorefrontPage({ params }) {
         const [platformProductsResult, officialCustomerResult, platformSettingsResult] = await Promise.all([
             supabase
                 .from('shopping_products')
-                .select('id, slug, title, description, product_images, category, mrp_paise, suggested_retail_price_paise, admin_stock, is_active')
+                .select('id, title, product_images, category, mrp_paise, suggested_retail_price_paise, admin_stock, is_active')
                 .eq('is_active', true),
             user
                 ? supabase.from('user_profiles').select('*').eq('id', user.id).single()
@@ -122,7 +122,7 @@ export default async function MerchantStorefrontPage({ params }) {
             profileResult,
             ratingResult,
             inventoryResult,
-            customerResult
+            merchantCustomerResult
         ] = await Promise.all([
             // Avatar
             fetchedMerchant.user_id
@@ -133,14 +133,16 @@ export default async function MerchantStorefrontPage({ params }) {
             // Inventory
             supabase
                 .from('merchant_inventory')
-                .select(`id, retail_price_paise, stock_quantity, merchant_id, product_id, is_active, is_platform_product, custom_title, custom_description, shopping_products!inner (id, slug, title, description, product_images, category, mrp_paise, suggested_retail_price_paise)`)
+                .select(`id, retail_price_paise, stock_quantity, merchant_id, product_id, is_active, is_platform_product, custom_title, custom_description, shopping_products!inner (id, title, product_images, category, mrp_paise, suggested_retail_price_paise)`)
                 .eq('merchant_id', fetchedMerchant.id)
                 .eq('is_active', true),
             // Customer profile
             user
-                ? supabase.from('user_profiles').select('*').eq('id', user.id).single()
+                ? supabase.from('user_profiles').select('wallet_balance_paise').eq('id', user.id).single()
                 : Promise.resolve({ data: null }),
         ]);
+
+        customerResult = merchantCustomerResult;
 
         merchant.user_profiles = { avatar_url: profileResult.data?.avatar_url || null };
         if (ratingResult.data) merchant.rating = ratingResult.data;

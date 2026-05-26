@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { Menu, X, ChevronRight, User, Moon, Sun } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -87,15 +86,8 @@ export default function Navbar() {
     return (
         <>
             {/* Premium Floating Navbar */}
-            <motion.nav
-                initial={{ y: -100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{
-                    duration: 0.6,
-                    ease: [0.22, 1, 0.36, 1],
-                    delay: 0.1
-                }}
-                className="fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-50 w-[90%] md:w-[85%] max-w-6xl px-0"
+            <nav
+                className={`fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-50 w-[90%] md:w-[85%] max-w-6xl px-0 animate-slideDown`}
             >
                 <div
                     className={`
@@ -108,12 +100,9 @@ export default function Navbar() {
                 >
                     <div className="flex items-center justify-between">
                         {/* Logo - Left */}
-                        <motion.a
+                        <a
                             href="/"
-                            whileHover={{ scale: 1.03 }}
-                            whileTap={{ scale: 0.97 }}
-                            transition={{ duration: 0.2 }}
-                            className="flex items-center gap-2.5 md:gap-3 z-10 group"
+                            className="flex items-center gap-2.5 md:gap-3 z-10 group hover:scale-[1.03] active:scale-[0.97] transition-transform"
                         >
                             <div className="relative w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
                                 <Image
@@ -128,42 +117,33 @@ export default function Navbar() {
                             <span className="text-lg md:text-xl font-bold bg-gradient-to-r from-[#7A93AC] via-[#92BCEA] to-[#AFB3F7] bg-clip-text text-transparent font-[family-name:var(--font-outfit)] tracking-tight">
                                 INTRUST
                             </span>
-                        </motion.a>
+                        </a>
 
                         {/* Desktop Menu - Center */}
                         <div className="hidden lg:flex items-center gap-8">
                             {menuItems.map((item, index) => (
-                                <motion.a
+                                <a
                                     key={item.label}
                                     href={item.href}
-                                    initial={{ opacity: 0, y: -10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{
-                                        delay: 0.3 + index * 0.1,
-                                        duration: 0.4,
-                                        ease: [0.22, 1, 0.36, 1]
-                                    }}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
                                     className="
                     relative px-5 py-2 text-[15px] font-medium 
                     text-[#617073] dark:text-gray-300 hover:text-[#171A21] dark:hover:text-white 
                     transition-colors duration-300 rounded-full
-                    group
+                    group hover:scale-105 active:scale-95
                   "
                                 >
                                     <span className="relative z-10">{item.label}</span>
 
                                     {/* Hover background */}
-                                    <motion.div
+                                    <div
                                         className="absolute inset-0 bg-gradient-to-r from-[#92BCEA]/10 to-[#AFB3F7]/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                                     />
 
                                     {/* Animated underline */}
-                                    <motion.span
+                                    <span
                                         className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] rounded-full group-hover:w-8 transition-all duration-300"
                                     />
-                                </motion.a>
+                                </a>
                             ))}
                         </div>
 
@@ -171,25 +151,19 @@ export default function Navbar() {
                         <div className="flex items-center gap-2 md:gap-3 z-10">
                             {/* Notifications - desktop only, mobile uses sidebar */}
                             {isAuthenticated && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: 0.45, duration: 0.4 }}
+                                <div
                                     className="hidden lg:flex"
                                 >
                                     <NotificationBell apiPath="/api/notifications" variant="navbar" />
-                                </motion.div>
+                                </div>
                             )}
                             {/* Theme Toggle */}
-                            <motion.button
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.45, duration: 0.4 }}
+                            <button
                                 onClick={toggleTheme}
                                 className="hidden lg:flex p-2 rounded-full text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
                             >
                                 {theme === 'light' ? <Sun size={20} /> : <Moon size={20} />}
-                            </motion.button>
+                            </button>
 
 
 
@@ -197,10 +171,8 @@ export default function Navbar() {
                                 <div className="hidden lg:flex items-center gap-4">
                                     <Link href="/profile">
                                         <div className="relative">
-                                            <motion.div
-                                                whileHover={{ scale: 1.05 }}
-                                                whileTap={{ scale: 0.95 }}
-                                                className={`w-10 h-10 rounded-full p-[2px] cursor-pointer transition-all duration-300 ${isGold
+                                            <div
+                                                className={`w-10 h-10 rounded-full p-[2px] cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 ${isGold
                                                     ? 'bg-gradient-to-br from-[#FFD700] via-[#FDB931] to-[#D4AF37] shadow-[0_0_10px_rgba(212,175,55,0.4)]'
                                                     : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
                                                     }`}
@@ -218,7 +190,7 @@ export default function Navbar() {
                                                         </span>
                                                     )}
                                                 </div>
-                                            </motion.div>
+                                            </div>
                                             {isGold && (
                                                 <div className="absolute -bottom-1 -right-1 z-10">
                                                     <GoldBadge size="sm" />
@@ -227,25 +199,21 @@ export default function Navbar() {
                                         </div>
                                     </Link>
 
-                                    <motion.button
-                                        whileHover={{ scale: 1.05, y: -1 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        transition={{ duration: 0.2 }}
+                                    <button
                                         onClick={handleLogout}
                                         className="
                       px-6 py-2 rounded-full font-semibold text-[15px]
                       bg-gray-100 text-gray-600 hover:bg-gray-200
                       dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700
-                      transition-all duration-300
+                      transition-all duration-300 hover:scale-105 active:scale-95
                     "
                                     >
                                         Sign Out
-                                    </motion.button>
+                                    </button>
                                     {/* Mobile/Tablet Profile Icon */}
                                     <Link href="/profile" className="lg:hidden">
-                                        <motion.div
-                                            whileTap={{ scale: 0.95 }}
-                                            className="w-8 h-8 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] cursor-pointer"
+                                        <div
+                                            className="w-8 h-8 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] cursor-pointer active:scale-95 transition-transform"
                                         >
                                             <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                                                 {hasImage ? (
@@ -260,39 +228,34 @@ export default function Navbar() {
                                                     </span>
                                                 )}
                                             </div>
-                                        </motion.div>
+                                        </div>
                                     </Link>
                                 </div>
                             ) : (
                                 <div className="hidden lg:flex items-center gap-2">
-                                    <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        transition={{ duration: 0.2 }}
+                                    <button
                                         onClick={() => router.push('/login')}
                                         className="
                       px-5 py-2 text-[15px] font-medium 
                       text-[#617073] dark:text-gray-300 hover:text-[#171A21] dark:hover:text-white 
                       transition-colors duration-300 rounded-full
                       hover:bg-gradient-to-r hover:from-[#92BCEA]/10 hover:to-[#AFB3F7]/10
+                      hover:scale-105 active:scale-95
                     "
                                     >
                                         Log In
-                                    </motion.button>
-                                    <motion.button
-                                        whileHover={{ scale: 1.05, y: -1 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        transition={{ duration: 0.2 }}
+                                    </button>
+                                    <button
                                         onClick={() => router.push('/login')}
                                         className="
                       px-6 py-2 rounded-full font-semibold text-[15px]
                       bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] 
                       text-white shadow-md hover:shadow-xl 
-                      transition-all duration-300
+                      transition-all duration-300 hover:scale-105 active:scale-95
                     "
                                     >
                                         Sign Up
-                                    </motion.button>
+                                    </button>
                                 </div>
                             )}
 
@@ -300,9 +263,8 @@ export default function Navbar() {
                             {isAuthenticated && (
                                 <Link href="/profile" className="lg:hidden mr-2">
                                     <div className="relative">
-                                        <motion.div
-                                            whileTap={{ scale: 0.95 }}
-                                            className={`w-9 h-9 rounded-full p-[2px] cursor-pointer transition-all duration-300 ${isGold
+                                        <div
+                                            className={`w-9 h-9 rounded-full p-[2px] cursor-pointer transition-all duration-300 active:scale-95 ${isGold
                                                 ? 'bg-gradient-to-br from-[#FFD700] via-[#FDB931] to-[#D4AF37] shadow-[0_0_10px_rgba(212,175,55,0.4)]'
                                                 : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
                                                 }`}
@@ -320,7 +282,7 @@ export default function Navbar() {
                                                     </span>
                                                 )}
                                             </div>
-                                        </motion.div>
+                                        </div>
                                         {isGold && (
                                             <div className="absolute -bottom-1 -right-1 z-10">
                                                 <GoldBadge size="sm" />
@@ -331,32 +293,29 @@ export default function Navbar() {
                             )}
 
                             {/* Mobile Menu Toggle */}
-                            <motion.button
-                                whileTap={{ scale: 0.9 }}
-                                transition={{ duration: 0.15 }}
+                            <button
                                 onClick={() => setMenuOpen(!menuOpen)}
                                 className="
                   lg:hidden p-2 md:p-2.5 rounded-full 
                   hover:bg-[#92BCEA]/10 
-                  transition-colors duration-200
+                  transition-colors duration-200 active:scale-90
                 "
                                 aria-label="Toggle menu"
                             >
-                                <motion.div
-                                    animate={menuOpen ? { rotate: 90 } : { rotate: 0 }}
-                                    transition={{ duration: 0.2 }}
+                                <div
+                                    style={{ transform: menuOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
                                 >
                                     {menuOpen ? (
                                         <X size={22} className="text-[#171A21] dark:text-gray-100" strokeWidth={2.5} />
                                     ) : (
                                         <Menu size={22} className="text-[#171A21] dark:text-gray-100" strokeWidth={2.5} />
                                     )}
-                                </motion.div>
-                            </motion.button>
+                                </div>
+                            </button>
                         </div>
                     </div>
                 </div>
-            </motion.nav>
+            </nav>
 
             {/* Mobile Menu */}
             <MobileNav

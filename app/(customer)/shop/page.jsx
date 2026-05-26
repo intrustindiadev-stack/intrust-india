@@ -11,44 +11,41 @@ export const dynamic = 'force-dynamic';
 
 export default async function MerchantHubPage() {
     const supabase = await createServerSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    // Fetch active merchants
-    const { data: merchantsArray } = await supabase
-        .from('merchants')
-        .select(`
-            id,
-            slug,
-            user_id,
-            business_name,
-            business_address,
-            shopping_banner_url,
-            is_open
-        `)
-        .eq('status', 'approved')
-        .order('business_name', { ascending: true });
-
-    let merchants = merchantsArray || [];
-
-    // Batch 2: run all remaining fetches in parallel
-    // profiles fetch requires userIds derived from merchants (Batch 1), so it belongs in Batch 2
-    const userIds = merchants.map(m => m.user_id).filter(Boolean);
     const adminClient = createAdminClient();
+
+    // Batch 1: Independent fetches
+    const [
+        merchantsResult,
+        userResult,
+        ratingsResult,
+        platformResult
+    ] = await Promise.all([
+        supabase
+            .from('merchants')
+            .select('id, slug, user_id, business_name, business_address, shopping_banner_url, is_open')
+            .eq('status', 'approved')
+            .order('business_name', { ascending: true }),
+        supabase.auth.getUser(),
+        supabase.from('merchant_rating_stats').select('merchant_id, avg_rating, total_ratings'),
+        adminClient.from('platform_settings').select('value').eq('key', 'platform_store').single()
+    ]);
+
+    let merchants = merchantsResult.data || [];
+    const user = userResult.data?.user;
+
+    // Batch 2: Dependent fetches (requires merchants/user)
+    const userIds = merchants.map(m => m.user_id).filter(Boolean);
 
     const [
         profilesResult,
-        ratingsResult,
         customerProfileResult,
         wishlistCountResult,
-        cartCountResult,
-        platformResult,
+        cartCountResult
     ] = await Promise.all([
         // Avatar profiles for all merchant users
         userIds.length > 0
             ? adminClient.from('user_profiles').select('id, avatar_url, full_name').in('id', userIds)
             : Promise.resolve({ data: [] }),
-        // Aggregate ratings for all merchants
-        supabase.from('merchant_rating_stats').select('merchant_id, avg_rating, total_ratings'),
         // Logged-in customer profile
         user
             ? supabase.from('user_profiles').select('wallet_balance_paise, full_name, avatar_url').eq('id', user.id).single()
@@ -60,9 +57,7 @@ export default async function MerchantHubPage() {
         // Cart count
         user
             ? supabase.from('shopping_cart').select('*', { count: 'exact', head: true }).eq('customer_id', user.id)
-            : Promise.resolve({ count: 0 }),
-        // Platform status
-        adminClient.from('platform_settings').select('value').eq('key', 'platform_store').single(),
+            : Promise.resolve({ count: 0 })
     ]);
 
     let platformStatus = { is_open: true };

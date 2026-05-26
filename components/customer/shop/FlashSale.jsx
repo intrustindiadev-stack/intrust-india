@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Zap, Plus, Minus, Check, Flame, Package, Store, ShoppingBag, Clock } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -88,16 +89,13 @@ function FlashSaleCard({ item, cartItem, onAdd, onRemove, onExpire, isStoreOpen,
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`w-[58vw] sm:w-auto shrink-0 snap-center flex flex-col rounded-2xl overflow-hidden border cursor-pointer group transition-all duration-300 ${
+        <div
+            className={`w-[58vw] sm:w-auto shrink-0 snap-center flex flex-col rounded-2xl overflow-hidden border cursor-pointer group transition-all duration-300 hover:-translate-y-0.5 ${
                 isDark
                     ? 'bg-[#0e111a] border-white/[0.06] hover:border-white/[0.12] hover:shadow-[0_8px_32px_rgba(0,0,0,0.5)]'
                     : 'bg-white border-slate-200 hover:shadow-xl hover:border-slate-300'
             }`}
             onClick={handleCardClick}
-            whileHover={{ y: -2 }}
         >
             {/* Image Area */}
             <div className={`relative w-full aspect-square flex items-center justify-center overflow-hidden ${isDark ? 'bg-[#0a0c14]' : 'bg-slate-50'}`}>
@@ -115,11 +113,14 @@ function FlashSaleCard({ item, cartItem, onAdd, onRemove, onExpire, isStoreOpen,
                 )}
 
                 {imageUrl ? (
-                    <img
+                    <Image
                         src={imageUrl}
                         alt={item.name || product.title || 'Product'}
+                        fill
+                        sizes="(max-width: 640px) 58vw, (max-width: 1024px) 33vw, 25vw"
+                        className={`object-contain p-[10%] transition-transform duration-500 group-hover:scale-105 ${isDark ? '' : 'mix-blend-multiply'}`}
                         loading="lazy"
-                        className={`w-[80%] h-[80%] object-contain transition-transform duration-500 group-hover:scale-110 ${isDark ? '' : 'mix-blend-multiply'}`}
+                        quality={75}
                     />
                 ) : (
                     <Package size={36} strokeWidth={1} className={isDark ? 'text-white/10' : 'text-slate-200'} />
@@ -247,7 +248,7 @@ function FlashSaleCard({ item, cartItem, onAdd, onRemove, onExpire, isStoreOpen,
                     </AnimatePresence>
                 )}
             </div>
-        </motion.div>
+        </div>
     );
 }
 

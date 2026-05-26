@@ -9,7 +9,7 @@ export default async function CustomerLayout({ children }) {
     try {
         const getUserPromise = supabase.auth.getUser();
         const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Auth timeout')), 3000)
+            setTimeout(() => reject(new Error('Auth timeout')), 1500)
         );
         const { data } = await Promise.race([getUserPromise, timeoutPromise]);
         user = data?.user;
@@ -30,7 +30,7 @@ export default async function CustomerLayout({ children }) {
                 .eq('id', user.id)
                 .single();
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Profile timeout')), 5000)
+                setTimeout(() => reject(new Error('Profile timeout')), 2000)
             );
             const { data, error } = await Promise.race([getProfilePromise, timeoutPromise]);
             if (!error && data) {

@@ -2,13 +2,15 @@ import { Inter, Outfit, Poppins, Sora, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { ThemeProvider } from '@/lib/contexts/ThemeContext';
-import PWAInstallPrompt from '@/components/ui/PWAInstallPrompt';
 import StructuredData from "@/components/seo/StructuredData";
 import { Toaster } from 'react-hot-toast';
 import { ConfettiProvider } from '@/components/ui/ConfettiProvider';
 import { ChatProvider } from '@/components/chat/ChatProvider';
-import GlobalChat from '@/components/chat/GlobalChat';
 import ErrorBoundary from '@/components/error/ErrorBoundary';
+import React, { Suspense } from 'react';
+
+const GlobalChat = React.lazy(() => import('@/components/chat/GlobalChat'));
+const PWAInstallPrompt = React.lazy(() => import('@/components/ui/PWAInstallPrompt'));
 
 
 const inter = Inter({
@@ -127,9 +129,6 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en-IN" className={`${inter.variable} ${outfit.variable} ${poppins.variable} ${sora.variable} ${dmSans.variable}`}>
-      <head>
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Material+Icons+Round&display=swap" rel="stylesheet" />
-      </head>
       <body className="antialiased">
         <ConfettiProvider>
           <ThemeProvider>
@@ -139,9 +138,11 @@ export default function RootLayout({ children }) {
                 <ErrorBoundary>
                   {children}
                 </ErrorBoundary>
-                <GlobalChat />
+                <Suspense fallback={null}>
+                  <GlobalChat />
+                  <PWAInstallPrompt />
+                </Suspense>
                 <Toaster position="top-center" reverseOrder={false} />
-                <PWAInstallPrompt />
               </ChatProvider>
             </AuthProvider>
           </ThemeProvider>

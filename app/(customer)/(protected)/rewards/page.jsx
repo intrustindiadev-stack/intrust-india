@@ -279,33 +279,63 @@ export default function RewardsPage() {
                         <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">Empire Rewards</h1>
                         <p className="text-sm text-slate-500 dark:text-gray-400 font-medium">Earn, track and redeem your benefits</p>
                     </div>
-                    <motion.button 
-                        onClick={() => setShowInfoModal(true)}
-                        whileHover={{ rotate: 15, scale: 1.1 }}
-                        className="w-14 h-14 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-white/20"
-                    >
-                        <Gift className="text-white" size={28} />
-                    </motion.button>
+                    <div className="flex items-center gap-3">
+                        <motion.button 
+                            onClick={() => router.push('/rewards/leaderboard')}
+                            whileHover={{ rotate: -5, scale: 1.05 }}
+                            className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 hover:bg-white/10 transition-colors"
+                        >
+                            <Trophy className="text-amber-500" size={24} />
+                        </motion.button>
+                        <motion.button 
+                            onClick={() => setShowInfoModal(true)}
+                            whileHover={{ rotate: 15, scale: 1.1 }}
+                            className="w-14 h-14 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-white/20"
+                        >
+                            <Gift className="text-white" size={28} />
+                        </motion.button>
+                    </div>
                 </div>
 
                 {/* Cross-navigation to Referral */}
-                <motion.button
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onClick={() => router.push('/refer')}
-                    className="w-full flex items-center justify-between px-6 py-4 bg-[#020617] dark:bg-black border border-white/10 rounded-[2rem] mb-6 group transition-all hover:border-emerald-500/30"
-                >
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 group-hover:scale-110 transition-transform">
-                            <Network size={16} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                    <motion.button
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        onClick={() => router.push('/refer')}
+                        className="w-full flex items-center justify-between px-6 py-4 bg-[#020617] dark:bg-black border border-white/10 rounded-3xl group transition-all hover:border-emerald-500/30"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                                <Network size={16} />
+                            </div>
+                            <div className="text-left">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400/60">Empire Builder</p>
+                                <p className="text-sm font-bold text-white">Referral Empire</p>
+                            </div>
                         </div>
-                        <div className="text-left">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400/60">Empire Builder</p>
-                            <p className="text-sm font-bold text-white">Referral Empire</p>
+                        <ChevronRight size={16} className="text-white/40 group-hover:translate-x-1 transition-transform" />
+                    </motion.button>
+
+                    <motion.button
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        onClick={() => router.push('/rewards/leaderboard')}
+                        className="w-full flex items-center justify-between px-6 py-4 bg-[#020617] dark:bg-black border border-white/10 rounded-3xl group transition-all hover:border-amber-500/30"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20 group-hover:scale-110 transition-transform">
+                                <Trophy size={16} />
+                            </div>
+                            <div className="text-left">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400/60">Hall of Fame</p>
+                                <p className="text-sm font-bold text-white">Leaderboard</p>
+                            </div>
                         </div>
-                    </div>
-                    <ChevronRight size={16} className="text-white/40 group-hover:translate-x-1 transition-transform" />
-                </motion.button>
+                        <ChevronRight size={16} className="text-white/40 group-hover:translate-x-1 transition-transform" />
+                    </motion.button>
+                </div>
 
                 {/* Main Points Card */}
                 <motion.div

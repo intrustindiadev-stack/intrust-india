@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import { ShieldCheck, Package, Clock, Star, Heart, ArrowRight, ShoppingCart } from 'lucide-react';
+import Image from 'next/image';
 
 export default function HeroIllustrativeAd() {
     return (
@@ -11,21 +11,17 @@ export default function HeroIllustrativeAd() {
             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-indigo-200/50 to-transparent dark:from-indigo-500/10 rounded-bl-full pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-violet-200/50 to-transparent dark:from-violet-500/10 rounded-tr-full pointer-events-none" />
 
-            {/* Decorative Stars */}
-            <motion.div
-                animate={{ rotate: 360, scale: [1, 1.2, 1] }}
-                transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-                className="absolute top-6 right-10 text-amber-400 opacity-60 pointer-events-none"
+            {/* Decorative Stars — CSS animation instead of framer-motion */}
+            <div
+                className="absolute top-6 right-10 text-amber-400 opacity-60 pointer-events-none animate-spin-slow"
             >
                 <Star size={16} fill="currentColor" />
-            </motion.div>
-            <motion.div
-                animate={{ rotate: -360, scale: [1, 1.5, 1] }}
-                transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
-                className="absolute bottom-8 left-1/2 text-emerald-400 opacity-40 pointer-events-none"
+            </div>
+            <div
+                className="absolute bottom-8 left-1/2 text-emerald-400 opacity-40 pointer-events-none animate-spin-reverse"
             >
                 <Star size={12} fill="currentColor" />
-            </motion.div>
+            </div>
 
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between p-6 md:p-8 gap-6">
 
@@ -68,22 +64,20 @@ export default function HeroIllustrativeAd() {
 
                 {/* Right Illustration Area - Image instead of SVG icons */}
                 <div className="w-full md:w-[40%] h-48 md:h-auto min-h-[160px] relative mt-4 md:mt-0 flex justify-end">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.6, type: "spring" }}
+                    <div
                         className="relative w-full max-w-[240px] aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl shadow-indigo-500/20 border-4 border-white/50 dark:border-white/10 mx-auto md:mx-0"
                     >
-                        {/* 
-                            This references the AI generated image stored in public/images/ecommerce_shopping_ad.png 
-                        */}
-                        <img
+                        <Image
                             src="/images/ecommerce_shopping_ad.png"
                             alt="Premium E-Commerce Platform"
-                            className="w-full h-full object-cover"
+                            fill
+                            sizes="240px"
+                            className="object-cover"
+                            loading="lazy"
+                            quality={75}
                         />
                         <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-transparent pointer-events-none" />
-                    </motion.div>
+                    </div>
                 </div>
             </div>
 

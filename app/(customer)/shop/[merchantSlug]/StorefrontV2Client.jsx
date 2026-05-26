@@ -8,13 +8,16 @@ import { createClient } from '@/lib/supabaseClient';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import ProductCardV2 from './ProductCardV2';
 import FloatingCart from './FloatingCart';
-import ConfirmModal from '@/components/ui/ConfirmModal';
-import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCardSkeleton from '@/components/customer/shop/ProductCardSkeleton';
 import MerchantProfileCard from '@/components/customer/shop/MerchantProfileCard';
-import FlashSale from '@/components/customer/shop/FlashSale';
 import { isStorefrontItemOOS } from '@/lib/shopping/stock';
+import React, { Suspense } from 'react';
+
+// Lazy load below-fold and modal components
+const AdBannerCarousel = React.lazy(() => import('@/components/customer/dashboard/AdBannerCarousel'));
+const FlashSale = React.lazy(() => import('@/components/customer/shop/FlashSale'));
+const ConfirmModal = React.lazy(() => import('@/components/ui/ConfirmModal'));
 
 export default function StorefrontV2Client({ merchant, initialInventory, customer }) {
     const router = useRouter();
@@ -72,8 +75,8 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
 
         const productIds = Array.from(new Set(liveInventory.map(i => i.product_id)));
         
-        const productsChannel = supabase
-            .channel('realtime_stock_products')
+        const syncChannel = supabase
+            .channel(`realtime_stock_sync_${liveMerchant.id}`)
             .on('postgres_changes', { 
                 event: 'UPDATE', 
                 schema: 'public', 
@@ -88,10 +91,6 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                     ));
                 }
             })
-            .subscribe();
-
-        const inventoryChannel = supabase
-            .channel('realtime_stock_inventory')
             .on('postgres_changes', { 
                 event: 'UPDATE', 
                 schema: 'public', 
@@ -109,8 +108,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
             .subscribe();
 
         return () => {
-            supabase.removeChannel(productsChannel);
-            supabase.removeChannel(inventoryChannel);
+            supabase.removeChannel(syncChannel);
         };
     }, [liveMerchant?.id, liveInventory.length]);
 
@@ -444,7 +442,9 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                     
                     {/* AD BANNER */}
                     <div className="w-full relative z-10 mb-4">
-                        <AdBannerCarousel />
+                        <Suspense fallback={<div className="w-full aspect-[16/9] md:aspect-[32/9] bg-slate-100 dark:bg-white/5 rounded-2xl animate-pulse" />}>
+                            <AdBannerCarousel />
+                        </Suspense>
                     </div>
 
                     {/* MERCHANT PROFILE HEADER (Mobile-First) */}
@@ -456,14 +456,16 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
 
                     {/* FLASH SALE */}
                     {liveMerchant?.id === 'official' && (
-                        <FlashSale
-                            cart={cart}
-                            onAdd={addToCart}
-                            onRemove={removeFromCart}
-                            isStoreOpen={isStoreOpen}
-                            primaryColor={primaryColor}
-                            secondaryColor={secondaryColor}
-                        />
+                        <Suspense fallback={<div className="w-full h-[200px] bg-slate-100 dark:bg-white/5 rounded-2xl animate-pulse mb-6" />}>
+                            <FlashSale
+                                cart={cart}
+                                onAdd={addToCart}
+                                onRemove={removeFromCart}
+                                isStoreOpen={isStoreOpen}
+                                primaryColor={primaryColor}
+                                secondaryColor={secondaryColor}
+                            />
+                        </Suspense>
                     )}
 
                     {/* Store Closed Browsing Note */}
@@ -526,15 +528,19 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                 />
             )}
 
-            <ConfirmModal
-                isOpen={confirmModalOpen}
-                onConfirm={handleConfirmClearCart}
-                onCancel={handleCancelClearCart}
-                title="Different Store"
-                message="Your cart contains items from another seller. Clear cart to add this item?"
-                confirmLabel="Clear & Add"
-                cancelLabel="Cancel"
-            />
+            <Suspense fallback={null}>
+                {confirmModalOpen && (
+                    <ConfirmModal
+                        isOpen={confirmModalOpen}
+                        onConfirm={handleConfirmClearCart}
+                        onCancel={handleCancelClearCart}
+                        title="Different Store"
+                        message="Your cart contains items from another seller. Clear cart to add this item?"
+                        confirmLabel="Clear & Add"
+                        cancelLabel="Cancel"
+                    />
+                )}
+            </Suspense>
             </div>
         </div>
     );
