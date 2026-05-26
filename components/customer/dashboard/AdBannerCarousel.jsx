@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Gift, Users, Crown, Zap } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 
 const banners = [
@@ -186,10 +187,14 @@ export default function AdBannerCarousel() {
                         {isDynamic ? (
                             // Dynamic Image Render — fills the 16:9 box completely
                             <Link href={banner.target_url || '#'} className="absolute inset-0">
-                                <img
+                                <Image
                                     src={banner.image_url}
                                     alt={banner.title}
-                                    className="w-full h-full object-cover"
+                                    fill
+                                    sizes="(max-width: 768px) 100vw, 90vw"
+                                    className="object-cover"
+                                    quality={75}
+                                    priority={currentIndex === 0}
                                 />
                             </Link>
                         ) : (

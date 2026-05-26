@@ -1,6 +1,7 @@
 'use client';
 
 import { MapPin, BadgeCheck, Phone, Star } from 'lucide-react';
+import Image from 'next/image';
 import RatingStars from '@/components/ui/RatingStars';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 
@@ -20,7 +21,7 @@ export default function MerchantProfileCard({ merchant, totalItems, isStoreOpen 
             <div className="relative shrink-0 w-[84px] h-[84px] sm:w-[100px] sm:h-[100px] rounded-3xl p-1 bg-gradient-to-br from-blue-500 to-indigo-500 shadow-xl shadow-blue-500/20">
                 <div className={`w-full h-full rounded-2xl overflow-hidden flex flex-col items-center justify-center font-black text-2xl ${isDark ? 'bg-[#0f111a] text-white' : 'bg-white text-slate-900'}`}>
                     {avatarUrl ? (
-                         <img src={avatarUrl} alt={merchant?.business_name} loading="lazy" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                         <Image src={avatarUrl} alt={merchant?.business_name} width={100} height={100} className="object-cover w-full h-full" referrerPolicy="no-referrer" />
                     ) : (
                          <span>{initials}</span>
                     )}

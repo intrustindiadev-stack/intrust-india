@@ -32,38 +32,23 @@ export default function FloatingCart({ count, total, savings, items, customer, o
                 >
                     {/* Cart Info */}
                     <div className="flex items-center gap-3">
-                        <motion.div 
-                            key={count} 
-                            initial={{ scale: 0.8, rotate: -10 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            transition={{ type: 'spring', damping: 10, stiffness: 300 }}
-                            className="p-2.5 rounded-xl relative bg-white/10 border border-white/20 backdrop-blur-md"
-                        >
+                        <div className="p-2.5 rounded-xl relative bg-white/10 border border-white/20">
                             <ShoppingCart size={22} className="text-white drop-shadow-md" />
-                            <motion.span 
-                                key={count}
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ type: 'spring', damping: 12, stiffness: 500, delay: 0.1 }}
+                            <span 
                                 className="absolute -top-2 -right-2 w-[18px] h-[18px] rounded-full bg-white text-[10px] font-black flex items-center justify-center shadow-lg" 
                                 style={{ color: primaryColor }}
                             >
                                 {count}
-                            </motion.span>
-                        </motion.div>
+                            </span>
+                        </div>
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black tracking-widest uppercase opacity-80" style={{ color: 'white' }}>
                                 {count} item{count !== 1 ? 's' : ''} added
                             </span>
                             <div className="flex items-center gap-2">
-                                <motion.span 
-                                    key={total}
-                                    initial={{ y: 5, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    className="text-xl font-black tracking-tight leading-none text-white drop-shadow-sm mt-0.5"
-                                >
+                                <span className="text-xl font-black tracking-tight leading-none text-white drop-shadow-sm mt-0.5">
                                     ₹{((total || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
-                                </motion.span>
+                                </span>
                                 {savings > 0 && (
                                     <span className="bg-emerald-500/90 border border-emerald-400 text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest shadow-sm">
                                         Save ₹{(savings / 100).toLocaleString('en-IN')}
@@ -82,12 +67,7 @@ export default function FloatingCart({ count, total, savings, items, customer, o
                         style={{ color: primaryColor }}
                     >
                         Review
-                        <motion.div
-                            animate={{ x: [0, 4, 0] }}
-                            transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                        >
-                            <ChevronRight size={16} strokeWidth={3} />
-                        </motion.div>
+                        <ChevronRight size={16} strokeWidth={3} className="animate-bounce-x" />
                     </motion.button>
                 </div>
             </motion.div>

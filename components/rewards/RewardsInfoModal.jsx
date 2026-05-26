@@ -69,29 +69,24 @@ export default function RewardsInfoModal({ isOpen, onClose, userTier = 'bronze' 
                             <h3 className="text-xl font-black text-gray-900 dark:text-white mb-3">How to Earn Points</h3>
                             <p className="text-sm text-gray-500">You earn points automatically — no claiming needed. The ✨ scratch cards on your dashboard reveal each new reward.</p>
                         </div>
-                        <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-white/10">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-gray-50 dark:bg-white/5 text-gray-500">
-                                    <tr>
-                                        <th className="px-4 py-3 font-bold">Action</th>
-                                        <th className="px-4 py-3 font-bold">Points</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                                    {[
-                                        ['Sign up', '100 points'],
-                                        ['Shop (per ₹100)', '5 points'],
-                                        ['Complete KYC', '200 points'],
-                                        ['Daily Login', '5 points'],
-                                        ['Become Merchant', '500 points'],
-                                    ].map(([act, pts]) => (
-                                        <tr key={act} className="dark:text-gray-300">
-                                            <td className="px-4 py-3">{act}</td>
-                                            <td className="px-4 py-3 font-bold text-violet-600">{pts}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {[
+                                { act: 'Sign up', pts: '100 pts', icon: '👋' },
+                                { act: 'Shop (per ₹100)', pts: '5 pts', icon: '🛍️' },
+                                { act: 'Complete KYC', pts: '200 pts', icon: '✓' },
+                                { act: 'Daily Login', pts: '5 pts', icon: '📅' },
+                                { act: 'Become Merchant', pts: '500 pts', icon: '🏪' },
+                            ].map(({ act, pts, icon }) => (
+                                <div key={act} className="p-3 rounded-2xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-between shadow-sm">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-black/20 flex items-center justify-center text-lg">
+                                            {icon}
+                                        </div>
+                                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{act}</span>
+                                    </div>
+                                    <span className="font-black text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10 px-2.5 py-1 rounded-lg text-xs">{pts}</span>
+                                </div>
+                            ))}
                         </div>
                         <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20">
                             <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300 flex items-center gap-2 mb-1">
@@ -193,23 +188,23 @@ export default function RewardsInfoModal({ isOpen, onClose, userTier = 'bronze' 
                     >
                         {/* Header/Tier Themed Strip */}
                         <div className={`h-2 bg-gradient-to-r ${tierGradients[userTier]}`} />
-                        <div className="p-6 sm:p-8 flex items-center justify-between">
+                        <div className="p-5 sm:p-6 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${tierGradients[userTier]} flex items-center justify-center text-white shadow-lg`}>
                                     <HelpCircle size={24} />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Rewards Guide</h2>
-                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{userTier} Tier Active</p>
+                                    <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">Rewards Guide</h2>
+                                    <p className="text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-widest">{userTier} Tier Active</p>
                                 </div>
                             </div>
-                            <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-white/5 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
+                            <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-white/5 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 transition-colors shrink-0">
                                 <X size={20} className="text-gray-600 dark:text-gray-300" />
                             </button>
                         </div>
 
                         {/* Tabs */}
-                        <div className="px-6 sm:px-8 flex items-center gap-2 overflow-x-auto pb-4 hide-scrollbar">
+                        <div className="px-5 sm:px-6 flex items-center gap-2 overflow-x-auto pb-4 hide-scrollbar">
                             {TABS.map((tab) => (
                                 <button
                                     key={tab.id}
@@ -227,7 +222,7 @@ export default function RewardsInfoModal({ isOpen, onClose, userTier = 'bronze' 
                         </div>
 
                         {/* Content */}
-                        <div className="p-6 sm:p-8 pt-2">
+                        <div className="p-5 sm:p-6 pt-2">
                             <motion.div
                                 key={activeTab}
                                 initial={{ opacity: 0, x: 20 }}
@@ -240,7 +235,7 @@ export default function RewardsInfoModal({ isOpen, onClose, userTier = 'bronze' 
                         </div>
 
                         {/* Footer */}
-                        <div className="p-6 sm:p-8 bg-gray-50 dark:bg-white/5 border-t border-gray-100 dark:border-white/10 flex items-center justify-between">
+                        <div className="p-5 sm:p-6 bg-gray-50 dark:bg-white/5 border-t border-gray-100 dark:border-white/10 flex items-center justify-between">
                             <p className="text-xs text-gray-400 font-medium">100 Points = ₹1 Rupee</p>
                             <button
                                 onClick={onClose}

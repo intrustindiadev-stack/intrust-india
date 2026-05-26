@@ -551,4 +551,23 @@ button, a, [role="button"] {
   .glass, .glass-dark, .merchant-glass {
     background: rgba(15, 23, 42, 0.95) !important;
   }
+}
+
+/* Performance optimizations for mobile devices (Low-end Android) */
+@media (max-width: 768px) {
+  /* Reduce heavy blurs to save GPU */
+  .backdrop-blur-xl, .backdrop-blur-2xl, .glass, .merchant-glass, .glass-dark {
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+  }
+
+  /* Simplify border radii for less complex paint operations */
+  .rounded-\[2rem\], .rounded-3xl, .rounded-\[24px\] {
+    border-radius: 1rem !important;
+  }
+
+  /* Disable or simplify complex box shadows */
+  .shadow-2xl, .shadow-\[0_4px_30px_rgba\(0\,0\,0\,0\.3\)\] {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  }
 }
