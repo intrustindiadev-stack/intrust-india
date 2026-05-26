@@ -586,6 +586,27 @@ export async function POST(request) {
                         } catch (notifErr) {
                             console.error('[Callback] NFC order notification failed:', notifErr.message);
                         }
+
+                        try {
+                            const { data: adminProfiles } = await supabaseAdmin
+                                .from('user_profiles')
+                                .select('id')
+                                .in('role', ['admin', 'super_admin']);
+
+                            if (adminProfiles && adminProfiles.length > 0) {
+                                const adminNotifs = adminProfiles.map((ap) => ({
+                                    user_id: ap.id,
+                                    title: 'New NFC Card Order 📇',
+                                    body: `NFC card order #${nfcOrderId.slice(0, 8).toUpperCase()} confirmed via gateway payment of ₹${amount}.`,
+                                    type: 'info',
+                                    reference_id: nfcOrderId,
+                                    reference_type: 'nfc_order'
+                                }));
+                                await supabaseAdmin.from('notifications').insert(adminNotifs);
+                            }
+                        } catch (adminNotifErr) {
+                            console.error('[Callback] NFC order admin notification failed:', adminNotifErr.message);
+                        }
                     }
                 }
             } catch (nfcError) {

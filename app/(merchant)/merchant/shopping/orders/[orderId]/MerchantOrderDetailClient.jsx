@@ -165,6 +165,8 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
     const orderNetProfit = (order.merchant_profit_paise ?? 0) !== 0
         ? order.merchant_profit_paise
         : (order.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0);
+    const orderTotalCost = (order.items || []).reduce((s, i) => s + ((i.cost_price_paise || 0) * (i.quantity || 1)), 0);
+    const orderPureProfit = orderNetProfit;
 
     const currentIdx = STATUS_FLOW.indexOf(currentStatus);
     const nextStatus = currentIdx >= 0 && currentIdx < STATUS_FLOW.length - 1 ? STATUS_FLOW[currentIdx + 1] : null;

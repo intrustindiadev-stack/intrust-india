@@ -137,17 +137,14 @@ export default function AutoModePage() {
 
             setMerchant(merchantData);
 
-            if (merchantData?.id) {
-                const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-                const { data: ordersData } = await supabase
-                    .from('shopping_order_groups')
-                    .select('id, created_at, delivery_status, payment_method, total_amount_paise, merchant_profit_paise, platform_cut_paise, customer_name, customer_phone')
-                    .eq('merchant_id', merchantData.id)
-                    .gte('created_at', thirtyDaysAgo)
-                    .order('created_at', { ascending: false })
-                    .limit(100);
-
-                setOrders(ordersData || []);
+            // Use server-side API (admin client) to bypass RLS on shopping_order_groups
+            const analyticsRes = await fetch('/api/merchant/auto-mode/analytics?days=90', {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+                cache: 'no-store',
+            });
+            if (analyticsRes.ok) {
+                const analyticsData = await analyticsRes.json();
+                setOrders(analyticsData.orders || []);
             }
 
             const pricingSettings = await getPricingSettings();
@@ -459,7 +456,7 @@ export default function AutoModePage() {
                     {/* Quick Stats Grid */}
                     <div className="grid grid-cols-2 gap-3">
                         <StatCard icon={IndianRupee} label="Net Profit" value={fmt(stats.totalProfit)} sub="After fees" accent="emerald" delay={0.05} trend={stats.growth} />
-                        <StatCard icon={TrendingUp} label="Gross Rev" value={fmt(stats.totalRevenue)} sub="30d Volume" accent="indigo" delay={0.1} />
+                        <StatCard icon={TrendingUp} label="Gross Rev" value={fmt(stats.totalRevenue)} sub="90d Volume" accent="indigo" delay={0.1} />
                         <StatCard icon={Package} label="Today's Orders" value={stats.todayCount} sub={`${stats.weekCount} this week`} accent="amber" delay={0.15} />
                         <StatCard icon={Star} label="Success Rate" value={`${stats.successRate}%`} sub={`${stats.deliveredCount} delivered`} accent="violet" delay={0.2} />
                     </div>
@@ -654,7 +651,7 @@ export default function AutoModePage() {
                             className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                             <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
                                 <h3 className="font-black text-slate-800 text-sm">All Orders</h3>
-                                <span className="text-[10px] text-slate-400 font-bold">{orders.length} in last 30d</span>
+                                <span className="text-[10px] text-slate-400 font-bold">{orders.length} in last 90d</span>
                             </div>
                             {orders.length === 0 ? (
                                 <div className="py-14 text-center">

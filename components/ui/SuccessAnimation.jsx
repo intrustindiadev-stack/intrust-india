@@ -45,6 +45,7 @@ export default function SuccessAnimation({
     message = 'Your items have been added to your inventory.',
     primaryAction = { label: 'View Inventory', href: '/merchant/shopping/inventory' },
     secondaryAction = { label: 'Continue Shopping', onClick: null },
+    tertiaryAction = null,
     stats = null,
 }) {
     const [particles, setParticles] = useState([]);
@@ -197,6 +198,15 @@ export default function SuccessAnimation({
                                 <ShoppingBag size={16} />
                                 {secondaryAction.label}
                             </button>
+
+                            {tertiaryAction && (
+                                <button
+                                    onClick={tertiaryAction.onClick}
+                                    className="w-full py-3 rounded-2xl text-blue-600 dark:text-blue-400 font-bold text-sm hover:bg-blue-50 dark:hover:bg-blue-500/10 flex items-center justify-center gap-2 transition-all active:scale-95 border border-blue-200 dark:border-blue-500/30"
+                                >
+                                    {tertiaryAction.label}
+                                </button>
+                            )}
                         </motion.div>
                     </motion.div>
                 </motion.div>

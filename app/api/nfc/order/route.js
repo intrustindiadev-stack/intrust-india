@@ -175,6 +175,41 @@ export async function POST(request) {
                 }
             }
 
+            // D. Notify Buyer and Admins (non-blocking — failures must not roll back the order)
+            try {
+                await supabaseAdmin.from('notifications').insert({
+                    user_id: userId,
+                    title: 'NFC Card Order Placed ✅',
+                    body: 'Your InTrust Premium NFC Card order has been placed and will be dispatched soon.',
+                    type: 'success',
+                    reference_id: order.id,
+                    reference_type: 'nfc_order'
+                });
+            } catch (notifErr) {
+                console.error('[NFC] Buyer notification failed:', notifErr);
+            }
+
+            try {
+                const { data: adminProfiles } = await supabaseAdmin
+                    .from('user_profiles')
+                    .select('id')
+                    .in('role', ['admin', 'super_admin']);
+
+                if (adminProfiles && adminProfiles.length > 0) {
+                    const adminNotifs = adminProfiles.map((ap) => ({
+                        user_id: ap.id,
+                        title: 'New NFC Card Order 📇',
+                        body: 'A new NFC card order has been placed. Review it in the NFC orders panel.',
+                        type: 'info',
+                        reference_id: order.id,
+                        reference_type: 'nfc_order'
+                    }));
+                    await supabaseAdmin.from('notifications').insert(adminNotifs);
+                }
+            } catch (adminNotifErr) {
+                console.error('[NFC] Admin notification failed:', adminNotifErr);
+            }
+
             return NextResponse.json({ success: true, orderId: order.id, message: 'Order placed successfully using wallet balance' });
         } 
         

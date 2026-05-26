@@ -17,16 +17,35 @@ export async function GET(request) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const { data, error } = await admin
+        const { searchParams } = new URL(request.url);
+        const limit = parseInt(searchParams.get('limit') || '30');
+        const offset = parseInt(searchParams.get('offset') || '0');
+
+        // 1. Get notifications with pagination
+        const { data, error, count } = await admin
             .from('notifications')
-            .select('*')
+            .select('*', { count: 'exact' })
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
-            .limit(30);
+            .range(offset, offset + limit - 1);
 
         if (error) throw error;
-        const unreadCount = (data || []).filter(n => !n.read).length;
-        return NextResponse.json({ notifications: data || [], unreadCount });
+
+        // 2. Get total unread count (not just for this page)
+        const { count: unreadCount, error: countError } = await admin
+            .from('notifications')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('read', false);
+
+        if (countError) throw countError;
+
+        return NextResponse.json({
+            notifications: data || [],
+            unreadCount: unreadCount || 0,
+            totalCount: count || 0,
+            hasMore: (offset + (data?.length || 0)) < (count || 0)
+        });
     } catch (error) {
         console.error('[API] Admin Notifications GET Error:', error);
         return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });

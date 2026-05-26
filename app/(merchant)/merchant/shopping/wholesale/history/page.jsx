@@ -21,7 +21,7 @@ export default async function WholesaleHistoryPage() {
 
     const { data: orders, error: ordersError } = await supabase
         .from('shopping_orders')
-        .select('*, shopping_products(title, product_images, category, wholesale_price_paise)')
+        .select('*, purchase_batch_id, unit_price_paise, shopping_products(title, product_images, category, wholesale_price_paise, gst_percentage, hsn_code)')
         .eq('buyer_id', merchant.id)
         .eq('buyer_type', 'merchant')
         .eq('order_type', 'wholesale')

@@ -184,6 +184,7 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
             case 'udhari_completed':
             case 'udhari_reminder': return 'credit_score';
             case 'gift_card_purchase': return 'card_giftcard';
+            case 'nfc_order': return 'contactless';
             case 'custom_product_submission':
             case 'product_approved':
             case 'product_rejected': return 'inventory_2';
@@ -328,6 +329,12 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
             case 'product_approved':
             case 'product_rejected':
                 if (isMerchant) router.push('/merchant/shopping/inventory');
+                break;
+
+            // ── NFC Orders ───────────────────────────────────────────────────
+            case 'nfc_order':
+                if (isAdmin) router.push('/admin/nfc');
+                else router.push('/merchant/nfc-orders');
                 break;
 
             // ── Admin Tasks ──────────────────────────────────────────────────

@@ -10,15 +10,90 @@ import Link from 'next/link';
 import MerchantFloatingCart from '@/components/merchant/shopping/MerchantFloatingCart';
 import SuccessAnimation from '@/components/ui/SuccessAnimation';
 import WholesaleProductModal from '@/components/merchant/shopping/WholesaleProductModal';
+import { generateOrderInvoice } from '@/lib/invoiceGenerator';
+import { PLATFORM_CONFIG } from '@/lib/config/platform';
 
 const PARTNERS = [
-    { name: 'AJIO', color: 'from-slate-900 to-slate-800', text: 'text-white', logo: 'https://cdn.iconscout.com/icon/free/png-256/free-ajio-3521255-2944669.png', desc: 'Fashion Hub', tag: 'Top Tier' },
-    { name: 'NYKAA', color: 'from-rose-500 to-pink-600', text: 'text-white', logo: 'https://upload.wikimedia.org/wikipedia/commons/d/d3/Nykaa_Logo.svg', desc: 'Beauty & Care', tag: 'Popular' },
-    { name: 'TATA CLiQ', color: 'from-red-600 to-rose-700', text: 'text-white', logo: 'https://logos-world.net/wp-content/uploads/2023/07/Tata-CLiQ-Logo.png', desc: 'Lifestyle', tag: 'Luxury' },
-    { name: 'RELIANCE', color: 'from-blue-700 to-indigo-800', text: 'text-white', logo: 'https://upload.wikimedia.org/wikipedia/commons/d/d3/Reliance_Industries_Logo.svg', desc: 'Retail Giant', tag: 'Essential' },
-    { name: 'AMAZON', color: 'from-amber-400 to-orange-500', text: 'text-black', logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg', desc: 'Bulk Sourcing', tag: 'Global' },
-    { name: 'FLIPKART', color: 'from-blue-500 to-sky-600', text: 'text-white', logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg', desc: 'Wholesale', tag: 'Value' },
+    { name: 'AJIO', color: 'from-slate-900 to-slate-800', text: 'text-white', logo: '/partners/ajio.png', desc: 'Fashion Hub', tag: 'Top Tier' },
+    { name: 'NYKAA', color: 'from-rose-500 to-pink-600', text: 'text-white', logo: '/partners/nykaa.png', desc: 'Beauty & Care', tag: 'Popular' },
+    { name: 'TATA CLiQ', color: 'from-red-600 to-rose-700', text: 'text-white', logo: '/partners/tata-cliq.png', desc: 'Lifestyle', tag: 'Luxury' },
+    { name: 'RELIANCE', color: 'from-blue-700 to-indigo-800', text: 'text-white', logo: '/partners/reliance.png', desc: 'Retail Giant', tag: 'Essential' },
+    { name: 'AMAZON', color: 'from-amber-400 to-orange-500', text: 'text-black', logo: '/partners/amazon.png', desc: 'Bulk Sourcing', tag: 'Global' },
+    { name: 'FLIPKART', color: 'from-blue-500 to-sky-600', text: 'text-white', logo: '/partners/flipkart.png', desc: 'Wholesale', tag: 'Value' },
 ];
+
+function PartnerCard({ partner, i }) {
+    const [imgFailed, setImgFailed] = useState(false);
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: (i % PARTNERS.length) * 0.1 }}
+            whileHover={{ 
+                y: -12,
+                transition: { duration: 0.4, ease: "easeOut" }
+            }}
+            className="flex-shrink-0 group cursor-pointer snap-center"
+        >
+            <div className="relative w-[180px] sm:w-[220px] p-7 rounded-[3rem] bg-white dark:bg-[#0c0e16] border border-slate-100 dark:border-white/[0.05] shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] dark:shadow-none dark:hover:bg-white/[0.03] transition-all duration-500 overflow-hidden">
+                {/* Premium Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-blue-500/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                
+                {/* Ambient Glow Background */}
+                <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-colors" />
+                
+                {/* Logo Area */}
+                <div className="relative mb-6">
+                    <div className="w-20 h-20 rounded-[2rem] bg-white dark:bg-white flex items-center justify-center p-4 shadow-2xl shadow-black/10 group-hover:rotate-3 transition-transform duration-500 relative z-10 overflow-hidden">
+                        {imgFailed ? (
+                            <div className="w-full h-full flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white font-black text-2xl rounded-full">
+                                {partner.name ? partner.name[0] : ''}
+                            </div>
+                        ) : (
+                            <img 
+                                src={partner.logo} 
+                                alt={partner.name} 
+                                className="w-full h-full object-contain"
+                                onError={() => setImgFailed(true)}
+                            />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                    </div>
+                    
+                    <div className="absolute -bottom-1 -right-1 z-20">
+                        <div className="relative flex h-6 w-6">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-20" />
+                            <div className="relative bg-emerald-500 w-6 h-6 rounded-full border-[5px] border-white dark:border-[#0c0e16] shadow-xl" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Text Info */}
+                <div className="space-y-1.5 relative z-10">
+                    <div className="flex items-center gap-2">
+                        <h3 className="font-black text-lg text-slate-900 dark:text-white tracking-tight">{partner.name}</h3>
+                        <div className="bg-blue-500/10 p-0.5 rounded-md">
+                            <BadgeCheck size={14} className="text-blue-600 dark:text-blue-400" />
+                        </div>
+                    </div>
+                    <p className="text-[13px] font-bold text-slate-500 dark:text-white/40 tracking-tight leading-tight">{partner.desc}</p>
+                </div>
+
+                {/* Tag Overlay */}
+                <div className="mt-6 pt-6 border-t border-dashed border-slate-100 dark:border-white/5 flex items-center justify-between relative z-10">
+                    <div className="flex flex-col">
+                        <span className="text-[9px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.2em] mb-0.5">Status</span>
+                        <span className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-wider">{partner.tag}</span>
+                    </div>
+                    <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-white/5 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+                        <Plus size={18} />
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
 
 function PartnerCarousel() {
     // Duplicate partners for seamless loop
@@ -62,66 +137,11 @@ function PartnerCarousel() {
                 <div className="flex items-center gap-6 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory pb-4">
                     <div className="animate-marquee hover:pause flex items-center gap-6">
                         {marqueePartners.map((partner, i) => (
-                            <motion.div
+                            <PartnerCard
                                 key={`${partner.name}-${i}`}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: (i % PARTNERS.length) * 0.1 }}
-                                whileHover={{ 
-                                    y: -12,
-                                    transition: { duration: 0.4, ease: "easeOut" }
-                                }}
-                                className="flex-shrink-0 group cursor-pointer snap-center"
-                            >
-                                <div className="relative w-[180px] sm:w-[220px] p-7 rounded-[3rem] bg-white dark:bg-[#0c0e16] border border-slate-100 dark:border-white/[0.05] shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] dark:shadow-none dark:hover:bg-white/[0.03] transition-all duration-500 overflow-hidden">
-                                    {/* Premium Gradient Overlay */}
-                                    <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-blue-500/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                                    
-                                    {/* Ambient Glow Background */}
-                                    <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-colors" />
-                                    
-                                    {/* Logo Area */}
-                                    <div className="relative mb-6">
-                                        <div className={`w-20 h-20 rounded-[2rem] bg-white dark:bg-white flex items-center justify-center p-4 shadow-2xl shadow-black/10 group-hover:rotate-3 transition-transform duration-500 relative z-10`}>
-                                            <img 
-                                                src={partner.logo} 
-                                                alt={partner.name} 
-                                                className="w-full h-full object-contain"
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                                        </div>
-                                        
-                                        <div className="absolute -bottom-1 -right-1 z-20">
-                                            <div className="relative flex h-6 w-6">
-                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-20" />
-                                                <div className="relative bg-emerald-500 w-6 h-6 rounded-full border-[5px] border-white dark:border-[#0c0e16] shadow-xl" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Text Info */}
-                                    <div className="space-y-1.5 relative z-10">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-black text-lg text-slate-900 dark:text-white tracking-tight">{partner.name}</h3>
-                                            <div className="bg-blue-500/10 p-0.5 rounded-md">
-                                                <BadgeCheck size={14} className="text-blue-600 dark:text-blue-400" />
-                                            </div>
-                                        </div>
-                                        <p className="text-[13px] font-bold text-slate-500 dark:text-white/40 tracking-tight leading-tight">{partner.desc}</p>
-                                    </div>
-
-                                    {/* Tag Overlay */}
-                                    <div className="mt-6 pt-6 border-t border-dashed border-slate-100 dark:border-white/5 flex items-center justify-between relative z-10">
-                                        <div className="flex flex-col">
-                                            <span className="text-[9px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.2em] mb-0.5">Status</span>
-                                            <span className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-wider">{partner.tag}</span>
-                                        </div>
-                                        <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-white/5 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-                                            <Plus size={18} />
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
+                                partner={partner}
+                                i={i}
+                            />
                         ))}
                     </div>
                 </div>
@@ -141,6 +161,9 @@ export default function WholesaleClient({ products = [], merchant, categories = 
     const [successStats, setSuccessStats] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [flyingItems, setFlyingItems] = useState([]);
+    const [lastBatchId, setLastBatchId] = useState(null);
+    const [lastCartSnapshot, setLastCartSnapshot] = useState([]);
+    const isAutoModeActive = merchant?.auto_mode_active || false;
 
     const updateQuantity = (e, product, delta) => {
         const productId = product.id;
@@ -251,6 +274,24 @@ export default function WholesaleClient({ products = [], merchant, categories = 
             }
             if (data && !data.success) throw new Error(data.message);
 
+            const batchId = data?.batch_id;
+            const totalPaise = data?.total_paise || Math.round(totalWithGst * 100);
+
+            // Snapshot cart before clearing
+            const cartSnapshot = cartItems.map(item => ({
+                ...item,
+                shopping_products: {
+                    title: item.title,
+                    hsn_code: products.find(p => p.id === item.id)?.hsn_code || '-',
+                    gst_percentage: item.gst_percentage || 0,
+                },
+                unit_price_paise: Math.round(item.unit_price * 100),
+                total_price_paise: Math.round(item.unit_price * item.quantity * (1 + (item.gst_percentage || 0) / 100) * 100),
+            }));
+
+            setLastBatchId(batchId);
+            setLastCartSnapshot(cartSnapshot);
+
             // Show success animation
             setSuccessStats([
                 { label: 'Items Purchased', value: cartItems.reduce((s, i) => s + i.quantity, 0) },
@@ -259,6 +300,31 @@ export default function WholesaleClient({ products = [], merchant, categories = 
             setCart({});
             setShowSuccess(true);
             router.refresh();
+
+            // Auto-generate invoice
+            if (batchId) {
+                try {
+                    await generateOrderInvoice({
+                        order: {
+                            id: batchId,
+                            created_at: new Date().toISOString(),
+                            delivery_fee_paise: 0,
+                        },
+                        items: cartSnapshot,
+                        seller: PLATFORM_CONFIG.business,
+                        customer: {
+                            name: merchant.business_name,
+                            address: merchant.business_address,
+                            phone: merchant.business_phone,
+                            gstin: merchant.gst_number,
+                        },
+                        type: 'shopping',
+                    });
+                } catch (invoiceErr) {
+                    console.error('[Invoice generation failed]', invoiceErr);
+                    toast('Invoice could not be auto-downloaded — use Purchase History to download it.', { icon: 'ℹ️' });
+                }
+            }
         } catch (error) {
             console.error('Purchase error:', error);
             toast.error(error.message || 'Purchase failed');
@@ -408,10 +474,30 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                 stats={successStats}
                 primaryAction={{ label: 'Manage Inventory', href: '/merchant/shopping/inventory' }}
                 secondaryAction={{ label: 'Buy More Stock', onClick: () => setShowSuccess(false) }}
+                tertiaryAction={lastBatchId ? {
+                    label: '📄 Re-download Invoice',
+                    onClick: async () => {
+                        try {
+                            await generateOrderInvoice({
+                                order: { id: lastBatchId, created_at: new Date().toISOString(), delivery_fee_paise: 0 },
+                                items: lastCartSnapshot,
+                                seller: PLATFORM_CONFIG.business,
+                                customer: {
+                                    name: merchant.business_name,
+                                    address: merchant.business_address,
+                                    phone: merchant.business_phone,
+                                    gstin: merchant.gst_number,
+                                },
+                                type: 'shopping',
+                            });
+                        } catch { toast.error('Invoice generation failed.'); }
+                    },
+                } : null}
             />
 
-            <div className="space-y-6">
-                {/* Page Header */}
+            <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-8 xl:items-start">
+                <div className="min-w-0 space-y-6">
+                    {/* Page Header */}
                 <div className="relative group">
                     <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
                     <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white shadow-xl dark:shadow-none dark:bg-white/[0.02] border border-slate-100 dark:border-white/10 p-8 rounded-3xl backdrop-blur-md">
@@ -615,35 +701,21 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                 </div>
             </div>
 
-            {/* Cart — desktop sticky sidebar sits in its own row; FAB handles mobile */}
-            <div className="hidden xl:block">
-                <MerchantFloatingCart
-                    cartItems={cartItems}
-                    merchantBalance={merchantBalance}
-                    subtotalInRupees={subtotal}
-                    onRemoveItem={removeFromCart}
-                    onPurchaseWallet={handlePurchaseWallet}
-                    onPurchaseGateway={handleGatewayPurchase}
-                    isPurchasing={isPurchasing}
-                    isProcessingGateway={isProcessingGateway}
-                    walletLabel="Pay via Wallet"
-                    gatewayLabel="Pay via UPI / Cards"
-                />
-            </div>
-            {/* Mobile FAB Cart */}
-            <div className="xl:hidden">
-                <MerchantFloatingCart
-                    cartItems={cartItems}
-                    merchantBalance={merchantBalance}
-                    subtotalInRupees={subtotal}
-                    onRemoveItem={removeFromCart}
-                    onPurchaseWallet={handlePurchaseWallet}
-                    onPurchaseGateway={handleGatewayPurchase}
-                    isPurchasing={isPurchasing}
-                    isProcessingGateway={isProcessingGateway}
-                    walletLabel="Pay via Wallet"
-                    gatewayLabel="Pay via UPI / Cards"
-                />
+            {/* Cart — desktop sticky sidebar & mobile FAB */}
+                <aside>
+                    <MerchantFloatingCart
+                        cartItems={cartItems}
+                        merchantBalance={merchantBalance}
+                        subtotalInRupees={subtotal}
+                        onRemoveItem={removeFromCart}
+                        onPurchaseWallet={handlePurchaseWallet}
+                        onPurchaseGateway={handleGatewayPurchase}
+                        isPurchasing={isPurchasing}
+                        isProcessingGateway={isProcessingGateway}
+                        walletLabel="Pay via Wallet"
+                        gatewayLabel="Pay via UPI / Cards"
+                    />
+                </aside>
             </div>
         </>
     );
