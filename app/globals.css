@@ -548,8 +548,11 @@ button, a, [role="button"] {
 
 /* Backdrop filter support for older Android */
 @supports not (backdrop-filter: blur(20px)) {
-  .glass, .glass-dark, .merchant-glass {
+  .glass, .glass-dark {
     background: rgba(15, 23, 42, 0.95) !important;
+  }
+  .merchant-glass {
+    background: rgba(255, 255, 255, 0.95) !important;
   }
 }
 

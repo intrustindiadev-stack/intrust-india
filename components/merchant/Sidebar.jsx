@@ -122,19 +122,21 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                                     key={item.href}
                                     href={item.href}
                                     onClick={() => setIsOpen(false)}
-                                    className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative overflow-hidden ${isActive
+                                    className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative ${isActive
                                         ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
                                         : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                                         }`}
                                 >
                                     {isActive && (
-                                        <motion.div 
-                                            layoutId="sidebar-active"
-                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                            className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent z-0 border-l-4 border-slate-900 dark:border-[#D4AF37]" 
-                                        />
+                                        <span className="absolute inset-0 rounded-2xl overflow-hidden z-0 pointer-events-none">
+                                            <motion.span 
+                                                layoutId="sidebar-active"
+                                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                                className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent border-l-4 border-slate-900 dark:border-[#D4AF37]" 
+                                            />
+                                        </span>
                                     )}
-                                    <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
+                                    <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
                                     <span className="text-[13px] font-bold tracking-wide z-10">{item.label}</span>
                                 </Link>
                             );
@@ -151,19 +153,21 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                                     key={item.href}
                                     href={item.href}
                                     onClick={() => setIsOpen(false)}
-                                    className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative overflow-hidden ${isActive
+                                    className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative ${isActive
                                         ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
                                         : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                                         }`}
                                 >
                                     {isActive && (
-                                        <motion.div 
-                                            layoutId="sidebar-active"
-                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                            className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent z-0 border-l-4 border-slate-900 dark:border-[#D4AF37]" 
-                                        />
+                                        <span className="absolute inset-0 rounded-2xl overflow-hidden z-0 pointer-events-none">
+                                            <motion.span 
+                                                layoutId="sidebar-active"
+                                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                                className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent border-l-4 border-slate-900 dark:border-[#D4AF37]" 
+                                            />
+                                        </span>
                                     )}
-                                    <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
+                                    <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
                                     <span className="text-[13px] font-bold tracking-wide z-10">{item.label}</span>
                                 </Link>
                             );

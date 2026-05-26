@@ -129,6 +129,14 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en-IN" className={`${inter.variable} ${outfit.variable} ${poppins.variable} ${sora.variable} ${dmSans.variable}`}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Round|Material+Icons+Outlined"
+          rel="stylesheet"
+        />
+      </head>
       <body className="antialiased">
         <ConfettiProvider>
           <ThemeProvider>
