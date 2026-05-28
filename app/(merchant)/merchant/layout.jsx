@@ -9,6 +9,7 @@ import MerchantGlobalChat from '@/components/chat/merchant/MerchantGlobalChat';
 
 import { SubscriptionProvider } from '@/components/merchant/SubscriptionContext';
 import { getPricingSettings } from '@/app/(admin)/admin/settings/actions';
+import { getPayerContact } from '@/lib/merchant/getPayerContact';
 
 export default async function MerchantRootLayout({ children }) {
     const supabase = await createServerSupabaseClient();
@@ -71,13 +72,15 @@ export default async function MerchantRootLayout({ children }) {
         // Fetch the first merchant (or none) for context — don't block
         const { data: adminMerchant } = await supabase
             .from('merchants')
-            .select('id, business_name, status, subscription_status, subscription_expires_at')
+            .select('id, business_name, status, subscription_status, subscription_expires_at, business_email, business_phone')
             .limit(1)
             .maybeSingle();
 
-        const merchantWithProfile = adminMerchant
-            ? { ...adminMerchant, user_profiles: profile }
-            : { id: 'admin-bypass', business_name: 'Admin View', status: 'approved', user_profiles: profile };
+        const adminMerchantObj = adminMerchant || { id: 'admin-bypass', business_name: 'Admin View', status: 'approved' };
+        const { payerEmail, payerPhone } = getPayerContact({ merchant: adminMerchantObj, profile, authUser: user });
+        console.log('Resolved Payer Email (Admin Bypass):', payerEmail);
+
+        const merchantWithProfile = { ...adminMerchantObj, user_profiles: profile, payerEmail, payerPhone };
 
         return (
             <SubscriptionProvider isSubscribed={true} merchantData={merchantWithProfile} plans={dynamicPlans}>
@@ -95,7 +98,7 @@ export default async function MerchantRootLayout({ children }) {
     // Fetch full merchant data so we can pass it to the subscription provider
     const { data: merchant } = await supabase
         .from('merchants')
-        .select('id, business_name, status, subscription_status, subscription_expires_at')
+        .select('id, business_name, status, subscription_status, subscription_expires_at, business_email, business_phone')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -139,7 +142,9 @@ export default async function MerchantRootLayout({ children }) {
     const isSubscribed = isSubActive && !isExpired;
 
     // Attach profile to merchant object so payment modal can prefill
-    const merchantWithProfile = { ...merchant, user_profiles: profile };
+    const { payerEmail, payerPhone } = getPayerContact({ merchant, profile, authUser: user });
+    console.log('Resolved Payer Email (Merchant):', payerEmail);
+    const merchantWithProfile = { ...merchant, user_profiles: profile, payerEmail, payerPhone };
 
     // 5. Render Layout (Authorized to View, Interactions handled by SubscriptionProvider)
     return (

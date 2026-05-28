@@ -9,6 +9,9 @@ import { sabpaisaConfig, validateCallbackConfig } from '@/lib/sabpaisa/config';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { MERCHANT_SUBSCRIPTION_PLANS, GOLD_SUBSCRIPTION_PLANS } from '@/lib/constants';
+import { validatePayerContact } from '@/lib/merchant/validatePayerContact';
+import { isTopupUdf1, WALLET_TOPUP_FALLBACK_MOBILE } from '@/lib/sabpaisa/topupFallback';
+import { normalizePayerMobile, DENIED_PAYER_MOBILES } from '@/lib/merchant/payerContactRules';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -63,6 +66,58 @@ export async function POST(request) {
         const orderData = await request.json().catch(() => null);
         if (!orderData) {
             return failResponse(400, 'Invalid request body.', correlationId);
+        }
+
+        // ── Validate Request Shape ──
+        const validationLog = (field) => {
+            console.warn(`[SabPaisa Initiate][${correlationId}] Validation failed for field: ${field}, merchant: ${orderData.udf2 || 'unknown'}`);
+        };
+
+        const isTopup = isTopupUdf1(orderData.udf1);
+
+        const payerValidation = validatePayerContact(
+            { email: orderData.payerEmail, phone: orderData.payerMobile },
+            { allowMissingPhone: isTopup }
+        );
+
+        // 1. Validate payerEmail
+        if (payerValidation.errors.email) {
+            validationLog('payerEmail');
+            return NextResponse.json(
+                { error: 'INVALID_PAYER_CONTACT', message: payerValidation.errors.email, field: 'payerEmail' },
+                { status: 400 }
+            );
+        }
+
+        // 2. Validate payerMobile
+        if (payerValidation.errors.phone) {
+            if (!isTopup) {
+                validationLog('payerMobile');
+                return NextResponse.json(
+                    { error: 'INVALID_PAYER_CONTACT', message: payerValidation.errors.phone, field: 'payerMobile' },
+                    { status: 400 }
+                );
+            }
+        }
+
+        // 3. Validate clientTxnId
+        const txnIdRegex = /^[A-Za-z0-9_]+$/;
+        if (!orderData.clientTxnId || typeof orderData.clientTxnId !== 'string' || orderData.clientTxnId.length > 64 || !txnIdRegex.test(orderData.clientTxnId)) {
+            validationLog('clientTxnId');
+            return NextResponse.json(
+                { error: 'INVALID_TRANSACTION_ID', message: 'A valid transaction ID is required.', field: 'clientTxnId' },
+                { status: 400 }
+            );
+        }
+
+        // 4. Validate amount
+        const parsedAmount = Number(orderData.amount);
+        if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 1000000) {
+            validationLog('amount');
+            return NextResponse.json(
+                { error: 'INVALID_AMOUNT', message: 'A valid payment amount is required.', field: 'amount' },
+                { status: 400 }
+            );
         }
 
         // ── Auth header ──
@@ -239,6 +294,15 @@ export async function POST(request) {
 
         // Override client amount with server-derived canonical amount for gateway encryption
         orderData.amount = (canonicalAmountPaise / 100).toFixed(2);
+
+        // ── Apply Fallback for Topup ──
+        if (isTopup) {
+            const normalizedPhone = normalizePayerMobile(orderData.payerMobile);
+            if (normalizedPhone.length !== 10 || DENIED_PAYER_MOBILES.includes(normalizedPhone)) {
+                orderData.payerMobile = WALLET_TOPUP_FALLBACK_MOBILE;
+                console.log(`[SabPaisa Initiate][${correlationId}][User:${user.id}] Applied phone fallback for topup.`);
+            }
+        }
 
         // ── Persist transaction record ──
         const { error: insertError } = await supabaseAdmin

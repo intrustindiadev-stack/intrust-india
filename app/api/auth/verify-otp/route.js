@@ -54,8 +54,10 @@ export async function POST(request) {
             return NextResponse.json({ success: false, error: 'Invalid OTP.' }, { status: 400 });
         }
 
-        // Mark OTP as used
-        await supabaseAdmin.from('otp_codes').update({ is_used: true }).eq('id', otpRecord.id);
+        // NOTE: OTP is intentionally NOT marked used here yet.
+        // We defer consumption until after session creation succeeds so that
+        // transient downstream failures (user creation, phone confirm, generateLink)
+        // do not force an unnecessary resend cycle.
 
         // 3. User Handling
         const authPhone = `+91${cleanPhone}`;
@@ -147,7 +149,7 @@ export async function POST(request) {
 
         // 5. Mint session
         console.log(`[VERIFY-OTP] Minting session via generateLink for user ${userId}`);
-        
+
         const { data: generatedLink, error: genErr } = await supabaseAdmin.auth.admin.generateLink({
             type: 'magiclink',
             email: stableEmail,
@@ -168,6 +170,10 @@ export async function POST(request) {
             console.error('[VERIFY-OTP] token exchange failed:', exchangeErr);
             return NextResponse.json({ success: false, error: 'Session creation failed.' }, { status: 500 });
         }
+
+        // Session is fully established — now it is safe to consume the OTP.
+        // Any failure before this point left the OTP intact so the user can retry.
+        await supabaseAdmin.from('otp_codes').update({ is_used: true }).eq('id', otpRecord.id);
 
         const session = exchanged.session;
         console.log(`[VERIFY-OTP] Session minted successfully for user ${userId}`);

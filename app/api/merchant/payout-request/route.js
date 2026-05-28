@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { getAuthUser } from '@/lib/apiAuth';
+import { requireMerchantSubscription } from '@/lib/merchant/requireSubscription';
 import { NextResponse } from 'next/server';
 import { notifyMerchantPayoutRequested } from '@/lib/notifications/merchantWhatsapp';
 
@@ -69,10 +70,9 @@ const RPC_ERROR_MSG = {
 
 export async function POST(request) {
     try {
-        const { user } = await getAuthUser(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const subResult = await requireMerchantSubscription(request);
+        if (!subResult.ok) return subResult.response;
+        const { user } = subResult;
 
         const body = await request.json();
         const { amount, source = 'wallet', reference_id } = body;

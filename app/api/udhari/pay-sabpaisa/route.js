@@ -3,6 +3,8 @@ import { buildEncryptedPayload } from '@/lib/sabpaisa/payload';
 import { sabpaisaConfig } from '@/lib/sabpaisa/config';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
+import { getPayerContact } from '@/lib/merchant/getPayerContact';
+import { validatePayerContact } from '@/lib/merchant/validatePayerContact';
 
 export async function POST(request) {
     const correlationId = crypto.randomUUID();
@@ -55,6 +57,31 @@ export async function POST(request) {
         const totalAmountPaise = purchaseAmountPaise + extraFeePaise;
         const totalAmountRupees = (totalAmountPaise / 100).toFixed(2);
 
+        const { data: profile } = await supabaseAdmin
+            .from('user_profiles')
+            .select('id, full_name, name, email, phone')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        const { payerEmail, payerPhone } = getPayerContact({
+            merchant: null,
+            profile,
+            authUser: user,
+        });
+        const payerValidation = validatePayerContact({ email: payerEmail, phone: payerPhone });
+        if (payerValidation.errors.email) {
+            return NextResponse.json(
+                { error: 'INVALID_PAYER_CONTACT', message: payerValidation.errors.email, field: 'payerEmail' },
+                { status: 400 }
+            );
+        }
+        if (payerValidation.errors.phone) {
+            return NextResponse.json(
+                { error: 'INVALID_PAYER_CONTACT', message: payerValidation.errors.phone, field: 'payerMobile' },
+                { status: 400 }
+            );
+        }
+
         // 3. Create transaction record for tracking & idempotency
         const clientTxnId = uuidv4();
         const { error: txnError } = await supabaseAdmin
@@ -67,9 +94,9 @@ export async function POST(request) {
                 udf1: 'UDHARI_PAYMENT',
                 udf2: requestId,
                 udf3: udhariRequest.merchant_id,
-                payer_email: user.email || '',
-                payer_mobile: '',
-                payer_name: ''
+                payer_email: payerEmail,
+                payer_mobile: payerPhone,
+                payer_name: profile?.full_name || profile?.name || user.email || 'User'
             });
 
         if (txnError) {
@@ -81,9 +108,9 @@ export async function POST(request) {
         const orderData = {
             clientTxnId,
             amount: totalAmountRupees,
-            payerEmail: user.email || '',
-            payerMobile: '',
-            payerName: '',
+            payerEmail,
+            payerMobile: payerPhone,
+            payerName: profile?.full_name || profile?.name || user.email || 'User',
             udf1: 'UDHARI_PAYMENT',
             udf2: requestId,
             udf3: udhariRequest.merchant_id

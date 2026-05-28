@@ -53,7 +53,7 @@ def build_local():
     result = subprocess.run(
         ["npm", "run", "build"],
         cwd=PROJECT_DIR,
-        shell=True
+        shell=False
     )
     if result.returncode != 0:
         print("\n[ERROR] Local build failed. Aborting.")
@@ -173,7 +173,7 @@ def deploy_on_vps(client):
     divider("STEP 4 - Deploying on VPS (extract -> deps -> restart)")
 
     print("\n[4a] Extracting build.tar.gz...")
-    run_remote(client, f"tar -xzf {REMOTE_UPLOAD} -C {REMOTE_APP_DIR}")
+    run_remote(client, f"tar -xzf {REMOTE_UPLOAD} --overwrite -C {REMOTE_APP_DIR}")
 
     print("\n[4b] Installing production dependencies (no rebuild)...")
     run_remote(

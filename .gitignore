@@ -72,3 +72,8 @@ claude.json
 
 # project documentation
 BRD-Intrust.pdf
+
+node_modules/
+.next/
+dist/
+.git/

@@ -1,19 +1,19 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { requireMerchantSubscription } from '@/lib/merchant/requireSubscription';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
     try {
+        // Subscription guard
+        const subResult = await requireMerchantSubscription(request);
+        if (!subResult.ok) return subResult.response;
+        const { user } = subResult;
+
         const supabase = await createServerSupabaseClient();
         const { couponIds, merchantId } = await request.json();
 
         if (!couponIds || !Array.isArray(couponIds) || couponIds.length === 0) {
             return NextResponse.json({ success: false, message: 'Invalid coupon IDs' }, { status: 400 });
-        }
-
-        // Get current user to verify merchant ownership (if merchantId not provided/admin)
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
         }
 
         // Call the RPC

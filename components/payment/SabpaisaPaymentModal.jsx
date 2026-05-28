@@ -16,8 +16,12 @@ import PaymentMethodCard from "./PaymentMethodCard";
 import WalletPaymentOption from "./WalletPaymentOption";
 
 import { useWallet } from "@/hooks/useWallet";
+import { usePayerContact } from "@/hooks/usePayerContact";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import PayerContactRecoveryPanel, { payerContactFieldFromServer } from "@/components/payment/PayerContactRecoveryPanel";
+import { normalizePayerMobile } from "@/lib/merchant/payerContactRules";
+import { WALLET_TOPUP_FALLBACK_MOBILE, isTopupUdf1 } from "@/lib/sabpaisa/topupFallback";
 
 export default function SabpaisaPaymentModal({
   isOpen,
@@ -31,14 +35,34 @@ export default function SabpaisaPaymentModal({
   onUdhariTrigger,
 }) {
   const { balance, fetchBalance, debitWallet } = useWallet();
+  const payerContact = usePayerContact({ requireMerchant: false });
   const router = useRouter();
 
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
+  const [serverContactError, setServerContactError] = useState(null);
 
   // Wallet topup states
   const [showTopupInput, setShowTopupInput] = useState(false);
   const [topupAmount, setTopupAmount] = useState("");
+  const firstInvalidField = Object.keys(payerContact.validation.errors)[0] || null;
+  const recoveryField = serverContactError?.field || firstInvalidField;
+  const isAddToWalletActive = showTopupInput;
+  const hasGatewayContactIssue = Boolean(recoveryField && !(isAddToWalletActive && recoveryField === 'phone'));
+
+  const savePayerContact = async (nextValue, field) => {
+    const profileId = payerContact.profile?.id || payerContact.authUser?.id || user?.id;
+    if (!profileId) throw new Error("Please log in again to update your contact details.");
+
+    const { error: updateError } = await supabase
+      .from("user_profiles")
+      .update(field === "phone" ? { phone: nextValue } : { email: nextValue })
+      .eq("id", profileId);
+
+    if (updateError) throw updateError;
+    setServerContactError(null);
+    await payerContact.refresh();
+  };
 
   // Refresh wallet balance when modal opens
   useEffect(() => {
@@ -132,19 +156,35 @@ export default function SabpaisaPaymentModal({
       }
 
       // ── Sabpaisa Gateway Payment (Secure Server-Side Flow) ──
+      const isContactInvalid = method === "ADD_TO_WALLET"
+          ? payerContact.validation.errors.email
+          : !payerContact.validation.ok;
+
+      if (isContactInvalid) {
+        setServerContactError({
+          field: firstInvalidField || "phone",
+          message: payerContact.validation.errors[firstInvalidField] || "Please update your contact details to continue.",
+        });
+        setProcessing(false);
+        return;
+      }
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session && process.env.NODE_ENV !== "development") throw new Error("Please log in to continue");
+      if (!session) throw new Error("Please log in to continue");
 
-      let clientTxnId, udf1, udf2;
+      let clientTxnId, udf1, udf2, udf3 = metadata?.type || "";
+      let payerMobile = normalizePayerMobile(payerContact.payerPhone).slice(-10);
       const uniqueRandomStr = Math.random().toString(36).substring(2, 8); // Fallback for environments where crypto.randomUUID isn't available
 
       if (method === "ADD_TO_WALLET") {
         clientTxnId = `WLT_${Date.now()}_${uniqueRandomStr}`;
         udf1 = "WALLET_TOPUP";
-        udf2 = "WALLET_TOPUP";
+        udf2 = user?.id || "";
+        udf3 = "wallet_topup";
+        if (!payerMobile || payerMobile.length !== 10) payerMobile = WALLET_TOPUP_FALLBACK_MOBILE;
       } else if (metadata?.type === "cart_checkout") {
         clientTxnId = `CART_${Date.now()}_${uniqueRandomStr}`;
         udf1 = "CART_CHECKOUT";
@@ -173,12 +213,12 @@ export default function SabpaisaPaymentModal({
         body: JSON.stringify({
           clientTxnId,
           amount: Number(paymentAmount).toFixed(2),
-          payerName: user?.user_metadata?.full_name || "Guest User",
-          payerEmail: (user?.email || "").trim() || "guest@sabpaisa.in",
-          payerMobile: (user?.phone || "9999999999").replace(/\D/g, '').replace(/^91/, '').slice(-10),
+          payerName: payerContact.payerName || user?.user_metadata?.full_name || "User",
+          payerEmail: payerContact.payerEmail,
+          payerMobile: payerMobile,
           udf1: udf1,
           udf2: udf2,
-          udf3: metadata?.type || "",
+          udf3: udf3,
           udf4: "",
           udf5: "",
         }),
@@ -192,7 +232,15 @@ export default function SabpaisaPaymentModal({
         if (contentType.includes('application/json')) {
           try {
             const errorData = await response.json();
-            userMessage = errorData.error || userMessage;
+            if (errorData.error === "INVALID_PAYER_CONTACT") {
+              setServerContactError({
+                field: payerContactFieldFromServer(errorData.field) || "phone",
+                message: errorData.message || userMessage,
+              });
+              setProcessing(false);
+              return;
+            }
+            userMessage = errorData.message || errorData.error || userMessage;
             correlationId = errorData.correlationId || null;
           } catch (parseErr) {
             // JSON parse failed despite content-type header — fall through to generic message
@@ -435,6 +483,17 @@ export default function SabpaisaPaymentModal({
               )}
             </AnimatePresence>
 
+            {hasGatewayContactIssue && (
+              <PayerContactRecoveryPanel
+                field={recoveryField}
+                message={serverContactError?.message || payerContact.validation.errors[recoveryField]}
+                currentValue={recoveryField === "email" ? payerContact.payerEmail : payerContact.payerPhone}
+                onSave={savePayerContact}
+                profileDeepLinkBase="/profile"
+                returnPath={typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : "/"}
+              />
+            )}
+
             {(!initialMethod || initialMethod === 'intrust_wallet') && (
               <>
                 {/* ── Merchant Wallet Option ── */}
@@ -492,7 +551,7 @@ export default function SabpaisaPaymentModal({
                                   setError("Please enter a valid amount");
                                 }
                               }}
-                              disabled={processing || !topupAmount}
+                              disabled={processing || payerContact.loading || !topupAmount}
                               className="
                                                             flex-1 px-5 py-3
                                                             bg-gradient-to-r from-indigo-500 to-indigo-700
@@ -547,19 +606,19 @@ export default function SabpaisaPaymentModal({
                     method="Cards"
                     icon={<CreditCard className="w-5 h-5 text-blue-600" />}
                     onClick={() => handlePayment("CARD")}
-                    disabled={processing}
+                    disabled={processing || payerContact.loading || hasGatewayContactIssue}
                   />
                   <PaymentMethodCard
                     method="Net Banking"
                     icon={<Building className="w-5 h-5 text-indigo-600" />}
                     onClick={() => handlePayment("NET_BANKING")}
-                    disabled={processing}
+                    disabled={processing || payerContact.loading || hasGatewayContactIssue}
                   />
                   <PaymentMethodCard
                     method="Wallet"
                     icon={<Wallet className="w-5 h-5 text-purple-600" />}
                     onClick={() => handlePayment("WALLET_PG")}
-                    disabled={processing}
+                    disabled={processing || payerContact.loading || hasGatewayContactIssue}
                   />
                   {udhariEnabled && (
                     <PaymentMethodCard
@@ -569,7 +628,7 @@ export default function SabpaisaPaymentModal({
                         onClose();
                         onUdhariTrigger();
                       }}
-                      disabled={processing}
+                      disabled={processing || payerContact.loading || hasGatewayContactIssue}
                     />
                   )}
                 </div>
@@ -605,4 +664,3 @@ export default function SabpaisaPaymentModal({
     </AnimatePresence>
   );
 }
-

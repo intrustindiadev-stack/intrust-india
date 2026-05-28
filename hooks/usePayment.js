@@ -1,5 +1,23 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { normalizePayerMobile } from '@/lib/merchant/payerContactRules';
+import { validatePayerContact } from '@/lib/merchant/validatePayerContact';
+import { isTopupUdf1, WALLET_TOPUP_FALLBACK_MOBILE } from '@/lib/sabpaisa/topupFallback';
+
+export class PayerContactError extends Error {
+    constructor({ field, message }) {
+        super(message || 'A valid payer contact is required to process payment.');
+        this.name = 'PayerContactError';
+        this.code = 'INVALID_PAYER_CONTACT';
+        this.field = field;
+    }
+}
+
+export function fieldFromPayerContactError(field) {
+    if (field === 'payerEmail') return 'email';
+    if (field === 'payerMobile') return 'phone';
+    return field === 'email' || field === 'phone' ? field : null;
+}
 
 export const usePayment = () => {
     const [paymentData, setPaymentData] = useState(null);
@@ -18,6 +36,25 @@ export const usePayment = () => {
 
             // 2. Generate a unique clientTxnId for this transaction
             const clientTxnId = `WLT_${Date.now()}_${Math.floor(Math.random() * 9999)}`;
+            const payerEmail = String(paymentDetails.payerEmail || '').trim();
+            let payerMobile = normalizePayerMobile(paymentDetails.payerMobile).slice(-10);
+            
+            const isTopup = isTopupUdf1(paymentDetails.udf1 || 'WALLET_TOPUP');
+            const payerValidation = validatePayerContact(
+                { email: payerEmail, phone: payerMobile },
+                { allowMissingPhone: isTopup }
+            );
+
+            if (payerValidation.errors.email) {
+                throw new PayerContactError({ field: 'email', message: payerValidation.errors.email });
+            }
+            if (payerValidation.errors.phone) {
+                if (!isTopup) {
+                    throw new PayerContactError({ field: 'phone', message: payerValidation.errors.phone });
+                } else {
+                    payerMobile = WALLET_TOPUP_FALLBACK_MOBILE;
+                }
+            }
 
             // 3. Call the new AES-128-CBC initiate API and persist transaction
             const response = await fetch('/api/sabpaisa/initiate', {
@@ -30,10 +67,8 @@ export const usePayment = () => {
                     clientTxnId,
                     amount: Number(paymentDetails.amount).toFixed(2),
                     payerName: paymentDetails.payerName || 'User',
-                    payerEmail: paymentDetails.payerEmail || 'guest@sabpaisa.in',
-                    payerMobile: paymentDetails.payerMobile
-                        ? paymentDetails.payerMobile.replace(/\D/g, '').replace(/^91/, '').slice(-10)
-                        : '9999999999',
+                    payerEmail,
+                    payerMobile,
                     udf1: paymentDetails.udf1 || 'WALLET_TOPUP',
                     udf2: paymentDetails.udf2 || '',
                     udf3: paymentDetails.udf3 || '',
@@ -50,9 +85,16 @@ export const usePayment = () => {
                 if (contentType.includes('application/json')) {
                     try {
                         const errorData = await response.json();
-                        userMessage = errorData.error || userMessage;
+                        if (errorData.error === 'INVALID_PAYER_CONTACT') {
+                            throw new PayerContactError({
+                                field: fieldFromPayerContactError(errorData.field),
+                                message: errorData.message || userMessage,
+                            });
+                        }
+                        userMessage = errorData.message || errorData.error || userMessage;
                         correlationId = errorData.correlationId || null;
                     } catch (parseErr) {
+                        if (parseErr instanceof PayerContactError) throw parseErr;
                         // JSON parse failed despite content-type header — fall through to generic message
                         console.error('[usePayment] Failed to parse error JSON:', parseErr);
                     }

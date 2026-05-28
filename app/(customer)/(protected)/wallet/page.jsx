@@ -20,17 +20,38 @@ import Navbar from '@/components/layout/Navbar';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import BalanceReveal from '@/components/ui/BalanceReveal';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { usePayment } from '@/hooks/usePayment';
+import { PayerContactError, usePayment } from '@/hooks/usePayment';
+import { usePayerContact } from '@/hooks/usePayerContact';
 import { supabase } from '@/lib/supabaseClient';
+import PayerContactRecoveryPanel from '@/components/payment/PayerContactRecoveryPanel';
 
 export default function CustomerWalletPage() {
     const { user, profile } = useAuth();
     const { initiatePayment, loading: paymentLoading } = usePayment();
+    const payerContact = usePayerContact({ requireMerchant: false });
     const [balance, setBalance] = useState(0);
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [addAmount, setAddAmount] = useState('');
     const [isAddingMoney, setIsAddingMoney] = useState(false);
+    const [serverContactError, setServerContactError] = useState(null);
+    const firstInvalidField = Object.keys(payerContact.validation.errors).filter(k => k !== 'phone')[0] || null;
+    const recoveryField = serverContactError?.field || firstInvalidField;
+    const hasContactIssue = Boolean(recoveryField);
+
+    const savePayerContact = async (nextValue, field) => {
+        const profileId = payerContact.profile?.id || payerContact.authUser?.id || user?.id;
+        if (!profileId) throw new Error('Please log in again to update your contact details.');
+
+        const { error } = await supabase
+            .from('user_profiles')
+            .update(field === 'phone' ? { phone: nextValue } : { email: nextValue })
+            .eq('id', profileId);
+
+        if (error) throw error;
+        setServerContactError(null);
+        await payerContact.refresh();
+    };
 
     useEffect(() => {
         let subscription;
@@ -322,6 +343,17 @@ export default function CustomerWalletPage() {
                                 Add Money
                             </h3>
 
+                            {hasContactIssue && (
+                                <PayerContactRecoveryPanel
+                                    field={recoveryField}
+                                    message={serverContactError?.message || payerContact.validation.errors[recoveryField]}
+                                    currentValue={recoveryField === 'email' ? payerContact.payerEmail : payerContact.payerPhone}
+                                    onSave={savePayerContact}
+                                    profileDeepLinkBase="/profile"
+                                    returnPath="/wallet"
+                                />
+                            )}
+
                             <div className="relative mb-6">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-gray-400">₹</span>
                                 <input
@@ -346,19 +378,23 @@ export default function CustomerWalletPage() {
                             </div>
 
                             <button
-                                disabled={paymentLoading || !addAmount || Number(addAmount) < 1}
+                                disabled={paymentLoading || payerContact.loading || hasContactIssue || !addAmount || Number(addAmount) < 1}
                                 className="w-full py-4 bg-gray-900 dark:bg-white text-white dark:text-black font-bold rounded-2xl shadow-xl active:scale-95 transition-all disabled:opacity-50"
                                 onClick={async () => {
                                     try {
                                         await initiatePayment({
                                             amount: Number(addAmount),
-                                            payerName: profile?.full_name || 'User',
-                                            payerEmail: user.email,
-                                            payerMobile: profile?.phone || '',
+                                            payerName: payerContact.payerName || profile?.full_name || 'User',
+                                            payerEmail: payerContact.payerEmail,
+                                            payerMobile: payerContact.payerPhone,
                                             udf1: 'WALLET_TOPUP'
                                         });
                                         setIsAddingMoney(false);
                                     } catch (err) {
+                                        if (err instanceof PayerContactError) {
+                                            setServerContactError({ field: err.field || 'phone', message: err.message });
+                                            return;
+                                        }
                                         alert('Payment initiation failed: ' + err.message);
                                     }
                                 }}

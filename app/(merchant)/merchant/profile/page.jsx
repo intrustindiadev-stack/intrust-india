@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useMerchant } from '@/hooks/useMerchant';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { useSubscription } from '@/components/merchant/SubscriptionContext';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Store,
     User,
@@ -80,6 +82,14 @@ function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
 
 export default function ProfilePage() {
     const { merchant, loading: merchantLoading, error: merchantError } = useMerchant();
+    const { isSubscribed, requireSubscription } = useSubscription();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const focusParam = searchParams.get('focus');
+    const returnPath = searchParams.get('return') || '/merchant/settings?tab=subscription';
+    const phoneRef = useRef(null);
+    const emailRef = useRef(null);
+    const [highlightedField, setHighlightedField] = useState(null);
     const [formData, setFormData] = useState({
         business_name: '',
         owner_name: '',
@@ -109,6 +119,21 @@ export default function ProfilePage() {
             });
         }
     }, [merchant]);
+
+    useEffect(() => {
+        if (!focusParam || merchantLoading) return;
+        if (!['business_phone', 'business_email'].includes(focusParam)) return;
+
+        setHighlightedField(focusParam);
+        const target = focusParam === 'business_phone' ? phoneRef.current : emailRef.current;
+        window.setTimeout(() => {
+            target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target?.focus();
+        }, 100);
+
+        const timeoutId = window.setTimeout(() => setHighlightedField(null), 2000);
+        return () => window.clearTimeout(timeoutId);
+    }, [focusParam, merchantLoading]);
 
     const handleBannerUpload = async (event) => {
         try {
@@ -148,27 +173,30 @@ export default function ProfilePage() {
     const handleSave = async (e) => {
         e.preventDefault();
 
-        // 1. Validation for "intrust"
-        if (formData.business_name.trim().toLowerCase() === 'intrust') {
-            toast.error('Business name cannot be "intrust" (Reserved Name)');
-            return;
-        }
-
         setSaving(true);
 
         try {
+            // 1. Validation for "intrust" (non-blocking)
+            const isReservedName = formData.business_name.trim().toLowerCase() === 'intrust';
+            const isNameChanged = formData.business_name !== merchant?.business_name;
+            
+            const merchantUpdatePayload = {
+                gst_number: formData.gst_number,
+                owner_name: formData.owner_name,
+                business_phone: formData.business_phone,
+                business_email: formData.business_email,
+                business_address: formData.business_address,
+                shopping_banner_url: formData.shopping_banner_url
+            };
+
+            if (!(isReservedName && isNameChanged)) {
+                merchantUpdatePayload.business_name = formData.business_name;
+            }
+
             // Update Merchants Table
             const { error: merchantUpdateError } = await supabase
                 .from('merchants')
-                .update({
-                    business_name: formData.business_name,
-                    gst_number: formData.gst_number,
-                    owner_name: formData.owner_name,
-                    business_phone: formData.business_phone,
-                    business_email: formData.business_email,
-                    business_address: formData.business_address,
-                    shopping_banner_url: formData.shopping_banner_url
-                })
+                .update(merchantUpdatePayload)
                 .eq('id', merchant.id);
 
             if (merchantUpdateError) throw merchantUpdateError;
@@ -178,13 +206,18 @@ export default function ProfilePage() {
                 .from('user_profiles')
                 .update({
                     full_name: formData.owner_name,
-                    avatar_url: formData.avatar_url
+                    avatar_url: formData.avatar_url,
+                    email: formData.business_email,
+                    phone: formData.business_phone
                 })
                 .eq('id', merchant.user_id);
 
             if (profileUpdateError) throw profileUpdateError;
 
             toast.success('Profile updated successfully!');
+            if (focusParam === 'business_phone' || focusParam === 'business_email') {
+                setHighlightedField(null);
+            }
         } catch (err) {
             console.error('Error updating profile:', err);
             toast.error(err.message || 'Failed to update profile');
@@ -246,6 +279,23 @@ export default function ProfilePage() {
                 </button>
             </motion.div>
 
+            {(focusParam === 'business_phone' || focusParam === 'business_email') && (
+                <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm dark:border-amber-500/20 dark:bg-amber-500/10">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
+                            Please update your {focusParam === 'business_phone' ? 'business phone' : 'business email'} to continue subscribing.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => router.push(returnPath)}
+                            className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-black text-white transition-colors hover:bg-amber-600"
+                        >
+                            Back to Subscribe
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Profile Hero / Avatar */}
                 <motion.div
@@ -270,11 +320,41 @@ export default function ProfilePage() {
                             <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 truncate mb-1">
                                 {formData.owner_name || 'Business Owner'}
                             </h2>
-                            <p className="text-blue-600 font-black text-[10px] uppercase tracking-[0.2em] mb-6">
+                            <p className="text-blue-600 font-black text-[10px] uppercase tracking-[0.2em] mb-3">
                                 Verified Merchant
                             </p>
 
-                            <div className="space-y-3 pt-6 border-t border-slate-100 dark:border-white/10">
+                            {/* Subscription Status Chip */}
+                            <div className="mb-4">
+                                {isSubscribed ? (
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        Subscription Active
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                        Subscription Pending
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Next Step Nudge for Unsubscribed */}
+                            {!isSubscribed && (
+                                <div className="mb-4 p-3 bg-gradient-to-r from-amber-500/10 to-transparent border border-amber-500/20 rounded-2xl">
+                                    <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400 mb-2">
+                                        Profile complete — activate your storefront →
+                                    </p>
+                                    <button
+                                        onClick={() => requireSubscription()}
+                                        className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-xl transition-colors"
+                                    >
+                                        Subscribe
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-white/10">
                                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
                                     <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
                                         <ShieldCheck size={16} />
@@ -358,10 +438,12 @@ export default function ProfilePage() {
                                             value={formData.business_name}
                                             onChange={e => setFormData({ ...formData, business_name: e.target.value })}
                                             placeholder="Trading Name"
-                                            className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all font-[family-name:var(--font-outfit)]"
+                                            className={`w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all font-[family-name:var(--font-outfit)] ${formData.business_name.trim().toLowerCase() === 'intrust' && formData.business_name !== merchant?.business_name ? 'border-red-500 focus:border-red-500/40' : 'border-slate-200 dark:border-white/10 focus:border-blue-500/40'}`}
                                         />
                                     </div>
-                                    <p className="text-[9px] text-slate-400 ml-1">Must not be 'intrust'</p>
+                                    <p className={`text-[9px] ml-1 ${formData.business_name.trim().toLowerCase() === 'intrust' && formData.business_name !== merchant?.business_name ? 'text-red-500 font-bold' : 'text-slate-400'}`}>
+                                        {formData.business_name.trim().toLowerCase() === 'intrust' && formData.business_name !== merchant?.business_name ? 'Business name cannot be "intrust" (Reserved Name)' : "Must not be 'intrust'"}
+                                    </p>
                                 </div>
 
                                 <div className="space-y-1.5">
@@ -421,11 +503,12 @@ export default function ProfilePage() {
                                     <div className="relative group">
                                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
                                         <input
+                                            ref={emailRef}
                                             type="email" required
                                             value={formData.business_email}
                                             onChange={e => setFormData({ ...formData, business_email: e.target.value })}
                                             placeholder="email@example.com"
-                                            className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all"
+                                            className={`w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all ${highlightedField === 'business_email' ? 'border-amber-400 ring-2 ring-amber-400 animate-pulse' : 'border-slate-200 dark:border-white/10'}`}
                                         />
                                     </div>
                                 </div>
@@ -435,11 +518,12 @@ export default function ProfilePage() {
                                     <div className="relative group">
                                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
                                         <input
+                                            ref={phoneRef}
                                             type="tel" required
                                             value={formData.business_phone}
                                             onChange={e => setFormData({ ...formData, business_phone: e.target.value })}
                                             placeholder="+91"
-                                            className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all"
+                                            className={`w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all ${highlightedField === 'business_phone' ? 'border-amber-400 ring-2 ring-amber-400 animate-pulse' : 'border-slate-200 dark:border-white/10'}`}
                                         />
                                     </div>
                                 </div>

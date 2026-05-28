@@ -14,7 +14,8 @@ import dynamic from 'next/dynamic';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { usePayment } from '@/hooks/usePayment';
+import { PayerContactError, usePayment } from '@/hooks/usePayment';
+import { usePayerContact } from '@/hooks/usePayerContact';
 import { supabase } from '@/lib/supabaseClient';
 import GoldBadge from '@/components/ui/GoldBadge';
 import { toast } from 'react-hot-toast';
@@ -79,6 +80,7 @@ export default function CustomerDashboardPage() {
     const { user, profile, loading: authLoading } = useAuth();
     const router = useRouter();
     const { initiatePayment, loading: paymentLoading } = usePayment();
+    const payerContact = usePayerContact({ requireMerchant: false });
     const [loading, setLoading] = useState(true);
     const [userData, setUserData] = useState({
         name: '',
@@ -153,18 +155,20 @@ export default function CustomerDashboardPage() {
         }
 
         try {
-            // Sabpaisa needs exactly 10-digit mobile number
-            const cleanMobile = (profile?.phone || '').replace(/\D/g, '').slice(-10);
-
             await initiatePayment({
                 amount: pkg.price,
-                payerName: userData.name,
-                payerEmail: user.email,
-                payerMobile: cleanMobile,
+                payerName: payerContact.payerName || userData.name,
+                payerEmail: payerContact.payerEmail,
+                payerMobile: payerContact.payerPhone,
                 udf1: 'GOLD_SUBSCRIPTION',
                 udf2: pkg.id // e.g., GOLD_1M, GOLD_3M, GOLD_1Y
             });
         } catch (err) {
+            if (err instanceof PayerContactError) {
+                toast.error(err.field === 'email' ? 'Add your email address to continue.' : 'Add your mobile number to continue.');
+                router.push(`/profile?focus=${err.field || 'phone'}&return=${encodeURIComponent('/dashboard')}`);
+                return;
+            }
             toast.error('Payment failed: ' + err.message);
         }
     };

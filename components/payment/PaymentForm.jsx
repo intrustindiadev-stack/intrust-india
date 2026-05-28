@@ -20,7 +20,7 @@ const PaymentForm = ({ amount, productDescription, userProfile }) => {
         initiatePayment({
             amount,
             ...details,
-            payerMobile: details.payerMobile ? details.payerMobile.replace(/\D/g, '').replace(/^91/, '').slice(-10) : '9999999999',
+            payerMobile: details.payerMobile ? details.payerMobile.replace(/\D/g, '').replace(/^91/, '').slice(-10) : '',
             udf1: productDescription // Example UDF usage
         });
     };

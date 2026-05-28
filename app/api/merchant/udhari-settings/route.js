@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { getAuthUser } from '@/lib/apiAuth';
+import { requireMerchantSubscription } from '@/lib/merchant/requireSubscription';
 import { NextResponse } from 'next/server';
 import { UDHARI_MAX_CONVENIENCE_FEE_BPS } from '@/lib/constants';
 
@@ -63,18 +64,11 @@ export async function PATCH(request) {
     try {
         const supabaseAdmin = createAdminClient();
 
-        const { user } = await getAuthUser(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Missing authorization header' }, { status: 401 });
-        }
+        const subResult = await requireMerchantSubscription(request);
+        if (!subResult.ok) return subResult.response;
+        const { user, merchant } = subResult;
 
-        const { data: merchant } = await supabaseAdmin
-            .from('merchants')
-            .select('id, status')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-        if (!merchant || merchant.status !== 'approved') {
+        if (merchant.status !== 'approved') {
             return NextResponse.json({ error: 'Approved merchant access required' }, { status: 403 });
         }
 

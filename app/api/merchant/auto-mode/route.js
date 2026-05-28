@@ -1,6 +1,7 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 import { getPricingSettings } from '@/app/(admin)/admin/settings/actions';
+import { requireMerchantSubscription } from '@/lib/merchant/requireSubscription';
 
 export async function POST(request) {
     try {
@@ -30,6 +31,12 @@ export async function POST(request) {
 
         const reqData = await request.json();
         const { action } = reqData; // 'activate' or 'deactivate'
+
+        // Subscription guard: only activate requires subscription
+        if (action === 'activate') {
+            const subResult = await requireMerchantSubscription(request);
+            if (!subResult.ok) return subResult.response;
+        }
 
         // 1. Get current merchant data
         const { data: merchant, error: merchantError } = await supabase

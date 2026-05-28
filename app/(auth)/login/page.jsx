@@ -201,6 +201,7 @@ function LoginContent() {
         if (loading) return; // block duplicate in-flight submissions
         const otpValue = otpOverride || otp;
         if (otpValue.replace(/\s+/g, '').length !== 6) return; // strict 6-digit guard
+        setLoading(true);
         try {
             const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
             const { data, error: verifyError } = await verifyOTP(formattedPhone, otpValue);
@@ -212,6 +213,8 @@ function LoginContent() {
             const user = data?.user;
             if (user) {
                 await redirectByRole(user, data.role, data.is_suspended, postLoginRedirect);
+                // Redirect is navigating away; do not clear loading so the button
+                // stays disabled until the navigation completes.
             } else {
                 toast.error('Login failed. Please try again.');
                 setLoading(false);

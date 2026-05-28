@@ -80,8 +80,9 @@ export async function POST(request) {
             );
         }
 
-        // Mark OTP as used
-        await supabaseAdmin.from('otp_codes').update({ is_used: true }).eq('id', otpRecord.id);
+        // NOTE: OTP is intentionally NOT marked used here yet.
+        // We defer consumption until after the phone update succeeds so that
+        // transient downstream failures do not force an unnecessary resend cycle.
 
         // 3. Link or verify link status
         const authPhone = `+91${cleanPhone}`;
@@ -136,6 +137,10 @@ export async function POST(request) {
             console.error('[VERIFY-PHONE] Profile update failed:', profileError);
             // Non-fatal if auth phone is updated, but still worth reporting
         }
+
+        // All downstream steps completed — now it is safe to consume the OTP.
+        // Any failure before this point left the OTP intact so the user can retry.
+        await supabaseAdmin.from('otp_codes').update({ is_used: true }).eq('id', otpRecord.id);
 
         console.log('[VERIFY-PHONE] Phone verified and linked for user:', userId);
         return NextResponse.json({ success: true, phone: authPhone });

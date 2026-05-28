@@ -12,6 +12,9 @@ import SuccessAnimation from '@/components/ui/SuccessAnimation';
 import WholesaleProductModal from '@/components/merchant/shopping/WholesaleProductModal';
 import { generateOrderInvoice } from '@/lib/invoiceGenerator';
 import { PLATFORM_CONFIG } from '@/lib/config/platform';
+import { usePayerContact } from '@/hooks/usePayerContact';
+import { validatePayerContact } from '@/lib/merchant/validatePayerContact';
+import { normalizePayerMobile } from '@/lib/merchant/payerContactRules';
 
 const PARTNERS = [
     { name: 'AJIO', color: 'from-slate-900 to-slate-800', text: 'text-white', logo: '/logos/ajio.svg', desc: 'Fashion Hub', tag: 'Top Tier' },
@@ -152,6 +155,7 @@ function PartnerCarousel() {
 
 export default function WholesaleClient({ products = [], merchant, categories = [] }) {
     const router = useRouter();
+    const payerContact = usePayerContact({ requireMerchant: true });
     const [cart, setCart] = useState({}); // { productId: quantity }
     const [isPurchasing, setIsPurchasing] = useState(false);
     const [isProcessingGateway, setIsProcessingGateway] = useState(false);
@@ -340,6 +344,20 @@ export default function WholesaleClient({ products = [], merchant, categories = 
         const loadingToast = toast.loading('Initiating secure payment...');
 
         try {
+            const contactValidation = validatePayerContact({
+                email: payerContact.payerEmail,
+                phone: payerContact.payerPhone,
+            });
+            if (!contactValidation.ok) {
+                const focus = contactValidation.errors.phone ? 'business_phone' : 'business_email';
+                const returnPath = typeof window !== 'undefined'
+                    ? `${window.location.pathname}${window.location.search}`
+                    : '/merchant/shopping/wholesale';
+                toast.error(contactValidation.errors.phone || contactValidation.errors.email || 'Add your contact details to complete checkout.', { id: loadingToast });
+                router.push(`/merchant/profile?focus=${focus}&return=${encodeURIComponent(returnPath)}`);
+                return;
+            }
+
             const { data: { session } } = await supabase.auth.getSession();
 
             if (!session) {
@@ -364,13 +382,7 @@ export default function WholesaleClient({ products = [], merchant, categories = 
             const draftData = await draftRes.json();
             if (!draftRes.ok) throw new Error(draftData.error || 'Failed to create wholesale draft');
 
-            const { data: profile } = await supabase
-                .from('user_profiles')
-                .select('name, email, mobile')
-                .eq('id', merchant.user_id)
-                .single();
-
-            const clientTxnId = `WHLS-${Date.now()}-${merchant.id.slice(0, 4)}`;
+            const clientTxnId = `WHLS_${Date.now()}_${merchant.id.slice(0, 4)}`;
             const initiateRes = await fetch('/api/sabpaisa/initiate', {
                 method: 'POST',
                 headers: {
@@ -380,9 +392,9 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                 body: JSON.stringify({
                     clientTxnId,
                     amount: (draftData.totalPaise / 100).toFixed(2),
-                    payerName: profile?.name || merchant.business_name || 'Merchant',
-                    payerEmail: profile?.email || '',
-                    payerMobile: profile?.mobile || '',
+                    payerName: payerContact.payerName || merchant.business_name || 'Merchant',
+                    payerEmail: payerContact.payerEmail,
+                    payerMobile: normalizePayerMobile(payerContact.payerPhone).slice(-10),
                     udf1: 'WHOLESALE_PURCHASE',
                     udf2: draftData.draftId,
                     udf3: merchant.id,
@@ -390,7 +402,18 @@ export default function WholesaleClient({ products = [], merchant, categories = 
             });
 
             const initiateData = await initiateRes.json();
-            if (!initiateRes.ok) throw new Error(initiateData.error || 'Failed to initiate payment');
+            if (!initiateRes.ok) {
+                if (initiateData.error === 'INVALID_PAYER_CONTACT') {
+                    const focus = initiateData.field === 'payerEmail' ? 'business_email' : 'business_phone';
+                    const returnPath = typeof window !== 'undefined'
+                        ? `${window.location.pathname}${window.location.search}`
+                        : '/merchant/shopping/wholesale';
+                    toast.error(initiateData.message || 'Add your mobile number to complete checkout.', { id: loadingToast });
+                    router.push(`/merchant/profile?focus=${focus}&return=${encodeURIComponent(returnPath)}`);
+                    return;
+                }
+                throw new Error(initiateData.message || initiateData.error || 'Failed to initiate payment');
+            }
 
             toast.success('Redirecting to secure gateway...', { id: loadingToast });
 

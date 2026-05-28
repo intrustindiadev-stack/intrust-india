@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import { requireMerchantSubscription } from '@/lib/merchant/requireSubscription';
 
 export const runtime = 'nodejs';
 
@@ -11,6 +12,9 @@ export async function POST(request) {
     const correlationId = randomUUID();
 
     try {
+        // Subscription guard
+        const subResult = await requireMerchantSubscription(request);
+        if (!subResult.ok) return subResult.response;
         const { items, merchantId } = await request.json();
 
         if (!items || !Array.isArray(items) || items.length === 0) {

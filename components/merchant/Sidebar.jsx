@@ -14,9 +14,15 @@ import { useSubscription } from "./SubscriptionContext";
 export default function Sidebar({ isOpen, setIsOpen }) {
     const pathname = usePathname();
     const { merchant } = useMerchant();
-    const { isSubscribed, setShowModal } = useSubscription();
+    const { isSubscribed, requireSubscription } = useSubscription();
 
-    const menuItems = [
+    const accountItems = [
+        { label: "Profile", href: "/merchant/profile", icon: "person_outline" },
+        { label: "Settings", href: "/merchant/settings", icon: "settings" },
+        { label: "Subscription", href: "/merchant/settings?tab=subscription", icon: "card_membership" },
+    ];
+
+    const operationsItems = [
         { label: "Dashboard", href: "/merchant/dashboard", icon: "grid_view" },
         { label: "Inventory", href: "/merchant/inventory", icon: "inventory_2" },
         { label: "Purchase Coupons", href: "/merchant/purchase", icon: "add_shopping_cart" },
@@ -30,11 +36,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { label: "Auto Mode", href: "/merchant/shopping/auto-mode", icon: "offline_bolt" },
         { label: "Ratings", href: "/merchant/ratings", icon: "star" },
         { label: "Analytics", href: "/merchant/analytics", icon: "analytics" },
-    ];
-
-    const preferencesItems = [
-        { label: "Profile", href: "/merchant/profile", icon: "person_outline" },
-        { label: "Settings", href: "/merchant/settings", icon: "settings" },
     ];
 
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -95,16 +96,29 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 <div className="px-5 mb-5 shrink-0 space-y-3">
                     {!isSubscribed && (
                         <div 
-                            onClick={() => setShowModal(true)}
-                            className="bg-gradient-to-r from-amber-500 to-[#D4AF37] p-3 rounded-2xl shadow-lg cursor-pointer hover:scale-[1.02] transition-transform flex items-center justify-between"
+                            onClick={() => requireSubscription()}
+                            className="bg-gradient-to-br from-amber-600 via-[#D4AF37] to-amber-500 p-3 rounded-2xl shadow-lg shadow-amber-500/20 ring-1 ring-white/20 cursor-pointer hover:scale-[1.02] transition-transform"
                         >
-                            <div>
-                                <h3 className="text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1">
-                                    <span className="material-icons-round text-sm">lock</span> Platform Locked
-                                </h3>
-                                <p className="text-white/80 text-[10px] uppercase font-semibold mt-0.5">Activate to launch your store</p>
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <span className="material-icons-round text-sm text-white w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center shrink-0">bolt</span>
+                                    <h3 className="text-white text-[12px] font-extrabold truncate">
+                                        Activate Storefront
+                                    </h3>
+                                </div>
+                                <p className="text-white/85 text-[10px] font-semibold pl-8 truncate">
+                                    Account ready · Subscription pending
+                                </p>
+                                <button 
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        requireSubscription();
+                                    }}
+                                    className="w-full flex items-center justify-center gap-1 text-[11px] font-black text-slate-900 bg-white hover:bg-slate-100 py-2 rounded-lg shadow-sm transition-colors"
+                                >
+                                    Subscribe Now →
+                                </button>
                             </div>
-                            <span className="material-icons-round text-white bg-white/20 rounded-full p-1 text-sm">arrow_forward</span>
                         </div>
                     )}
                     <div className="bg-white/50 dark:bg-white/5 p-3 rounded-2xl border border-black/5 dark:border-[#D4AF37]/20 shadow-sm relative overflow-hidden backdrop-blur-md">
@@ -115,8 +129,31 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
                 <nav className="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar pb-6 relative z-10">
                     <LayoutGroup>
-                        {menuItems.map((item) => {
+                        {/* Operations Section — gated behind subscription */}
+                        <div className="pb-2 px-6">
+                            <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 font-black">Operations</p>
+                        </div>
+
+                        {operationsItems.map((item) => {
                             const isActive = pathname === item.href;
+                            const locked = !isSubscribed;
+
+                            if (locked) {
+                                return (
+                                    <button
+                                        key={item.href}
+                                        onClick={() => requireSubscription(item.label)}
+                                        className="group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-400 w-full text-left opacity-60 hover:opacity-80"
+                                    >
+                                        <span className="material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 group-hover:scale-110">{item.icon}</span>
+                                        <span className="text-[13px] font-bold tracking-wide z-10 flex-1">{item.label}</span>
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[8px] font-black uppercase tracking-wider z-10">
+                                            <span className="material-icons-round text-[10px]">lock</span>
+                                        </span>
+                                    </button>
+                                );
+                            }
+
                             return (
                                 <Link
                                     key={item.href}
@@ -142,12 +179,13 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                             );
                         })}
 
+                        {/* Account Section — always accessible */}
                         <div className="pt-8 pb-2 px-6">
-                            <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 font-black">Preferences</p>
+                            <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 font-black">Account</p>
                         </div>
 
-                        {preferencesItems.map((item) => {
-                            const isActive = pathname === item.href;
+                        {accountItems.map((item) => {
+                            const isActive = pathname === item.href || pathname?.startsWith(item.href.split('?')[0] + '/');
                             return (
                                 <Link
                                     key={item.href}
@@ -155,7 +193,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                                     onClick={() => setIsOpen(false)}
                                     className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative ${isActive
                                         ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
-                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                        : `text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white ${!isSubscribed ? 'font-semibold' : ''}`
                                         }`}
                                 >
                                     {isActive && (

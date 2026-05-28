@@ -1070,21 +1070,8 @@ export async function POST(request) {
         let redirectQuery = `?txnId=${clientTxnId}&msg=${encodeURIComponent(result.transMsg || 'Payment Failed')}`;
 
         if (internalStatus === 'gateway_success') {
-            // Merchant-specific redirects for immediate dashboard access
-            if (existingTxn?.udf1 === 'MERCHANT_SUBSCRIPTION') {
-                redirectPath = '/merchant/dashboard';
-                redirectQuery = `?welcome=true&txnId=${clientTxnId}`;
-            } else if (existingTxn?.udf1 === 'MERCHANT_TOPUP') {
-                redirectPath = '/merchant/wallet';
-                redirectQuery = `?success=true&txnId=${clientTxnId}`;
-            } else if (existingTxn?.udf1 === 'WHOLESALE_PURCHASE') {
-                redirectPath = '/merchant/inventory';
-                redirectQuery = `?success=true&txnId=${clientTxnId}`;
-            } else {
-                // Default success page for customer transactions
-                redirectPath = '/payment/success';
-                redirectQuery = `?txnId=${clientTxnId}`;
-            }
+            redirectPath = '/payment/success';
+            redirectQuery = '?txnId=' + clientTxnId;
         } else if (internalStatus === 'pending') {
             redirectPath = '/payment/processing';
             redirectQuery = `?txnId=${clientTxnId}`;

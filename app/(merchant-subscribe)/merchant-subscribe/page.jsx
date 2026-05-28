@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
 import MerchantSubscriptionPayButton from '@/components/merchant/MerchantSubscriptionPayButton';
 import { getPricingSettings } from '@/app/(admin)/admin/settings/actions';
+import { getPayerContact } from '@/lib/merchant/getPayerContact';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ export default async function MerchantSubscribePage() {
 
     const { data: merchant } = await supabase
         .from('merchants')
-        .select('id, status, subscription_status, subscription_expires_at, business_name')
+        .select('id, status, subscription_status, subscription_expires_at, business_name, business_email, business_phone')
         .eq('user_id', user.id)
         .single();
 
@@ -28,6 +29,12 @@ export default async function MerchantSubscribePage() {
         .select('full_name, email, phone')
         .eq('id', user.id)
         .single();
+
+    const { payerEmail, payerPhone } = getPayerContact({ merchant, profile, authUser: user });
+
+    if (!payerEmail) {
+        redirect('/merchant/profile?missingContact=1');
+    }
 
     const pricing = await getPricingSettings();
 
@@ -64,8 +71,8 @@ export default async function MerchantSubscribePage() {
                 merchantId={merchant.id}
                 businessName={merchant.business_name}
                 payerName={profile?.full_name || 'Merchant User'}
-                payerEmail={profile?.email || 'merchant@example.com'}
-                payerMobile={profile?.phone || '9999999999'}
+                payerEmail={payerEmail}
+                payerMobile={payerPhone}
                 isRenewal={merchant.subscription_status === 'active' || Boolean(merchant.subscription_expires_at)}
                 subscriptionExpiresAt={merchant.subscription_expires_at}
                 plans={dynamicPlans}

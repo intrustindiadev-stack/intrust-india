@@ -1,6 +1,12 @@
-> **Status:** Implemented (see next.config.mjs redirects)
+> **Status:** SUPERSEDED — All flows now route through /payment/success first. See ticket:b33ec303-9dfc-4554-a21e-5731ae4f40d1/74a166f1-b4f6-46ec-a38d-593ff7940254
 
 # Payment Redirect Fix - Merchant Dashboard
+
+## What's Changed
+- Every `gateway_success` outcome (merchant and customer) now redirects to `/payment/success?txnId=…` first.
+- The per-`udf1` merchant direct-redirect branches (`/merchant/dashboard`, `/merchant/wallet`, `/merchant/inventory`) have been removed from the callback.
+- The success page's `getConfig` map (in `file:pages/payment/success.jsx`) is the single source of truth for per-flow ACK copy and auto-redirect destination.
+- Session-dropped clients no longer bounce to `/login`; they see the success ACK inferred from the `txnId` prefix.
 
 ## Overview
 Fixed the payment callback system to redirect merchants directly to their dashboard after successful payment, instead of showing a generic success page.
@@ -91,10 +97,10 @@ Modified both payment callback handlers to intelligently redirect users based on
 
 ## Testing Checklist
 
-- [ ] Merchant subscription payment → redirects to `/merchant/dashboard?welcome=true`
-- [ ] Merchant wallet topup → redirects to `/merchant/wallet?success=true`
-- [ ] Wholesale purchase → redirects to `/merchant/inventory?success=true`
-- [ ] Customer wallet topup → redirects to `/payment/success`
+- [ ] Merchant subscription payment → redirects to `/payment/success?txnId=...` then auto-redirects to `/merchant/dashboard?welcome=true`
+- [ ] Merchant wallet topup → redirects to `/payment/success?txnId=...` then auto-redirects to `/merchant/wallet`
+- [ ] Wholesale purchase → redirects to `/payment/success?txnId=...` then auto-redirects to `/merchant/inventory`
+- [ ] Customer wallet topup → redirects to `/payment/success?txnId=...` then auto-redirects to `/wallet`
 - [ ] Failed payment → redirects to `/payment/failure` with error
 - [ ] Pending payment → redirects to `/payment/processing`
 - [ ] Payment timeout → redirects to `/payment/processing?status=timeout`

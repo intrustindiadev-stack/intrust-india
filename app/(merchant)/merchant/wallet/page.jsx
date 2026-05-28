@@ -161,12 +161,8 @@ function WalletContent() {
 
     useEffect(() => {
         const action = searchParams.get('action');
-        const topup = searchParams.get('topup');
         if (action === 'topup') {
             setShowTopup(true);
-        }
-        if (topup === 'success') {
-            fetchWalletData();
         }
     }, [searchParams, fetchWalletData]);
 

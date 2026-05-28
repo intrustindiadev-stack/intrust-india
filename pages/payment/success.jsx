@@ -24,7 +24,7 @@ const getConfig = (txnId, transaction, userRole) => {
         color: '#f59e0b',
         title: 'Store Activated! 🎉',
         subtitle: 'Your merchant subscription is now active. Welcome to your dashboard!',
-        redirectTo: '/merchant/dashboard',
+        redirectTo: '/merchant/dashboard?welcome=true',
         redirectDelay: 4000,
         redirectLabel: 'Merchant Dashboard',
         showConfetti: true,
@@ -124,7 +124,17 @@ const SuccessPage = () => {
 
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
-                    router.replace(`/login?returnUrl=/payment/success?txnId=${txnId}`);
+                    let inferredUdf1 = undefined;
+                    if (txnId.startsWith('MSUB_')) inferredUdf1 = 'MERCHANT_SUBSCRIPTION';
+                    else if (txnId.startsWith('WLT_')) inferredUdf1 = 'WALLET_TOPUP';
+                    else if (txnId.startsWith('GC_')) inferredUdf1 = 'GIFT_CARD';
+                    else if (txnId.startsWith('GOLD_')) inferredUdf1 = 'GOLD_SUBSCRIPTION';
+                    else if (txnId.startsWith('CART_')) inferredUdf1 = 'CART_CHECKOUT';
+                    else if (txnId.startsWith('NFC_')) inferredUdf1 = 'NFC_ORDER';
+                    else if (txnId.startsWith('UDR_')) inferredUdf1 = 'UDHARI_PAYMENT';
+                    
+                    setTransaction({ udf1: inferredUdf1 });
+                    setState('verified');
                     return;
                 }
 

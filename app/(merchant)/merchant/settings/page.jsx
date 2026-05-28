@@ -1,11 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import MerchantWhatsAppConnect from '@/components/merchant/MerchantWhatsAppConnect';
+import MerchantSubscriptionPayButton from '@/components/merchant/MerchantSubscriptionPayButton';
 import { supabase } from '@/lib/supabaseClient';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { useSubscription } from '@/components/merchant/SubscriptionContext';
+import { useMerchant } from '@/hooks/useMerchant';
+
+const lockedTabIds = ['store', 'bank'];
+
+const tabs = [
+    { id: 'business', label: 'Business Info', icon: 'business', locked: false },
+    { id: 'account', label: 'Account', icon: 'shield', locked: false },
+    { id: 'notifications', label: 'Notifications', icon: 'notifications', locked: false },
+    { id: 'whatsapp', label: 'WhatsApp', icon: 'chat', locked: false },
+    { id: 'subscription', label: 'Subscription', icon: 'card_membership', locked: false },
+    { id: 'store', label: 'Store Status', icon: 'storefront', locked: true },
+    { id: 'bank', label: 'Bank Account', icon: 'account_balance', locked: true },
+];
 
 export default function MerchantSettingsPage() {
     const [loading, setLoading] = useState(true);
@@ -13,10 +28,26 @@ export default function MerchantSettingsPage() {
     const [success, setSuccess] = useState(null);
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('business');
+    const [highlightedField, setHighlightedField] = useState(null);
+    const phoneRef = useRef(null);
+    const emailRef = useRef(null);
 
     const [merchantProfile, setMerchantProfile] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
     const [kycStatus, setKycStatus] = useState(null);
+
+    const {
+        isSubscribed,
+        expiresAt,
+        subscriptionStatus,
+        daysUntilExpiry,
+        requireSubscription,
+        setShowModal,
+        merchantData,
+        plans = [],
+    } = useSubscription();
+    const { merchant } = useMerchant();
+    const subscriptionMerchant = merchantData || merchant;
 
     const [formData, setFormData] = useState({
         business_name: '',
@@ -50,13 +81,39 @@ export default function MerchantSettingsPage() {
         whatsapp_marketing: false,
     });
     const searchParams = useSearchParams();
+    const router = useRouter();
+    const focusParam = searchParams.get('focus');
+    const returnPath = searchParams.get('return') || '/merchant/settings?tab=subscription';
 
     useEffect(() => {
         const tab = searchParams.get('tab');
-        if (tab && ['business', 'bank', 'account', 'notifications', 'whatsapp', 'store'].includes(tab)) {
-            setActiveTab(tab);
+        const validTabIds = tabs.map(t => t.id);
+        if (tab && validTabIds.includes(tab)) {
+            // If locked tab and not subscribed, don't switch — show modal
+            if (lockedTabIds.includes(tab) && !isSubscribed) {
+                const tabObj = tabs.find(t => t.id === tab);
+                requireSubscription(tabObj?.label || tab);
+            } else {
+                setActiveTab(tab);
+            }
         }
-    }, [searchParams]);
+    }, [searchParams, isSubscribed, requireSubscription]);
+
+    useEffect(() => {
+        if (!focusParam || loading) return;
+        if (!['business_phone', 'business_email'].includes(focusParam)) return;
+
+        setActiveTab('business');
+        setHighlightedField(focusParam);
+        const target = focusParam === 'business_phone' ? phoneRef.current : emailRef.current;
+        window.setTimeout(() => {
+            target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target?.focus();
+        }, 100);
+
+        const timeoutId = window.setTimeout(() => setHighlightedField(null), 2000);
+        return () => window.clearTimeout(timeoutId);
+    }, [focusParam, loading]);
 
     useEffect(() => {
         fetchSettings();
@@ -156,20 +213,41 @@ export default function MerchantSettingsPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
+            const isReservedName = formData.business_name.trim().toLowerCase() === 'intrust';
+            const isNameChanged = formData.business_name !== merchantProfile?.business_name;
+            
+            const merchantUpdatePayload = {
+                gst_number: formData.gst_number,
+                pan_number: formData.pan_number,
+                business_phone: formData.business_phone,
+                business_email: formData.business_email,
+            };
+
+            if (!(isReservedName && isNameChanged)) {
+                merchantUpdatePayload.business_name = formData.business_name;
+            }
+
             const { error: updateError } = await supabase
                 .from('merchants')
-                .update({
-                    business_name: formData.business_name,
-                    gst_number: formData.gst_number,
-                    pan_number: formData.pan_number,
-                    business_phone: formData.business_phone,
-                    business_email: formData.business_email,
-                })
+                .update(merchantUpdatePayload)
                 .eq('user_id', user.id);
 
             if (updateError) throw updateError;
 
+            const { error: profileUpdateError } = await supabase
+                .from('user_profiles')
+                .update({
+                    email: formData.business_email,
+                    phone: formData.business_phone
+                })
+                .eq('id', user.id);
+
+            if (profileUpdateError) throw profileUpdateError;
+
             setSuccess('Settings updated successfully!');
+            if (focusParam === 'business_phone' || focusParam === 'business_email') {
+                setHighlightedField(null);
+            }
             await fetchSettings();
         } catch (error) {
             console.error('Error saving settings:', error);
@@ -221,14 +299,13 @@ export default function MerchantSettingsPage() {
         }
     };
 
-    const tabs = [
-        { id: 'business', label: 'Business Info', icon: 'business' },
-        { id: 'store', label: 'Store Status', icon: 'storefront' },
-        { id: 'bank', label: 'Bank Account', icon: 'account_balance' },
-        { id: 'account', label: 'Account', icon: 'shield' },
-        { id: 'notifications', label: 'Notifications', icon: 'notifications' },
-        { id: 'whatsapp', label: 'WhatsApp', icon: 'chat' },
-    ];
+    const handleTabClick = (tab) => {
+        if (tab.locked && !isSubscribed) {
+            requireSubscription(tab.label);
+            return;
+        }
+        setActiveTab(tab.id);
+    };
 
     if (loading) {
         return (
@@ -237,6 +314,10 @@ export default function MerchantSettingsPage() {
             </div>
         );
     }
+
+    const expiryFormatted = expiresAt
+        ? new Date(expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+        : null;
 
     return (
         <div className="relative">
@@ -250,6 +331,38 @@ export default function MerchantSettingsPage() {
                     <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 font-medium">Manage your account and preferences</p>
                 </div>
             </div>
+
+            {/* Subscription Status Banner */}
+            {!isSubscribed ? (
+                <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-4 shadow-sm">
+                    <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="material-icons-round text-amber-600 dark:text-amber-400">warning</span>
+                    </div>
+                    <div className="flex-1">
+                        <p className="font-bold text-amber-700 dark:text-amber-400 text-sm">Account ready. Activate your subscription to unlock storefront operations and payouts.</p>
+                    </div>
+                    <button
+                        onClick={() => requireSubscription()}
+                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl transition-colors whitespace-nowrap"
+                    >
+                        Subscribe
+                    </button>
+                </div>
+            ) : (
+                <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-4 shadow-sm">
+                    <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="material-icons-round text-emerald-600 dark:text-emerald-400">verified</span>
+                    </div>
+                    <div className="flex-1">
+                        <p className="font-bold text-emerald-700 dark:text-emerald-400 text-sm">
+                            Subscription active{expiryFormatted ? ` until ${expiryFormatted}` : ''}
+                            {daysUntilExpiry !== null && daysUntilExpiry <= 7 && daysUntilExpiry > 0 && (
+                                <span className="text-amber-600 dark:text-amber-400 ml-2">· Expires in {daysUntilExpiry} day{daysUntilExpiry !== 1 ? 's' : ''}</span>
+                            )}
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Alerts */}
             {error && (
@@ -272,33 +385,86 @@ export default function MerchantSettingsPage() {
                 </div>
             )}
 
+            {(focusParam === 'business_phone' || focusParam === 'business_email') && (
+                <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm dark:border-amber-500/20 dark:bg-amber-500/10">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
+                            Please update your {focusParam === 'business_phone' ? 'business phone' : 'business email'} to continue subscribing.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => router.push(returnPath)}
+                            className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-black text-white transition-colors hover:bg-amber-600"
+                        >
+                            Back to Subscribe
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Tabs */}
             <div className="flex gap-2 mb-8 bg-black/5 dark:bg-white/5 p-1.5 rounded-2xl w-fit border border-black/5 dark:border-white/5 overflow-x-auto shadow-sm">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
+                        onClick={() => handleTabClick(tab)}
                         className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all focus:outline-none whitespace-nowrap ${activeTab === tab.id
                             ? 'bg-[#D4AF37] text-[#020617] shadow-lg shadow-[#D4AF37]/20 gold-glow'
-                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                            : tab.locked && !isSubscribed
+                                ? 'text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 opacity-60'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
                             }`}
                     >
                         <span className="material-icons-round text-sm">{tab.icon}</span>
                         <span className="hidden sm:inline">{tab.label}</span>
+                        {tab.locked && !isSubscribed && (
+                            <span className="material-icons-round text-[12px] text-amber-500">lock</span>
+                        )}
                     </button>
                 ))}
             </div>
 
             {/* Content Container */}
             <div className="merchant-glass rounded-3xl border border-black/5 dark:border-white/5 overflow-hidden shadow-xl mb-12">
-                {activeTab === 'store' && (
+                {/* Locked tab soft-lock overlay */}
+                {lockedTabIds.includes(activeTab) && !isSubscribed && (
+                    <div className="relative p-5 sm:p-8 min-h-[300px]">
+                        <div className="absolute inset-0 backdrop-blur-sm bg-white/60 dark:bg-black/60 z-10 flex items-center justify-center">
+                            <div className="text-center p-8 bg-white dark:bg-slate-900 rounded-3xl border border-black/10 dark:border-white/10 shadow-2xl max-w-sm">
+                                <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <span className="material-icons-round text-amber-500 text-3xl">lock</span>
+                                </div>
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">Subscription Required</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Subscribe to manage {tabs.find(t => t.id === activeTab)?.label || 'this feature'}</p>
+                                <button
+                                    onClick={() => requireSubscription(tabs.find(t => t.id === activeTab)?.label)}
+                                    className="px-8 py-3 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:opacity-90 transition-all gold-glow shadow-lg shadow-[#D4AF37]/20"
+                                >
+                                    Subscribe Now
+                                </button>
+                            </div>
+                        </div>
+                        {/* Blurred preview content */}
+                        <div className="opacity-30 pointer-events-none select-none">
+                            <div className="h-8 bg-black/5 dark:bg-white/5 rounded-xl mb-4 w-48"></div>
+                            <div className="h-4 bg-black/5 dark:bg-white/5 rounded-lg mb-8 w-72"></div>
+                            <div className="space-y-4">
+                                <div className="h-16 bg-black/5 dark:bg-white/5 rounded-2xl"></div>
+                                <div className="h-16 bg-black/5 dark:bg-white/5 rounded-2xl"></div>
+                                <div className="h-16 bg-black/5 dark:bg-white/5 rounded-2xl"></div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'store' && isSubscribed && (
                     <div className="p-5 sm:p-8">
                         <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
                             <span className="material-icons-round text-[#D4AF37] mr-3">storefront</span>
                             Store Management
                         </h2>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
-                            Control your store's visibility and operating hours. Users cannot place orders when the store is closed.
+                            Control your store&apos;s visibility and operating hours. Users cannot place orders when the store is closed.
                         </p>
                         <div className="space-y-8 max-w-2xl">
                             {/* Manual Toggle */}
@@ -374,14 +540,19 @@ export default function MerchantSettingsPage() {
                         <div className="space-y-6 max-w-2xl">
 
                             <div className="group">
-                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 group-focus-within:text-[#D4AF37] transition-colors">
-                                    Business Name
-                                </label>
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 group-focus-within:text-[#D4AF37] transition-colors">
+                                        Business Name
+                                    </label>
+                                    {formData.business_name.trim().toLowerCase() === 'intrust' && formData.business_name !== merchantProfile?.business_name && (
+                                        <span className="text-[10px] font-bold text-red-500">Cannot be &quot;intrust&quot; (Reserved Name)</span>
+                                    )}
+                                </div>
                                 <input
                                     type="text"
                                     value={formData.business_name}
                                     onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                                    className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                                    className={`w-full px-5 py-4 bg-black/5 dark:bg-white/5 border rounded-xl focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 font-medium transition-all ${formData.business_name.trim().toLowerCase() === 'intrust' && formData.business_name !== merchantProfile?.business_name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-black/5 dark:border-white/10 focus:border-[#D4AF37] focus:ring-[#D4AF37]'}`}
                                 />
                             </div>
 
@@ -420,10 +591,11 @@ export default function MerchantSettingsPage() {
                                         Business Phone
                                     </label>
                                     <input
+                                        ref={phoneRef}
                                         type="tel"
                                         value={formData.business_phone}
                                         onChange={(e) => setFormData({ ...formData, business_phone: e.target.value })}
-                                        className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                                        className={`w-full px-5 py-4 bg-black/5 dark:bg-white/5 border rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all ${highlightedField === 'business_phone' ? 'border-amber-400 ring-2 ring-amber-400 animate-pulse' : 'border-black/5 dark:border-white/10'}`}
                                     />
                                 </div>
 
@@ -432,10 +604,11 @@ export default function MerchantSettingsPage() {
                                         Business Email
                                     </label>
                                     <input
+                                        ref={emailRef}
                                         type="email"
                                         value={formData.business_email}
                                         onChange={(e) => setFormData({ ...formData, business_email: e.target.value })}
-                                        className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                                        className={`w-full px-5 py-4 bg-black/5 dark:bg-white/5 border rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all ${highlightedField === 'business_email' ? 'border-amber-400 ring-2 ring-amber-400 animate-pulse' : 'border-black/5 dark:border-white/10'}`}
                                     />
                                 </div>
                             </div>
@@ -463,7 +636,7 @@ export default function MerchantSettingsPage() {
                     </div>
                 )}
 
-                {activeTab === 'bank' && (
+                {activeTab === 'bank' && isSubscribed && (
                     <div className="p-5 sm:p-8">
                         <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
                             <span className="material-icons-round text-[#D4AF37] mr-3">account_balance</span>
@@ -683,7 +856,6 @@ export default function MerchantSettingsPage() {
                         </h2>
 
                         <div className="space-y-4 max-w-2xl">
-                            {/* Notification Row Component would be better but keeping it for inline style */}
                             {[
                                 { id: 'email_notifications', label: 'Email Notifications', desc: 'Receive account updates and alerts via email', icon: 'email' },
                                 { id: 'purchase_notifications', label: 'Purchase Notifications', desc: 'Get notified when you purchase new coupons for inventory', icon: 'shopping_cart' },
@@ -705,7 +877,6 @@ export default function MerchantSettingsPage() {
                                             checked={notifSettings[item.id]}
                                             onChange={async (e) => {
                                                 const newVal = e.target.checked;
-                                                // Optimistic update
                                                 setNotifSettings(prev => ({ ...prev, [item.id]: newVal }));
 
                                                 try {
@@ -716,14 +887,15 @@ export default function MerchantSettingsPage() {
                                                             'Content-Type': 'application/json',
                                                             'Authorization': `Bearer ${session?.access_token}`
                                                         },
-                                                        body: JSON.stringify({ [item.id]: newVal })
+                                                        body: JSON.stringify({
+                                                            [item.id]: newVal,
+                                                        }),
                                                     });
 
                                                     const result = await res.json();
                                                     if (!result.success) throw new Error(result.error || 'Failed to save');
                                                     toast.success('Preferences saved');
                                                 } catch (err) {
-                                                    // Revert
                                                     setNotifSettings(prev => ({ ...prev, [item.id]: !newVal }));
                                                     toast.error(err.message || 'Failed to update preferences');
                                                 }
@@ -749,9 +921,78 @@ export default function MerchantSettingsPage() {
                         </div>
                     </div>
                 )}
+
+                {activeTab === 'subscription' && (
+                    <div className="p-5 sm:p-8">
+                        <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
+                            <span className="material-icons-round text-[#D4AF37] mr-3">card_membership</span>
+                            Subscription
+                        </h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
+                            Manage your storefront subscription plan and billing.
+                        </p>
+
+                        <div className="max-w-2xl space-y-6">
+                            {/* Current Plan Status */}
+                            <div className="p-6 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Current Plan</h3>
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                                        isSubscribed
+                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                                    }`}>
+                                        {subscriptionStatus?.toUpperCase() || 'INACTIVE'}
+                                    </span>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between py-2 border-b border-black/5 dark:border-white/5">
+                                        <span className="text-sm text-slate-500 dark:text-slate-400">Status</span>
+                                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100 capitalize">{subscriptionStatus || 'Inactive'}</span>
+                                    </div>
+                                    {expiresAt && (
+                                        <div className="flex items-center justify-between py-2 border-b border-black/5 dark:border-white/5">
+                                            <span className="text-sm text-slate-500 dark:text-slate-400">Expires</span>
+                                            <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{expiryFormatted}</span>
+                                        </div>
+                                    )}
+                                    {daysUntilExpiry !== null && (
+                                        <div className="flex items-center justify-between py-2 border-b border-black/5 dark:border-white/5">
+                                            <span className="text-sm text-slate-500 dark:text-slate-400">Days Remaining</span>
+                                            <span className={`text-sm font-bold ${daysUntilExpiry <= 7 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                                                {daysUntilExpiry > 0 ? `${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}` : 'Expired'}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {merchantProfile?.subscription_payment_ref && (
+                                        <div className="flex items-center justify-between py-2">
+                                            <span className="text-sm text-slate-500 dark:text-slate-400">Last Payment Ref</span>
+                                            <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300">{merchantProfile.subscription_payment_ref}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Subscribe/Renew CTA */}
+                            {subscriptionMerchant ? (
+                                <div className="mt-6">
+                                    <button
+                                        onClick={() => setShowModal(true)}
+                                        className="w-full sm:w-auto px-8 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 gold-glow shadow-lg shadow-[#D4AF37]/20"
+                                    >
+                                        <span className="material-icons-round text-lg">{isSubscribed ? 'autorenew' : 'card_membership'}</span>
+                                        {isSubscribed ? 'Extend Subscription' : 'Activate Subscription'}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 p-6 shadow-sm mt-6">
+                                    <div className="h-4 w-56 max-w-full animate-pulse rounded bg-slate-200 dark:bg-white/10" />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
 }
-
-

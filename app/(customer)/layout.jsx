@@ -47,8 +47,17 @@ export default async function CustomerLayout({ children }) {
             redirect('/admin');
         }
         // If merchant tries to access customer routes, redirect them to their dashboard
+        // But only if they actually have a merchant record in the DB to avoid redirect loops on /merchant-apply.
         if (profile?.role === 'merchant') {
-            redirect('/merchant/dashboard');
+            const { data: merchant } = await supabase
+                .from('merchants')
+                .select('id')
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+            if (merchant) {
+                redirect('/merchant/dashboard');
+            }
         }
     }
 

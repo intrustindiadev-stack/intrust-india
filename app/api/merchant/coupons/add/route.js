@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { encryptCouponCode } from '@/lib/encryption';
+import { requireMerchantSubscription } from '@/lib/merchant/requireSubscription';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,28 +11,20 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request) {
     try {
-        const supabase = await createServerSupabaseClient();
-
-        // 1. Authenticate User
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // 2. Fetch Merchant Profile
-        const { data: merchant, error: merchantError } = await supabase
-            .from('merchants')
-            .select('id, business_name, status')
-            .eq('user_id', user.id)
-            .single();
-
-        if (merchantError || !merchant) {
-            return NextResponse.json({ error: 'Merchant profile not found' }, { status: 403 });
-        }
+        const subResult = await requireMerchantSubscription(request);
+        if (!subResult.ok) return subResult.response;
+        const { user, merchant, admin: supabase } = subResult;
 
         if (merchant.status !== 'approved') {
             return NextResponse.json({ error: 'Merchant account is not approved' }, { status: 403 });
         }
+
+        // Fetch full merchant profile for business_name
+        const { data: merchantFull } = await supabase
+            .from('merchants')
+            .select('id, business_name, status')
+            .eq('user_id', user.id)
+            .single();
 
         // 3. Parse Request Body
         const body = await request.json();
@@ -104,8 +97,8 @@ export async function POST(request) {
             status: 'available',
             valid_until: expiryDate,
             terms_and_conditions: terms || 'Standard T&C apply.',
-            merchant_id: merchant.id,
-            merchant_name: merchant.business_name,
+            merchant_id: merchantFull.id,
+            merchant_name: merchantFull.business_name,
             created_by: user.id,
             is_merchant_owned: true,
             listed_on_marketplace: true,

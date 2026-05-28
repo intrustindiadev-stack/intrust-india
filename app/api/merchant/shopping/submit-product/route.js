@@ -1,9 +1,14 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
+import { requireMerchantSubscription } from '@/lib/merchant/requireSubscription';
 
 export async function POST(request) {
     try {
+        // Subscription guard — must be subscribed to submit products
+        const subResult = await requireMerchantSubscription(request);
+        if (!subResult.ok) return subResult.response;
+
         const { user, profile, admin: adminSupabase } = await getAuthUser(request);
 
         if (!user) {
