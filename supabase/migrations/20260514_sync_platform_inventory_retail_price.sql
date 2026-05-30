@@ -110,7 +110,8 @@ BEGIN
             stock_quantity      = public.merchant_inventory.stock_quantity + v_quantity,
             retail_price_paise  = EXCLUDED.retail_price_paise,
             is_platform_product = true,
-            updated_at          = now();
+            updated_at          = now()
+        WHERE public.merchant_inventory.is_platform_product = true;
 
         -- Log to shopping orders (for history)
         INSERT INTO public.shopping_orders (
@@ -233,7 +234,8 @@ BEGIN
         is_active           = EXCLUDED.is_active,
         custom_title        = EXCLUDED.custom_title,
         custom_description  = EXCLUDED.custom_description,
-        updated_at          = now();
+        updated_at          = now()
+    WHERE public.merchant_inventory.is_platform_product = true;
 
     INSERT INTO public.shopping_orders (buyer_id, buyer_type, seller_id, seller_type, product_id, quantity, unit_price_paise, total_price_paise, order_type)
     VALUES (p_merchant_id, 'merchant', NULL, 'admin', p_product_id, p_quantity, v_wholesale_price, v_total_cost, 'wholesale');
@@ -353,7 +355,8 @@ BEGIN
             is_active           = EXCLUDED.is_active,
             custom_title        = EXCLUDED.custom_title,
             custom_description  = EXCLUDED.custom_description,
-            updated_at          = now();
+            updated_at          = now()
+        WHERE public.merchant_inventory.is_platform_product = true;
 
         -- Log Order (record base wholesale price for the unit price)
         INSERT INTO public.shopping_orders (buyer_id, buyer_type, seller_id, seller_type, product_id, quantity, unit_price_paise, total_price_paise, order_type)

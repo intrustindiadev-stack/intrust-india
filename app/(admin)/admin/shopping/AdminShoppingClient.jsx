@@ -434,6 +434,10 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                                                 </div>
                                             </div>
                                         )}
+                                        <div className={`${!isMerchantProduct ? 'border-l border-dashed border-slate-200 pl-3' : ''}`}>
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">HSN</p>
+                                            <p className="font-black text-slate-950 text-sm tracking-tighter">{product.hsn_code || '—'}</p>
+                                        </div>
                                     </div>
                                 </div>
 

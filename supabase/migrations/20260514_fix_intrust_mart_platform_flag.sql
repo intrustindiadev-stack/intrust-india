@@ -36,6 +36,10 @@ BEGIN
        AND (
              mi.is_platform_product = false
           OR mi.retail_price_paise IS DISTINCT FROM sp.suggested_retail_price_paise
+           )
+       AND (
+             sp.submitted_by_merchant_id IS NULL
+          OR mi.merchant_id <> sp.submitted_by_merchant_id
            );
 
     GET DIAGNOSTICS v_count = ROW_COUNT;
