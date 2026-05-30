@@ -2,6 +2,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // Serve AVIF/WebP automatically — Android Chrome supports both; ~40-60% smaller
+    formats: ['image/avif', 'image/webp'],
+    // Include common Android viewport widths (360, 390, 414) for optimal srcset
+    deviceSizes: [360, 390, 414, 640, 750, 828, 1080, 1200, 1920],
+    // Cache immutable Supabase CDN images for 1 year in the browser
+    minimumCacheTTL: 31536000,
     remotePatterns: [
       {
         protocol: 'https',

@@ -1,11 +1,12 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Heart, ShoppingCart, Trash2, Package, Loader2, Store, ArrowLeft, Ban } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { isPlatformProductOOS, isInventoryRowOOS } from '@/lib/shopping/stock';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
@@ -34,7 +35,7 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
     return Object.values(groups);
   }, [items]);
 
-  const removeFromWishlist = async (id) => {
+  const removeFromWishlist = useCallback(async (id) => {
     setRemovingId(id);
     const { error } = await supabase.from('user_wishlists').delete().eq('id', id);
     if (!error) {
@@ -44,9 +45,9 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
       toast.error('Failed to remove item');
     }
     setRemovingId(null);
-  };
+  }, []);
 
-  const moveToCart = async (item) => {
+  const moveToCart = useCallback(async (item) => {
     const isOOS = item.is_platform_item 
       ? isPlatformProductOOS(item.shopping_products)
       : isInventoryRowOOS(item.merchant_inventory);
@@ -82,9 +83,9 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
     } finally {
       setMovingId(null);
     }
-  };
+  }, [userId, router]);
 
-  const addAllToCart = async (group) => {
+  const addAllToCart = useCallback(async (group) => {
     const availableItems = group.items.filter(item => {
       return item.is_platform_item 
         ? !isPlatformProductOOS(item.shopping_products)
@@ -127,7 +128,7 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
     } finally {
       setAddingAllGroupKey(null);
     }
-  };
+  }, [userId, router, moveToCart]);
 
   const handleConfirmClearCart = async () => {
     setConfirmModalOpen(false);
@@ -236,7 +237,16 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
                     >
                       <Link href={`/shop/product/${product?.slug}`} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50 border border-slate-100 relative">
                         {product?.product_images?.[0] ? (
-                          <img src={product.product_images[0]} alt={product.title} className="w-full h-full object-contain" />
+                          <div className="relative w-full h-full">
+                            <Image
+                              src={product.product_images[0]}
+                              alt={product.title}
+                              fill
+                              sizes="(max-width: 640px) 20vw, 64px"
+                              className="object-contain"
+                              quality={60}
+                            />
+                          </div>
                         ) : (
                           <Package size={20} className="text-slate-200" />
                         )}

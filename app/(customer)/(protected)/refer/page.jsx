@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Gift, Share2, Copy, CheckCircle, ChevronLeft, ChevronRight,
@@ -63,10 +64,18 @@ function NetworkNode({ node, depth = 0 }) {
                 {/* Avatar */}
                 <div className={`w-12 h-12 flex-shrink-0 rounded-2xl bg-gradient-to-br ${gradient(depth)} flex items-center justify-center text-white font-black text-lg shadow-lg ring-2 ring-white dark:ring-white/10 relative overflow-hidden`}>
                     <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    {node.avatar_url
-                        ? <img src={node.avatar_url} alt="" className="w-full h-full object-cover" />
-                        : initial
-                    }
+                    {node.avatar_url ? (
+                        <Image
+                            src={node.avatar_url}
+                            alt=""
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                            quality={60}
+                        />
+                    ) : (
+                        initial
+                    )}
                 </div>
 
                 <div className="flex-1 min-w-0">
