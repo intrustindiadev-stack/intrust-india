@@ -5,12 +5,14 @@ import {
     Phone, Mail, MapPin, Building, Calendar, Clock, Edit, FileText, 
     Activity, MessageSquare, CheckCircle2, ChevronRight, Zap, Target, 
     DollarSign, Thermometer, Plus, Trash2, ExternalLink, CreditCard, 
-    ShoppingBag, Sun, Package, ArrowLeft, MessageCircle
+    ShoppingBag, Sun, Package, ArrowLeft, MessageCircle, X
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
+import { toast } from 'react-hot-toast';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 const TABS = [
     { id: 'activity', label: 'Activity', icon: Activity },
@@ -33,13 +35,31 @@ export default function LeadDetailPage({ params }) {
     const router = useRouter();
     const unwrappedParams = use(params);
     const { id } = unwrappedParams;
+    const { user, profile } = useAuth();
     
     const [activeTab, setActiveTab] = useState('activity');
     const [lead, setLead] = useState(null);
     const [tasks, setTasks] = useState([]);
     const [intentServices, setIntentServices] = useState([]);
     const [paidServices, setPaidServices] = useState([]);
+    const [salesTeam, setSalesTeam] = useState([]);
+    const [showCreateTask, setShowCreateTask] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+
+    const fetchSalesTeam = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('user_profiles')
+                .select('id, full_name, role')
+                .in('role', ['sales_exec', 'sales_manager', 'admin', 'super_admin'])
+                .order('full_name', { ascending: true });
+            if (!error && data) {
+                setSalesTeam(data);
+            }
+        } catch (err) {
+            console.error('Error fetching sales team:', err);
+        }
+    }, []);
 
     const fetchData = useCallback(async () => {
         try {
@@ -56,7 +76,7 @@ export default function LeadDetailPage({ params }) {
             // 2. Fetch Tasks
             const { data: taskData } = await supabase
                 .from('crm_tasks')
-                .select('*')
+                .select('*, user_profiles(full_name)')
                 .eq('lead_id', id)
                 .order('due_date', { ascending: true });
             setTasks(taskData || []);
@@ -106,13 +126,14 @@ export default function LeadDetailPage({ params }) {
 
     useEffect(() => {
         fetchData();
+        fetchSalesTeam();
         const leadSub = supabase.channel(`lead_${id}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_leads', filter: `id=eq.${id}` }, fetchData)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_tasks', filter: `lead_id=eq.${id}` }, fetchData)
             .subscribe();
         
         return () => supabase.removeChannel(leadSub);
-    }, [id, fetchData]);
+    }, [id, fetchData, fetchSalesTeam]);
 
     const handleToggleTask = async (taskId, currentStatus) => {
         const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
@@ -276,7 +297,7 @@ export default function LeadDetailPage({ params }) {
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Task Manager</h2>
-                                        <button className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-black flex items-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform">
+                                        <button onClick={() => setShowCreateTask(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-black flex items-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
                                             <Plus size={16} /> Create Task
                                         </button>
                                     </div>
@@ -293,7 +314,7 @@ export default function LeadDetailPage({ params }) {
                                                     </button>
                                                     <div className="flex-1">
                                                         <h4 className={`text-sm font-black ${task.status === 'completed' ? 'text-gray-500 line-through' : 'text-gray-900 dark:text-white'}`}>{task.title}</h4>
-                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Due {format(new Date(task.due_date), 'MMM dd, p')}</p>
+                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Due {format(new Date(task.due_date), 'MMM dd, p')} · Assigned to: {task.user_profiles?.full_name || 'Me'}</p>
                                                     </div>
                                                 </div>
                                             ))
@@ -422,6 +443,110 @@ export default function LeadDetailPage({ params }) {
                     </AnimatePresence>
                 </div>
             </div>
+            
+            <AnimatePresence>
+                {showCreateTask && (
+                    <CreateTaskModal 
+                        leadId={id} 
+                        salesTeam={salesTeam} 
+                        currentUserProfile={profile} 
+                        onClose={() => setShowCreateTask(false)} 
+                        onSave={fetchData} 
+                    />
+                )}
+            </AnimatePresence>
         </div>
+    );
+}
+
+function CreateTaskModal({ leadId, salesTeam, currentUserProfile, onClose, onSave }) {
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [dueDate, setDueDate] = useState('');
+    const [assignedTo, setAssignedTo] = useState(currentUserProfile?.id || '');
+    const [saving, setSaving] = useState(false);
+
+    const isManagerOrAdmin = ['sales_manager', 'admin', 'super_admin'].includes(currentUserProfile?.role);
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        if (!title.trim() || !dueDate) {
+            toast.error('Title and Due Date are required');
+            return;
+        }
+        setSaving(true);
+        try {
+            const { error } = await supabase.from('crm_tasks').insert([{
+                lead_id: leadId,
+                title,
+                description,
+                due_date: new Date(dueDate).toISOString(),
+                assigned_to: assignedTo || currentUserProfile?.id,
+                status: 'pending'
+            }]);
+            if (error) throw error;
+            toast.success('Task scheduled successfully!');
+            onSave();
+            onClose();
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-2xl w-full max-w-md p-6 border border-gray-100 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-5">
+                    <div>
+                        <h3 className="text-lg font-black text-gray-900 dark:text-white">Create New Task</h3>
+                        <p className="text-xs text-gray-400">Schedule follow-up or call for this lead</p>
+                    </div>
+                    <button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl"><X size={18} className="text-gray-500" /></button>
+                </div>
+                <form onSubmit={handleSave} className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">Task Title *</label>
+                        <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Call client to discuss solar quote" required
+                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-semibold" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">Description</label>
+                        <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Additional notes or action details..." rows={3}
+                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-semibold resize-none" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">Due Date & Time *</label>
+                        <input type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)} required
+                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-semibold" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">Assigned To</label>
+                        {isManagerOrAdmin ? (
+                            <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-semibold">
+                                <option value={currentUserProfile?.id}>Assign to Me ({currentUserProfile?.full_name})</option>
+                                {salesTeam.filter(t => t.id !== currentUserProfile?.id).map(teamMember => (
+                                    <option key={teamMember.id} value={teamMember.id}>
+                                        {teamMember.full_name} ({teamMember.role === 'sales_exec' ? 'Exec' : 'Manager'})
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <div className="w-full px-4 py-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900 text-sm text-gray-500 font-semibold select-none">
+                                Assigned to Me ({currentUserProfile?.full_name || 'Sales Executive'})
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-semibold text-sm active:scale-95 transition-transform hover:bg-gray-50 dark:hover:bg-gray-900">Cancel</button>
+                        <button type="submit" disabled={saving} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-indigo-700 disabled:opacity-60">
+                            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Create Task'}
+                        </button>
+                    </div>
+                </form>
+            </motion.div>
+        </motion.div>
     );
 }

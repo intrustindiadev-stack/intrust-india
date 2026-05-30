@@ -90,7 +90,6 @@ function EmployeeDrawer({ employee, onClose, onSave }) {
 
                     {[
                         { label: 'Employee ID', key: 'employee_id', placeholder: 'e.g. EMP001' },
-                        { label: 'Department', key: 'department', placeholder: 'e.g. Sales, Engineering' },
                         { label: 'City', key: 'city', placeholder: 'e.g. Mumbai' },
                         { label: 'Base Salary (₹/month)', key: 'base_salary', placeholder: '30000', type: 'number' },
                     ].map(f => (
@@ -100,6 +99,17 @@ function EmployeeDrawer({ employee, onClose, onSave }) {
                                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all" />
                         </div>
                     ))}
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Department</label>
+                        <select value={form.department} onChange={e => up('department', e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all">
+                            <option value="">Select Department...</option>
+                            {['Engineering', 'Sales', 'Operations', 'HR', 'Customer Support', 'Marketing', 'Finance'].map(dept => (
+                                <option key={dept} value={dept}>{dept}</option>
+                            ))}
+                        </select>
+                    </div>
 
                     <div>
                         <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Joining Date</label>
