@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
     Package,
     MapPin,
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,7 +33,7 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
     const router = useRouter();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
     
     const [isRescheduling, setIsRescheduling] = useState(false);
     const [rescheduleDate, setRescheduleDate] = useState('');
@@ -420,8 +421,19 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
 
                             return (
                                 <div key={item.id} className={`flex gap-3 pb-4 border-b last:border-b-0 last:pb-0 ${isDark ? 'border-white/[0.03]' : 'border-slate-50'}`}>
-                                    <div className={`w-14 h-14 rounded-xl overflow-hidden p-1 flex items-center justify-center ${isDark ? 'bg-black/20' : 'bg-slate-50 shadow-inner'}`}>
-                                        <img src={item.shopping_products?.product_images?.[0]} alt="" className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal" />
+                                    <div className={`w-14 h-14 rounded-xl overflow-hidden p-1 flex items-center justify-center ${isDark ? 'bg-black/20' : 'bg-slate-50 shadow-inner'} relative`}>
+                                        {item.shopping_products?.product_images?.[0] ? (
+                                            <Image
+                                                src={item.shopping_products.product_images[0]}
+                                                alt=""
+                                                fill
+                                                sizes="(max-width: 640px) 15vw, 56px"
+                                                className="object-contain p-1 mix-blend-multiply dark:mix-blend-normal"
+                                                quality={60}
+                                            />
+                                        ) : (
+                                            <Package className="w-6 h-6 text-slate-300" />
+                                        )}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <h4 className="text-sm font-bold line-clamp-1">{item.shopping_products?.title}</h4>

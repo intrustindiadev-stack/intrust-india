@@ -7,7 +7,9 @@ import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import ShopHubClient from './ShopHubClient';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 
-export const dynamic = 'force-dynamic';
+// ISR: cache the merchant list for 60 seconds at the edge.
+// Real-time open/closed status is handled client-side via WebSocket (ShopHubClient).
+export const revalidate = 60;
 
 export default async function MerchantHubPage() {
     const supabase = await createServerSupabaseClient();

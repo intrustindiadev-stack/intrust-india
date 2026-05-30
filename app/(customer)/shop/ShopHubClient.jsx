@@ -1,12 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense, memo, useCallback } from 'react';
 import { Search, Store, X, Sparkles, ChevronRight, BadgeCheck, Star, MapPin, Heart } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabaseClient';
-import { AnimatePresence } from 'framer-motion';
-import MerchantCardSkeleton from '@/components/customer/shop/MerchantCardSkeleton';
 import RatingStars from '@/components/ui/RatingStars';
 
 // Lazy load below-fold components
@@ -17,7 +15,7 @@ const HeroIllustrativeAd = lazy(() => import('@/components/customer/shop/HeroIll
 const BLUR_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZTJlOGYwIi8+PC9zdmc+';
 
 // ── Featured Card (Intrust Official) – full-width ─────────────────────────
-function FeaturedCard({ merchant, isOpen }) {
+const FeaturedCard = memo(function FeaturedCard({ merchant, isOpen }) {
     return (
         <div className="col-span-full mb-4 animate-fadeIn">
             <Link href="/shop/official" className="group block focus-visible:outline-none">
@@ -81,10 +79,10 @@ function FeaturedCard({ merchant, isOpen }) {
             </Link>
         </div>
     );
-}
+});
 
 // ── Quick-Commerce Card (Optimized) ──────────────────────────────────────
-function MerchantCard({ merchant, rating, isOpen }) {
+const MerchantCard = memo(function MerchantCard({ merchant, rating, isOpen, priority }) {
     let avatarUrl = null;
     if (Array.isArray(merchant.user_profiles)) {
         avatarUrl = merchant.user_profiles[0]?.avatar_url;
@@ -112,7 +110,8 @@ function MerchantCard({ merchant, rating, isOpen }) {
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         className="object-cover group-hover:scale-105 transition-transform duration-700"
-                        loading="lazy"
+                        loading={priority ? 'eager' : 'lazy'}
+                        priority={priority}
                         quality={70}
                         placeholder="blur"
                         blurDataURL={BLUR_PLACEHOLDER}
@@ -220,10 +219,11 @@ function MerchantCard({ merchant, rating, isOpen }) {
             </Link>
         </div>
     );
-}
+});
 
 // ── Main Export ──────────────────────────────────────────────────────────────
 export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
+    const [searchInput, setSearchInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [merchantStatuses, setMerchantStatuses] = useState(() => {
         const map = {};
@@ -231,6 +231,15 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
         return map;
     });
     const inputRef = useRef(null);
+    const debounceRef = useRef(null);
+
+    // Debounce search — 150 ms so mobile keyboards don't trigger on every character
+    const handleSearchChange = useCallback((e) => {
+        const val = e.target.value;
+        setSearchInput(val);
+        clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => setSearchQuery(val), 150);
+    }, []);
 
     // Consolidated realtime: single channel for platform + all merchants
     useEffect(() => {
@@ -292,14 +301,14 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
                         <input
                             ref={inputRef}
                             type="text"
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
+                            value={searchInput}
+                            onChange={handleSearchChange}
                             placeholder="Search for stores, items or cuisines…"
                             className="w-full pl-12 pr-12 py-4 rounded-[1.5rem] bg-white dark:bg-[#13161f] border border-slate-200 dark:border-white/[0.08] shadow-[0_4px_12px_rgba(0,0,0,0.03)] focus:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:focus:shadow-[0_8px_30px_rgba(0,0,0,0.4)] focus:border-emerald-500/30 outline-none font-bold text-base placeholder:text-slate-400 dark:placeholder:text-white/20 text-slate-900 dark:text-white transition-all"
                         />
-                        {searchQuery && (
+                        {searchInput && (
                             <button
-                                onClick={() => { setSearchQuery(''); inputRef.current?.focus(); }}
+                                onClick={() => { setSearchInput(''); setSearchQuery(''); inputRef.current?.focus(); }}
                                 className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-6 h-6 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors"
                             >
                                 <X size={12} />
@@ -352,8 +361,8 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
                     {showFeatured && <FeaturedCard merchant={official} isOpen={merchantStatuses['official'] !== false} />}
-                    {filtered.map((merchant) => (
-                        <MerchantCard key={merchant.id} merchant={merchant} rating={ratingsMap[merchant.id]} isOpen={merchantStatuses[merchant.id] !== false} />
+                    {filtered.map((merchant, idx) => (
+                        <MerchantCard key={merchant.id} merchant={merchant} rating={ratingsMap[merchant.id]} isOpen={merchantStatuses[merchant.id] !== false} priority={idx < 3} />
                     ))}
                 </div>
             )}

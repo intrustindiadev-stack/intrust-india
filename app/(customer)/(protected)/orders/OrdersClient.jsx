@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabaseClient";
 import {
   Package,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -27,7 +28,7 @@ const OrdersClient = ({ userId }) => {
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const isSuccess = searchParams.get("success") === "true";
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -227,11 +228,16 @@ const OrdersClient = ({ userId }) => {
                   {/* Thumbnail */}
                   <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-md border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center">
                     {item.shopping_products?.product_images?.[0] ? (
-                      <img
-                        src={item.shopping_products.product_images[0]}
-                        alt={item.shopping_products.title}
-                        className="w-full h-full object-contain p-1 mix-blend-multiply"
-                      />
+                      <div className="relative w-full h-full">
+                        <Image
+                          src={item.shopping_products.product_images[0]}
+                          alt={item.shopping_products.title}
+                          fill
+                          sizes="(max-width: 640px) 20vw, 80px"
+                          className="object-contain p-1 mix-blend-multiply"
+                          quality={60}
+                        />
+                      </div>
                     ) : (
                       <Package className="w-8 h-8 text-gray-300" />
                     )}

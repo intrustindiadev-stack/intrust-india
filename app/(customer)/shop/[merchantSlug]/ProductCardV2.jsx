@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Plus, Minus, Package, BadgeCheck, Check, Heart, Store } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -10,7 +10,7 @@ import { isStorefrontItemOOS } from '@/lib/shopping/stock';
 import OutOfStockOverlay from '@/components/ui/OutOfStockOverlay';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 
-export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#000000', secondaryColor = '#1e293b', isWishlisted = false, onWishlist, isStoreOpen = true }) {
+function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#000000', secondaryColor = '#1e293b', isWishlisted = false, onWishlist, isStoreOpen = true }) {
     const router = useRouter();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -251,3 +251,14 @@ export default function ProductCardV2({ item, cartItem, onAdd, onRemove, primary
         </div>
     );
 }
+
+export default memo(ProductCardV2, (prevProps, nextProps) => {
+    return (
+        prevProps.isStoreOpen === nextProps.isStoreOpen &&
+        prevProps.isWishlisted === nextProps.isWishlisted &&
+        prevProps.primaryColor === nextProps.primaryColor &&
+        prevProps.secondaryColor === nextProps.secondaryColor &&
+        prevProps.item === nextProps.item &&
+        prevProps.cartItem?.quantity === nextProps.cartItem?.quantity
+    );
+});

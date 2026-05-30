@@ -197,53 +197,72 @@ export default function HRMAttendancePage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-gray-50/50 border-b border-gray-100">
-                                    {['Employee', 'Status', 'Clock In', 'Clock Out', 'Duration', 'Override', 'Action'].map(h => (
+                                    {['Employee', 'Status', 'Location', 'Clock In', 'Clock Out', 'Duration', 'Override', 'Action'].map(h => (
                                         <th key={h} className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                                     ))}
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {filtered.map(r => {
-                                    const duration = r.check_in && r.check_out
-                                        ? `${Math.round((new Date(r.check_out) - new Date(r.check_in)) / 3600000)}h ${Math.round(((new Date(r.check_out) - new Date(r.check_in)) % 3600000) / 60000)}m`
-                                        : '—';
-                                    return (
-                                        <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center text-emerald-700 font-bold text-sm flex-shrink-0">
-                                                        {(r.user_profiles?.full_name || '?').charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-semibold text-gray-900 text-sm">{r.user_profiles?.full_name}</p>
-                                                        <p className="text-xs text-gray-400">{r.user_profiles?.department || 'No dept'}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border capitalize ${STATUS_STYLE[r.status] || 'bg-gray-50 text-gray-600 border-gray-100'}`}>
-                                                    {r.status?.replace('_', ' ')}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-4 text-sm text-gray-700 font-medium">{fmt(r.check_in)}</td>
-                                            <td className="px-5 py-4 text-sm text-gray-700 font-medium">{fmt(r.check_out)}</td>
-                                            <td className="px-5 py-4 text-sm text-gray-500">{duration}</td>
-                                            <td className="px-5 py-4">
-                                                {r.override_reason ? (
-                                                    <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 font-medium" title={r.override_reason}>Overridden</span>
-                                                ) : <span className="text-xs text-gray-400">—</span>}
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <button onClick={() => setOverriding(r)} className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors border border-emerald-100">
-                                                    <Edit3 size={12} /> Override
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                             </thead>
+                             <tbody className="divide-y divide-gray-50">
+                                 {filtered.map(r => {
+                                     const duration = r.check_in && r.check_out
+                                         ? `${Math.round((new Date(r.check_out) - new Date(r.check_in)) / 3600000)}h ${Math.round(((new Date(r.check_out) - new Date(r.check_in)) % 3600000) / 60000)}m`
+                                         : '—';
+                                     return (
+                                         <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
+                                             <td className="px-5 py-4">
+                                                 <div className="flex items-center gap-3">
+                                                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center text-emerald-700 font-bold text-sm flex-shrink-0">
+                                                         {(r.user_profiles?.full_name || '?').charAt(0).toUpperCase()}
+                                                     </div>
+                                                     <div>
+                                                         <p className="font-semibold text-gray-900 text-sm">{r.user_profiles?.full_name}</p>
+                                                         <p className="text-xs text-gray-400">{r.user_profiles?.department || 'No dept'}</p>
+                                                     </div>
+                                                 </div>
+                                             </td>
+                                             <td className="px-5 py-4">
+                                                 <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border capitalize ${STATUS_STYLE[r.status] || 'bg-gray-50 text-gray-600 border-gray-100'}`}>
+                                                     {r.status?.replace('_', ' ')}
+                                                 </span>
+                                             </td>
+                                             <td className="px-5 py-4">
+                                                 {r.check_in_lat ? (
+                                                     <div className="flex flex-col gap-1 w-fit">
+                                                         <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-lg border capitalize ${r.is_onsite ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/50' : 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/50'}`}>
+                                                             {r.is_onsite ? 'On-Site' : 'WFH/Off-Site'}
+                                                         </span>
+                                                         <a 
+                                                             href={`https://www.google.com/maps/search/?api=1&query=${r.check_in_lat},${r.check_in_lng}`} 
+                                                             target="_blank" 
+                                                             rel="noopener noreferrer" 
+                                                             className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline flex items-center gap-0.5 font-bold"
+                                                         >
+                                                             <MapPin size={11} /> View Map
+                                                         </a>
+                                                     </div>
+                                                 ) : (
+                                                     <span className="text-xs text-gray-400 font-medium">No GPS data</span>
+                                                 )}
+                                             </td>
+                                             <td className="px-5 py-4 text-sm text-gray-700 font-medium">{fmt(r.check_in)}</td>
+                                             <td className="px-5 py-4 text-sm text-gray-700 font-medium">{fmt(r.check_out)}</td>
+                                             <td className="px-5 py-4 text-sm text-gray-500">{duration}</td>
+                                             <td className="px-5 py-4">
+                                                 {r.override_reason ? (
+                                                     <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 font-medium" title={r.override_reason}>Overridden</span>
+                                                 ) : <span className="text-xs text-gray-400">—</span>}
+                                             </td>
+                                             <td className="px-5 py-4">
+                                                 <button onClick={() => setOverriding(r)} className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors border border-emerald-100">
+                                                     <Edit3 size={12} /> Override
+                                                 </button>
+                                             </td>
+                                         </tr>
+                                     );
+                                 })}
+                             </tbody>
+                         </table>
+                     </div>
                 )}
             </div>
         </div>

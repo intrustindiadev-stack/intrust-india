@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart, Zap, Shirt, Pill, Home, Utensils, Grid, Star, MapPin, Store } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -27,17 +27,20 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [isLoading, setIsLoading] = useState(true);
     const [activeSubCategory, setActiveSubCategory] = useState('All');
+    const [searchInput, setSearchInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingCartItem, setPendingCartItem] = useState(null);
     const [liveMerchant, setLiveMerchant] = useState(merchant);
     const [liveInventory, setLiveInventory] = useState(initialInventory);
+    const debounceRef = useRef(null);
+
+    // Supabase client — memoized to avoid creating a new instance on every render
+    const supabase = useMemo(() => createClient(), []);
 
     useEffect(() => {
         setLiveMerchant(merchant);
     }, [merchant]);
-
-    const supabase = createClient();
 
     useEffect(() => {
         if (!liveMerchant?.id) return;
@@ -133,7 +136,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
         if (data) setWishlistIds(new Set(data.map(r => r.product_id)));
     };
 
-    const toggleWishlist = async (item) => {
+    const toggleWishlist = useCallback(async (item) => {
         if (!customer?.id) {
             router.push('/login');
             return;
@@ -171,7 +174,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                 toast.error('Could not save to wishlist');
             }
         }
-    };
+    }, [customer?.id, wishlistIds, supabase, router]);
 
     const syncCartFromDB = async () => {
         const { data } = await supabase
@@ -310,7 +313,15 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
         return ['All', ...new Set(liveInventory.map(item => item.shopping_products?.category || 'Other'))];
     }, [liveInventory]);
 
-    const getCategoryIcon = (category) => {
+    // Debounce search — 150ms prevents re-filtering large inventories on every keystroke
+    const handleSearchChange = useCallback((e) => {
+        const val = e.target.value;
+        setSearchInput(val);
+        clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => setSearchQuery(val), 150);
+    }, []);
+
+    const getCategoryIcon = useCallback((category) => {
         const cat = category.toLowerCase();
         if (cat === 'all') return <Grid size={14} />;
         if (cat.includes('grocer') || cat.includes('fmcg') || cat.includes('mart')) return <ShoppingCart size={14} />;
@@ -321,13 +332,14 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
         if (cat.includes('beauty') || cat.includes('cosmetic')) return <Sparkles size={14} />;
         if (cat.includes('home') || cat.includes('kitchen') || cat.includes('decor')) return <Home size={14} />;
         return <Package size={14} />;
-    };
-
-    const filteredItems = liveInventory.filter(item => {
-        const titleMatch = item.shopping_products?.title?.toLowerCase().includes(searchQuery.toLowerCase());
-        const subMatch = activeSubCategory === 'All' || item.shopping_products?.category === activeSubCategory;
-        return titleMatch && subMatch;
-    });
+    }, []);
+    const filteredItems = useMemo(() => {
+        return liveInventory.filter(item => {
+            const titleMatch = item.shopping_products?.title?.toLowerCase().includes(searchQuery.toLowerCase());
+            const subMatch = activeSubCategory === 'All' || item.shopping_products?.category === activeSubCategory;
+            return titleMatch && subMatch;
+        });
+    }, [liveInventory, searchQuery, activeSubCategory]);
 
     const totalItems = cart.reduce((acc, item) => acc + (item.quantity || 0), 0);
     const totalPrice = cart.reduce((acc, item) => {
@@ -349,8 +361,6 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
 
     return (
         <div className={`relative min-h-screen flex flex-col transition-all duration-700`}>
-
-            <div className="relative min-h-screen flex flex-col pt-12 md:pt-14">
 
             {/* ====== CREATIVE AMBIENT BACKGROUND ====== */}
             <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
@@ -389,8 +399,8 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                             <input
                                 type="text"
                                 placeholder={`Search for items in ${merchant?.business_name}...`}
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                value={searchInput}
+                                onChange={handleSearchChange}
                                 className={`w-full pl-10 pr-4 py-2 md:py-2.5 rounded-full text-sm font-medium outline-none transition-all border ${
                                     isDark 
                                         ? 'bg-[#0a0c14]/50 text-white placeholder:text-white/30 border-white/[0.08] focus:bg-[#0a0c14] focus:border-white/20' 
@@ -541,7 +551,6 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                     />
                 )}
             </Suspense>
-            </div>
         </div>
     );
 }

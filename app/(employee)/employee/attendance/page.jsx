@@ -50,20 +50,74 @@ export default function EmployeeAttendancePage() {
 
     useEffect(() => { fetchAttendance(); }, [fetchAttendance]);
 
+    const getCoordinates = () => {
+        return new Promise((resolve) => {
+            if (typeof window === 'undefined' || !navigator.geolocation) {
+                toast.error('Geolocation is not supported by your browser');
+                resolve(null);
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                },
+                (err) => {
+                    console.warn("Geolocation access denied or failed", err);
+                    toast.error('Geolocation permission denied or timed out. Clocking in without coordinates.');
+                    resolve(null);
+                },
+                { enableHighAccuracy: true, timeout: 8000 }
+            );
+        });
+    };
+
+    const getDistanceInMeters = (lat1, lon1, lat2, lon2) => {
+        const R = 6371e3; // metres
+        const φ1 = lat1 * Math.PI/180;
+        const φ2 = lat2 * Math.PI/180;
+        const Δφ = (lat2-lat1) * Math.PI/180;
+        const Δλ = (lon2-lon1) * Math.PI/180;
+
+        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                  Math.cos(φ1) * Math.cos(φ2) *
+                  Math.sin(Δλ/2) * Math.sin(Δλ/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+        return R * c; // in metres
+    };
+
     const handleClockIn = async () => {
         setClocking(true);
         try {
+            const coords = await getCoordinates();
+            let checkInLat = null;
+            let checkInLng = null;
+            let isOnsite = false;
+
+            if (coords) {
+                checkInLat = coords.lat;
+                checkInLng = coords.lng;
+                // Intrust office HQ (Mumbai reference coords)
+                const dist = getDistanceInMeters(coords.lat, coords.lng, 19.0760, 72.8777);
+                if (dist <= 300) {
+                    isOnsite = true;
+                }
+            }
+
             const now = new Date().toISOString();
             const { data, error } = await supabase.from('attendance').insert([{
                 employee_id: user.id,
                 date: today,
                 check_in: now,
                 status: 'present',
+                check_in_lat: checkInLat,
+                check_in_lng: checkInLng,
+                is_onsite: isOnsite
             }]).select().single();
             if (error) throw error;
             setTodayRecord(data);
             setClockedIn(true);
-            toast.success('Clocked in successfully!');
+            toast.success(isOnsite ? 'Clocked in successfully (On-Site)!' : 'Clocked in successfully (WFH/Off-Site)!');
             fetchAttendance();
         } catch (err) { toast.error(err.message); }
         finally { setClocking(false); }
@@ -73,8 +127,27 @@ export default function EmployeeAttendancePage() {
         if (!todayRecord) return;
         setClocking(true);
         try {
+            const coords = await getCoordinates();
+            let checkOutLat = null;
+            let checkOutLng = null;
+            let isOnsite = todayRecord.is_onsite;
+
+            if (coords) {
+                checkOutLat = coords.lat;
+                checkOutLng = coords.lng;
+                const dist = getDistanceInMeters(coords.lat, coords.lng, 19.0760, 72.8777);
+                if (dist <= 300) {
+                    isOnsite = true;
+                }
+            }
+
             const now = new Date().toISOString();
-            const { error } = await supabase.from('attendance').update({ check_out: now }).eq('id', todayRecord.id);
+            const { error } = await supabase.from('attendance').update({ 
+                check_out: now,
+                check_out_lat: checkOutLat,
+                check_out_lng: checkOutLng,
+                is_onsite: isOnsite
+            }).eq('id', todayRecord.id);
             if (error) throw error;
             setClockedIn(false);
             toast.success('Clocked out successfully!');
@@ -129,11 +202,19 @@ export default function EmployeeAttendancePage() {
                         {clocking ? <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> : clockedIn ? 'Clock Out' : 'Clock In'}
                     </button>
                 </div>
-                {todayRecord?.check_out && (
-                    <div className="mt-4 pt-4 border-t border-white/10 flex gap-6 text-sm">
+                {todayRecord && (
+                    <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap gap-4 text-xs font-semibold">
                         <span>In: <strong>{fmt(todayRecord.check_in)}</strong></span>
-                        <span>Out: <strong>{fmt(todayRecord.check_out)}</strong></span>
-                        <span>Duration: <strong>{duration(todayRecord.check_in, todayRecord.check_out)}</strong></span>
+                        {todayRecord.check_out && <span>Out: <strong>{fmt(todayRecord.check_out)}</strong></span>}
+                        {todayRecord.check_out && <span>Duration: <strong>{duration(todayRecord.check_in, todayRecord.check_out)}</strong></span>}
+                        {todayRecord.check_in_lat && (
+                            <span className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/10">
+                                <MapPin size={12} className="text-emerald-300 animate-pulse" />
+                                <a href={`https://www.google.com/maps/search/?api=1&query=${todayRecord.check_in_lat},${todayRecord.check_in_lng}`} target="_blank" rel="noopener noreferrer" className="hover:underline font-black text-white">
+                                    {todayRecord.is_onsite ? "On-Site" : "WFH/Off-Site"} Location
+                                </a>
+                            </span>
+                        )}
                     </div>
                 )}
             </motion.div>
@@ -180,6 +261,21 @@ export default function EmployeeAttendancePage() {
                                         <div>
                                             <p className="font-semibold text-gray-900 text-sm">{new Date(r.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
                                             {r.check_in && <p className="text-xs text-gray-400 mt-0.5">{fmt(r.check_in)} → {fmt(r.check_out)} {r.check_out ? `· ${duration(r.check_in, r.check_out)}` : '(ongoing)'}</p>}
+                                            {r.check_in_lat && (
+                                                <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] font-bold">
+                                                    <span className={`px-1.5 py-0.5 rounded-md border ${r.is_onsite ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/50' : 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/50'}`}>
+                                                        {r.is_onsite ? 'On-Site' : 'WFH/Off-Site'}
+                                                    </span>
+                                                    <a 
+                                                        href={`https://www.google.com/maps/search/?api=1&query=${r.check_in_lat},${r.check_in_lng}`} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer" 
+                                                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 flex items-center gap-0.5 hover:underline"
+                                                    >
+                                                        <MapPin size={10} /> View Map
+                                                    </a>
+                                                </div>
+                                            )}
                                             {r.override_reason && <p className="text-xs text-amber-500 mt-0.5">Override: {r.override_reason}</p>}
                                         </div>
                                     </div>

@@ -6,17 +6,20 @@ import {
     ShoppingBag, Plus, Package, PackageX, TrendingUp, DollarSign,
     ChevronRight, Tags, ClipboardList, Store, Edit,
     ToggleLeft, ToggleRight, Search, Filter, Clock,
-    CheckCircle2, AlertTriangle, Trash2, ShieldCheck, RefreshCw
+    CheckCircle2, AlertTriangle, Trash2, ShieldCheck, RefreshCw, FileSpreadsheet, X
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
+import { useRouter } from "next/navigation";
 import { isInventoryRowOOS, OOS_LABEL } from '@/lib/shopping/stock';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
+import BulkProductUpload from '@/components/admin/shopping/BulkProductUpload';
 
 const TAB_PLATFORM = "platform";
 const TAB_CUSTOM = "custom";
 
 export default function AdminShoppingClient({ products: initialProducts, stats: initialStats, initialOrders, pendingApprovals = 0 }) {
+    const router = useRouter();
     const [localProducts, setLocalProducts] = useState(initialProducts);
     const [localOrders, setLocalOrders] = useState(initialOrders);
     const [activeTab, setActiveTab] = useState(TAB_PLATFORM);
@@ -27,6 +30,7 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
     const [savingStock, setSavingStock] = useState(new Set());
     const [deletingId, setDeletingId] = useState(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
 
     // REALTIME SUBSCRIPTION
     useEffect(() => {
@@ -231,6 +235,13 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                             <Plus size={16} />
                         </div>
                     </Link>
+                    <button
+                        onClick={() => setBulkUploadOpen(true)}
+                        className="group w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 sm:pr-4 py-3.5 rounded-2xl sm:rounded-[1.5rem] font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all shadow-2xl shadow-emerald-600/20 active:scale-95"
+                    >
+                        <FileSpreadsheet size={16} />
+                        <span>Bulk Upload</span>
+                    </button>
                 </div>
             </div>
 
@@ -476,6 +487,43 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                     })
                 )}
             </div>
+
+            {/* ── Bulk Upload Slide-Over ──────────────────────────────────── */}
+            {bulkUploadOpen && (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+                        onClick={() => setBulkUploadOpen(false)}
+                    />
+                    {/* Panel */}
+                    <div className="relative w-full sm:max-w-xl bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto z-10">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
+                                    <FileSpreadsheet size={16} className="text-emerald-600" />
+                                </div>
+                                <div>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Admin Panel</p>
+                                    <p className="text-sm font-black text-slate-900 leading-none">CSV Bulk Upload</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setBulkUploadOpen(false)}
+                                className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-all"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <BulkProductUpload
+                            onSuccess={() => {
+                                setBulkUploadOpen(false);
+                                router.refresh();
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

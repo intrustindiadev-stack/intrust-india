@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import {
     ShoppingCart,
     ShieldCheck,
@@ -25,12 +25,15 @@ import { toast } from 'react-hot-toast';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import ConfirmModal from '@/components/ui/ConfirmModal';
+import Image from 'next/image';
 import { isPdpProductOOS, isInventoryRowOOS, OOS_LABEL, isPlatformProductOOS } from '@/lib/shopping/stock';
 import OutOfStockOverlay from '@/components/ui/OutOfStockOverlay';
 import OutOfStockBanner from '@/components/ui/OutOfStockBanner';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 import NotifyMeButton from '@/components/ui/NotifyMeButton';
+
+// Lazy-load modal — only needed on rare cart-conflict path, keep it out of the initial bundle
+const ConfirmModal = lazy(() => import('@/components/ui/ConfirmModal'));
 
 export default function ProductDetailClient({ product, inventory, customer, recommendedProducts = [], initialPlatformStatus }) {
     const router = useRouter();
@@ -48,7 +51,9 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const [isPlatformOpen, setIsPlatformOpen] = useState(initialPlatformStatus?.is_open ?? true);
     const [merchantStatuses, setMerchantStatuses] = useState(new Map()); // Map<id, is_open>
     const [isClosedAnimation, setIsClosedAnimation] = useState(false);
-    const supabase = createClient();
+
+    // Memoized supabase client — prevents a new instance on every render
+    const supabase = useMemo(() => createClient(), []);
 
     useEffect(() => {
         if (!customer?.id) return;
@@ -155,48 +160,57 @@ export default function ProductDetailClient({ product, inventory, customer, reco
         }
     };
 
-    // Offers logic
-    const platformOffer = {
-        is_platform_direct: true,
-        retail_price_paise: product.suggested_retail_price_paise,
-        merchant_name: 'InTrust Official',
-        stock: product.admin_stock
-    };
+    // Memoized offer list — only rebuilds when inventory or product prices change
+    const allOffers = useMemo(() => {
+        const platformOffer = {
+            is_platform_direct: true,
+            retail_price_paise: product.suggested_retail_price_paise,
+            merchant_name: 'InTrust Official',
+            stock: product.admin_stock
+        };
+        return [
+            platformOffer,
+            ...inventory.map(inv => ({
+                id: inv.id,
+                is_platform_direct: false,
+                // For platform-managed rows, use the authoritative price from shopping_products.
+                // retail_price_paise on merchant_inventory can be stale between admin updates.
+                // See migration: 20260514_sync_platform_inventory_retail_price.sql
+                retail_price_paise: inv.is_platform_product
+                    ? (product.suggested_retail_price_paise ?? inv.retail_price_paise)
+                    : inv.retail_price_paise,
+                merchant_name: inv.merchants?.business_name || 'Merchant',
+                merchant_location: inv.merchants?.business_address || '',
+                stock: inv.stock_quantity,
+                stock_quantity: inv.stock_quantity,
+                is_active: inv.is_active
+            }))
+        ].sort((a, b) => a.retail_price_paise - b.retail_price_paise);
+    }, [product.suggested_retail_price_paise, product.admin_stock, inventory]);
 
-    const allOffers = [
-        platformOffer,
-        ...inventory.map(inv => ({
-            id: inv.id,
-            is_platform_direct: false,
-            // For platform-managed rows, use the authoritative price from shopping_products.
-            // retail_price_paise on merchant_inventory can be stale between admin updates.
-            // See migration: 20260514_sync_platform_inventory_retail_price.sql
-            retail_price_paise: inv.is_platform_product
-                ? (product.suggested_retail_price_paise ?? inv.retail_price_paise)
-                : inv.retail_price_paise,
-            merchant_name: inv.merchants?.business_name || 'Merchant',
-            merchant_location: inv.merchants?.business_address || '',
-            stock: inv.stock_quantity,
-            stock_quantity: inv.stock_quantity,
-            is_active: inv.is_active
-        }))
-    ].sort((a, b) => a.retail_price_paise - b.retail_price_paise);
+    const isOfferOOS = useCallback((off) =>
+        off.is_platform_direct ? isPlatformProductOOS(product) : isInventoryRowOOS(off)
+    , [product]);
 
-    const productIsOOS = isPdpProductOOS({ product, inventory });
-    const isOfferOOS = (off) => off.is_platform_direct ? isPlatformProductOOS(product) : isInventoryRowOOS(off);
-    const defaultOffer = allOffers.find(o => !isOfferOOS(o)) || allOffers[0];
-    const selectedOffer = allOffers.find(o => (o.is_platform_direct ? selectedOfferId === 'platform' : o.id === selectedOfferId)) || defaultOffer;
-    const selectedOfferIsOOS = isOfferOOS(selectedOffer);
+    // Memoize derived OOS / selection state
+    const productIsOOS = useMemo(() => isPdpProductOOS({ product, inventory }), [product, inventory]);
+    const defaultOffer = useMemo(() => allOffers.find(o => !isOfferOOS(o)) || allOffers[0], [allOffers, isOfferOOS]);
+    const selectedOffer = useMemo(() =>
+        allOffers.find(o => (o.is_platform_direct ? selectedOfferId === 'platform' : o.id === selectedOfferId)) || defaultOffer
+    , [allOffers, selectedOfferId, defaultOffer]);
+    const selectedOfferIsOOS = useMemo(() => isOfferOOS(selectedOffer), [isOfferOOS, selectedOffer]);
     const isOutOfStock = productIsOOS || selectedOfferIsOOS;
 
-    const isStoreOpen = selectedOffer.is_platform_direct
-        ? isPlatformOpen
-        : (merchantStatuses.get(inventory.find(i => i.id === selectedOffer.id)?.merchant_id) ?? true);
+    const isStoreOpen = useMemo(() =>
+        selectedOffer.is_platform_direct
+            ? isPlatformOpen
+            : (merchantStatuses.get(inventory.find(i => i.id === selectedOffer.id)?.merchant_id) ?? true)
+    , [selectedOffer, isPlatformOpen, merchantStatuses, inventory]);
 
-    const triggerClosedAnimation = () => {
+    const triggerClosedAnimation = useCallback(() => {
         setIsClosedAnimation(true);
         setTimeout(() => setIsClosedAnimation(false), 500);
-    };
+    }, []);
 
     const addToCart = async () => {
         if (productIsOOS || selectedOfferIsOOS) {
@@ -302,12 +316,19 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const primaryColor = '#3b82f6';
     const secondaryColor = '#60a5fa';
 
-    // Pricing
-    const sellingPrice = selectedOffer.retail_price_paise;
-    const mrp = product.mrp_paise || product.suggested_retail_price_paise || sellingPrice;
-    const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;
-    const savings = finalMrp - sellingPrice;
-    const savingsPercent = finalMrp > 0 ? Math.round((savings / finalMrp) * 100) : 0;
+    // Memoized pricing — only recalculate when offer or product changes
+    const { sellingPrice, finalMrp, savings, savingsPercent } = useMemo(() => {
+        const sp = selectedOffer.retail_price_paise;
+        const mrp = product.mrp_paise || product.suggested_retail_price_paise || sp;
+        const fm = mrp > sp ? mrp : sp;
+        const sav = fm - sp;
+        return {
+            sellingPrice: sp,
+            finalMrp: fm,
+            savings: sav,
+            savingsPercent: fm > 0 ? Math.round((sav / fm) * 100) : 0
+        };
+    }, [selectedOffer.retail_price_paise, product.mrp_paise, product.suggested_retail_price_paise]);
     const categoryName = product.shopping_categories?.name || 'Category';
 
     return (
@@ -390,10 +411,14 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                     : [];
                                 const displayUrl = allImages[selectedImageIndex] || null;
                                 return displayUrl ? (
-                                    <img
+                                    <Image
                                         src={displayUrl}
                                         alt={product.title}
-                                        className={`w-full h-full object-contain relative z-10 ${isDark ? '' : 'mix-blend-multiply'}`}
+                                        fill
+                                        sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 540px"
+                                        className={`object-contain relative z-10 ${isDark ? '' : 'mix-blend-multiply'}`}
+                                        priority
+                                        quality={85}
                                     />
                                 ) : (
                                     <div className={`flex flex-col items-center justify-center ${isDark ? 'text-white/10' : 'text-slate-200'}`}>
@@ -463,10 +488,14 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                                 }`}
                                             style={idx === selectedImageIndex ? { borderColor: primaryColor } : {}}
                                         >
-                                            <img
+                                            <Image
                                                 src={url}
                                                 alt={`View ${idx + 1}`}
+                                                width={56}
+                                                height={56}
                                                 className="w-full h-full object-cover"
+                                                loading="lazy"
+                                                quality={65}
                                             />
                                         </button>
                                     ))}
@@ -768,7 +797,15 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                                 </div>
                                             )}
                                             {rProduct.product_images?.[0] ? (
-                                                <img src={rProduct.product_images[0]} alt={rProduct.title} className={`w-[80%] h-[80%] object-contain group-hover:scale-105 transition-transform ${isDark ? '' : 'mix-blend-multiply'}`} />
+                                                <Image
+                                                    src={rProduct.product_images[0]}
+                                                    alt={rProduct.title}
+                                                    fill
+                                                    sizes="160px"
+                                                    className={`object-contain p-[10%] group-hover:scale-105 transition-transform ${isDark ? '' : 'mix-blend-multiply'}`}
+                                                    loading="lazy"
+                                                    quality={70}
+                                                />
                                             ) : (
                                                 <Package size={24} className={isDark ? 'text-white/10' : 'text-slate-200'} />
                                             )}
@@ -914,15 +951,19 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                 </div>
             </div>
 
-            <ConfirmModal
-                isOpen={confirmModalOpen}
-                onConfirm={handleConfirmClearCart}
-                onCancel={handleCancelClearCart}
-                title="Different Store"
-                message="Your cart contains items from another seller. Clear cart to add this item?"
-                confirmLabel="Clear & Add"
-                cancelLabel="Cancel"
-            />
+            <Suspense fallback={null}>
+                {confirmModalOpen && (
+                    <ConfirmModal
+                        isOpen={confirmModalOpen}
+                        onConfirm={handleConfirmClearCart}
+                        onCancel={handleCancelClearCart}
+                        title="Different Store"
+                        message="Your cart contains items from another seller. Clear cart to add this item?"
+                        confirmLabel="Clear & Add"
+                        cancelLabel="Cancel"
+                    />
+                )}
+            </Suspense>
         </div>
     );
 }

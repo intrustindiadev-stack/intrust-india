@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import { createClient } from "@/lib/supabaseClient";
 import {
   ShoppingBag,
@@ -28,6 +28,7 @@ import {
   Clock
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 const SabpaisaPaymentModal = React.lazy(() => import("@/components/payment/SabpaisaPaymentModal"));
@@ -60,7 +61,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
   const [addressForm, setAddressForm] = useState({
     address: "", city: "", state: "", pincode: "", phone: ""
   });
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -824,7 +825,16 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                         className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex-shrink-0 p-1.5 flex items-center justify-center ${isDark ? 'bg-[#0c0e14] border border-white/[0.04]' : 'bg-slate-50 border border-slate-100'}`}
                       >
                         {item.shopping_products?.product_images?.[0] ? (
-                          <img src={item.shopping_products.product_images[0]} alt="product" className={`w-full h-full object-contain ${isDark ? '' : 'mix-blend-multiply'}`} />
+                          <div className="relative w-full h-full">
+                            <Image
+                              src={item.shopping_products.product_images[0]}
+                              alt="product"
+                              fill
+                              sizes="(max-width: 640px) 20vw, 80px"
+                              className={`object-contain ${isDark ? '' : 'mix-blend-multiply'}`}
+                              quality={60}
+                            />
+                          </div>
                         ) : (
                           <Package size={20} className={isDark ? 'text-white/10' : 'text-slate-200'} />
                         )}

@@ -189,6 +189,45 @@ function CareerApplyForm() {
         }
     };
 
+    // ── KYC CHECK ──────────────────────────────────────────────────
+    if (user && profile && profile.kyc_status !== 'verified') {
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col">
+                <Navbar />
+                <div className="flex-1 flex items-center justify-center px-4 py-32">
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                        className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8 max-w-md w-full text-center relative overflow-hidden">
+                        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-500 to-orange-600" />
+                        <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-amber-500 border border-amber-100 animate-pulse">
+                            <Shield size={32} />
+                        </div>
+                        <h2 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">KYC Verification Required</h2>
+                        <p className="text-gray-500 text-sm leading-relaxed mb-6">
+                            To ensure authenticity and secure our internal networks, all job applicants are required to complete their **KYC Verification** before applying for job roles at InTrust.
+                        </p>
+                        
+                        <div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 text-left space-y-2">
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Why is this required?</p>
+                            <p className="text-xs text-gray-600 leading-relaxed">
+                                KYC verification connects your authenticated profile details (Aadhaar, PAN, and address proof) to your professional application, eliminating identity mismatch risks and preparing you for immediate onboarding once hired.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                            <Link href="/profile?section=kyc" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-2xl shadow-lg shadow-amber-500/25 hover:from-amber-600 active:scale-95 transition-all text-sm">
+                                Complete KYC Now <ChevronRight size={16} />
+                            </Link>
+                            <Link href="/career" className="text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">
+                                Back to Careers
+                            </Link>
+                        </div>
+                    </motion.div>
+                </div>
+                <CustomerBottomNav />
+            </div>
+        );
+    }
+
     // ── SUCCESS STATE ──────────────────────────────────────────────
     if (submitted) {
         return (
