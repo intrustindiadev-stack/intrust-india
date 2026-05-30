@@ -35,23 +35,15 @@ const SAMPLE_ROWS = [
 ];
 
 function generateCSV() {
-    const note = [
-        '# INTRUST PRODUCT BULK UPLOAD TEMPLATE',
-        '# Rules:',
-        '# - title, description, category, wholesale_price, selling_price, mrp, stock, gst_percent are REQUIRED',
-        '# - category must exactly match an active category name in the admin panel',
-        '# - prices are in ₹ (rupees, NOT paise). e.g. write 499 not 49900',
-        '# - gst_percent must be: 0, 5, 12, 18, or 28',
-        '# - image_url_1/2/3 must be publicly accessible URLs (optional)',
-        '# - is_active: true or false (defaults to true)',
-        '# - Max 500 rows per file',
-        '# - Delete these comment rows before uploading',
-    ].join('\n');
-
     const csv = [
-        note,
         SAMPLE_HEADERS.join(','),
-        ...SAMPLE_ROWS.map(r => r.map(v => v.includes(',') ? `"${v}"` : v).join(','))
+        ...SAMPLE_ROWS.map(r => r.map(v => {
+            let escaped = v.replace(/"/g, '""');
+            if (escaped.includes(',') || escaped.includes('\n') || escaped.includes('\r') || escaped.includes('"')) {
+                return `"${escaped}"`;
+            }
+            return escaped;
+        }).join(','))
     ].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

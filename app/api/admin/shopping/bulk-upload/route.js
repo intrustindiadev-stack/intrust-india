@@ -8,28 +8,58 @@ import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseSer
  * Handles quoted fields, commas inside quotes, and \r\n / \n line endings.
  */
 function parseCSV(text) {
-    const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
     const rows = [];
-    for (const line of lines) {
-        if (!line.trim()) continue;
-        const row = [];
-        let inQuote = false;
-        let field = '';
-        for (let i = 0; i < line.length; i++) {
-            const ch = line[i];
-            if (ch === '"') {
-                if (inQuote && line[i + 1] === '"') { field += '"'; i++; }
-                else { inQuote = !inQuote; }
-            } else if (ch === ',' && !inQuote) {
-                row.push(field.trim()); field = '';
+    let row = [];
+    let field = '';
+    let inQuote = false;
+
+    let i = 0;
+    while (i < text.length) {
+        const ch = text[i];
+        
+        if (ch === '"') {
+            // Check if it's an escaped quote ("")
+            if (inQuote && text[i + 1] === '"') {
+                field += '"';
+                i += 2; // skip both
             } else {
-                field += ch;
+                inQuote = !inQuote;
+                i++;
             }
+        } else if (ch === ',' && !inQuote) {
+            row.push(field.trim());
+            field = '';
+            i++;
+        } else if ((ch === '\n' || ch === '\r') && !inQuote) {
+            row.push(field.trim());
+            // Filter out comment lines starting with '#'
+            if (row.length > 0 && !row[0].trim().startsWith('#')) {
+                rows.push(row);
+            }
+            row = [];
+            field = '';
+            
+            // Advance past \r\n
+            if (ch === '\r' && text[i + 1] === '\n') {
+                i += 2;
+            } else {
+                i++;
+            }
+        } else {
+            field += ch;
+            i++;
         }
-        row.push(field.trim());
-        rows.push(row);
     }
-    return rows;
+    // Push the remaining field and row if any
+    if (field || row.length > 0) {
+        row.push(field.trim());
+        if (row.length > 0 && !row[0].trim().startsWith('#')) {
+            rows.push(row);
+        }
+    }
+    
+    // Clean up empty lines
+    return rows.filter(r => r.length > 0 && r.some(cell => cell.trim() !== ''));
 }
 
 const VALID_GST = new Set([0, 5, 12, 18, 28]);
