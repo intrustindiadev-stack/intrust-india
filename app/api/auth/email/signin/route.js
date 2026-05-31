@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabaseServer';
 import { createServerClient } from '@supabase/ssr';
 import { sendTemplateMessage, LOGIN_ALERT_TEMPLATE } from '@/lib/omniflow';
 import crypto from 'crypto';
+import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
 
 const MAX_ATTEMPTS = 5;
 const LOCK_DURATION_MINUTES = 15;
@@ -196,6 +197,9 @@ export async function POST(request) {
 
         // 7. WhatsApp login security alert (non-blocking, dedup: 5-min cooldown)
         try {
+            // Ensure binding exists before reading it for the login alert
+            await ensureWhatsAppBinding({ userId: existing.id });
+
             // user_channel_bindings schema: { user_id, phone, whatsapp_opt_in, linked_at }
             const { data: binding } = await admin
                 .from('user_channel_bindings')

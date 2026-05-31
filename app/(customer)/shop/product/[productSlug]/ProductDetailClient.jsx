@@ -164,7 +164,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const allOffers = useMemo(() => {
         const platformOffer = {
             is_platform_direct: true,
-            retail_price_paise: product.suggested_retail_price_paise,
+            retail_price_paise: product.platform_price_paise ?? product.suggested_retail_price_paise,
             merchant_name: 'InTrust Official',
             stock: product.admin_stock
         };
@@ -186,7 +186,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                 is_active: inv.is_active
             }))
         ].sort((a, b) => a.retail_price_paise - b.retail_price_paise);
-    }, [product.suggested_retail_price_paise, product.admin_stock, inventory]);
+    }, [product.platform_price_paise, product.suggested_retail_price_paise, product.admin_stock, inventory]);
 
     const isOfferOOS = useCallback((off) =>
         off.is_platform_direct ? isPlatformProductOOS(product) : isInventoryRowOOS(off)

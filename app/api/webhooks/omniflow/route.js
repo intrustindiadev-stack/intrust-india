@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabaseServer';
-import { hashOTP } from '@/lib/otpUtils';
-import { sendWhatsAppMessage, sendMessageToAgent, normalisePhone, sendTemplateMessage, WELCOME_TEMPLATE, MERCHANT_WELCOME_LINKED_TEMPLATE } from '@/lib/omniflow';
+import { sendWhatsAppMessage, sendMessageToAgent, normalisePhone } from '@/lib/omniflow';
 import { sanitizeMessage } from '@/lib/piiFilter';
 import { enforceIntent } from '@/lib/intentEnforcer';
 import { buildMerchantContext, formatMerchantContextForPrompt } from '@/lib/chat/merchantBuildContext';
@@ -389,126 +388,7 @@ export async function POST(req) {
     // Idempotency check must remain before inbound log
 
 
-    // -------------------------------------------------------------------
-    // FLOW A: Check if this is an OTP reply for phone linking
-    // -------------------------------------------------------------------
     const trimmedMessage = userMessage.trim();
-    const isNumericSixDigit = /^\d{6}$/.test(trimmedMessage);
-
-    if (isNumericSixDigit) {
-      const candidateHash = hashOTP(trimmedMessage);
-
-      const { data: otpRecord, error: otpError } = await admin
-        .from('whatsapp_otp_codes')
-        .select('id, user_id, expires_at, is_used')
-        .eq('phone', normalised)
-        .eq('otp_hash', candidateHash)
-        .eq('is_used', false)
-        .maybeSingle();
-
-      if (!otpError && otpRecord && new Date(otpRecord.expires_at) > new Date()) {
-        // Fetch role to determine audience
-        const { data: userProfile } = await admin
-          .from('user_profiles')
-          .select('role')
-          .eq('id', otpRecord.user_id)
-          .single();
-        const role = userProfile?.role || 'customer';
-        const isMerchant = ['merchant', 'admin', 'super_admin'].includes(role);
-        const audience = isMerchant ? 'merchant' : 'customer';
-
-        // Log inbound with resolved audience
-        await logMessage({
-          userId: otpRecord.user_id,
-          phoneHash,
-          wamid,
-          direction: 'inbound',
-          channel: 'whatsapp',
-          status: 'delivered',
-          contentPreview: userMessage,
-          audience,
-        });
-
-        // Valid OTP — link the phone
-        const { error: bindError } = await admin
-          .from('user_channel_bindings')
-          .upsert({
-            user_id: otpRecord.user_id,
-            phone: normalised,
-            audience,
-            whatsapp_opt_in: true,
-            linked_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'user_id,audience' });
-
-        if (bindError) {
-          console.error('[omniflow-webhook] Binding insert error:', bindError);
-          await sendWhatsAppMessage(
-            normalised,
-            'Something went wrong linking your WhatsApp. Please try again from the website.'
-          );
-        } else {
-          // Mark OTP as used
-          await admin
-            .from('whatsapp_otp_codes')
-            .update({ is_used: true })
-            .eq('id', otpRecord.id);
-
-          // Insert in-app notification for WhatsApp linking
-          try {
-            await admin.from('notifications').insert({
-              user_id: otpRecord.user_id,
-              title: 'WhatsApp Connected ✅',
-              body: "Your WhatsApp number has been linked. You'll now receive order updates and alerts via WhatsApp.",
-              type: 'success',
-              reference_type: 'whatsapp_connected',
-            });
-          } catch {
-            // Non-fatal
-          }
-
-          // Send welcome template (plain text won't work — no 24-hour window yet)
-          const template = audience === 'merchant'
-            ? MERCHANT_WELCOME_LINKED_TEMPLATE
-            : WELCOME_TEMPLATE;
-
-          await sendTemplateMessage(
-            normalised,
-            template.name,
-            template.language,
-            template.buildComponents()
-          );
-          const confirmMsg =
-            '✅ Your WhatsApp has been successfully linked to your InTrust India account.\n\n' +
-            'You can now use this chat to:\n' +
-            '• Check your wallet balance\n' +
-            '• View your KYC verification status\n' +
-            '• Review recent transactions\n\n' +
-            'Simply send us a message and our assistant will respond instantly.\n' +
-            'For detailed account management, visit: intrustindia.com';
-
-          await logMessage({
-            userId: otpRecord.user_id,
-            phoneHash,
-            direction: 'outbound',
-            channel: 'whatsapp',
-            status: 'delivered',
-            contentPreview: confirmMsg,
-            audience,
-          });
-        }
-
-        return new NextResponse('OK', { status: 200 });
-      }
-
-      // Looks like an OTP attempt but doesn't match
-      if (isNumericSixDigit) {
-        const errMsg = 'Invalid or expired OTP. Please request a new code from the InTrust website.';
-        await sendWhatsAppMessage(normalised, errMsg);
-        await logMessage({ phoneHash, direction: 'outbound', channel: 'whatsapp', status: 'delivered', contentPreview: errMsg });
-        return new NextResponse('OK', { status: 200 });
-      }
-    }
 
     // -------------------------------------------------------------------
     // FLOW B: Regular chat message
@@ -521,7 +401,7 @@ export async function POST(req) {
       .eq('phone', normalised);
 
     if (!bindings || bindings.length === 0) {
-      const notLinkedMsg = 'Please link your WhatsApp first by visiting intrustindia.com → Profile → Connect WhatsApp.';
+      const notLinkedMsg = 'Your phone number is not yet linked to an InTrust India account. Please sign up or log in at intrustindia.com to get started.';
       await sendWhatsAppMessage(normalised, notLinkedMsg);
       await logMessage({ phoneHash, direction: 'outbound', channel: 'whatsapp', status: 'delivered', contentPreview: notLinkedMsg });
       return new NextResponse('OK', { status: 200 });

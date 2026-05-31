@@ -6,7 +6,7 @@ import {
     ShoppingBag, Plus, Package, PackageX, TrendingUp, DollarSign,
     ChevronRight, Tags, ClipboardList, Store, Edit,
     ToggleLeft, ToggleRight, Search, Filter, Clock,
-    CheckCircle2, AlertTriangle, Trash2, ShieldCheck, RefreshCw, FileSpreadsheet, X
+    CheckCircle2, AlertTriangle, Trash2, ShieldCheck, RefreshCw, FileSpreadsheet, X, ArrowDownToLine
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
@@ -206,6 +206,20 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                                 {pendingApprovals}
                             </span>
                         )}
+                    </Link>
+                    <Link
+                        href="/admin/shopping/procurement"
+                        className="group flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-4 sm:pl-5 sm:pr-4 py-3 sm:py-3.5 rounded-2xl sm:rounded-[1.5rem] font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                    >
+                        <ArrowDownToLine size={16} className="text-indigo-500" />
+                        <span>Procure</span>
+                    </Link>
+                    <Link
+                        href="/admin/shopping/procurement/history"
+                        className="group flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-4 sm:pl-5 sm:pr-4 py-3 sm:py-3.5 rounded-2xl sm:rounded-[1.5rem] font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                    >
+                        <Clock size={16} className="text-indigo-500" />
+                        <span>Hist.</span>
                     </Link>
                     <Link
                         href="/admin/shopping/orders"

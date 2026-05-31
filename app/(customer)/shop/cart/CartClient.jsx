@@ -88,6 +88,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
             product_images,
             mrp_paise,
             suggested_retail_price_paise,
+            platform_price_paise,
             category,
             gst_percentage
           )
@@ -498,7 +499,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
   // Bill
   const billDetails = cartItems.reduce((acc, item) => {
     const sellingPrice = item.is_platform_item
-      ? (item.shopping_products?.suggested_retail_price_paise || 0)
+      ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
       : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
 
     const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
@@ -798,7 +799,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
               <AnimatePresence mode="popLayout">
                 {cartItems.map((item, idx) => {
                   const sellingPrice = item.is_platform_item
-                    ? (item.shopping_products?.suggested_retail_price_paise || 0)
+                    ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
                     : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
                   const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
                   const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;

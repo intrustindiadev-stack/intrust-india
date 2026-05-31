@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
 import { hashOTP, validatePhoneNumber } from '@/lib/otpUtils';
+import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
 
 /**
  * Profile Phone Verification API
@@ -141,6 +142,11 @@ export async function POST(request) {
         // All downstream steps completed — now it is safe to consume the OTP.
         // Any failure before this point left the OTP intact so the user can retry.
         await supabaseAdmin.from('otp_codes').update({ is_used: true }).eq('id', otpRecord.id);
+
+        // Non-blocking: ensure WhatsApp binding is up-to-date for this user.
+        ensureWhatsAppBinding({ userId }).catch((e) =>
+            console.warn('[VERIFY-PHONE] ensureWhatsAppBinding failed (non-fatal):', e.message)
+        );
 
         console.log('[VERIFY-PHONE] Phone verified and linked for user:', userId);
         return NextResponse.json({ success: true, phone: authPhone });

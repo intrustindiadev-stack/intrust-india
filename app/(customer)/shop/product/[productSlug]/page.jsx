@@ -30,7 +30,8 @@ export default async function ProductDetailPage({ params }) {
         .from('shopping_products')
         .select(`
             id, title, description, product_images, mrp_paise,
-            suggested_retail_price_paise, category_id, category, slug,
+            suggested_retail_price_paise, platform_price_paise, platform_listed,
+            category_id, category, slug,
             is_active, admin_stock, gst_percentage, hsn_code, approval_status, created_at,
             shopping_categories(name, color_primary, color_secondary)
         `)
@@ -101,9 +102,9 @@ export default async function ProductDetailPage({ params }) {
             .from('shopping_products')
             .select(`
                 id, slug, title, description, product_images, category,
-                mrp_paise, suggested_retail_price_paise, is_active
+                mrp_paise, suggested_retail_price_paise, platform_listed, platform_price_paise
             `)
-            .eq('is_active', true)
+            .eq('platform_listed', true)
             .gt('admin_stock', 0)
             .is('deleted_at', null)
             .ilike('category', product.category)
@@ -113,7 +114,7 @@ export default async function ProductDetailPage({ params }) {
         const platformMapped = (recPlatform || []).map(p => ({
             id: `platform-${p.id}`,
             product_id: p.id,
-            retail_price_paise: p.suggested_retail_price_paise,
+            retail_price_paise: p.platform_price_paise ?? p.suggested_retail_price_paise,
             // Use a sentinel value (1) to signal in-stock without leaking the real count
             stock_quantity: 1,
             is_platform_direct: true,
@@ -127,7 +128,7 @@ export default async function ProductDetailPage({ params }) {
                 category: p.category,
                 mrp_paise: p.mrp_paise,
                 suggested_retail_price_paise: p.suggested_retail_price_paise,
-                is_active: p.is_active,
+                platform_price_paise: p.platform_price_paise,
             },
         }));
 

@@ -584,6 +584,12 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                         >
                             Purchase History
                         </Link>
+                        <Link
+                            href="/merchant/shopping/sales-to-intrust"
+                            className="px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest bg-white dark:bg-white/5 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all"
+                        >
+                            Sales to InTrust
+                        </Link>
                     </div>
 
                     {/* Category Filters */}

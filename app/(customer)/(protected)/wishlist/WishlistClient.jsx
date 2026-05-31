@@ -218,7 +218,7 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
                 {group.items.map((item, idx) => {
                   const product = item.shopping_products;
                   const price = item.is_platform_item 
-                    ? product?.suggested_retail_price_paise 
+                    ? (product?.platform_price_paise ?? product?.suggested_retail_price_paise)
                     : (item.merchant_inventory?.retail_price_paise || product?.suggested_retail_price_paise);
                   
                   const isOOS = item.is_platform_item 

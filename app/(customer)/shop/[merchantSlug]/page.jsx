@@ -26,8 +26,8 @@ export default async function MerchantStorefrontPage({ params }) {
         const [platformProductsResult, officialCustomerResult, platformSettingsResult] = await Promise.all([
             supabase
                 .from('shopping_products')
-                .select('id, title, product_images, category, mrp_paise, suggested_retail_price_paise, admin_stock, is_active')
-                .eq('is_active', true)
+                .select('id, title, product_images, category, mrp_paise, suggested_retail_price_paise, platform_price_paise, admin_stock, platform_listed')
+                .eq('platform_listed', true)
                 .is('deleted_at', null),
             user
                 ? supabase.from('user_profiles').select('*').eq('id', user.id).single()
@@ -64,7 +64,7 @@ export default async function MerchantStorefrontPage({ params }) {
         mergedInventory = (platformProducts || []).map(p => ({
             id: `platform-${p.id}`,
             product_id: p.id,
-            retail_price_paise: p.suggested_retail_price_paise,
+            retail_price_paise: p.platform_price_paise ?? p.suggested_retail_price_paise,
             stock_quantity: p.admin_stock,
             merchant_id: null,
             is_active: true,

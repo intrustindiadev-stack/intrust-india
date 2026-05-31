@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabaseServer';
 import { hashOTP, validatePhoneNumber, getStablePhoneEmail, isPseudoEmail } from '@/lib/otpUtils';
 import crypto from 'crypto';
 import { createServerClient } from '@supabase/ssr';
+import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
 
 export async function POST(request) {
     console.log('[VERIFY-OTP] Request received');
@@ -174,6 +175,11 @@ export async function POST(request) {
         // Session is fully established — now it is safe to consume the OTP.
         // Any failure before this point left the OTP intact so the user can retry.
         await supabaseAdmin.from('otp_codes').update({ is_used: true }).eq('id', otpRecord.id);
+
+        // Non-blocking: ensure WhatsApp binding is up-to-date for this user.
+        ensureWhatsAppBinding({ userId }).catch((e) =>
+            console.warn('[VERIFY-OTP] ensureWhatsAppBinding failed (non-fatal):', e.message)
+        );
 
         const session = exchanged.session;
         console.log(`[VERIFY-OTP] Session minted successfully for user ${userId}`);

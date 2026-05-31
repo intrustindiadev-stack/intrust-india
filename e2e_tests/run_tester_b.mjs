@@ -55,6 +55,7 @@ const suites = [
     path.join(__dirname, 'tester_b_merchant_orders.mjs'),
     path.join(__dirname, 'tester_b_shopping_storefront.mjs'),
     path.join(__dirname, 'tester_b_admin_panel.mjs'),
+    path.join(__dirname, 'tester_b_procurement.mjs'),
 ];
 
 // ── Main ──

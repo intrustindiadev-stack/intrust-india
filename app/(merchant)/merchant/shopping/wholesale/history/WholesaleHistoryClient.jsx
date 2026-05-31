@@ -218,7 +218,7 @@ export default function WholesaleHistoryClient({ orders = [], merchant }) {
     return (
         <div className="space-y-10">
             {/* Tab Bar */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-2 mb-2 -mx-6 px-6 sm:mx-0 sm:px-0">
                 <Link
                     href="/merchant/shopping/wholesale"
                     className="whitespace-nowrap px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all"
@@ -228,6 +228,12 @@ export default function WholesaleHistoryClient({ orders = [], merchant }) {
                 <span className="whitespace-nowrap px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest bg-slate-900 text-white shadow-xl shadow-slate-900/20">
                     Purchase History
                 </span>
+                <Link
+                    href="/merchant/shopping/sales-to-intrust"
+                    className="whitespace-nowrap px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all"
+                >
+                    Sales to InTrust
+                </Link>
             </div>
 
             {/* Summary Stats */}

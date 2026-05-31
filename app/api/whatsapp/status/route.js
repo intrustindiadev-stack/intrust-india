@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
+import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
 
 /**
  * GET /api/whatsapp/status
@@ -15,6 +16,10 @@ export async function GET() {
     }
 
     const admin = createAdminClient();
+
+    // Ensure binding is up-to-date before reading it
+    await ensureWhatsAppBinding({ userId: user.id });
+
     const { data: binding, error } = await admin
       .from('user_channel_bindings')
       .select('phone, whatsapp_opt_in, linked_at')

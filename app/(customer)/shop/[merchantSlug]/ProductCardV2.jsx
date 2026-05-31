@@ -38,7 +38,7 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#00000
     // retail_price_paise on merchant_inventory can be stale between admin updates.
     // See migration: 20260514_sync_platform_inventory_retail_price.sql
     const sellingPrice = item.is_platform_product
-        ? (product?.suggested_retail_price_paise || item.retail_price_paise || 0) / 100
+        ? ((product?.platform_price_paise ?? product?.suggested_retail_price_paise) || item.retail_price_paise || 0) / 100
         : (item.retail_price_paise || 0) / 100;
     const savings = mrp > sellingPrice ? mrp - sellingPrice : 0;
     const discountPct = mrp > 0 ? Math.round((savings / mrp) * 100) : 0;

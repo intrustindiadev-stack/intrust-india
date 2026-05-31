@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
+import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
 
 /**
  * GET /api/merchant/whatsapp/status
@@ -24,6 +25,9 @@ export async function GET() {
     if (!profile || !['merchant', 'admin', 'super_admin'].includes(profile.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+
+    // Ensure binding is up-to-date before reading the view
+    await ensureWhatsAppBinding({ userId: user.id });
 
     const { data: viewData, error } = await admin
       .from('merchant_whatsapp_status')
@@ -54,45 +58,3 @@ export async function GET() {
   }
 }
 
-export async function DELETE() {
-  try {
-    const supabase = await createServerSupabaseClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const admin = createAdminClient();
-    const { data: profile } = await admin
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile || !['merchant', 'admin', 'super_admin'].includes(profile.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    await admin
-      .from('user_channel_bindings')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('audience', 'merchant');
-
-    try {
-      await admin.from('notifications').insert({
-        user_id: user.id,
-        title: 'WhatsApp Disconnected',
-        body: "Your business WhatsApp has been unlinked.",
-        type: 'info',
-        reference_type: 'whatsapp_disconnected',
-      });
-    } catch {}
-
-    return NextResponse.json({ success: true, linked: false });
-  } catch (err) {
-    console.error('[merchant/whatsapp/status] Unhandled DELETE error:', err);
-    return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
-  }
-}
