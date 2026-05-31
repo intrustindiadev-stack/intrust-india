@@ -82,7 +82,7 @@ export default function AdminInvestmentsPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Mera Paisa Management</h1>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-tight">AI Grow Management</h1>
                         <p className="text-sm text-slate-500 font-medium mt-1">Manage capital deployments and performance feeds</p>
                     </div>
                     <div className="flex items-center gap-3">

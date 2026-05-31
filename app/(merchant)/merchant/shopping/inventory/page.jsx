@@ -79,13 +79,22 @@ export default async function MerchantShopPage() {
                 </div>
                 <div className="flex flex-col gap-4 self-start sm:self-auto shrink-0 w-full max-w-sm ml-auto">
                     <StoreStatusToggle initialStoreData={merchant} />
-                    <Link
-                        href="/merchant/shopping/inventory/new"
-                        className="inline-flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2c5282] text-white px-5 py-3 rounded-2xl font-black text-sm transition-all shadow-xl shadow-blue-900/10 w-full"
-                    >
-                        <Plus size={18} />
-                        Add Custom Product
-                    </Link>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full">
+                        <Link
+                            href="/merchant/shopping/inventory/bulk"
+                            className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-[#1e3a5f] border-2 border-[#1e3a5f]/20 hover:border-[#1e3a5f]/40 px-4 py-3 rounded-2xl font-black text-sm transition-all w-full sm:w-auto"
+                        >
+                            <Sparkles size={16} />
+                            Bulk Add
+                        </Link>
+                        <Link
+                            href="/merchant/shopping/inventory/new"
+                            className="inline-flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2c5282] text-white px-5 py-3 rounded-2xl font-black text-sm transition-all shadow-xl shadow-blue-900/10 flex-1"
+                        >
+                            <Plus size={18} />
+                            Add Custom Product
+                        </Link>
+                    </div>
                 </div>
             </div>
 

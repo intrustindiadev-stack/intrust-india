@@ -56,7 +56,7 @@ const navigationGroups = [
             { name: 'Merchants', href: '/admin/merchants', icon: Store },
             { name: 'Store Status', href: '/admin/store-status', icon: Activity },
             { name: 'Store Credit', href: '/admin/merchants/udhari', icon: CreditCard },
-            { name: 'Mera Paisa', href: '/admin/investments', icon: TrendingUp },
+            { name: 'AI Grow', href: '/admin/investments', icon: TrendingUp },
         ]
     },
     {
