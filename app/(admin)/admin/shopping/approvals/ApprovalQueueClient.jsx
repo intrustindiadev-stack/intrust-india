@@ -92,6 +92,37 @@ export default function ApprovalQueueClient({ initialProducts }) {
         }
     };
 
+    const handleApproveAll = async () => {
+        if (products.length === 0) return;
+        
+        const confirmApprove = window.confirm(`Are you sure you want to approve all ${products.length} pending products?`);
+        if (!confirmApprove) return;
+
+        setProcessingId('all');
+        try {
+            const productIds = products.map(p => p.id);
+            const res = await fetch('/api/admin/shopping/approve-products-bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productIds })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to approve products');
+
+            toast.success(`Successfully approved ${data.approvedIds?.length || products.length} products!`);
+            
+            // Optimistically remove all approved products
+            const approvedIdsSet = new Set(data.approvedIds || productIds);
+            setProducts(prev => prev.filter(p => !approvedIdsSet.has(p.id)));
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message || 'Bulk approval failed');
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
     return (
         <div className="p-6 lg:p-10 max-w-7xl mx-auto bg-[#f8f9fb] min-h-screen font-[family-name:var(--font-outfit)]">
             {/* Header */}
@@ -107,6 +138,16 @@ export default function ApprovalQueueClient({ initialProducts }) {
                         Review and approve custom products submitted by merchants.
                     </p>
                 </div>
+                {products.length > 0 && (
+                    <button
+                        onClick={handleApproveAll}
+                        disabled={processingId !== null}
+                        className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 shrink-0"
+                    >
+                        <CheckCircle size={16} />
+                        Approve All ({products.length})
+                    </button>
+                )}
             </div>
 
             {/* Products Grid */}

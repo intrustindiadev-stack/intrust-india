@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { ChevronLeft, TableProperties, Upload, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, TableProperties, Upload, CheckCircle2, XCircle, AlertTriangle, Lock } from 'lucide-react';
 import Link from 'next/link';
 import BulkProductTable from './BulkProductTable';
 import BulkCSVUploader from './BulkCSVUploader';
 
-export default function BulkProductPage({ merchantId }) {
+export default function BulkProductPage({ merchantId, isSubscribed = true }) {
     const [activeTab, setActiveTab] = useState('table');
     const [categories, setCategories] = useState([]);
     const [submitting, setSubmitting] = useState(false);
@@ -26,6 +26,10 @@ export default function BulkProductPage({ merchantId }) {
     }, []);
 
     const handleSubmit = async (products) => {
+        if (!isSubscribed) {
+            toast.error('An active subscription is required to submit products.');
+            return;
+        }
         setSubmitting(true);
         setResults(null);
         try {
@@ -36,12 +40,19 @@ export default function BulkProductPage({ merchantId }) {
                 body: JSON.stringify({ merchantId, products }),
             });
             const json = await res.json();
-            if (!res.ok) throw new Error(json.error || 'Submission failed');
-            setResults(json.results);
-            const successCount = json.results.filter(r => r.success).length;
-            const failCount = json.results.length - successCount;
+            if (!res.ok && res.status === 402) {
+                toast.error('Subscription required. Please subscribe to use this feature.');
+                return;
+            }
+            if (!res.ok && !json.results) throw new Error(json.error || 'Submission failed');
+            const results = json.results;
+            setResults(results);
+            const successCount = results.filter(r => r.success).length;
+            const failCount = results.length - successCount;
             if (failCount === 0) {
                 toast.success(`All ${successCount} products submitted for approval!`);
+            } else if (successCount === 0) {
+                toast.error(`All ${failCount} products had validation errors. See details below.`);
             } else {
                 toast.error(`${successCount} submitted, ${failCount} failed. See details below.`);
             }
@@ -97,8 +108,29 @@ export default function BulkProductPage({ merchantId }) {
                 ))}
             </div>
 
+            {/* Subscription gate banner */}
+            {!isSubscribed && (
+                <div className="flex items-center gap-4 p-5 bg-amber-50 border border-amber-200 rounded-2xl">
+                    <div className="w-11 h-11 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                        <Lock size={20} />
+                    </div>
+                    <div className="flex-1">
+                        <p className="font-black text-amber-800 text-sm">Active subscription required</p>
+                        <p className="text-amber-700 text-xs font-medium mt-0.5">
+                            You need an active subscription to bulk-add products. Please subscribe or renew to unlock this feature.
+                        </p>
+                    </div>
+                    <Link
+                        href="/merchant/subscription"
+                        className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-amber-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all shadow-md shrink-0"
+                    >
+                        Subscribe
+                    </Link>
+                </div>
+            )}
+
             {/* Tab switcher */}
-            <div className="flex items-center p-1 bg-white rounded-2xl border border-slate-200 shadow-sm w-fit">
+            <div className={`flex items-center p-1 bg-white rounded-2xl border border-slate-200 shadow-sm w-fit ${!isSubscribed ? 'opacity-50 pointer-events-none' : ''}`}>
                 {tabs.map(tab => {
                     const Icon = tab.icon;
                     return (
@@ -117,7 +149,7 @@ export default function BulkProductPage({ merchantId }) {
             </div>
 
             {/* Tab Content */}
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 sm:p-8">
+            <div className={`bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 sm:p-8 ${!isSubscribed ? 'opacity-50 pointer-events-none' : ''}`}>
                 {activeTab === 'table' ? (
                     <BulkProductTable categories={categories} onSubmit={handleSubmit} submitting={submitting} />
                 ) : (

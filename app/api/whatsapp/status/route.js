@@ -18,13 +18,17 @@ export async function GET() {
     const admin = createAdminClient();
 
     // Ensure binding is up-to-date before reading it
-    await ensureWhatsAppBinding({ userId: user.id });
+    const { audience, phone: ensurePhone } = await ensureWhatsAppBinding({ userId: user.id });
+
+    if (!audience) {
+      return NextResponse.json({ linked: false, hasPhone: false });
+    }
 
     const { data: binding, error } = await admin
       .from('user_channel_bindings')
       .select('phone, whatsapp_opt_in, linked_at')
       .eq('user_id', user.id)
-      .eq('audience', 'customer')
+      .eq('audience', audience)
       .maybeSingle();
 
     if (error) {
@@ -33,7 +37,7 @@ export async function GET() {
     }
 
     if (!binding) {
-      return NextResponse.json({ linked: false });
+      return NextResponse.json({ linked: false, hasPhone: !!ensurePhone });
     }
 
     return NextResponse.json({

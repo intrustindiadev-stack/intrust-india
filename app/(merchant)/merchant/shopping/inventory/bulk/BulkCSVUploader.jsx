@@ -2,21 +2,9 @@
 
 import { useState, useRef } from 'react';
 import { Upload, FileText, X, Eye, AlertCircle, Download } from 'lucide-react';
+import { parseCSV } from '@/lib/csvParser';
 
 const REQUIRED_COLUMNS = ['Product Name', 'Description', 'Category', 'Selling Price (₹)', 'MRP (₹)', 'Cost Price (₹)', 'GST %', 'HSN Code', 'Initial Stock'];
-
-function parseCSV(text) {
-    const lines = text.trim().split('\n').filter(l => l.trim());
-    if (lines.length < 2) return { headers: [], rows: [], error: 'CSV must have at least a header row and one data row.' };
-    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-    const rows = lines.slice(1).map((line, idx) => {
-        const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-        const obj = { _row: idx + 2 };
-        headers.forEach((h, i) => { obj[h] = values[i] || ''; });
-        return obj;
-    });
-    return { headers, rows, error: null };
-}
 
 function mapToProduct(row, headers, columnMap) {
     const get = (key) => row[headers[columnMap[key]] ?? key] || '';
@@ -62,14 +50,39 @@ export default function BulkCSVUploader({ categories, onSubmit, submitting }) {
         setParseError(null);
         const reader = new FileReader();
         reader.onload = (e) => {
-            const { headers, rows, error } = parseCSV(e.target.result);
-            if (error) { setParseError(error); return; }
-            // auto-map columns
+            const csvRows = parseCSV(e.target.result);
+            if (csvRows.length < 2) {
+                setParseError('CSV must have at least a header row and one data row.');
+                return;
+            }
+
+            // First row = headers
+            const headers = csvRows[0].map(h => h.replace(/^\"|\"$/g, ''));
+            const dataRows = csvRows.slice(1);
+
+            // Validate required headers
+            const missingHeaders = REQUIRED_COLUMNS.filter(
+                col => !headers.some(h => h.toLowerCase().includes(col.toLowerCase().split(' ')[0]))
+            );
+            if (missingHeaders.length > 0) {
+                setParseError(`Missing required columns: ${missingHeaders.join(', ')}. Please use the template.`);
+                return;
+            }
+
+            // Auto-map columns
             const columnMap = {};
             REQUIRED_COLUMNS.forEach(col => {
                 const idx = headers.findIndex(h => h.toLowerCase().includes(col.toLowerCase().split(' ')[0]));
                 if (idx !== -1) columnMap[col] = idx;
             });
+
+            // Convert row arrays to objects keyed by header name
+            const rows = dataRows.map((cols, idx) => {
+                const obj = { _row: idx + 2 };
+                headers.forEach((h, i) => { obj[h] = cols[i] || ''; });
+                return obj;
+            });
+
             setParsed({ headers, rows, columnMap });
         };
         reader.readAsText(f);

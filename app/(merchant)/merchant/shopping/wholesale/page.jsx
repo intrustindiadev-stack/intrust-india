@@ -28,6 +28,7 @@ export default async function WholesaleHubPage() {
         .from('shopping_products')
         .select('*')
         .eq('is_active', true)
+        .or('approval_status.eq.live,approval_status.is.null')
         .gt('admin_stock', 0)
         .is('deleted_at', null)
         .order('title');

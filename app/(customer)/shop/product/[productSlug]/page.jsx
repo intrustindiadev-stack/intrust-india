@@ -44,6 +44,12 @@ export default async function ProductDetailPage({ params }) {
         redirect("/shop");
     }
 
+    // Block access to pending-approval products on the public storefront.
+    // Products with approval_status = null are legacy admin/platform products — allow those.
+    if (product.approval_status && product.approval_status !== 'live') {
+        redirect('/shop');
+    }
+
     // 2. Fetch Inventory Info (use product.id for relational queries)
     const { data: inventory } = await supabase
         .from('merchant_inventory')
@@ -105,6 +111,7 @@ export default async function ProductDetailPage({ params }) {
                 mrp_paise, suggested_retail_price_paise, platform_listed, platform_price_paise
             `)
             .eq('platform_listed', true)
+            .or('approval_status.eq.live,approval_status.is.null')
             .gt('admin_stock', 0)
             .is('deleted_at', null)
             .ilike('category', product.category)
