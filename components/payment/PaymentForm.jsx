@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { usePayment } from '../../hooks/usePayment';
+import { normalizePayerMobile } from '@/lib/merchant/payerContactRules';
 
 const PaymentForm = ({ amount, productDescription, userProfile }) => {
     const { initiatePayment, loading, error } = usePayment();
     const [details, setDetails] = useState({
         payerName: userProfile?.full_name || '',
         payerEmail: userProfile?.email || '',
-        payerMobile: userProfile?.phone ? userProfile.phone.replace(/\D/g, '').replace(/^91/, '').slice(-10) : '',
+        payerMobile: userProfile?.phone ? normalizePayerMobile(userProfile.phone) : '',
         payerAddress: '', // Optional
     });
 
@@ -20,7 +21,7 @@ const PaymentForm = ({ amount, productDescription, userProfile }) => {
         initiatePayment({
             amount,
             ...details,
-            payerMobile: details.payerMobile ? details.payerMobile.replace(/\D/g, '').replace(/^91/, '').slice(-10) : '',
+            payerMobile: details.payerMobile ? normalizePayerMobile(details.payerMobile) : '',
             udf1: productDescription // Example UDF usage
         });
     };
