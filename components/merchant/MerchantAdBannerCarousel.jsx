@@ -119,7 +119,7 @@ export default function MerchantAdBannerCarousel() {
 
     if (loading) return (
         <div className="w-full mb-6 sm:mb-10">
-            <div className="rounded-xl sm:rounded-3xl bg-slate-200 dark:bg-slate-800 animate-pulse min-h-[140px] sm:min-h-[200px]" />
+            <div className="rounded-xl sm:rounded-3xl bg-slate-200 dark:bg-slate-800 animate-pulse min-h-[140px] sm:min-h-[200px] lg:min-h-[260px] xl:min-h-[30px]" />
             <div className="flex justify-center gap-2 mt-2.5 sm:mt-4">
                 {[...Array(3)].map((_, i) => (
                     <div key={i} className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-700 animate-pulse" />
@@ -164,7 +164,7 @@ export default function MerchantAdBannerCarousel() {
                     >
                         {isDynamic ? (
                             // Dynamic Image Render
-                            <Link href={banner.target_url || '#'} className="block w-full min-h-[140px] sm:min-h-[200px] relative">
+                            <Link href={banner.target_url || '#'} className="block w-full min-h-[140px] sm:min-h-[200px] lg:min-h-[260px] xl:min-h-[300px] relative">
                                 <img
                                     src={banner.image_url}
                                     alt={banner.title}
@@ -188,7 +188,7 @@ export default function MerchantAdBannerCarousel() {
                                 <div className="absolute bottom-8 right-12 w-3 h-3 bg-white/10 rounded-full animate-pulse delay-700" />
 
                                 {/* Content */}
-                                <div className="relative z-10 flex items-center justify-between p-4 sm:p-8 lg:p-10 min-h-[140px] sm:min-h-[200px]">
+                                <div className="relative z-10 flex items-center justify-between p-4 sm:p-8 lg:p-10 min-h-[140px] sm:min-h-[200px] lg:min-h-[260px] xl:min-h-[300px]">
                                     <div className="flex-1 pr-2 sm:pr-4">
                                         <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
                                             <span className="text-[9px] sm:text-xs font-bold uppercase tracking-[0.15em] text-white/80 bg-white/10 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full backdrop-blur-sm">
