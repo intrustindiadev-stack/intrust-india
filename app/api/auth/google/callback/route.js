@@ -32,21 +32,42 @@ function parseState(raw) {
  * Issue a session for a given user by creating a magic sign-in token
  * via the admin API, then exchanging it for a full session.
  */
-async function issueSessionForUser(userId, redirectResponse) {
-    const { data: linkData, error: linkErr } =
-        await supabaseAdmin.auth.admin.generateLink({
-            type: 'magiclink',
-            email: '',   // not needed — we'll use a different approach
-        });
-    // generateLink doesn't work without email. Use createSession instead.
-    const { data: sessionData, error: sessionErr } =
-        await supabaseAdmin.auth.admin.createSession(userId, { data: {} });
+async function issueSessionForUser(userId, email) {
+    if (typeof supabaseAdmin.auth.admin.createSession === 'function') {
+        const { data: sessionData, error: sessionErr } = await supabaseAdmin.auth.admin.createSession(userId);
+        if (!sessionErr && sessionData?.session) {
+            return sessionData.session;
+        }
+    }
 
-    if (sessionErr || !sessionData?.session) {
-        console.error('[Google OAuth] Could not create session for merged user:', sessionErr?.message);
+    const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'magiclink',
+        email: email,
+    });
+
+    if (linkErr || !linkData?.properties?.hashed_token) {
+        console.error('[Google OAuth] generateLink fallback failed:', linkErr?.message);
         return null;
     }
-    return sessionData.session;
+
+    const exchangeClient = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        { cookies: { getAll: () => [], setAll: () => {} } }
+    );
+
+    const { data: otpData, error: otpErr } = await exchangeClient.auth.verifyOtp({
+        email: email,
+        token: linkData.properties.hashed_token,
+        type: 'magiclink',
+    });
+
+    if (otpErr || !otpData?.session) {
+        console.error('[Google OAuth] verifyOtp fallback failed:', otpErr?.message);
+        return null;
+    }
+
+    return otpData.session;
 }
 
 /**
@@ -196,108 +217,109 @@ export async function GET(request) {
         }
 
         // ── Flow B: Normal Google sign-in — check for existing email account ──────
-        // After signInWithIdToken, check if a *different* Supabase user already
-        // exists with the same email and provider = 'email' (or 'phone_otp').
-        const { data: existingProfile } = await supabaseAdmin
+        // 1. Fetch the signed-in user's own profile + establishment signal
+        const { data: selfProfile } = await supabaseAdmin
             .from('user_profiles')
-            .select('id, auth_provider, full_name')
-            .eq('email', googleEmail)
-            .neq('id', user.id)                  // must be a different user
-            .in('auth_provider', ['email', 'phone_otp', 'multiple'])
+            .select('id, role, auth_provider')
+            .eq('id', user.id)
             .maybeSingle();
 
-        if (existingProfile) {
-            // ── Merge: keep the email-based user, delete the new Google duplicate ──
-            const survivingId = existingProfile.id;
-            console.log('[Google OAuth][Flow B] Detected duplicate. Merging Google user', user.id, '→ email user', survivingId);
+        const userCreatedAtMs = user.created_at ? new Date(user.created_at).getTime() : 0;
+        const isBrandNew = (Date.now() - userCreatedAtMs < 10000) &&
+                           (user.identities?.length <= 1 || (user.app_metadata?.providers?.length === 1 && user.app_metadata.providers[0] === 'google'));
 
-            // 1. Update the surviving user's Supabase auth record to include the
-            //    Google identity (add google as additional provider).
-            //    Supabase admin updateUserById can add app_metadata identities.
-            await supabaseAdmin.auth.admin.updateUserById(survivingId, {
-                app_metadata: { provider: 'google', providers: ['email', 'google'] },
-                email_verified: true,
-            });
+        const signedInEstablished = !!selfProfile && (
+            selfProfile.role !== 'user' ||
+            !isBrandNew ||
+            selfProfile.auth_provider === 'multiple'
+        );
 
-            // 2. Update user_profiles for the surviving user
-            await supabaseAdmin
+        // 2. Gate the merge on establishment
+        let existingProfile = null;
+        if (!signedInEstablished) {
+            const { data } = await supabaseAdmin
                 .from('user_profiles')
-                .update({
-                    auth_provider:      'multiple',
-                    avatar_url:         googlePicture || undefined,
-                    email_verified:     true,
-                    email_verified_at:  new Date().toISOString(),
-                })
-                .eq('id', survivingId);
-
-            // 3. Delete the freshly-created Google-only duplicate user
-            //    (do this BEFORE writing any data to it)
-            try {
-                await supabaseAdmin.auth.admin.deleteUser(user.id);
-                console.log('[Google OAuth][Flow B] Deleted duplicate Google user:', user.id);
-            } catch (delErr) {
-                console.warn('[Google OAuth][Flow B] Could not delete duplicate user:', delErr?.message);
-            }
-
-            // 4. Audit log
-            try {
-                await supabaseAdmin.from('audit_logs').insert({
-                    user_id:  survivingId,
-                    action:   'account_linked',
-                    metadata: {
-                        method:           'google_merged_into_email',
-                        google_user_id:   user.id,
-                        surviving_id:     survivingId,
-                        email:            googleEmail,
-                    }
-                });
-            } catch (_) { /* non-fatal */ }
-
-            // 5. Issue a new session for the surviving (merged) user.
-            //    generateLink produces a one-time sign-in URL; we extract the
-            //    token_hash and exchange it for a real session via verifyOtp.
-            const { data: linkData, error: linkErr } =
-                await supabaseAdmin.auth.admin.generateLink({
-                    type:             'magiclink',
-                    email:            googleEmail,
-                    options:          { redirectTo: `${appUrl}/dashboard` },
-                });
-
-            if (linkErr || !linkData?.properties?.hashed_token) {
-                console.error('[Google OAuth][Flow B] Could not generate link for merged user:', linkErr?.message);
-                // Graceful fallback — send user to login with a helpful notice
-                return NextResponse.redirect(new URL('/login?merged=true', appUrl));
-            }
-
-            // Exchange the one-time token for a real session using a disposable anon client
-            const exchangeClient = createServerClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-                { cookies: { getAll: () => [], setAll: () => {} } }
-            );
-
-            const { data: otpData, error: otpErr } = await exchangeClient.auth.verifyOtp({
-                email:      googleEmail,
-                token:      linkData.properties.hashed_token,
-                type:       'magiclink',
-            });
-
-            if (otpErr || !otpData?.session) {
-                console.error('[Google OAuth][Flow B] verifyOtp failed for merged user:', otpErr?.message);
-                return NextResponse.redirect(new URL('/login?merged=true', appUrl));
-            }
-
-            session = otpData.session;
-            user    = otpData.user ?? otpData.session.user;
-        } else {
-            // No duplicate — normal Google sign-in. Check if profile exists first to avoid overwriting role
-            const { data: currentProfile } = await supabaseAdmin
-                .from('user_profiles')
-                .select('role, auth_provider')
-                .eq('id', user.id)
+                .select('id, auth_provider, full_name')
+                .eq('email', googleEmail)
+                .neq('id', user.id)
+                .in('auth_provider', ['email', 'phone_otp', 'multiple'])
                 .maybeSingle();
+            existingProfile = data;
+        }
 
-            if (currentProfile) {
+        if (existingProfile && !signedInEstablished) {
+            // 3. Guard the destructive delete
+            if (selfProfile?.role === 'user') {
+                const survivingId = existingProfile.id;
+                console.log('[Google OAuth][Flow B] Detected duplicate. Merging Google user', user.id, '→ email user', survivingId);
+
+                // 1. Update the surviving user's Supabase auth record to include the
+                //    Google identity (add google as additional provider).
+                //    Supabase admin updateUserById can add app_metadata identities.
+                await supabaseAdmin.auth.admin.updateUserById(survivingId, {
+                    app_metadata: { provider: 'google', providers: ['email', 'google'] },
+                    email_verified: true,
+                });
+
+                // 2. Update user_profiles for the surviving user
+                await supabaseAdmin
+                    .from('user_profiles')
+                    .update({
+                        auth_provider:      'multiple',
+                        avatar_url:         googlePicture || undefined,
+                        email_verified:     true,
+                        email_verified_at:  new Date().toISOString(),
+                    })
+                    .eq('id', survivingId);
+
+                // 3. Delete the freshly-created Google-only duplicate user
+                try {
+                    await supabaseAdmin.auth.admin.deleteUser(user.id);
+                    console.log('[Google OAuth][Flow B] Deleted duplicate Google user:', user.id);
+                } catch (delErr) {
+                    console.warn('[Google OAuth][Flow B] Could not delete duplicate user:', delErr?.message);
+                }
+
+                // 4. Audit log
+                try {
+                    await supabaseAdmin.from('audit_logs').insert({
+                        user_id:  survivingId,
+                        action:   'account_linked',
+                        metadata: {
+                            method:           'google_merged_into_email',
+                            google_user_id:   user.id,
+                            surviving_id:     survivingId,
+                            email:            googleEmail,
+                        }
+                    });
+                } catch (_) { /* non-fatal */ }
+
+                // 5. Robust merged-session re-issue
+                const result = await issueSessionForUser(survivingId, googleEmail);
+                if (result) {
+                    session = result;
+                    user = result.user ?? result;
+                } else {
+                    return NextResponse.redirect(new URL('/login?merged=true', appUrl));
+                }
+            } else {
+                console.log('[Google OAuth][Flow B] Aborted merge: deletion target is not a simple user role');
+                // Fall through to normal sign in reusing selfProfile
+                if (selfProfile) {
+                    await supabaseAdmin
+                        .from('user_profiles')
+                        .update({
+                            full_name:        googleName || 'Google User',
+                            avatar_url:       googlePicture,
+                            email_verified:   true,
+                            email_verified_at: new Date().toISOString(),
+                        })
+                        .eq('id', user.id);
+                }
+            }
+        } else {
+            // No duplicate or established user — normal Google sign-in. Reuse selfProfile.
+            if (selfProfile) {
                 // Only update non-critical fields
                 await supabaseAdmin
                     .from('user_profiles')

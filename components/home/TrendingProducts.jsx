@@ -170,6 +170,7 @@ export default function TrendingProducts() {
                     .from('shopping_products')
                     .select('id, title, category, suggested_retail_price_paise, mrp_paise, product_images, slug, admin_stock')
                     .eq('is_active', true)
+                    .or('approval_status.eq.live,approval_status.is.null')
                     .is('deleted_at', null)
                     .not('product_images', 'is', null)
                     .order('created_at', { ascending: false })

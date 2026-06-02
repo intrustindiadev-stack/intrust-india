@@ -379,7 +379,7 @@ function CustomerProfileContent() {
                                     </div>
                                     <div className="text-left flex-1">
                                         <p className="font-black text-sm">WhatsApp</p>
-                                        <p className="text-white/70 text-xs">Connect for instant support</p>
+                                        <p className="text-white/70 text-xs">WhatsApp alerts &amp; chat</p>
                                     </div>
                                     <ArrowRight size={18} className="text-white/70 flex-shrink-0" />
                                 </button>

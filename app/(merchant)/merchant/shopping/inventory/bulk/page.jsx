@@ -12,11 +12,18 @@ export default async function BulkAddProductsPage() {
 
     const { data: merchant } = await supabase
         .from('merchants')
-        .select('id')
+        .select('id, subscription_status, subscription_expires_at')
         .eq('user_id', user.id)
         .single();
 
     if (!merchant) redirect('/merchant-status');
 
-    return <BulkProductPage merchantId={merchant.id} />;
+    // Compute subscription state to gate the bulk feature on the client
+    const now = new Date();
+    const isSubscribed =
+        merchant.subscription_status === 'active' &&
+        merchant.subscription_expires_at &&
+        new Date(merchant.subscription_expires_at) > now;
+
+    return <BulkProductPage merchantId={merchant.id} isSubscribed={isSubscribed} />;
 }

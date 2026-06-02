@@ -24,6 +24,13 @@ export default async function MerchantShopPage() {
         redirect('/merchant-status');
     }
 
+    // Compute subscription state for gating paid features (e.g. Bulk Add)
+    const now = new Date();
+    const isSubscribed =
+        merchant.subscription_status === 'active' &&
+        merchant.subscription_expires_at &&
+        new Date(merchant.subscription_expires_at) > now;
+
     // Fetch merchant's inventory
     // We join with shopping_products to get platform product details
     const { data: inventory, error: inventoryError } = await supabase
@@ -80,13 +87,23 @@ export default async function MerchantShopPage() {
                 <div className="flex flex-col gap-4 self-start sm:self-auto shrink-0 w-full max-w-sm ml-auto">
                     <StoreStatusToggle initialStoreData={merchant} />
                     <div className="flex flex-col sm:flex-row gap-2 w-full">
-                        <Link
-                            href="/merchant/shopping/inventory/bulk"
-                            className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-[#1e3a5f] border-2 border-[#1e3a5f]/20 hover:border-[#1e3a5f]/40 px-4 py-3 rounded-2xl font-black text-sm transition-all w-full sm:w-auto"
-                        >
-                            <Sparkles size={16} />
-                            Bulk Add
-                        </Link>
+                        {isSubscribed ? (
+                            <Link
+                                href="/merchant/shopping/inventory/bulk"
+                                className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-[#1e3a5f] border-2 border-[#1e3a5f]/20 hover:border-[#1e3a5f]/40 px-4 py-3 rounded-2xl font-black text-sm transition-all w-full sm:w-auto"
+                            >
+                                <Sparkles size={16} />
+                                Bulk Add
+                            </Link>
+                        ) : (
+                            <span
+                                title="Active subscription required for bulk add"
+                                className="inline-flex items-center justify-center gap-2 bg-slate-100 text-slate-400 border-2 border-slate-200 px-4 py-3 rounded-2xl font-black text-sm cursor-not-allowed w-full sm:w-auto"
+                            >
+                                <Sparkles size={16} />
+                                Bulk Add
+                            </span>
+                        )}
                         <Link
                             href="/merchant/shopping/inventory/new"
                             className="inline-flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2c5282] text-white px-5 py-3 rounded-2xl font-black text-sm transition-all shadow-xl shadow-blue-900/10 flex-1"
