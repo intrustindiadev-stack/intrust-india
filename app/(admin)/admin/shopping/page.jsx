@@ -12,30 +12,54 @@ export default async function AdminShoppingPage() {
     // Use admin client so RLS doesn't block shopping_order_groups
     const adminSupabase = createAdminClient();
 
-    // Fetch ALL products (platform + custom/merchant)
-    const { data: products, error } = await adminSupabase
-        .from('shopping_products')
+    // 1. Fetch Stats via cap-proof RPC
+    const { data: statsData, error: statsError } = await adminSupabase.rpc('get_admin_shopping_stats');
+    if (statsError) console.error('[AdminShopping] stats error:', statsError);
+    const dbStats = statsData?.[0] || {};
+
+    const stats = {
+        totalProducts: Number(dbStats.total_products || 0),
+        platformProducts: Number(dbStats.platform_products || 0),
+        customProducts: Number(dbStats.custom_products || 0),
+        activeProducts: Number(dbStats.active_products || 0),
+        totalOrders: Number(dbStats.total_orders || 0),
+        pendingOrders: Number(dbStats.pending_orders || 0),
+        totalRevenue: Number(dbStats.total_revenue || 0),
+    };
+
+    const pendingApprovals = Number(dbStats.pending_approvals || 0);
+
+    // 2. Fetch merchant custom product counts via RPC
+    const { data: countsData, error: countsError } = await adminSupabase.rpc('get_admin_merchant_custom_counts');
+    if (countsError) console.error('[AdminShopping] merchant counts error:', countsError);
+    
+    const merchantCounts = {};
+    countsData?.forEach(row => {
+        merchantCounts[row.merchant_id] = Number(row.custom_count || 0);
+    });
+
+    // 3. Fetch ONLY the first page of products (platform products initially, active tab)
+    const { data: initialProducts, count: totalCount, error: productsError } = await adminSupabase
+        .from('admin_shopping_products_v')
         .select(`
             *,
             shopping_categories (name),
             merchant_inventory (
-                merchant_id,
+                id,
+                is_active,
+                stock_quantity,
                 is_platform_product,
+                merchant_id,
+                retail_price_paise,
                 merchants (id, business_name)
             )
-        `)
+        `, { count: 'exact' })
         .is('deleted_at', null)
+        .eq('is_custom', false)
         .order('created_at', { ascending: false })
-        .limit(10000);
+        .range(0, 19);
 
-    if (error) console.error('Error fetching products:', error);
-
-    // Fetch all orders for quick stats (was failing with anon client due to RLS)
-    const { data: orderStats, error: ordersError } = await adminSupabase
-        .from('shopping_order_groups')
-        .select('id, delivery_status, total_amount_paise, is_platform_order', { count: 'exact' });
-
-    if (ordersError) console.error('[AdminShopping] orders error:', ordersError.message);
+    if (productsError) console.error('[AdminShopping] products error:', productsError.message);
 
     // Fetch approved merchants to allow admin to assign custom products
     const { data: merchants, error: merchantsError } = await adminSupabase
@@ -46,24 +70,23 @@ export default async function AdminShoppingPage() {
 
     if (merchantsError) console.error('[AdminShopping] merchants error:', merchantsError.message);
 
-    const stats = {
-        totalProducts: products?.length || 0,
-        platformProducts: products?.filter(p => !p.merchant_inventory?.some(inv => inv.is_platform_product === false)).length || 0,
-        customProducts: products?.filter(p => p.merchant_inventory?.some(inv => inv.is_platform_product === false)).length || 0,
-        activeProducts: products?.filter(p => p.is_active).length || 0,
-        totalOrders: orderStats?.length || 0,
-        pendingOrders: orderStats?.filter(o => o.delivery_status === 'pending').length || 0,
-        totalRevenue: orderStats?.reduce((sum, o) => sum + (o.total_amount_paise || 0), 0) || 0,
-    };
+    // Fetch all categories for the category filter dropdown
+    const { data: dbCategories, error: categoriesError } = await adminSupabase
+        .from('shopping_categories')
+        .select('name')
+        .order('name', { ascending: true });
 
-    const pendingApprovals = products?.filter(p => p.approval_status === 'pending_approval').length || 0;
+    if (categoriesError) console.error('[AdminShopping] categories error:', categoriesError.message);
+    const categories = dbCategories?.map(c => c.name) || [];
 
     return <AdminShoppingClient 
-        products={products || []} 
+        initialProducts={initialProducts || []} 
+        totalCount={totalCount || 0}
         stats={stats} 
-        initialOrders={orderStats || []} 
+        merchantCounts={merchantCounts}
         pendingApprovals={pendingApprovals} 
         merchants={merchants || []}
+        categories={categories}
     />;
 }
 

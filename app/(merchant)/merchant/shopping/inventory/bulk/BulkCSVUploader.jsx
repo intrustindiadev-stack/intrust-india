@@ -2,22 +2,46 @@
 
 import { useState, useRef } from 'react';
 import { Upload, FileText, X, Eye, AlertCircle, Download } from 'lucide-react';
-import { parseCSV } from '@/lib/csvParser';
+import { parseCSV, normalizeHeader } from '@/lib/csvParser';
 
-const REQUIRED_COLUMNS = ['Product Name', 'Description', 'Category', 'Selling Price (₹)', 'MRP (₹)', 'Cost Price (₹)', 'GST %', 'HSN Code', 'Initial Stock'];
+const CANONICAL_FIELDS = {
+    title: { label: 'Product Name', aliases: ['product name', 'name', 'title', 'product'] },
+    description: { label: 'Description', aliases: ['description', 'desc'] },
+    category: { label: 'Category', aliases: ['category', 'cat'] },
+    retail_price_paise: { label: 'Selling Price (₹)', aliases: ['selling price', 'sellingprice', 'price', 'retail', 'mrp selling'] },
+    mrp_paise: { label: 'MRP (₹)', aliases: ['mrp', 'maximum retail price'] },
+    wholesale_price_paise: { label: 'Cost Price (₹)', aliases: ['cost price', 'cost', 'wholesale', 'buy price'] },
+    gst_percentage: { label: 'GST %', aliases: ['gst', 'gst percent', 'tax'] },
+    hsn_code: { label: 'HSN Code', aliases: ['hsn', 'hsn code'] },
+    stock_quantity: { label: 'Initial Stock', aliases: ['initial stock', 'stock', 'quantity', 'qty'] },
+};
 
 function mapToProduct(row, headers, columnMap) {
-    const get = (key) => row[headers[columnMap[key]] ?? key] || '';
+    const get = (fieldKey) => {
+        const idx = columnMap[fieldKey];
+        const headerName = headers[idx];
+        return row[headerName] || '';
+    };
+
+    const retailVal = get('retail_price_paise') || '';
+    const mrpVal = get('mrp_paise') || '';
+    const retail_price_paise = Math.round(parseFloat(retailVal || 0) * 100);
+    // If MRP is not provided, default to Selling Price.
+    const mrp_paise = mrpVal ? Math.round(parseFloat(mrpVal) * 100) : retail_price_paise;
+
+    const wholesaleVal = get('wholesale_price_paise') || '';
+    const wholesale_price_paise = wholesaleVal ? Math.round(parseFloat(wholesaleVal) * 100) : 0;
+
     return {
-        title: get('Product Name'),
-        description: get('Description'),
-        category: get('Category'),
-        retail_price_paise: Math.round(parseFloat(get('Selling Price (₹)') || 0) * 100),
-        mrp_paise: Math.round(parseFloat(get('MRP (₹)') || 0) * 100),
-        wholesale_price_paise: Math.round(parseFloat(get('Cost Price (₹)') || 0) * 100),
-        gst_percentage: parseInt(get('GST %') || 0),
-        hsn_code: get('HSN Code') || '9971',
-        stock_quantity: parseInt(get('Initial Stock') || 0),
+        title: get('title'),
+        description: get('description'),
+        category: get('category'),
+        retail_price_paise,
+        mrp_paise,
+        wholesale_price_paise,
+        gst_percentage: parseInt(get('gst_percentage') || 0),
+        hsn_code: get('hsn_code') || '9971',
+        stock_quantity: parseInt(get('stock_quantity') || 0),
         product_images: [],
     };
 }
@@ -34,7 +58,7 @@ function downloadTemplate(categories) {
     URL.revokeObjectURL(url);
 }
 
-export default function BulkCSVUploader({ categories, onSubmit, submitting }) {
+export default function BulkCSVUploader({ categories, onSubmit, submitting, progressMessage }) {
     const [file, setFile] = useState(null);
     const [parsed, setParsed] = useState(null);
     const [parseError, setParseError] = useState(null);
@@ -60,21 +84,25 @@ export default function BulkCSVUploader({ categories, onSubmit, submitting }) {
             const headers = csvRows[0].map(h => h.replace(/^\"|\"$/g, ''));
             const dataRows = csvRows.slice(1);
 
-            // Validate required headers
-            const missingHeaders = REQUIRED_COLUMNS.filter(
-                col => !headers.some(h => h.toLowerCase().includes(col.toLowerCase().split(' ')[0]))
-            );
-            if (missingHeaders.length > 0) {
-                setParseError(`Missing required columns: ${missingHeaders.join(', ')}. Please use the template.`);
+            // Validate headers using normalized mapping
+            const columnMap = {};
+            const unmappedFields = [];
+            const normalizedHeaders = headers.map(normalizeHeader);
+
+            Object.entries(CANONICAL_FIELDS).forEach(([fieldKey, config]) => {
+                const normalizedAliases = config.aliases.map(normalizeHeader);
+                const idx = normalizedHeaders.findIndex(nh => normalizedAliases.includes(nh));
+                if (idx !== -1) {
+                    columnMap[fieldKey] = idx;
+                } else {
+                    unmappedFields.push(config.label);
+                }
+            });
+
+            if (unmappedFields.length > 0) {
+                setParseError(`Missing required columns: ${unmappedFields.join(', ')}.`);
                 return;
             }
-
-            // Auto-map columns
-            const columnMap = {};
-            REQUIRED_COLUMNS.forEach(col => {
-                const idx = headers.findIndex(h => h.toLowerCase().includes(col.toLowerCase().split(' ')[0]));
-                if (idx !== -1) columnMap[col] = idx;
-            });
 
             // Convert row arrays to objects keyed by header name
             const rows = dataRows.map((cols, idx) => {
@@ -189,7 +217,7 @@ export default function BulkCSVUploader({ categories, onSubmit, submitting }) {
                             className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-[#1e3a5f] hover:bg-[#2c5282] text-white font-black text-[11px] uppercase tracking-widest transition-all shadow-xl shadow-blue-900/20 disabled:opacity-50"
                         >
                             {submitting ? (
-                                <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Submitting...</>
+                                <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {progressMessage || 'Submitting...'}</>
                             ) : (
                                 <>Import {parsed.rows.length} Products →</>
                             )}

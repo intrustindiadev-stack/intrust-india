@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 
 // POST /api/admin/shopping/products — create a new platform product
 export async function POST(request) {
@@ -237,6 +237,118 @@ export async function DELETE(request) {
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (error) {
         console.error('Admin product delete error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+// GET /api/admin/shopping/products — list products with pagination and filters
+export async function GET(request) {
+    try {
+        const supabase = await createServerSupabaseClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            return NextResponse.json(
+                { error: 'Unauthorized. Please log in.' },
+                { status: 401 }
+            );
+        }
+
+        // Verify Admin Role
+        const { data: userProfile, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (profileError || !['admin', 'super_admin'].includes(userProfile?.role)) {
+            return NextResponse.json(
+                { error: 'Forbidden. Admin access required.' },
+                { status: 403 }
+            );
+        }
+
+        const adminSupabase = createAdminClient();
+        const { searchParams } = new URL(request.url);
+
+        const tab = searchParams.get('tab') || 'platform';
+        const search = searchParams.get('search') || '';
+        const category = searchParams.get('category') || '';
+        const oosOnly = searchParams.get('oosOnly') === 'true';
+        const merchantId = searchParams.get('merchantId') || '';
+        const page = parseInt(searchParams.get('page')) || 1;
+        const pageSize = parseInt(searchParams.get('pageSize')) || 20;
+
+        const from = (page - 1) * pageSize;
+        const to = page * pageSize - 1;
+
+        let query = adminSupabase
+            .from('admin_shopping_products_v')
+            .select(`
+                *,
+                shopping_categories (name),
+                merchant_inventory (
+                    id,
+                    is_active,
+                    stock_quantity,
+                    is_platform_product,
+                    merchant_id,
+                    retail_price_paise,
+                    merchants (id, business_name)
+                )
+            `, { count: 'exact' });
+
+        // Filter out deleted products
+        query = query.is('deleted_at', null);
+
+        // Filter by tab
+        if (tab === 'custom') {
+            query = query.eq('is_custom', true);
+        } else {
+            query = query.eq('is_custom', false);
+        }
+
+        // Filter by search (title or merchant business name)
+        if (search) {
+            query = query.or(`title.ilike.%${search}%,custom_merchant_name.ilike.%${search}%`);
+        }
+
+        // Filter by category
+        if (category && category !== 'all') {
+            query = query.eq('category', category);
+        }
+
+        // Filter by out-of-stock
+        if (oosOnly) {
+            query = query.eq('is_oos', true);
+        }
+
+        // Filter by merchantId (custom products only)
+        if (tab === 'custom' && merchantId && merchantId !== 'all') {
+            query = query.eq('custom_merchant_id', merchantId);
+        }
+
+        // Order by created_at desc
+        query = query.order('created_at', { ascending: false });
+
+        // Pagination
+        query = query.range(from, to);
+
+        const { data: products, count: totalCount, error: queryError } = await query;
+
+        if (queryError) {
+            console.error('Error fetching admin products:', queryError);
+            throw queryError;
+        }
+
+        return NextResponse.json({
+            products: products || [],
+            totalCount: totalCount || 0,
+            page,
+            pageSize
+        }, { status: 200 });
+    } catch (error) {
+        console.error('Admin products fetch error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

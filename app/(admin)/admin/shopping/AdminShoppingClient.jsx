@@ -18,7 +18,15 @@ import BulkProductUpload from '@/components/admin/shopping/BulkProductUpload';
 const TAB_PLATFORM = "platform";
 const TAB_CUSTOM = "custom";
 
-export default function AdminShoppingClient({ products: initialProducts, stats: initialStats, initialOrders, pendingApprovals = 0, merchants = [] }) {
+export default function AdminShoppingClient({
+    initialProducts,
+    totalCount: initialTotalCount,
+    stats: initialStats,
+    merchantCounts: initialMerchantCounts,
+    pendingApprovals: initialPendingApprovals = 0,
+    merchants = [],
+    categories = []
+}) {
     const router = useRouter();
     const searchParams = useSearchParams();
     
@@ -26,10 +34,14 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
     const initialMerchant = searchParams.get('merchant') || "all";
 
     const [localProducts, setLocalProducts] = useState(initialProducts);
-    const [localOrders, setLocalOrders] = useState(initialOrders);
+    const [stats, setStats] = useState(initialStats);
+    const [merchantCounts, setMerchantCounts] = useState(initialMerchantCounts);
+    const [pendingApprovals, setPendingApprovals] = useState(initialPendingApprovals);
+    
     const [activeTab, setActiveTab] = useState(initialTab);
     const [selectedMerchant, setSelectedMerchant] = useState(initialMerchant);
     const [search, setSearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("all");
     const [oosOnly, setOosOnly] = useState(false);
     const [stockEdits, setStockEdits] = useState({});
@@ -38,36 +50,111 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
     const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
 
+    // PAGINATION STATE
+    const [page, setPage] = useState(1);
+    const [pageSize] = useState(20);
+    const [totalCount, setTotalCount] = useState(initialTotalCount);
+    const [loading, setLoading] = useState(false);
+
+    // DEBOUNCE SEARCH INPUT
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(search);
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [search]);
+
+    // Reset page to 1 when debouncedSearch changes
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch]);
+
+    // FETCH PRODUCTS FUNCTION
+    const fetchProducts = async (currentPage, currentTab, currentSearch, currentCategory, currentOosOnly, currentMerchant) => {
+        setLoading(true);
+        try {
+            const params = new URLSearchParams({
+                tab: currentTab,
+                search: currentSearch,
+                category: currentCategory,
+                oosOnly: currentOosOnly ? "true" : "false",
+                merchantId: currentMerchant,
+                page: currentPage.toString(),
+                pageSize: pageSize.toString()
+            });
+
+            const res = await fetch(`/api/admin/shopping/products?${params.toString()}`);
+            if (!res.ok) throw new Error("Failed to fetch products");
+            
+            const data = await res.json();
+            setLocalProducts(data.products || []);
+            setTotalCount(data.totalCount || 0);
+        } catch (err) {
+            console.error("Error fetching products:", err);
+            toast.error("Failed to load products");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // RE-FETCH ALL COUNTS AND STATS
+    const refreshStatsAndCounts = async () => {
+        try {
+            const { data: statsData, error: statsError } = await supabase.rpc("get_admin_shopping_stats");
+            if (statsError) throw statsError;
+            if (statsData && statsData.length > 0) {
+                const dbStats = statsData[0];
+                setStats({
+                    totalProducts: Number(dbStats.total_products || 0),
+                    platformProducts: Number(dbStats.platform_products || 0),
+                    customProducts: Number(dbStats.custom_products || 0),
+                    activeProducts: Number(dbStats.active_products || 0),
+                    totalOrders: Number(dbStats.total_orders || 0),
+                    pendingOrders: Number(dbStats.pending_orders || 0),
+                    totalRevenue: Number(dbStats.total_revenue || 0),
+                });
+                setPendingApprovals(Number(dbStats.pending_approvals || 0));
+            }
+
+            const { data: countsData, error: countsError } = await supabase.rpc("get_admin_merchant_custom_counts");
+            if (countsError) throw countsError;
+            if (countsData) {
+                const mappedCounts = {};
+                countsData.forEach(row => {
+                    mappedCounts[row.merchant_id] = Number(row.custom_count || 0);
+                });
+                setMerchantCounts(mappedCounts);
+            }
+        } catch (err) {
+            console.error("Error refreshing stats/counts:", err);
+        }
+    };
+
+    // Store active filters/page in a ref for realtime callbacks
+    const activeFiltersRef = React.useRef({ page, activeTab, debouncedSearch, categoryFilter, oosOnly, selectedMerchant });
+    useEffect(() => {
+        activeFiltersRef.current = { page, activeTab, debouncedSearch, categoryFilter, oosOnly, selectedMerchant };
+    }, [page, activeTab, debouncedSearch, categoryFilter, oosOnly, selectedMerchant]);
+
+    const refreshCurrentPage = () => {
+        const { page, activeTab, debouncedSearch, categoryFilter, oosOnly, selectedMerchant } = activeFiltersRef.current;
+        fetchProducts(page, activeTab, debouncedSearch, categoryFilter, oosOnly, selectedMerchant);
+    };
+
     // REALTIME SUBSCRIPTION
     useEffect(() => {
         const productChannel = supabase
-            .channel('admin-shopping-products')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_products' }, (payload) => {
-                if (payload.eventType === 'INSERT') {
-                    setLocalProducts(prev => [payload.new, ...prev]);
-                } else if (payload.eventType === 'UPDATE') {
-                    if (payload.new.deleted_at) {
-                        // Soft-deleted — remove from list
-                        setLocalProducts(prev => prev.filter(p => p.id !== payload.new.id));
-                    } else {
-                        setLocalProducts(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p));
-                    }
-                } else if (payload.eventType === 'DELETE') {
-                    setLocalProducts(prev => prev.filter(p => p.id === payload.old.id));
-                }
+            .channel("admin-shopping-products")
+            .on("postgres_changes", { event: "*", schema: "public", table: "shopping_products" }, (payload) => {
+                refreshStatsAndCounts();
+                refreshCurrentPage();
             })
             .subscribe();
 
         const orderChannel = supabase
-            .channel('admin-shopping-orders')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_order_groups' }, (payload) => {
-                if (payload.eventType === 'INSERT') {
-                    setLocalOrders(prev => [payload.new, ...prev]);
-                } else if (payload.eventType === 'UPDATE') {
-                    setLocalOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o));
-                } else if (payload.eventType === 'DELETE') {
-                    setLocalOrders(prev => prev.filter(o => o.id === payload.old.id));
-                }
+            .channel("admin-shopping-orders")
+            .on("postgres_changes", { event: "*", schema: "public", table: "shopping_order_groups" }, (payload) => {
+                refreshStatsAndCounts();
             })
             .subscribe();
 
@@ -77,21 +164,15 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
         };
     }, []);
 
-    // COMPUTED STATS (REALTIME)
-    const stats = useMemo(() => {
-        const products = localProducts;
-        const orderStats = localOrders;
-
-        return {
-            totalProducts: products.length,
-            platformProducts: products.filter(p => !p.merchant_inventory?.some(inv => inv.is_platform_product === false)).length,
-            customProducts: products.filter(p => p.merchant_inventory?.some(inv => inv.is_platform_product === false)).length,
-            activeProducts: products.filter(p => p.is_active).length,
-            totalOrders: orderStats.length,
-            pendingOrders: orderStats.filter(o => o.delivery_status === 'pending').length,
-            totalRevenue: orderStats.reduce((sum, o) => sum + (o.total_amount_paise || 0), 0),
-        };
-    }, [localProducts, localOrders]);
+    // TRIGGER FETCH ON FILTER / PAGE CHANGES
+    const isFirstMount = React.useRef(true);
+    useEffect(() => {
+        if (isFirstMount.current) {
+            isFirstMount.current = false;
+            return;
+        }
+        fetchProducts(page, activeTab, debouncedSearch, categoryFilter, oosOnly, selectedMerchant);
+    }, [activeTab, debouncedSearch, categoryFilter, oosOnly, selectedMerchant, page]);
 
     const handleAdminStockUpdate = async (productId, newStock) => {
         const parsedStock = parseInt(newStock);
@@ -155,39 +236,6 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
             setDeletingId(null);
         }
     };
-
-    const platformProducts = localProducts.filter(p => !p.merchant_inventory?.some(inv => inv.is_platform_product === false));
-    const customProducts = localProducts.filter(p => p.merchant_inventory?.some(inv => inv.is_platform_product === false));
-    const currentProducts = activeTab === TAB_PLATFORM ? platformProducts : customProducts;
-
-    // Get unique categories for current tab
-    const categories = [...new Set(currentProducts.map(p => p.category || p.shopping_categories?.name).filter(Boolean))];
-
-    const filtered = currentProducts.filter(p => {
-        const matchesSearch = !search ||
-            p.title.toLowerCase().includes(search.toLowerCase()) ||
-            (p.merchant_inventory?.find(inv => inv.is_platform_product === false)?.merchants?.business_name || "").toLowerCase().includes(search.toLowerCase());
-        const cat = p.category || p.shopping_categories?.name;
-        const matchesCat = categoryFilter === "all" || cat === categoryFilter;
-        
-        let matchesOos = true;
-        if (oosOnly) {
-            const isMerchantProduct = p.merchant_inventory?.some(inv => inv.is_platform_product === false);
-            if (!isMerchantProduct) {
-                matchesOos = (p.admin_stock ?? 0) <= 0;
-            } else {
-                matchesOos = p.merchant_inventory?.every(inv => isInventoryRowOOS(inv)) ?? false;
-            }
-        }
-        
-        let matchesMerchantFilter = true;
-        if (activeTab === TAB_CUSTOM && selectedMerchant !== "all") {
-            const mId = p.merchant_inventory?.find(inv => inv.is_platform_product === false)?.merchant_id;
-            matchesMerchantFilter = mId === selectedMerchant;
-        }
-
-        return matchesSearch && matchesCat && matchesOos && matchesMerchantFilter;
-    });
 
     const newProductLink = activeTab === TAB_CUSTOM && selectedMerchant !== "all" 
         ? `/admin/shopping/new?merchant=${selectedMerchant}` 
@@ -306,7 +354,7 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
                 <div className="flex items-center gap-1.5 bg-white border border-slate-100 rounded-[1.5rem] p-1 shadow-sm overflow-x-auto no-scrollbar">
                     <button
-                        onClick={() => { setActiveTab(TAB_PLATFORM); setCategoryFilter("all"); }}
+                        onClick={() => { setActiveTab(TAB_PLATFORM); setCategoryFilter("all"); setPage(1); }}
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === TAB_PLATFORM
                                 ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
                                 : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
@@ -318,7 +366,7 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                         </span>
                     </button>
                     <button
-                        onClick={() => { setActiveTab(TAB_CUSTOM); setCategoryFilter("all"); }}
+                        onClick={() => { setActiveTab(TAB_CUSTOM); setCategoryFilter("all"); setPage(1); }}
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === TAB_CUSTOM
                                 ? "bg-violet-600 text-white shadow-lg shadow-violet-600/20"
                                 : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
@@ -333,7 +381,11 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
 
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 flex-1 w-full">
                     <div className="relative flex-1 min-w-[200px] w-full">
-                        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        {loading ? (
+                            <RefreshCw size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-blue-600 animate-spin" />
+                        ) : (
+                            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        )}
                         <input
                             type="text"
                             placeholder="Find products..."
@@ -346,7 +398,7 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                         {activeTab === TAB_CUSTOM && merchants.length > 0 && (
                             <select
                                 value={selectedMerchant}
-                                onChange={e => setSelectedMerchant(e.target.value)}
+                                onChange={e => { setSelectedMerchant(e.target.value); setPage(1); }}
                                 className="shrink-0 w-36 sm:w-48 px-3 py-3 rounded-[1.2rem] bg-white border border-slate-200 text-[10px] font-black text-slate-900 uppercase tracking-widest outline-none focus:ring-4 focus:ring-violet-500/10 transition-all appearance-none cursor-pointer"
                             >
                                 <option value="all">All Merchants</option>
@@ -355,14 +407,14 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                         )}
                         <select
                             value={categoryFilter}
-                            onChange={e => setCategoryFilter(e.target.value)}
+                            onChange={e => { setCategoryFilter(e.target.value); setPage(1); }}
                             className="shrink-0 w-28 sm:w-32 px-3 py-3 rounded-[1.2rem] bg-white border border-slate-200 text-[10px] font-black text-slate-900 uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/10 transition-all appearance-none cursor-pointer"
                         >
                             <option value="all">Category: All</option>
                             {categories.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                         <button
-                            onClick={() => setOosOnly(!oosOnly)}
+                            onClick={() => { setOosOnly(!oosOnly); setPage(1); }}
                             className={`shrink-0 flex items-center justify-center gap-1.5 rounded-[1.2rem] px-3 py-3 font-black text-[10px] uppercase tracking-widest transition-all ${
                                 oosOnly
                                     ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
@@ -393,7 +445,7 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
             {activeTab === TAB_CUSTOM && selectedMerchant !== "all" && (
                 <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <button
-                        onClick={() => setSelectedMerchant("all")}
+                        onClick={() => { setSelectedMerchant("all"); setPage(1); }}
                         className="flex items-center gap-2 px-4 py-2 w-fit bg-white border border-slate-200 rounded-[1rem] text-xs font-black text-slate-700 uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
                     >
                         <ChevronRight size={14} className="rotate-180" />
@@ -433,7 +485,7 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                         </div>
                     ) : (
                         merchants.filter(m => !search || m.business_name.toLowerCase().includes(search.toLowerCase())).map(merchant => {
-                            const productCount = customProducts.filter(p => p.merchant_inventory?.some(inv => inv.is_platform_product === false && inv.merchant_id === merchant.id)).length;
+                            const productCount = merchantCounts[merchant.id] || 0;
                             return (
                                 <div
                                     key={merchant.id}
@@ -461,13 +513,13 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filtered.length === 0 ? (
+                    {localProducts.length === 0 ? (
                         <div className="col-span-full py-24 text-center bg-white rounded-[2rem] border border-dashed border-slate-200 shadow-inner">
                             <Package className="mx-auto text-slate-100 mb-4" size={56} />
                             <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Matrix Empty: No Products Found</p>
                         </div>
                     ) : (
-                        filtered.map(product => {
+                        localProducts.map(product => {
                         const isMerchantProduct = product.merchant_inventory?.some(inv => inv.is_platform_product === false);
                         const categoryName = product.shopping_categories?.name || product.category || "General";
                         const currentStock = stockEdits[product.id] !== undefined ? parseInt(stockEdits[product.id]) || 0 : (product.admin_stock || 0);
@@ -605,6 +657,97 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                         );
                     })
                 )}
+                </div>
+            )}
+
+            {/* Pagination Controls */}
+            {!(activeTab === TAB_CUSTOM && selectedMerchant === "all") && totalCount > pageSize && (
+                <div className="mt-8 flex items-center justify-between bg-white px-6 py-4 rounded-[1.5rem] border border-slate-100 shadow-sm font-[family-name:var(--font-outfit)]">
+                    <div className="flex-1 flex justify-between sm:hidden">
+                        <button
+                            onClick={() => setPage(p => Math.max(p - 1, 1))}
+                            disabled={page === 1}
+                            className="relative inline-flex items-center px-4 py-2 border border-slate-200 text-xs font-black rounded-xl text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        >
+                            Previous
+                        </button>
+                        <button
+                            onClick={() => setPage(p => Math.min(p + 1, Math.ceil(totalCount / pageSize)))}
+                            disabled={page === Math.ceil(totalCount / pageSize)}
+                            className="ml-3 relative inline-flex items-center px-4 py-2 border border-slate-200 text-xs font-black rounded-xl text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        >
+                            Next
+                        </button>
+                    </div>
+                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p className="text-xs text-slate-500 font-medium">
+                                Showing <span className="font-bold text-slate-800">{(page - 1) * pageSize + 1}</span> to <span className="font-bold text-slate-800">{Math.min(page * pageSize, totalCount)}</span> of{' '}
+                                <span className="font-bold text-slate-800">{totalCount}</span> results
+                            </p>
+                        </div>
+                        <div>
+                            <nav className="relative z-0 inline-flex rounded-xl shadow-sm -space-x-px" aria-label="Pagination">
+                                <button
+                                    onClick={() => setPage(1)}
+                                    disabled={page === 1}
+                                    className="relative inline-flex items-center px-3 py-2 rounded-l-xl border border-slate-200 bg-white text-xs font-black text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    First
+                                </button>
+                                <button
+                                    onClick={() => setPage(p => Math.max(p - 1, 1))}
+                                    disabled={page === 1}
+                                    className="relative inline-flex items-center px-3 py-2 border border-slate-200 bg-white text-xs font-black text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    Prev
+                                </button>
+                                {/* Page Numbers */}
+                                {Array.from({ length: Math.ceil(totalCount / pageSize) }).map((_, idx) => {
+                                    const pageNum = idx + 1;
+                                    // Only show current page, 2 pages before, and 2 pages after
+                                    if (pageNum === 1 || pageNum === Math.ceil(totalCount / pageSize) || (pageNum >= page - 2 && pageNum <= page + 2)) {
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => setPage(pageNum)}
+                                                className={`relative inline-flex items-center px-4 py-2 border text-xs font-black transition-all ${
+                                                    page === pageNum
+                                                        ? "z-10 bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-600/10"
+                                                        : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                                                }`}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    }
+                                    // Add ellipses
+                                    if (pageNum === page - 3 || pageNum === page + 3) {
+                                        return (
+                                            <span key={pageNum} className="relative inline-flex items-center px-4 py-2 border border-slate-200 bg-white text-xs font-medium text-slate-500">
+                                                ...
+                                            </span>
+                                        );
+                                    }
+                                    return null;
+                                })}
+                                <button
+                                    onClick={() => setPage(p => Math.min(p + 1, Math.ceil(totalCount / pageSize)))}
+                                    disabled={page === Math.ceil(totalCount / pageSize)}
+                                    className="relative inline-flex items-center px-3 py-2 border border-slate-200 bg-white text-xs font-black text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    Next
+                                </button>
+                                <button
+                                    onClick={() => setPage(Math.ceil(totalCount / pageSize))}
+                                    disabled={page === Math.ceil(totalCount / pageSize)}
+                                    className="relative inline-flex items-center px-3 py-2 rounded-r-xl border border-slate-200 bg-white text-xs font-black text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    Last
+                                </button>
+                            </nav>
+                        </div>
+                    </div>
                 </div>
             )}
 

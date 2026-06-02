@@ -97,7 +97,7 @@ export async function POST(request) {
         }
 
         if (products.length > 100) {
-            return NextResponse.json({ error: 'Maximum 100 products per bulk submission' }, { status: 400 });
+            return NextResponse.json({ error: 'Maximum 100 products per bulk submission batch. Please batch client submissions.' }, { status: 400 });
         }
 
         // Verify merchant ownership (the subscription guard fetches by user_id,

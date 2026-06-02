@@ -47,7 +47,7 @@ function downloadTemplate(categories) {
     URL.revokeObjectURL(url);
 }
 
-export default function BulkProductTable({ categories, onSubmit, submitting }) {
+export default function BulkProductTable({ categories, onSubmit, submitting, progressMessage }) {
     const [rows, setRows] = useState([EMPTY_ROW()]);
     const [errors, setErrors] = useState({});
     const [validated, setValidated] = useState(false);
@@ -340,7 +340,7 @@ export default function BulkProductTable({ categories, onSubmit, submitting }) {
                         className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-[#1e3a5f] hover:bg-[#2c5282] text-white font-black text-[11px] uppercase tracking-widest transition-all shadow-xl shadow-blue-900/20 disabled:opacity-50"
                     >
                         {submitting ? (
-                            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Submitting...</>
+                            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {progressMessage || 'Submitting...'}</>
                         ) : (
                             <>Submit {rows.length} Product{rows.length > 1 ? 's' : ''} →</>
                         )}

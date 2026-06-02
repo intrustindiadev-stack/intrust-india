@@ -12,7 +12,8 @@ export default function BulkProductPage({ merchantId, isSubscribed = true }) {
     const [activeTab, setActiveTab] = useState('table');
     const [categories, setCategories] = useState([]);
     const [submitting, setSubmitting] = useState(false);
-    const [results, setResults] = useState(null); // null | { items: [{index, title, success, error}] }
+    const [progressMessage, setProgressMessage] = useState('');
+    const [results, setResults] = useState(null); // null | [{index, title, success, error}]
 
     useEffect(() => {
         supabase
@@ -31,28 +32,70 @@ export default function BulkProductPage({ merchantId, isSubscribed = true }) {
             return;
         }
         setSubmitting(true);
+        setProgressMessage('');
         setResults(null);
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch('/api/merchant/shopping/bulk-submit-products', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-                body: JSON.stringify({ merchantId, products }),
-            });
-            const json = await res.json();
-            if (!res.ok && res.status === 402) {
-                toast.error('Subscription required. Please subscribe to use this feature.');
-                return;
+            const batchSize = 100;
+            const allResults = [];
+
+            for (let i = 0; i < products.length; i += batchSize) {
+                const batch = products.slice(i, i + batchSize);
+                const batchNum = Math.floor(i / batchSize) + 1;
+                const totalBatches = Math.ceil(products.length / batchSize);
+                
+                setProgressMessage(`Batch ${batchNum} of ${totalBatches} — ${i + batch.length}/${products.length} submitted`);
+
+                try {
+                    const res = await fetch('/api/merchant/shopping/bulk-submit-products', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+                        body: JSON.stringify({ merchantId, products: batch }),
+                    });
+                    
+                    if (!res.ok && res.status === 402) {
+                        toast.error('Subscription required. Please subscribe to use this feature.');
+                        return;
+                    }
+
+                    const json = await res.json();
+                    
+                    if (json && json.results) {
+                        const mappedResults = json.results.map(r => ({
+                            ...r,
+                            index: i + r.index
+                        }));
+                        allResults.push(...mappedResults);
+                    } else {
+                        const errorMsg = json?.error || `Submission failed with status ${res.status}`;
+                        const failedResults = batch.map((p, idx) => ({
+                            index: i + idx,
+                            title: p.title || `Product ${i + idx + 1}`,
+                            success: false,
+                            error: errorMsg,
+                        }));
+                        allResults.push(...failedResults);
+                    }
+                } catch (batchErr) {
+                    const failedResults = batch.map((p, idx) => ({
+                        index: i + idx,
+                        title: p.title || `Product ${i + idx + 1}`,
+                        success: false,
+                        error: batchErr.message || 'Network error',
+                    }));
+                    allResults.push(...failedResults);
+                }
             }
-            if (!res.ok && !json.results) throw new Error(json.error || 'Submission failed');
-            const results = json.results;
-            setResults(results);
-            const successCount = results.filter(r => r.success).length;
-            const failCount = results.length - successCount;
+
+            allResults.sort((a, b) => a.index - b.index);
+            setResults(allResults);
+
+            const successCount = allResults.filter(r => r.success).length;
+            const failCount = allResults.length - successCount;
             if (failCount === 0) {
                 toast.success(`All ${successCount} products submitted for approval!`);
             } else if (successCount === 0) {
-                toast.error(`All ${failCount} products had validation errors. See details below.`);
+                toast.error(`All ${failCount} products had errors. See details below.`);
             } else {
                 toast.error(`${successCount} submitted, ${failCount} failed. See details below.`);
             }
@@ -60,6 +103,7 @@ export default function BulkProductPage({ merchantId, isSubscribed = true }) {
             toast.error(err.message || 'Failed to submit products');
         } finally {
             setSubmitting(false);
+            setProgressMessage('');
         }
     };
 
@@ -130,7 +174,7 @@ export default function BulkProductPage({ merchantId, isSubscribed = true }) {
             )}
 
             {/* Tab switcher */}
-            <div className={`flex items-center p-1 bg-white rounded-2xl border border-slate-200 shadow-sm w-fit ${!isSubscribed ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className={`flex items-center p-1 bg-white rounded-2xl border border-slate-200 shadow-sm w-fit ${submitting || !isSubscribed ? 'opacity-50 pointer-events-none' : ''}`}>
                 {tabs.map(tab => {
                     const Icon = tab.icon;
                     return (
@@ -151,9 +195,9 @@ export default function BulkProductPage({ merchantId, isSubscribed = true }) {
             {/* Tab Content */}
             <div className={`bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 sm:p-8 ${!isSubscribed ? 'opacity-50 pointer-events-none' : ''}`}>
                 {activeTab === 'table' ? (
-                    <BulkProductTable categories={categories} onSubmit={handleSubmit} submitting={submitting} />
+                    <BulkProductTable categories={categories} onSubmit={handleSubmit} submitting={submitting} progressMessage={progressMessage} />
                 ) : (
-                    <BulkCSVUploader categories={categories} onSubmit={handleSubmit} submitting={submitting} />
+                    <BulkCSVUploader categories={categories} onSubmit={handleSubmit} submitting={submitting} progressMessage={progressMessage} />
                 )}
             </div>
 
@@ -178,7 +222,10 @@ export default function BulkProductPage({ merchantId, isSubscribed = true }) {
                                     ? <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
                                     : <XCircle size={15} className="text-red-500 shrink-0" />
                                 }
-                                <span className={`font-black flex-1 truncate ${r.success ? 'text-emerald-800' : 'text-red-800'}`}>{r.title || `Product ${i + 1}`}</span>
+                                <span className={`font-black flex-1 truncate ${r.success ? 'text-emerald-800' : 'text-red-800'}`}>
+                                    <span className="text-slate-400 font-normal mr-2">Row {r.index + (activeTab === 'csv' ? 2 : 1)}:</span>
+                                    {r.title || 'Product'}
+                                </span>
                                 {!r.success && <span className="text-red-600 text-xs font-bold shrink-0">{r.error}</span>}
                                 {r.success && <span className="text-emerald-600 text-[9px] font-black uppercase tracking-widest shrink-0">Pending Approval</span>}
                             </div>
