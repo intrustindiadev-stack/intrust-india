@@ -25,7 +25,8 @@ export default async function AdminShoppingPage() {
             )
         `)
         .is('deleted_at', null)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10000);
 
     if (error) console.error('Error fetching products:', error);
 
