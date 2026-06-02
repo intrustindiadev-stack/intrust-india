@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle, XCircle, ShieldOff, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
+import { CheckCircle, XCircle, ShieldOff, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function MerchantActions({ merchantId, userId, status, hasBankData, bankVerified }) {
@@ -240,6 +241,15 @@ export default function MerchantActions({ merchantId, userId, status, hasBankDat
                         <div className="flex-1 px-8 py-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl text-sm font-black flex items-center justify-center gap-2 shadow-inner">
                             <CheckCircle size={18} strokeWidth={2.5} /> Bank Verified
                         </div>
+                    )}
+                    
+                    {isApproved && (
+                        <Link
+                            href={`/admin/shopping?tab=custom&merchant=${merchantId}`}
+                            className="flex-1 px-8 py-3.5 bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition-all text-center whitespace-nowrap"
+                        >
+                            <ShoppingBag size={18} strokeWidth={2.5} /> Custom Products
+                        </Link>
                     )}
                 </div>
             )}

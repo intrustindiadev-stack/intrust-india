@@ -17,7 +17,6 @@ const tabs = [
     { id: 'account', label: 'Account', icon: 'shield', locked: false },
     { id: 'notifications', label: 'Notifications', icon: 'notifications', locked: false },
     { id: 'whatsapp', label: 'WhatsApp', icon: 'chat', locked: false },
-    { id: 'subscription', label: 'Subscription', icon: 'card_membership', locked: false },
     { id: 'store', label: 'Store Status', icon: 'storefront', locked: true },
     { id: 'bank', label: 'Bank Account', icon: 'account_balance', locked: true },
 ];
@@ -83,7 +82,7 @@ export default function MerchantSettingsPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const focusParam = searchParams.get('focus');
-    const returnPath = searchParams.get('return') || '/merchant/settings?tab=subscription';
+    const returnPath = searchParams.get('return') || '/merchant/subscription';
 
     useEffect(() => {
         const tab = searchParams.get('tab');
@@ -918,77 +917,6 @@ export default function MerchantSettingsPage() {
 
                         <div className="max-w-2xl">
                             <MerchantWhatsAppConnect notifSettings={notifSettings} setNotifSettings={setNotifSettings} />
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'subscription' && (
-                    <div className="p-5 sm:p-8">
-                        <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
-                            <span className="material-icons-round text-[#D4AF37] mr-3">card_membership</span>
-                            Subscription
-                        </h2>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
-                            Manage your storefront subscription plan and billing.
-                        </p>
-
-                        <div className="max-w-2xl space-y-6">
-                            {/* Current Plan Status */}
-                            <div className="p-6 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 shadow-sm">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Current Plan</h3>
-                                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                                        isSubscribed
-                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                                    }`}>
-                                        {subscriptionStatus?.toUpperCase() || 'INACTIVE'}
-                                    </span>
-                                </div>
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between py-2 border-b border-black/5 dark:border-white/5">
-                                        <span className="text-sm text-slate-500 dark:text-slate-400">Status</span>
-                                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100 capitalize">{subscriptionStatus || 'Inactive'}</span>
-                                    </div>
-                                    {expiresAt && (
-                                        <div className="flex items-center justify-between py-2 border-b border-black/5 dark:border-white/5">
-                                            <span className="text-sm text-slate-500 dark:text-slate-400">Expires</span>
-                                            <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{expiryFormatted}</span>
-                                        </div>
-                                    )}
-                                    {daysUntilExpiry !== null && (
-                                        <div className="flex items-center justify-between py-2 border-b border-black/5 dark:border-white/5">
-                                            <span className="text-sm text-slate-500 dark:text-slate-400">Days Remaining</span>
-                                            <span className={`text-sm font-bold ${daysUntilExpiry <= 7 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-100'}`}>
-                                                {daysUntilExpiry > 0 ? `${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}` : 'Expired'}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {merchantProfile?.subscription_payment_ref && (
-                                        <div className="flex items-center justify-between py-2">
-                                            <span className="text-sm text-slate-500 dark:text-slate-400">Last Payment Ref</span>
-                                            <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300">{merchantProfile.subscription_payment_ref}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Subscribe/Renew CTA */}
-                            {subscriptionMerchant ? (
-                                <div className="mt-6">
-                                    <button
-                                        onClick={() => setShowModal(true)}
-                                        className="w-full sm:w-auto px-8 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 gold-glow shadow-lg shadow-[#D4AF37]/20"
-                                    >
-                                        <span className="material-icons-round text-lg">{isSubscribed ? 'autorenew' : 'card_membership'}</span>
-                                        {isSubscribed ? 'Extend Subscription' : 'Activate Subscription'}
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 p-6 shadow-sm mt-6">
-                                    <div className="h-4 w-56 max-w-full animate-pulse rounded bg-slate-200 dark:bg-white/10" />
-                                </div>
-                            )}
                         </div>
                     </div>
                 )}

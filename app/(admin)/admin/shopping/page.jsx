@@ -36,6 +36,15 @@ export default async function AdminShoppingPage() {
 
     if (ordersError) console.error('[AdminShopping] orders error:', ordersError.message);
 
+    // Fetch approved merchants to allow admin to assign custom products
+    const { data: merchants, error: merchantsError } = await adminSupabase
+        .from('merchants')
+        .select('id, business_name, user_id')
+        .eq('status', 'approved')
+        .order('business_name', { ascending: true });
+
+    if (merchantsError) console.error('[AdminShopping] merchants error:', merchantsError.message);
+
     const stats = {
         totalProducts: products?.length || 0,
         platformProducts: products?.filter(p => !p.merchant_inventory?.some(inv => inv.is_platform_product === false)).length || 0,
@@ -48,6 +57,12 @@ export default async function AdminShoppingPage() {
 
     const pendingApprovals = products?.filter(p => p.approval_status === 'pending_approval').length || 0;
 
-    return <AdminShoppingClient products={products || []} stats={stats} initialOrders={orderStats || []} pendingApprovals={pendingApprovals} />;
+    return <AdminShoppingClient 
+        products={products || []} 
+        stats={stats} 
+        initialOrders={orderStats || []} 
+        pendingApprovals={pendingApprovals} 
+        merchants={merchants || []}
+    />;
 }
 

@@ -8,7 +8,7 @@ import { Loader2, Plus, ArrowRight, Package, Upload, Save, Trash2 } from 'lucide
 import MultiImageUploader from '@/components/shared/MultiImageUploader';
 import { uploadProductImage } from './upload-product-image';
 
-export default function ProductForm({ initialData = null }) {
+export default function ProductForm({ initialData = null, merchantId = null }) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [deleting, setDeleting] = useState(false);
@@ -70,6 +70,7 @@ export default function ProductForm({ initialData = null }) {
                 gst_percentage: parseInt(formData.gst_percentage || 0),
                 hsn_code: formData.hsn_code || null,
                 category_id: categoryId,
+                merchant_id: merchantId,
             };
 
             let res;

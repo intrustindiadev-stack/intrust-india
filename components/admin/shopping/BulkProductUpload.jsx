@@ -55,8 +55,7 @@ function generateCSV() {
     URL.revokeObjectURL(url);
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────
-export default function BulkProductUpload({ onSuccess }) {
+export default function BulkProductUpload({ onSuccess, merchantId }) {
     const [dragOver, setDragOver] = useState(false);
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
@@ -93,6 +92,9 @@ export default function BulkProductUpload({ onSuccess }) {
         try {
             const formData = new FormData();
             formData.append('file', file);
+            if (merchantId) {
+                formData.append('merchant_id', merchantId);
+            }
 
             setProgress(30);
             const res = await fetch('/api/admin/shopping/bulk-upload', {

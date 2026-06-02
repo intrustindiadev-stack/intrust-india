@@ -39,9 +39,9 @@ const OutOfStockBadge = ({ size = 'md', variant = 'solid', className = '', icon 
     const variantClasses = isDark ? currentVariant.dark : currentVariant.light;
 
     return (
-        <span className={`inline-flex items-center gap-1 rounded-full font-black uppercase tracking-wider ${currentSize.pill} ${variantClasses} ${className}`}>
+        <span className={`inline-flex items-center gap-1 rounded-full font-black uppercase tracking-wider whitespace-nowrap ${currentSize.pill} ${variantClasses} ${className}`}>
             {icon && <PackageX size={currentSize.icon} strokeWidth={2.5} className="shrink-0" />}
-            {OOS_LABEL}
+            <span className="truncate">{OOS_LABEL}</span>
         </span>
     );
 };

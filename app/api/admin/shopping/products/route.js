@@ -26,6 +26,44 @@ export async function POST(request) {
             hsn_code
         } = body;
 
+        if (body.merchant_id) {
+            const { createAdminClient } = await import('@/lib/supabaseServer');
+            const adminClient = createAdminClient();
+            
+            const { data: prodData, error: prodError } = await adminClient.from('shopping_products').insert({
+                title,
+                description,
+                category,
+                category_id,
+                wholesale_price_paise,
+                suggested_retail_price_paise,
+                mrp_paise: body.mrp_paise || suggested_retail_price_paise,
+                admin_stock,
+                product_images: product_images || [],
+                is_active,
+                gst_percentage: gst_percentage || 0,
+                hsn_code: hsn_code || '9971',
+                platform_listed: true,
+                approval_status: 'live',
+                submitted_by_merchant_id: body.merchant_id
+            }).select('*').single();
+
+            if (prodError) throw prodError;
+
+            const { error: invError } = await adminClient.from('merchant_inventory').insert({
+                product_id: prodData.id,
+                merchant_id: body.merchant_id,
+                retail_price_paise: suggested_retail_price_paise,
+                stock_quantity: admin_stock,
+                is_active: true,
+                is_platform_product: false
+            });
+            
+            if (invError) throw invError;
+            
+            return NextResponse.json({ product: prodData }, { status: 201 });
+        }
+
         const { data, error } = await supabase.rpc('admin_insert_shopping_product', {
             p_title: title,
             p_description: description,

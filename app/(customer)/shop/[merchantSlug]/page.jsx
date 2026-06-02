@@ -1,5 +1,6 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { notFound, redirect } from 'next/navigation';
+import Link from 'next/link';
 import StorefrontV2Client from './StorefrontV2Client';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -96,7 +97,9 @@ export default async function MerchantStorefrontPage({ params }) {
                 business_name,
                 business_address,
                 shopping_banner_url,
-                is_open
+                is_open,
+                subscription_status,
+                subscription_expires_at
             `)
             .eq('slug', merchantSlug)
             .eq('status', 'approved')
@@ -105,6 +108,35 @@ export default async function MerchantStorefrontPage({ params }) {
         if (merchantError || !fetchedMerchant) {
             return notFound();
         }
+
+        const now = new Date();
+        const hasValidSubscription = fetchedMerchant.subscription_status === 'active' && 
+            (!fetchedMerchant.subscription_expires_at || new Date(fetchedMerchant.subscription_expires_at) > now);
+
+        if (!hasValidSubscription) {
+            return (
+                <div className="min-h-screen flex flex-col bg-[#f7f8fa] dark:bg-[#080a10]">
+                    <Navbar />
+                    <main className="flex-1 flex items-center justify-center pt-20 px-4 h-[70vh]">
+                        <div className="text-center bg-white dark:bg-[#0c0e16] p-8 md:p-12 rounded-[2.5rem] border border-slate-200 dark:border-white/10 shadow-xl max-w-md w-full mx-auto">
+                            <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                                <span className="text-4xl">🏪</span>
+                            </div>
+                            <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-3">Store Unavailable</h1>
+                            <p className="text-slate-500 dark:text-slate-400 font-medium text-sm mb-8 leading-relaxed">
+                                {fetchedMerchant.business_name} is currently offline. Please explore other amazing stores in your area.
+                            </p>
+                            <Link href="/shop" className="inline-flex items-center justify-center w-full gap-2 px-6 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg">
+                                Explore Shops
+                            </Link>
+                        </div>
+                    </main>
+                    <Footer />
+                    <CustomerBottomNav />
+                </div>
+            );
+        }
+
         merchant = fetchedMerchant;
 
         // Run all remaining fetches in parallel

@@ -24,7 +24,7 @@ export default async function MerchantHubPage() {
     ] = await Promise.all([
         supabase
             .from('merchants')
-            .select('id, slug, user_id, business_name, business_address, shopping_banner_url, is_open')
+            .select('id, slug, user_id, business_name, business_address, shopping_banner_url, is_open, subscription_status, subscription_expires_at')
             .eq('status', 'approved')
             .order('business_name', { ascending: true }),
         supabase.auth.getUser(),
@@ -32,7 +32,13 @@ export default async function MerchantHubPage() {
         adminClient.from('platform_settings').select('value').eq('key', 'platform_store').single()
     ]);
 
-    let merchants = merchantsResult.data || [];
+    const rawMerchants = merchantsResult.data || [];
+    const now = new Date();
+    let merchants = rawMerchants.filter(m => 
+        m.subscription_status === 'active' && 
+        (!m.subscription_expires_at || new Date(m.subscription_expires_at) > now)
+    );
+
     const user = userResult.data?.user;
 
     // Batch 2: Dependent fetches (requires merchants/user)

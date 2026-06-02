@@ -69,6 +69,8 @@ export async function POST(request) {
         // Parse multipart form
         const formData = await request.formData();
         const file = formData.get('file');
+        const merchantId = formData.get('merchant_id') || null;
+
         if (!file) return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
 
         const fileName = file.name?.toLowerCase() || '';
@@ -134,24 +136,65 @@ export async function POST(request) {
                 const p = r.payload;
                 // Resolve category ID
                 const cat = categories?.find(c => c.name.toLowerCase() === p.category.toLowerCase());
-                const { data, error } = await supabase.rpc('admin_insert_shopping_product', {
-                    p_title:        p.title,
-                    p_description:  p.description,
-                    p_category:     p.category,
-                    p_category_id:  cat?.id || null,
-                    p_wholesale_price: p.wholesale_price_paise,
-                    p_retail_price: p.suggested_retail_price_paise,
-                    p_mrp_paise:    p.mrp_paise,
-                    p_admin_stock:  p.admin_stock,
-                    p_product_images: p.product_images,
-                    p_is_active:    p.is_active,
-                    p_gst_percentage: p.gst_percentage,
-                    p_hsn_code:     p.hsn_code,
-                });
-                if (error) {
-                    insertErrors.push({ row: r.rowNumber, messages: [error.message || 'DB insert failed'] });
-                } else if (data?.id) {
-                    insertedIds.push(data.id);
+                
+                if (merchantId) {
+                    // Custom Product Upload
+                    const { data: prodData, error: prodError } = await adminClient.from('shopping_products').insert({
+                        title: p.title,
+                        description: p.description,
+                        category: p.category,
+                        category_id: cat?.id || null,
+                        wholesale_price_paise: p.wholesale_price_paise,
+                        suggested_retail_price_paise: p.suggested_retail_price_paise,
+                        mrp_paise: p.mrp_paise,
+                        admin_stock: p.admin_stock,
+                        product_images: p.product_images,
+                        is_active: p.is_active,
+                        gst_percentage: p.gst_percentage,
+                        hsn_code: p.hsn_code,
+                        platform_listed: true,
+                        approval_status: 'live',
+                        submitted_by_merchant_id: merchantId
+                    }).select('id').single();
+
+                    if (prodError) {
+                        insertErrors.push({ row: r.rowNumber, messages: [prodError.message || 'Product insert failed'] });
+                    } else if (prodData?.id) {
+                        const { error: invError } = await adminClient.from('merchant_inventory').insert({
+                            product_id: prodData.id,
+                            merchant_id: merchantId,
+                            retail_price_paise: p.suggested_retail_price_paise,
+                            stock_quantity: p.admin_stock,
+                            is_active: true,
+                            is_platform_product: false
+                        });
+                        if (invError) {
+                            insertErrors.push({ row: r.rowNumber, messages: [invError.message || 'Inventory insert failed'] });
+                        } else {
+                            insertedIds.push(prodData.id);
+                        }
+                    }
+                } else {
+                    // Platform Product Upload
+                    const { data, error } = await supabase.rpc('admin_insert_shopping_product', {
+                        p_title:        p.title,
+                        p_description:  p.description,
+                        p_category:     p.category,
+                        p_category_id:  cat?.id || null,
+                        p_wholesale_price: p.wholesale_price_paise,
+                        p_retail_price: p.suggested_retail_price_paise,
+                        p_mrp_paise:    p.mrp_paise,
+                        p_admin_stock:  p.admin_stock,
+                        p_product_images: p.product_images,
+                        p_is_active:    p.is_active,
+                        p_gst_percentage: p.gst_percentage,
+                        p_hsn_code:     p.hsn_code,
+                    });
+                    if (error) {
+                        insertErrors.push({ row: r.rowNumber, messages: [error.message || 'DB insert failed'] });
+                    } else if (data?.id) {
+                        insertedIds.push(data.id);
+                    }
                 }
             }));
         }

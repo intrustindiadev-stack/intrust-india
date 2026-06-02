@@ -19,7 +19,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     const accountItems = [
         { label: "Profile", href: "/merchant/profile", icon: "person_outline" },
         { label: "Settings", href: "/merchant/settings", icon: "settings" },
-        { label: "Subscription", href: "/merchant/settings?tab=subscription", icon: "card_membership" },
+        { label: "Subscription", href: "/merchant/subscription", icon: "card_membership" },
     ];
 
     const operationsItems = [

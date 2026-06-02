@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { isInventoryRowOOS, OOS_LABEL } from '@/lib/shopping/stock';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 import BulkProductUpload from '@/components/admin/shopping/BulkProductUpload';
@@ -18,11 +18,17 @@ import BulkProductUpload from '@/components/admin/shopping/BulkProductUpload';
 const TAB_PLATFORM = "platform";
 const TAB_CUSTOM = "custom";
 
-export default function AdminShoppingClient({ products: initialProducts, stats: initialStats, initialOrders, pendingApprovals = 0 }) {
+export default function AdminShoppingClient({ products: initialProducts, stats: initialStats, initialOrders, pendingApprovals = 0, merchants = [] }) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    
+    const initialTab = searchParams.get('tab') === TAB_CUSTOM ? TAB_CUSTOM : TAB_PLATFORM;
+    const initialMerchant = searchParams.get('merchant') || "all";
+
     const [localProducts, setLocalProducts] = useState(initialProducts);
     const [localOrders, setLocalOrders] = useState(initialOrders);
-    const [activeTab, setActiveTab] = useState(TAB_PLATFORM);
+    const [activeTab, setActiveTab] = useState(initialTab);
+    const [selectedMerchant, setSelectedMerchant] = useState(initialMerchant);
     const [search, setSearch] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("all");
     const [oosOnly, setOosOnly] = useState(false);
@@ -174,8 +180,18 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
             }
         }
         
-        return matchesSearch && matchesCat && matchesOos;
+        let matchesMerchantFilter = true;
+        if (activeTab === TAB_CUSTOM && selectedMerchant !== "all") {
+            const mId = p.merchant_inventory?.find(inv => inv.is_platform_product === false)?.merchant_id;
+            matchesMerchantFilter = mId === selectedMerchant;
+        }
+
+        return matchesSearch && matchesCat && matchesOos && matchesMerchantFilter;
     });
+
+    const newProductLink = activeTab === TAB_CUSTOM && selectedMerchant !== "all" 
+        ? `/admin/shopping/new?merchant=${selectedMerchant}` 
+        : `/admin/shopping/new`;
 
     return (
         <div className="p-6 lg:p-10 max-w-7xl mx-auto bg-[#f8f9fb] min-h-screen font-[family-name:var(--font-outfit)]">
@@ -240,22 +256,26 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                         <Tags size={16} />
                         <span>Cats</span>
                     </Link>
-                    <Link
-                        href="/admin/shopping/new"
-                        className="group w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-950 hover:bg-blue-600 text-white px-6 sm:pl-5 sm:pr-4 py-3.5 rounded-2xl sm:rounded-[1.5rem] font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all shadow-2xl shadow-slate-950/10 active:scale-95"
-                    >
-                        <span>Add Product</span>
-                        <div className="bg-white/10 p-1 rounded-xl group-hover:rotate-90 transition-transform">
-                            <Plus size={16} />
-                        </div>
-                    </Link>
-                    <button
-                        onClick={() => setBulkUploadOpen(true)}
-                        className="group w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 sm:pr-4 py-3.5 rounded-2xl sm:rounded-[1.5rem] font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all shadow-2xl shadow-emerald-600/20 active:scale-95"
-                    >
-                        <FileSpreadsheet size={16} />
-                        <span>Bulk Upload</span>
-                    </button>
+                    {activeTab === TAB_PLATFORM && (
+                        <Link
+                            href="/admin/shopping/new"
+                            className="group w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-950 hover:bg-blue-600 text-white px-6 sm:pl-5 sm:pr-4 py-3.5 rounded-2xl sm:rounded-[1.5rem] font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all shadow-2xl shadow-slate-950/10 active:scale-95"
+                        >
+                            <span>Add Platform Product</span>
+                            <div className="bg-white/10 p-1 rounded-xl group-hover:rotate-90 transition-transform">
+                                <Plus size={16} />
+                            </div>
+                        </Link>
+                    )}
+                    {activeTab === TAB_PLATFORM && (
+                        <button
+                            onClick={() => setBulkUploadOpen(true)}
+                            className="group w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 sm:pr-4 py-3.5 rounded-2xl sm:rounded-[1.5rem] font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all shadow-2xl shadow-emerald-600/20 active:scale-95"
+                        >
+                            <FileSpreadsheet size={16} />
+                            <span>Bulk Upload Platform</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -311,8 +331,8 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                     </button>
                 </div>
 
-                <div className="flex items-center gap-3 flex-1">
-                    <div className="relative flex-1">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 flex-1 w-full">
+                    <div className="relative flex-1 min-w-[200px] w-full">
                         <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
                             type="text"
@@ -322,51 +342,132 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                             className="w-full pl-9 pr-4 py-3 rounded-[1.2rem] bg-white border border-slate-200 text-xs font-bold text-slate-900 dark:placeholder:text-slate-400 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
                         />
                     </div>
-                    <select
-                        value={categoryFilter}
-                        onChange={e => setCategoryFilter(e.target.value)}
-                        className="w-32 px-3 py-3 rounded-[1.2rem] bg-white border border-slate-200 text-[10px] font-black text-slate-900 uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/10 transition-all appearance-none cursor-pointer"
-                    >
-                        <option value="all">Category: All</option>
-                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    <button
-                        onClick={() => setOosOnly(!oosOnly)}
-                        className={`flex items-center gap-1.5 rounded-[1.2rem] px-3 py-3 font-black text-[10px] uppercase tracking-widest transition-all ${
-                            oosOnly
-                                ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
-                                : "bg-white border border-slate-200 text-slate-500"
-                        }`}
-                    >
-                        <PackageX size={12} className={oosOnly ? "text-white" : "text-slate-400"} />
-                        {OOS_LABEL} Only
-                    </button>
+                    <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-1 sm:pb-0 w-full sm:w-auto">
+                        {activeTab === TAB_CUSTOM && merchants.length > 0 && (
+                            <select
+                                value={selectedMerchant}
+                                onChange={e => setSelectedMerchant(e.target.value)}
+                                className="shrink-0 w-36 sm:w-48 px-3 py-3 rounded-[1.2rem] bg-white border border-slate-200 text-[10px] font-black text-slate-900 uppercase tracking-widest outline-none focus:ring-4 focus:ring-violet-500/10 transition-all appearance-none cursor-pointer"
+                            >
+                                <option value="all">All Merchants</option>
+                                {merchants.map(m => <option key={m.id} value={m.id}>{m.business_name}</option>)}
+                            </select>
+                        )}
+                        <select
+                            value={categoryFilter}
+                            onChange={e => setCategoryFilter(e.target.value)}
+                            className="shrink-0 w-28 sm:w-32 px-3 py-3 rounded-[1.2rem] bg-white border border-slate-200 text-[10px] font-black text-slate-900 uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/10 transition-all appearance-none cursor-pointer"
+                        >
+                            <option value="all">Category: All</option>
+                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <button
+                            onClick={() => setOosOnly(!oosOnly)}
+                            className={`shrink-0 flex items-center justify-center gap-1.5 rounded-[1.2rem] px-3 py-3 font-black text-[10px] uppercase tracking-widest transition-all ${
+                                oosOnly
+                                    ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
+                                    : "bg-white border border-slate-200 text-slate-500"
+                            }`}
+                        >
+                            <PackageX size={12} className={oosOnly ? "text-white" : "text-slate-400"} />
+                            <span className="hidden sm:inline">{OOS_LABEL} Only</span>
+                            <span className="sm:hidden">OOS</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Context Banner */}
-            {activeTab === TAB_CUSTOM && (
+            {activeTab === TAB_CUSTOM && selectedMerchant === "all" && (
                 <div className="mb-5 p-4 rounded-2xl bg-violet-50 border border-violet-200 flex items-start gap-3">
                     <Store size={16} className="text-violet-600 mt-0.5 shrink-0" />
                     <div>
                         <p className="text-sm font-black text-violet-800">Merchant Custom Products</p>
                         <p className="text-xs text-violet-600 mt-0.5">
-                            These products were created by merchants directly. InTrust earns <strong>5% commission</strong> on each sale.
-                            You can view and toggle their active status, but pricing is set by merchants.
+                            Select a merchant to view and manage their custom inventory. InTrust earns <strong>5% commission</strong> on each sale.
                         </p>
                     </div>
                 </div>
             )}
 
-            {/* Products Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filtered.length === 0 ? (
-                    <div className="col-span-full py-24 text-center bg-white rounded-[2rem] border border-dashed border-slate-200 shadow-inner">
-                        <Package className="mx-auto text-slate-100 mb-4" size={56} />
-                        <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Matrix Empty: No Products Found</p>
+            {activeTab === TAB_CUSTOM && selectedMerchant !== "all" && (
+                <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <button
+                        onClick={() => setSelectedMerchant("all")}
+                        className="flex items-center gap-2 px-4 py-2 w-fit bg-white border border-slate-200 rounded-[1rem] text-xs font-black text-slate-700 uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                    >
+                        <ChevronRight size={14} className="rotate-180" />
+                        Back to Merchants
+                    </button>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="px-3 py-1.5 rounded-lg bg-violet-50 border border-violet-100 text-[10px] font-black text-violet-600 uppercase tracking-widest hidden md:block">
+                            {merchants.find(m => m.id === selectedMerchant)?.business_name || "Merchant"}
+                        </div>
+                        <Link
+                            href={`/admin/shopping/new?merchant=${selectedMerchant}`}
+                            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-[1rem] text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shadow-sm shadow-violet-600/20 active:scale-95"
+                        >
+                            <Plus size={14} />
+                            <span className="hidden sm:inline">Add Custom Product</span>
+                            <span className="sm:hidden">Add</span>
+                        </Link>
+                        <button
+                            onClick={() => setBulkUploadOpen(true)}
+                            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[1rem] text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shadow-sm shadow-emerald-600/20 active:scale-95"
+                        >
+                            <FileSpreadsheet size={14} />
+                            <span className="hidden sm:inline">Bulk Upload Custom</span>
+                            <span className="sm:hidden">Bulk</span>
+                        </button>
                     </div>
-                ) : (
-                    filtered.map(product => {
+                </div>
+            )}
+
+            {/* Content Area */}
+            {activeTab === TAB_CUSTOM && selectedMerchant === "all" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {merchants.length === 0 ? (
+                        <div className="col-span-full py-24 text-center bg-white rounded-[2rem] border border-dashed border-slate-200 shadow-inner">
+                            <Store className="mx-auto text-slate-100 mb-4" size={56} />
+                            <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">No Merchants Found</p>
+                        </div>
+                    ) : (
+                        merchants.filter(m => !search || m.business_name.toLowerCase().includes(search.toLowerCase())).map(merchant => {
+                            const productCount = customProducts.filter(p => p.merchant_inventory?.some(inv => inv.is_platform_product === false && inv.merchant_id === merchant.id)).length;
+                            return (
+                                <div
+                                    key={merchant.id}
+                                    onClick={() => setSelectedMerchant(merchant.id)}
+                                    className="group cursor-pointer bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-violet-500/10 hover:border-violet-100 transition-all duration-300 flex flex-col items-center text-center gap-3"
+                                >
+                                    <div className="w-16 h-16 rounded-[1.2rem] bg-violet-50 text-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 border border-violet-100">
+                                        <Store size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-black text-slate-900 truncate tracking-tight px-2">{merchant.business_name}</h3>
+                                        <div className="flex items-center justify-center gap-2 mt-2">
+                                            <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border ${merchant.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                                                {merchant.status}
+                                            </span>
+                                            <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border bg-blue-50 text-blue-600 border-blue-100">
+                                                {productCount} Items
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filtered.length === 0 ? (
+                        <div className="col-span-full py-24 text-center bg-white rounded-[2rem] border border-dashed border-slate-200 shadow-inner">
+                            <Package className="mx-auto text-slate-100 mb-4" size={56} />
+                            <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Matrix Empty: No Products Found</p>
+                        </div>
+                    ) : (
+                        filtered.map(product => {
                         const isMerchantProduct = product.merchant_inventory?.some(inv => inv.is_platform_product === false);
                         const categoryName = product.shopping_categories?.name || product.category || "General";
                         const currentStock = stockEdits[product.id] !== undefined ? parseInt(stockEdits[product.id]) || 0 : (product.admin_stock || 0);
@@ -413,7 +514,7 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                                         )}
                                         <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{categoryName}</span>
                                         {isMerchantProduct && (
-                                            <span className="text-[8px] font-black text-violet-500 bg-violet-50 px-2 py-0.5 rounded-lg border border-violet-100 uppercase tracking-wider">
+                                            <span className="text-[8px] font-black text-violet-500 bg-violet-50 px-2 py-0.5 rounded-lg border border-violet-100 uppercase tracking-wider max-w-[100px] sm:max-w-[150px] truncate">
                                                 {product.merchant_inventory?.find(inv => inv.is_platform_product === false)?.merchants?.business_name || "Merchant"}
                                             </span>
                                         )}
@@ -504,7 +605,8 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                         );
                     })
                 )}
-            </div>
+                </div>
+            )}
 
             {/* ── Bulk Upload Slide-Over ──────────────────────────────────── */}
             {bulkUploadOpen && (
@@ -534,6 +636,7 @@ export default function AdminShoppingClient({ products: initialProducts, stats: 
                             </button>
                         </div>
                         <BulkProductUpload
+                            merchantId={activeTab === TAB_CUSTOM && selectedMerchant !== "all" ? selectedMerchant : null}
                             onSuccess={() => {
                                 setBulkUploadOpen(false);
                                 router.refresh();

@@ -2,7 +2,10 @@ import ProductForm from '../ProductForm';
 import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 
-export default function NewProductPage() {
+export default async function NewProductPage({ searchParams }) {
+    const resolvedSearchParams = await searchParams;
+    const merchantId = resolvedSearchParams?.merchant || null;
+
     return (
         <div className="p-6 lg:p-10 max-w-5xl mx-auto">
             <Link 
@@ -18,7 +21,7 @@ export default function NewProductPage() {
                 <p className="text-slate-500 mt-1 font-medium">Create a new platform product for merchants to stock</p>
             </div>
 
-            <ProductForm />
+            <ProductForm merchantId={merchantId} />
         </div>
     );
 }
