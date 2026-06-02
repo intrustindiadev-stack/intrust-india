@@ -220,6 +220,23 @@ def verify_health(client):
 
 
 # ──────────────────────────────────────────────
+#  STEP 6: CLEANUP
+# ──────────────────────────────────────────────
+def cleanup(client):
+    divider("STEP 6 - Cleanup")
+    print("\n[6a] Removing local build.tar.gz...")
+    if os.path.exists(LOCAL_TAR):
+        os.remove(LOCAL_TAR)
+        print("  Removed local tarball.")
+    else:
+        print("  Local tarball not found.")
+
+    print("\n[6b] Removing remote build.tar.gz...")
+    run_remote(client, f"rm -f {REMOTE_UPLOAD}", exit_on_fail=False)
+    print("  Removed remote tarball.")
+
+
+# ──────────────────────────────────────────────
 #  MAIN PIPELINE
 # ──────────────────────────────────────────────
 def main():
@@ -254,6 +271,9 @@ def main():
 
         # Step 5: Verify
         verify_health(client)
+
+        # Step 6: Cleanup
+        cleanup(client)
     finally:
         client.close()
 
