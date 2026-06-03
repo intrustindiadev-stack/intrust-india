@@ -15,7 +15,7 @@ function pass(msg) { console.log(`  ✅ PASS: ${msg}`); passed++; }
 function fail(msg, detail) { console.error(`  ❌ FAIL: ${msg}`, detail || ''); failed++; }
 
 async function getTestUserId() {
-    const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     return users?.users?.find(u => u.email === TEST_EMAIL)?.id;
 }
 

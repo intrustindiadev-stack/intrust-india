@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
-import { hashOTP, validatePhoneNumber } from '@/lib/otpUtils';
+import { hashOTP, validatePhoneNumber, normalizePhone } from '@/lib/otpUtils';
 import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
 
 /**
@@ -15,11 +15,10 @@ export async function POST(request) {
         const body = await request.json();
         const { phone, otp, userId } = body;
 
-        // 1. Validate inputs
-        let cleanPhone = phone ? phone.replace(/\D/g, '') : '';
-        if (cleanPhone.length > 10) cleanPhone = cleanPhone.slice(-10);
+        // 1. Validate inputs using unified normalizePhone
+        const { cleanPhone, isValid } = normalizePhone(phone);
 
-        if (!cleanPhone || !validatePhoneNumber(cleanPhone) || !otp || otp.length !== 6) {
+        if (!isValid || !otp || otp.length !== 6) {
             return NextResponse.json(
                 { success: false, error: 'Invalid phone number or OTP.' },
                 { status: 400 }

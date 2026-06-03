@@ -7,7 +7,7 @@ import {
     Loader2, ChevronLeft, Store, TrendingUp, Users, Check, Sparkles, CreditCard, Banknote, X, Home, Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { createClient } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { verifyGSTIN } from '@/app/actions/sprintVerifyActions';

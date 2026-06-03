@@ -9,6 +9,7 @@ import { Phone, ArrowRight, Loader2, ShieldCheck, User, Sparkles, Mail, CheckCir
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { normalizePhone } from '@/lib/phoneUtils';
 import AccountLinkingPrompt from '@/components/auth/AccountLinkingPrompt';
 
 // Inner component that uses useSearchParams (must be wrapped in Suspense)
@@ -33,24 +34,19 @@ function SignupPageInner() {
     const [conflictProvider, setConflictProvider] = useState('');
     const [resendLoading, setResendLoading] = useState(false);
     const [timer, setTimer] = useState(0);
-    const [canResend, setCanResend] = useState(true);
+    const canResend = timer === 0;
 
     useEffect(() => {
-        let interval;
         if (timer > 0) {
-            interval = setInterval(() => {
+            const interval = setInterval(() => {
                 setTimer((prev) => prev - 1);
             }, 1000);
-        } else {
-            setCanResend(true);
-            clearInterval(interval);
+            return () => clearInterval(interval);
         }
-        return () => clearInterval(interval);
     }, [timer]);
 
     const startTimer = () => {
-        setTimer(30);
-        setCanResend(false);
+        setTimer(60);
     };
 
     useEffect(() => {
@@ -84,25 +80,18 @@ function SignupPageInner() {
     const handleSendOTP = async (e) => {
         if (e) e.preventDefault();
         setLoading(true);
-        if (phone.length !== 10) {
+        const { formattedPhone, isValid } = normalizePhone(phone);
+        if (!isValid) {
             toast.error('Please enter a valid 10-digit phone number');
             setLoading(false);
             return;
         }
-        try {
-            const { data: userData, error: checkError } = await supabase
-                .rpc('get_user_id_by_phone', { phone_number: phone });
-            if (!checkError && userData) {
-                toast.error('Account already exists. Please login instead.');
-                setLoading(false);
-                return;
-            }
-        } catch (err) {
-            console.error('[SIGNUP] Phone check failed:', err);
+        const { error: otpError } = await signInWithOTP(formattedPhone, 'signup');
+        if (otpError) { 
+            toast.error(otpError.message || 'Failed to send OTP.'); 
+            setLoading(false); 
+            return; 
         }
-        const formattedPhone = `+91${phone}`;
-        const { error: otpError } = await signInWithOTP(formattedPhone);
-        if (otpError) { toast.error(otpError.message || 'Failed to send OTP.'); setLoading(false); return; }
         setStep('otp');
         startTimer();
         setLoading(false);
@@ -110,13 +99,17 @@ function SignupPageInner() {
 
     const handleVerifyOTP = async (e) => {
         if (e) e.preventDefault();
+        if (loading) return;
         if (otp.length !== 6) { toast.error('Please enter the 6-digit OTP'); return; }
         setLoading(true);
         try {
-            const formattedPhone = `+91${phone}`;
+            const { formattedPhone } = normalizePhone(phone);
             const { data, error: verifyError } = await verifyOTP(formattedPhone, otp, name);
             if (verifyError) { toast.error(verifyError.message || 'Invalid OTP.'); setLoading(false); return; }
             await redirectByRole(data?.user, data?.role, data?.is_suspended);
+            if (data?.is_suspended) {
+                setLoading(false);
+            }
         } catch (err) {
             console.error('[SIGNUP] Unexpected OTP error:', err);
             toast.error('An unexpected error occurred. Please try again.');
@@ -330,7 +323,7 @@ function SignupPageInner() {
                             </button>
                             <h2 className="text-2xl font-bold text-[var(--text-primary)] w-full text-center">Your Name</h2>
                         </div>
-                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">Let's personalise your account</p>
+                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">Let&apos;s personalise your account</p>
 
                         <form onSubmit={handleContinue} className="space-y-5">
                             <div>
@@ -455,11 +448,11 @@ function SignupPageInner() {
                         </div>
                         <h2 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Check your email</h2>
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
-                            We've sent a verification link to<br />
+                            We&apos;ve sent a verification link to<br />
                             <span className="font-bold text-[var(--text-primary)]">{emailAddress}</span>
                         </p>
                         <p className="text-xs text-[var(--text-secondary)] text-center mb-6">
-                            Click the link in the email to activate your account. Check spam if it doesn't arrive.
+                            Click the link in the email to activate your account. Check spam if it doesn&apos;t arrive.
                         </p>
 
                         <button

@@ -1,34 +1,51 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
-import { generateOTP, hashOTP, validatePhoneNumber } from '@/lib/otpUtils';
+import { generateOTP, hashOTP, validatePhoneNumber, normalizePhone, formatPhoneForSMS } from '@/lib/otpUtils';
 import { sendOTP } from '@/lib/smsClient';
 
 export async function POST(request) {
     try {
         const body = await request.json();
-        let { phone } = body;
+        let { phone, flow } = body;
 
-        // Normalize phone: Remove non-digits, take last 10 digits
-        // This handles +91, 91, 0 prefixes, or spaces/dashes
-        if (phone) {
-            const digits = phone.replace(/\D/g, '');
-            if (digits.length >= 10) {
-                phone = digits.slice(-10);
-            } else {
-                // Too short? leave as is to fail validation below
-                phone = digits;
-            }
-        }
+        // Normalize phone using unified utility
+        const { cleanPhone, isValid } = normalizePhone(phone);
 
         // 1. Validate phone number
-        if (!phone || !validatePhoneNumber(phone)) {
+        if (!isValid) {
             return NextResponse.json(
                 { success: false, error: 'Invalid phone number. Must be 10 digits.' },
                 { status: 400 }
             );
         }
 
+        phone = cleanPhone; // Set phone to 10-digit clean format for the rest of route
+
         const supabase = createAdminClient();
+
+        // 1b. Check user existence to prevent account enumeration / spam
+        if (flow) {
+            const { data: userId, error: checkError } = await supabase
+                .rpc('get_user_id_by_phone', { phone_number: phone });
+
+            if (checkError) {
+                console.error('[send-otp] Database error checking user existence:', checkError);
+                return NextResponse.json(
+                    { success: false, error: 'Internal server error' },
+                    { status: 500 }
+                );
+            }
+
+            if (flow === 'login' && !userId) {
+                console.log(`[send-otp] Login flow: phone ${phone} does not exist. Returning neutral success.`);
+                return NextResponse.json({ success: true });
+            }
+
+            if (flow === 'signup' && userId) {
+                console.log(`[send-otp] Signup flow: phone ${phone} already exists. Returning neutral success.`);
+                return NextResponse.json({ success: true });
+            }
+        }
 
         // 2. Rate Limiting & Cooldown
         const now = new Date();
@@ -94,10 +111,7 @@ export async function POST(request) {
         }
 
         // 4. Send SMS
-        // We ensure we send mostly normalized number to SMS client, 
-        // SMS provider might want 91 prefixed. smsClient handles raw phone.
-        // Let's prepend 91 for SMS delivery to be safe as most gateways expect country code.
-        const msgPhone = `91${phone}`;
+        const msgPhone = formatPhoneForSMS(phone);
         const smsResult = await sendOTP(msgPhone, otp);
 
         if (!smsResult.success) {
@@ -111,7 +125,7 @@ export async function POST(request) {
                 .eq('otp_hash', otpHash);
 
             return NextResponse.json(
-                { success: false, error: 'Failed to send OTP. Please try again.' },
+                { success: false, error: smsResult.error || 'Failed to send OTP. Please try again.' },
                 { status: 500 }
             );
         }

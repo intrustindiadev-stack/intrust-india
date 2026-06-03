@@ -8,8 +8,9 @@ import { Phone, ArrowRight, Loader2, ShieldCheck, Mail, Eye, EyeOff, CheckCircle
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { normalizePhone } from '@/lib/phoneUtils';
 
-function OTPBoxInput({ value, onChange, onComplete }) {
+function OTPBoxInput({ value, onChange, onComplete, loading }) {
     const refs = useRef([]);
     // Lock prevents onComplete from firing multiple times (e.g. paste + auto-fill race)
     const submittingRef = useRef(false);
@@ -20,6 +21,13 @@ function OTPBoxInput({ value, onChange, onComplete }) {
             onComplete && onComplete(completed);
         }
     };
+
+    // Reset the lock when loading is complete (e.g. verify failed) or value is cleared
+    useEffect(() => {
+        if (!loading) {
+            submittingRef.current = false;
+        }
+    }, [loading]);
 
     // Reset the lock whenever the value is cleared (e.g. after a failed attempt)
     useEffect(() => {
@@ -101,24 +109,19 @@ function LoginContent() {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [timer, setTimer] = useState(0);
-    const [canResend, setCanResend] = useState(true);
+    const canResend = timer === 0;
 
     useEffect(() => {
-        let interval;
         if (timer > 0) {
-            interval = setInterval(() => {
+            const interval = setInterval(() => {
                 setTimer((prev) => prev - 1);
             }, 1000);
-        } else {
-            setCanResend(true);
-            clearInterval(interval);
+            return () => clearInterval(interval);
         }
-        return () => clearInterval(interval);
     }, [timer]);
 
     const startTimer = () => {
         setTimer(60);
-        setCanResend(false);
     };
 
     // ─── Email-specific ──────────────────────────────────────────────────────────
@@ -166,26 +169,13 @@ function LoginContent() {
     const handleSendOTP = async (e) => {
         if (e) e.preventDefault();
         setLoading(true);
-        try {
-            const { data: userId, error: checkError } = await supabase
-                .rpc('get_user_id_by_phone', { phone_number: phone });
-            if (checkError) {
-                toast.error('Something went wrong, please try again.');
-                setLoading(false);
-                return;
-            }
-            if (!userId) {
-                toast.error('No account found with this phone number. Redirecting to signup...');
-                setTimeout(() => router.push('/signup'), 1500);
-                return;
-            }
-        } catch (err) {
-            toast.error('Something went wrong, please try again.');
+        const { formattedPhone, isValid } = normalizePhone(phone);
+        if (!isValid) {
+            toast.error('Invalid phone number. Must be 10 digits.');
             setLoading(false);
             return;
         }
-        const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
-        const { error: otpError } = await signInWithOTP(formattedPhone);
+        const { error: otpError } = await signInWithOTP(formattedPhone, 'login');
         if (otpError) {
             toast.error(otpError.message || 'Failed to send OTP');
             setLoading(false);
@@ -203,7 +193,7 @@ function LoginContent() {
         if (otpValue.replace(/\s+/g, '').length !== 6) return; // strict 6-digit guard
         setLoading(true);
         try {
-            const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
+            const { formattedPhone } = normalizePhone(phone);
             const { data, error: verifyError } = await verifyOTP(formattedPhone, otpValue);
             if (verifyError) {
                 toast.error(verifyError.message || 'Invalid OTP');
@@ -213,6 +203,9 @@ function LoginContent() {
             const user = data?.user;
             if (user) {
                 await redirectByRole(user, data.role, data.is_suspended, postLoginRedirect);
+                if (data.is_suspended) {
+                    setLoading(false);
+                }
                 // Redirect is navigating away; do not clear loading so the button
                 // stays disabled until the navigation completes.
             } else {
@@ -407,7 +400,7 @@ function LoginContent() {
                         </div>
 
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-6">
-                            Don't have an account? <Link href="/signup" className="text-[#92BCEA] font-semibold hover:underline">Sign up</Link>
+                            Don&apos;t have an account? <Link href="/signup" className="text-[#92BCEA] font-semibold hover:underline">Sign up</Link>
                         </p>
                     </div>
                 )}
@@ -485,10 +478,11 @@ function LoginContent() {
                             value={otp}
                             onChange={(v) => { setOtp(v); }}
                             onComplete={callVerifyOTP}
+                            loading={loading}
                         />
 
                         <p className="text-xs text-[var(--text-secondary)] text-center mt-3 mb-6">
-                            Can't find the email? Check your spam folder.
+                            Can&apos;t find the email? Check your spam folder.
                         </p>
 
                         <div className="space-y-3">
@@ -537,7 +531,7 @@ function LoginContent() {
                                         required pattern="[0-9]{10}" maxLength={10}
                                     />
                                 </div>
-                                <p className="text-xs text-[var(--text-secondary)] mt-2">We'll send you an OTP via SMS</p>
+                                <p className="text-xs text-[var(--text-secondary)] mt-2">We&apos;ll send you an OTP via SMS</p>
                             </div>
 
                             <button
@@ -571,6 +565,7 @@ function LoginContent() {
                             value={otp}
                             onChange={(v) => { setOtp(v); }}
                             onComplete={callVerifyOTP}
+                            loading={loading}
                         />
 
                         <div className="mt-6 space-y-4">
@@ -588,7 +583,7 @@ function LoginContent() {
                                 disabled={loading || !canResend}
                                 className="w-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm transition-colors disabled:opacity-50"
                             >
-                                Didn't receive OTP? <span className="underline font-semibold">{canResend ? 'Resend' : `Resend in ${timer}s`}</span>
+                                Didn&apos;t receive OTP? <span className="underline font-semibold">{canResend ? 'Resend' : `Resend in ${timer}s`}</span>
                             </button>
                         </div>
                     </div>

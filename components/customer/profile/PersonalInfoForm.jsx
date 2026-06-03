@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { User, Mail, Phone, Calendar, Edit2, Check, X, Loader2, Lock, ShieldCheck, AlertCircle } from 'lucide-react';
 import { signInWithOTP } from '@/lib/supabase';
 import { displayEmail } from '@/lib/auth';
+import { normalizePhone } from '@/lib/phoneUtils';
 
 function EditableRow({ label, value, icon: Icon, onSave, type = 'text', placeholder, readOnly = false, badge }) {
     const [editing, setEditing] = useState(false);
@@ -94,15 +95,14 @@ function PhoneVerification({ currentPhone, authPhone, userId, onVerified, showTo
     }, [step]);
 
     const handleSendOTP = async () => {
-        if (phone.length !== 10) return;
+        const { cleanPhone, formattedPhone, isValid } = normalizePhone(phone);
+        if (!isValid) return;
         setError('');
         setLoading(true);
 
-        const formattedPhone = `+91${phone}`;
-
         try {
             const { data: existingUserId, error: checkError } = await supabase
-                .rpc('get_user_id_by_phone', { phone_number: phone });
+                .rpc('get_user_id_by_phone', { phone_number: cleanPhone });
 
             if (checkError) {
                 console.error('Phone check error:', checkError);

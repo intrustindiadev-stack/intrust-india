@@ -29,9 +29,13 @@ function fail(msg, detail) {
 
 async function cleanupData() {
     // Clean up test user
-    const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     const testUser = users?.users?.find(u => u.email === TEST_EMAIL);
     if (testUser) {
+        // Clean up dependent CRM leads to prevent foreign key constraint violations
+        await supabaseAdmin.from('crm_leads').delete().eq('created_by', testUser.id);
+        await supabaseAdmin.from('crm_leads').delete().eq('assigned_to', testUser.id);
+        
         await supabaseAdmin.auth.admin.deleteUser(testUser.id);
     }
     // Clean up OTPs
@@ -61,7 +65,7 @@ async function run() {
     }
     if (res1.status === 200 && data1.pendingVerification) {
         // Force confirm user to proceed with signin tests later
-        const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+        const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
         const createdUser = users?.users?.find(u => u.email === TEST_EMAIL);
         if (createdUser) {
             await supabaseAdmin.auth.admin.updateUserById(createdUser.id, { email_confirm: true });
@@ -184,7 +188,7 @@ async function run() {
         }
     }
     if (status9 === 423 || data9.locked) {
-        const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+        const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
         const lockedUser = users?.users?.find(u => u.email === TEST_EMAIL);
         const { data: profile } = await supabaseAdmin.from('user_profiles').select('locked_until').eq('id', lockedUser.id).single();
         if (profile?.locked_until && new Date(profile.locked_until) > new Date()) {

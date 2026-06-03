@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr';
 import { sendTemplateMessage, LOGIN_ALERT_TEMPLATE } from '@/lib/omniflow';
 import crypto from 'crypto';
 import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
+import { applySupabaseCookies } from '@/lib/supabaseCookieHelper';
 
 const MAX_ATTEMPTS = 5;
 const LOCK_DURATION_MINUTES = 15;
@@ -174,17 +175,7 @@ export async function POST(request) {
         });
 
         // Replay collected cookies onto the response
-        cookiesToSet.forEach(({ name, value, options }) => {
-            const isRefreshToken = name.includes('refresh-token');
-            response.cookies.set(name, value, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                path: '/',
-                ...(isRefreshToken ? { maxAge: 60 * 60 * 24 * 365 } : {}),
-                ...options
-            });
-        });
+        applySupabaseCookies(response, cookiesToSet);
 
         // 6. Audit log successful login
         try {

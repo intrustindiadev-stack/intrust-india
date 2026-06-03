@@ -1,26 +1,32 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
-import { hashOTP, validatePhoneNumber, getStablePhoneEmail, isPseudoEmail } from '@/lib/otpUtils';
+import { hashOTP, validatePhoneNumber, getStablePhoneEmail, isPseudoEmail, normalizePhone } from '@/lib/otpUtils';
 import crypto from 'crypto';
 import { createServerClient } from '@supabase/ssr';
 import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
+import { applySupabaseCookies } from '@/lib/supabaseCookieHelper';
 
 export async function POST(request) {
     console.log('[VERIFY-OTP] Request received');
+    let claimedOtpId = null;
+    let supabaseAdmin = null;
+
     try {
         const body = await request.json();
         console.log('[VERIFY-OTP] Body:', JSON.stringify(body, null, 2));
         const { phone, otp, full_name } = body;
 
-        // 1. Validate inputs
-        let cleanPhone = phone ? phone.replace(/\D/g, '') : '';
-        if (cleanPhone.length > 10) cleanPhone = cleanPhone.slice(-10);
+        // 1. Validate inputs using unified normalizePhone
+        const { cleanPhone, isValid } = normalizePhone(phone);
 
-        if (!cleanPhone || !validatePhoneNumber(cleanPhone) || !otp || otp.length !== 6) {
-            return NextResponse.json({ success: false, error: 'Invalid phone number or OTP.' }, { status: 400 });
+        if (!isValid || !otp || otp.length !== 6) {
+            return NextResponse.json(
+                { success: false, error: 'Invalid phone number or OTP.', code: 'INVALID_INPUT' },
+                { status: 400 }
+            );
         }
 
-        const supabaseAdmin = createAdminClient();
+        supabaseAdmin = createAdminClient();
 
         // 2. Verify OTP Record
         console.log('[VERIFY-OTP] Looking up OTP for cleanPhone:', cleanPhone);
@@ -35,30 +41,56 @@ export async function POST(request) {
 
         if (fetchError || !otpRecord) {
             console.error('[VERIFY-OTP] OTP lookup failed. fetchError:', fetchError, 'cleanPhone:', cleanPhone);
-            return NextResponse.json({ success: false, error: 'Invalid or expired OTP.' }, { status: 400 });
+            return NextResponse.json(
+                { success: false, error: 'Invalid or expired OTP.', code: 'OTP_NOT_FOUND' },
+                { status: 400 }
+            );
         }
 
         const now = new Date();
         const expiresAt = new Date(otpRecord.expires_at);
 
         if (now > expiresAt) {
-            return NextResponse.json({ success: false, error: 'OTP has expired.' }, { status: 400 });
+            return NextResponse.json(
+                { success: false, error: 'OTP has expired.', code: 'OTP_EXPIRED' },
+                { status: 400 }
+            );
         }
 
         if (otpRecord.attempts >= otpRecord.max_attempts) {
-            return NextResponse.json({ success: false, error: 'Too many failed attempts. Please request a new OTP.' }, { status: 400 });
+            return NextResponse.json(
+                { success: false, error: 'Too many failed attempts. Please request a new OTP.', code: 'OTP_MAX_ATTEMPTS' },
+                { status: 400 }
+            );
         }
 
         const inputHash = hashOTP(otp);
         if (inputHash !== otpRecord.otp_hash) {
             await supabaseAdmin.from('otp_codes').update({ attempts: otpRecord.attempts + 1 }).eq('id', otpRecord.id);
-            return NextResponse.json({ success: false, error: 'Invalid OTP.' }, { status: 400 });
+            return NextResponse.json(
+                { success: false, error: 'Invalid OTP.', code: 'OTP_INVALID' },
+                { status: 400 }
+            );
         }
 
-        // NOTE: OTP is intentionally NOT marked used here yet.
-        // We defer consumption until after session creation succeeds so that
-        // transient downstream failures (user creation, phone confirm, generateLink)
-        // do not force an unnecessary resend cycle.
+        // Atomically claim the OTP record
+        const { data: claimedRecords, error: claimError } = await supabaseAdmin
+            .from('otp_codes')
+            .update({ is_used: true })
+            .eq('id', otpRecord.id)
+            .eq('is_used', false)
+            .select();
+
+        if (claimError || !claimedRecords || claimedRecords.length === 0) {
+            console.error('[VERIFY-OTP] Concurrency clash or OTP already claimed:', claimError, claimedRecords);
+            return NextResponse.json(
+                { success: false, error: 'OTP has already been used or is invalid.', code: 'OTP_ALREADY_USED' },
+                { status: 400 }
+            );
+        }
+
+        // Set claimedOtpId so that catch block knows to roll back on downstream failures
+        claimedOtpId = otpRecord.id;
 
         // 3. User Handling
         const authPhone = `+91${cleanPhone}`;
@@ -66,14 +98,17 @@ export async function POST(request) {
 
         // Try to get user ID by RPC first
         const { data: rpcUserId, error: rpcError } = await supabaseAdmin.rpc('get_user_id_by_phone', { phone_number: cleanPhone });
-        if (!rpcError && rpcUserId) {
+        if (rpcError) {
+            console.error('[VERIFY-OTP] get_user_id_by_phone RPC error:', rpcError);
+        } else if (rpcUserId) {
             userId = rpcUserId;
         }
 
-        // If not found, create the user (new-user path only)
-        if (!userId) {
-            const pseudoEmail = getStablePhoneEmail(cleanPhone);
+        const pseudoEmail = getStablePhoneEmail(cleanPhone);
 
+        if (!userId) {
+            // New user path: Create the user
+            console.log(`[VERIFY-OTP] Creating new user for phone: ${authPhone}`);
             const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                 phone: authPhone,
                 email: pseudoEmail,
@@ -84,82 +119,91 @@ export async function POST(request) {
             if (createError) {
                 // Check if user already exists
                 if (createError.message?.toLowerCase().includes('already registered') || createError.status === 422) {
+                    console.log('[VERIFY-OTP] User creation collision, falling back to RPC lookup');
                     const { data: fallbackUserId, error: fallbackError } = await supabaseAdmin.rpc('get_user_id_by_phone', { phone_number: cleanPhone });
 
                     if (!fallbackError && fallbackUserId) {
                         userId = fallbackUserId;
                     } else {
-                        return NextResponse.json({ success: false, error: `User creation failed: ${createError.message}` }, { status: 500 });
+                        const err = new Error('User creation failed: User already registered but could not be resolved.');
+                        err.code = 'USER_CREATION_FAILED';
+                        throw err;
                     }
                 } else {
-                    return NextResponse.json({ success: false, error: `User creation failed: ${createError.message}` }, { status: 500 });
+                    const err = new Error(`User creation failed: ${createError.message}`);
+                    err.code = 'USER_CREATION_FAILED';
+                    throw err;
                 }
             } else {
                 userId = newUser.user.id;
-                // Update profile name for new users
-                if (full_name) {
-                    console.log(`[VERIFY-OTP] Updating new user ${userId} with name: ${full_name}`);
-                    const { error: updateProfileError } = await supabaseAdmin
-                        .from('user_profiles')
-                        .update({ full_name })
-                        .eq('id', userId);
+            }
+        } else {
+            // Existing user path: Check if we need to update/confirm details
+            console.log(`[VERIFY-OTP] Locating existing user: ${userId}`);
+            const { data: userResp, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(userId);
+            if (getUserError || !userResp?.user) {
+                const err = new Error(`Could not fetch existing user details: ${getUserError?.message || 'User not found'}`);
+                err.code = 'USER_NOT_FOUND';
+                throw err;
+            }
 
-                    if (updateProfileError) {
-                        console.error('[VERIFY-OTP] Failed to update profile name:', updateProfileError);
-                    } else {
-                        console.log('[VERIFY-OTP] Profile name updated successfully.');
-                    }
+            const existingUser = userResp.user;
+            const needsPhoneConfirm = !existingUser.phone_confirmed_at;
+            const needsEmailUpdate = !existingUser.email || (isPseudoEmail(existingUser.email) && existingUser.email !== pseudoEmail);
+
+            if (needsPhoneConfirm || needsEmailUpdate) {
+                console.log(`[VERIFY-OTP] Updating user ${userId}: needsPhoneConfirm=${needsPhoneConfirm}, needsEmailUpdate=${needsEmailUpdate}`);
+                const updateAttrs = {};
+                if (needsPhoneConfirm) {
+                    updateAttrs.phone_confirm = true;
+                }
+                if (needsEmailUpdate) {
+                    updateAttrs.email = pseudoEmail;
+                    updateAttrs.email_confirm = true;
+                }
+
+                const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, updateAttrs);
+                if (updateError) {
+                    const err = new Error(`Failed to update user login profile: ${updateError.message}`);
+                    err.code = 'USER_UPDATE_FAILED';
+                    throw err;
                 }
             }
         }
 
         if (!userId) {
-            return NextResponse.json({ success: false, error: 'Could not create or locate user.' }, { status: 500 });
+            const err = new Error('Could not create or locate user.');
+            err.code = 'USER_NOT_FOUND';
+            throw err;
         }
 
-        // 4. Confirm Phone for existing users (no password rotation)
-        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-            userId,
-            { phone_confirm: true }
-        );
-
-        if (updateError) {
-            return NextResponse.json({ success: false, error: 'Failed to confirm user phone.' }, { status: 500 });
-        }
-
-        // Update name for existing users if provided
+        // 4. Update name in user_profiles if provided (both new and existing users)
         if (full_name) {
-            console.log(`[VERIFY-OTP] Ensuring name update for user ${userId}...`);
-            const { error: finalUpdateError } = await supabaseAdmin.from('user_profiles').update({ full_name }).eq('id', userId);
-            if (finalUpdateError) console.error('[VERIFY-OTP] Final name update failed:', finalUpdateError);
+            console.log(`[VERIFY-OTP] Updating name for user ${userId} to: ${full_name}`);
+            const { error: updateProfileError } = await supabaseAdmin
+                .from('user_profiles')
+                .update({ full_name })
+                .eq('id', userId);
+
+            if (updateProfileError) {
+                console.error('[VERIFY-OTP] Failed to update profile name (non-fatal):', updateProfileError);
+            }
         }
 
-        // Back-fill stable pseudo-email for existing users if needed
-        const { data: userResp } = await supabaseAdmin.auth.admin.getUserById(userId);
-        const existingUser = userResp?.user || {};
-        const pseudoEmail = getStablePhoneEmail(cleanPhone);
-        
-        let stableEmail = existingUser.email;
-        if (!existingUser.email || (isPseudoEmail(existingUser.email) && existingUser.email !== pseudoEmail)) {
-            await supabaseAdmin.auth.admin.updateUserById(userId, { email: pseudoEmail, email_confirm: true });
-            console.log(`[VERIFY-OTP] Back-filled stable pseudo-email for user ${userId}`);
-            stableEmail = pseudoEmail;
-        } else if (isPseudoEmail(existingUser.email)) {
-            stableEmail = pseudoEmail;
-        }
-
-        // 5. Mint session
+        // 5. Mint session via generateLink
         console.log(`[VERIFY-OTP] Minting session via generateLink for user ${userId}`);
 
         const { data: generatedLink, error: genErr } = await supabaseAdmin.auth.admin.generateLink({
             type: 'magiclink',
-            email: stableEmail,
+            email: pseudoEmail,
             options: { shouldCreateUser: false },
         });
 
         if (genErr || !generatedLink?.properties?.hashed_token) {
             console.error('[VERIFY-OTP] generateLink failed:', genErr);
-            return NextResponse.json({ success: false, error: 'Session creation failed.' }, { status: 500 });
+            const err = new Error(genErr?.message || 'Session generation token link failed.');
+            err.code = 'SESSION_MINT_FAILED';
+            throw err;
         }
 
         const { data: exchanged, error: exchangeErr } = await supabaseAdmin.auth.verifyOtp({
@@ -169,12 +213,10 @@ export async function POST(request) {
 
         if (exchangeErr || !exchanged?.session) {
             console.error('[VERIFY-OTP] token exchange failed:', exchangeErr);
-            return NextResponse.json({ success: false, error: 'Session creation failed.' }, { status: 500 });
+            const err = new Error(exchangeErr?.message || 'Session exchange token failed.');
+            err.code = 'SESSION_MINT_FAILED';
+            throw err;
         }
-
-        // Session is fully established — now it is safe to consume the OTP.
-        // Any failure before this point left the OTP intact so the user can retry.
-        await supabaseAdmin.from('otp_codes').update({ is_used: true }).eq('id', otpRecord.id);
 
         // Non-blocking: ensure WhatsApp binding is up-to-date for this user.
         ensureWhatsAppBinding({ userId }).catch((e) =>
@@ -184,17 +226,16 @@ export async function POST(request) {
         const session = exchanged.session;
         console.log(`[VERIFY-OTP] Session minted successfully for user ${userId}`);
 
+        // Fetch user profile info (role, suspension status)
         const { data: prof } = await supabaseAdmin
             .from('user_profiles')
             .select('role, is_suspended')
             .eq('id', userId)
             .single();
 
-        const { data: finalUser } = await supabaseAdmin.auth.admin.getUserById(userId);
-
         const response = NextResponse.json({
             success: true,
-            user: finalUser?.user ?? { id: userId },
+            user: exchanged.user ?? { id: userId },
             role: prof?.role ?? null,
             is_suspended: prof?.is_suspended ?? false
         });
@@ -208,17 +249,7 @@ export async function POST(request) {
                         return request.cookies.getAll();
                     },
                     setAll(cookiesToSet) {
-                        cookiesToSet.forEach(({ name, value, options }) => {
-                            const isRefreshToken = name.includes('refresh-token');
-                            response.cookies.set(name, value, {
-                                httpOnly: true,
-                                secure: process.env.NODE_ENV === 'production',
-                                sameSite: 'lax',
-                                path: '/',
-                                ...(isRefreshToken ? { maxAge: 60 * 60 * 24 * 365 } : {}),
-                                ...options,
-                            });
-                        });
+                        applySupabaseCookies(response, cookiesToSet);
                     },
                 },
             }
@@ -230,7 +261,21 @@ export async function POST(request) {
         return response;
 
     } catch (error) {
-        console.error('[VERIFY-OTP] Unexpected error:', error);
-        return NextResponse.json({ success: false, error: `Internal server error: ${error.message}` }, { status: 500 });
+        console.error('[VERIFY-OTP] Error in verify-otp handler:', error);
+
+        // Rollback OTP claim if it was claimed
+        if (claimedOtpId && supabaseAdmin) {
+            try {
+                console.log(`[VERIFY-OTP] Downstream failure, rolling back OTP claim for ID: ${claimedOtpId}`);
+                await supabaseAdmin.from('otp_codes').update({ is_used: false }).eq('id', claimedOtpId);
+            } catch (rollbackError) {
+                console.error('[VERIFY-OTP] Failed to rollback OTP claim:', rollbackError);
+            }
+        }
+
+        // Return structured failure response
+        const errMessage = error.message || 'An unexpected error occurred';
+        const errCode = error.code || 'UNKNOWN_ERROR';
+        return NextResponse.json({ success: false, error: errMessage, code: errCode }, { status: 500 });
     }
 }

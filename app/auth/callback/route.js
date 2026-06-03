@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { applySupabaseCookies } from '@/lib/supabaseCookieHelper'
 
 export async function GET(request) {
     const requestUrl = new URL(request.url)
@@ -30,15 +31,7 @@ export async function GET(request) {
     )
 
     const applyCookies = (res) => {
-        cookiesToSet.forEach(({ name, value, options }) => {
-            res.cookies.set(name, value, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                path: '/',
-                ...options
-            })
-        })
+        applySupabaseCookies(res, cookiesToSet)
         return res
     }
 
