@@ -216,7 +216,7 @@ def verify_health(client):
         run_remote(client, "pm2 logs intrust-india --lines 30 --nostream", exit_on_fail=False, timeout=30)
 
     print("\nPublic domain check:")
-    run_remote(client, "curl -s -o /dev/null -w 'https://intrustindia.com -> HTTP %{http_code}' https://intrustindia.com", exit_on_fail=False)
+    run_remote(client, 'curl -s -o /dev/null -w "https://intrustindia.com -> HTTP %{http_code}" https://intrustindia.com', exit_on_fail=False)
 
 
 # ──────────────────────────────────────────────
