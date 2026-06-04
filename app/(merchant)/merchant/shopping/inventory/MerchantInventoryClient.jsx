@@ -1,36 +1,83 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Tag, Box, ShoppingBag, ArrowRight, Store, Lock, Package, Plus, Minus, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 import { OOS_LABEL } from '@/lib/shopping/stock';
+import Pagination from '@/components/search/Pagination';
 
-export default function MerchantInventoryClient({ initialInventory, merchant }) {
+export default function MerchantInventoryClient({
+    initialInventory,
+    merchant,
+    totalCount,
+    page,
+    pageSize,
+    totalPages,
+    initialSearchQuery,
+    initialFilterType
+}) {
+    const router = useRouter();
     const [inventory, setInventory] = useState(initialInventory);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [filterType, setFilterType] = useState('all');
+    const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
+    const [filterType, setFilterType] = useState(initialFilterType || 'all');
     const [isUpdating, setIsUpdating] = useState(null);
     // Track per-item editable price state (custom products only)
     const [editPrices, setEditPrices] = useState({});
 
-    const filteredInventory = inventory.filter(item => {
-        const product = item.shopping_products;
-        const title = item.custom_title || product?.title || '';
-        const category = product?.category || '';
-        const matchesSearch =
-            title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            category.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesFilter =
-            filterType === 'all' ||
-            (filterType === 'platform' && item.is_platform_product) ||
-            (filterType === 'custom' && !item.is_platform_product) ||
-            (filterType === 'oos' && item.stock_quantity <= 0);
-        return matchesSearch && matchesFilter;
-    });
+    // Sync state with props
+    useEffect(() => {
+        setInventory(initialInventory);
+    }, [initialInventory]);
+
+    useEffect(() => {
+        setSearchQuery(initialSearchQuery || '');
+    }, [initialSearchQuery]);
+
+    useEffect(() => {
+        setFilterType(initialFilterType || 'all');
+    }, [initialFilterType]);
+
+    // Debounced search query update to URL
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            const params = new URLSearchParams(window.location.search);
+            const currentQ = params.get('q') || '';
+            if (searchQuery !== currentQ) {
+                if (searchQuery) {
+                    params.set('q', searchQuery);
+                } else {
+                    params.delete('q');
+                }
+                params.set('page', '1');
+                router.push(`${window.location.pathname}?${params.toString()}`);
+            }
+        }, 300);
+
+        return () => clearTimeout(handler);
+    }, [searchQuery, router]);
+
+    const handleFilterChange = (type) => {
+        setFilterType(type);
+        const params = new URLSearchParams(window.location.search);
+        if (type === 'all') {
+            params.delete('filter');
+        } else {
+            params.set('filter', type);
+        }
+        params.set('page', '1');
+        router.push(`${window.location.pathname}?${params.toString()}`);
+    };
+
+    const handlePageChange = (newPage) => {
+        const params = new URLSearchParams(window.location.search);
+        params.set('page', newPage.toString());
+        router.push(`${window.location.pathname}?${params.toString()}`);
+    };
 
     const handleToggleActive = async (itemId, currentStatus) => {
         setIsUpdating(itemId);
@@ -162,7 +209,7 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                     {['all', 'platform', 'custom', 'oos'].map(type => (
                         <button
                             key={type}
-                            onClick={() => setFilterType(type)}
+                            onClick={() => handleFilterChange(type)}
                             className={`flex-1 sm:flex-none px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filterType === type
                                 ? (type === 'oos' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'bg-[#1e3a5f] text-white shadow-lg shadow-blue-900/20')
                                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
@@ -176,12 +223,12 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
 
             {/* Count */}
             <p className="text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-widest">
-                {filteredInventory.length} product{filteredInventory.length !== 1 ? 's' : ''} found
+                {totalCount} product{totalCount !== 1 ? 's' : ''} found
             </p>
 
             {/* Inventory Cards */}
             <AnimatePresence>
-                {filteredInventory.length === 0 ? (
+                {inventory.length === 0 ? (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -207,7 +254,7 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                     </motion.div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {filteredInventory.map((item, idx) => {
+                        {inventory.map((item, idx) => {
                             const product = item.shopping_products;
                             const isPlatform = item.is_platform_product;
                             const isUpdatingThis = isUpdating === item.id;
@@ -485,6 +532,16 @@ export default function MerchantInventoryClient({ initialInventory, merchant }) 
                     </div>
                 )}
             </AnimatePresence>
+
+            <div className="mb-28 lg:mb-0">
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    totalCount={totalCount}
+                    pageSize={pageSize}
+                    onPageChange={handlePageChange}
+                />
+            </div>
         </div>
     );
 }

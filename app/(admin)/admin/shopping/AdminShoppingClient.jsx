@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { isInventoryRowOOS, OOS_LABEL } from '@/lib/shopping/stock';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 import BulkProductUpload from '@/components/admin/shopping/BulkProductUpload';
+import Pagination from '@/components/search/Pagination';
 
 const TAB_PLATFORM = "platform";
 const TAB_CUSTOM = "custom";
@@ -660,94 +661,17 @@ export default function AdminShoppingClient({
                 </div>
             )}
 
-            {/* Pagination Controls */}
+            {/* Pagination Controls — shared component, mobile-safe */}
             {!(activeTab === TAB_CUSTOM && selectedMerchant === "all") && totalCount > pageSize && (
-                <div className="mt-8 flex items-center justify-between bg-white px-6 py-4 rounded-[1.5rem] border border-slate-100 shadow-sm font-[family-name:var(--font-outfit)]">
-                    <div className="flex-1 flex justify-between sm:hidden">
-                        <button
-                            onClick={() => setPage(p => Math.max(p - 1, 1))}
-                            disabled={page === 1}
-                            className="relative inline-flex items-center px-4 py-2 border border-slate-200 text-xs font-black rounded-xl text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                        >
-                            Previous
-                        </button>
-                        <button
-                            onClick={() => setPage(p => Math.min(p + 1, Math.ceil(totalCount / pageSize)))}
-                            disabled={page === Math.ceil(totalCount / pageSize)}
-                            className="ml-3 relative inline-flex items-center px-4 py-2 border border-slate-200 text-xs font-black rounded-xl text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                        >
-                            Next
-                        </button>
-                    </div>
-                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                        <div>
-                            <p className="text-xs text-slate-500 font-medium">
-                                Showing <span className="font-bold text-slate-800">{(page - 1) * pageSize + 1}</span> to <span className="font-bold text-slate-800">{Math.min(page * pageSize, totalCount)}</span> of{' '}
-                                <span className="font-bold text-slate-800">{totalCount}</span> results
-                            </p>
-                        </div>
-                        <div>
-                            <nav className="relative z-0 inline-flex rounded-xl shadow-sm -space-x-px" aria-label="Pagination">
-                                <button
-                                    onClick={() => setPage(1)}
-                                    disabled={page === 1}
-                                    className="relative inline-flex items-center px-3 py-2 rounded-l-xl border border-slate-200 bg-white text-xs font-black text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                >
-                                    First
-                                </button>
-                                <button
-                                    onClick={() => setPage(p => Math.max(p - 1, 1))}
-                                    disabled={page === 1}
-                                    className="relative inline-flex items-center px-3 py-2 border border-slate-200 bg-white text-xs font-black text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                >
-                                    Prev
-                                </button>
-                                {/* Page Numbers */}
-                                {Array.from({ length: Math.ceil(totalCount / pageSize) }).map((_, idx) => {
-                                    const pageNum = idx + 1;
-                                    // Only show current page, 2 pages before, and 2 pages after
-                                    if (pageNum === 1 || pageNum === Math.ceil(totalCount / pageSize) || (pageNum >= page - 2 && pageNum <= page + 2)) {
-                                        return (
-                                            <button
-                                                key={pageNum}
-                                                onClick={() => setPage(pageNum)}
-                                                className={`relative inline-flex items-center px-4 py-2 border text-xs font-black transition-all ${
-                                                    page === pageNum
-                                                        ? "z-10 bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-600/10"
-                                                        : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                                                }`}
-                                            >
-                                                {pageNum}
-                                            </button>
-                                        );
-                                    }
-                                    // Add ellipses
-                                    if (pageNum === page - 3 || pageNum === page + 3) {
-                                        return (
-                                            <span key={pageNum} className="relative inline-flex items-center px-4 py-2 border border-slate-200 bg-white text-xs font-medium text-slate-500">
-                                                ...
-                                            </span>
-                                        );
-                                    }
-                                    return null;
-                                })}
-                                <button
-                                    onClick={() => setPage(p => Math.min(p + 1, Math.ceil(totalCount / pageSize)))}
-                                    disabled={page === Math.ceil(totalCount / pageSize)}
-                                    className="relative inline-flex items-center px-3 py-2 border border-slate-200 bg-white text-xs font-black text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                >
-                                    Next
-                                </button>
-                                <button
-                                    onClick={() => setPage(Math.ceil(totalCount / pageSize))}
-                                    disabled={page === Math.ceil(totalCount / pageSize)}
-                                    className="relative inline-flex items-center px-3 py-2 rounded-r-xl border border-slate-200 bg-white text-xs font-black text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                >
-                                    Last
-                                </button>
-                            </nav>
-                        </div>
-                    </div>
+                <div className="mt-8 pb-6">
+                    <Pagination
+                        page={page}
+                        totalPages={Math.ceil(totalCount / pageSize)}
+                        onPageChange={(newPage) => setPage(newPage)}
+                        totalCount={totalCount}
+                        pageSize={pageSize}
+                        className="[--border-color:theme(colors.slate.200)] [--text-secondary:theme(colors.slate.500)] [--text-primary:theme(colors.slate.800)]"
+                    />
                 </div>
             )}
 

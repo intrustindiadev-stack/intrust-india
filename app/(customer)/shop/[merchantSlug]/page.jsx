@@ -20,21 +20,33 @@ export default async function MerchantStorefrontPage({ params }) {
     let merchant = null;
     let mergedInventory = [];
     let customerResult = { data: null };
+    let categories = ['All'];
+    const PAGE_SIZE = 24;
 
     const normalizedSlug = merchantSlug?.toLowerCase();
 
     if (normalizedSlug === 'official') {
-        const [platformProductsResult, officialCustomerResult, platformSettingsResult] = await Promise.all([
-            supabase
-                .from('shopping_products')
-                .select('id, title, product_images, category, mrp_paise, suggested_retail_price_paise, platform_price_paise, admin_stock, platform_listed')
-                .eq('platform_listed', true)
-                .is('deleted_at', null),
+        const [storefrontResult, officialCustomerResult, platformSettingsResult, categoriesResult] = await Promise.all([
+            // Fetch initial products using optimized unified pagination RPC (including slug and other essential columns)
+            supabase.rpc('get_storefront_page', {
+                p_merchant_slug: 'official',
+                p_offset: 0,
+                p_limit: PAGE_SIZE,
+                p_search: '',
+                p_category: ''
+            }),
             user
                 ? supabase.from('user_profiles').select('*').eq('id', user.id).single()
                 : Promise.resolve({ data: null }),
-            createAdminClient().from('platform_settings').select('value').eq('key', 'platform_store').single()
+            createAdminClient().from('platform_settings').select('value').eq('key', 'platform_store').single(),
+            supabase
+                .from('shopping_products')
+                .select('category')
+                .eq('platform_listed', true)
+                .is('deleted_at', null)
         ]);
+
+        categories = ['All', ...new Set((categoriesResult?.data || []).map(p => p.category).filter(Boolean))];
 
         let officialStoreStatus = { is_open: true };
         try {
@@ -59,20 +71,10 @@ export default async function MerchantStorefrontPage({ params }) {
 
         customerResult = officialCustomerResult;
 
-        const { data: platformProducts, error: platformError } = platformProductsResult;
-        if (platformError) console.error('Error fetching platform products:', platformError);
-
-        mergedInventory = (platformProducts || []).map(p => ({
-            id: `platform-${p.id}`,
-            product_id: p.id,
-            retail_price_paise: p.platform_price_paise ?? p.suggested_retail_price_paise,
-            stock_quantity: p.admin_stock,
-            merchant_id: null,
-            is_active: true,
-            is_platform_direct: true,
-            is_platform_product: true,
-            shopping_products: p
-        }));
+        if (storefrontResult.error) {
+            console.error('Error fetching platform products in page:', storefrontResult.error);
+        }
+        mergedInventory = storefrontResult.data?.items || [];
     } else {
         // If the segment looks like a UUID, this is a legacy URL — redirect to slug-based URL
         if (UUID_REGEX.test(merchantSlug)) {
@@ -145,7 +147,8 @@ export default async function MerchantStorefrontPage({ params }) {
             profileResult,
             ratingResult,
             inventoryResult,
-            merchantCustomerResult
+            merchantCustomerResult,
+            categoriesResult
         ] = await Promise.all([
             // Avatar
             fetchedMerchant.user_id
@@ -153,29 +156,38 @@ export default async function MerchantStorefrontPage({ params }) {
                 : Promise.resolve({ data: null }),
             // Rating
             supabase.from('merchant_rating_stats').select('avg_rating, total_ratings').eq('merchant_id', fetchedMerchant.id).single(),
-            // Inventory
-            supabase
-                .from('merchant_inventory')
-                .select(`id, retail_price_paise, stock_quantity, merchant_id, product_id, is_active, is_platform_product, custom_title, custom_description, shopping_products!inner (id, title, product_images, category, mrp_paise, suggested_retail_price_paise)`)
-                .eq('merchant_id', fetchedMerchant.id)
-                .eq('is_active', true)
-                .is('shopping_products.deleted_at', null),
+            // Inventory via optimized unified pagination RPC (including slug and other essential columns)
+            supabase.rpc('get_storefront_page', {
+                p_merchant_slug: fetchedMerchant.slug,
+                p_offset: 0,
+                p_limit: PAGE_SIZE,
+                p_search: '',
+                p_category: ''
+            }),
             // Customer profile
             user
                 ? supabase.from('user_profiles').select('wallet_balance_paise').eq('id', user.id).single()
                 : Promise.resolve({ data: null }),
+            // Category query
+            supabase
+                .from('merchant_inventory')
+                .select('shopping_products!inner(category)')
+                .eq('merchant_id', fetchedMerchant.id)
+                .eq('is_active', true)
+                .is('shopping_products.deleted_at', null)
         ]);
+
+        categories = ['All', ...new Set((categoriesResult?.data || []).map(r => r.shopping_products?.category).filter(Boolean))];
 
         customerResult = merchantCustomerResult;
 
         merchant.user_profiles = { avatar_url: profileResult.data?.avatar_url || null };
         if (ratingResult.data) merchant.rating = ratingResult.data;
 
-        if (inventoryResult.error) console.error('Error fetching merchant inventory:', inventoryResult.error);
-        mergedInventory = (inventoryResult.data || []).map(item => ({
-            ...item,
-            merchants: { business_name: merchant.business_name }
-        }));
+        if (inventoryResult.error) {
+            console.error('Error fetching merchant inventory in page:', inventoryResult.error);
+        }
+        mergedInventory = inventoryResult.data?.items || [];
 
         return (
             <div className="min-h-screen">
@@ -185,6 +197,7 @@ export default async function MerchantStorefrontPage({ params }) {
                         merchant={merchant}
                         initialInventory={mergedInventory}
                         customer={customerResult.data}
+                        categories={categories}
                     />
                 </main>
                 <Footer />
@@ -205,6 +218,7 @@ export default async function MerchantStorefrontPage({ params }) {
                     merchant={merchant}
                     initialInventory={mergedInventory} 
                     customer={customerProfile} 
+                    categories={categories}
                 />
             </main>
 

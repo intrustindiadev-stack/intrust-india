@@ -6,8 +6,16 @@ import WholesaleClient from './WholesaleClient';
 
 export const dynamic = 'force-dynamic';
 
-export default async function WholesaleHubPage() {
+const PAGE_SIZE = 20;
+
+export default async function WholesaleHubPage({ searchParams }) {
     const supabase = await createServerSupabaseClient();
+    const params = await searchParams;
+
+    // Parse URL params
+    const page = Math.max(1, parseInt(params?.page || '1'));
+    const searchQuery = params?.q || '';
+    const selectedCategory = params?.category || 'All';
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect('/login');
@@ -24,16 +32,32 @@ export default async function WholesaleHubPage() {
     }
 
     // Fetch platform products
-    const { data: products, error: productsError } = await supabase
+    let productsQuery = supabase
         .from('shopping_products')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('is_active', true)
         .or('approval_status.eq.live,approval_status.is.null')
         .gt('admin_stock', 0)
         .is('deleted_at', null)
         .order('title');
 
+    if (searchQuery) {
+        productsQuery = productsQuery.ilike('title', `%${searchQuery}%`);
+    }
+
+    if (selectedCategory && selectedCategory !== 'All') {
+        productsQuery = productsQuery.eq('category', selectedCategory);
+    }
+
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    productsQuery = productsQuery.range(from, to);
+
+    const { data: products, count: productsCount, error: productsError } = await productsQuery;
     if (productsError) console.error('Error fetching wholesale products:', productsError);
+
+    const totalCount = productsCount || 0;
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
     // Fetch active categories
     const { data: categories, error: categoriesError } = await supabase
@@ -73,7 +97,17 @@ export default async function WholesaleHubPage() {
                 </div>
             </div>
 
-            <WholesaleClient products={products || []} merchant={merchant} categories={categories || []} />
+            <WholesaleClient
+                products={products || []}
+                merchant={merchant}
+                categories={categories || []}
+                totalCount={totalCount}
+                page={page}
+                pageSize={PAGE_SIZE}
+                totalPages={totalPages}
+                initialSearchTerm={searchQuery}
+                initialCategory={selectedCategory}
+            />
         </div>
     );
 }

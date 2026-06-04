@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Package, Plus, Minus, Sparkles, Search, ChevronRight, BadgeCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
@@ -15,6 +15,7 @@ import { PLATFORM_CONFIG } from '@/lib/config/platform';
 import { usePayerContact } from '@/hooks/usePayerContact';
 import { validatePayerContact } from '@/lib/merchant/validatePayerContact';
 import { normalizePayerMobile } from '@/lib/merchant/payerContactRules';
+import Pagination from '@/components/search/Pagination';
 
 const PARTNERS = [
     { name: 'AJIO', color: 'from-slate-900 to-slate-800', text: 'text-white', logo: '/logos/ajio.svg', desc: 'Fashion Hub', tag: 'Top Tier' },
@@ -153,14 +154,24 @@ function PartnerCarousel() {
     );
 }
 
-export default function WholesaleClient({ products = [], merchant, categories = [] }) {
+export default function WholesaleClient({
+    products = [],
+    merchant,
+    categories = [],
+    totalCount,
+    page,
+    pageSize,
+    totalPages,
+    initialSearchTerm,
+    initialCategory
+}) {
     const router = useRouter();
     const payerContact = usePayerContact({ requireMerchant: true });
     const [cart, setCart] = useState({}); // { productId: quantity }
     const [isPurchasing, setIsPurchasing] = useState(false);
     const [isProcessingGateway, setIsProcessingGateway] = useState(false);
-    const [selectedCategory, setSelectedCategory] = useState('All');
-    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'All');
+    const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '');
     const [showSuccess, setShowSuccess] = useState(false);
     const [successStats, setSuccessStats] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -168,6 +179,52 @@ export default function WholesaleClient({ products = [], merchant, categories = 
     const [lastBatchId, setLastBatchId] = useState(null);
     const [lastCartSnapshot, setLastCartSnapshot] = useState([]);
     const isAutoModeActive = merchant?.auto_mode_active || false;
+
+    // Sync state with props
+    useEffect(() => {
+        setSelectedCategory(initialCategory || 'All');
+    }, [initialCategory]);
+
+    useEffect(() => {
+        setSearchTerm(initialSearchTerm || '');
+    }, [initialSearchTerm]);
+
+    // Debounced search query update to URL
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            const params = new URLSearchParams(window.location.search);
+            const currentQ = params.get('q') || '';
+            if (searchTerm !== currentQ) {
+                if (searchTerm) {
+                    params.set('q', searchTerm);
+                } else {
+                    params.delete('q');
+                }
+                params.set('page', '1');
+                router.push(`${window.location.pathname}?${params.toString()}`);
+            }
+        }, 300);
+
+        return () => clearTimeout(handler);
+    }, [searchTerm, router]);
+
+    const handleCategoryChange = (category) => {
+        setSelectedCategory(category);
+        const params = new URLSearchParams(window.location.search);
+        if (category === 'All') {
+            params.delete('category');
+        } else {
+            params.set('category', category);
+        }
+        params.set('page', '1');
+        router.push(`${window.location.pathname}?${params.toString()}`);
+    };
+
+    const handlePageChange = (newPage) => {
+        const params = new URLSearchParams(window.location.search);
+        params.set('page', newPage.toString());
+        router.push(`${window.location.pathname}?${params.toString()}`);
+    };
 
     const updateQuantity = (e, product, delta) => {
         const productId = product.id;
@@ -436,12 +493,7 @@ export default function WholesaleClient({ products = [], merchant, categories = 
         }
     };
 
-    const filteredProducts = products.filter(p => {
-        const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-        const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
-        return matchesCategory && matchesSearch;
-    });
+    const filteredProducts = products;
 
     return (
         <>
@@ -596,7 +648,7 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                     {categories.length > 0 && (
                         <div className="flex items-center gap-2 overflow-x-auto py-4 custom-scrollbar">
                             <button
-                                onClick={() => setSelectedCategory('All')}
+                                onClick={() => handleCategoryChange('All')}
                                 className={`whitespace-nowrap px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex-shrink-0 ${selectedCategory === 'All'
                                     ? 'bg-slate-900 dark:bg-white text-white dark:text-black shadow-lg shadow-slate-900/20 dark:shadow-white/20'
                                     : 'bg-white dark:bg-white/5 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
@@ -607,7 +659,7 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                             {categories.map(cat => (
                                 <button
                                     key={cat.id}
-                                    onClick={() => setSelectedCategory(cat.name)}
+                                    onClick={() => handleCategoryChange(cat.name)}
                                     className={`whitespace-nowrap px-5 py-2.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2 flex-shrink-0 ${selectedCategory === cat.name
                                         ? 'bg-white dark:bg-black text-slate-900 dark:text-white shadow-lg ring-2 ring-slate-900 dark:ring-white ring-offset-2 ring-offset-[#f8f9fb] dark:ring-offset-[#0b0e14]'
                                         : 'bg-white dark:bg-white/5 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
@@ -621,7 +673,7 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                     )}
 
                     {/* Products Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pb-32 xl:pb-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pb-4">
                         {filteredProducts.length === 0 ? (
                             <div className="col-span-2 py-20 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200">
                                 <Package className="mx-auto text-slate-200 mb-4" size={56} />
@@ -724,6 +776,16 @@ export default function WholesaleClient({ products = [], merchant, categories = 
                                 );
                             })
                         )}
+                    </div>
+
+                    <div className="mb-28 lg:mb-0">
+                        <Pagination
+                            page={page}
+                            totalPages={totalPages}
+                            totalCount={totalCount}
+                            pageSize={pageSize}
+                            onPageChange={handlePageChange}
+                        />
                     </div>
                 </div>
             </div>

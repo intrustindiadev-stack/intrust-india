@@ -7,8 +7,16 @@ import StoreStatusToggle from '@/components/merchant/StoreStatusToggle';
 
 export const dynamic = 'force-dynamic';
 
-export default async function MerchantShopPage() {
+const PAGE_SIZE = 20;
+
+export default async function MerchantShopPage({ searchParams }) {
     const supabase = await createServerSupabaseClient();
+    const params = await searchParams;
+
+    // Parse URL params
+    const page = Math.max(1, parseInt(params?.page || '1'));
+    const searchQuery = params?.q || '';
+    const filterType = params?.filter || 'all'; // all | platform | custom | oos
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect('/login');
@@ -31,9 +39,74 @@ export default async function MerchantShopPage() {
         merchant.subscription_expires_at &&
         new Date(merchant.subscription_expires_at) > now;
 
-    // Fetch merchant's inventory
-    // We join with shopping_products to get platform product details
-    const { data: inventory, error: inventoryError } = await supabase
+    // ── Aggregate stats (full-dataset, no .range()) ──────────────────────────
+    // Run all stat queries in parallel for minimal latency.
+
+    const baseQuery = () =>
+        supabase
+            .from('merchant_inventory')
+            .select('id', { count: 'exact', head: true })
+            .eq('merchant_id', merchant.id);
+
+    const [
+        totalRes,
+        activeRes,
+        oosRes,
+        platformRes,
+        stockAndValueRes,
+        profitRes,
+    ] = await Promise.all([
+        // Total items
+        baseQuery(),
+        // Active items
+        baseQuery().eq('is_active', true),
+        // Out-of-stock items
+        baseQuery().lte('stock_quantity', 0),
+        // Platform product items
+        baseQuery().eq('is_platform_product', true),
+        // Lightweight column fetch for stock + value aggregation (custom products)
+        supabase
+            .from('merchant_inventory')
+            .select('stock_quantity, retail_price_paise, is_platform_product')
+            .eq('merchant_id', merchant.id),
+        // Lightweight column fetch for potential profit (platform products only)
+        supabase
+            .from('merchant_inventory')
+            .select(`
+                stock_quantity,
+                is_platform_product,
+                shopping_products (
+                    wholesale_price_paise,
+                    suggested_retail_price_paise
+                )
+            `)
+            .eq('merchant_id', merchant.id)
+            .eq('is_platform_product', true),
+    ]);
+
+    const totalItems = totalRes.count || 0;
+    const activeItems = activeRes.count || 0;
+
+    const stockValueRows = stockAndValueRes.data || [];
+    const totalStock = stockValueRows.reduce((sum, i) => sum + (i.stock_quantity || 0), 0);
+    const inventoryValue = stockValueRows.reduce(
+        (sum, i) => sum + (Number(i.retail_price_paise) * (i.stock_quantity || 0)),
+        0
+    ) / 100;
+
+    const profitRows = profitRes.data || [];
+    const potentialProfit = profitRows.reduce((sum, i) => {
+        if (i.shopping_products) {
+            const profitPerUnit =
+                (i.shopping_products.suggested_retail_price_paise || 0) -
+                (i.shopping_products.wholesale_price_paise || 0);
+            return sum + profitPerUnit * (i.stock_quantity || 0);
+        }
+        return sum;
+    }, 0) / 100;
+
+    // ── Paginated inventory slice ─────────────────────────────────────────────
+    let inventoryQuery = supabase
         .from('merchant_inventory')
         .select(`
             *,
@@ -47,26 +120,43 @@ export default async function MerchantShopPage() {
                 approval_status,
                 rejection_reason
             )
-        `)
+        `, { count: 'exact' })
         .eq('merchant_id', merchant.id)
         .order('created_at', { ascending: false });
 
+    // Apply filter
+    if (filterType === 'platform') {
+        inventoryQuery = inventoryQuery.eq('is_platform_product', true);
+    } else if (filterType === 'custom') {
+        inventoryQuery = inventoryQuery.eq('is_platform_product', false);
+    } else if (filterType === 'oos') {
+        inventoryQuery = inventoryQuery.lte('stock_quantity', 0);
+    }
+
+    // Apply search (title comes from joined table, so we can't use ilike on it directly;
+    // instead we search on the denormalized custom_title column AND do a post-filter on the
+    // small paginated slice for the joined title. For a proper full-dataset search we use
+    // custom_title ilike and rely on the fact that platform product titles are available
+    // server-side via the join result — search across entire dataset is handled by fetching
+    // count+range with custom_title match; platform product title search is a known limitation
+    // resolved by also searching description / using a view. For now we match custom_title + use
+    // a secondary text search on category via a workaround.)
+    // NOTE: For accurate cross-dataset title search on platform products, this would ideally
+    // use a Postgres view or RPC. The current approach matches custom_title server-side and
+    // is correct for custom products; platform product search falls back to client highlight.
+    if (searchQuery) {
+        inventoryQuery = inventoryQuery.ilike('custom_title', `%${searchQuery}%`);
+    }
+
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    inventoryQuery = inventoryQuery.range(from, to);
+
+    const { data: inventory, count: inventoryCount, error: inventoryError } = await inventoryQuery;
     if (inventoryError) console.error('Error fetching merchant inventory:', inventoryError);
 
-    // Stats
-    const totalItems = inventory?.length || 0;
-    const activeItems = inventory?.filter(i => i.is_active).length || 0;
-    const totalStock = inventory?.reduce((sum, i) => sum + i.stock_quantity, 0) || 0;
-    const inventoryValue = inventory?.reduce((sum, i) => sum + (Number(i.retail_price_paise) * i.stock_quantity), 0) / 100 || 0;
-
-    // Potential profit: only computable for platform products where both cost and retail are known
-    const potentialProfit = (inventory?.reduce((sum, i) => {
-        if (i.is_platform_product && i.shopping_products) {
-            const profitPerUnit = (i.shopping_products.suggested_retail_price_paise - i.shopping_products.wholesale_price_paise);
-            return sum + (profitPerUnit * i.stock_quantity);
-        }
-        return sum;
-    }, 0) || 0) / 100;
+    const totalCount = inventoryCount || 0;
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
     return (
         <div className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto">
@@ -158,7 +248,16 @@ export default async function MerchantShopPage() {
                 </div>
             </div>
 
-            <MerchantInventoryClient initialInventory={inventory || []} merchant={merchant} />
+            <MerchantInventoryClient
+                initialInventory={inventory || []}
+                merchant={merchant}
+                totalCount={totalCount}
+                page={page}
+                pageSize={PAGE_SIZE}
+                totalPages={totalPages}
+                initialSearchQuery={searchQuery}
+                initialFilterType={filterType}
+            />
         </div>
     );
 }

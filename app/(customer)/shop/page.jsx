@@ -1,71 +1,58 @@
-import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
-import { Wallet, Heart, ShoppingBag, Package } from 'lucide-react';
-import Link from 'next/link';
+import { createStaticSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
+import { ShoppingBag } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import ShopHubClient from './ShopHubClient';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
+import UserShopHeaderActions from './UserShopHeaderActions';
 
 // ISR: cache the merchant list for 60 seconds at the edge.
 // Real-time open/closed status is handled client-side via WebSocket (ShopHubClient).
 export const revalidate = 60;
 
 export default async function MerchantHubPage() {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createStaticSupabaseClient();
     const adminClient = createAdminClient();
 
-    // Batch 1: Independent fetches
+    const nowIso = new Date().toISOString();
+
+    // Batch 1: Independent fetches using static client (cachable)
     const [
         merchantsResult,
-        userResult,
-        ratingsResult,
         platformResult
     ] = await Promise.all([
         supabase
             .from('merchants')
             .select('id, slug, user_id, business_name, business_address, shopping_banner_url, is_open, subscription_status, subscription_expires_at')
             .eq('status', 'approved')
+            .eq('subscription_status', 'active')
+            .or(`subscription_expires_at.is.null,subscription_expires_at.gt.${nowIso}`)
             .order('business_name', { ascending: true }),
-        supabase.auth.getUser(),
-        supabase.from('merchant_rating_stats').select('merchant_id, avg_rating, total_ratings'),
-        adminClient.from('platform_settings').select('value').eq('key', 'platform_store').single()
+        supabase
+            .from('platform_settings')
+            .select('value')
+            .eq('key', 'platform_store')
+            .single()
     ]);
 
-    const rawMerchants = merchantsResult.data || [];
-    const now = new Date();
-    let merchants = rawMerchants.filter(m => 
-        m.subscription_status === 'active' && 
-        (!m.subscription_expires_at || new Date(m.subscription_expires_at) > now)
-    );
-
-    const user = userResult.data?.user;
-
-    // Batch 2: Dependent fetches (requires merchants/user)
+    let merchants = merchantsResult.data || [];
     const userIds = merchants.map(m => m.user_id).filter(Boolean);
+    const merchantIds = merchants.map(m => m.id);
 
+    // Batch 2: Dependent fetches using active merchants' IDs (ratings, profiles)
     const [
         profilesResult,
-        customerProfileResult,
-        wishlistCountResult,
-        cartCountResult
+        ratingsResult
     ] = await Promise.all([
-        // Avatar profiles for all merchant users
+        // Avatar profiles for all merchant users (requires service role / adminClient to bypass RLS)
         userIds.length > 0
             ? adminClient.from('user_profiles').select('id, avatar_url, full_name').in('id', userIds)
             : Promise.resolve({ data: [] }),
-        // Logged-in customer profile
-        user
-            ? supabase.from('user_profiles').select('wallet_balance_paise, full_name, avatar_url').eq('id', user.id).single()
-            : Promise.resolve({ data: null }),
-        // Wishlist count
-        user
-            ? supabase.from('user_wishlists').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
-            : Promise.resolve({ count: 0 }),
-        // Cart count
-        user
-            ? supabase.from('shopping_cart').select('*', { count: 'exact', head: true }).eq('customer_id', user.id)
-            : Promise.resolve({ count: 0 })
+        // Filtered ratings stats (static client)
+        merchantIds.length > 0
+            ? supabase.from('merchant_rating_stats').select('merchant_id, avg_rating, total_ratings').in('merchant_id', merchantIds)
+            : Promise.resolve({ data: [] })
     ]);
 
     let platformStatus = { is_open: true };
@@ -101,12 +88,8 @@ export default async function MerchantHubPage() {
             user_profiles: { avatar_url: '/icons/intrustLogo.png', full_name: null },
             is_open: !!platformStatus.is_open
         },
-        ...(merchants || [])
+        ...merchants
     ];
-
-    const customerProfile = customerProfileResult.data || null;
-    const wishlistCount = wishlistCountResult.count || 0;
-    const cartCount = cartCountResult.count || 0;
 
     return (
         <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#080a10] relative pb-32 transition-colors">
@@ -134,58 +117,7 @@ export default async function MerchantHubPage() {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-2 md:gap-3">
-                            {user && (
-                                <>
-                                    <Link
-                                        href="/wishlist"
-                                        className="relative flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-xl bg-pink-50 dark:bg-pink-500/10 text-pink-500 border border-pink-100 dark:border-pink-500/20 hover:bg-pink-100 dark:hover:bg-pink-500/30 transition-colors"
-                                    >
-                                        <Heart size={18} className={wishlistCount > 0 ? 'fill-current' : ''} />
-                                        {wishlistCount > 0 && (
-                                            <span className="absolute -top-1.5 -right-1.5 bg-pink-500 text-white text-[10px] font-black w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-[#0c0e16]">
-                                                {wishlistCount}
-                                            </span>
-                                        )}
-                                    </Link>
-
-                                    <Link
-                                        href="/shop/cart"
-                                        className="relative flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/30 transition-colors"
-                                    >
-                                        <ShoppingBag size={18} className={cartCount > 0 ? 'fill-current' : ''} />
-                                        {cartCount > 0 && (
-                                            <span className="absolute -top-1.5 -right-1.5 bg-indigo-600 text-white text-[10px] font-black w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-[#0c0e16]">
-                                                {cartCount}
-                                            </span>
-                                        )}
-                                    </Link>
-
-                                    <Link
-                                        href="/orders"
-                                        className="flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/30 transition-colors"
-                                    >
-                                        <Package size={18} />
-                                    </Link>
-                                </>
-                            )}
-
-                            {/* Wallet balance chip */}
-                            {customerProfile && (
-                                <Link
-                                    href="/wallet"
-                                    className="hidden sm:flex items-center gap-2.5 bg-slate-900 dark:bg-white/[0.06] rounded-xl px-4 py-2 border border-transparent hover:border-slate-700 dark:hover:border-white/10 transition-all border-slate-800"
-                                >
-                                    <Wallet size={16} className="text-[#FDB931]" />
-                                    <div>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Balance</p>
-                                        <p className="text-sm font-black text-white dark:text-white leading-none">
-                                            ₹{(customerProfile.wallet_balance_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
-                                        </p>
-                                    </div>
-                                </Link>
-                            )}
-                        </div>
+                        <UserShopHeaderActions />
                     </div>
                 </div>
 
@@ -202,3 +134,4 @@ export default async function MerchantHubPage() {
         </div>
     );
 }
+

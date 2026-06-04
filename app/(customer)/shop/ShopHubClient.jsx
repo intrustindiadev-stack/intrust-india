@@ -244,6 +244,25 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
     // Consolidated realtime: single channel for platform + all merchants
     useEffect(() => {
         const supabase = createClient();
+        const nonOfficialMerchantIds = merchants
+            .map(m => m.id)
+            .filter(id => id && id !== 'official');
+
+        if (nonOfficialMerchantIds.length === 0) {
+            const channel = supabase
+                .channel('shop_hub_sync_platform')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'platform_settings', filter: 'key=eq.platform_store' }, (payload) => {
+                    if (payload.new?.value) {
+                        try {
+                            const parsed = typeof payload.new.value === 'string' ? JSON.parse(payload.new.value) : payload.new.value;
+                            setMerchantStatuses(prev => ({ ...prev, official: !!parsed.is_open }));
+                        } catch (e) {}
+                    }
+                })
+                .subscribe();
+            return () => { supabase.removeChannel(channel); };
+        }
+
         const channel = supabase
             .channel('shop_hub_sync')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'platform_settings', filter: 'key=eq.platform_store' }, (payload) => {
@@ -254,7 +273,12 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
                     } catch (e) {}
                 }
             })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'merchants' }, (payload) => {
+            .on('postgres_changes', { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'merchants',
+                filter: `id=in.(${nonOfficialMerchantIds.join(',')})`
+            }, (payload) => {
                 if (payload.new) {
                     setMerchantStatuses(prev => ({ ...prev, [payload.new.id]: payload.new.is_open !== false }));
                 }
@@ -262,7 +286,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, []);
+    }, [merchants]);
 
     const official = merchants.find(m => m.id === 'official');
     const rest = merchants.filter(m => m.id !== 'official');
