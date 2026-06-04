@@ -191,7 +191,20 @@ export default function EmployeeLeavesPage() {
                     <h3 className="text-base font-bold text-gray-900">Leave History</h3>
                 </div>
                 {loading ? (
-                    <div className="p-8 flex justify-center"><div className="w-6 h-6 border-2 border-amber-200 border-t-amber-500 rounded-full animate-spin" /></div>
+                    <div className="divide-y divide-gray-50 animate-pulse">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="flex items-center justify-between px-5 py-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-50" />
+                                    <div className="space-y-1.5">
+                                        <div className="h-3.5 bg-gray-200 rounded w-28" />
+                                        <div className="h-2.5 bg-gray-100 rounded w-36" />
+                                    </div>
+                                </div>
+                                <div className="h-6 w-20 bg-gray-100 rounded-lg" />
+                            </div>
+                        ))}
+                    </div>
                 ) : leaves.length === 0 ? (
                     <div className="p-12 text-center">
                         <Calendar size={36} className="mx-auto text-gray-200 mb-3" />

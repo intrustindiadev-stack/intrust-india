@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 
 const DEPT_COLORS = {
     freelancer: 'bg-violet-50 text-violet-700 border-violet-100',
@@ -104,8 +106,9 @@ export default function CareerPage() {
     });
 
     return (
-        <div className="min-h-screen bg-gray-50">
-
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+            <Navbar />
+            
             {/* ── HERO ── */}
             <section className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-violet-900 to-purple-900 text-white">
                 {/* Background image */}
@@ -266,7 +269,27 @@ export default function CareerPage() {
                 {isLoading ? (
                     <div className="space-y-4">
                         {[...Array(4)].map((_, i) => (
-                            <div key={i} className="h-28 bg-white rounded-3xl border border-gray-100 animate-pulse" />
+                            <div key={i} className="bg-white rounded-3xl border border-gray-100 p-5 sm:p-6 shadow-sm overflow-hidden relative">
+                                <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent z-10" />
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div className="flex items-start gap-4 flex-1">
+                                        <div className="w-12 h-12 rounded-2xl bg-gray-100 animate-pulse flex-shrink-0" />
+                                        <div className="flex-1 w-full space-y-3 pt-1">
+                                            <div className="h-5 bg-gray-100 rounded-lg w-1/3 animate-pulse" />
+                                            <div className="flex gap-2">
+                                                <div className="h-6 bg-gray-100 rounded-lg w-20 animate-pulse" />
+                                                <div className="h-6 bg-gray-100 rounded-lg w-24 animate-pulse" />
+                                                <div className="h-6 bg-gray-100 rounded-lg w-28 animate-pulse" />
+                                            </div>
+                                            <div className="space-y-2 mt-2">
+                                                <div className="h-3 bg-gray-100 rounded-full w-full max-w-lg animate-pulse" />
+                                                <div className="h-3 bg-gray-100 rounded-full w-3/4 max-w-md animate-pulse" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="w-32 h-11 bg-gray-100 rounded-2xl animate-pulse flex-shrink-0" />
+                                </div>
+                            </div>
                         ))}
                     </div>
                 ) : filtered.length === 0 ? (
@@ -316,6 +339,8 @@ export default function CareerPage() {
                     </div>
                 </motion.div>
             </section>
+            
+            <Footer />
         </div>
     );
 }

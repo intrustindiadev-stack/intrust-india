@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, X, ChevronDown, RefreshCw, Briefcase, Phone, Mail, ExternalLink, CheckCircle2, Clock, User, DollarSign, Calendar, MessageSquare, UserCheck, AlertCircle } from 'lucide-react';
+import { Search, X, ChevronDown, RefreshCw, Briefcase, Phone, Mail, ExternalLink, CheckCircle2, Clock, User, DollarSign, Calendar, MessageSquare, UserCheck, AlertCircle, FileText } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -117,8 +117,15 @@ function CandidateDrawer({ app, onClose, onUpdate }) {
                         {app?.email && <a href={`mailto:${app.email}`} className="flex items-center gap-3 text-sm text-gray-700 hover:text-violet-600"><Mail size={15} className="text-gray-400" /> {app.email}</a>}
                         {app?.phone && <a href={`tel:${app.phone}`} className="flex items-center gap-3 text-sm text-gray-700 hover:text-violet-600"><Phone size={15} className="text-gray-400" /> {app.phone}</a>}
                         {app?.linkedin_url && <a href={app.linkedin_url} target="_blank" rel="noreferrer" className="flex items-center gap-3 text-sm text-violet-600 hover:underline"><ExternalLink size={15} /> LinkedIn Profile</a>}
+                        
+                        {app?.resume_url && (
+                            <a href={app.resume_url} target="_blank" rel="noreferrer" className="flex items-center gap-3 text-sm text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 rounded-xl font-bold transition-colors w-max mt-2 shadow-md shadow-indigo-500/20">
+                                <FileText size={16} /> View Resume (PDF)
+                            </a>
+                        )}
+
                         {(app?.expected_salary_min || app?.expected_salary_max) && (
-                            <p className="flex items-center gap-3 text-sm text-gray-600"><DollarSign size={15} className="text-gray-400" /> Expected ₹{app.expected_salary_min?.toLocaleString('en-IN')} – ₹{app.expected_salary_max?.toLocaleString('en-IN')}</p>
+                            <p className="flex items-center gap-3 text-sm text-gray-600 mt-2"><DollarSign size={15} className="text-gray-400" /> Expected ₹{app.expected_salary_min?.toLocaleString('en-IN')} – ₹{app.expected_salary_max?.toLocaleString('en-IN')}</p>
                         )}
                         {app?.cover_letter && (
                             <div className="mt-3 pt-3 border-t border-gray-100">

@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 
 const STAGES = [
     { key: 'pending', label: 'Applied', icon: Send, color: 'text-blue-600', bg: 'bg-blue-100' },
@@ -126,6 +128,12 @@ function ApplicationCard({ app, delay }) {
                     </div>
                 )}
             </div>
+            
+            <div className="mt-4 flex items-center justify-end">
+                <Link href={`/career/applications/${app.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+                    View Details <ChevronRight size={16} />
+                </Link>
+            </div>
         </motion.div>
     );
 }
@@ -153,19 +161,25 @@ export default function ApplicationsHistoryPage() {
 
     if (!user) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-4">
-                <div className="text-center">
-                    <div className="w-16 h-16 bg-indigo-100 rounded-3xl flex items-center justify-center mx-auto mb-4"><AlertCircle size={28} className="text-indigo-500" /></div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-2">Sign In Required</h2>
-                    <p className="text-gray-500 mb-6">Please sign in to view your application history.</p>
-                    <Link href="/auth/login" className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-colors">Sign In</Link>
+            <div className="min-h-screen bg-gray-50 flex flex-col">
+                <Navbar />
+                <div className="flex-1 flex items-center justify-center p-4">
+                    <div className="text-center">
+                        <div className="w-16 h-16 bg-indigo-100 rounded-3xl flex items-center justify-center mx-auto mb-4"><AlertCircle size={28} className="text-indigo-500" /></div>
+                        <h2 className="text-xl font-bold text-gray-900 mb-2">Sign In Required</h2>
+                        <p className="text-gray-500 mb-6">Please sign in to view your application history.</p>
+                        <Link href="/auth/login" className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-colors">Sign In</Link>
+                    </div>
                 </div>
+                <Footer />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+            <Navbar />
+            
             {/* Header */}
             <div className="bg-white border-b border-gray-100 px-4 py-5">
                 <div className="max-w-3xl mx-auto">
@@ -208,6 +222,8 @@ export default function ApplicationsHistoryPage() {
                     </div>
                 )}
             </div>
+            
+            <Footer />
         </div>
     );
 }

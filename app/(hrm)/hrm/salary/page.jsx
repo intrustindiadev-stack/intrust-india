@@ -243,7 +243,45 @@ export default function SalaryPage() {
 
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                 {isLoading ? (
-                    <div className="p-12 flex justify-center"><div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" /></div>
+                    <div className="overflow-x-auto animate-pulse">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-gray-50/50 border-b border-gray-100">
+                                    {['Employee', 'Basic', 'HRA', 'Allowances', 'Deductions', 'Net Pay', 'Status', 'Action'].map(h => (
+                                        <th key={h} className="px-5 py-4">
+                                            <div className="h-3 bg-gray-200 rounded w-16" />
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {[...Array(6)].map((_, i) => (
+                                    <tr key={i}>
+                                        <td className="px-5 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-xl bg-gray-100 flex-shrink-0" />
+                                                <div className="space-y-1.5">
+                                                    <div className="h-3.5 bg-gray-200 rounded w-28" />
+                                                    <div className="h-2.5 bg-gray-100 rounded w-20" />
+                                                </div>
+                                            </div>
+                                        </td>
+                                        {[...Array(5)].map((_, j) => (
+                                            <td key={j} className="px-5 py-4">
+                                                <div className="h-3 bg-gray-100 rounded w-16" />
+                                            </td>
+                                        ))}
+                                        <td className="px-5 py-4">
+                                            <div className="h-5 bg-gray-100 rounded w-20" />
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <div className="h-8 bg-gray-100 rounded-lg w-20" />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">

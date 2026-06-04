@@ -397,7 +397,53 @@ export default function LeadsPage() {
 
             {/* Mobile cards + Desktop table */}
             {isLoading ? (
-                <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>
+                <>
+                    {/* Mobile skeleton cards */}
+                    <div className="space-y-3 lg:hidden">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 animate-pulse">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex-shrink-0" />
+                                        <div className="space-y-2">
+                                            <div className="h-4 bg-gray-200 rounded-lg w-32" />
+                                            <div className="h-3 bg-gray-100 rounded w-24" />
+                                        </div>
+                                    </div>
+                                    <div className="h-6 w-16 bg-gray-100 rounded-lg flex-shrink-0" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Desktop skeleton table */}
+                    <div className="hidden lg:block bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden animate-pulse">
+                        <div className="bg-gray-50 border-b border-gray-100 px-6 py-4 flex gap-6">
+                            {['w-48', 'w-36', 'w-28', 'w-20', 'w-20', 'w-16'].map((w, i) => (
+                                <div key={i} className={`h-3 ${w} bg-gray-200 rounded`} />
+                            ))}
+                        </div>
+                        {[...Array(7)].map((_, i) => (
+                            <div key={i} className="flex items-center gap-6 px-6 py-4 border-b border-gray-50 last:border-0">
+                                <div className="flex items-center gap-3 flex-1">
+                                    <div className="w-9 h-9 rounded-xl bg-gray-100 flex-shrink-0" />
+                                    <div className="space-y-1.5">
+                                        <div className="h-3.5 bg-gray-200 rounded w-32" />
+                                        <div className="h-2.5 bg-gray-100 rounded w-24" />
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5 w-36">
+                                    <div className="h-3 bg-gray-100 rounded w-full" />
+                                    <div className="h-2.5 bg-gray-100 rounded w-3/4" />
+                                </div>
+                                <div className="h-3 bg-gray-100 rounded w-24" />
+                                <div className="h-6 bg-gray-100 rounded-lg w-20" />
+                                <div className="h-3 bg-gray-100 rounded w-16" />
+                                <div className="h-8 w-8 bg-gray-100 rounded-xl" />
+                            </div>
+                        ))}
+                    </div>
+                </>
             ) : filtered.length === 0 ? (
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-16 text-center">
                     <Briefcase size={40} className="mx-auto text-gray-200 mb-3" />

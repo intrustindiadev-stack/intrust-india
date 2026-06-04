@@ -20,7 +20,7 @@ export default function EmployeeDashboard() {
     const [clockedIn, setClockedIn] = useState(false);
     const [clocking, setClocking] = useState(false);
     const [latestPayslip, setLatestPayslip] = useState(null);
-    const [stats, setStats] = useState({ leavesRemaining: 12, pendingTasks: 4, workingDays: 22 });
+    const [stats, setStats] = useState({ leavesRemaining: 41, pendingTasks: 0, workingDays: 22 });
     const [isLoading, setIsLoading] = useState(true);
 
     const today = new Date().toISOString().split('T')[0];
@@ -35,9 +35,11 @@ export default function EmployeeDashboard() {
     const fetchDashboardData = useCallback(async () => {
         if (!user) return;
         try {
-            const [attRes, payRes] = await Promise.allSettled([
+            const [attRes, payRes, leaveRes, tasksRes] = await Promise.allSettled([
                 supabase.from('attendance').select('*').eq('employee_id', user.id).eq('date', today).maybeSingle(),
                 supabase.from('salary_records').select('*').eq('employee_id', user.id).order('year', { ascending: false }).order('month', { ascending: false }).limit(1).maybeSingle(),
+                supabase.from('leave_requests').select('from_date, to_date').eq('employee_id', user.id).eq('status', 'approved').gte('from_date', `${new Date().getFullYear()}-01-01`),
+                supabase.from('crm_tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).eq('status', 'pending')
             ]);
 
             if (attRes.status === 'fulfilled' && !attRes.value.error) {
@@ -49,6 +51,24 @@ export default function EmployeeDashboard() {
             if (payRes.status === 'fulfilled' && !payRes.value.error) {
                 setLatestPayslip(payRes.value.data || null);
             }
+
+            let usedLeaves = 0;
+            if (leaveRes.status === 'fulfilled' && leaveRes.value.data) {
+                leaveRes.value.data.forEach(r => {
+                    usedLeaves += Math.max(1, Math.ceil((new Date(r.to_date) - new Date(r.from_date)) / 86400000) + 1);
+                });
+            }
+
+            const totalAnnualLeaves = 41; // 12 CL + 8 SL + 21 EL
+            
+            const tasksCount = tasksRes.status === 'fulfilled' ? (tasksRes.value.count || 0) : 0;
+
+            setStats(prev => ({
+                ...prev,
+                leavesRemaining: Math.max(0, totalAnnualLeaves - usedLeaves),
+                pendingTasks: tasksCount
+            }));
+
         } catch (err) {
             console.error('Dashboard fetch error:', err);
         } finally {
@@ -83,11 +103,13 @@ export default function EmployeeDashboard() {
         if (!todayRecord) return;
         setClocking(true);
         try {
+            const checkOutTime = new Date().toISOString();
             const { error } = await supabase.from('attendance')
-                .update({ check_out: new Date().toISOString() })
+                .update({ check_out: checkOutTime })
                 .eq('id', todayRecord.id);
             if (error) throw error;
             setClockedIn(false);
+            setTodayRecord(prev => prev ? { ...prev, check_out: checkOutTime } : prev);
             toast.success('Shift completed. Enjoy your evening! 👋');
             fetchDashboardData();
         } catch (err) {
@@ -110,7 +132,7 @@ export default function EmployeeDashboard() {
         { label: 'Attendance', sub: 'Check In/Out', href: '/employee/attendance', icon: ClipboardList, color: 'emerald' },
         { label: 'My Leaves', sub: 'Apply Leave', href: '/employee/leaves', icon: Calendar, color: 'blue' },
         { label: 'Payslips', sub: 'View History', href: '/employee/payslips', icon: FileText, color: 'amber' },
-        { label: 'Performance', sub: 'My Growth', href: '/employee/performance', icon: TrendingUp, color: 'violet' },
+        { label: 'My Profile', sub: 'View Details', href: '/employee/profile', icon: User, color: 'violet' },
     ];
 
     const COLOR_MAP = {
@@ -150,7 +172,7 @@ export default function EmployeeDashboard() {
                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="hidden sm:flex items-center gap-4 bg-white dark:bg-gray-800 p-2 rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-sm">
                     <div className="pl-4 pr-2">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Office Location</p>
-                        <p className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-1.5"><MapPin size={14} className="text-rose-500" /> Gurugram HQ</p>
+                        <p className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-1.5"><MapPin size={14} className="text-rose-500" /> {profile?.department ? `${profile.department} Dept` : 'Gurugram HQ'}</p>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-400">
                         <Building size={20} />

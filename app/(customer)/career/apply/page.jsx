@@ -7,12 +7,13 @@ import {
     Briefcase, User, Phone, Mail, MapPin, Building2, GraduationCap,
     MessageSquare, ChevronRight, ChevronLeft, CheckCircle2, ArrowLeft,
     Sparkles, Zap, Users, TrendingUp, DollarSign, Shield, FileText,
-    Star, Globe, Check
+    Star, Globe, Check, UploadCloud, File
 } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import { toast } from 'react-hot-toast';
 
@@ -100,6 +101,7 @@ function CareerApplyForm() {
     const [submitted, setSubmitted] = useState(false);
     const [roles, setRoles] = useState([]);
     const [loadingRoles, setLoadingRoles] = useState(true);
+    const [resumeFile, setResumeFile] = useState(null);
 
     const [form, setForm] = useState({
         job_role_id: '',
@@ -162,8 +164,24 @@ function CareerApplyForm() {
         if (!user) { toast.error('Please login first'); return; }
         if (!form.job_role_id) { toast.error('Please select a role'); return; }
         if (!form.full_name || !form.phone || !form.email) { toast.error('Please fill all required fields'); return; }
+        if (!resumeFile) { toast.error('Please upload your resume in Step 3'); return; }
+        
         setSubmitting(true);
         try {
+            let resume_url = null;
+            if (resumeFile) {
+                const fileExt = resumeFile.name.split('.').pop();
+                const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('resumes')
+                    .upload(fileName, resumeFile, { cacheControl: '3600', upsert: false });
+                
+                if (uploadError) throw uploadError;
+                
+                const { data: { publicUrl } } = supabase.storage.from('resumes').getPublicUrl(fileName);
+                resume_url = publicUrl;
+            }
+
             const { error } = await supabase.from('career_applications').insert([{
                 user_id: user.id,
                 job_role_id: form.job_role_id,
@@ -179,6 +197,7 @@ function CareerApplyForm() {
                 languages_known: form.languages_known,
                 cover_message: form.cover_message,
                 referral_code: form.referral_code || null,
+                resume_url: resume_url,
             }]);
             if (error) throw error;
             setSubmitted(true);
@@ -371,6 +390,54 @@ function CareerApplyForm() {
                                         </SelectField>
                                         <InputField label="Current Occupation" id="occupation" value={form.current_occupation} onChange={v => updateForm('current_occupation', v)} placeholder="e.g. Sales Executive, Student" icon={Building2} />
                                         <InputField label="Highest Education" id="education" value={form.education} onChange={v => updateForm('education', v)} placeholder="e.g. B.Com, MBA, 12th Pass" icon={GraduationCap} />
+                                        
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                                Resume / CV <span className="text-rose-500">*</span>
+                                            </label>
+                                            <label className={`w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl border-2 border-dashed cursor-pointer transition-all ${resumeFile ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-500 hover:border-gray-300'}`}>
+                                                <input 
+                                                    type="file" 
+                                                    accept=".pdf,.doc,.docx" 
+                                                    onChange={e => {
+                                                        const file = e.target.files[0];
+                                                        if (file) {
+                                                            if (file.size > 5 * 1024 * 1024) {
+                                                                toast.error('File size must be less than 5MB');
+                                                                return;
+                                                            }
+                                                            setResumeFile(file);
+                                                        }
+                                                    }} 
+                                                    className="hidden" 
+                                                />
+                                                {resumeFile ? (
+                                                    <>
+                                                        <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                                                            <File size={20} className="text-indigo-600" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-bold truncate">{resumeFile.name}</p>
+                                                            <p className="text-xs opacity-70">{(resumeFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                        </div>
+                                                        <button type="button" onClick={(e) => { e.preventDefault(); setResumeFile(null); }} className="p-2 hover:bg-indigo-200 rounded-lg text-indigo-600 transition-colors">
+                                                            <X size={16} />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                                                            <UploadCloud size={20} />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <p className="text-sm font-semibold text-gray-700">Upload your Resume</p>
+                                                            <p className="text-xs text-gray-400">PDF, DOC, DOCX up to 5MB</p>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </label>
+                                        </div>
+
                                         <div>
                                             <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><Globe size={14} /> Languages Known</label>
                                             <div className="flex flex-wrap gap-2">
@@ -455,6 +522,7 @@ function CareerApplyForm() {
                     </div>
                 </div>
             </div>
+            <Footer />
             <CustomerBottomNav />
         </div>
     );
