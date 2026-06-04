@@ -133,7 +133,7 @@ export default function CareerPage() {
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                         className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 text-sm font-medium mb-6 backdrop-blur-sm">
                         <Sparkles size={14} className="text-violet-300" />
-                        We're hiring across {jobs.length > 0 ? jobs.length : 'multiple'} roles
+                        We&apos;re hiring across {jobs.length > 0 ? jobs.length : 'multiple'} roles
                     </motion.div>
 
                     <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
@@ -237,7 +237,7 @@ export default function CareerPage() {
                                 <div className="flex gap-1 mb-4">
                                     {[...Array(5)].map((_, si) => <Star key={si} size={14} className="text-amber-400 fill-amber-400" />)}
                                 </div>
-                                <p className="text-sm text-gray-600 italic leading-relaxed mb-5">"{t.quote}"</p>
+                                <p className="text-sm text-gray-600 italic leading-relaxed mb-5">&quot;{t.quote}&quot;</p>
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white font-bold">
                                         {t.avatar}
@@ -300,7 +300,7 @@ export default function CareerPage() {
                             <Search size={40} className="text-gray-300" />
                         </div>
                         <p className="text-2xl font-black text-gray-900 tracking-tight">No open positions right now</p>
-                        <p className="text-gray-500 mt-2 font-medium">We're always growing. Check back soon!</p>
+                        <p className="text-gray-500 mt-2 font-medium">We&apos;re always growing. Check back soon!</p>
                     </motion.div>
                 ) : (
                     <AnimatePresence mode="popLayout">
@@ -325,9 +325,9 @@ export default function CareerPage() {
                         <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/20">
                             <Sparkles size={32} className="text-violet-300" />
                         </div>
-                        <h3 className="text-3xl sm:text-4xl font-black mb-4 tracking-tight">Don't see your role?</h3>
+                        <h3 className="text-3xl sm:text-4xl font-black mb-4 tracking-tight">Don&apos;t see your role?</h3>
                         <p className="text-white/70 mb-10 max-w-lg mx-auto text-lg leading-relaxed font-medium">
-                            We're always looking for exceptional talent. Drop your CV and we'll reach out when the right opportunity arrives.
+                            We&apos;re always looking for exceptional talent. Drop your CV and we&apos;ll reach out when the right opportunity arrives.
                         </p>
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                             <Link href="/career/apply"

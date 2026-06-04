@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Calendar, Plus, Clock, CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -30,7 +30,7 @@ export default function EmployeeLeavesPage() {
     const [usedMap, setUsedMap] = useState({});
     const [form, setForm] = useState({ leave_type: 'Casual Leave', from_date: '', to_date: '', reason: '' });
 
-    const fetchLeaves = async () => {
+    const fetchLeaves = useCallback(async () => {
         if (!user) return;
         const { data } = await supabase
             .from('leave_requests')
@@ -49,9 +49,9 @@ export default function EmployeeLeavesPage() {
             });
         setUsedMap(map);
         setLoading(false);
-    };
+    }, [user]);
 
-    useEffect(() => { fetchLeaves(); }, [user]);
+    useEffect(() => { fetchLeaves(); }, [fetchLeaves]);
 
     const diffDays = (from, to) => {
         if (!from || !to) return 0;

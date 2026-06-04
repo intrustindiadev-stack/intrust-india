@@ -12,10 +12,12 @@ import MerchantCard from '@/components/admin/merchants/MerchantCard';
 /* ─── Production-grade Action Modal (replaces all browser dialogs) ─── */
 function ActionModal({ isOpen, onClose, config, onConfirm, isLoading }) {
     const [reason, setReason] = useState('');
+    const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
 
-    useEffect(() => {
-        if (isOpen) setReason('');
-    }, [isOpen]);
+    if (isOpen !== prevIsOpen) {
+        setPrevIsOpen(isOpen);
+        setReason('');
+    }
 
     if (!config) return null;
 
@@ -597,7 +599,7 @@ export default function AdminMerchantsPage() {
                                 <Building2 className="w-10 h-10 text-slate-300" strokeWidth={1.5} />
                             </div>
                             <h3 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tight">No {filter} merchants found</h3>
-                            <p className="text-slate-400 font-bold text-sm max-w-xs mx-auto">We couldn't find any merchant records matching the current filters or search criteria.</p>
+                            <p className="text-slate-400 font-bold text-sm max-w-xs mx-auto">We couldn&apos;t find any merchant records matching the current filters or search criteria.</p>
                         </div>
                     )}
                 </>

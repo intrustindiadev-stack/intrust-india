@@ -7,7 +7,7 @@ import {
     Briefcase, User, Phone, Mail, MapPin, Building2, GraduationCap,
     MessageSquare, ChevronRight, ChevronLeft, CheckCircle2, ArrowLeft,
     Sparkles, Zap, Users, TrendingUp, DollarSign, Shield, FileText,
-    Star, Globe, Check, UploadCloud, File
+    Star, Globe, Check, UploadCloud, File, X
 } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
@@ -147,7 +147,7 @@ function CareerApplyForm() {
             }
         }
         fetchRoles();
-    }, []);
+    }, [searchParams]);
 
     useEffect(() => {
         if (profile || user) {
@@ -257,7 +257,7 @@ function CareerApplyForm() {
                         <CheckCircle2 size={52} className="text-white" />
                     </motion.div>
                     <h2 className="text-3xl font-extrabold text-gray-900 mb-3">Application Sent! 🎉</h2>
-                    <p className="text-gray-500 mb-2">We've received your application for <strong className="text-gray-800">{selectedRole?.title || 'the role'}</strong>.</p>
+                    <p className="text-gray-500 mb-2">We&apos;ve received your application for <strong className="text-gray-800">{selectedRole?.title || 'the role'}</strong>.</p>
                     <p className="text-sm text-gray-400 mb-8">Our HR team will review it and reach out within 2–3 business days.</p>
                     <div className="flex flex-col gap-3">
                         <Link href="/career/applications" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/25 hover:from-emerald-500 transition-all">
@@ -310,7 +310,7 @@ function CareerApplyForm() {
                             {step === 1 && (
                                 <motion.div key="s1" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} className="p-6 sm:p-8">
                                     <h2 className="text-xl font-bold text-gray-900 mb-1">Choose a Role</h2>
-                                    <p className="text-sm text-gray-400 mb-6">Select the opportunity you'd like to apply for. Tap to select & continue.</p>
+                                    <p className="text-sm text-gray-400 mb-6">Select the opportunity you&apos;d like to apply for. Tap to select & continue.</p>
                                     {loadingRoles ? (
                                         <div className="space-y-3">{[...Array(4)].map((_, i) => <div key={i} className="h-20 rounded-2xl bg-gray-100 animate-pulse" />)}</div>
                                     ) : roles.length === 0 ? (
@@ -490,7 +490,7 @@ function CareerApplyForm() {
                                     <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
                                         <p className="text-xs text-amber-700 font-medium flex items-start gap-2">
                                             <Shield size={14} className="flex-shrink-0 mt-0.5" />
-                                            Your information is secure and will only be used for the application review process. We'll contact you via phone/email if selected.
+                                            Your information is secure and will only be used for the application review process. We&apos;ll contact you via phone/email if selected.
                                         </p>
                                     </div>
                                 </motion.div>

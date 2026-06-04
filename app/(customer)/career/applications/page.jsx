@@ -104,20 +104,20 @@ function ApplicationCard({ app, delay }) {
                     <div>
                         <p className="text-sm font-semibold text-violet-700 mb-1">Interview Scheduled</p>
                         {app.interview_date && <p className="text-sm text-violet-600">📅 {new Date(app.interview_date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>}
-                        {app.interview_notes && <p className="text-sm text-violet-600 mt-1 italic">"{app.interview_notes}"</p>}
+                        {app.interview_notes && <p className="text-sm text-violet-600 mt-1 italic">&quot;{app.interview_notes}&quot;</p>}
                     </div>
                 )}
                 {app.status === 'offer_sent' && (
                     <div>
                         <p className="text-sm font-semibold text-indigo-700 mb-1">🎉 Offer Extended!</p>
                         {app.offered_salary > 0 && <p className="text-sm text-indigo-600">Package: ₹{app.offered_salary.toLocaleString('en-IN')}/month{app.commission_percent > 0 ? ` + ${app.commission_percent}% commission` : ''}{app.joining_bonus > 0 ? ` + ₹${app.joining_bonus.toLocaleString('en-IN')} joining bonus` : ''}</p>}
-                        {app.offer_letter_notes && <p className="text-sm text-indigo-600 mt-1 italic">"{app.offer_letter_notes}"</p>}
+                        {app.offer_letter_notes && <p className="text-sm text-indigo-600 mt-1 italic">&quot;{app.offer_letter_notes}&quot;</p>}
                     </div>
                 )}
                 {app.status === 'hired' && (
                     <div>
                         <p className="text-sm font-bold text-emerald-700 mb-1">🎊 Welcome to the team!</p>
-                        <p className="text-sm text-emerald-600">Congratulations! You've been selected. HR will reach out with onboarding details.</p>
+                        <p className="text-sm text-emerald-600">Congratulations! You&apos;ve been selected. HR will reach out with onboarding details.</p>
                         {app.hired_at && <p className="text-xs text-emerald-500 mt-1">Hired on {new Date(app.hired_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>}
                     </div>
                 )}

@@ -200,7 +200,7 @@ function AddLeadDrawer({ onClose, onSave }) {
                 <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                     <div>
                         <h2 className="text-lg font-bold text-gray-900">Add New Lead</h2>
-                        <p className="text-xs text-gray-400 mt-0.5">Fill in the prospect's details</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Fill in the prospect&apos;s details</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors"><X size={18} className="text-gray-500" /></button>
                 </div>

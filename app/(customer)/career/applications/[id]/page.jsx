@@ -204,7 +204,7 @@ export default function ApplicationDetailPage({ params }) {
                                 </div>
                                 {app.interview_notes && (
                                     <div className="bg-white/60 p-4 rounded-2xl border border-violet-200/50">
-                                        <p className="text-sm text-violet-800 italic">"{app.interview_notes}"</p>
+                                        <p className="text-sm text-violet-800 italic">&quot;{app.interview_notes}&quot;</p>
                                     </div>
                                 )}
                             </div>
@@ -228,7 +228,7 @@ export default function ApplicationDetailPage({ params }) {
                                 </div>
                                 {app.offer_letter_notes && (
                                     <div className="bg-white/60 p-4 rounded-2xl border border-indigo-200/50">
-                                        <p className="text-sm text-indigo-800 italic">"{app.offer_letter_notes}"</p>
+                                        <p className="text-sm text-indigo-800 italic">&quot;{app.offer_letter_notes}&quot;</p>
                                     </div>
                                 )}
                             </div>

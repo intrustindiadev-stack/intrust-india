@@ -130,7 +130,7 @@ function CandidateDrawer({ app, onClose, onUpdate }) {
                         {app?.cover_letter && (
                             <div className="mt-3 pt-3 border-t border-gray-100">
                                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Cover Letter</p>
-                                <p className="text-sm text-gray-600 italic leading-relaxed">"{app.cover_letter}"</p>
+                                <p className="text-sm text-gray-600 italic leading-relaxed">&quot;{app.cover_letter}&quot;</p>
                             </div>
                         )}
                     </div>
