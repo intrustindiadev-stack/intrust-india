@@ -91,10 +91,10 @@ function WalletContent() {
             setWallet(walletData.wallet);
             setTransactions(walletData.transactions || []);
 
-            // Fetch merchant data (bank_verified, bank_data for withdrawal)
+            // Fetch merchant data (bank_verified, bank_data + raw columns for withdrawal gate)
             const { data: merchant, error: merchantError } = await supabase
                 .from('merchants')
-                .select('id, bank_verified, bank_data, wallet_balance_paise, business_name, status')
+                .select('id, bank_verified, bank_data, bank_account_number, bank_ifsc_code, bank_account_name, wallet_balance_paise, business_name, status')
                 .eq('user_id', session.user.id)
                 .single();
 
@@ -335,34 +335,71 @@ function WalletContent() {
                         </button>
                     </div>
                     <div className="w-full">
-                        {merchantData?.bank_verified ? (
-                            <WithdrawalForm
-                                merchant={merchantData}
-                                minAmountPaise={payoutMinAmountPaise}
-                                pendingRequests={pendingPayouts}
-                                maxPendingCount={payoutMaxPendingCount}
-                                onSuccess={() => {
-                                    setShowWithdrawal(false);
-                                    fetchWalletData();
-                                }}
-                                onCancel={() => setShowWithdrawal(false)}
-                            />
-                        ) : (
-                            <div className="py-8 text-center">
-                                <span className="material-icons-round text-6xl text-amber-500 mb-4 block">account_balance</span>
-                                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Bank Account Not Verified</h3>
-                                <p className="text-slate-600 dark:text-slate-400 text-sm max-w-sm mx-auto">
-                                    To withdraw funds, verify your bank account in KYC settings first.
-                                </p>
-                                <a
-                                    href="/merchant/settings?tab=bank"
-                                    className="inline-flex items-center gap-2 mt-4 px-6 py-3 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:opacity-90 transition-all"
-                                >
-                                    <span className="material-icons-round text-base">verified</span>
-                                    Verify Bank Account
-                                </a>
-                            </div>
-                        )}
+                        {(() => {
+                            const acct = merchantData?.bank_account_number ||
+                                merchantData?.bank_data?.account_number || '';
+                            const ifsc = merchantData?.bank_ifsc_code ||
+                                merchantData?.bank_data?.ifsc ||
+                                merchantData?.bank_data?.ifsc_code || '';
+                            const holder = merchantData?.bank_account_name ||
+                                merchantData?.bank_data?.account_holder_name ||
+                                merchantData?.bank_data?.name || '';
+                            const isBankComplete = acct.trim() !== '' && ifsc.trim() !== '' && holder.trim() !== '';
+
+                            if (!merchantData?.bank_verified) {
+                                return (
+                                    <div className="py-8 text-center">
+                                        <span className="material-icons-round text-6xl text-amber-500 mb-4 block">account_balance</span>
+                                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Bank Account Not Verified</h3>
+                                        <p className="text-slate-600 dark:text-slate-400 text-sm max-w-sm mx-auto">
+                                            To withdraw funds, please submit your bank details and wait for admin verification.
+                                        </p>
+                                        <a
+                                            href="/merchant/settings?tab=bank"
+                                            className="inline-flex items-center gap-2 mt-4 px-6 py-3 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:opacity-90 transition-all"
+                                        >
+                                            <span className="material-icons-round text-base">verified</span>
+                                            Add Bank Details
+                                        </a>
+                                    </div>
+                                );
+                            }
+
+                            if (!isBankComplete) {
+                                return (
+                                    <div className="py-8 text-center">
+                                        <span className="material-icons-round text-6xl text-orange-500 mb-4 block">edit_note</span>
+                                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Bank Details Incomplete</h3>
+                                        <p className="text-slate-600 dark:text-slate-400 text-sm max-w-sm mx-auto">
+                                            Your bank account is verified but some required fields are missing
+                                            (account number, IFSC, or account holder name). Please update your
+                                            bank details before withdrawing.
+                                        </p>
+                                        <a
+                                            href="/merchant/settings?tab=bank"
+                                            className="inline-flex items-center gap-2 mt-4 px-6 py-3 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:opacity-90 transition-all"
+                                        >
+                                            <span className="material-icons-round text-base">edit</span>
+                                            Complete Bank Details
+                                        </a>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <WithdrawalForm
+                                    merchant={merchantData}
+                                    minAmountPaise={payoutMinAmountPaise}
+                                    pendingRequests={pendingPayouts}
+                                    maxPendingCount={payoutMaxPendingCount}
+                                    onSuccess={() => {
+                                        setShowWithdrawal(false);
+                                        fetchWalletData();
+                                    }}
+                                    onCancel={() => setShowWithdrawal(false)}
+                                />
+                            );
+                        })()}
                     </div>
                 </div>
             )}

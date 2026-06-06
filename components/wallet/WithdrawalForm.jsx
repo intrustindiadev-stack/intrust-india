@@ -33,10 +33,13 @@ export default function WithdrawalForm({ merchant, onSuccess, onCancel, minAmoun
 
     const balanceRupees = (merchant.wallet_balance_paise || 0) / 100;
     const bankData = merchant.bank_data || {};
-    const accountNumber = bankData.account_number || 'N/A';
-    const ifsc = bankData.ifsc || bankData.ifsc_code || 'N/A';
-    const holder = bankData.name || bankData.account_holder_name || bankData.beneficiary_name || 'N/A';
+    const accountNumber = merchant.bank_account_number || bankData.account_number || '';
+    const ifsc = merchant.bank_ifsc_code || bankData.ifsc || bankData.ifsc_code || '';
+    const holder = merchant.bank_account_name || bankData.name || bankData.account_holder_name || bankData.beneficiary_name || '';
     const bankName = bankData.bank_name || '';
+
+    // All three fields must be present before a withdrawal is permitted
+    const isBankComplete = accountNumber.trim() !== '' && ifsc.trim() !== '' && holder.trim() !== '';
 
     // Derive min amount in rupees from prop (falls back to ₹100)
     const minRupees = (minAmountPaise || 10000) / 100;
@@ -55,6 +58,7 @@ export default function WithdrawalForm({ merchant, onSuccess, onCancel, minAmoun
         if (parts[1]?.length > 2) raw = parts[0] + '.' + parts[1].slice(0, 2);
         setAmount(raw);
     };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -110,6 +114,27 @@ export default function WithdrawalForm({ merchant, onSuccess, onCancel, minAmoun
         }
     };
 
+    if (!isBankComplete) {
+        return (
+            <div className="py-10 text-center">
+                <div className="w-16 h-16 bg-orange-500/10 border border-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="material-icons-round text-orange-500 text-3xl">edit_note</span>
+                </div>
+                <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 mb-2">Bank Details Incomplete</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto mb-4">
+                    Your account number, IFSC code, or account holder name is missing. Please complete your bank details before requesting a withdrawal.
+                </p>
+                <a
+                    href="/merchant/settings?tab=bank"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:opacity-90 transition-all text-sm"
+                >
+                    <span className="material-icons-round text-base">edit</span>
+                    Complete Bank Details
+                </a>
+            </div>
+        );
+    }
+
     if (success) {
         return (
             <div className="py-10 text-center">
@@ -135,17 +160,17 @@ export default function WithdrawalForm({ merchant, onSuccess, onCancel, minAmoun
                 <div className="space-y-2">
                     <div className="flex justify-between items-center">
                         <span className="text-xs text-slate-500 dark:text-slate-400">Account Holder</span>
-                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{holder}</span>
+                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{holder || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-xs text-slate-500 dark:text-slate-400">Account Number</span>
                         <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 font-mono">
-                            ••••{accountNumber.slice(-4)}
+                            {accountNumber ? `••••${accountNumber.slice(-4)}` : 'N/A'}
                         </span>
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-xs text-slate-500 dark:text-slate-400">IFSC</span>
-                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 font-mono">{ifsc}</span>
+                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 font-mono">{ifsc || 'N/A'}</span>
                     </div>
                     {bankName && (
                         <div className="flex justify-between items-center">
@@ -154,6 +179,7 @@ export default function WithdrawalForm({ merchant, onSuccess, onCancel, minAmoun
                         </div>
                     )}
                 </div>
+
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
