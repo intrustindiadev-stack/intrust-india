@@ -80,11 +80,7 @@ CREATE POLICY "admin_view_all_payout_request_events"
     ON public.payout_request_events
     FOR SELECT
     USING (
-        EXISTS (
-            SELECT 1 FROM public.user_profiles
-            WHERE id = auth.uid()
-              AND role IN ('admin', 'super_admin')
-        )
+        is_admin()
     );
 
 -- No UPDATE or DELETE policies — this table is append-only.
