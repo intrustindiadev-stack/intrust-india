@@ -183,8 +183,9 @@ export default function MerchantActions({ merchantId, userId, status, hasBankDat
                     </button>
                     <button
                         onClick={handleApprove}
-                        disabled={isApproving || isRejecting}
-                        className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 text-white text-sm font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+                        disabled={isApproving || isRejecting || !bankVerified}
+                        title={!bankVerified ? "Bank must be verified first" : "Approve Merchant"}
+                        className={`w-full sm:w-auto px-8 py-3.5 text-sm font-black rounded-2xl transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 ${!bankVerified ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                     >
                         {isApproving ? (
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -220,28 +221,6 @@ export default function MerchantActions({ merchantId, userId, status, hasBankDat
                             </>
                         )}
                     </button>
-
-                    {isApproved && hasBankData && !bankVerified && (
-                        <button
-                            onClick={handleVerifyBank}
-                            disabled={isVerifyingBank}
-                            className="flex-1 px-8 py-3.5 bg-blue-600 text-white text-sm font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
-                        >
-                            {isVerifyingBank ? (
-                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                                <>
-                                    <CheckCircle size={18} strokeWidth={2.5} /> Verify Bank Registry
-                                </>
-                            )}
-                        </button>
-                    )}
-
-                    {isApproved && bankVerified && (
-                        <div className="flex-1 px-8 py-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl text-sm font-black flex items-center justify-center gap-2 shadow-inner">
-                            <CheckCircle size={18} strokeWidth={2.5} /> Bank Verified
-                        </div>
-                    )}
                     
                     {isApproved && (
                         <Link
@@ -251,6 +230,28 @@ export default function MerchantActions({ merchantId, userId, status, hasBankDat
                             <ShoppingBag size={18} strokeWidth={2.5} /> Custom Products
                         </Link>
                     )}
+                </div>
+            )}
+            
+            {(isApproved || isPending) && hasBankData && !bankVerified && (
+                <button
+                    onClick={handleVerifyBank}
+                    disabled={isVerifyingBank}
+                    className="flex-1 px-8 py-3.5 bg-blue-600 text-white text-sm font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+                >
+                    {isVerifyingBank ? (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                        <>
+                            <CheckCircle size={18} strokeWidth={2.5} /> Verify Bank Registry
+                        </>
+                    )}
+                </button>
+            )}
+
+            {bankVerified && (
+                <div className="flex-1 px-8 py-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl text-sm font-black flex items-center justify-center gap-2 shadow-inner">
+                    <CheckCircle size={18} strokeWidth={2.5} /> Bank Verified
                 </div>
             )}
         </div>
