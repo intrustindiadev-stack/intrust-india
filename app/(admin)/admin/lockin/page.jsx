@@ -65,15 +65,42 @@ export default function AdminLockinPage() {
         fetchBalances();
     }, []);
 
-    const filteredBalances = balances.filter(b => 
-        b.merchant?.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.merchant?.user_profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    // Group balances by merchant
+    const merchantGroups = balances.reduce((acc, b) => {
+        const mId = b.merchant?.id;
+        if (!mId) return acc;
+        if (!acc[mId]) {
+            acc[mId] = {
+                merchant: b.merchant,
+                totalAmount: 0,
+                activeCount: 0,
+                maturedCount: 0,
+                interestRates: [],
+                lockins: []
+            };
+        }
+        acc[mId].lockins.push(b);
+        if (b.status === 'active') {
+            acc[mId].totalAmount += b.amount_paise;
+            acc[mId].activeCount++;
+            acc[mId].interestRates.push(Number(b.interest_rate));
+        } else if (b.status === 'matured' || b.status === 'released') {
+            acc[mId].maturedCount++;
+        }
+        return acc;
+    }, {});
+
+    const groupsArray = Object.values(merchantGroups);
+
+    const filteredBalances = groupsArray.filter(g => 
+        g.merchant?.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        g.merchant?.user_profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     // Analytics Data
-    const totalLockedPaise = balances.reduce((sum, b) => sum + (b.amount_paise || 0), 0);
     const activeBalances = balances.filter(b => b.status === 'active');
     const activeCount = activeBalances.length;
+    const totalLockedPaise = activeBalances.reduce((sum, b) => sum + (b.amount_paise || 0), 0);
     
     const chartData = useMemo(() => {
         if (activeBalances.length === 0) return [];
@@ -259,68 +286,60 @@ export default function AdminLockinPage() {
                                 <thead>
                                     <tr className="bg-slate-50/50 text-left border-b border-slate-100">
                                         <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Merchant Details</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Fund Value</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Retention Bonus %</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Term</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Unlock Date</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status Protections</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Total Active Value</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Avg Bonus %</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Active Terms</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status Summary</th>
                                         <th className="px-6 py-4 w-10"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {filteredBalances.map(item => (
-                                        <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
+                                    {filteredBalances.map(group => {
+                                        const avgBonus = group.interestRates.length > 0 
+                                            ? (group.interestRates.reduce((a, b) => a + b, 0) / group.interestRates.length).toFixed(1) 
+                                            : '-';
+                                            
+                                        return (
+                                        <tr key={group.merchant.id} className="hover:bg-slate-50/80 transition-colors group">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-900 flex items-center justify-center font-bold text-xs shadow-sm shadow-slate-100">
-                                                        {item.merchant?.business_name?.[0] || 'M'}
+                                                        {group.merchant?.business_name?.[0] || 'M'}
                                                     </div>
                                                     <div>
-                                                        <p className="font-semibold text-slate-900 text-sm">{item.merchant?.business_name}</p>
-                                                        <p className="text-[10px] text-slate-500 font-medium">{item.merchant?.user_profiles?.full_name}</p>
+                                                        <p className="font-semibold text-slate-900 text-sm">{group.merchant?.business_name}</p>
+                                                        <p className="text-[10px] text-slate-500 font-medium">{group.merchant?.user_profiles?.full_name}</p>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <p className="font-bold text-slate-900 text-sm tracking-tight">₹{(item.amount_paise / 100).toLocaleString('en-IN')}</p>
-                                                <p className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-1 inline-block rounded">SECURED</p>
+                                                <p className="font-bold text-slate-900 text-sm tracking-tight">₹{(group.totalAmount / 100).toLocaleString('en-IN')}</p>
+                                                {group.activeCount > 0 && <p className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-1 inline-block rounded mt-1">SECURED</p>}
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-sm font-bold text-blue-600">{item.interest_rate}%</span>
-                                                    <ArrowUpRight size={10} className="text-blue-400" />
+                                            <td className="px-6 py-4 text-center">
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <span className="text-sm font-bold text-blue-600">{avgBonus}%</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-xs font-semibold text-slate-600">{item.lockin_period_months}M</span>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="text-xs font-semibold text-slate-600">{group.activeCount}</span>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                                                    {new Date(item.end_date).toLocaleDateString('hi-IN', { month: '2-digit', year: 'numeric', day: '2-digit' })}
+                                            <td className="px-6 py-4 text-center">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {group.activeCount > 0 && <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">Active</span>}
+                                                    {group.maturedCount > 0 && <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100">Matured/Released</span>}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-colors ${
-                                                    item.status === 'active' 
-                                                        ? 'bg-blue-50 text-blue-700 border-blue-100'
-                                                        : item.status === 'matured'
-                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                                        : 'bg-slate-100 text-slate-500 border-slate-200'
-                                                }`}>
-                                                    {item.status === 'active' ? <Clock size={10} /> : item.status === 'matured' ? <CheckCircle size={10} /> : <XCircle size={10} />}
-                                                    {item.status}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-6 py-4 text-right">
                                                 <Link 
-                                                    href={`/admin/lockin/${item.id}`}
-                                                    className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center w-fit"
+                                                    href={`/admin/portfolio/${group.merchant.id}`}
+                                                    className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center w-fit ml-auto"
                                                 >
                                                     <Eye size={16} />
                                                 </Link>
                                             </td>
                                         </tr>
-                                    ))}
+                                    )})}
                                 </tbody>
                             </table>
                         </div>

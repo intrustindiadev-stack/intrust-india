@@ -5,7 +5,7 @@ import {
     Phone, Mail, MapPin, Building, Calendar, Clock, Edit, FileText, 
     Activity, MessageSquare, CheckCircle2, ChevronRight, Zap, Target, 
     DollarSign, Thermometer, Plus, Trash2, ExternalLink, CreditCard, 
-    ShoppingBag, Sun, Package, ArrowLeft, MessageCircle, X
+    ShoppingBag, Sun, Package, ArrowLeft, MessageCircle, X, Send
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
@@ -42,8 +42,18 @@ export default function LeadDetailPage({ params }) {
     const [tasks, setTasks] = useState([]);
     const [intentServices, setIntentServices] = useState([]);
     const [paidServices, setPaidServices] = useState([]);
+    const [notes, setNotes] = useState([]);
+    const [activities, setActivities] = useState([]);
     const [salesTeam, setSalesTeam] = useState([]);
+    
+    const [newNote, setNewNote] = useState('');
+    const [savingNote, setSavingNote] = useState(false);
+    
     const [showCreateTask, setShowCreateTask] = useState(false);
+    const [showEditLead, setShowEditLead] = useState(false);
+    const [showLogActivity, setShowLogActivity] = useState(false);
+    const [showLogIntent, setShowLogIntent] = useState(false);
+    
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchSalesTeam = useCallback(async () => {
@@ -85,10 +95,11 @@ export default function LeadDetailPage({ params }) {
             const { data: intentData } = await supabase
                 .from('crm_lead_services')
                 .select('*')
-                .eq('lead_id', id);
+                .eq('lead_id', id)
+                .order('created_at', { ascending: false });
             setIntentServices(intentData || []);
 
-            // 4. Fetch Paid Services (Cross-reference by email/phone)
+            // 4. Fetch Paid Services
             const { data: profiles } = await supabase
                 .from('user_profiles')
                 .select('id')
@@ -117,6 +128,22 @@ export default function LeadDetailPage({ params }) {
                 setPaidServices(merged);
             }
 
+            // 5. Fetch Notes
+            const { data: notesData } = await supabase
+                .from('crm_lead_notes')
+                .select('*, user_profiles:author_id(full_name)')
+                .eq('lead_id', id)
+                .order('created_at', { ascending: false });
+            setNotes(notesData || []);
+
+            // 6. Fetch Activities
+            const { data: activitiesData } = await supabase
+                .from('crm_lead_activities')
+                .select('*, user_profiles:actor_id(full_name)')
+                .eq('lead_id', id)
+                .order('created_at', { ascending: false });
+            setActivities(activitiesData || []);
+
         } catch (err) {
             console.error('Error fetching lead hub data:', err);
         } finally {
@@ -130,6 +157,9 @@ export default function LeadDetailPage({ params }) {
         const leadSub = supabase.channel(`lead_${id}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_leads', filter: `id=eq.${id}` }, fetchData)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_tasks', filter: `lead_id=eq.${id}` }, fetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_lead_notes', filter: `lead_id=eq.${id}` }, fetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_lead_activities', filter: `lead_id=eq.${id}` }, fetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_lead_services', filter: `lead_id=eq.${id}` }, fetchData)
             .subscribe();
         
         return () => supabase.removeChannel(leadSub);
@@ -139,6 +169,38 @@ export default function LeadDetailPage({ params }) {
         const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
         await supabase.from('crm_tasks').update({ status: newStatus }).eq('id', taskId);
         fetchData();
+    };
+
+    const handlePostNote = async () => {
+        if (!newNote.trim()) return;
+        setSavingNote(true);
+        try {
+            const { error } = await supabase.from('crm_lead_notes').insert([{
+                lead_id: id,
+                author_id: user?.id,
+                note: newNote.trim()
+            }]);
+            if (error) throw error;
+            setNewNote('');
+            fetchData();
+            toast.success('Note added');
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setSavingNote(false);
+        }
+    };
+
+    const handleDeleteLead = async () => {
+        if (!window.confirm("Are you sure you want to delete this lead? This cannot be undone.")) return;
+        try {
+            const { error } = await supabase.from('crm_leads').delete().eq('id', id);
+            if (error) throw error;
+            toast.success('Lead deleted');
+            router.push('/crm/leads');
+        } catch (err) {
+            toast.error(err.message);
+        }
     };
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
@@ -159,13 +221,13 @@ export default function LeadDetailPage({ params }) {
             
             <div className="flex items-center justify-between">
                 <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm">
-                    <ArrowLeft size={18} /> Back to Pipeline
+                    <ArrowLeft size={18} /> Back
                 </button>
                 <div className="flex items-center gap-2">
-                    <button className="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-indigo-500 transition-all">
+                    <button onClick={() => setShowEditLead(true)} className="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">
                         <Edit size={18} />
                     </button>
-                    <button className="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-rose-200 dark:border-rose-900/50 text-rose-600 hover:bg-rose-50 transition-all">
+                    <button onClick={handleDeleteLead} className="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-rose-200 dark:border-rose-900/50 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all shadow-sm">
                         <Trash2 size={18} />
                     </button>
                 </div>
@@ -244,7 +306,7 @@ export default function LeadDetailPage({ params }) {
                     <div className="bg-indigo-900 rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden group">
                         <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-500" />
                         <h3 className="text-xs font-black text-indigo-300 uppercase tracking-widest mb-4">Lead Status Notes</h3>
-                        <p className="text-sm font-bold leading-relaxed opacity-90 italic">"{lead.notes || 'No active notes for this lead yet. Internal discussions are required.'}"</p>
+                        <p className="text-sm font-bold leading-relaxed opacity-90 italic">"{lead.notes || 'No active notes for this lead yet.'}"</p>
                     </div>
                 </div>
 
@@ -274,11 +336,29 @@ export default function LeadDetailPage({ params }) {
                                 <div className="space-y-8">
                                     <div className="flex items-center justify-between mb-2">
                                         <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Timeline</h2>
-                                        <button className="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 flex items-center gap-1 hover:underline">
+                                        <button onClick={() => setShowLogActivity(true)} className="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 flex items-center gap-1 hover:underline">
                                             <Plus size={14} /> Log Entry
                                         </button>
                                     </div>
                                     <div className="relative pl-6 border-l-2 border-gray-100 dark:border-gray-700 space-y-10">
+                                        
+                                        {activities.map(activity => (
+                                            <div key={activity.id} className="relative">
+                                                <div className="absolute -left-[33px] w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-300 ring-4 ring-white dark:ring-gray-800 shadow-md">
+                                                    <Activity size={12} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">{activity.action_type}</p>
+                                                    <p className="text-xs font-bold text-gray-400">{format(new Date(activity.created_at), 'PPP p')} · by {activity.user_profiles?.full_name || 'System'}</p>
+                                                    {activity.metadata?.details && (
+                                                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-700">
+                                                            {activity.metadata.details}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+
                                         <div className="relative">
                                             <div className="absolute -left-[33px] w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-white ring-4 ring-white dark:ring-gray-800 shadow-md">
                                                 <Target size={12} />
@@ -289,6 +369,7 @@ export default function LeadDetailPage({ params }) {
                                                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-700">Automated entry from CRM pipeline initialization.</p>
                                             </div>
                                         </div>
+
                                     </div>
                                 </div>
                             )}
@@ -329,7 +410,7 @@ export default function LeadDetailPage({ params }) {
                                         <div className="space-y-6">
                                             <div className="flex items-center justify-between">
                                                 <h3 className="text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Sales Intent</h3>
-                                                <button className="text-[10px] font-black uppercase bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded-md">Log Intent</button>
+                                                <button onClick={() => setShowLogIntent(true)} className="text-[10px] font-black uppercase bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 px-2 py-1 rounded-md transition-colors">Log Intent</button>
                                             </div>
                                             <div className="space-y-3">
                                                 {intentServices.length === 0 ? (
@@ -386,11 +467,11 @@ export default function LeadDetailPage({ params }) {
                                         <div className="space-y-6">
                                             <div className="flex items-center gap-4">
                                                 <div className="p-3 rounded-2xl bg-gray-50 dark:bg-gray-900 text-gray-400"><Phone size={18} /></div>
-                                                <p className="text-sm font-black text-gray-900 dark:text-white">{lead.phone}</p>
+                                                <p className="text-sm font-black text-gray-900 dark:text-white">{lead.phone || 'N/A'}</p>
                                             </div>
                                             <div className="flex items-center gap-4">
                                                 <div className="p-3 rounded-2xl bg-gray-50 dark:bg-gray-900 text-gray-400"><Mail size={18} /></div>
-                                                <p className="text-sm font-black text-gray-900 dark:text-white">{lead.email}</p>
+                                                <p className="text-sm font-black text-gray-900 dark:text-white">{lead.email || 'N/A'}</p>
                                             </div>
                                             <div className="flex items-center gap-4">
                                                 <div className="p-3 rounded-2xl bg-gray-50 dark:bg-gray-900 text-gray-400"><Building size={18} /></div>
@@ -417,24 +498,46 @@ export default function LeadDetailPage({ params }) {
                             )}
 
                             {activeTab === 'notes' && (
-                                <div className="space-y-6">
+                                <div className="space-y-6 flex flex-col h-full">
                                     <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Internal Discussions</h2>
-                                    <div className="bg-gray-50 dark:bg-gray-900/50 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 min-h-[150px] flex items-center justify-center text-center">
-                                        <div className="space-y-2">
-                                            <MessageSquare size={32} className="mx-auto text-gray-200 dark:text-gray-700" />
-                                            <p className="text-sm font-bold text-gray-400 italic">No collaborative notes found for this lead. Start a thread to align with your team.</p>
-                                        </div>
+                                    
+                                    <div className="flex-1 space-y-4 max-h-[400px] overflow-y-auto no-scrollbar pr-2">
+                                        {notes.length === 0 ? (
+                                            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 min-h-[150px] flex items-center justify-center text-center">
+                                                <div className="space-y-2">
+                                                    <MessageSquare size={32} className="mx-auto text-gray-200 dark:text-gray-700" />
+                                                    <p className="text-sm font-bold text-gray-400 italic">No collaborative notes found for this lead. Start a thread to align with your team.</p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            notes.map(note => (
+                                                <div key={note.id} className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-xs font-bold text-gray-900 dark:text-white">{note.user_profiles?.full_name || 'User'}</span>
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{format(new Date(note.created_at), 'MMM dd, p')}</span>
+                                                    </div>
+                                                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{note.note}</p>
+                                                </div>
+                                            ))
+                                        )}
                                     </div>
-                                    <div className="flex gap-4 items-end">
+
+                                    <div className="flex gap-4 items-end pt-4 border-t border-gray-100 dark:border-gray-700">
                                         <div className="flex-1 bg-white dark:bg-gray-900 border-2 border-gray-100 dark:border-gray-700 rounded-3xl p-2 focus-within:border-indigo-500 transition-all shadow-inner">
                                             <textarea 
                                                 rows="3" 
-                                                placeholder="Type your message here..." 
-                                                className="w-full bg-transparent border-none focus:ring-0 p-4 text-sm font-bold text-gray-900 dark:text-white no-scrollbar"
+                                                placeholder="Type your note here..." 
+                                                value={newNote}
+                                                onChange={e => setNewNote(e.target.value)}
+                                                className="w-full bg-transparent border-none focus:ring-0 p-4 text-sm font-bold text-gray-900 dark:text-white no-scrollbar resize-none"
                                             />
                                         </div>
-                                        <button className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 p-4 rounded-[1.5rem] shadow-xl active:scale-95 transition-transform">
-                                            <Plus size={24} />
+                                        <button 
+                                            onClick={handlePostNote} 
+                                            disabled={savingNote || !newNote.trim()}
+                                            className="bg-indigo-600 text-white p-4 rounded-[1.5rem] shadow-xl hover:bg-indigo-700 active:scale-95 transition-transform disabled:opacity-50 flex items-center justify-center"
+                                        >
+                                            {savingNote ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={24} />}
                                         </button>
                                     </div>
                                 </div>
@@ -452,6 +555,31 @@ export default function LeadDetailPage({ params }) {
                         currentUserProfile={profile} 
                         onClose={() => setShowCreateTask(false)} 
                         onSave={fetchData} 
+                    />
+                )}
+                {showLogActivity && (
+                    <LogActivityModal
+                        leadId={id}
+                        userId={user?.id}
+                        onClose={() => setShowLogActivity(false)}
+                        onSave={fetchData}
+                    />
+                )}
+                {showLogIntent && (
+                    <LogIntentModal
+                        leadId={id}
+                        userId={user?.id}
+                        onClose={() => setShowLogIntent(false)}
+                        onSave={fetchData}
+                    />
+                )}
+                {showEditLead && (
+                    <EditLeadModal
+                        lead={lead}
+                        salesTeam={salesTeam}
+                        currentUserProfile={profile}
+                        onClose={() => setShowEditLead(false)}
+                        onSave={fetchData}
                     />
                 )}
             </AnimatePresence>
@@ -546,6 +674,237 @@ function CreateTaskModal({ leadId, salesTeam, currentUserProfile, onClose, onSav
                         </button>
                     </div>
                 </form>
+            </motion.div>
+        </motion.div>
+    );
+}
+
+function LogActivityModal({ leadId, userId, onClose, onSave }) {
+    const [actionType, setActionType] = useState('Call');
+    const [details, setDetails] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            const { error } = await supabase.from('crm_lead_activities').insert([{
+                lead_id: leadId,
+                actor_id: userId,
+                action_type: actionType,
+                metadata: { details }
+            }]);
+            if (error) throw error;
+            toast.success('Activity logged');
+            onSave();
+            onClose();
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-2xl w-full max-w-md p-6">
+                <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white">Log Activity</h3>
+                    <button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl"><X size={18} className="text-gray-500" /></button>
+                </div>
+                <form onSubmit={handleSave} className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Activity Type</label>
+                        <select value={actionType} onChange={e => setActionType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm">
+                            <option value="Call">Call</option>
+                            <option value="Email">Email</option>
+                            <option value="Meeting">Meeting</option>
+                            <option value="WhatsApp">WhatsApp</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Details</label>
+                        <textarea value={details} onChange={e => setDetails(e.target.value)} rows={3} placeholder="Discussion summary..." required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm resize-none" />
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">Cancel</button>
+                        <button type="submit" disabled={saving} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 flex justify-center items-center">
+                            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Log Activity'}
+                        </button>
+                    </div>
+                </form>
+            </motion.div>
+        </motion.div>
+    );
+}
+
+function LogIntentModal({ leadId, userId, onClose, onSave }) {
+    const [serviceName, setServiceName] = useState('');
+    const [dealValue, setDealValue] = useState('');
+    const [status, setStatus] = useState('pitched');
+    const [saving, setSaving] = useState(false);
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            const { error } = await supabase.from('crm_lead_services').insert([{
+                lead_id: leadId,
+                service_name: serviceName,
+                deal_value: Number(dealValue) || 0,
+                status
+            }]);
+            if (error) throw error;
+            toast.success('Intent logged');
+            onSave();
+            onClose();
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-2xl w-full max-w-md p-6">
+                <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white">Log Sales Intent</h3>
+                    <button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl"><X size={18} className="text-gray-500" /></button>
+                </div>
+                <form onSubmit={handleSave} className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Service / Product Name</label>
+                        <input type="text" value={serviceName} onChange={e => setServiceName(e.target.value)} required placeholder="e.g. 5kW Solar System" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Expected Deal Value (₹)</label>
+                        <input type="number" value={dealValue} onChange={e => setDealValue(e.target.value)} placeholder="0" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Status</label>
+                        <select value={status} onChange={e => setStatus(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm">
+                            <option value="pitched">Pitched</option>
+                            <option value="negotiating">Negotiating</option>
+                            <option value="agreed">Agreed</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">Cancel</button>
+                        <button type="submit" disabled={saving} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 flex justify-center items-center">
+                            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Save Intent'}
+                        </button>
+                    </div>
+                </form>
+            </motion.div>
+        </motion.div>
+    );
+}
+
+function EditLeadModal({ lead, salesTeam, currentUserProfile, onClose, onSave }) {
+    const [form, setForm] = useState({
+        contact_name: lead.contact_name || '',
+        title: lead.title || '',
+        phone: lead.phone || '',
+        email: lead.email || '',
+        source: lead.source || '',
+        status: lead.status || 'new',
+        temperature: lead.temperature || 'warm',
+        deal_value: lead.deal_value || 0,
+        assigned_to: lead.assigned_to || '',
+    });
+    const [saving, setSaving] = useState(false);
+    const isManagerOrAdmin = ['sales_manager', 'admin', 'super_admin'].includes(currentUserProfile?.role);
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            const { error } = await supabase.from('crm_leads').update({
+                ...form,
+                updated_at: new Date().toISOString()
+            }).eq('id', lead.id);
+            if (error) throw error;
+            toast.success('Lead updated');
+            onSave();
+            onClose();
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between shrink-0">
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white">Edit Lead Details</h3>
+                    <button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl"><X size={18} className="text-gray-500" /></button>
+                </div>
+                <div className="overflow-y-auto p-6 flex-1">
+                    <form id="editLeadForm" onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Contact Name</label>
+                            <input type="text" value={form.contact_name} onChange={e => setForm({...form, contact_name: e.target.value})} required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Lead Title</label>
+                            <input type="text" value={form.title} onChange={e => setForm({...form, title: e.target.value})} required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Phone</label>
+                            <input type="text" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Email</label>
+                            <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Source</label>
+                            <input type="text" value={form.source} onChange={e => setForm({...form, source: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Expected Deal Value (₹)</label>
+                            <input type="number" value={form.deal_value} onChange={e => setForm({...form, deal_value: Number(e.target.value)})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Status</label>
+                            <select value={form.status} onChange={e => setForm({...form, status: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm capitalize">
+                                {Object.keys(STATUS_CONFIG).map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Temperature</label>
+                            <select value={form.temperature} onChange={e => setForm({...form, temperature: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm capitalize">
+                                <option value="hot">Hot</option>
+                                <option value="warm">Warm</option>
+                                <option value="cold">Cold</option>
+                            </select>
+                        </div>
+                        {isManagerOrAdmin && (
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Assigned To</label>
+                                <select value={form.assigned_to} onChange={e => setForm({...form, assigned_to: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm">
+                                    <option value="">Unassigned</option>
+                                    {salesTeam.map(teamMember => (
+                                        <option key={teamMember.id} value={teamMember.id}>
+                                            {teamMember.full_name} ({teamMember.role === 'sales_exec' ? 'Exec' : 'Manager'})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                    </form>
+                </div>
+                <div className="p-6 border-t border-gray-100 flex gap-3 shrink-0">
+                    <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">Cancel</button>
+                    <button type="submit" form="editLeadForm" disabled={saving} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 flex justify-center items-center">
+                        {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Save Changes'}
+                    </button>
+                </div>
             </motion.div>
         </motion.div>
     );

@@ -7,7 +7,7 @@ import {
     TrendingUp, Briefcase, Activity, Percent, Eye
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import FeedOrderModal from '@/components/admin/investment/FeedOrderModal';
+import { useRouter } from 'next/navigation';
 import AddInvestmentModal from '@/components/admin/investment/AddInvestmentModal';
 import GrowthAnalytics from '@/components/admin/investment/GrowthAnalytics';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,11 +23,9 @@ export default function AdminInvestmentsPage() {
     const [investments, setInvestments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [showFeedModal, setShowFeedModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
-    const [selectedInvestment, setSelectedInvestment] = useState(null);
-    const [processingId, setProcessingId] = useState(null);
     const [activeTab, setActiveTab] = useState('all');
+    const router = useRouter();
 
     const fetchInvestments = async () => {
         setLoading(true);
@@ -47,37 +45,40 @@ export default function AdminInvestmentsPage() {
 
     useEffect(() => { fetchInvestments(); }, []);
 
-    const handleUpdateStatus = async (id, status) => {
-        // Optimistic UI update
-        const previousInvestments = [...investments];
-        setInvestments(prev => prev.map(inv => inv.id === id ? { ...inv, status } : inv));
-        setProcessingId(id);
-        
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch('/api/admin/investments', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-                body: JSON.stringify({ id, status }),
-            });
-            if (!res.ok) { 
-                const d = await res.json(); 
-                throw new Error(d.error); 
-            }
-            toast.success(`Investment ${status}`);
-        } catch (err) {
-            // Revert optimistic update
-            setInvestments(previousInvestments);
-            toast.error(err.message);
-        } finally {
-            setProcessingId(null);
+    // Group investments by merchant
+    const merchantGroups = investments.reduce((acc, inv) => {
+        const mId = inv.merchant?.id;
+        if (!mId) return acc;
+        if (!acc[mId]) {
+            acc[mId] = {
+                merchant: inv.merchant,
+                totalAUM: 0,
+                activeCount: 0,
+                pendingCount: 0,
+                totalPaid: 0,
+                investments: []
+            };
         }
-    };
+        acc[mId].investments.push(inv);
+        if (inv.status === 'active') {
+            acc[mId].totalAUM += inv.amount_paise;
+            acc[mId].activeCount++;
+        }
+        if (inv.status === 'pending') {
+            acc[mId].pendingCount++;
+        }
+        acc[mId].totalPaid += (inv.total_profit_paid_paise || 0);
+        return acc;
+    }, {});
 
-    const filtered = investments.filter(inv => {
-        const matchesSearch = inv.merchant?.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                              inv.merchant?.user_profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesTab = activeTab === 'all' || inv.status === activeTab;
+    const groupsArray = Object.values(merchantGroups);
+
+    const filtered = groupsArray.filter(g => {
+        const matchesSearch = g.merchant?.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              g.merchant?.user_profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesTab = activeTab === 'all' || 
+                           (activeTab === 'active' && g.activeCount > 0) ||
+                           (activeTab === 'pending' && g.pendingCount > 0);
         return matchesSearch && matchesTab;
     });
 
@@ -169,11 +170,10 @@ export default function AdminInvestmentsPage() {
                             <thead>
                                 <tr className="bg-white border-b border-slate-100">
                                     <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Merchant</th>
-                                    <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
-                                    <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Profit Shared</th>
-                                    <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Paid Out</th>
-                                    <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                                    <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                    <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Total AUM</th>
+                                    <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Active Funds</th>
+                                    <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Pending Review</th>
+                                    <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Summary</th>
                                     <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -193,9 +193,9 @@ export default function AdminInvestmentsPage() {
                                     </td></tr>
                                 ) : (
                                     <AnimatePresence>
-                                        {filtered.map(inv => (
+                                        {filtered.map(group => (
                                             <motion.tr 
-                                                key={inv.id} 
+                                                key={group.merchant.id} 
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 exit={{ opacity: 0 }}
@@ -204,54 +204,34 @@ export default function AdminInvestmentsPage() {
                                                 <td className="px-6 md:px-8 py-5">
                                                     <div className="flex items-center gap-4">
                                                         <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-black text-sm shrink-0">
-                                                            {inv.merchant?.business_name?.[0]}
+                                                            {group.merchant?.business_name?.[0]}
                                                         </div>
                                                         <div>
-                                                            <p className="font-bold text-slate-900 text-sm">{inv.merchant?.business_name}</p>
-                                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{inv.merchant?.user_profiles?.full_name}</p>
+                                                            <p className="font-bold text-slate-900 text-sm">{group.merchant?.business_name}</p>
+                                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{group.merchant?.user_profiles?.full_name}</p>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 md:px-8 py-5 text-right font-black text-slate-900 text-[15px]">
-                                                    ₹{(inv.amount_paise / 100).toLocaleString('en-IN')}
+                                                    ₹{(group.totalAUM / 100).toLocaleString('en-IN')}
                                                 </td>
-                                                <td className="px-6 md:px-8 py-5 text-right font-black text-indigo-600 text-sm bg-indigo-50/10">
-                                                    ₹{((inv.total_profit_paid_paise || 0) / 100).toLocaleString('en-IN')}
+                                                <td className="px-6 md:px-8 py-5 text-right font-black text-indigo-600 text-sm">
+                                                    {group.activeCount}
                                                 </td>
-                                                <td className="px-6 md:px-8 py-5 text-right font-black text-emerald-600 text-sm">
-                                                    ₹{((inv.total_profit_paid_paise || 0) / 100).toLocaleString('en-IN')}
-                                                </td>
-                                                <td className="px-6 md:px-8 py-5 text-xs font-bold text-slate-500">
-                                                    {new Date(inv.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                <td className="px-6 md:px-8 py-5 text-right font-black text-amber-600 text-sm">
+                                                    {group.pendingCount}
                                                 </td>
                                                 <td className="px-6 md:px-8 py-5">
-                                                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${STATUS_CHIP[inv.status] || STATUS_CHIP.pending}`}>
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${inv.status === 'active' ? 'bg-emerald-500' : inv.status === 'pending' ? 'bg-amber-500' : inv.status === 'rejected' ? 'bg-red-500' : 'bg-slate-400'}`} />
-                                                        {inv.status}
+                                                    <div className="flex items-center gap-2">
+                                                        {group.activeCount > 0 && <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">Active</span>}
+                                                        {group.pendingCount > 0 && <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100">Pending</span>}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 md:px-8 py-5 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        {inv.status === 'pending' ? (
-                                                            <>
-                                                                <button onClick={() => handleUpdateStatus(inv.id, 'active')} disabled={processingId === inv.id}
-                                                                    className="p-2.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white rounded-xl transition-all border border-emerald-100" title="Approve">
-                                                                    <CheckCircle size={16} strokeWidth={2.5} />
-                                                                </button>
-                                                                <button onClick={() => handleUpdateStatus(inv.id, 'rejected')} disabled={processingId === inv.id}
-                                                                    className="p-2.5 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white rounded-xl transition-all border border-red-100" title="Reject">
-                                                                    <XCircle size={16} strokeWidth={2.5} />
-                                                                </button>
-                                                            </>
-                                                        ) : inv.status === 'active' ? (
-                                                            <button onClick={() => { setSelectedInvestment(inv); setShowFeedModal(true); }}
-                                                                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:border-indigo-500 hover:text-indigo-600 transition-all text-[10px] font-black uppercase tracking-widest shadow-sm">
-                                                                <Eye size={14} /> View Feed
-                                                            </button>
-                                                        ) : (
-                                                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest pr-4">—</span>
-                                                        )}
-                                                    </div>
+                                                    <button onClick={() => router.push(`/admin/portfolio/${group.merchant.id}`)}
+                                                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:border-indigo-500 hover:text-indigo-600 transition-all text-[10px] font-black uppercase tracking-widest shadow-sm">
+                                                        <Eye size={14} /> Open Portfolio
+                                                    </button>
                                                 </td>
                                             </motion.tr>
                                         ))}
@@ -263,12 +243,6 @@ export default function AdminInvestmentsPage() {
                 </div>
             </div>
 
-            {/* Modals are deferred to slide out / pop up properly */}
-            <AnimatePresence>
-                {showFeedModal && (
-                    <FeedOrderModal investment={selectedInvestment} onClose={(refresh) => { setShowFeedModal(false); setSelectedInvestment(null); if (refresh) fetchInvestments(); }} />
-                )}
-            </AnimatePresence>
             <AnimatePresence>
                 {showAddModal && (
                     <AddInvestmentModal onClose={(refresh) => { setShowAddModal(false); if (refresh) fetchInvestments(); }} />

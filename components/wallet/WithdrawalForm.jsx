@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { motion } from 'framer-motion';
 
 /**
  * @typedef {{
@@ -112,13 +113,58 @@ export default function WithdrawalForm({ merchant, onSuccess, onCancel, minAmoun
 
     if (success) {
         return (
-            <div className="py-10 text-center">
-                <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="material-icons-round text-emerald-500 text-3xl">check_circle</span>
-                </div>
-                <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 mb-2">Withdrawal Requested!</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Your payout request has been submitted. The admin will review and release the payment manually.</p>
-            </div>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                className="py-12 text-center relative overflow-hidden"
+            >
+                <motion.div 
+                    initial={{ scale: 0 }} 
+                    animate={{ scale: [1.2, 1] }} 
+                    transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                    className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-500/30 relative z-10"
+                >
+                    <motion.span 
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
+                        className="material-icons-round text-white text-5xl"
+                    >
+                        check
+                    </motion.span>
+                </motion.div>
+                
+                {/* Decorative flying particles */}
+                {[...Array(6)].map((_, i) => (
+                    <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: 0, y: 0 }}
+                        animate={{ 
+                            opacity: [0, 1, 0], 
+                            x: (Math.random() - 0.5) * 200, 
+                            y: (Math.random() - 0.5) * 200 - 50 
+                        }}
+                        transition={{ duration: 1.5, ease: "easeOut" }}
+                        className="absolute left-1/2 top-1/2 w-3 h-3 bg-emerald-400 rounded-full"
+                    />
+                ))}
+
+                <motion.h3 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="font-black text-2xl text-slate-800 dark:text-slate-100 mb-2 tracking-tight"
+                >
+                    Withdrawal Initiated!
+                </motion.h3>
+                <motion.p 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto font-medium"
+                >
+                    Your payout request has been securely submitted. Funds will arrive in your bank soon.
+                </motion.p>
+            </motion.div>
         );
     }
 

@@ -13,7 +13,7 @@ export default function WalletBalance({ balance, loading }) {
             <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h2 className="text-gray-400 text-sm font-semibold uppercase tracking-wider flex items-center gap-2 mb-1">
-                        <Wallet size={16} /> Merchant Wallet Balance
+                        <Wallet size={16} /> My Portfolio
                     </h2>
                     {loading ? (
                         <div className="h-10 w-48 bg-gray-700 animate-pulse rounded-lg mt-2"></div>

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, Plus, Phone, Mail, ArrowUpRight, X, ChevronDown, RefreshCw, User, Building2, MapPin, Briefcase, Download, UploadCloud } from 'lucide-react';
+import { Search, Filter, Plus, Phone, Mail, ArrowUpRight, X, ChevronDown, RefreshCw, User, Building2, MapPin, Briefcase, Download, UploadCloud, Edit2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -309,6 +310,9 @@ function UpdateStatusDrawer({ lead, onClose, onUpdate }) {
 }
 
 export default function LeadsPage() {
+    const router = useRouter();
+    const { profile } = useAuth();
+    
     const [leads, setLeads] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -321,6 +325,12 @@ export default function LeadsPage() {
         try {
             let q = supabase.from('crm_leads').select('*').order('created_at', { ascending: false });
             if (statusFilter !== 'all') q = q.eq('status', statusFilter);
+            
+            // RBAC: Executives only see assigned leads
+            if (profile && !['sales_manager', 'admin', 'super_admin'].includes(profile.role)) {
+                q = q.eq('assigned_to', profile.id);
+            }
+            
             const { data, error } = await q;
             if (error) throw error;
             setLeads(data || []);
@@ -330,7 +340,7 @@ export default function LeadsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [statusFilter]);
+    }, [statusFilter, profile]);
 
     useEffect(() => {
         fetchLeads();
@@ -458,7 +468,7 @@ export default function LeadsPage() {
                     {/* Mobile: cards */}
                     <div className="space-y-3 lg:hidden">
                         {filtered.map(lead => (
-                            <motion.div key={lead.id} layout onClick={() => setSelectedLead(lead)}
+                            <motion.div key={lead.id} layout onClick={() => router.push('/crm/leads/' + lead.id)}
                                 className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 cursor-pointer hover:border-indigo-200 hover:shadow-md transition-all">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-center gap-3 min-w-0">
@@ -470,9 +480,13 @@ export default function LeadsPage() {
                                             {lead.phone && <p className="text-xs text-gray-400 flex items-center gap-1"><Phone size={10} />{lead.phone}</p>}
                                         </div>
                                     </div>
-                                    <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border capitalize flex-shrink-0 ${STATUS_STYLE[lead.status] || 'bg-gray-50 border-gray-200 text-gray-600'}`}>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); }} 
+                                        className={`text-xs font-bold px-2.5 py-1 rounded-lg border capitalize flex-shrink-0 transition-transform active:scale-95 ${STATUS_STYLE[lead.status] || 'bg-gray-50 border-gray-200 text-gray-600'}`}
+                                        title="Quick Update Status"
+                                    >
                                         {lead.status}
-                                    </span>
+                                    </button>
                                 </div>
                                 {lead.source && <p className="text-xs text-gray-400 mt-2 ml-13">Source: {lead.source}</p>}
                             </motion.div>
@@ -494,7 +508,7 @@ export default function LeadsPage() {
                             </thead>
                             <tbody className="divide-y divide-gray-50">
                                 {filtered.map(lead => (
-                                    <tr key={lead.id} onClick={() => setSelectedLead(lead)} className="hover:bg-indigo-50/20 transition-colors cursor-pointer group">
+                                    <tr key={lead.id} onClick={() => router.push('/crm/leads/' + lead.id)} className="hover:bg-indigo-50/20 transition-colors cursor-pointer group">
                                         <td className="p-4 pl-6">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
@@ -519,8 +533,18 @@ export default function LeadsPage() {
                                         <td className="p-4 text-xs text-gray-400">
                                             {new Date(lead.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                                         </td>
-                                        <td className="p-4 pr-6">
-                                            <button className="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors opacity-0 group-hover:opacity-100">
+                                        <td className="p-4 pr-6 flex gap-2 justify-end">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); }} 
+                                                className="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors opacity-0 group-hover:opacity-100"
+                                                title="Quick Edit"
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
+                                            <button 
+                                                className="p-2 rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors opacity-0 group-hover:opacity-100"
+                                                title="View Details"
+                                            >
                                                 <ArrowUpRight size={14} />
                                             </button>
                                         </td>
