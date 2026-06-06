@@ -37,6 +37,8 @@ import {
     User,
     Zap,
     Bell,
+    ShieldCheck,
+    BookOpen,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
@@ -57,6 +59,7 @@ const navigationGroups = [
             { name: 'Store Status', href: '/admin/store-status', icon: Activity },
             { name: 'Store Credit', href: '/admin/merchants/udhari', icon: CreditCard },
             { name: 'AI Grow', href: '/admin/investments', icon: TrendingUp },
+            { name: 'Lockin', href: '/admin/lockin', icon: ShieldCheck },
         ]
     },
     {
@@ -90,7 +93,6 @@ const navigationGroups = [
         title: 'Growth & Setup',
         items: [
             { name: 'Rewards', href: '/admin/rewards', icon: Trophy },
-            { name: 'Partnership Growth', href: '/admin/lockin', icon: Clock },
             { name: 'Flash Sale', href: '/admin/flash-sale', icon: Zap },
             { name: 'Banners', href: '/admin/banners', icon: ImageIcon },
             { name: 'Analytics', href: '/admin/analytics', icon: TrendingUp },

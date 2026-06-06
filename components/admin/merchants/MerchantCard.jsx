@@ -132,8 +132,9 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                                 </button>
                                 <button
                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onApprove(merchant.id, merchant.userId); }}
-                                    disabled={isApproving === merchant.id || isRejecting === merchant.id}
-                                    className={`p-2 rounded-xl transition-all shadow-sm active:scale-90 ${isApproving === merchant.id ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-emerald-500 hover:text-emerald-700 border border-emerald-100 hover:border-emerald-200'}`}
+                                    disabled={isApproving === merchant.id || isRejecting === merchant.id || !merchant.bankVerified}
+                                    title={!merchant.bankVerified ? "Bank must be verified first" : "Approve Merchant"}
+                                    className={`p-2 rounded-xl transition-all shadow-sm active:scale-90 ${!merchant.bankVerified ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : isApproving === merchant.id ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-emerald-500 hover:text-emerald-700 border border-emerald-100 hover:border-emerald-200'}`}
                                 >
                                     {isApproving === merchant.id ? (
                                         <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
@@ -164,7 +165,7 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                         )}
 
                         {/* Bank Verification */}
-                        {isApproved && merchant.hasBankData && !merchant.bankVerified && onVerifyBank && (
+                        {(isApproved || isPending) && merchant.hasBankData && !merchant.bankVerified && onVerifyBank && (
                             <button
                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onVerifyBank(merchant.id); }}
                                 disabled={isVerifyingBank === merchant.id}
@@ -177,7 +178,7 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                             </button>
                         )}
 
-                        {isApproved && merchant.bankVerified && (
+                        {merchant.bankVerified && (
                             <div className="flex items-center gap-2 text-xs font-black text-emerald-600 px-4 py-2 bg-emerald-50 rounded-2xl border border-emerald-100 shadow-inner">
                                 <CheckCircle size={14} strokeWidth={3} /> Bank Verified
                             </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { motion } from 'framer-motion';
-import { Users, Briefcase, TrendingUp, Clock, ArrowRight, Plus, Phone, Mail, Zap, Target, CheckCircle, Calendar, DollarSign, Activity, FileText } from 'lucide-react';
+import { Users, Briefcase, TrendingUp, Clock, ArrowRight, Plus, Phone, Mail, Zap, Target, CheckCircle, Calendar, DollarSign, Activity, FileText, AlertTriangle } from 'lucide-react';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import Link from 'next/link';
@@ -63,13 +63,37 @@ export default function CRMDashboard() {
     const [stats, setStats] = useState({ newLeads: 0, activePipeline: 0, convRate: '0%', followUps: 0, expectedRevenue: 0 });
     const [chartData, setChartData] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    
+    // Role-based state
+    const [isManager, setIsManager] = useState(false);
+    const [unassignedCount, setUnassignedCount] = useState(0);
 
     const fetchData = async () => {
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+            const currentUserId = session.user.id;
+            
+            const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', currentUserId).single();
+            const role = profile?.role || 'sales_exec';
+            const manager = ['sales_manager', 'admin', 'super_admin'].includes(role);
+            setIsManager(manager);
+
+            let recentQuery = supabase.from('crm_leads').select('id, title, contact_name, phone, email, status, source, created_at, deal_value, temperature').order('created_at', { ascending: false }).limit(5);
+            let allQuery = supabase.from('crm_leads').select('status, created_at, deal_value, assigned_to');
+            let tasksQuery = supabase.from('crm_tasks').select('*').eq('status', 'pending').order('due_date', { ascending: true }).limit(4);
+
+            if (!manager) {
+                // Executives only see their own assigned leads and tasks
+                recentQuery = recentQuery.eq('assigned_to', currentUserId);
+                allQuery = allQuery.eq('assigned_to', currentUserId);
+                tasksQuery = tasksQuery.eq('assigned_to', currentUserId);
+            }
+
             const [recentRes, allRes, tasksRes] = await Promise.all([
-                supabase.from('crm_leads').select('id, title, contact_name, phone, email, status, source, created_at, deal_value, temperature').order('created_at', { ascending: false }).limit(5),
-                supabase.from('crm_leads').select('status, created_at, deal_value'),
-                supabase.from('crm_tasks').select('*').eq('status', 'pending').order('due_date', { ascending: true }).limit(4)
+                recentQuery,
+                allQuery,
+                tasksQuery
             ]);
             
             const recent = recentRes.data || [];
@@ -90,6 +114,10 @@ export default function CRMDashboard() {
                 followUps: all.filter(l => l.status === 'contacted').length,
                 expectedRevenue: totalRevenue
             });
+
+            if (manager) {
+                setUnassignedCount(all.filter(l => !l.assigned_to).length);
+            }
 
             // Prepare mock funnel data based on real counts
             const funnel = [
@@ -129,8 +157,12 @@ export default function CRMDashboard() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">Sales Command Center</h1>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">Real-time pipeline visibility and revenue forecasting.</p>
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                        {isManager ? 'Sales Command Center' : 'My Sales Dashboard'}
+                    </h1>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">
+                        {isManager ? 'Real-time team pipeline visibility and revenue forecasting.' : 'Track your active leads and upcoming follow-ups.'}
+                    </p>
                 </div>
                 <Link
                     href="/crm/leads"
@@ -146,7 +178,7 @@ export default function CRMDashboard() {
                     [...Array(4)].map((_, i) => <Skeleton key={i} className="h-40" />)
                 ) : (
                     <>
-                        <StatCard label="Pipeline Value" value={formatCurrency(stats.expectedRevenue)} icon={DollarSign} gradient="from-slate-800 to-slate-900" delay={0} trend="+12%" />
+                        <StatCard label={isManager ? "Team Pipeline Value" : "My Pipeline Value"} value={formatCurrency(stats.expectedRevenue)} icon={DollarSign} gradient="from-slate-800 to-slate-900" delay={0} trend="+12%" />
                         <StatCard label="Active Pipeline" value={stats.activePipeline} icon={Target} gradient="from-indigo-600 to-violet-600" delay={0.1} />
                         <StatCard label="Conversion" value={isLoading ? '…' : stats.convRate} icon={TrendingUp} gradient="from-emerald-500 to-teal-600" delay={0.2} trend="+2%" />
                         <StatCard label="Follow-ups" value={isLoading ? '…' : stats.followUps} icon={Clock} gradient="from-amber-500 to-orange-500" delay={0.3} />
@@ -236,12 +268,55 @@ export default function CRMDashboard() {
                 {/* Right Sidebar: Tasks & Quick Actions */}
                 <div className="space-y-6 sm:space-y-8">
                     
+                    {/* Manager Exclusive: Team Overview */}
+                    {isManager && (
+                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }} className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden relative">
+                            <div className="p-6">
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+                                    <Users size={18} className="text-blue-500" /> Team Overview
+                                </h2>
+                                
+                                {unassignedCount > 0 ? (
+                                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 flex items-start gap-3 mb-4">
+                                        <AlertTriangle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+                                        <div>
+                                            <h3 className="text-sm font-bold text-amber-800 dark:text-amber-400">Action Required</h3>
+                                            <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">There are {unassignedCount} leads in the pool waiting to be assigned to executives.</p>
+                                            <Link href="/crm/leads" className="inline-block mt-3 text-xs font-bold bg-amber-500 text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-amber-600 transition-colors">
+                                                Assign Leads
+                                            </Link>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-4 flex items-center gap-3 mb-4">
+                                        <CheckCircle size={20} className="text-emerald-500 shrink-0" />
+                                        <div>
+                                            <h3 className="text-sm font-bold text-emerald-800 dark:text-emerald-400">All Leads Assigned</h3>
+                                            <p className="text-xs text-emerald-700 dark:text-emerald-500">The team is fully utilized.</p>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="font-medium text-gray-500 dark:text-gray-400">Total Leads in System</span>
+                                        <span className="font-bold text-gray-900 dark:text-white">{stats.newLeads + stats.activePipeline + Math.round(stats.convRate.replace('%', '') / 100 * (stats.newLeads + stats.activePipeline))}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="font-medium text-gray-500 dark:text-gray-400">Active Deals</span>
+                                        <span className="font-bold text-gray-900 dark:text-white">{stats.activePipeline}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
                     {/* Actionable Tasks Widget */}
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl -mr-10 -mt-10" />
                         <div className="flex items-center justify-between mb-5 relative z-10">
                             <div>
-                                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><Calendar size={18} className="text-amber-500" /> Upcoming Tasks</h2>
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><Calendar size={18} className="text-amber-500" /> {isManager ? 'Team Tasks' : 'Upcoming Tasks'}</h2>
                             </div>
                         </div>
                         

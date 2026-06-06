@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, RefreshCw, ArrowRight, DollarSign, Thermometer, Clock, Phone } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -41,20 +42,29 @@ const TEMP_COLORS = {
 };
 
 export default function PipelinePage() {
+    const { profile } = useAuth();
+    
     const [leads, setLeads] = useState([]);
     const [loading, setLoading] = useState(true);
     const [dragging, setDragging] = useState(null);
     const [sourceFilter, setSourceFilter] = useState('All');
 
     const fetchLeads = useCallback(async () => {
-        const { data } = await supabase
+        let q = supabase
             .from('crm_leads')
             .select('id, title, contact_name, phone, status, source, created_at, deal_value, temperature')
             .not('status', 'eq', 'lost')
             .order('created_at', { ascending: false });
+            
+        // RBAC: Executives only see assigned leads
+        if (profile && !['sales_manager', 'admin', 'super_admin'].includes(profile.role)) {
+            q = q.eq('assigned_to', profile.id);
+        }
+        
+        const { data } = await q;
         setLeads(data || []);
         setLoading(false);
-    }, []);
+    }, [profile]);
 
     useEffect(() => {
         fetchLeads();

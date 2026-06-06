@@ -178,7 +178,7 @@ function WalletContent() {
 
             <div className="flex items-center justify-between mt-0 sm:mt-4 mb-6 sticky top-0 bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-xl z-30 p-4 -mx-4 sm:mx-0 sm:p-0 rounded-b-2xl sm:rounded-none border-b border-black/5 dark:border-white/5 sm:border-none shadow-sm sm:shadow-none">
                 <div>
-                    <h1 className="font-display text-xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">InTrust Wallet</h1>
+                    <h1 className="font-display text-xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">My Portfolio</h1>
                     <p className="text-[9px] sm:text-xs text-slate-500 uppercase tracking-widest font-bold mt-0.5">Premium Balance Manager</p>
                 </div>
                 <button

@@ -37,6 +37,9 @@ import KYCPopup from '@/components/kyc/KYCPopup';
 import FeatureAdvertiser from '@/components/ui/FeatureAdvertiser';
 import { useKYCPopup } from '@/hooks/useKYCPopup';
 
+import MerchantApplyPopup from '@/components/merchant/MerchantApplyPopup';
+import { useMerchantApplyPopup } from '@/hooks/useMerchantApplyPopup';
+
 const OpportunitiesSection = dynamic(() => import('@/components/customer/OpportunitiesSection'), { ssr: false });
 const MerchantOpportunityBanner = dynamic(() => import('@/components/customer/MerchantOpportunityBanner'), { ssr: false });
 const PackageSelectionModal = dynamic(() => import('@/components/customer/dashboard/PackageSelectionModal'), { ssr: false });
@@ -112,6 +115,11 @@ export default function CustomerDashboardPage() {
 
     const { isOpen: kycPopupOpen, closeKYC } = useKYCPopup({
         kycStatus: userData.kycStatus,
+        enabled: !loading && !!user
+    });
+
+    const { isOpen: merchantPopupOpen, closeMerchantPopup } = useMerchantApplyPopup({
+        merchantStatus: userData.merchantStatus,
         enabled: !loading && !!user
     });
 
@@ -472,6 +480,7 @@ export default function CustomerDashboardPage() {
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)] flex flex-col">
             <AdvertisementModal />
             <KYCPopup isOpen={kycPopupOpen} onClose={closeKYC} />
+            <MerchantApplyPopup isOpen={merchantPopupOpen} onClose={closeMerchantPopup} />
             <Navbar />
 
             {!userData.completedOnboarding && user && (

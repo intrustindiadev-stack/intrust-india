@@ -356,6 +356,12 @@ export default function AIGrowPage() {
                                                 {order.category && (
                                                     <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[9px] font-black uppercase tracking-widest text-slate-500">{order.category}</span>
                                                 )}
+                                                {order.location && (
+                                                    <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-[9px] font-black uppercase tracking-widest text-indigo-500 flex items-center gap-1">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                                        {order.location}
+                                                    </span>
+                                                )}
                                                 <span className="text-[10px] font-bold text-slate-400">
                                                     {new Date(order.order_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                                                 </span>

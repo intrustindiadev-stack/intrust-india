@@ -39,14 +39,14 @@ export default function LockinDetailsPage({ params }) {
         const fetchDetails = async () => {
             setLoading(true);
             try {
-                const { data, error } = await supabase
-                    .from('merchant_lockin_balances')
-                    .select('*, merchant:merchants(*, user_profiles(*))')
-                    .eq('id', id)
-                    .single();
-
-                if (error) throw error;
-                setLockin(data);
+                const { data: { session } } = await supabase.auth.getSession();
+                const res = await fetch(`/api/admin/lockin/${id}`, {
+                    headers: { Authorization: `Bearer ${session?.access_token}` }
+                });
+                const result = await res.json();
+                
+                if (!res.ok) throw new Error(result.error);
+                setLockin(result.data);
             } catch (err) {
                 console.error('Error:', err);
                 toast.error('Failed to load contract details');
@@ -58,6 +58,35 @@ export default function LockinDetailsPage({ params }) {
 
         fetchDetails();
     }, [id, router]);
+
+    const handleReleaseToWallet = async () => {
+        if (!confirm('Are you sure you want to release this lockin back to the merchant portfolio?')) return;
+        setLoading(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`/api/admin/lockin/${id}/release`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            if (!res.ok) {
+                const d = await res.json();
+                throw new Error(d.error);
+            }
+            toast.success('Lockin released to portfolio');
+            // Refresh details via API
+            const resFetch = await fetch(`/api/admin/lockin/${id}`, {
+                headers: { Authorization: `Bearer ${session.access_token}` }
+            });
+            const resultFetch = await resFetch.json();
+            if (resFetch.ok && resultFetch.data) {
+                setLockin(resultFetch.data);
+            }
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -140,13 +169,23 @@ export default function LockinDetailsPage({ params }) {
                                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border transition-all ${
                                         lockin.status === 'active' 
                                             ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                                            : lockin.status === 'matured'
+                                            : lockin.status === 'matured' || lockin.status === 'released'
                                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                                             : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
                                     }`}>
                                         {lockin.status}
                                     </span>
                                     <p className="text-[9px] text-slate-500 font-medium">Secured on {startDate.toLocaleDateString('en-IN')}</p>
+                                    
+                                    {lockin.status === 'active' && (
+                                        <button 
+                                            onClick={handleReleaseToWallet}
+                                            className="mt-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2"
+                                        >
+                                            <Wallet size={12} />
+                                            Release to Wallet
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                             {/* Abstract Glow */}

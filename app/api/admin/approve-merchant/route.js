@@ -69,6 +69,13 @@ export async function POST(request) {
             );
         }
 
+        if (!existingMerchant.bank_verified) {
+            return NextResponse.json(
+                { error: 'Cannot approve merchant. Bank details must be verified first.' },
+                { status: 400 }
+            );
+        }
+
         const targetUserId = userId || existingMerchant.user_id;
 
         // 5. Update Merchant Status to 'approved' and subscription_status to 'unpaid'
