@@ -21,6 +21,7 @@ export default async function MerchantStorefrontPage({ params }) {
     let mergedInventory = [];
     let customerResult = { data: null };
     let categories = ['All'];
+    let initialTotalCount = 0;
     const PAGE_SIZE = 24;
 
     const normalizedSlug = merchantSlug?.toLowerCase();
@@ -75,6 +76,7 @@ export default async function MerchantStorefrontPage({ params }) {
             console.error('Error fetching platform products in page:', storefrontResult.error);
         }
         mergedInventory = storefrontResult.data?.items || [];
+        initialTotalCount = storefrontResult.data?.totalCount ?? 0;
     } else {
         // If the segment looks like a UUID, this is a legacy URL — redirect to slug-based URL
         if (UUID_REGEX.test(merchantSlug)) {
@@ -166,7 +168,7 @@ export default async function MerchantStorefrontPage({ params }) {
             }),
             // Customer profile
             user
-                ? supabase.from('user_profiles').select('wallet_balance_paise').eq('id', user.id).single()
+                ? supabase.from('user_profiles').select('id, wallet_balance_paise').eq('id', user.id).single()
                 : Promise.resolve({ data: null }),
             // Category query
             supabase
@@ -188,6 +190,7 @@ export default async function MerchantStorefrontPage({ params }) {
             console.error('Error fetching merchant inventory in page:', inventoryResult.error);
         }
         mergedInventory = inventoryResult.data?.items || [];
+        initialTotalCount = inventoryResult.data?.totalCount ?? 0;
 
         return (
             <div className="min-h-screen">
@@ -196,6 +199,7 @@ export default async function MerchantStorefrontPage({ params }) {
                     <StorefrontV2Client
                         merchant={merchant}
                         initialInventory={mergedInventory}
+                        initialTotalCount={initialTotalCount}
                         customer={customerResult.data}
                         categories={categories}
                     />
@@ -216,7 +220,8 @@ export default async function MerchantStorefrontPage({ params }) {
             <main className="pt-20 md:pt-24">
                 <StorefrontV2Client 
                     merchant={merchant}
-                    initialInventory={mergedInventory} 
+                    initialInventory={mergedInventory}
+                    initialTotalCount={initialTotalCount}
                     customer={customerProfile} 
                     categories={categories}
                 />

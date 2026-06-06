@@ -100,6 +100,7 @@ describe('notifyRewardEarned', () => {
 
         // Chained builder: .from().select().eq()...maybeSingle()
         const chainSelect = {
+            select:      () => chainSelect,
             eq:          () => chainSelect,
             order:       () => chainSelect,
             limit:       () => chainSelect,

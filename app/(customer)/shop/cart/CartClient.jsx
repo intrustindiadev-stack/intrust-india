@@ -976,11 +976,11 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span>SGST (Calculated)</span>
+                    <span>SGST</span>
                     <span>₹{(billDetails.sgstTotal / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>CGST (Calculated)</span>
+                    <span>CGST</span>
                     <span>₹{(billDetails.cgstTotal / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between">

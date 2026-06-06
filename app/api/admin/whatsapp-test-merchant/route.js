@@ -51,7 +51,10 @@ const TEMPLATE_MAP = {
 export async function POST(request) {
   // 1. Auth check
   const { user, profile } = await getAuthUser(request);
-  if (!user || !['admin', 'super_admin'].includes(profile?.role)) {
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!['admin', 'super_admin'].includes(profile?.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

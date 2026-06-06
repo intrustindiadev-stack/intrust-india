@@ -7,7 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Gift, Share2, Copy, CheckCircle, ChevronLeft, ChevronRight,
     Users, Coins, Network, Sparkles, Clock, Zap, Target,
-    TrendingUp, Info, ArrowUpRight, ShieldCheck, PieChart, BarChart3, X
+    TrendingUp, Info, ArrowUpRight, ShieldCheck, PieChart, BarChart3, X,
+    RefreshCw
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -326,21 +327,21 @@ export default function ReferAndEarnPage() {
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="relative bg-gradient-to-br from-[#0F172A] to-black rounded-[3rem] p-10 text-white shadow-2xl mb-10 overflow-hidden group border border-white/5"
+                    className="relative bg-gradient-to-br from-[#0F172A] to-black rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-white shadow-2xl mb-10 overflow-hidden group border border-white/5"
                 >
                     <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" />
                     
-                    <div className="relative z-10 text-center sm:text-left flex flex-col sm:flex-row items-center gap-8">
+                    <div className="relative z-10 text-center sm:text-left flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
                         <motion.div
                             whileHover={{ rotate: 12, scale: 1.1 }}
-                            className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-[2rem] flex items-center justify-center shadow-2xl border border-white/20 shrink-0"
+                            className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-2xl border border-white/20 shrink-0"
                         >
-                            <Network size={44} className="text-white" />
+                            <Network className="w-10 h-10 sm:w-11 sm:h-11 text-white" />
                         </motion.div>
                         
                         <div>
-                            <h1 className="text-4xl sm:text-5xl font-black mb-3 tracking-tighter leading-none">Empire <span className="text-emerald-400">Builder</span></h1>
-                            <p className="text-slate-400 text-sm sm:text-base font-medium max-w-sm">Grow a 7-level deep network and unlock unlimited liquid rewards.</p>
+                            <h1 className="text-3xl sm:text-5xl font-black mb-3 tracking-tighter leading-none">Empire <span className="text-emerald-400">Builder</span></h1>
+                            <p className="text-slate-400 text-xs sm:text-base font-medium max-w-sm">Grow a 7-level deep network and unlock unlimited liquid rewards.</p>
                         </div>
                     </div>
                 </motion.div>
@@ -349,22 +350,22 @@ export default function ReferAndEarnPage() {
                 <div className="grid grid-cols-2 gap-4 mb-10">
                     <button 
                         onClick={() => setShowStats(true)}
-                        className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2.5rem] p-6 text-left hover:shadow-xl transition-all group relative overflow-hidden"
+                        className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-6 text-left hover:shadow-xl transition-all group relative overflow-hidden"
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-4">
-                            <PieChart size={24} />
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-3 sm:mb-4">
+                            <PieChart size={20} className="sm:w-6 sm:h-6" />
                         </div>
-                        <h4 className="font-black text-slate-900 dark:text-white mb-1">Network Stats</h4>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{networkData?.total_network_size || 0} Total Members</p>
+                        <h4 className="font-black text-xs sm:text-base text-slate-900 dark:text-white mb-1">Network Stats</h4>
+                        <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">{networkData?.total_network_size || 0} Members</p>
                     </button>
 
-                    <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2.5rem] p-6 text-left relative overflow-hidden">
-                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-4">
-                            <TrendingUp size={24} />
+                    <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-6 text-left relative overflow-hidden">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-3 sm:mb-4">
+                            <TrendingUp size={20} className="sm:w-6 sm:h-6" />
                         </div>
-                        <h4 className="font-black text-slate-900 dark:text-white mb-1">Cash Value</h4>
-                        <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tighter leading-none">₹{totalRupees}</p>
+                        <h4 className="font-black text-xs sm:text-base text-slate-900 dark:text-white mb-1">Cash Value</h4>
+                        <p className="text-lg sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tighter leading-none">₹{totalRupees}</p>
                     </div>
                 </div>
 
@@ -372,37 +373,37 @@ export default function ReferAndEarnPage() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-emerald-600 rounded-[3rem] p-8 sm:p-10 text-white shadow-2xl shadow-emerald-500/20 mb-10 relative overflow-hidden group"
+                    className="bg-emerald-600 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-white shadow-2xl shadow-emerald-500/20 mb-10 relative overflow-hidden group"
                 >
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
                     <div className="absolute -top-32 -right-32 w-80 h-80 bg-white/10 blur-[100px] rounded-full group-hover:bg-white/20 transition-all duration-700" />
                     
                     <div className="relative z-10 flex flex-col items-center">
-                        <div className="flex items-center gap-3 mb-8">
+                        <div className="flex items-center gap-3 mb-6 sm:mb-8">
                             <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
                                 <Target size={22} />
                             </div>
                             <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Invitation Code</span>
                         </div>
 
-                        <div className="text-5xl sm:text-6xl font-mono font-black tracking-[0.3em] mb-10 drop-shadow-2xl select-all">
+                        <div className="text-3xl sm:text-5xl lg:text-6xl font-mono font-black tracking-[0.25em] sm:tracking-[0.3em] mb-8 sm:mb-10 drop-shadow-2xl select-all">
                             {referralCode || '------'}
                         </div>
 
-                        <div className="flex gap-4 w-full">
+                        <div className="flex gap-3 sm:gap-4 w-full">
                             <button
                                 onClick={handleCopy}
-                                className="flex-1 flex items-center justify-center gap-2 bg-white text-emerald-700 py-4.5 rounded-[2rem] font-black text-sm shadow-xl hover:bg-emerald-50 active:scale-95 transition-all"
+                                className="flex-1 flex items-center justify-center gap-2 bg-white text-emerald-700 py-4 rounded-[2rem] font-black text-sm shadow-xl hover:bg-emerald-50 active:scale-95 transition-all"
                             >
                                 {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
                                 {copied ? 'Secured' : 'Secure Code'}
                             </button>
-                                <button
-                                    onClick={handleMainShare}
-                                    className="p-4 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all active:scale-95"
-                                >
-                                    <Share2 size={24} />
-                                </button>
+                            <button
+                                onClick={handleMainShare}
+                                className="p-4 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all active:scale-95"
+                            >
+                                <Share2 size={24} />
+                            </button>
                         </div>
                     </div>
                 </motion.div>
@@ -412,22 +413,22 @@ export default function ReferAndEarnPage() {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-white dark:bg-[#020617] rounded-[3rem] p-8 border border-gray-100 dark:border-white/5 shadow-sm mb-10"
+                        className="bg-white dark:bg-[#020617] rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-8 border border-gray-100 dark:border-white/5 shadow-sm mb-10"
                     >
                         <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Enter Invite Code</h3>
                         <p className="text-xs text-slate-500 mb-6">Received an invite? Enter it here to join an empire.</p>
-                        <div className="flex gap-3">
+                        <div className="flex flex-col sm:flex-row gap-3">
                             <input
                                 type="text"
                                 value={enterCode}
                                 onChange={(e) => setEnterCode(e.target.value.toUpperCase())}
                                 placeholder="Neural Code"
-                                className="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 font-mono font-bold text-lg focus:border-emerald-500 outline-none transition-all uppercase"
+                                className="w-full sm:flex-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 font-mono font-bold text-lg focus:border-emerald-500 outline-none transition-all uppercase"
                             />
                             <button
                                 onClick={handleApplyCode}
                                 disabled={applyingCode}
-                                className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-emerald-600 transition-all disabled:opacity-50"
+                                className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-emerald-600 transition-all disabled:opacity-50 flex items-center justify-center"
                             >
                                 {applyingCode ? <RefreshCw className="animate-spin" size={18} /> : 'Connect'}
                             </button>

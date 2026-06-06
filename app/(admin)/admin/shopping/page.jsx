@@ -57,6 +57,7 @@ export default async function AdminShoppingPage() {
         .is('deleted_at', null)
         .eq('is_custom', false)
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .range(0, 19);
 
     if (productsError) console.error('[AdminShopping] products error:', productsError.message);
@@ -70,14 +71,16 @@ export default async function AdminShoppingPage() {
 
     if (merchantsError) console.error('[AdminShopping] merchants error:', merchantsError.message);
 
-    // Fetch all categories for the category filter dropdown
+    // Fetch active categories as objects (id + name) for the category filter dropdown
     const { data: dbCategories, error: categoriesError } = await adminSupabase
         .from('shopping_categories')
-        .select('name')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
         .order('name', { ascending: true });
 
     if (categoriesError) console.error('[AdminShopping] categories error:', categoriesError.message);
-    const categories = dbCategories?.map(c => c.name) || [];
+    const categories = dbCategories || [];
 
     return <AdminShoppingClient 
         initialProducts={initialProducts || []} 

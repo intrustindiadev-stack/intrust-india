@@ -48,7 +48,10 @@ export default async function MerchantRootLayout({ children }) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-        redirect('/login');
+        const headerList = await headers();
+        const pathname = headerList.get('x-current-path') || '';
+        const redirectUrl = pathname ? `/login?returnUrl=${encodeURIComponent(pathname)}` : '/login';
+        redirect(redirectUrl);
     }
 
     // 2. Check Role

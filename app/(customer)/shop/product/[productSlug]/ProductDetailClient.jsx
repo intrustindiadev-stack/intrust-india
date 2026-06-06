@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { useTheme } from '@/lib/contexts/ThemeContext';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -38,6 +39,9 @@ const ConfirmModal = lazy(() => import('@/components/ui/ConfirmModal'));
 export default function ProductDetailClient({ product, inventory, customer, recommendedProducts = [], initialPlatformStatus }) {
     const router = useRouter();
     const { theme } = useTheme();
+    const { user: authUser, profile: authProfile } = useAuth();
+    const activeCustomer = authProfile || customer;
+    const activeEmail = activeCustomer?.email || authUser?.email;
     const isDark = theme === 'dark';
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -56,15 +60,15 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const supabase = useMemo(() => createClient(), []);
 
     useEffect(() => {
-        if (!customer?.id) return;
+        if (!activeCustomer?.id) return;
         supabase
             .from('user_wishlists')
             .select('id')
-            .eq('user_id', customer.id)
+            .eq('user_id', activeCustomer.id)
             .eq('product_id', product.id)
             .maybeSingle()
             .then(({ data }) => setIsWishlisted(!!data));
-    }, [customer?.id, product.id]);
+    }, [activeCustomer?.id, product.id]);
 
     // Initialize merchant statuses
     useEffect(() => {
@@ -120,7 +124,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     }, [inventory]);
 
     const toggleWishlist = async () => {
-        if (!customer?.id) {
+        if (!activeCustomer?.id) {
             toast.error('Please login to save items');
             return;
         }
@@ -130,7 +134,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                 const { error } = await supabase
                     .from('user_wishlists')
                     .delete()
-                    .eq('user_id', customer.id)
+                    .eq('user_id', activeCustomer.id)
                     .eq('product_id', product.id);
                 if (!error) {
                     setIsWishlisted(false);
@@ -141,7 +145,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                 }
             } else {
                 const { error } = await supabase.from('user_wishlists').upsert({
-                    user_id: customer.id,
+                    user_id: activeCustomer.id,
                     product_id: product.id,
                     merchant_id: selectedOffer.is_platform_direct ? null : (inventory[0]?.merchant_id || null),
                     inventory_id: selectedOffer.is_platform_direct ? null : (selectedOffer.id || null),
@@ -221,7 +225,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
             triggerClosedAnimation();
             return;
         }
-        if (!customer) {
+        if (!activeCustomer) {
             toast.error('Please login to add to cart');
             router.push('/login');
             return;
@@ -230,7 +234,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
         setLoading(true);
         try {
             const { data, error } = await supabase.rpc('add_to_shopping_cart', {
-                p_customer_id: customer.id,
+                p_customer_id: activeCustomer.id,
                 p_inventory_id: selectedOffer.is_platform_direct ? null : selectedOffer.id,
                 p_product_id: product.id,
                 p_quantity: quantity,
@@ -264,7 +268,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
             triggerClosedAnimation();
             return;
         }
-        if (!customer) {
+        if (!activeCustomer) {
             toast.error('Please login to purchase');
             router.push('/login');
             return;
@@ -272,7 +276,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
         setBuyNowLoading(true);
         try {
             const { data, error } = await supabase.rpc('add_to_shopping_cart', {
-                p_customer_id: customer.id,
+                p_customer_id: activeCustomer.id,
                 p_inventory_id: selectedOffer.is_platform_direct ? null : selectedOffer.id,
                 p_product_id: product.id,
                 p_quantity: quantity,
@@ -281,9 +285,9 @@ export default function ProductDetailClient({ product, inventory, customer, reco
             if (error) throw error;
             if (data?.message === 'MIXED_SELLER_ERROR') {
                 // Clear cart and add anyway for Buy Now
-                await supabase.from('shopping_cart').delete().eq('customer_id', customer.id);
+                await supabase.from('shopping_cart').delete().eq('customer_id', activeCustomer.id);
                 await supabase.rpc('add_to_shopping_cart', {
-                    p_customer_id: customer.id,
+                    p_customer_id: activeCustomer.id,
                     p_inventory_id: selectedOffer.is_platform_direct ? null : selectedOffer.id,
                     p_product_id: product.id,
                     p_quantity: quantity,
@@ -302,7 +306,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const handleConfirmClearCart = async () => {
         setConfirmModalOpen(false);
         try {
-            await supabase.from('shopping_cart').delete().eq('customer_id', customer.id);
+            await supabase.from('shopping_cart').delete().eq('customer_id', activeCustomer.id);
             await addToCart();
         } catch (err) {
             console.error('Error clearing cart:', err);
@@ -668,7 +672,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                         <NotifyMeButton
                                             productId={product.id}
                                             inventoryId={selectedOffer?.is_platform_direct ? undefined : selectedOffer?.id}
-                                            email={customer?.email}
+                                            email={activeEmail}
                                             className="mt-1"
                                         />
                                     )}
@@ -942,7 +946,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                             <NotifyMeButton
                                 productId={product.id}
                                 inventoryId={selectedOffer?.is_platform_direct ? undefined : selectedOffer?.id}
-                                email={customer?.email}
+                                email={activeEmail}
                                 variant="outline"
                                 className="w-full h-10 text-xs"
                             />

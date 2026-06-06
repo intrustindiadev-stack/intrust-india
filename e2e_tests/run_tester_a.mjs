@@ -12,7 +12,8 @@ const modules = [
   { name: 'Gift Cards / Coupons', file: 'tester_a_giftcards.mjs', expected: 8 },
   { name: 'NFC Service', file: 'tester_a_nfc.mjs', expected: 3 },
   { name: 'Payment Gateway', file: 'tester_a_payment_gateway.mjs', expected: 6 },
-  { name: 'Notifications', file: 'tester_a_notifications.mjs', expected: 4 }
+  { name: 'Notifications', file: 'tester_a_notifications.mjs', expected: 4 },
+  { name: 'Page Route Guards', file: 'tester_a_pages.mjs', expected: 28 }
 ];
 
 let globalTotalPass = 0;

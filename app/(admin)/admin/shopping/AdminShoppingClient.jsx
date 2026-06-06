@@ -412,7 +412,7 @@ export default function AdminShoppingClient({
                             className="shrink-0 w-28 sm:w-32 px-3 py-3 rounded-[1.2rem] bg-white border border-slate-200 text-[10px] font-black text-slate-900 uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/10 transition-all appearance-none cursor-pointer"
                         >
                             <option value="all">Category: All</option>
-                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                         <button
                             onClick={() => { setOosOnly(!oosOnly); setPage(1); }}

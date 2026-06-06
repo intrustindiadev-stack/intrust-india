@@ -1,5 +1,6 @@
 import { createServerSupabaseClient }   from '@/lib/supabaseServer';
 import { redirect }                       from 'next/navigation';
+import { headers }                        from 'next/headers';
 import { RewardsRealtimeProvider }        from '@/lib/contexts/RewardsRealtimeContext';
 import GlobalScratchCardPopup             from '@/components/rewards/GlobalScratchCardPopupLoader';
 
@@ -15,7 +16,10 @@ export default async function ProtectedCustomerLayout({ children }) {
     }
 
     if (!user) {
-        redirect('/login');
+        const headerList = await headers();
+        const pathname = headerList.get('x-current-path') || '';
+        const redirectUrl = pathname ? `/login?returnUrl=${encodeURIComponent(pathname)}` : '/login';
+        redirect(redirectUrl);
     }
 
     // Role-based redirection is already handled in the parent (customer) layout

@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 import { useTheme } from '@/lib/contexts/ThemeContext';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import ProductCardV2 from './ProductCardV2';
 import FloatingCart from './FloatingCart';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,7 +14,7 @@ import ProductCardSkeleton from '@/components/customer/shop/ProductCardSkeleton'
 import MerchantProfileCard from '@/components/customer/shop/MerchantProfileCard';
 import { isStorefrontItemOOS } from '@/lib/shopping/stock';
 import React, { Suspense } from 'react';
-import VirtualizedGridItem from '@/components/ui/VirtualizedGridItem';
+import Pagination from '@/components/search/Pagination';
 
 const PAGE_SIZE = 24;
 
@@ -22,9 +23,11 @@ const AdBannerCarousel = React.lazy(() => import('@/components/customer/dashboar
 const FlashSale = React.lazy(() => import('@/components/customer/shop/FlashSale'));
 const ConfirmModal = React.lazy(() => import('@/components/ui/ConfirmModal'));
 
-export default function StorefrontV2Client({ merchant, initialInventory, customer, categories }) {
+export default function StorefrontV2Client({ merchant, initialInventory, initialTotalCount, customer, categories }) {
     const router = useRouter();
     const { theme } = useTheme();
+    const { user: authUser, profile: authProfile } = useAuth();
+    const activeCustomer = authProfile || customer;
     const isDark = theme === 'dark';
     const [cart, setCart] = useState([]);
     const [wishlistIds, setWishlistIds] = useState(new Set());
@@ -38,21 +41,23 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
     const [liveInventory, setLiveInventory] = useState(initialInventory);
     const debounceRef = useRef(null);
 
-    const [page, setPage] = useState(0);
-    const [hasMore, setHasMore] = useState(initialInventory.length >= PAGE_SIZE);
-    const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
-    const [isFirstPageLoading, setIsFirstPageLoading] = useState(false);
-    const sentinelRef = useRef(null);
+    const [page, setPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(initialTotalCount ?? 0);
+    const [loading, setLoading] = useState(false);
     const isFirstRender = useRef(true);
 
     useEffect(() => {
         setLiveInventory(initialInventory);
-        setPage(0);
-        setHasMore(initialInventory.length >= PAGE_SIZE);
-        setIsFetchingNextPage(false);
-        setIsFirstPageLoading(false);
+        setPage(1);
+        setTotalCount(initialTotalCount ?? 0);
+        setLoading(false);
         isFirstRender.current = true;
-    }, [initialInventory]);
+    }, [initialInventory, initialTotalCount]);
+
+    // Open-at-top fix: scrolls to top on mount and whenever merchant slug changes
+    useEffect(() => {
+        window.scrollTo({ top: 0 });
+    }, [liveMerchant.slug]);
 
     // Supabase client — memoized to avoid creating a new instance on every render
     const supabase = useMemo(() => createClient(), []);
@@ -61,12 +66,12 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
         setLiveMerchant(merchant);
     }, [merchant]);
 
-    const fetchItems = useCallback(async (pageNum, searchVal, catVal, replace = false) => {
-        setIsFetchingNextPage(true);
+    const fetchItems = useCallback(async (pageNum, searchVal, catVal) => {
+        setLoading(true);
         try {
             const queryParams = new URLSearchParams({
                 merchantSlug: liveMerchant.slug,
-                offset: (pageNum * PAGE_SIZE).toString(),
+                offset: ((pageNum - 1) * PAGE_SIZE).toString(),
                 limit: PAGE_SIZE.toString(),
             });
             if (searchVal) {
@@ -80,62 +85,37 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
             if (!res.ok) throw new Error('Failed to fetch storefront items');
             const data = await res.json();
 
-            setLiveInventory(prev => {
-                if (replace) {
-                    return data.items || [];
-                } else {
-                    const existingIds = new Set(prev.map(i => i.id));
-                    const newItems = (data.items || []).filter(item => !existingIds.has(item.id));
-                    return [...prev, ...newItems];
-                }
-            });
-            setHasMore(data.hasMore);
+            setLiveInventory(data.items || []);
+            setTotalCount(data.totalCount ?? 0);
             setPage(pageNum);
         } catch (err) {
             console.error('Error fetching storefront items:', err);
             toast.error('Could not load products');
         } finally {
-            setIsFetchingNextPage(false);
+            setLoading(false);
         }
     }, [liveMerchant.slug]);
 
+    // Page changes trigger fetches
+    useEffect(() => {
+        if (isFirstRender.current) {
+            return;
+        }
+        fetchItems(page, searchQuery, activeSubCategory);
+    }, [page, fetchItems]);
+
+    // Search and Category resets page to 1
     useEffect(() => {
         if (isFirstRender.current) {
             isFirstRender.current = false;
             return;
         }
-
-        setIsFirstPageLoading(true);
-        setLiveInventory([]);
-        fetchItems(0, searchQuery, activeSubCategory, true).finally(() => {
-            setIsFirstPageLoading(false);
-        });
-    }, [searchQuery, activeSubCategory, fetchItems]);
-
-    useEffect(() => {
-        if (!hasMore || isFetchingNextPage || isFirstPageLoading) return;
-
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting) {
-                fetchItems(page + 1, searchQuery, activeSubCategory, false);
-            }
-        }, {
-            // Larger rootMargin so the observer fires before the sentinel slides
-            // under the CustomerBottomNav (~92px) + FloatingCart (~60px) on mobile.
-            rootMargin: '200px',
-        });
-
-        const currentSentinel = sentinelRef.current;
-        if (currentSentinel) {
-            observer.observe(currentSentinel);
+        if (page !== 1) {
+            setPage(1);
+        } else {
+            fetchItems(1, searchQuery, activeSubCategory);
         }
-
-        return () => {
-            if (currentSentinel) {
-                observer.unobserve(currentSentinel);
-            }
-        };
-    }, [hasMore, isFetchingNextPage, isFirstPageLoading, page, searchQuery, activeSubCategory, fetchItems]);
+    }, [searchQuery, activeSubCategory, fetchItems]);
 
     useEffect(() => {
         if (!liveMerchant?.id) return;
@@ -216,23 +196,23 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
 
     // Preserve User's core sync logic
     useEffect(() => {
-        if (customer?.id) {
+        if (activeCustomer?.id) {
             Promise.all([syncCartFromDB(), syncWishlistFromDB()]).finally(() => setIsLoading(false));
         } else {
             setIsLoading(false);
         }
-    }, [customer?.id]);
+    }, [activeCustomer?.id]);
 
     const syncWishlistFromDB = async () => {
         const { data } = await supabase
             .from('user_wishlists')
             .select('product_id')
-            .eq('user_id', customer.id);
+            .eq('user_id', activeCustomer.id);
         if (data) setWishlistIds(new Set(data.map(r => r.product_id)));
     };
 
     const toggleWishlist = useCallback(async (item) => {
-        if (!customer?.id) {
+        if (!activeCustomer?.id) {
             router.push('/login');
             return;
         }
@@ -243,7 +223,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
             const { error } = await supabase
                 .from('user_wishlists')
                 .delete()
-                .eq('user_id', customer.id)
+                .eq('user_id', activeCustomer.id)
                 .eq('product_id', productId);
             if (!error) {
                 setWishlistIds(prev => { const next = new Set(prev); next.delete(productId); return next; });
@@ -255,7 +235,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
         } else {
             const isPlatform = !!item.is_platform_direct;
             const { error } = await supabase.from('user_wishlists').upsert({
-                user_id: customer.id,
+                user_id: activeCustomer.id,
                 product_id: productId,
                 merchant_id: isPlatform ? null : (item.merchant_id || null),
                 inventory_id: isPlatform ? null : item.id,
@@ -269,13 +249,13 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                 toast.error('Could not save to wishlist');
             }
         }
-    }, [customer?.id, wishlistIds, supabase, router]);
+    }, [activeCustomer?.id, wishlistIds, supabase, router]);
 
     const syncCartFromDB = async () => {
         const { data } = await supabase
             .from('shopping_cart')
             .select('*')
-            .eq('customer_id', customer.id);
+            .eq('customer_id', activeCustomer.id);
 
         if (data) {
             const mappedCart = data.map(item => {
@@ -297,7 +277,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
             toast.error("Store is currently closed and not accepting orders.");
             return;
         }
-        if (!customer?.id) {
+        if (!activeCustomer?.id) {
             router.push('/login');
             return;
         }
@@ -314,7 +294,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
         try {
             const isPlatform = !!item.is_platform_direct;
             const { data, error } = await supabase.rpc('add_to_shopping_cart', {
-                p_customer_id: customer.id,
+                p_customer_id: activeCustomer.id,
                 p_inventory_id: isPlatform ? null : item.id,
                 p_product_id: item.product_id,
                 p_quantity: 1,
@@ -348,13 +328,13 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
             console.error('Error adding to cart:', err);
             toast.error("Failed to add to cart");
         }
-    }, [customer?.id, supabase, router, isStoreOpen]);
+    }, [activeCustomer?.id, supabase, router, isStoreOpen]);
 
     const handleConfirmClearCart = async () => {
         if (!pendingCartItem) return;
         setConfirmModalOpen(false);
         try {
-            await supabase.from('shopping_cart').delete().eq('customer_id', customer.id);
+            await supabase.from('shopping_cart').delete().eq('customer_id', activeCustomer.id);
             await addToCart(pendingCartItem);
         } catch (err) {
             console.error('Error clearing cart:', err);
@@ -552,7 +532,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                     {/* MERCHANT PROFILE HEADER (Mobile-First) */}
                     <MerchantProfileCard 
                         merchant={liveMerchant} 
-                        totalItems={liveInventory.length} 
+                        totalItems={totalCount} 
                         isStoreOpen={isStoreOpen}
                     />
 
@@ -584,7 +564,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                             </div>
                         </div>
                     )}
-                    {(isLoading || isFirstPageLoading) ? (
+                    {(isLoading || loading) ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
                             {Array.from({ length: PAGE_SIZE }).map((_, i) => (
                                 <ProductCardSkeleton key={`psk-${i}`} />
@@ -599,44 +579,30 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                         <>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
                                 {filteredItems.map(item => (
-                                    <VirtualizedGridItem key={item.id}>
-                                        <ProductCardV2
-                                            item={item}
-                                            cartItem={cart.find(i => i.id === item.id)}
-                                            onAdd={() => addToCart(item)}
-                                            onRemove={() => removeFromCart(item)}
-                                            primaryColor={primaryColor}
-                                            secondaryColor={secondaryColor}
-                                            isWishlisted={wishlistIds.has(item.product_id)}
-                                            onWishlist={() => toggleWishlist(item)}
-                                            isStoreOpen={isStoreOpen}
-                                        />
-                                    </VirtualizedGridItem>
-                                ))}
-                                {isFetchingNextPage && Array.from({ length: PAGE_SIZE }).map((_, i) => (
-                                    <ProductCardSkeleton key={`next-psk-${i}`} />
+                                    <ProductCardV2
+                                        key={item.id}
+                                        item={item}
+                                        cartItem={cart.find(i => i.id === item.id)}
+                                        onAdd={() => addToCart(item)}
+                                        onRemove={() => removeFromCart(item)}
+                                        primaryColor={primaryColor}
+                                        secondaryColor={secondaryColor}
+                                        isWishlisted={wishlistIds.has(item.product_id)}
+                                        onWishlist={() => toggleWishlist(item)}
+                                        isStoreOpen={isStoreOpen}
+                                    />
                                 ))}
                             </div>
 
-                            {/* Load More fallback — visible safety net for when the IntersectionObserver
-                                is blocked (e.g. by persistent occlusion on very short screens). Sits
-                                above the sentinel so it's always reachable with a 44px tap target. */}
-                            {hasMore && !isFetchingNextPage && (
-                                <div className="flex justify-center mt-6 mb-4">
-                                    <button
-                                        onClick={() => fetchItems(page + 1, searchQuery, activeSubCategory, false)}
-                                        style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
-                                        className="min-h-[44px] px-8 py-3 rounded-2xl text-white text-sm font-bold shadow-lg active:scale-95 transition-transform"
-                                    >
-                                        Load more
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* Invisible sentinel — h-16 gives a larger intersection target.
-                                Positioned after Load More so it fires before the button becomes
-                                necessary, as a first-choice trigger. */}
-                            <div ref={sentinelRef} className="h-16 w-full clear-both mt-2" />
+                            <div className="mt-8 flex justify-center">
+                                <Pagination
+                                    page={page}
+                                    totalPages={Math.ceil(totalCount / PAGE_SIZE)}
+                                    onPageChange={setPage}
+                                    totalCount={totalCount}
+                                    pageSize={PAGE_SIZE}
+                                />
+                            </div>
                         </>
                     )}
                 </div>
@@ -649,7 +615,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, custome
                     total={totalPrice}
                     savings={totalSavings}
                     items={cart}
-                    customer={customer}
+                    customer={activeCustomer}
                     onClear={() => setCart([])}
                     primaryColor={primaryColor}
                     secondaryColor={secondaryColor}

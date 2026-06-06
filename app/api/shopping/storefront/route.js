@@ -35,8 +35,9 @@ export async function GET(request) {
         }
 
         return NextResponse.json({
-            items: data?.items || [],
-            hasMore: data?.hasMore || false
+            items:      data?.items      || [],
+            hasMore:    data?.hasMore    || false,
+            totalCount: data?.totalCount ?? 0,
         });
     } catch (error) {
         console.error('Storefront paged products API error:', error);

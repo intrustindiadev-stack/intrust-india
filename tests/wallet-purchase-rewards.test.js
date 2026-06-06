@@ -62,19 +62,21 @@ async function seedTestUser(supabase, { balancePaise = 50000 } = {}) {
     if (error) throw new Error(`seedTestUser createUser: ${error.message}`);
 
     // Ensure profile exists with kyc_status = verified
-    await supabase.from('user_profiles').upsert({
+    const { error: profErr } = await supabase.from('user_profiles').upsert({
         id: user.id,
         full_name: 'Rewards Test User',
         kyc_status: 'verified',
         address: '123 Test St, City, State, 110001',
         phone: '+919999000000',
     });
+    if (profErr) throw new Error(`seedTestUser profile upsert: ${profErr.message}`);
 
     // Ensure wallet with enough balance
-    await supabase.from('customer_wallets').upsert({
+    const { error: wallErr } = await supabase.from('customer_wallets').upsert({
         user_id: user.id,
         balance_paise: balancePaise,
-    });
+    }, { onConflict: 'user_id' });
+    if (wallErr) throw new Error(`seedTestUser wallet upsert: ${wallErr.message}`);
 
     return user;
 }
@@ -95,40 +97,35 @@ describe('Wallet gift-card checkout — reward issuance', () => {
         supabase = adminClient();
         testUser = await seedTestUser(supabase, { balancePaise: 200_00 }); // ₹200
 
-        // Find or create an 'available' coupon priced at ≤ ₹200
-        const { data: availableCoupon } = await supabase
-            .from('coupons')
-            .select('id, selling_price_paise, face_value_paise')
-            .eq('status', 'available')
-            .lte('selling_price_paise', 200_00)
+        // Always seed a new coupon to avoid conflicts with existing database rows
+        const { data: merchant } = await supabase
+            .from('merchants')
+            .select('id')
             .limit(1)
-            .maybeSingle();
+            .single();
 
-        if (availableCoupon) {
-            couponId = availableCoupon.id;
-        } else {
-            // Seed a minimal coupon (requires a valid merchant_id in the test project)
-            const { data: merchant } = await supabase
-                .from('merchants')
-                .select('id')
-                .limit(1)
-                .single();
+        const { data: seeded, error: seedErr } = await supabase
+            .from('coupons')
+            .insert({
+                merchant_id: merchant.id,
+                status: 'available',
+                selling_price_paise: 100_00, // ₹100
+                face_value_paise: 100_00,
+                title: 'Test Reward Gift Card',
+                brand: 'TEST_BRAND',
+                description: 'Test description',
+                category: 'TEST_CATEGORY',
+                encrypted_code: 'enc_123',
+                masked_code: 'XXXX-123',
+                valid_from: new Date().toISOString(),
+                valid_until: new Date(Date.now() + 86400000).toISOString(),
+                terms_and_conditions: 'Test terms'
+            })
+            .select('id')
+            .single();
 
-            const { data: seeded, error: seedErr } = await supabase
-                .from('coupons')
-                .insert({
-                    merchant_id: merchant.id,
-                    status: 'available',
-                    selling_price_paise: 100_00, // ₹100
-                    face_value_paise: 100_00,
-                    title: 'Test Reward Gift Card',
-                })
-                .select('id')
-                .single();
-
-            if (seedErr) throw new Error(`Seed coupon error: ${seedErr.message}`);
-            couponId = seeded.id;
-        }
+        if (seedErr) throw new Error(`Seed coupon error: ${seedErr.message}`);
+        couponId = seeded.id;
     });
 
     afterAll(async () => {
@@ -145,6 +142,9 @@ describe('Wallet gift-card checkout — reward issuance', () => {
             p_coupon_id: couponId,
         });
 
+        if (rpcError || !rpcResult?.success) {
+            console.error('wallet_buy_gift_card failed:', rpcError, rpcResult);
+        }
         expect(rpcError).toBeNull();
         expect(rpcResult.success).toBe(true);
 
@@ -229,6 +229,9 @@ describe('Wallet cart checkout — reward issuance', () => {
             { p_customer_id: testUser.id }
         );
 
+        if (checkoutError || !checkoutResult?.success) {
+            console.error('customer_checkout_v4 failed:', checkoutError, checkoutResult);
+        }
         expect(checkoutError).toBeNull();
         expect(checkoutResult?.success).toBe(true);
 

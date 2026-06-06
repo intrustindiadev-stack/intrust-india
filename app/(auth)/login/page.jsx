@@ -137,7 +137,7 @@ function LoginContent() {
     const confirmed = searchParams?.get('confirmed') === 'true';
 
     // Safe post-login redirect (only internal paths, no open-redirect)
-    const rawRedirect = searchParams?.get('redirect') || '';
+    const rawRedirect = searchParams?.get('redirect') || searchParams?.get('returnUrl') || '';
     const postLoginRedirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : null;
 
     useEffect(() => {

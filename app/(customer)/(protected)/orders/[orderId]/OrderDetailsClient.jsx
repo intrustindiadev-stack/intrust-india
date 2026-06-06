@@ -73,7 +73,7 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
     }, { mrpTotal: 0, sellingTotal: 0, gstTotal: 0 });
 
     const totalDiscount = billDetails.mrpTotal > billDetails.sellingTotal ? billDetails.mrpTotal - billDetails.sellingTotal : 0;
-    const deliveryFee = order.delivery_fee_paise || 5000;
+    const deliveryFee = order.delivery_fee_paise ?? 9900;
     const finalPayable = billDetails.sellingTotal + billDetails.gstTotal + deliveryFee;
 
     return (
@@ -474,11 +474,11 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                         )}
 
                         <div className="flex justify-between items-center">
-                            <span className={isDark ? 'text-white/40' : 'text-slate-500'}>SGST (Calculated)</span>
+                            <span className={isDark ? 'text-white/40' : 'text-slate-500'}>SGST</span>
                             <span>₹{(billDetails.gstTotal / 200).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className={isDark ? 'text-white/40' : 'text-slate-500'}>CGST (Calculated)</span>
+                            <span className={isDark ? 'text-white/40' : 'text-slate-500'}>CGST</span>
                             <span>₹{(billDetails.gstTotal / 200).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
 

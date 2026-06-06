@@ -3,13 +3,17 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, CheckCircle, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ContactForm() {
     const [formState, setFormState] = useState({
         name: '',
         email: '',
         subject: '',
-        message: ''
+        message: '',
+        company: '', // honeypot
     });
 
     const [focused, setFocused] = useState('');
@@ -24,14 +28,38 @@ export default function ContactForm() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Lightweight email sanity check before hitting the server
+        if (!EMAIL_RE.test(formState.email.trim())) {
+            toast.error('Please enter a valid email address.');
+            return;
+        }
+
         setStatus('loading');
 
-        // Simulate API call
-        setTimeout(() => {
-            setStatus('success');
-            setFormState({ name: '', email: '', subject: '', message: '' });
-            setTimeout(() => setStatus('idle'), 3000);
-        }, 1500);
+        try {
+            const res = await fetch('/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formState),
+            });
+
+            if (res.ok) {
+                setStatus('success');
+                setFormState({ name: '', email: '', subject: '', message: '', company: '' });
+                setTimeout(() => setStatus('idle'), 3000);
+            } else {
+                const data = await res.json().catch(() => ({}));
+                setStatus('error');
+                toast.error(data.error || 'Something went wrong. Please try again.');
+                // Keep typed data so the user can retry
+                setTimeout(() => setStatus('idle'), 100);
+            }
+        } catch {
+            setStatus('error');
+            toast.error('Network error. Please check your connection and try again.');
+            setTimeout(() => setStatus('idle'), 100);
+        }
     };
 
     const inputClasses = "w-full px-4 py-4 rounded-xl bg-gray-50/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 outline-hidden transition-all duration-300 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 placeholder-transparent peer text-gray-900 dark:text-gray-100";
@@ -48,6 +76,19 @@ export default function ContactForm() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Honeypot — invisible to humans, catches bots */}
+                <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', height: 0, overflow: 'hidden' }}>
+                    <label htmlFor="company">Company</label>
+                    <input
+                        type="text"
+                        name="company"
+                        id="company"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={formState.company}
+                        onChange={handleChange}
+                    />
+                </div>
                 <div className="grid md:grid-cols-2 gap-6">
                     <div className="relative group">
                         <input

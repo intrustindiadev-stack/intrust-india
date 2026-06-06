@@ -31,7 +31,7 @@ export function usePayerContact({ requireMerchant = false } = {}) {
             const [{ data: profileData, error: profileError }, merchantResult] = await Promise.all([
                 supabase
                     .from('user_profiles')
-                    .select('id, full_name, name, email, phone')
+                    .select('id, full_name, email, phone')
                     .eq('id', user.id)
                     .maybeSingle(),
                 requireMerchant

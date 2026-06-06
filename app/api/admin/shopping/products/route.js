@@ -313,9 +313,10 @@ export async function GET(request) {
             query = query.or(`title.ilike.%${search}%,custom_merchant_name.ilike.%${search}%`);
         }
 
-        // Filter by category
+        // Filter by category_id (UUID sent from client dropdown)
+        // Using the FK instead of the denormalized text column makes this rename-safe
         if (category && category !== 'all') {
-            query = query.eq('category', category);
+            query = query.eq('category_id', category);
         }
 
         // Filter by out-of-stock
@@ -328,8 +329,9 @@ export async function GET(request) {
             query = query.eq('custom_merchant_id', merchantId);
         }
 
-        // Order by created_at desc
+        // Order by created_at desc, then id desc for stable pagination
         query = query.order('created_at', { ascending: false });
+        query = query.order('id', { ascending: false });
 
         // Pagination
         query = query.range(from, to);

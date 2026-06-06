@@ -342,8 +342,11 @@ export default async function AdminMerchantDetailPage({ params }) {
                             </div>
                             <div className="space-y-1">
                                 <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Account Number</label>
-                                <div className="font-mono font-black text-slate-400 p-4 bg-slate-50/50 border border-slate-100 rounded-[1.25rem] shadow-inner text-base sm:text-lg tracking-[0.15em]">
-                                    {merchant.bank_account_number ? `•••• •••• ${merchant.bank_account_number.slice(-4)}` : 'N/A'}
+                                <div className={`font-mono font-black p-4 bg-slate-50/50 border border-slate-100 rounded-[1.25rem] shadow-inner text-base sm:text-lg tracking-[0.15em] ${isSuperAdmin ? 'text-slate-900' : 'text-slate-400'}`}>
+                                    {isSuperAdmin
+                                        ? (merchant.bank_account_number || 'N/A')
+                                        : (merchant.bank_account_number ? `•••• •••• ${merchant.bank_account_number.slice(-4)}` : 'N/A')
+                                    }
                                 </div>
                             </div>
                             <div className="space-y-1">
