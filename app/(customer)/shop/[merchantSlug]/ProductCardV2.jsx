@@ -61,12 +61,13 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#00000
                 onClick={() => router.push(`/shop/product/${product.slug}`)}
                 className="relative cursor-pointer flex flex-col flex-1 p-2 md:p-3"
             >
-                {/* Product Image */}
+                {/* Product Image - Enforced aspect ratio for layout stability */}
                 <div
                     className={`w-full aspect-square relative mb-3 rounded-xl flex items-center justify-center overflow-hidden ${isDark ? 'bg-[#0c0e14]' : 'bg-slate-50/50'}`}
-                    style={isDark ? {
-                        boxShadow: `inset 0 0 40px ${primaryColor}08`
-                    } : {}}
+                    style={{
+                        aspectRatio: '1 / 1',
+                        ...(isDark ? { boxShadow: `inset 0 0 40px ${primaryColor}08` } : {})
+                    }}
                 >
                     {product.product_images?.[0] ? (
                         <Image

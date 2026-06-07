@@ -12,7 +12,7 @@ import { intervalToDuration } from 'date-fns';
 import { createClient } from '@/lib/supabaseClient';
 
 // ─── Individual Flash Sale Card ─────────────────────────────────────────────
-function FlashSaleCard({ item, cartItem, onAdd, onRemove, onExpire, isStoreOpen, primaryColor, secondaryColor }) {
+function FlashSaleCard({ item, cartItem, onAdd, onRemove, onExpire, isStoreOpen, primaryColor, secondaryColor, isMobile }) {
     const router = useRouter();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -97,8 +97,11 @@ function FlashSaleCard({ item, cartItem, onAdd, onRemove, onExpire, isStoreOpen,
             }`}
             onClick={handleCardClick}
         >
-            {/* Image Area */}
-            <div className={`relative w-full aspect-square flex items-center justify-center overflow-hidden ${isDark ? 'bg-[#0a0c14]' : 'bg-slate-50'}`}>
+            {/* Image Area - Enforced aspect ratio for layout stability */}
+            <div 
+                className={`relative w-full aspect-square flex items-center justify-center overflow-hidden ${isDark ? 'bg-[#0a0c14]' : 'bg-slate-50'}`}
+                style={{ aspectRatio: '1 / 1' }}
+            >
                 {/* Discount Badge */}
                 {discountPct > 0 && (
                     <div className="absolute top-2 left-2 z-10 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg shadow-sm tracking-tight">
@@ -167,6 +170,58 @@ function FlashSaleCard({ item, cartItem, onAdd, onRemove, onExpire, isStoreOpen,
                     <div className="flex items-center justify-center h-9 w-full">
                         <OutOfStockBadge variant="soft" size="sm" />
                     </div>
+                ) : isMobile ? (
+                    // Plain static buttons for mobile (absolutely zero framer-motion overhead)
+                    justAdded ? (
+                        <div
+                            className="flex items-center justify-center gap-1.5 text-white h-9 w-full rounded-xl transition-all"
+                            style={{ background: 'linear-gradient(135deg, #10b981, #34d399)', boxShadow: '0 4px 16px rgba(16,185,129,0.35)' }}
+                        >
+                            <Check size={14} strokeWidth={3} />
+                            <span className="text-xs font-black">Added!</span>
+                        </div>
+                    ) : cartItem ? (
+                        <div
+                            className="flex items-center justify-between text-white rounded-xl overflow-hidden h-9 w-full"
+                            style={{
+                                background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                                boxShadow: `0 4px 16px ${primaryColor}30`
+                            }}
+                        >
+                            <button
+                                onClick={handleRemove}
+                                className="w-10 h-full flex items-center justify-center hover:bg-black/15 active:bg-black/25 transition-colors"
+                            >
+                                <Minus size={13} strokeWidth={3} />
+                            </button>
+                            <span
+                                className="text-sm font-black w-8 text-center bg-black/10 h-full flex items-center justify-center shadow-inner"
+                            >
+                                {cartItem.quantity}
+                            </span>
+                            <button
+                                onClick={handleAdd}
+                                className="w-10 h-full flex items-center justify-center hover:bg-black/15 active:bg-black/25 transition-colors"
+                            >
+                                <Plus size={13} strokeWidth={3} />
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleAdd}
+                            className={`w-full h-9 rounded-xl flex items-center justify-center gap-1.5 font-black text-xs tracking-wide transition-all active:scale-95 ${
+                                isDark ? 'border text-white hover:bg-white/[0.08]' : 'border text-white shadow-sm hover:brightness-110'
+                            }`}
+                            style={{
+                                borderColor: isClosedAnim ? '#ef4444' : `${primaryColor}50`,
+                                backgroundColor: isClosedAnim ? '#ef4444' : (isDark ? 'transparent' : primaryColor),
+                                color: isClosedAnim ? 'white' : (isDark ? primaryColor : 'white'),
+                            }}
+                        >
+                            {isClosedAnim ? <Store size={12} strokeWidth={3} /> : <ShoppingBag size={12} strokeWidth={3} />}
+                            <span>{isClosedAnim ? 'CLOSED' : 'ADD'}</span>
+                        </button>
+                    )
                 ) : (
                     <AnimatePresence mode="wait">
                         {justAdded ? (
@@ -232,7 +287,7 @@ function FlashSaleCard({ item, cartItem, onAdd, onRemove, onExpire, isStoreOpen,
                                 }}
                                 onClick={handleAdd}
                                 className={`w-full h-9 rounded-xl flex items-center justify-center gap-1.5 font-black text-xs tracking-wide transition-all active:scale-95 ${isDark
-                                    ? 'border text-white'
+                                    ? 'border text-white hover:bg-white/[0.08]'
                                     : 'border text-white shadow-sm hover:brightness-110'
                                     }`}
                                 style={{
@@ -257,6 +312,14 @@ export default function FlashSale({ initialItems = [], cart = [], onAdd, onRemov
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const [items, setItems] = useState(initialItems);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const fetchItems = async () => {
         try {
@@ -333,6 +396,7 @@ export default function FlashSale({ initialItems = [], cart = [], onAdd, onRemov
                         isStoreOpen={isStoreOpen}
                         primaryColor={primaryColor}
                         secondaryColor={secondaryColor}
+                        isMobile={isMobile}
                     />
                 ))}
             </div>

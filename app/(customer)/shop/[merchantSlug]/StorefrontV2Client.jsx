@@ -464,29 +464,21 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
 
 
     return (
-        <div className={`relative min-h-screen flex flex-col transition-all duration-700`}>
+        <div className={`relative min-h-screen flex flex-col transition-colors duration-700`}>
 
             {/* ====== CREATIVE AMBIENT BACKGROUND ====== */}
             <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
                 <div className={`absolute inset-0 ${isDark ? 'bg-[#080a10]' : 'bg-[#f7f8fa]'}`} />
-                <div
-                    className="absolute -top-[15%] left-1/2 -translate-x-1/2 w-[120%] h-[70%] rounded-full"
-                    style={{ background: `radial-gradient(ellipse, ${primaryColor}${isDark ? '20' : '0c'} 0%, transparent 70%)`, filter: 'blur(60px)' }}
-                />
-                <div
-                    className="absolute -bottom-[10%] -right-[10%] w-[60%] h-[50%] rounded-full"
-                    style={{ background: `radial-gradient(circle, ${secondaryColor}${isDark ? '12' : '06'} 0%, transparent 60%)`, filter: 'blur(80px)' }}
-                />
-                <div className={`absolute inset-0 ${isDark ? 'opacity-[0.04]' : 'opacity-[0.02]'}`}
-                    style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }}
-                />
             </div>
 
             {/* ====== STICKY HEADER — FROSTED GLASS ====== */}
             <div className="sticky top-[76px] md:top-[92px] z-30 px-2 sm:px-4 md:px-6 max-w-7xl mx-auto w-full mb-4 pointer-events-none">
                 <header
-                    className={`pointer-events-auto backdrop-blur-xl rounded-2xl md:rounded-[2rem] border transition-all overflow-hidden flex flex-col ${isDark ? 'bg-[#080a10]/85 border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.3)]' : 'bg-white/95 border-slate-200/80 shadow-lg'
-                        }`}
+                    className={`pointer-events-auto md:backdrop-blur-xl rounded-2xl md:rounded-[2rem] border transition-all overflow-hidden flex flex-col ${
+                        isDark 
+                            ? 'bg-[#0c0e16] md:bg-[#080a10]/85 border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.3)]' 
+                            : 'bg-white md:bg-white/95 border-slate-200/80 shadow-lg'
+                    }`}
                 >
                     {/* Top Row */}
                     <div className="flex items-center gap-3 px-4 py-3 md:px-5">
@@ -532,9 +524,14 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                         }`}
                                     >
                                         {isActive && (
+                                            <div
+                                                className="absolute inset-0 bg-blue-500 rounded-full shadow-lg shadow-blue-500/20 md:hidden"
+                                            />
+                                        )}
+                                        {isActive && (
                                             <motion.div
                                                 layoutId="activeCategoryPill"
-                                                className="absolute inset-0 bg-blue-500 rounded-full shadow-lg shadow-blue-500/20"
+                                                className="absolute inset-0 bg-blue-500 rounded-full shadow-lg shadow-blue-500/20 hidden md:block"
                                                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                                             />
                                         )}
