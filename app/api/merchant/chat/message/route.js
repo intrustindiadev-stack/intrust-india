@@ -121,9 +121,16 @@ export async function POST(req) {
         if (sessionErr) throw sessionErr;
         activeSessionId = newSession.id;
 
-        // One-time notification: chatbot is now connected
-        if (!providedSessionId) {
-          try {
+        // First-ever conversation notification: only fire when user has no prior merchant sessions
+        try {
+          const { count } = await admin
+            .from('webchat_sessions')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('audience', 'merchant')
+            .neq('id', activeSessionId);
+
+          if (count === 0) {
             await admin.from('notifications').insert({
               user_id: user.id,
               title: 'Merchant Chatbot Connected 🤖',
@@ -131,9 +138,9 @@ export async function POST(req) {
               type: 'success',
               reference_type: 'merchant_chatbot_connected',
             });
-          } catch {
-            // Non-fatal — never block the chat response
           }
+        } catch {
+          // Non-fatal — never block the chat response
         }
       }
     } catch (sessionErr) {

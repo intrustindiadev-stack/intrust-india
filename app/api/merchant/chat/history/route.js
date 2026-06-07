@@ -25,17 +25,22 @@ export async function GET(req) {
     }
 
     const { searchParams } = new URL(req.url);
+    const sessionId = searchParams.get('sessionId');
     const limit = Math.min(parseInt(searchParams.get('limit')) || 50, 100);
     const before = searchParams.get('before');
 
-    // Find the most recent session
+    // No sessionId provided — return empty (no auto-resume)
+    if (!sessionId) {
+      return NextResponse.json({ messages: [], sessionId: null });
+    }
+
+    // Validate ownership: session must belong to this user and be a merchant session
     const { data: session } = await admin
       .from('webchat_sessions')
       .select('id')
+      .eq('id', sessionId)
       .eq('user_id', user.id)
       .eq('audience', 'merchant')
-      .order('last_active_at', { ascending: false })
-      .limit(1)
       .single();
 
     if (!session) {

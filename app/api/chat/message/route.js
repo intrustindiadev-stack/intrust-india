@@ -87,6 +87,7 @@ export async function POST(req) {
           .select('id')
           .eq('id', activeSessionId)
           .eq('user_id', user.id)
+          .eq('audience', 'customer')
           .single();
         if (!existingSession) {
           activeSessionId = null;
@@ -101,15 +102,22 @@ export async function POST(req) {
       if (!activeSessionId) {
         const { data: newSession, error: sessionErr } = await admin
           .from('webchat_sessions')
-          .insert({ user_id: user.id })
+          .insert({ user_id: user.id, audience: 'customer' })
           .select('id')
           .single();
         if (sessionErr) throw sessionErr;
         activeSessionId = newSession.id;
 
-        // One-time notification: chatbot is now connected
-        if (!providedSessionId) {
-          try {
+        // First-ever conversation notification: only fire when user has no prior customer sessions
+        try {
+          const { count } = await admin
+            .from('webchat_sessions')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('audience', 'customer')
+            .neq('id', activeSessionId);
+
+          if (count === 0) {
             await admin.from('notifications').insert({
               user_id: user.id,
               title: 'Chatbot Connected 🤖',
@@ -117,9 +125,9 @@ export async function POST(req) {
               type: 'success',
               reference_type: 'chatbot_connected',
             });
-          } catch {
-            // Non-fatal — never block the chat response
           }
+        } catch {
+          // Non-fatal — never block the chat response
         }
       }
     } catch (sessionErr) {
@@ -206,8 +214,8 @@ export async function POST(req) {
       try {
         if (activeSessionId) {
           await admin.from('webchat_messages').insert([
-            { session_id: activeSessionId, user_id: user.id, role: 'user', content: userMessage },
-            { session_id: activeSessionId, user_id: user.id, role: 'model', content: finalReply }
+            { session_id: activeSessionId, user_id: user.id, role: 'user', content: userMessage, audience: 'customer' },
+            { session_id: activeSessionId, user_id: user.id, role: 'model', content: finalReply, audience: 'customer' }
           ]);
         }
       } catch (msgLogErr) {

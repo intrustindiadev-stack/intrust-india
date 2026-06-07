@@ -11,18 +11,24 @@ export async function GET(req) {
     }
 
     const { searchParams } = new URL(req.url);
+    const sessionId = searchParams.get('sessionId');
     const limit = Math.min(parseInt(searchParams.get('limit')) || 50, 100);
     const before = searchParams.get('before');
 
+    // No sessionId provided — return empty (no auto-resume)
+    if (!sessionId) {
+      return NextResponse.json({ messages: [], sessionId: null });
+    }
+
     const admin = createAdminClient();
 
-    // Find the most recent session
+    // Validate ownership: session must belong to this user and be a customer session
     const { data: session } = await admin
       .from('webchat_sessions')
       .select('id')
+      .eq('id', sessionId)
       .eq('user_id', user.id)
-      .order('last_active_at', { ascending: false })
-      .limit(1)
+      .eq('audience', 'customer')
       .single();
 
     if (!session) {
@@ -33,6 +39,7 @@ export async function GET(req) {
       .from('webchat_messages')
       .select('id, role, content, created_at')
       .eq('session_id', session.id)
+      .eq('audience', 'customer')
       .order('created_at', { ascending: false })
       .limit(limit);
 

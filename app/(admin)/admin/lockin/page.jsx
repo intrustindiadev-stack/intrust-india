@@ -21,6 +21,7 @@ import {
     LinkIcon
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import LockinTransferModal from '@/components/admin/LockinTransferModal';
 import { 
@@ -34,6 +35,7 @@ import {
 } from 'recharts';
 
 export default function AdminLockinPage() {
+    const router = useRouter();
     const [balances, setBalances] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -130,20 +132,22 @@ export default function AdminLockinPage() {
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <div className="relative group">
-                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                            <input 
-                                type="text"
-                                placeholder="Search inventory..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none w-full md:w-72 transition-all shadow-sm"
-                            />
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                        <div className="w-full md:w-auto">
+                            <div className="relative group">
+                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                <input 
+                                    type="text"
+                                    placeholder="Search inventory..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none w-full md:w-72 transition-all shadow-sm"
+                                />
+                            </div>
                         </div>
                         <button 
                             onClick={() => setShowModal(true)}
-                            className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 flex items-center gap-2"
+                            className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 flex items-center gap-2 justify-center"
                         >
                             <Plus size={16} />
                             Deploy Capital
@@ -220,7 +224,7 @@ export default function AdminLockinPage() {
                         </div>
                     </div>
 
-                    <div className="lg:col-span-4 bg-slate-900 rounded-2xl p-6 shadow-lg shadow-slate-200/50 flex flex-col justify-between relative overflow-hidden group">
+                    <div className="hidden lg:flex lg:col-span-4 bg-slate-900 rounded-2xl p-6 shadow-lg shadow-slate-200/50 flex-col justify-between relative overflow-hidden group">
                         <div className="absolute right-0 top-0 p-8 transform translate-x-4 -translate-y-4 opacity-10 transition-transform group-hover:scale-110">
                             <Clock size={120} className="text-white" />
                         </div>
@@ -281,68 +285,143 @@ export default function AdminLockinPage() {
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Accessing Ledger...</p>
                         </div>
                     ) : filteredBalances.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <table className="w-full border-collapse">
-                                <thead>
-                                    <tr className="bg-slate-50/50 text-left border-b border-slate-100">
-                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Merchant Details</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Total Active Value</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Avg Bonus %</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Active Terms</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status Summary</th>
-                                        <th className="px-6 py-4 w-10"></th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                    {filteredBalances.map(group => {
-                                        const avgBonus = group.interestRates.length > 0 
-                                            ? (group.interestRates.reduce((a, b) => a + b, 0) / group.interestRates.length).toFixed(1) 
-                                            : '-';
-                                            
-                                        return (
-                                        <tr key={group.merchant.id} className="hover:bg-slate-50/80 transition-colors group">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-900 flex items-center justify-center font-bold text-xs shadow-sm shadow-slate-100">
-                                                        {group.merchant?.business_name?.[0] || 'M'}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-semibold text-slate-900 text-sm">{group.merchant?.business_name}</p>
-                                                        <p className="text-[10px] text-slate-500 font-medium">{group.merchant?.user_profiles?.full_name}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <p className="font-bold text-slate-900 text-sm tracking-tight">₹{(group.totalAmount / 100).toLocaleString('en-IN')}</p>
-                                                {group.activeCount > 0 && <p className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-1 inline-block rounded mt-1">SECURED</p>}
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-1">
-                                                    <span className="text-sm font-bold text-blue-600">{avgBonus}%</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="text-xs font-semibold text-slate-600">{group.activeCount}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    {group.activeCount > 0 && <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">Active</span>}
-                                                    {group.maturedCount > 0 && <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100">Matured/Released</span>}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <Link 
-                                                    href={`/admin/portfolio/${group.merchant.id}`}
-                                                    className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center w-fit ml-auto"
-                                                >
-                                                    <Eye size={16} />
-                                                </Link>
-                                            </td>
+                        <>
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="w-full border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 text-left border-b border-slate-100">
+                                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Merchant Details</th>
+                                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Total Active Value</th>
+                                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Avg Bonus %</th>
+                                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Active Terms</th>
+                                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status Summary</th>
+                                            <th className="px-6 py-4 w-10"></th>
                                         </tr>
-                                    )})}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {filteredBalances.map(group => {
+                                            const avgBonus = group.interestRates.length > 0 
+                                                ? (group.interestRates.reduce((a, b) => a + b, 0) / group.interestRates.length).toFixed(1) 
+                                                : '-';
+                                                
+                                            return (
+                                            <tr 
+                                                key={group.merchant.id} 
+                                                onClick={() => router.push(`/admin/portfolio/${group.merchant.id}`)}
+                                                className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                                            >
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-900 flex items-center justify-center font-bold text-xs shadow-sm shadow-slate-100">
+                                                            {group.merchant?.business_name?.[0] || 'M'}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-semibold text-slate-900 text-sm">{group.merchant?.business_name}</p>
+                                                            <p className="text-[10px] text-slate-500 font-medium">{group.merchant?.user_profiles?.full_name}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <p className="font-bold text-slate-900 text-sm tracking-tight">₹{(group.totalAmount / 100).toLocaleString('en-IN')}</p>
+                                                    {group.activeCount > 0 && <p className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-1 inline-block rounded mt-1">SECURED</p>}
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <span className="text-sm font-bold text-blue-600">{avgBonus}%</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="text-xs font-semibold text-slate-600">{group.activeCount}</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        {group.activeCount > 0 && <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">Active</span>}
+                                                        {group.maturedCount > 0 && <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100">Matured/Released</span>}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <Link 
+                                                        href={`/admin/portfolio/${group.merchant.id}`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition-all flex items-center justify-center w-fit ml-auto"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        )})}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Mobile Card List */}
+                            <div className="block md:hidden divide-y divide-slate-100">
+                                {filteredBalances.map(group => {
+                                    const avgBonus = group.interestRates.length > 0 
+                                        ? (group.interestRates.reduce((a, b) => a + b, 0) / group.interestRates.length).toFixed(1) 
+                                        : '-';
+                                        
+                                    return (
+                                        <div 
+                                            key={group.merchant.id}
+                                            onClick={() => router.push(`/admin/portfolio/${group.merchant.id}`)}
+                                            className="flex items-center gap-3 px-4 py-4 cursor-pointer active:bg-slate-50"
+                                        >
+                                            {/* Avatar */}
+                                            <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-900 flex items-center justify-center font-bold text-xs shadow-sm shadow-slate-100 flex-shrink-0">
+                                                {group.merchant?.business_name?.[0] || 'M'}
+                                            </div>
+                                            
+                                            {/* Text block & metrics */}
+                                            <div className="flex-1 min-w-0 space-y-1">
+                                                <div className="flex items-baseline justify-between">
+                                                    <p className="font-semibold text-sm text-slate-900 truncate">{group.merchant?.business_name}</p>
+                                                    <span className="font-bold text-sm text-slate-900 ml-2">
+                                                        ₹{(group.totalAmount/100).toLocaleString('en-IN')}
+                                                    </span>
+                                                </div>
+                                                
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-[10px] text-slate-500 truncate">{group.merchant?.user_profiles?.full_name}</p>
+                                                    {group.activeCount > 0 && (
+                                                        <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-1 rounded">
+                                                            SECURED
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                
+                                                <div className="flex items-center justify-between pt-1">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-bold">
+                                                            {avgBonus}% Bonus
+                                                        </span>
+                                                        <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-semibold">
+                                                            {group.activeCount} {group.activeCount === 1 ? 'Term' : 'Terms'}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center gap-1">
+                                                        {group.activeCount > 0 && (
+                                                            <span className="px-1.5 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">
+                                                                Active
+                                                            </span>
+                                                        )}
+                                                        {group.maturedCount > 0 && (
+                                                            <span className="px-1.5 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                                Matured/Released
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Right Chevron */}
+                                            <ChevronRight size={16} className="text-slate-400 ml-auto flex-shrink-0" />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
                     ) : (
                         <div className="h-96 flex flex-col items-center justify-center p-12 text-center bg-slate-50/20">
                             <div className="w-16 h-16 bg-white border border-slate-100 rounded-2xl flex items-center justify-center mb-4 shadow-sm">

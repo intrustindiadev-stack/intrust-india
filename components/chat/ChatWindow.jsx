@@ -35,6 +35,37 @@ function formatTime(date) {
   });
 }
 
+function formatRelativeTime(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  
+  if (isNaN(diffMs)) return '';
+  
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffSecs < 60) {
+    return 'Just now';
+  } else if (diffMins < 60) {
+    return `${diffMins}m ago`;
+  } else if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  } else if (diffDays === 1) {
+    return 'Yesterday';
+  } else if (diffDays < 7) {
+    return `${diffDays}d ago`;
+  } else {
+    return date.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+    });
+  }
+}
+
 function isBotTurnComplete(text) {
   if (!text) return true;
   const trimmed = text.trim();
@@ -82,6 +113,7 @@ const QUICK_REPLIES = [
 export function BaseChatWindow({
   apiPath = "/api/chat/message",
   historyPath = "/api/chat/history",
+  sessionsPath = "/api/chat/sessions",
   welcomeMessageBuilder = WELCOME_MESSAGE,
   quickReplies = QUICK_REPLIES,
   assistantTitle = "InTrust Assistant",
@@ -101,6 +133,16 @@ export function BaseChatWindow({
   const [micError, setMicError] = useState(null); // user-facing STT error message
   const [sessionId, setSessionId] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // History & Sessions management states
+  const [view, setView] = useState('chat'); // 'chat' | 'history-list' | 'history-view'
+  const [sessions, setSessions] = useState([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsError, setSessionsError] = useState(null);
+  const [selectedSessionMessages, setSelectedSessionMessages] = useState([]);
+  const [selectedSessionLoading, setSelectedSessionLoading] = useState(false);
+  const [selectedSessionError, setSelectedSessionError] = useState(null);
+  const [activeSessionId, setActiveSessionId] = useState(null);
   const endRef = useRef(null);
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
@@ -302,59 +344,125 @@ export function BaseChatWindow({
 
       return res.json();
     },
-    [buildHistory, sessionId]
+    [apiPath, buildHistory, sessionId]
   );
 
-  // Inject welcome message once on first open
+  // Fetch sessions from backend API
+  const fetchSessions = useCallback(async () => {
+    if (!user) {
+      setSessions([]);
+      setSessionsError('Please sign in to view your chat history.');
+      return;
+    }
+    setSessionsLoading(true);
+    setSessionsError(null);
+    try {
+      const res = await fetch(`${sessionsPath}?limit=30`);
+      if (!res.ok) throw new Error('Failed to load past sessions');
+      const data = await res.json();
+      setSessions(data.sessions || []);
+    } catch (err) {
+      console.error('Sessions fetch error:', err);
+      setSessionsError('Failed to load chat history. Please try again.');
+    } finally {
+      setSessionsLoading(false);
+    }
+  }, [sessionsPath, user]);
+
+  const handleOpenHistoryList = useCallback(() => {
+    setView('history-list');
+    fetchSessions();
+  }, [fetchSessions]);
+
+  const handleSelectSession = useCallback(async (sid) => {
+    setActiveSessionId(sid);
+    setView('history-view');
+    setSelectedSessionLoading(true);
+    setSelectedSessionError(null);
+    setSelectedSessionMessages([]);
+    try {
+      const res = await fetch(`${historyPath}?sessionId=${sid}&limit=50`);
+      if (!res.ok) throw new Error('Failed to fetch conversation history');
+      const data = await res.json();
+      if (data.messages) {
+        const mapped = data.messages.map(msg => ({
+          id: msg.id,
+          sender: msg.role === 'model' ? 'bot' : 'user',
+          text: sanitizeOnClient(msg.content),
+          timestamp: new Date(msg.created_at),
+          status: 'delivered'
+        }));
+        setSelectedSessionMessages(mapped);
+      } else {
+        setSelectedSessionMessages([]);
+      }
+    } catch (err) {
+      console.error('Failed to load session history:', err);
+      setSelectedSessionError('Failed to load the conversation. Please try again.');
+    } finally {
+      setSelectedSessionLoading(false);
+    }
+  }, [historyPath]);
+
+  const handleBackToChat = useCallback(() => {
+    setView('chat');
+  }, []);
+
+  const handleBackToHistoryList = useCallback(() => {
+    setView('history-list');
+  }, []);
+
+  const handleNewChat = useCallback(() => {
+    setSessionId(null);
+    const name =
+      profile?.full_name?.split(' ')[0] ||
+      user?.user_metadata?.full_name?.split(' ')[0] ||
+      'there';
+    
+    const welcomeText = welcomeMessageBuilder(name);
+    setMessages([
+      {
+        id: crypto.randomUUID(),
+        sender: 'bot',
+        text: sanitizeOnClient(welcomeText),
+        timestamp: new Date(),
+        status: 'delivered',
+      }
+    ]);
+    setView('chat');
+    setInput('');
+    setMicError(null);
+    setLoading(false);
+    setTimeout(() => inputRef.current?.focus(), 400);
+  }, [profile, user, welcomeMessageBuilder]);
+
+  // Inject welcome message and reset session on every open
   useEffect(() => {
-    if (isOpen && !hasWelcomed) {
-      setHasWelcomed(true);
+    if (isOpen) {
+      setSessionId(null);
       const name =
         profile?.full_name?.split(' ')[0] ||
         user?.user_metadata?.full_name?.split(' ')[0] ||
-        firstName;
+        'there';
 
-      const fetchHistory = async () => {
-        if (!user) {
-          addBotMessage(welcomeMessageBuilder(name));
-          return;
+      const welcomeText = welcomeMessageBuilder(name);
+      setMessages([
+        {
+          id: crypto.randomUUID(),
+          sender: 'bot',
+          text: sanitizeOnClient(welcomeText),
+          timestamp: new Date(),
+          status: 'delivered',
         }
+      ]);
+      setLoading(false);
+      setInput('');
+      setMicError(null);
+      setView('chat');
 
-        setHistoryLoading(true);
-        try {
-          const res = await fetch(`${historyPath}?limit=50`);
-          if (!res.ok) throw new Error('Failed to fetch history');
-          const data = await res.json();
-
-          if (data.messages && data.messages.length > 0) {
-            const mapped = data.messages.map(msg => ({
-              id: msg.id,
-              sender: msg.role === 'model' ? 'bot' : 'user',
-              text: sanitizeOnClient(msg.content),
-              timestamp: new Date(msg.created_at),
-              status: 'delivered'
-            }));
-            setMessages(mapped);
-            setSessionId(data.sessionId);
-          } else {
-            addBotMessage(welcomeMessageBuilder(name));
-          }
-        } catch (err) {
-          console.error('History fetch error:', err);
-          addBotMessage(welcomeMessageBuilder(name));
-        } finally {
-          setHistoryLoading(false);
-        }
-      };
-
-      fetchHistory();
-    }
-
-    if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 400);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, hasWelcomed, profile, user, firstName, addBotMessage]);
+  }, [isOpen, profile, user, welcomeMessageBuilder]);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
@@ -772,6 +880,139 @@ export function BaseChatWindow({
             padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
           }
         }
+
+        /* ── History & Sessions Styling ───────────────── */
+        .chat-sessions-list {
+          flex: 1;
+          overflow-y: auto;
+          background: #f8f9fc;
+          display: flex;
+          flex-direction: column;
+          -webkit-overflow-scrolling: touch;
+        }
+        .chat-session-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 16px;
+          min-height: 64px;
+          background: #fff;
+          border: none;
+          border-bottom: 1px solid #e8edf5;
+          text-align: left;
+          cursor: pointer;
+          transition: background 0.2s, transform 0.1s;
+          width: 100%;
+          font-family: inherit;
+        }
+        .chat-session-row:hover {
+          background: #f1f5f9;
+        }
+        .chat-session-row:active {
+          transform: scale(0.99);
+        }
+        .chat-session-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: #f1f5f9;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .chat-session-info-container {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .chat-session-row-meta {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+        }
+        .chat-session-row-meta h4 {
+          margin: 0;
+          font-size: 13.5px;
+          font-weight: 600;
+          color: #1e293b;
+        }
+        .chat-session-time {
+          font-size: 11px;
+          color: #64748b;
+          white-space: nowrap;
+        }
+        .chat-session-preview-line {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+        }
+        .chat-session-preview {
+          margin: 0;
+          font-size: 12.5px;
+          color: #64748b;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          flex: 1;
+        }
+        .chat-session-badge {
+          font-size: 11px;
+          font-weight: 700;
+          color: #fff;
+          border-radius: 12px;
+          padding: 2px 6px;
+          min-width: 18px;
+          height: 18px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .chat-back-btn, .chat-history-btn {
+          background: none;
+          border: none;
+          color: #fff;
+          cursor: pointer;
+          padding: 6px;
+          border-radius: 50%;
+          opacity: 0.8;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 44px;
+          min-height: 44px;
+        }
+        .chat-back-btn:hover, .chat-history-btn:hover {
+          opacity: 1;
+          background: rgba(255,255,255,0.12);
+        }
+        .chat-new-chat-btn:hover {
+          background: rgba(255,255,255,0.3) !important;
+        }
+        .chat-view-container {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          overflow: hidden;
+          animation: chat-view-fade 0.25s ease-out;
+        }
+        @keyframes chat-view-fade {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 640px) {
+          .chat-header {
+            padding-top: calc(14px + env(safe-area-inset-top)) !important;
+          }
+          .chat-readonly-area {
+            padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+          }
+        }
       `}</style>
 
       <div className={`chat-window-overlay ${isOpen ? 'is-open' : ''}`} role="dialog" aria-label={`${assistantTitle} Chat`}>
@@ -781,18 +1022,114 @@ export function BaseChatWindow({
         </div>
         {/* Header */}
         <div className="chat-header">
-          <div className="chat-header-avatar" aria-hidden="true">
-            <img src="/robot-mascot-nobg.png" alt="Assistant" />
-          </div>
-          <div className="chat-header-info">
-            <h3>{assistantTitle}</h3>
-            <p><span className="chat-online-dot" />{assistantSubtitle}</p>
-          </div>
+          {view === 'chat' ? (
+            <>
+              <div className="chat-header-avatar" aria-hidden="true">
+                <img src="/robot-mascot-nobg.png" alt="Assistant" />
+              </div>
+              <div className="chat-header-info">
+                <h3>{assistantTitle}</h3>
+                <p><span className="chat-online-dot" />{assistantSubtitle}</p>
+              </div>
+              <button
+                className="chat-history-btn"
+                onClick={handleOpenHistoryList}
+                aria-label="View history"
+                style={{ marginLeft: 'auto', marginRight: '8px' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                  <path d="M12 7v5l4 2" />
+                </svg>
+              </button>
+            </>
+          ) : view === 'history-list' ? (
+            <>
+              <button
+                className="chat-back-btn"
+                onClick={handleBackToChat}
+                aria-label="Back to chat"
+                style={{ marginRight: '8px' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12" />
+                  <polyline points="12 19 5 12 12 5" />
+                </svg>
+              </button>
+              <div className="chat-header-info">
+                <h3>Chat History</h3>
+                <p>Your past conversations</p>
+              </div>
+              <button
+                className="chat-new-chat-btn"
+                onClick={handleNewChat}
+                aria-label="Start new chat"
+                style={{
+                  marginLeft: 'auto',
+                  marginRight: '8px',
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  borderRadius: '16px',
+                  padding: '6px 12px',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'background 0.2s',
+                }}
+              >
+                <span style={{ fontSize: '14px' }}>+</span> New chat
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className="chat-back-btn"
+                onClick={handleBackToHistoryList}
+                aria-label="Back to history list"
+                style={{ marginRight: '8px' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12" />
+                  <polyline points="12 19 5 12 12 5" />
+                </svg>
+              </button>
+              <div className="chat-header-info">
+                <h3>Past Conversation</h3>
+                <p>Read-only mode</p>
+              </div>
+              <button
+                className="chat-new-chat-btn"
+                onClick={handleBackToChat}
+                aria-label="Back to live chat"
+                style={{
+                  marginLeft: 'auto',
+                  marginRight: '8px',
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  borderRadius: '16px',
+                  padding: '6px 12px',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
+                }}
+              >
+                Live Chat
+              </button>
+            </>
+          )}
           <button
             className="chat-close-btn"
             onClick={closeChat}
             aria-label="Close chat"
             id="chat-close-btn"
+            style={view === 'chat' ? {} : { marginLeft: 0 }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M18 6L6 18M6 6l12 12" stroke="white" strokeWidth="2" strokeLinecap="round" />
@@ -800,16 +1137,11 @@ export function BaseChatWindow({
           </button>
         </div>
 
-        {/* Messages */}
-        <div className="chat-messages" id="chat-messages-container">
-          {historyLoading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-              <div className="chat-typing">
-                <span /><span /><span />
-              </div>
-            </div>
-          ) : (
-            <>
+        {/* Dynamic Panels */}
+        {view === 'chat' && (
+          <div className="chat-view-container">
+            {/* Messages */}
+            <div className="chat-messages" id="chat-messages-container">
               {messages.map((msg) => (
                 <div key={msg.id} className={`chat-msg ${msg.sender}`}>
                   <div className="chat-bubble-text">
@@ -841,98 +1173,268 @@ export function BaseChatWindow({
                 </div>
               )}
               <div ref={endRef} />
-            </>
-          )}
-        </div>
+            </div>
 
-        {/* Input */}
-        <div className="chat-input-area" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 0 }}>
-          {/* Mic error banner (Comment 3) */}
-          {micError && (
+            {/* Input */}
+            <div className="chat-input-area" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 0 }}>
+              {/* Mic error banner (Comment 3) */}
+              {micError && (
+                <div
+                  role="alert"
+                  style={{
+                    fontSize: '11.5px',
+                    color: '#b91c1c',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    borderRadius: '10px',
+                    padding: '6px 10px',
+                    marginBottom: '6px',
+                    lineHeight: 1.4,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '6px',
+                  }}
+                >
+                  <span aria-hidden="true" style={{ flexShrink: 0 }}>🎙️</span>
+                  <span>{micError} <strong>Type your message below.</strong></span>
+                  <button
+                    onClick={() => setMicError(null)}
+                    style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#b91c1c', fontSize: '13px', flexShrink: 0 }}
+                    aria-label="Dismiss mic error"
+                  >✕</button>
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* Mic button — hidden when STT is unsupported (Comment 3) */}
+                {isSttSupported && (
+                  <button
+                    id="chat-mic-btn"
+                    className={`chat-mic-btn${isListening ? ' listening' : ''}`}
+                    onClick={handleMic}
+                    disabled={loading}
+                    aria-label={isListening ? 'Stop recording' : 'Start voice input'}
+                    title={isListening ? 'Tap to stop' : 'Speak your message'}
+                  >
+                    {isListening ? (
+                      /* Waveform / stop indicator */
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="3" y="7" width="3" height="10" rx="1.5" />
+                        <rect x="8" y="4" width="3" height="16" rx="1.5" />
+                        <rect x="13" y="7" width="3" height="10" rx="1.5" />
+                        <rect x="18" y="9" width="3" height="6" rx="1.5" />
+                      </svg>
+                    ) : (
+                      /* Microphone icon */
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="2" width="6" height="12" rx="3" />
+                        <path d="M19 10a7 7 0 0 1-14 0" />
+                        <line x1="12" y1="19" x2="12" y2="22" />
+                        <line x1="8" y1="22" x2="16" y2="22" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+
+                <input
+                  ref={inputRef}
+                  id="chat-input"
+                  className="chat-input"
+                  type="text"
+                  placeholder={isListening ? '🎙️ Listening...' : 'Ask anything about InTrust...'}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  maxLength={1000}
+                  disabled={loading}
+                  aria-label="Type your message"
+                />
+                <button
+                  id="chat-send-btn"
+                  className="chat-send-btn"
+                  onClick={handleSend}
+                  disabled={!input.trim() || loading}
+                  aria-label="Send message"
+                >
+                  {/* Paper plane icon */}
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 2L11 13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {view === 'history-list' && (
+          <div className="chat-view-container">
+            <div className="chat-sessions-list">
+              {sessionsLoading && (
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', gap: '12px' }}>
+                  <div className="chat-typing">
+                    <span /><span /><span />
+                  </div>
+                  <p style={{ fontSize: '13px', color: '#64748b' }}>Loading past conversations...</p>
+                </div>
+              )}
+
+              {sessionsError && (
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '24px', textAlign: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '24px' }}>⚠️</span>
+                  <p style={{ fontSize: '13.5px', color: '#b91c1c' }}>{sessionsError}</p>
+                  <button
+                    onClick={fetchSessions}
+                    style={{
+                      background: accentColor,
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '16px',
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {!sessionsLoading && !sessionsError && sessions.length === 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '24px', textAlign: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '32px' }}>💬</span>
+                  <p style={{ fontSize: '14px', color: '#64748b', fontWeight: '500' }}>No previous conversations yet.</p>
+                  <button
+                    onClick={handleNewChat}
+                    style={{
+                      background: accentColor,
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '20px',
+                      padding: '10px 20px',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      boxShadow: `0 4px 12px ${accentColor}33`,
+                    }}
+                  >
+                    Start a new chat
+                  </button>
+                </div>
+              )}
+
+              {!sessionsLoading && !sessionsError && sessions.length > 0 && sessions.map((session) => (
+                <button
+                  key={session.id}
+                  className="chat-session-row"
+                  onClick={() => handleSelectSession(session.id)}
+                  aria-label={`Conversation from ${formatRelativeTime(session.last_active_at)}. ${session.messageCount} messages.`}
+                >
+                  <div className="chat-session-icon" style={{ color: accentColor }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                  </div>
+                  <div className="chat-session-info-container">
+                    <div className="chat-session-row-meta">
+                      <h4>Conversation</h4>
+                      <span className="chat-session-time">{formatRelativeTime(session.last_active_at)}</span>
+                    </div>
+                    <div className="chat-session-preview-line">
+                      <p className="chat-session-preview">{session.preview || 'No text preview available'}</p>
+                      {session.messageCount > 0 && (
+                        <span className="chat-session-badge" style={{ backgroundColor: accentColor }}>
+                          {session.messageCount}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {view === 'history-view' && (
+          <div className="chat-view-container">
+            <div className="chat-messages" id="chat-messages-container">
+              {selectedSessionLoading && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                  <div className="chat-typing">
+                    <span /><span /><span />
+                  </div>
+                </div>
+              )}
+
+              {selectedSessionError && (
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '24px', textAlign: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '24px' }}>⚠️</span>
+                  <p style={{ fontSize: '13.5px', color: '#b91c1c' }}>{selectedSessionError}</p>
+                  <button
+                    onClick={() => handleSelectSession(activeSessionId)}
+                    style={{
+                      background: accentColor,
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '16px',
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {!selectedSessionLoading && !selectedSessionError && selectedSessionMessages.map((msg) => (
+                <div key={msg.id} className={`chat-msg ${msg.sender}`}>
+                  <div className="chat-bubble-text">
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                  </div>
+                  <span className="chat-msg-time">{formatTime(msg.timestamp)}</span>
+                </div>
+              ))}
+              <div ref={endRef} />
+            </div>
+
             <div
-              role="alert"
+              className="chat-input-area chat-readonly-area"
               style={{
-                fontSize: '11.5px',
-                color: '#b91c1c',
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
-                borderRadius: '10px',
-                padding: '6px 10px',
-                marginBottom: '6px',
-                lineHeight: 1.4,
+                background: '#f1f5f9',
+                color: '#475569',
+                fontSize: '13px',
+                textAlign: 'center',
+                padding: '16px',
+                fontWeight: '500',
+                borderTop: '1px solid #e2e8f0',
                 display: 'flex',
-                alignItems: 'flex-start',
-                gap: '6px',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
               }}
             >
-              <span aria-hidden="true" style={{ flexShrink: 0 }}>🎙️</span>
-              <span>{micError} <strong>Type your message below.</strong></span>
+              <span>Viewing a past conversation (read-only)</span>
               <button
-                onClick={() => setMicError(null)}
-                style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#b91c1c', fontSize: '13px', flexShrink: 0 }}
-                aria-label="Dismiss mic error"
-              >✕</button>
+                onClick={handleBackToChat}
+                style={{
+                  background: accentColor,
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '16px',
+                  padding: '6px 16px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  boxShadow: `0 2px 6px ${accentColor}22`,
+                }}
+              >
+                Return to Live Chat
+              </button>
             </div>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Mic button — hidden when STT is unsupported (Comment 3) */}
-          {isSttSupported && (
-            <button
-              id="chat-mic-btn"
-              className={`chat-mic-btn${isListening ? ' listening' : ''}`}
-              onClick={handleMic}
-              disabled={loading}
-              aria-label={isListening ? 'Stop recording' : 'Start voice input'}
-              title={isListening ? 'Tap to stop' : 'Speak your message'}
-            >
-              {isListening ? (
-                /* Waveform / stop indicator */
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="3" y="7" width="3" height="10" rx="1.5" />
-                  <rect x="8" y="4" width="3" height="16" rx="1.5" />
-                  <rect x="13" y="7" width="3" height="10" rx="1.5" />
-                  <rect x="18" y="9" width="3" height="6" rx="1.5" />
-                </svg>
-              ) : (
-                /* Microphone icon */
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="2" width="6" height="12" rx="3" />
-                  <path d="M19 10a7 7 0 0 1-14 0" />
-                  <line x1="12" y1="19" x2="12" y2="22" />
-                  <line x1="8" y1="22" x2="16" y2="22" />
-                </svg>
-              )}
-            </button>
-          )}
-
-          <input
-            ref={inputRef}
-            id="chat-input"
-            className="chat-input"
-            type="text"
-            placeholder={isListening ? '🎙️ Listening...' : 'Ask anything about InTrust...'}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            maxLength={1000}
-            disabled={loading}
-            aria-label="Type your message"
-          />
-          <button
-            id="chat-send-btn"
-            className="chat-send-btn"
-            onClick={handleSend}
-            disabled={!input.trim() || loading}
-            aria-label="Send message"
-          >
-            {/* Paper plane icon */}
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22 2L11 13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
           </div>
-        </div>
+        )}
       </div>
     </>
   );
