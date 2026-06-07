@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ProductCardSkeleton from '@/components/customer/shop/ProductCardSkeleton';
 import MerchantProfileCard from '@/components/customer/shop/MerchantProfileCard';
 import { isStorefrontItemOOS } from '@/lib/shopping/stock';
+import { isValidUUID } from '@/lib/utils';
 import React, { Suspense } from 'react';
 import Pagination from '@/components/search/Pagination';
 
@@ -45,11 +46,13 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
     const [totalCount, setTotalCount] = useState(initialTotalCount ?? 0);
     const [loading, setLoading] = useState(false);
     const isFirstRender = useRef(true);
+    const [pageLastIds, setPageLastIds] = useState({ 1: null });
 
     useEffect(() => {
         setLiveInventory(initialInventory);
         setPage(1);
         setTotalCount(initialTotalCount ?? 0);
+        setPageLastIds({ 1: null });
         setLoading(false);
         isFirstRender.current = true;
     }, [initialInventory, initialTotalCount]);
@@ -66,7 +69,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         setLiveMerchant(merchant);
     }, [merchant]);
 
-    const fetchItems = useCallback(async (pageNum, searchVal, catVal) => {
+    const fetchItems = useCallback(async (pageNum, searchVal, catVal, lastIdVal) => {
         setLoading(true);
         try {
             const queryParams = new URLSearchParams({
@@ -80,14 +83,28 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
             if (catVal && catVal !== 'All') {
                 queryParams.append('category', catVal);
             }
+            if (lastIdVal) {
+                queryParams.append('lastId', lastIdVal);
+            }
 
             const res = await fetch(`/api/shopping/storefront?${queryParams.toString()}`);
             if (!res.ok) throw new Error('Failed to fetch storefront items');
             const data = await res.json();
 
-            setLiveInventory(data.items || []);
+            const items = data.items || [];
+            setLiveInventory(items);
             setTotalCount(data.totalCount ?? 0);
             setPage(pageNum);
+
+            // Cache the last seen ID of this page for the next page
+            if (items.length > 0) {
+                const lastItem = items[items.length - 1];
+                const nextLastId = liveMerchant.slug === 'official' ? lastItem.product_id : lastItem.id;
+                setPageLastIds(prev => ({
+                    ...prev,
+                    [pageNum + 1]: nextLastId
+                }));
+            }
         } catch (err) {
             console.error('Error fetching storefront items:', err);
             toast.error('Could not load products');
@@ -101,7 +118,8 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         if (isFirstRender.current) {
             return;
         }
-        fetchItems(page, searchQuery, activeSubCategory);
+        const lastId = pageLastIds[page] || null;
+        fetchItems(page, searchQuery, activeSubCategory, lastId);
     }, [page, fetchItems]);
 
     // Search and Category resets page to 1
@@ -110,10 +128,11 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
             isFirstRender.current = false;
             return;
         }
+        setPageLastIds({ 1: null });
         if (page !== 1) {
             setPage(1);
         } else {
-            fetchItems(1, searchQuery, activeSubCategory);
+            fetchItems(1, searchQuery, activeSubCategory, null);
         }
     }, [searchQuery, activeSubCategory, fetchItems]);
 
@@ -148,13 +167,22 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         };
     }, [liveMerchant?.id]);
 
+    // Stable key derived from visible product IDs — changes when the user
+    // navigates to a new page even if the item count stays at PAGE_SIZE.
+    const productIdsKey = useMemo(
+        () => Array.from(new Set(liveInventory.map(i => i.product_id))).sort().join(','),
+        [liveInventory]
+    );
+
     useEffect(() => {
         if (!liveInventory || liveInventory.length === 0) return;
 
         const productIds = Array.from(new Set(liveInventory.map(i => i.product_id)));
-        
+
+        // Include a slice of productIdsKey in the channel name so each unique
+        // page gets its own channel, forcing a clean teardown/re-subscribe.
         const syncChannel = supabase
-            .channel(`realtime_stock_sync_${liveMerchant.id}`)
+            .channel(`realtime_stock_sync_${liveMerchant.id}_${productIdsKey.slice(0, 16)}`)
             .on('postgres_changes', { 
                 event: 'UPDATE', 
                 schema: 'public', 
@@ -168,8 +196,13 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                             : item
                     ));
                 }
-            })
-            .on('postgres_changes', { 
+            });
+
+        // Only subscribe to merchant_inventory changes for real merchant UUIDs.
+        // For the official store, liveMerchant.id is the string 'official' which
+        // Supabase Realtime rejects as an invalid UUID filter.
+        if (isValidUUID(liveMerchant.id)) {
+            syncChannel.on('postgres_changes', { 
                 event: 'UPDATE', 
                 schema: 'public', 
                 table: 'merchant_inventory', 
@@ -182,13 +215,15 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                             : item
                     ));
                 }
-            })
-            .subscribe();
+            });
+        }
+
+        syncChannel.subscribe();
 
         return () => {
             supabase.removeChannel(syncChannel);
         };
-    }, [liveMerchant?.id, liveInventory.length]);
+    }, [liveMerchant?.id, productIdsKey]);
 
     const isStoreOpen = useMemo(() => {
         return !!liveMerchant.is_open;

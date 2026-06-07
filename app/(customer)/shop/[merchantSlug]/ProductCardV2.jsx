@@ -5,7 +5,6 @@ import { Plus, Minus, Package, BadgeCheck, Check, Heart, Store } from 'lucide-re
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/contexts/ThemeContext';
-import { motion, AnimatePresence } from 'framer-motion';
 import { isStorefrontItemOOS } from '@/lib/shopping/stock';
 import OutOfStockOverlay from '@/components/ui/OutOfStockOverlay';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
@@ -24,7 +23,7 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#00000
         if (!isStoreOpen) {
             setIsClosedAnimation(true);
             setTimeout(() => setIsClosedAnimation(false), 1200);
-            onAdd(); // This will still trigger the toast in parent, but we show animation here too
+            onAdd(); // Triggers parent toast
             return;
         }
         setJustAdded(true);
@@ -34,9 +33,6 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#00000
 
     // Calculation of MRP and Selling Price
     const mrp = (product.mrp_paise || product.suggested_retail_price_paise || item.retail_price_paise || 0) / 100;
-    // For platform-managed rows, use the authoritative price from shopping_products.
-    // retail_price_paise on merchant_inventory can be stale between admin updates.
-    // See migration: 20260514_sync_platform_inventory_retail_price.sql
     const sellingPrice = item.is_platform_product
         ? ((product?.platform_price_paise ?? product?.suggested_retail_price_paise) || item.retail_price_paise || 0) / 100
         : (item.retail_price_paise || 0) / 100;
@@ -54,18 +50,18 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#00000
                 boxShadow: `0 4px 24px ${primaryColor}06`
             } : {}}
         >
-                <div
-                    className={`absolute top-0 left-0 text-white text-[10px] font-black px-2.5 py-1 rounded-br-xl z-10`}
-                    style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
-                >
-                    {discountPct}% OFF
-                </div>
+            <div
+                className={`absolute top-0 left-0 text-white text-[10px] font-black px-2.5 py-1 rounded-br-xl z-10`}
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+            >
+                {discountPct}% OFF
+            </div>
 
             <div
                 onClick={() => router.push(`/shop/product/${product.slug}`)}
                 className="relative cursor-pointer flex flex-col flex-1 p-2 md:p-3"
             >
-                {/* Product Image — subtle category-colored inner glow in dark mode */}
+                {/* Product Image */}
                 <div
                     className={`w-full aspect-square relative mb-3 rounded-xl flex items-center justify-center overflow-hidden ${isDark ? 'bg-[#0c0e14]' : 'bg-slate-50/50'}`}
                     style={isDark ? {
@@ -151,41 +147,20 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#00000
                         <OutOfStockBadge variant="soft" size="sm" />
                     </div>
                 ) : (
-                    <AnimatePresence mode="wait">
+                    <div className="w-full h-9 md:h-10 relative">
                         {justAdded ? (
-                            <motion.div
-                                key="success"
-                                initial={{ opacity: 0, scale: 0.98 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.98 }}
-                                transition={{ type: 'tween', duration: 0.2, ease: 'easeOut' }}
-                                className="flex items-center justify-center gap-1.5 text-white shadow-sm h-9 md:h-10 w-full rounded-xl"
+                            <div
+                                className="flex items-center justify-center gap-1.5 text-white shadow-sm h-full w-full rounded-xl transition-all duration-200"
                                 style={{ background: 'linear-gradient(135deg, #10b981, #34d399)', boxShadow: '0 4px 16px rgba(16,185,129,0.40)' }}
                             >
-                                <motion.div
-                                    initial={{ scale: 0.5, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    transition={{ type: "tween", duration: 0.2, delay: 0.05 }}
-                                >
-                                    <Check size={16} strokeWidth={3} />
-                                </motion.div>
-                                <motion.span
-                                    initial={{ opacity: 0, x: -6 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.12 }}
-                                    className="text-xs font-black"
-                                >
+                                <Check size={16} strokeWidth={3} className="scale-100 transition-transform duration-200" />
+                                <span className="text-xs font-black">
                                     Added!
-                                </motion.span>
-                            </motion.div>
+                                </span>
+                            </div>
                         ) : cartItem ? (
-                            <motion.div
-                                key="qty"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ type: 'tween', duration: 0.2, ease: 'easeOut' }}
-                                className="mx-auto flex items-center justify-between text-white rounded-xl overflow-hidden shadow-sm h-9 md:h-10 w-full"
+                            <div
+                                className="mx-auto flex items-center justify-between text-white rounded-xl overflow-hidden shadow-sm h-full w-full transition-all duration-200"
                                 style={{
                                     background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
                                     boxShadow: isDark ? `0 4px 16px ${primaryColor}30` : `0 2px 8px ${primaryColor}25`
@@ -197,37 +172,24 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#00000
                                 >
                                     <Minus size={14} strokeWidth={3} />
                                 </button>
-                                <motion.span
-                                    key={cartItem.quantity}
-                                    initial={{ scale: 1.4, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
+                                <span
                                     className="text-sm font-black w-8 text-center bg-black/10 h-full flex flex-col justify-center shadow-inner"
                                 >
                                     {cartItem.quantity}
-                                </motion.span>
+                                </span>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onAdd(); }}
                                     className="w-10 h-full flex items-center justify-center hover:bg-black/10 transition-colors active:bg-black/20"
                                 >
                                     <Plus size={14} strokeWidth={3} />
                                 </button>
-                            </motion.div>
+                            </div>
                         ) : (
-                            <motion.button
-                                key="add"
-                                initial={{ opacity: 0 }}
-                                animate={{
-                                    opacity: 1,
-                                    x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0
-                                }}
-                                exit={{ opacity: 0 }}
-                                whileTap={{ scale: 0.96 }}
-                                transition={{
-                                    x: { type: 'keyframes', duration: 0.3 },
-                                    default: { type: 'tween', duration: 0.2, ease: 'easeOut' }
-                                }}
+                            <button
                                 onClick={handleAdd}
-                                className={`w-full h-9 md:h-10 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-all active:scale-95 ${isDark
+                                className={`w-full h-full rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-all active:scale-[0.96] duration-200 ${
+                                    isClosedAnimation ? 'animate-bounce' : ''
+                                } ${isDark
                                     ? 'border text-white hover:bg-white/[0.08]'
                                     : 'border shadow-sm hover:brightness-110 text-white'
                                     }`}
@@ -243,9 +205,9 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#00000
                                 ) : (
                                     <Plus size={13} strokeWidth={3} />
                                 )}
-                            </motion.button>
+                            </button>
                         )}
-                    </AnimatePresence>
+                    </div>
                 )}
             </div>
         </div>

@@ -57,7 +57,7 @@ export default async function AdminMerchantDetailPage({ params }) {
     // Try to grab payouts/withdrawals
     let payouts = [];
     try {
-        const { data: p } = await supabase.from('payout_requests').select('*').eq('merchant_id', id).order('created_at', { ascending: false }).limit(5);
+        const { data: p } = await supabase.from('payout_requests').select('*').eq('merchant_id', id).order('requested_at', { ascending: false }).limit(5);
         if (p) payouts = p;
     } catch {
         // Ignored
@@ -121,10 +121,10 @@ export default async function AdminMerchantDetailPage({ params }) {
     try {
         const { data: ratings } = await supabase
             .from('merchant_ratings')
-            .select('rating')
+            .select('rating_value')
             .eq('merchant_id', id);
         if (ratings && ratings.length > 0) {
-            const sum = ratings.reduce((s, r) => s + (r.rating || 0), 0);
+            const sum = ratings.reduce((s, r) => s + (r.rating_value || 0), 0);
             ratingInfo = {
                 average: (sum / ratings.length).toFixed(1),
                 count: ratings.length
@@ -447,7 +447,7 @@ export default async function AdminMerchantDetailPage({ params }) {
                                     <div key={p.id} className="flex justify-between items-center py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors px-2 -mx-2 rounded-xl">
                                         <div>
                                             <p className="text-slate-900 font-black text-sm">₹{(p.amount / 100).toLocaleString('en-IN')}</p>
-                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{formatDate(p.created_at)}</p>
+                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{formatDate(p.requested_at)}</p>
                                         </div>
                                         <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${p.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : p.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
                                             {p.status}

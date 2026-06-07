@@ -16,6 +16,9 @@ import UdhariRequestModal from '../components/UdhariRequestModal';
 import PaymentMethodSelector from '@/components/giftcards/PaymentMethodSelector';
 
 
+import { isValidUUID } from '@/lib/utils';
+
+
 export default function GiftCardDetailPage({ params }) {
     const { user } = useAuth();
     const router = useRouter();
@@ -44,6 +47,14 @@ export default function GiftCardDetailPage({ params }) {
         let isMounted = true; // Prevent state updates on unmounted component
 
         async function fetchData() {
+            if (!isValidUUID(id)) {
+                if (isMounted) {
+                    setError('Invalid gift card ID');
+                    setLoading(false);
+                    setKycLoading(false);
+                }
+                return;
+            }
             try {
                 setLoading(true);
                 setKycLoading(true);

@@ -1,11 +1,13 @@
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
 import { notFound } from "next/navigation";
+import { isValidUUID } from "@/lib/utils";
 import { PLATFORM_CONFIG } from "@/lib/config/platform";
 import { getPlatformConfig } from "@/lib/config/platform-server";
 import InvoiceClient from "./InvoiceClient";
 
 export default async function InvoicePage({ params }) {
     const { orderId } = await params;
+    if (!isValidUUID(orderId)) return notFound();
     const supabase = await createServerSupabaseClient();
 
     const { data: { user } } = await supabase.auth.getUser();

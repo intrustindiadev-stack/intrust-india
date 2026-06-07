@@ -29,6 +29,8 @@ import { generateOrderInvoice } from '@/lib/invoiceGenerator';
 import { PLATFORM_CONFIG } from '@/lib/config/platform';
 import toast from 'react-hot-toast';
 
+import { isValidUUID } from '@/lib/utils';
+
 export default function TransactionDetailPage() {
     const router = useRouter();
     const params = useParams();
@@ -43,6 +45,16 @@ export default function TransactionDetailPage() {
 
     const fetchTransactionDetails = useCallback(async () => {
         if (!id) return;
+        
+        const isCart = id.startsWith('cart-');
+        const actualId = isCart ? id.replace('cart-', '') : id;
+
+        if (!isValidUUID(actualId)) {
+            setError('Invalid transaction ID format.');
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
@@ -50,9 +62,6 @@ export default function TransactionDetailPage() {
             // Fetch Transaction
             let data = null;
             let queryError = null;
-
-            const isCart = id.startsWith('cart-');
-            const actualId = isCart ? id.replace('cart-', '') : id;
 
             if (source === 'payout') {
                 const { data: payout, error: err } = await supabase

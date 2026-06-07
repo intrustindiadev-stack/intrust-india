@@ -10,6 +10,8 @@ export default function UserShopHeaderActions() {
     const { user, profile, loading } = useAuth();
     const [wishlistCount, setWishlistCount] = useState(0);
     const [cartCount, setCartCount] = useState(0);
+    const [walletBalance, setWalletBalance] = useState(0);
+    const [hasWallet, setHasWallet] = useState(false);
 
     useEffect(() => {
         if (!user) return;
@@ -18,7 +20,7 @@ export default function UserShopHeaderActions() {
 
         const fetchData = async () => {
             try {
-                const [wishlistResult, cartResult] = await Promise.all([
+                const [wishlistResult, cartResult, walletResult] = await Promise.all([
                     supabase
                         .from('user_wishlists')
                         .select('*', { count: 'exact', head: true })
@@ -26,12 +28,23 @@ export default function UserShopHeaderActions() {
                     supabase
                         .from('shopping_cart')
                         .select('*', { count: 'exact', head: true })
-                        .eq('customer_id', user.id)
+                        .eq('customer_id', user.id),
+                    supabase
+                        .from('customer_wallets')
+                        .select('balance_paise')
+                        .eq('user_id', user.id)
+                        .maybeSingle()
                 ]);
 
                 if (active) {
                     setWishlistCount(wishlistResult.count || 0);
                     setCartCount(cartResult.count || 0);
+                    if (walletResult.data) {
+                        setWalletBalance(walletResult.data.balance_paise || 0);
+                        setHasWallet(true);
+                    } else {
+                        setHasWallet(false);
+                    }
                 }
             } catch (err) {
                 console.error('Error fetching header counts:', err);
@@ -63,10 +76,25 @@ export default function UserShopHeaderActions() {
             )
             .subscribe();
 
+        const walletChannel = supabase
+            .channel(`wallet_changes_${user.id}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'customer_wallets', filter: `user_id=eq.${user.id}` },
+                (payload) => {
+                    if (payload.new) {
+                        setWalletBalance(payload.new.balance_paise || 0);
+                        setHasWallet(true);
+                    }
+                }
+            )
+            .subscribe();
+
         return () => {
             active = false;
             supabase.removeChannel(wishlistChannel);
             supabase.removeChannel(cartChannel);
+            supabase.removeChannel(walletChannel);
         };
     }, [user]);
 
@@ -109,7 +137,7 @@ export default function UserShopHeaderActions() {
             </Link>
 
             {/* Wallet balance chip */}
-            {profile && (
+            {hasWallet && (
                 <Link
                     href="/wallet"
                     className="hidden sm:flex items-center gap-2.5 bg-slate-900 dark:bg-white/[0.06] rounded-xl px-4 py-2 border border-transparent hover:border-slate-700 dark:hover:border-white/10 transition-all border-slate-800"
@@ -118,7 +146,7 @@ export default function UserShopHeaderActions() {
                     <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Balance</p>
                         <p className="text-sm font-black text-white dark:text-white leading-none">
-                            ₹{((profile.wallet_balance_paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
+                            ₹{((walletBalance || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
                         </p>
                     </div>
                 </Link>

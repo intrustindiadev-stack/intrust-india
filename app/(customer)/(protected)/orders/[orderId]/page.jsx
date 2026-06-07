@@ -1,11 +1,13 @@
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
 import { notFound } from "next/navigation";
+import { isValidUUID } from "@/lib/utils";
 import OrderDetailsClient from "./OrderDetailsClient";
 import Navbar from "@/components/layout/Navbar";
 import CustomerBottomNav from "@/components/layout/customer/CustomerBottomNav";
 
 export default async function OrderDetailsPage({ params }) {
     const { orderId } = await params;
+    if (!isValidUUID(orderId)) return notFound();
     const supabase = await createServerSupabaseClient();
 
     const { data: { user } } = await supabase.auth.getUser();

@@ -131,7 +131,7 @@ function CustomerProfileContent() {
                     // Count both coupon purchases AND shop orders
                     const [{ data: couponsData }, { data: shopOrdersData }] = await Promise.all([
                         supabase.from('coupons').select('face_value_paise, selling_price_paise, purchased_at').eq('purchased_by', authUser.id).eq('status', 'sold'),
-                        supabase.from('shopping_orders').select('id, total_amount_paise, created_at').eq('customer_id', authUser.id).neq('delivery_status', 'cancelled')
+                        supabase.from('shopping_order_groups').select('id, total_amount_paise, created_at').eq('customer_id', authUser.id).neq('delivery_status', 'cancelled')
                     ]);
                     if (!cancelled) {
                         const couponCount = couponsData?.length || 0;

@@ -36,6 +36,16 @@ export default async function MerchantHubPage() {
             .single()
     ]);
 
+    if (merchantsResult.error) {
+        console.error('Error fetching merchants in shop page:', merchantsResult.error);
+        throw new Error(`Failed to fetch merchants: ${merchantsResult.error.message}`);
+    }
+
+    if (platformResult.error) {
+        console.error('Error fetching platform settings in shop page:', platformResult.error);
+        throw new Error(`Failed to fetch platform settings: ${platformResult.error.message}`);
+    }
+
     let merchants = merchantsResult.data || [];
     const userIds = merchants.map(m => m.user_id).filter(Boolean);
     const merchantIds = merchants.map(m => m.id);
@@ -54,6 +64,14 @@ export default async function MerchantHubPage() {
             ? supabase.from('merchant_rating_stats').select('merchant_id, avg_rating, total_ratings').in('merchant_id', merchantIds)
             : Promise.resolve({ data: [] })
     ]);
+
+    if (profilesResult.error) {
+        console.warn('Error fetching profiles in shop page:', profilesResult.error);
+    }
+
+    if (ratingsResult.error) {
+        console.warn('Error fetching ratings in shop page:', ratingsResult.error);
+    }
 
     let platformStatus = { is_open: true };
     try {

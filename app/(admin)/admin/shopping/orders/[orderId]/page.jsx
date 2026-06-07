@@ -1,5 +1,6 @@
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabaseServer';
 import { redirect, notFound } from 'next/navigation';
+import { isValidUUID } from '@/lib/utils';
 import AdminOrderDetailClient from './AdminOrderDetailClient';
 import { PLATFORM_CONFIG } from '@/lib/config/platform';
 
@@ -7,6 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminOrderDetailPage({ params }) {
     const { orderId } = await params;
+    if (!isValidUUID(orderId)) return notFound();
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect('/login');

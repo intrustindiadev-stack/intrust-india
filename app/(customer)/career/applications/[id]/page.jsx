@@ -35,6 +35,9 @@ function DetailRow({ icon: Icon, label, value }) {
     );
 }
 
+import { isValidUUID } from '@/lib/utils';
+
+
 export default function ApplicationDetailPage({ params }) {
     const unwrappedParams = use(params);
     const appId = unwrappedParams.id;
@@ -46,6 +49,11 @@ export default function ApplicationDetailPage({ params }) {
 
     const fetchApplication = useCallback(async () => {
         if (!user) return;
+        if (!isValidUUID(appId)) {
+            setError('Application not found or you do not have permission to view it.');
+            setIsLoading(false);
+            return;
+        }
         setIsLoading(true);
         try {
             const { data, error: fetchError } = await supabase

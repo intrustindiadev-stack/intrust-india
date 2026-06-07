@@ -1,11 +1,13 @@
 import { createAdminClient } from "@/lib/supabaseServer";
 import { notFound } from "next/navigation";
+import { isValidUUID } from "@/lib/utils";
 import InvoiceClient from "@/app/(customer)/(protected)/orders/[orderId]/invoice/InvoiceClient";
 import { getPlatformConfig } from "@/lib/config/platform-server";
 
 export default async function AdminInvoicePage({ params }) {
     try {
         const { orderId } = await params;
+        if (!isValidUUID(orderId)) return notFound();
         
         console.log(`[AdminInvoicePage] Fetching invoice for orderId: ${orderId}`);
 

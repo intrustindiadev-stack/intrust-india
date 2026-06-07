@@ -9,6 +9,7 @@ export async function GET(request) {
         const limit = parseInt(searchParams.get('limit') || '24', 10);
         const search = searchParams.get('search') || '';
         const category = searchParams.get('category') || '';
+        const lastId = searchParams.get('lastId') || null;
 
         if (!merchantSlug) {
             return NextResponse.json({ error: 'merchantSlug is required' }, { status: 400 });
@@ -22,7 +23,8 @@ export async function GET(request) {
             p_offset: offset,
             p_limit: limit,
             p_search: search,
-            p_category: category
+            p_category: category,
+            p_last_id: lastId || null
         });
 
         if (error) {

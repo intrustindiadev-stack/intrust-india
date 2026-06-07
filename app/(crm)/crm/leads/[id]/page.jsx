@@ -31,6 +31,9 @@ const STATUS_CONFIG = {
     lost: { bg: 'bg-rose-50 text-rose-700 border-rose-100', dot: 'bg-rose-500' },
 };
 
+import { isValidUUID } from '@/lib/utils';
+
+
 export default function LeadDetailPage({ params }) {
     const router = useRouter();
     const unwrappedParams = use(params);
@@ -72,6 +75,10 @@ export default function LeadDetailPage({ params }) {
     }, []);
 
     const fetchData = useCallback(async () => {
+        if (!isValidUUID(id)) {
+            setIsLoading(false);
+            return;
+        }
         try {
             // 1. Fetch Lead Details
             const { data: leadData, error: leadError } = await supabase
@@ -152,6 +159,10 @@ export default function LeadDetailPage({ params }) {
     }, [id]);
 
     useEffect(() => {
+        if (!isValidUUID(id)) {
+            setIsLoading(false);
+            return;
+        }
         fetchData();
         fetchSalesTeam();
         const leadSub = supabase.channel(`lead_${id}`)
