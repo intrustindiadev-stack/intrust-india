@@ -38,7 +38,7 @@ export default function EmployeeProfilePage() {
                 </div>
                 <div className="divide-y divide-gray-50">
                     {[
-                        { icon: Mail, label: 'Email', value: profile?.email || displayEmail(user?.email) || '—' },
+                        { icon: Mail, label: 'Email', value: displayEmail(profile?.email) || displayEmail(user?.email) || '—' },
                         { icon: Phone, label: 'Phone', value: profile?.phone || '—' },
                         { icon: MapPin, label: 'City', value: profile?.city || '—' },
                         { icon: Building2, label: 'Department', value: profile?.department || 'General' },

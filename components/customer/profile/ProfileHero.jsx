@@ -1,6 +1,6 @@
 'use client';
 
-import { Mail, Phone, Camera, Loader2, Star } from 'lucide-react';
+import { Mail, Phone, Camera, Loader2, Star, Link as LinkIcon } from 'lucide-react';
 import GoldBadge from '@/components/ui/GoldBadge';
 import { useRef, useState } from 'react';
 import { createClient } from '@/lib/supabaseClient';
@@ -68,11 +68,12 @@ function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
     );
 }
 
-export default function ProfileHero({ user, profile, onAvatarUpload }) {
+export default function ProfileHero({ user, profile, onAvatarUpload, onLinkEmail }) {
     const name = authDisplayName(profile, user);
     const joinYear = new Date(profile?.created_at || user.created_at).getFullYear();
     const isGold = !!profile?.is_gold_verified;
     const kycStatus = profile?.kyc_status || 'not_started';
+    const safeEmail = displayEmail(user.email) || displayEmail(profile?.email);
 
     return (
         <div
@@ -131,9 +132,23 @@ export default function ProfileHero({ user, profile, onAvatarUpload }) {
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-[10px] uppercase font-black tracking-widest text-gray-400 dark:text-gray-500 mb-1">Primary Email</p>
-                        <p className={`text-sm font-bold truncate ${isGold ? 'text-amber-900 dark:text-amber-100/90' : 'text-gray-900 dark:text-gray-100'}`}>
-                            {displayEmail(user.email) || profile?.email || 'Not Linked'}
-                        </p>
+                        {safeEmail ? (
+                            <p className={`text-sm font-bold truncate ${isGold ? 'text-amber-900 dark:text-amber-100/90' : 'text-gray-900 dark:text-gray-100'}`}>
+                                {safeEmail}
+                            </p>
+                        ) : (
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="text-sm font-bold text-gray-400 dark:text-gray-500">Not Linked</span>
+                                <button
+                                    onClick={onLinkEmail}
+                                    className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                                    type="button"
+                                >
+                                    <LinkIcon size={12} />
+                                    Link Email
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 

@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { useSubscription } from '@/components/merchant/SubscriptionContext';
 import { useMerchant } from '@/hooks/useMerchant';
+import { displayEmail } from '@/lib/auth';
 
 const lockedTabIds = ['store', 'bank'];
 
@@ -177,7 +178,7 @@ export default function MerchantSettingsPage() {
                 gst_number: merchant?.gst_number || '',
                 pan_number: merchant?.pan_number || '',
                 business_phone: merchant?.business_phone || profile?.phone || '',
-                business_email: merchant?.business_email || user.email || '',
+                business_email: merchant?.business_email || displayEmail(user.email) || '',
             });
 
             // Fetch notification settings

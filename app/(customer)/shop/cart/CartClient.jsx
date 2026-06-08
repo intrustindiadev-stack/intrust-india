@@ -30,6 +30,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { displayEmail } from "@/lib/auth";
 
 const SabpaisaPaymentModal = React.lazy(() => import("@/components/payment/SabpaisaPaymentModal"));
 import { useTheme } from "@/lib/contexts/ThemeContext";
@@ -1250,7 +1251,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
               }
             }}
             amount={(draftAmount || finalPayable) / 100}
-            user={{ id: userId, email: profile?.email || '', phone: profile?.phone || '' }}
+            user={{ id: userId, email: displayEmail(profile?.email) || '', phone: profile?.phone || '' }}
             productInfo={{ title: `${itemCount} Item${itemCount > 1 ? 's' : ''} in Cart` }}
             metadata={{ type: 'cart_checkout', groupId: draftGroupId }}
             initialMethod="gateway"

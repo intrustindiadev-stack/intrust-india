@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useMerchant } from '@/hooks/useMerchant';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { displayEmail } from '@/lib/auth';
 import { useSubscription } from '@/components/merchant/SubscriptionContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -112,7 +113,7 @@ export default function ProfilePage() {
                 owner_name: merchant.owner_name || merchant.user_profiles?.full_name || '',
                 gst_number: merchant.gst_number || '',
                 business_phone: merchant.business_phone || merchant.user_profiles?.phone || '',
-                business_email: merchant.business_email || merchant.user_profiles?.email || '',
+                business_email: merchant.business_email || displayEmail(merchant.user_profiles?.email) || '',
                 business_address: merchant.business_address || '',
                 avatar_url: merchant.user_profiles?.avatar_url || '',
                 shopping_banner_url: merchant.shopping_banner_url || ''

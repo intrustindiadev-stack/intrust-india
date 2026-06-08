@@ -284,6 +284,10 @@ function CustomerProfileContent() {
                                         if (err) showToast(err, 'error');
                                         else if (url) saveField('avatar_url', url);
                                     }}
+                                    onLinkEmail={() => {
+                                        const el = document.getElementById('personal-info-form');
+                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                    }}
                                 />
                             </motion.div>
 

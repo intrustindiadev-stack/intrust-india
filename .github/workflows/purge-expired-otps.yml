@@ -1,0 +1,23 @@
+# ─── Required GitHub Repository Secrets ──────────────────────────────────────
+# Configure these in: GitHub → Settings → Secrets and variables → Actions
+#
+# CRON_SECRET — Bearer token for protected cron API routes
+# ─────────────────────────────────────────────────────────────────────────────
+name: Purge Expired OTPs
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Every 6 hours
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Purge Expired OTPs API
+        run: |
+          curl -f -X GET "https://intrustindia.com/api/cron/purge-expired-otps" \
+          -H "Accept: application/json" \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          --max-time 30 \
+          --connect-timeout 10

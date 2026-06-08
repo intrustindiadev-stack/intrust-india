@@ -301,13 +301,14 @@ function EmailLinkSection({ showToast, supabase }) {
         setError('');
         setLoading(true);
         try {
-            const { error: otpError } = await supabase.auth.signInWithOtp({
-                email,
-                options: { shouldCreateUser: false },
-            });
-            if (otpError) throw otpError;
+            const redirectTo = `${window.location.origin}/auth/callback?next=/profile`;
+            const { error: updateError } = await supabase.auth.updateUser(
+                { email },
+                { emailRedirectTo: redirectTo }
+            );
+            if (updateError) throw updateError;
             setStep('sent');
-            showToast?.('Magic link sent! Check your inbox.');
+            showToast?.('Confirmation email sent! Check your inbox.');
         } catch (err) {
             setError(err.message || 'Could not send link. Try again.');
         } finally {
@@ -346,9 +347,9 @@ function EmailLinkSection({ showToast, supabase }) {
                 <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Primary Email</p>
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                        Magic link sent to <span className="text-blue-500">{email}</span>
+                        Confirmation email sent to <span className="text-blue-500">{email}</span>
                     </p>
-                    <p className="text-[11px] text-gray-400 mt-1">Open the link in this browser to complete linking.</p>
+                    <p className="text-[11px] text-gray-400 mt-1">Click the link in the email to confirm linking.</p>
                 </div>
                 <button onClick={() => { setStep('idle'); setEmail(''); setError(''); }}
                     className="mt-1 px-3 py-2 text-[10px] font-black text-gray-400 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 uppercase tracking-widest transition-all">
@@ -367,7 +368,7 @@ function EmailLinkSection({ showToast, supabase }) {
                 </div>
                 <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Link Email Address</p>
-                    <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Receive a magic link to verify</p>
+                    <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Receive a confirmation link to verify</p>
                 </div>
             </div>
             <div className="space-y-4">
@@ -386,7 +387,7 @@ function EmailLinkSection({ showToast, supabase }) {
                         className="flex-1 py-3.5 bg-black text-white text-[11px] font-black rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-gray-900 transition-all uppercase tracking-[0.15em] shadow-2xl"
                     >
                         {loading ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
-                        Send Magic Link
+                        Send Confirmation Link
                     </button>
                     <button onClick={() => { setStep('idle'); setEmail(''); setError(''); }}
                         className="px-6 py-3.5 bg-gray-100 dark:bg-white/5 text-gray-500 text-[11px] font-black rounded-2xl transition-all uppercase tracking-widest">
@@ -408,7 +409,7 @@ export default function PersonalInfoForm({ user, profile, onSave, onPhoneVerifie
     const safeEmail = displayEmail(user?.email);
 
     return (
-        <div className="bg-white dark:bg-gray-900/50 backdrop-blur-xl rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-xl relative overflow-hidden transition-all duration-500">
+        <div id="personal-info-form" className="bg-white dark:bg-gray-900/50 backdrop-blur-xl rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-xl relative overflow-hidden transition-all duration-500">
             <div className="flex items-center gap-4 mb-10">
                 <div className="w-11 h-11 rounded-[1.25rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/10">
                     <User size={20} className="text-white" />

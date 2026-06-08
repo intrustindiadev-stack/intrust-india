@@ -23,10 +23,15 @@ export async function POST(request) {
 
         const supabase = createAdminClient();
 
+        // Retries are handled centrally in supabaseCustomFetch (3 attempts, 4s each, 10s ceiling).
+        // Kept as a pass-through so all call sites remain unchanged for easy rollback.
+        const executeWithRetry = (queryFn) => queryFn();
+
         // 1b. Check user existence to prevent account enumeration / spam
         if (flow) {
-            const { data: userId, error: checkError } = await supabase
-                .rpc('get_user_id_by_phone', { phone_number: phone });
+            const { data: userId, error: checkError } = await executeWithRetry(() =>
+                supabase.rpc('get_user_id_by_phone', { phone_number: phone })
+            );
 
             if (checkError) {
                 console.error('[send-otp] Database error checking user existence:', checkError);
@@ -52,12 +57,14 @@ export async function POST(request) {
         const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
 
         // Check recent attempts in last 10 minutes
-        const { data: recentOtps, error: countError } = await supabase
-            .from('otp_codes')
-            .select('created_at')
-            .eq('phone', phone)
-            .gt('created_at', tenMinutesAgo.toISOString())
-            .order('created_at', { ascending: false });
+        const { data: recentOtps, error: countError } = await executeWithRetry(() =>
+            supabase
+                .from('otp_codes')
+                .select('created_at')
+                .eq('phone', phone)
+                .gt('created_at', tenMinutesAgo.toISOString())
+                .order('created_at', { ascending: false })
+        );
 
         if (countError) {
             console.error('Database error checking rate limit:', countError);
@@ -94,13 +101,15 @@ export async function POST(request) {
         // Expires in 5 minutes
         const expiresAt = new Date(now.getTime() + 5 * 60 * 1000);
 
-        const { error: insertError } = await supabase
-            .from('otp_codes')
-            .insert({
-                phone,
-                otp_hash: otpHash,
-                expires_at: expiresAt.toISOString(),
-            });
+        const { error: insertError } = await executeWithRetry(() =>
+            supabase
+                .from('otp_codes')
+                .insert({
+                    phone,
+                    otp_hash: otpHash,
+                    expires_at: expiresAt.toISOString(),
+                })
+        );
 
         if (insertError) {
             console.error('Database error storing OTP:', insertError);
@@ -118,11 +127,13 @@ export async function POST(request) {
             console.error('SMS sending failed:', smsResult.error);
 
             // Delete the OTP record we just created so it doesn't count against rate limits
-            await supabase
-                .from('otp_codes')
-                .delete()
-                .eq('phone', phone)
-                .eq('otp_hash', otpHash);
+            await executeWithRetry(() =>
+                supabase
+                    .from('otp_codes')
+                    .delete()
+                    .eq('phone', phone)
+                    .eq('otp_hash', otpHash)
+            ).catch((err) => console.error('[send-otp] Failed to delete OTP record after SMS failure:', err));
 
             return NextResponse.json(
                 { success: false, error: smsResult.error || 'Failed to send OTP. Please try again.' },
