@@ -27,13 +27,15 @@ export async function POST(request) {
             email,
             address,
             bankAccount,
+            bankAccountName,
+            bankName,
             ifscCode,
             panCard,
             merchantReferralCode,
         } = formData;
 
         // Validate required fields
-        if (!businessName || !ownerName || !phone || !email || !bankAccount || !ifscCode || !panCard) {
+        if (!businessName || !ownerName || !phone || !email || !bankAccount || !bankAccountName || !ifscCode || !panCard) {
             return NextResponse.json(
                 { error: 'Missing required fields. Please fill in all required information.' },
                 { status: 400 }
@@ -133,15 +135,22 @@ export async function POST(request) {
                         business_phone: phone,
                         business_email: email,
                         business_address: address,
+                        bank_account_name: bankAccountName,
                         bank_account_number: bankAccount,
                         bank_ifsc_code: ifscCode,
+                        bank_name: bankName || null,
                         pan_number: panCard,
                         status: finalStatus,
                         pan_verified: panVerified,
                         bank_verified: bankVerified,
                         gstin_verified: gstVerified,
                         pan_data: null,
-                        bank_data: null,
+                        bank_data: {
+                            account_holder_name: bankAccountName,
+                            account_number: bankAccount,
+                            ifsc: ifscCode,
+                            bank_name: bankName || null,
+                        },
                         gstin_data: gstResult?.data || null,
                         referred_by_merchant_id: referrerMerchantId,
                         referral_code: generatedCode,

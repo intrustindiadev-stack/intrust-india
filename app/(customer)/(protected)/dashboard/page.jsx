@@ -206,7 +206,7 @@ export default function CustomerDashboardPage() {
             toast.success('Elite Gold activated successfully via wallet!');
 
             // Redirect to premium success page with animation
-            router.push(`/payment/success?txnId=GOLD_${pkg.id}&amount=${pkg.price}`);
+            router.push(`/payment/success?txnId=WALLET_${pkg.id}&amount=${pkg.price}&type=GOLD_SUBSCRIPTION`);
 
             setShowPackages(false);
         } catch (err) {

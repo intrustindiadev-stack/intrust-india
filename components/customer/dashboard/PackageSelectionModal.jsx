@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Wallet, Star, Smartphone, CheckCircle, X, ChevronRight, CreditCard, Sparkles, AlertCircle } from 'lucide-react';
+import { GOLD_SUBSCRIPTION_PLANS } from '@/lib/constants';
 
 export default function PackageSelectionModal({ showPackages, setShowPackages, handleBuyPackage, userData }) {
     const [selectedPackage, setSelectedPackage] = useState(null);
 
-    // Hardcode packages within component for easy access
-    const packages = [
-        { id: 'GOLD_1M', label: '1 MONTH ELITE', price: 299, cashback: 199, popular: false },
-        { id: 'GOLD_3M', label: '3 MONTHS ELITE', price: 799, cashback: 499, popular: true },
-        { id: 'GOLD_1Y', label: '1 YEAR ELITE', price: 2499, cashback: 1499, popular: false },
-    ];
+    // Dynamic packages from canonical server source of truth
+    const packages = GOLD_SUBSCRIPTION_PLANS.map(plan => ({
+        id: plan.key,
+        label: plan.key === 'GOLD_1M' ? '1 MONTH ELITE' : plan.key === 'GOLD_3M' ? '3 MONTHS ELITE' : '1 YEAR ELITE',
+        price: plan.price,
+        cashback: plan.cashback,
+        popular: plan.key === 'GOLD_3M'
+    }));
 
     // Prevent background scrolling when modal is open
     useEffect(() => {

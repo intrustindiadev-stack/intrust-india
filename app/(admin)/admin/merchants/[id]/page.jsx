@@ -352,7 +352,7 @@ export default async function AdminMerchantDetailPage({ params }) {
                             <div className="space-y-1">
                                 <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">IFSC Code Identifier</label>
                                 <div className="font-mono font-black text-slate-900 p-4 bg-slate-50/50 border border-slate-100 rounded-[1.25rem] shadow-inner text-base sm:text-lg tracking-widest uppercase">
-                                    {merchant.ifsc_code || 'N/A'}
+                                    {merchant.bank_ifsc_code || merchant.bank_data?.ifsc || merchant.bank_data?.ifsc_code || 'N/A'}
                                 </div>
                             </div>
                         </div>

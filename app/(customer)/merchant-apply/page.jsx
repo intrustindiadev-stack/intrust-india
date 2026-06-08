@@ -117,7 +117,7 @@ function MerchantApplyPageInner() {
     const [formData, setFormData] = useState({
         businessName: '', gstNumber: '', ownerName: '',
         phone: '', email: '', address: '',
-        bankAccount: '', ifscCode: '', panCard: '',
+        bankAccount: '', confirmBankAccount: '', bankAccountName: '', bankName: '', ifscCode: '', panCard: '',
         merchantReferralCode: '',
     });
 
@@ -170,6 +170,13 @@ function MerchantApplyPageInner() {
 
     const handleFormSubmit = async (e) => {
         if (e && e.preventDefault) e.preventDefault();
+
+        const step2Error = validateStep2();
+        if (step2Error) {
+            setError(step2Error);
+            return;
+        }
+
         setLoading(true);
         setError('');
 
@@ -229,9 +236,19 @@ function MerchantApplyPageInner() {
     };
 
     const validateStep2 = () => {
+        if (!formData.bankAccountName || !formData.bankAccountName.trim()) {
+            toast.error("Please enter the Account Holder Name.");
+            return "Please enter the Account Holder Name.";
+        }
+
         if (!formData.bankAccount || !formData.ifscCode) {
             toast.error("Please enter your Bank Account details.");
             return "Please enter your Bank Account details.";
+        }
+
+        if (formData.bankAccount !== formData.confirmBankAccount) {
+            toast.error("Account numbers do not match.");
+            return "Account numbers do not match.";
         }
 
         if (!formData.panCard) {
@@ -511,6 +528,16 @@ function MerchantApplyPageInner() {
                                     </div>
 
                                     <SmoothInput
+                                        label="Account Holder Name"
+                                        type="text"
+                                        value={formData.bankAccountName}
+                                        onChange={e => {
+                                            setFormData({ ...formData, bankAccountName: e.target.value });
+                                        }}
+                                        autoFocus
+                                        icon={Users}
+                                    />
+                                    <SmoothInput
                                         label="Account Number"
                                         type="text"
                                         inputMode="numeric"
@@ -519,7 +546,17 @@ function MerchantApplyPageInner() {
                                         onChange={e => {
                                             setFormData({ ...formData, bankAccount: e.target.value });
                                         }}
-                                        autoFocus
+                                        icon={CreditCard}
+                                    />
+                                    <SmoothInput
+                                        label="Confirm Account Number"
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={formData.confirmBankAccount}
+                                        onChange={e => {
+                                            setFormData({ ...formData, confirmBankAccount: e.target.value });
+                                        }}
                                         icon={CreditCard}
                                     />
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -532,14 +569,22 @@ function MerchantApplyPageInner() {
                                             icon={Banknote}
                                         />
                                         <SmoothInput
-                                            label="PAN Number"
-                                            value={formData.panCard}
+                                            label="Bank Name"
+                                            value={formData.bankName}
                                             onChange={e => {
-                                                setFormData({ ...formData, panCard: e.target.value.toUpperCase() });
+                                                setFormData({ ...formData, bankName: e.target.value });
                                             }}
-                                            icon={FileText}
+                                            icon={Building2}
                                         />
                                     </div>
+                                    <SmoothInput
+                                        label="PAN Number"
+                                        value={formData.panCard}
+                                        onChange={e => {
+                                            setFormData({ ...formData, panCard: e.target.value.toUpperCase() });
+                                        }}
+                                        icon={FileText}
+                                    />
 
                                     {error && (
                                         <div className="p-4 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium border border-red-100 dark:border-red-500/20">
@@ -610,8 +655,8 @@ function MerchantApplyPageInner() {
                         </button>
                         <button
                             onClick={step === 2 ? handleFormSubmit : nextStep}
-                            disabled={loading || (step === 2 && (!formData.bankAccount || !formData.ifscCode || !formData.panCard))}
-                            className={`flex-1 flex gap-3 justify-center items-center py-5 rounded-2xl text-white dark:text-[#020617] font-black shadow-lg transition-all text-xl ${(loading || (step === 2 && (!formData.bankAccount || !formData.ifscCode || !formData.panCard))) ? 'bg-slate-200 dark:bg-white/5 shadow-none text-slate-400 cursor-not-allowed' : 'bg-[#D4AF37] shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/30 hover:scale-[1.02] active:scale-[0.98] gold-glow'}`}
+                            disabled={loading || (step === 2 && (!formData.bankAccountName || !formData.bankAccount || !formData.confirmBankAccount || !formData.ifscCode || !formData.panCard))}
+                            className={`flex-1 flex gap-3 justify-center items-center py-5 rounded-2xl text-white dark:text-[#020617] font-black shadow-lg transition-all text-xl ${(loading || (step === 2 && (!formData.bankAccountName || !formData.bankAccount || !formData.confirmBankAccount || !formData.ifscCode || !formData.panCard))) ? 'bg-slate-200 dark:bg-white/5 shadow-none text-slate-400 cursor-not-allowed' : 'bg-[#D4AF37] shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/30 hover:scale-[1.02] active:scale-[0.98] gold-glow'}`}
                         >
                             {loading && <Loader2 className="animate-spin" size={24} />}
                             {loading ? 'Submitting...' : step === 2 ? 'Submit Application' : 'Continue'}
