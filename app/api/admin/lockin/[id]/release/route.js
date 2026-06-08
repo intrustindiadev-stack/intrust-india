@@ -36,8 +36,19 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
         }
 
+        // Calculate accumulated interest
+        const principalPaise = lockin.amount_paise;
+        const rate = (lockin.interest_rate || lockin.interest_rate_percent || 0) / 100;
+        let interestPaise = 0;
+        if (lockin.start_date) {
+            const startDate = new Date(lockin.start_date);
+            const daysElapsed = Math.max(0, (new Date() - startDate) / (1000 * 60 * 60 * 24));
+            interestPaise = Math.round(principalPaise * (rate / 365) * daysElapsed);
+        }
+        const totalAmountToRelease = principalPaise + interestPaise;
+
         // 1. Update merchant wallet balance
-        const newBalance = (merchant.wallet_balance_paise || 0) + lockin.amount_paise;
+        const newBalance = (merchant.wallet_balance_paise || 0) + totalAmountToRelease;
         const { error: updateMerError } = await supabase
             .from('merchants')
             .update({ wallet_balance_paise: newBalance })
@@ -51,10 +62,10 @@ export async function POST(request, { params }) {
             .insert({
                 merchant_id: lockin.merchant_id,
                 transaction_type: 'wallet_topup',
-                amount_paise: lockin.amount_paise,
+                amount_paise: totalAmountToRelease,
                 balance_after_paise: newBalance,
-                description: 'Lockin Released to Wallet',
-                metadata: { reference_id: id, type: 'LOCKIN_RELEASE' }
+                description: 'Lockin + Interest Released to Wallet',
+                metadata: { reference_id: id, type: 'LOCKIN_RELEASE', principal: principalPaise, interest: interestPaise }
             });
 
         if (txError) throw txError;
@@ -68,11 +79,10 @@ export async function POST(request, { params }) {
         if (updateLockinError) throw updateLockinError;
 
         // 4. Send notification
-        try {
             await supabase.from('notifications').insert({
                 user_id: merchant.user_id,
                 title: 'Lockin Released',
-                body: `₹${(lockin.amount_paise / 100).toLocaleString('en-IN')} from your Lockin has been released to your portfolio.`,
+                body: `₹${(totalAmountToRelease / 100).toLocaleString('en-IN')} (including interest) from your Lockin has been released to your portfolio.`,
                 type: 'success',
                 reference_id: id,
                 reference_type: 'lockin_balance'

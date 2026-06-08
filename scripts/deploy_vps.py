@@ -53,7 +53,7 @@ def build_local():
     result = subprocess.run(
         ["npm", "run", "build"],
         cwd=PROJECT_DIR,
-        shell=False
+        shell=(os.name == 'nt')
     )
     if result.returncode != 0:
         print("\n[ERROR] Local build failed. Aborting.")

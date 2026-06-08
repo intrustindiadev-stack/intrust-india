@@ -22,7 +22,7 @@ export default function WalletCard({ setIsOpen }) {
             <div className="flex items-center justify-between mb-0.5">
                 <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-1.5">
                     <Wallet size={10} />
-                    Wallet
+                    Balance
                 </p>
                 {!loading && (
                     <div className="flex items-center gap-1">

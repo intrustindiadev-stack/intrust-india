@@ -36,8 +36,17 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
         }
 
+        // Fetch associated orders to calculate profit
+        const { data: orders } = await supabase
+            .from('merchant_investment_orders')
+            .select('profit_paise')
+            .eq('investment_id', id);
+        
+        const totalProfitPaise = orders?.reduce((sum, order) => sum + (order.profit_paise || 0), 0) || 0;
+        const totalAmountToRelease = investment.amount_paise + totalProfitPaise;
+
         // 1. Update merchant wallet balance
-        const newBalance = (merchant.wallet_balance_paise || 0) + investment.amount_paise;
+        const newBalance = (merchant.wallet_balance_paise || 0) + totalAmountToRelease;
         const { error: updateMerError } = await supabase
             .from('merchants')
             .update({ wallet_balance_paise: newBalance })
@@ -51,10 +60,10 @@ export async function POST(request, { params }) {
             .insert({
                 merchant_id: investment.merchant_id,
                 transaction_type: 'wallet_topup',
-                amount_paise: investment.amount_paise,
+                amount_paise: totalAmountToRelease,
                 balance_after_paise: newBalance,
-                description: 'AI Grow Investment Released to Wallet',
-                metadata: { reference_id: id, type: 'AI_GROW_RELEASE' }
+                description: 'AI Grow Investment + Profit Released to Wallet',
+                metadata: { reference_id: id, type: 'AI_GROW_RELEASE', principal: investment.amount_paise, profit: totalProfitPaise }
             });
 
         if (txError) throw txError;
@@ -68,11 +77,10 @@ export async function POST(request, { params }) {
         if (updateInvError) throw updateInvError;
 
         // 4. Send notification
-        try {
             await supabase.from('notifications').insert({
                 user_id: merchant.user_id,
                 title: 'Investment Released',
-                body: `₹${(investment.amount_paise / 100).toLocaleString('en-IN')} from your AI Grow investment has been released to your portfolio.`,
+                body: `₹${(totalAmountToRelease / 100).toLocaleString('en-IN')} (including profits) from your AI Grow investment has been released to your portfolio.`,
                 type: 'success',
                 reference_id: id,
                 reference_type: 'investment'
