@@ -111,3 +111,72 @@ export async function GET(request) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }
+
+export async function PATCH(request) {
+    try {
+        const { user, profile, admin: supabase } = await getAuthUser(request);
+        if (!user || !['admin', 'super_admin'].includes(profile?.role)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { id, status } = await request.json();
+        if (!id || !status) return NextResponse.json({ error: 'ID and Status are required' }, { status: 400 });
+
+        const updateData = { status };
+        
+        if (status === 'active') {
+            updateData.start_date = new Date().toISOString();
+            // Need to update end_date based on lockin_period_months
+            const { data: lockin } = await supabase.from('merchant_lockin_balances').select('lockin_period_months').eq('id', id).single();
+            if (lockin) {
+                const endDate = new Date();
+                endDate.setMonth(endDate.getMonth() + lockin.lockin_period_months);
+                updateData.end_date = endDate.toISOString();
+            }
+            updateData.admin_id = user.id;
+        }
+
+        const { data, error } = await supabase
+            .from('merchant_lockin_balances')
+            .update(updateData)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Notify Merchant
+        try {
+            const { data: lockin } = await supabase
+                .from('merchant_lockin_balances')
+                .select('merchant_id, amount_paise')
+                .eq('id', id)
+                .single();
+
+            const { data: merchant } = await supabase
+                .from('merchants')
+                .select('user_id')
+                .eq('id', lockin.merchant_id)
+                .single();
+
+            if (merchant) {
+                await supabase.from('notifications').insert({
+                    user_id: merchant.user_id,
+                    title: status === 'active' ? 'Lockin Approved ✅' : 'Lockin Update',
+                    body: status === 'active'
+                        ? `Your lockin request for ₹${(lockin.amount_paise / 100).toLocaleString('en-IN')} has been approved and is now active.`
+                        : `Your lockin request for ₹${(lockin.amount_paise / 100).toLocaleString('en-IN')} has been ${status}.`,
+                    type: status === 'active' ? 'success' : 'info',
+                    reference_id: id,
+                    reference_type: 'lockin_balance'
+                });
+            }
+        } catch (notifErr) {
+            console.error('Notification error:', notifErr);
+        }
+
+        return NextResponse.json({ data });
+    } catch (err) {
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+}

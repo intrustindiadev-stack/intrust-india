@@ -5,7 +5,7 @@ import {
     AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { TrendingUp, IndianRupee, BarChart2, PieChart as PieIcon } from 'lucide-react';
+import { TrendingUp, IndianRupee, BarChart2, PieChart as PieIcon, MapPin } from 'lucide-react';
 
 const PERIOD_OPTIONS = [
     { label: '7D', days: 7 },
@@ -68,6 +68,18 @@ export default function InvestmentAnalytics({ orders, investments = [] }) {
         return Object.entries(counts).map(([name, value]) => ({ name, value }));
     }, [investments]);
 
+    // Locations donut
+    const locationData = useMemo(() => {
+        const counts = {};
+        filteredOrders.forEach(o => {
+            const loc = o.location ? o.location.split(',')[0].trim() : 'Other';
+            counts[loc] = (counts[loc] || 0) + (o.amount_paise || 0) / 100;
+        });
+        return Object.entries(counts).map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 5); // top 5 locations
+    }, [filteredOrders]);
+
     const totalProfit = filteredOrders.reduce((s, o) => s + (o.profit_paise || 0), 0) / 100;
     const totalVolume = filteredOrders.reduce((s, o) => s + (o.amount_paise || 0), 0) / 100;
 
@@ -83,6 +95,7 @@ export default function InvestmentAnalytics({ orders, investments = [] }) {
     const charts = [
         { id: 'profit', label: 'Profit', icon: TrendingUp },
         { id: 'volume', label: 'Volume', icon: BarChart2 },
+        { id: 'location', label: 'Locations', icon: MapPin },
         { id: 'portfolio', label: 'Portfolio', icon: PieIcon },
     ];
 
@@ -109,7 +122,7 @@ export default function InvestmentAnalytics({ orders, investments = [] }) {
                     })}
                 </div>
 
-                {/* Period filter (only for profit/volume charts) */}
+                {/* Period filter (only for profit/volume/location charts) */}
                 {activeChart !== 'portfolio' && (
                     <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl">
                         {PERIOD_OPTIONS.map(p => (
@@ -175,6 +188,32 @@ export default function InvestmentAnalytics({ orders, investments = [] }) {
                             <Bar dataKey="Volume" name="Trade Volume" fill="#6366F1" radius={[6, 6, 0, 0]} />
                             <Bar dataKey="Profit" name="Profit" fill="#10B981" radius={[6, 6, 0, 0]} />
                         </BarChart>
+                    ) : activeChart === 'location' ? (
+                        <PieChart>
+                            <Pie
+                                data={locationData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius="45%"
+                                outerRadius="80%"
+                                paddingAngle={2}
+                                dataKey="value"
+                            >
+                                {locationData.map((entry, index) => {
+                                    const colors = ['#6366F1', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#94A3B8'];
+                                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                                })}
+                            </Pie>
+                            <Tooltip formatter={(val) => [`₹${val.toLocaleString('en-IN')}`, 'Trade Volume']} />
+                            <Legend
+                                formatter={(value) => <span className="text-xs font-bold text-slate-600 capitalize">{value}</span>}
+                                iconType="circle"
+                                iconSize={8}
+                                layout="vertical"
+                                verticalAlign="middle"
+                                align="right"
+                            />
+                        </PieChart>
                     ) : (
                         <PieChart>
                             <Pie

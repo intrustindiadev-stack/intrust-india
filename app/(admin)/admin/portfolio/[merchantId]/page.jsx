@@ -81,6 +81,64 @@ export default function MerchantPortfolioPage({ params }) {
         }
     };
 
+    const handleUpdateStatus = async (id, type, newStatus) => {
+        if (!confirm(`Are you sure you want to mark this request as ${newStatus}?`)) return;
+        
+        setProcessingId(id);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const endpoint = type === 'lockin' 
+                ? `/api/admin/lockin`
+                : `/api/admin/investments`;
+                
+            const res = await fetch(endpoint, {
+                method: 'PATCH',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}` 
+                },
+                body: JSON.stringify({ id, status: newStatus })
+            });
+            if (!res.ok) {
+                const d = await res.json();
+                throw new Error(d.error);
+            }
+            toast.success(`Marked as ${newStatus}`);
+            fetchPortfolio();
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleSettleCash = async (id, type) => {
+        if (!confirm(`Are you sure you want to settle this ${type === 'lockin' ? 'Lockin' : 'Investment'} in cash? This will mark it as completed without crediting the merchant's wallet.`)) return;
+        
+        setProcessingId(id);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const endpoint = type === 'lockin' 
+                ? `/api/admin/lockin/${id}/settle-cash`
+                : `/api/admin/investments/${id}/settle-cash`;
+                
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            if (!res.ok) {
+                const d = await res.json();
+                throw new Error(d.error);
+            }
+            toast.success(`Settled in cash successfully`);
+            fetchPortfolio();
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
     if (loading || !data) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50/50">
@@ -223,7 +281,25 @@ export default function MerchantPortfolioPage({ params }) {
                                             </span>
                                         </div>
                                         
-                                        <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
+                                        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-slate-50">
+                                            {inv.status === 'pending' && (
+                                                <>
+                                                    <button 
+                                                        onClick={() => handleUpdateStatus(inv.id, 'ai_grow', 'active')}
+                                                        disabled={processingId === inv.id}
+                                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-bold transition-all"
+                                                    >
+                                                        {processingId === inv.id ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle size={14} />} Approve
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleUpdateStatus(inv.id, 'ai_grow', 'rejected')}
+                                                        disabled={processingId === inv.id}
+                                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white rounded-xl text-xs font-bold transition-all"
+                                                    >
+                                                        {processingId === inv.id ? <RefreshCw size={14} className="animate-spin" /> : <XCircle size={14} />} Reject
+                                                    </button>
+                                                </>
+                                            )}
                                             {inv.status === 'active' && (
                                                 <>
                                                     <button 
@@ -238,6 +314,13 @@ export default function MerchantPortfolioPage({ params }) {
                                                         className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
                                                     >
                                                         {processingId === inv.id ? <RefreshCw size={14} className="animate-spin" /> : <Wallet size={14} />} Release
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleSettleCash(inv.id, 'ai_grow')}
+                                                        disabled={processingId === inv.id}
+                                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                                                    >
+                                                        {processingId === inv.id ? <RefreshCw size={14} className="animate-spin" /> : <Briefcase size={14} />} Settled in Cash
                                                     </button>
                                                 </>
                                             )}
@@ -343,15 +426,42 @@ export default function MerchantPortfolioPage({ params }) {
                                                 </div>
                                             )}
 
-                                            <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
+                                            <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-slate-50">
+                                                {lockin.status === 'pending' && (
+                                                    <>
+                                                        <button 
+                                                            onClick={() => handleUpdateStatus(lockin.id, 'lockin', 'active')}
+                                                            disabled={processingId === lockin.id}
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-bold transition-all"
+                                                        >
+                                                            {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle size={14} />} Approve
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleUpdateStatus(lockin.id, 'lockin', 'rejected')}
+                                                            disabled={processingId === lockin.id}
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white rounded-xl text-xs font-bold transition-all"
+                                                        >
+                                                            {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <XCircle size={14} />} Reject
+                                                        </button>
+                                                    </>
+                                                )}
                                                 {lockin.status === 'active' && (
-                                                    <button 
-                                                        onClick={() => handleReleaseInvestment(lockin.id, 'lockin')}
-                                                        disabled={processingId === lockin.id}
-                                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-amber-500/20"
-                                                    >
-                                                        {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <Wallet size={14} />} Release Lockin to Wallet
-                                                    </button>
+                                                    <>
+                                                        <button 
+                                                            onClick={() => handleReleaseInvestment(lockin.id, 'lockin')}
+                                                            disabled={processingId === lockin.id}
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-amber-500/20"
+                                                        >
+                                                            {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <Wallet size={14} />} Release Lockin to Wallet
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleSettleCash(lockin.id, 'lockin')}
+                                                            disabled={processingId === lockin.id}
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                                                        >
+                                                            {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <Briefcase size={14} />} Settled in Cash
+                                                        </button>
+                                                    </>
                                                 )}
                                             </div>
                                         </div>
