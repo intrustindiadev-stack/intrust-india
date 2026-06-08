@@ -77,6 +77,7 @@ export async function POST(request, { params }) {
         if (updateInvError) throw updateInvError;
 
         // 4. Send notification
+        try {
             await supabase.from('notifications').insert({
                 user_id: merchant.user_id,
                 title: 'Investment Released',

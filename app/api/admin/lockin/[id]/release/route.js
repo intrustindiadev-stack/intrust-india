@@ -79,6 +79,7 @@ export async function POST(request, { params }) {
         if (updateLockinError) throw updateLockinError;
 
         // 4. Send notification
+        try {
             await supabase.from('notifications').insert({
                 user_id: merchant.user_id,
                 title: 'Lockin Released',
