@@ -37,13 +37,11 @@ export default async function MerchantHubPage() {
     ]);
 
     if (merchantsResult.error) {
-        console.error('Error fetching merchants in shop page:', merchantsResult.error);
-        throw new Error(`Failed to fetch merchants: ${merchantsResult.error.message}`);
+        console.error('Error fetching merchants in shop page (will render empty):', merchantsResult.error);
     }
 
     if (platformResult.error) {
-        console.error('Error fetching platform settings in shop page:', platformResult.error);
-        throw new Error(`Failed to fetch platform settings: ${platformResult.error.message}`);
+        console.error('Error fetching platform settings in shop page (will use defaults):', platformResult.error);
     }
 
     let merchants = merchantsResult.data || [];
