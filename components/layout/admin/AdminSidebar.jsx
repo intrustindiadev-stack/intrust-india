@@ -49,6 +49,7 @@ const navigationGroups = [
             { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
             { name: 'Tasks', href: '/admin/tasks', icon: ClipboardList },
             { name: 'Notifications', href: '/admin/notifications', icon: Bell },
+            { name: 'WhatsApp Health', href: '/admin/whatsapp-health', icon: Activity },
         ]
     },
     {

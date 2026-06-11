@@ -61,6 +61,34 @@ function normalize(str) {
 }
 
 // -------------------------------------------------------------------
+// Status Mapping Helper
+// -------------------------------------------------------------------
+const STATUS_HIERARCHY = {
+  pending: 0,
+  sent: 1,
+  delivered: 2,
+  read: 3,
+  failed: 4,
+  undeliverable: 4
+};
+
+function mapOmniflowStatus(rawStatus, errorCode) {
+  const s = String(rawStatus || '').toLowerCase();
+  if (s === 'sent') return 'sent';
+  if (s === 'delivered') return 'delivered';
+  if (s === 'read') return 'read';
+  if (s === 'failed' || s === 'error' || s === 'undeliverable') {
+    const code = String(errorCode || '').toLowerCase();
+    // Common undeliverable error codes or explicit undeliverable status
+    if (s === 'undeliverable' || code === '131026') {
+      return 'undeliverable';
+    }
+    return 'failed';
+  }
+  return null;
+}
+
+// -------------------------------------------------------------------
 // Merchant quick-reply map (module-level, built once)
 // -------------------------------------------------------------------
 const MERCHANT_QUICK_REPLIES = {
@@ -168,7 +196,7 @@ async function getFinancialContext(userId) {
 // -------------------------------------------------------------------
 // Log helper
 // -------------------------------------------------------------------
-async function logMessage({ userId, phoneHash, wamid, direction, channel, status, contentPreview, audience = 'customer' }) {
+async function logMessage({ userId, phoneHash, wamid, direction, channel, status, contentPreview, audience = 'customer', error_code = null, error_detail = null }) {
   const admin = getAdmin();
   await admin.from('whatsapp_message_logs').insert({
     user_id: userId || null,
@@ -180,7 +208,44 @@ async function logMessage({ userId, phoneHash, wamid, direction, channel, status
     status,
     content_preview: contentPreview ? contentPreview.substring(0, 100) : null,
     audience,
+    error_code,
+    error_detail,
   });
+}
+
+// -------------------------------------------------------------------
+// Safe send and log wrapper
+// -------------------------------------------------------------------
+async function safeSendAndLog({ userId, phoneHash, wamid, normalisedPhone, messageText, audience = 'customer' }) {
+  try {
+    const res = await sendWhatsAppMessage(normalisedPhone, messageText);
+    await logMessage({
+      userId,
+      phoneHash,
+      wamid: res?.messageId ?? null,
+      direction: 'outbound',
+      channel: 'whatsapp',
+      status: 'sent',
+      contentPreview: messageText,
+      audience,
+    });
+    return res;
+  } catch (sendError) {
+    console.error(`[omniflow-webhook] Failed to send WhatsApp message to ${normalisedPhone}:`, sendError.message);
+    await logMessage({
+      userId,
+      phoneHash,
+      wamid,
+      direction: 'outbound',
+      channel: 'whatsapp',
+      status: 'failed',
+      contentPreview: `[FAILED] ${messageText}`,
+      audience,
+      error_code: sendError.code || null,
+      error_detail: sendError.rawSnippet || sendError.message || null,
+    });
+    throw sendError;
+  }
 }
 
 // -------------------------------------------------------------------
@@ -220,47 +285,55 @@ async function handleMerchantInbound({ userId, normalised, phoneHash, trimmedMes
 
   if (matchedEntry && ctx) {
     const reply = matchedEntry[1](ctx);
-
-    await sendWhatsAppMessage(normalised, reply);
-    await logMessage({
-      userId,
-      phoneHash,
-      direction: 'outbound',
-      channel: 'whatsapp',
-      status: 'delivered',
-      contentPreview: reply,
-      audience: 'merchant',
-    });
+    try {
+      await safeSendAndLog({
+        userId,
+        phoneHash,
+        wamid: null,
+        normalisedPhone: normalised,
+        messageText: reply,
+        audience: 'merchant'
+      });
+    } catch (e) {
+      // non-blocking for response
+    }
     return;
   }
 
   // AI Fallback
+  let aiReply, sanitized;
   try {
-    const aiReply = await sendMessageToAgent(normalised, contextBlock, trimmedMessage);
-    const sanitized = sanitizeMessage(aiReply);
-    await sendWhatsAppMessage(normalised, sanitized);
-    await logMessage({
-      userId,
-      phoneHash,
-      direction: 'outbound',
-      channel: 'whatsapp',
-      status: 'delivered',
-      contentPreview: sanitized,
-      audience: 'merchant',
-    });
+    aiReply = await sendMessageToAgent(normalised, contextBlock, trimmedMessage);
+    sanitized = sanitizeMessage(String(aiReply));
   } catch (err) {
     console.error('[omniflow-webhook] Merchant AI call failed:', err);
     const fallback = "For help with your merchant account, please visit intrustindia.com/merchant or contact our support team.";
-    await sendWhatsAppMessage(normalised, fallback);
-    await logMessage({
+    try {
+      await safeSendAndLog({
+        userId,
+        phoneHash,
+        wamid: null,
+        normalisedPhone: normalised,
+        messageText: fallback,
+        audience: 'merchant'
+      });
+    } catch (e) {
+      // non-blocking
+    }
+    return;
+  }
+
+  try {
+    await safeSendAndLog({
       userId,
       phoneHash,
-      direction: 'outbound',
-      channel: 'whatsapp',
-      status: 'delivered',
-      contentPreview: fallback,
-      audience: 'merchant',
+      wamid: null,
+      normalisedPhone: normalised,
+      messageText: sanitized,
+      audience: 'merchant'
     });
+  } catch (e) {
+    // non-blocking
   }
 }
 
@@ -295,16 +368,18 @@ async function handleCustomerInbound({ userId, normalised, phoneHash, trimmedMes
     }
 
     if (quickReply) {
-      await sendWhatsAppMessage(normalised, quickReply);
-      await logMessage({
-        userId,
-        phoneHash,
-        direction: 'outbound',
-        channel: 'whatsapp',
-        status: 'delivered',
-        contentPreview: quickReply,
-        audience: 'customer',
-      });
+      try {
+        await safeSendAndLog({
+          userId,
+          phoneHash,
+          wamid: null,
+          normalisedPhone: normalised,
+          messageText: quickReply,
+          audience: 'customer'
+        });
+      } catch (e) {
+        // non-blocking
+      }
       return;
     }
   }
@@ -319,7 +394,7 @@ async function handleCustomerInbound({ userId, normalised, phoneHash, trimmedMes
   } else {
     try {
       const aiReply = await sendMessageToAgent(normalised, contextBlock, trimmedMessage);
-      const sanitized = sanitizeMessage(aiReply);
+      const sanitized = sanitizeMessage(String(aiReply));
       finalReply = enforceIntent(sanitized, { walletBalance, kycStatus }) || sanitized;
     } catch (aiErr) {
       console.error('[omniflow-webhook] Customer AI call failed:', aiErr);
@@ -329,16 +404,18 @@ async function handleCustomerInbound({ userId, normalised, phoneHash, trimmedMes
 
   finalReply = sanitizeMessage(finalReply);
 
-  await sendWhatsAppMessage(normalised, finalReply);
-  await logMessage({
-    userId,
-    phoneHash,
-    direction: 'outbound',
-    channel: 'whatsapp',
-    status: 'delivered',
-    contentPreview: finalReply,
-    audience: 'customer',
-  });
+  try {
+    await safeSendAndLog({
+      userId,
+      phoneHash,
+      wamid: null,
+      normalisedPhone: normalised,
+      messageText: finalReply,
+      audience: 'customer'
+    });
+  } catch (e) {
+    // non-blocking
+  }
 }
 
 // -------------------------------------------------------------------
@@ -361,18 +438,68 @@ export async function POST(req) {
       return new NextResponse('Bad Request', { status: 400 });
     }
 
-    // Omniflow payload shape: { phone, message, type, wamid, timestamp }
-    const { phone: rawPhone, message: userMessage, type: msgType, wamid } = payload;
-
-    if (!rawPhone || !userMessage) {
-      return new NextResponse('OK', { status: 200 }); // Delivery receipts etc.
-    }
+    // Omniflow payload shape: { phone, message, type, wamid, timestamp, status, error_code, error_detail }
+    const { 
+      phone: rawPhone, 
+      message: userMessage, 
+      type: msgType, 
+      wamid,
+      status: rawStatus,
+      error_code: payloadErrorCode,
+      error: payloadError,
+      error_detail: payloadErrorDetail,
+      reason: payloadReason
+    } = payload;
 
     const admin = getAdmin();
+
+    // --- Outbound Message Status Updates ---
+    const isStatusEvent = msgType === 'message_status' || msgType === 'status' || rawStatus;
+    
+    if (isStatusEvent && wamid) {
+      const errorCode = payloadErrorCode || payloadError || null;
+      const errorDetail = payloadErrorDetail || payloadReason || null;
+      const mappedStatus = mapOmniflowStatus(rawStatus, errorCode);
+
+      if (mappedStatus) {
+        const { data: existing } = await admin
+          .from('whatsapp_message_logs')
+          .select('id, status')
+          .eq('wamid', wamid)
+          .maybeSingle();
+
+        if (!existing) {
+          console.warn(`[omniflow-webhook] Unknown wamid for status update: ${wamid}`);
+          return new NextResponse('OK', { status: 200 });
+        }
+
+        const currentRank = STATUS_HIERARCHY[existing.status] ?? -1;
+        const newRank = STATUS_HIERARCHY[mappedStatus] ?? -1;
+
+        if (newRank > currentRank) {
+          await admin
+            .from('whatsapp_message_logs')
+            .update({
+              status: mappedStatus,
+              error_code: errorCode,
+              error_detail: errorDetail,
+            })
+            .eq('wamid', wamid);
+        }
+      }
+
+      return new NextResponse('OK', { status: 200 });
+    }
+
+    // --- Inbound Messages ---
+    if (!rawPhone || !userMessage) {
+      return new NextResponse('OK', { status: 200 }); // Other unrecognized events
+    }
+
     const normalised = normalisePhone(rawPhone);
     const phoneHash = crypto.createHash('sha256').update(normalised).digest('hex');
 
-    // --- Idempotency: skip duplicate webhooks by wamid ---
+    // --- Idempotency: skip duplicate inbound webhooks by wamid ---
     if (wamid) {
       const { data: existing } = await admin
         .from('whatsapp_message_logs')
@@ -402,8 +529,18 @@ export async function POST(req) {
 
     if (!bindings || bindings.length === 0) {
       const notLinkedMsg = 'Your phone number is not yet linked to an InTrust India account. Please sign up or log in at intrustindia.com to get started.';
-      await sendWhatsAppMessage(normalised, notLinkedMsg);
-      await logMessage({ phoneHash, direction: 'outbound', channel: 'whatsapp', status: 'delivered', contentPreview: notLinkedMsg });
+      try {
+        await safeSendAndLog({
+          userId: null,
+          phoneHash,
+          wamid: null,
+          normalisedPhone: normalised,
+          messageText: notLinkedMsg,
+          audience: 'customer'
+        });
+      } catch (e) {
+        // non-blocking
+      }
       return new NextResponse('OK', { status: 200 });
     }
 

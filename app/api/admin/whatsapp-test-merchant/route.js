@@ -99,7 +99,7 @@ export async function POST(request) {
 
   // 4. Send template (no toggle/dedup checks — intentional for diagnostic tool)
   try {
-    await sendTemplateMessage(
+    const res = await sendTemplateMessage(
       binding.phone,
       template.name,
       template.language,
@@ -114,7 +114,8 @@ export async function POST(request) {
       message_type: 'template',
       channel: 'whatsapp',
       audience: 'merchant',
-      status: 'delivered',
+      status: 'sent',
+      wamid: res?.messageId ?? null,
       content_preview: `[ADMIN_TEST:${templateName}]`,
     });
 
@@ -135,6 +136,8 @@ export async function POST(request) {
         audience: 'merchant',
         status: 'failed',
         content_preview: `[ADMIN_TEST_FAILED:${templateName}] ` + error.message.slice(0, 150),
+        error_code: error.code || null,
+        error_detail: error.rawSnippet || error.message || null
       });
     } catch (logErr) {
       console.error('[whatsapp-test-merchant] Failed to write failure log:', logErr);

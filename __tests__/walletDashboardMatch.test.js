@@ -75,6 +75,13 @@ jest.mock('@/hooks/useKYCPopup', () => ({
     })
 }));
 
+jest.mock('@/hooks/useMerchantApplyPopup', () => ({
+    useMerchantApplyPopup: () => ({
+        isOpen: false,
+        closeMerchantPopup: jest.fn()
+    })
+}));
+
 // Mock Framer Motion
 jest.mock('framer-motion', () => ({
     motion: {

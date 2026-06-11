@@ -225,25 +225,42 @@ export async function POST(request) {
                         day: '2-digit', month: 'short', year: 'numeric',
                         hour: '2-digit', minute: '2-digit', hour12: true
                     }) + ' IST';
-                    await sendTemplateMessage(
-                        binding.phone,
-                        LOGIN_ALERT_TEMPLATE.name,
-                        LOGIN_ALERT_TEMPLATE.language,
-                        LOGIN_ALERT_TEMPLATE.buildComponents(deviceInfo, now)
-                    );
-                    // Record the sent alert so the next call within 5 min is deduped
                     const phoneHash = crypto.createHash('sha256').update(binding.phone).digest('hex');
-                    await admin.from('whatsapp_message_logs').insert({
-                        user_id: existing.id,
-                        phone_hash: phoneHash,
-                        direction: 'outbound',
-                        message_type: 'template',
-                        channel: 'web',
-                        status: 'delivered',
-                        content_preview: '[template:intrust_login_alert]',
-                    }).then(({ error }) => {
+
+                    try {
+                        const res = await sendTemplateMessage(
+                            binding.phone,
+                            LOGIN_ALERT_TEMPLATE.name,
+                            LOGIN_ALERT_TEMPLATE.language,
+                            LOGIN_ALERT_TEMPLATE.buildComponents(deviceInfo, now)
+                        );
+
+                        const { error } = await admin.from('whatsapp_message_logs').insert({
+                            user_id: existing.id,
+                            phone_hash: phoneHash,
+                            direction: 'outbound',
+                            message_type: 'template',
+                            channel: 'whatsapp',
+                            status: 'sent',
+                            wamid: res?.messageId ?? null,
+                            content_preview: '[template:intrust_login_alert]',
+                        });
                         if (error) console.warn('[signin] Failed to log login alert to whatsapp_message_logs:', error.message);
-                    });
+                    } catch (sendError) {
+                        console.error('[signin] WhatsApp login alert failed:', sendError.message);
+                        const { error } = await admin.from('whatsapp_message_logs').insert({
+                            user_id: existing.id,
+                            phone_hash: phoneHash,
+                            direction: 'outbound',
+                            message_type: 'template',
+                            channel: 'whatsapp',
+                            status: 'failed',
+                            content_preview: '[FAILED] [template:intrust_login_alert] :: ' + sendError.message.slice(0, 150),
+                            error_code: sendError.code || null,
+                            error_detail: sendError.rawSnippet || sendError.message || null
+                        });
+                        if (error) console.warn('[signin] Failed to log failed login alert:', error.message);
+                    }
                 }
             }
         } catch (waErr) {

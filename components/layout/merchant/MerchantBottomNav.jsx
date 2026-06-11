@@ -7,7 +7,7 @@ const navItems = [
     { icon: 'grid_view', label: 'Dashboard', href: '/merchant/dashboard' },
     { icon: 'shopping_bag', label: 'Buy Stock', href: '/merchant/shopping/wholesale' },
     { icon: 'storefront', label: 'My Shop', href: '/merchant/shopping/inventory' },
-    { icon: 'account_balance_wallet', label: 'Wallet', href: '/merchant/wallet' },
+    { icon: 'account_balance_wallet', label: 'My Portfolio', href: '/merchant/wallet' },
     { icon: 'person', label: 'Account', href: '/merchant/profile' },
 ];
 
