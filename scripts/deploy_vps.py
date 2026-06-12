@@ -169,11 +169,49 @@ def upload_tar(client):
 # ──────────────────────────────────────────────
 #  STEP 4: DEPLOY ON VPS (NO BUILD ON SERVER)
 # ──────────────────────────────────────────────
+def update_remote_env_files(client):
+    sftp = client.open_sftp()
+    env_files = [".env", ".env.local"]
+    for filename in env_files:
+        path = f"{REMOTE_APP_DIR}/{filename}"
+        try:
+            sftp.stat(path)
+        except IOError:
+            print(f"  [WARN] Remote env file not found: {path}")
+            continue
+
+        with sftp.open(path, "r") as f:
+            content = f.read().decode("utf-8", errors="replace")
+
+        lines = content.splitlines()
+        found = False
+        new_lines = []
+        for line in lines:
+            if line.strip().startswith("GEMINI_MODEL="):
+                new_lines.append("GEMINI_MODEL=gemini-2.5-flash")
+                found = True
+            else:
+                new_lines.append(line)
+
+        if not found:
+            new_lines.append("GEMINI_MODEL=gemini-2.5-flash")
+
+        new_content = "\n".join(new_lines) + "\n"
+
+        with sftp.open(path, "w") as f:
+            f.write(new_content.encode("utf-8"))
+        print(f"  [OK] Updated GEMINI_MODEL to gemini-2.5-flash in {filename}")
+    sftp.close()
+
+
 def deploy_on_vps(client):
     divider("STEP 4 - Deploying on VPS (extract -> deps -> restart)")
 
     print("\n[4a] Extracting build.tar.gz...")
     run_remote(client, f"tar -xzf {REMOTE_UPLOAD} --overwrite -C {REMOTE_APP_DIR}")
+
+    print("\n[4a-2] Overriding GEMINI_MODEL in VPS .env files...")
+    update_remote_env_files(client)
 
     print("\n[4b] Installing production dependencies (no rebuild)...")
     run_remote(
