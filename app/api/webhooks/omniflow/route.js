@@ -45,6 +45,7 @@ import { buildMerchantContext, formatMerchantContextForPrompt } from '@/lib/chat
 // Supabase admin client (bypasses RLS — service role only)
 let _admin;
 function getAdmin() {
+  if (process.env.NODE_ENV === 'test') return createAdminClient();
   if (!_admin) _admin = createAdminClient();
   return _admin;
 }
@@ -544,20 +545,55 @@ export async function POST(req) {
       return new NextResponse('OK', { status: 200 });
     }
 
+    // Explicit override commands (e.g. #personal, #store)
+    let userMsg = trimmedMessage;
+    let explicitAudience = null;
+    if (userMsg.toLowerCase().startsWith('#customer')) {
+      explicitAudience = 'customer';
+      userMsg = userMsg.slice('#customer'.length).trim();
+    } else if (userMsg.toLowerCase().startsWith('#personal')) {
+      explicitAudience = 'customer';
+      userMsg = userMsg.slice('#personal'.length).trim();
+    } else if (userMsg.toLowerCase().startsWith('#merchant')) {
+      explicitAudience = 'merchant';
+      userMsg = userMsg.slice('#merchant'.length).trim();
+    } else if (userMsg.toLowerCase().startsWith('#store')) {
+      explicitAudience = 'merchant';
+      userMsg = userMsg.slice('#store'.length).trim();
+    }
+
     let chosen = bindings[0];
     if (bindings.length > 1) {
-      // Resolve preference by querying user_profiles.role
-      const userIds = bindings.map(b => b.user_id);
-      const { data: profiles } = await admin
-        .from('user_profiles')
-        .select('id, role')
-        .in('id', userIds);
-
-      const hasMerchant = profiles?.some(p => ['merchant', 'admin', 'super_admin'].includes(p.role));
-      if (hasMerchant) {
-        chosen = bindings.find(b => b.audience === 'merchant') || chosen;
+      if (explicitAudience) {
+        chosen = bindings.find(b => b.audience === explicitAudience) || chosen;
       } else {
-        chosen = bindings.find(b => b.audience === 'customer') || chosen;
+        // Query the last outbound message for this phone hash
+        const { data: lastOutbound } = await admin
+          .from('whatsapp_message_logs')
+          .select('audience')
+          .eq('phone_hash', phoneHash)
+          .eq('direction', 'outbound')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (lastOutbound?.audience) {
+          chosen = bindings.find(b => b.audience === lastOutbound.audience) || chosen;
+        } else {
+          // Resolve preference by querying user_profiles.role (fallback to merchant priority)
+          const userIds = bindings.map(b => b.user_id);
+          const { data: profiles } = await admin
+            .from('user_profiles')
+            .select('id, role')
+            .in('id', userIds);
+
+          const hasMerchant = profiles?.some(p => ['merchant', 'admin', 'super_admin'].includes(p.role));
+          if (hasMerchant) {
+            chosen = bindings.find(b => b.audience === 'merchant') || chosen;
+          } else {
+            chosen = bindings.find(b => b.audience === 'customer') || chosen;
+          }
+        }
       }
     }
 
@@ -577,12 +613,12 @@ export async function POST(req) {
     });
 
     if (audience === 'merchant') {
-      await handleMerchantInbound({ userId, normalised, phoneHash, trimmedMessage });
+      await handleMerchantInbound({ userId, normalised, phoneHash, trimmedMessage: userMsg });
       return new NextResponse('OK', { status: 200 });
     }
 
     // falls through to handleCustomerInbound
-    await handleCustomerInbound({ userId, normalised, phoneHash, trimmedMessage });
+    await handleCustomerInbound({ userId, normalised, phoneHash, trimmedMessage: userMsg });
     return new NextResponse('OK', { status: 200 });
   } catch (err) {
     console.error('[omniflow-webhook] Unhandled error:', err);

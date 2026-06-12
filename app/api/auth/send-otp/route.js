@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
-import { generateOTP, hashOTP, validatePhoneNumber, normalizePhone, formatPhoneForSMS } from '@/lib/otpUtils';
+import { generateOTP, hashOTP, validatePhoneNumber, normalizePhone } from '@/lib/otpUtils';
 import { sendOTP } from '@/lib/smsClient';
 
 export async function POST(request) {
@@ -120,8 +120,7 @@ export async function POST(request) {
         }
 
         // 4. Send SMS
-        const msgPhone = formatPhoneForSMS(phone);
-        const smsResult = await sendOTP(msgPhone, otp);
+        const smsResult = await sendOTP(phone, otp);
 
         if (!smsResult.success) {
             console.error('SMS sending failed:', smsResult.error);

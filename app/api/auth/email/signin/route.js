@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
 import { createServerClient } from '@supabase/ssr';
-import { sendTemplateMessage, LOGIN_ALERT_TEMPLATE } from '@/lib/omniflow';
-import crypto from 'crypto';
+import { sendWhatsAppLoginAlert } from '@/lib/notifications/authWhatsapp';
 import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
 import { applySupabaseCookies } from '@/lib/supabaseCookieHelper';
 
@@ -192,76 +191,14 @@ export async function POST(request) {
 
         // 7. WhatsApp login security alert (non-blocking, dedup: 5-min cooldown)
         try {
-            // Ensure binding exists before reading it for the login alert
-            await ensureWhatsAppBinding({ userId: existing.id });
-
-            // user_channel_bindings schema: { user_id, phone, whatsapp_opt_in, linked_at }
-            const { data: binding } = await admin
-                .from('user_channel_bindings')
-                .select('phone')
-                .eq('user_id', existing.id)
-                .eq('whatsapp_opt_in', true)
-                .maybeSingle();
-
+            const binding = await ensureWhatsAppBinding({ userId: existing.id });
             if (binding?.phone) {
-                // Deduplication guard: skip if a login alert was already sent within the last 5 minutes.
-                const dedupeWindow = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-                const { data: recentAlert } = await admin
-                    .from('whatsapp_message_logs')
-                    .select('id')
-                    .eq('user_id', existing.id)
-                    .eq('content_preview', '[template:intrust_login_alert]')
-                    .gte('created_at', dedupeWindow)
-                    .limit(1)
-                    .maybeSingle();
-
-                if (recentAlert) {
-                    console.log(`[signin] Skipping duplicate login alert for user ${existing.id} (sent within 5 min)`);
-                } else {
-                    const ua = request.headers.get('user-agent') || 'Unknown device';
-                    const deviceInfo = ua.length > 80 ? ua.slice(0, 77) + '...' : ua;
-                    const now = new Date().toLocaleString('en-IN', {
-                        timeZone: 'Asia/Kolkata',
-                        day: '2-digit', month: 'short', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit', hour12: true
-                    }) + ' IST';
-                    const phoneHash = crypto.createHash('sha256').update(binding.phone).digest('hex');
-
-                    try {
-                        const res = await sendTemplateMessage(
-                            binding.phone,
-                            LOGIN_ALERT_TEMPLATE.name,
-                            LOGIN_ALERT_TEMPLATE.language,
-                            LOGIN_ALERT_TEMPLATE.buildComponents(deviceInfo, now)
-                        );
-
-                        const { error } = await admin.from('whatsapp_message_logs').insert({
-                            user_id: existing.id,
-                            phone_hash: phoneHash,
-                            direction: 'outbound',
-                            message_type: 'template',
-                            channel: 'whatsapp',
-                            status: 'sent',
-                            wamid: res?.messageId ?? null,
-                            content_preview: '[template:intrust_login_alert]',
-                        });
-                        if (error) console.warn('[signin] Failed to log login alert to whatsapp_message_logs:', error.message);
-                    } catch (sendError) {
-                        console.error('[signin] WhatsApp login alert failed:', sendError.message);
-                        const { error } = await admin.from('whatsapp_message_logs').insert({
-                            user_id: existing.id,
-                            phone_hash: phoneHash,
-                            direction: 'outbound',
-                            message_type: 'template',
-                            channel: 'whatsapp',
-                            status: 'failed',
-                            content_preview: '[FAILED] [template:intrust_login_alert] :: ' + sendError.message.slice(0, 150),
-                            error_code: sendError.code || null,
-                            error_detail: sendError.rawSnippet || sendError.message || null
-                        });
-                        if (error) console.warn('[signin] Failed to log failed login alert:', error.message);
-                    }
-                }
+                await sendWhatsAppLoginAlert({
+                    userId: existing.id,
+                    audience: binding.audience,
+                    phone: binding.phone,
+                    deviceInfo: request.headers.get('user-agent') || 'Unknown device'
+                });
             }
         } catch (waErr) {
             console.error('[signin] WhatsApp login alert failed (non-blocking):', waErr.message);

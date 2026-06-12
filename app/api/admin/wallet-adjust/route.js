@@ -321,7 +321,7 @@ export async function POST(request) {
         try {
             const { data: binding } = await supabase
                 .from('user_channel_bindings')
-                .select('phone')
+                .select('phone, audience')
                 .eq('user_id', userId)
                 .eq('whatsapp_opt_in', true)
                 .maybeSingle();
@@ -345,12 +345,16 @@ export async function POST(request) {
                     const direction = operation === 'credit' ? 'credited to' : 'debited from';
                     const phoneHash = crypto.createHash('sha256').update(binding.phone).digest('hex');
 
+                    const audience = binding.audience || (walletType === 'merchant' ? 'merchant' : 'customer');
+                    const audienceLabel = audience === 'merchant' ? 'Merchant' : 'Customer';
+                    const directionLabel = `${direction} (${audienceLabel})`;
+
                     try {
                         const res = await sendTemplateMessage(
                             binding.phone,
                             TRANSACTION_ALERT_TEMPLATE.name,
                             TRANSACTION_ALERT_TEMPLATE.language,
-                            TRANSACTION_ALERT_TEMPLATE.buildComponents(amountRs, direction, newBalanceRs)
+                            TRANSACTION_ALERT_TEMPLATE.buildComponents(amountRs, directionLabel, newBalanceRs)
                         );
                         console.log(`[wallet-adjust] WhatsApp transaction alert sent to user ${userId}`);
 
@@ -363,6 +367,7 @@ export async function POST(request) {
                             status: 'sent',
                             wamid: res?.messageId ?? null,
                             content_preview: alertTag,
+                            audience,
                         });
                         if (error) console.warn('[wallet-adjust] Failed to log transaction alert:', error.message);
                     } catch (sendError) {
@@ -376,7 +381,8 @@ export async function POST(request) {
                             status: 'failed',
                             content_preview: `[FAILED] ${alertTag} :: ` + sendError.message.slice(0, 150),
                             error_code: sendError.code || null,
-                            error_detail: sendError.rawSnippet || sendError.message || null
+                            error_detail: sendError.rawSnippet || sendError.message || null,
+                            audience,
                         });
                         if (error) console.warn('[wallet-adjust] Failed to log failed transaction alert:', error.message);
                     }

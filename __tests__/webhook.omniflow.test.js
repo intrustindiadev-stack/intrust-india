@@ -150,3 +150,160 @@ describe('Omniflow Webhook Status Reconciliation', () => {
   });
 
 });
+
+describe('Inbound Routing for Shared Numbers', () => {
+  let bindingsMockVal = [];
+  let lastOutboundMockVal = null;
+  let profilesMockVal = [];
+  let mockSendWhatsAppMessage;
+  let mockSendMessageToAgent;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    bindingsMockVal = [];
+    lastOutboundMockVal = null;
+    profilesMockVal = [];
+
+    mockSendWhatsAppMessage = require('@/lib/omniflow').sendWhatsAppMessage;
+    mockSendMessageToAgent = require('@/lib/omniflow').sendMessageToAgent;
+
+    mockSendWhatsAppMessage.mockResolvedValue({ messageId: 'msg.outbound.123' });
+    mockSendMessageToAgent.mockResolvedValue('Mock Agent Reply');
+
+    const buildMerchantContext = require('@/lib/chat/merchantBuildContext').buildMerchantContext;
+    buildMerchantContext.mockResolvedValue({
+      recentOrders: [],
+      pendingFulfillmentsCount: 0,
+      pendingPayoutsCount: 0,
+      pendingPayoutsTotalRs: '0.00',
+      lastPayoutStatus: 'N/A',
+      walletBalanceRs: '0.00',
+      totalCommissionPaidRs: '0.00',
+      liveInventoryCount: 0,
+      lowStockCount: 0,
+      subscriptionStatus: 'active',
+      kycStatus: 'Verified',
+      bankVerified: true
+    });
+
+    let currentTable = '';
+    const dbMock = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      in: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      insert: jest.fn().mockResolvedValue({ error: null }),
+      maybeSingle: jest.fn().mockImplementation(() => {
+        if (currentTable === 'user_channel_bindings') {
+          return Promise.resolve({ data: bindingsMockVal });
+        }
+        if (currentTable === 'whatsapp_message_logs') {
+          return Promise.resolve({ data: lastOutboundMockVal });
+        }
+        if (currentTable === 'customer_wallets') {
+          return Promise.resolve({ data: { balance_paise: 5000 } });
+        }
+        return Promise.resolve({ data: null });
+      }),
+      single: jest.fn().mockImplementation(() => {
+        if (currentTable === 'user_profiles') {
+          return Promise.resolve({ data: { kyc_status: 'Verified', full_name: 'Test Customer' } });
+        }
+        return Promise.resolve({ data: null });
+      }),
+      then: jest.fn().mockImplementation((onfulfilled) => {
+        if (currentTable === 'user_profiles') {
+          return Promise.resolve({ data: profilesMockVal }).then(onfulfilled);
+        }
+        if (currentTable === 'user_channel_bindings') {
+          return Promise.resolve({ data: bindingsMockVal }).then(onfulfilled);
+        }
+        return Promise.resolve({ data: [] }).then(onfulfilled);
+      })
+    };
+
+    createAdminClient.mockReturnValue({
+      from: jest.fn().mockImplementation((table) => {
+        currentTable = table;
+        return dbMock;
+      })
+    });
+  });
+
+    const createRequest = (payload) => {
+      return {
+        text: jest.fn().mockResolvedValue(JSON.stringify(payload)),
+        headers: { get: jest.fn() }
+      };
+    };
+
+    it('should route single merchant binding to merchant', async () => {
+      bindingsMockVal = [{ user_id: 'merchant-1', audience: 'merchant' }];
+      const payload = { phone: '+916232809817', message: 'Hello merchant', type: 'message_received' };
+      const req = createRequest(payload);
+
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+      expect(mockSendMessageToAgent).toHaveBeenCalled();
+    });
+
+    it('should route shared number to merchant when last outbound log was merchant', async () => {
+      bindingsMockVal = [
+        { user_id: 'customer-1', audience: 'customer' },
+        { user_id: 'merchant-1', audience: 'merchant' }
+      ];
+      lastOutboundMockVal = { audience: 'merchant' };
+      const payload = { phone: '+916232809817', message: 'Hi', type: 'message_received' };
+      const req = createRequest(payload);
+
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+      const buildMerchantContext = require('@/lib/chat/merchantBuildContext').buildMerchantContext;
+      expect(buildMerchantContext).toHaveBeenCalledWith(expect.anything(), 'merchant-1');
+    });
+
+    it('should route shared number to customer when last outbound log was customer', async () => {
+      bindingsMockVal = [
+        { user_id: 'customer-1', audience: 'customer' },
+        { user_id: 'merchant-1', audience: 'merchant' }
+      ];
+      lastOutboundMockVal = { audience: 'customer' };
+      const payload = { phone: '+916232809817', message: 'Hi', type: 'message_received' };
+      const req = createRequest(payload);
+
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+      const buildMerchantContext = require('@/lib/chat/merchantBuildContext').buildMerchantContext;
+      expect(buildMerchantContext).not.toHaveBeenCalledWith(expect.anything(), 'merchant-1');
+    });
+
+    it('should route shared number to customer when #personal override prefix is used', async () => {
+      bindingsMockVal = [
+        { user_id: 'customer-1', audience: 'customer' },
+        { user_id: 'merchant-1', audience: 'merchant' }
+      ];
+      lastOutboundMockVal = { audience: 'merchant' };
+      const payload = { phone: '+916232809817', message: '#personal check balance', type: 'message_received' };
+      const req = createRequest(payload);
+
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+      expect(mockSendWhatsAppMessage).toHaveBeenCalledWith(expect.anything(), expect.stringContaining('wallet balance'));
+    });
+
+    it('should route shared number to merchant when #store override prefix is used', async () => {
+      bindingsMockVal = [
+        { user_id: 'customer-1', audience: 'customer' },
+        { user_id: 'merchant-1', audience: 'merchant' }
+      ];
+      lastOutboundMockVal = { audience: 'customer' };
+      const payload = { phone: '+916232809817', message: '#store my orders', type: 'message_received' };
+      const req = createRequest(payload);
+
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+      expect(mockSendWhatsAppMessage).toHaveBeenCalledWith(expect.anything(), expect.stringContaining('Recent Orders'));
+    });
+  });
+

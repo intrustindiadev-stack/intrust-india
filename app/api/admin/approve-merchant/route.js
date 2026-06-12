@@ -143,7 +143,7 @@ export async function POST(request) {
         try {
             const { data: binding } = await adminSupabase
                 .from('user_channel_bindings')
-                .select('phone')
+                .select('phone, audience')
                 .eq('user_id', targetUserId)
                 .eq('whatsapp_opt_in', true)
                 .maybeSingle();
@@ -165,6 +165,7 @@ export async function POST(request) {
                     console.log(`[approve-merchant] Skipping duplicate KYC alert for merchant ${existingMerchant.id}`);
                 } else {
                     const phoneHash = crypto.createHash('sha256').update(binding.phone).digest('hex');
+                    const audience = binding.audience || 'merchant';
                     try {
                         const res = await sendTemplateMessage(
                             binding.phone,
@@ -186,6 +187,7 @@ export async function POST(request) {
                             status: 'sent',
                             wamid: res?.messageId ?? null,
                             content_preview: alertTag,
+                            audience,
                         });
                         if (error) console.warn('[approve-merchant] Failed to log KYC alert:', error.message);
                     } catch (sendError) {
@@ -199,7 +201,8 @@ export async function POST(request) {
                             status: 'failed',
                             content_preview: `[FAILED] ${alertTag} :: ` + sendError.message.slice(0, 150),
                             error_code: sendError.code || null,
-                            error_detail: sendError.rawSnippet || sendError.message || null
+                            error_detail: sendError.rawSnippet || sendError.message || null,
+                            audience,
                         });
                         if (error) console.warn('[approve-merchant] Failed to log failed KYC alert:', error.message);
                     }

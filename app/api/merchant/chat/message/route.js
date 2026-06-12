@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { GoogleGenAI } from '@google/genai';
+import { sendGeminiMessage } from '@/lib/chat/geminiHelper';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { maskPII } from '@/lib/piiFilter';
 import { buildMerchantContext, formatMerchantContextForPrompt } from '@/lib/chat/merchantBuildContext';
@@ -33,15 +33,6 @@ const MAX_HISTORY_TURNS = 8;
 // Module-level flag so we log the missing-table warning once, not on every request
 let _logTableMissingOnce = false;
 
-// Lazily initialized Gemini client (one instance per worker lifetime)
-// Note: kept isolated from the customer route
-let _genAI = null;
-function getGenAI() {
-  if (!_genAI) {
-    _genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  }
-  return _genAI;
-}
 
 export async function POST(req) {
   try {
@@ -169,7 +160,7 @@ export async function POST(req) {
 
     try {
       userCtx = await buildMerchantContext(admin, user.id);
-      firstName = userCtx.firstName;
+      firstName = userCtx?.firstName || 'there';
     } catch (ctxErr) {
       // Non-fatal — Gemini can still answer knowledge base questions
       console.warn('[merchant/chat/message] Failed to build merchant context:', ctxErr.message || ctxErr);
@@ -184,26 +175,11 @@ export async function POST(req) {
     let finalReply;
 
     try {
-      const genAI = getGenAI();
-      const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
-
-      const chat = genAI.chats.create({
-        model,
-        config: {
-          systemInstruction,
-          temperature: 0.4,
-          maxOutputTokens: 1024,
-          safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          ],
-        },
+      const response = await sendGeminiMessage({
+        systemInstruction,
         history,
+        message: userMessage,
       });
-
-      const response = await chat.sendMessage({ message: userMessage });
       const rawText = response.text?.trim() || '';
 
       if (!rawText) {

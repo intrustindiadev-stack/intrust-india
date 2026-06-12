@@ -4,6 +4,7 @@ import { hashOTP, validatePhoneNumber, getStablePhoneEmail, isPseudoEmail, norma
 import crypto from 'crypto';
 import { createServerClient } from '@supabase/ssr';
 import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
+import { sendWhatsAppLoginAlert } from '@/lib/notifications/authWhatsapp';
 import { applySupabaseCookies } from '@/lib/supabaseCookieHelper';
 
 export async function POST(request) {
@@ -246,10 +247,23 @@ export async function POST(request) {
             throw err;
         }
 
-        // Non-blocking: ensure WhatsApp binding is up-to-date for this user.
-        ensureWhatsAppBinding({ userId }).catch((e) =>
-            console.warn('[VERIFY-OTP] ensureWhatsAppBinding failed (non-fatal):', e.message)
-        );
+        // Non-blocking: ensure WhatsApp binding is up-to-date and send login alert for returning user.
+        const userAgent = request.headers.get('user-agent') || '';
+        (async () => {
+            try {
+                const { isNewLink, audience, phone } = await ensureWhatsAppBinding({ userId });
+                if (isNewLink === false && phone) {
+                    await sendWhatsAppLoginAlert({
+                        userId,
+                        audience,
+                        phone,
+                        deviceInfo: userAgent
+                    });
+                }
+            } catch (e) {
+                console.warn('[VERIFY-OTP] WhatsApp binding/alert failed (non-fatal):', e.message);
+            }
+        })();
 
         const session = exchanged.session;
         console.log(`[VERIFY-OTP] Session minted successfully for user ${userId}`);

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
+import { sendWhatsAppLoginAlert } from '@/lib/notifications/authWhatsapp';
 
 // Service role client to upsert user_profiles bypassing RLS
 const supabaseAdmin = createClient(
@@ -408,10 +409,23 @@ export async function GET(request) {
             );
         }
 
-        // Non-blocking: ensure WhatsApp binding is up-to-date for the surviving user.
-        ensureWhatsAppBinding({ userId: user.id }).catch((e) =>
-            console.warn('[Google OAuth] ensureWhatsAppBinding failed (non-fatal):', e.message)
-        );
+        // Non-blocking: ensure WhatsApp binding is up-to-date and send login alert for returning user.
+        const userAgent = request.headers.get('user-agent') || '';
+        (async () => {
+            try {
+                const { isNewLink, audience, phone } = await ensureWhatsAppBinding({ userId: user.id });
+                if (isNewLink === false && phone) {
+                    await sendWhatsAppLoginAlert({
+                        userId: user.id,
+                        audience,
+                        phone,
+                        deviceInfo: userAgent
+                    });
+                }
+            } catch (e) {
+                console.warn('[Google OAuth] WhatsApp binding/alert failed (non-fatal):', e.message);
+            }
+        })();
 
         console.log('[Google OAuth] Success. User:', user.id, '→', redirectPath);
         return redirectResponse;
