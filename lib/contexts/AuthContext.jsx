@@ -107,6 +107,13 @@ export function AuthProvider({ children }) {
                     setShowAuthLoader(true);
                 }
 
+                // Keep user state in sync whenever Supabase silently refreshes
+                // the access token (e.g. after network reconnect or tab re-focus).
+                if (event === 'TOKEN_REFRESHED' && session?.user) {
+                    setUser(session.user);
+                    // Don't re-fetch profile on token refresh — it's the same user
+                }
+
                 if (session?.user) {
                     setUser(session.user);
 
@@ -130,6 +137,7 @@ export function AuthProvider({ children }) {
                 setLoading(false);
             }
         );
+
 
         return () => {
             mounted = false;
@@ -169,11 +177,12 @@ export function AuthProvider({ children }) {
         triggerDailyReward();
     }, [user?.id]);
 
-    // 4. Proactive session refresh: prevent auto-logout if tab is left open but inactive for hours
+    // 4. Proactive session management: prevent logouts from inactivity or network drops
     useEffect(() => {
         if (!user) return;
 
-        // Auto-refresh the session every 10 minutes to guarantee it never expires while the app is open
+        // Auto-refresh the session every 10 minutes to guarantee it never expires
+        // while the app is open in the background.
         const intervalId = setInterval(() => {
             console.log('[AUTH-CONTEXT] Proactively refreshing session to prevent auto-logout');
             supabase.auth.getSession();
@@ -187,8 +196,28 @@ export function AuthProvider({ children }) {
             }
         };
 
+        // ── Network reconnect recovery ────────────────────────────────────────
+        // When the browser detects the network coming back (e.g. WiFi reconnected),
+        // immediately call refreshSession(). Supabase uses the refresh token stored
+        // in the HTTP-only cookie to issue a new access token — zero re-login needed.
+        const handleOnline = async () => {
+            console.log('[AUTH-CONTEXT] Network restored, refreshing session...');
+            try {
+                const { data, error } = await supabase.auth.refreshSession();
+                if (data?.session?.user && !error) {
+                    setUser(data.session.user);
+                    console.log('[AUTH-CONTEXT] Session refreshed successfully after reconnect');
+                }
+            } catch (err) {
+                console.warn('[AUTH-CONTEXT] Session refresh after reconnect failed:', err?.message);
+            }
+        };
+
         if (typeof document !== 'undefined') {
             document.addEventListener('visibilitychange', handleVisibilityChange);
+        }
+        if (typeof window !== 'undefined') {
+            window.addEventListener('online', handleOnline);
         }
 
         return () => {
@@ -196,8 +225,12 @@ export function AuthProvider({ children }) {
             if (typeof document !== 'undefined') {
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
             }
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('online', handleOnline);
+            }
         };
     }, [user?.id]);
+
 
     const refreshProfile = async () => {
         if (user) {

@@ -10,6 +10,7 @@ import KycStatusCard from "./KycStatusCard";
 import WalletCard from "./WalletCard";
 import { motion, LayoutGroup } from "framer-motion";
 import { useSubscription } from "./SubscriptionContext";
+import Image from "next/image";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
     const pathname = usePathname();
@@ -217,10 +218,12 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                     <div className="bg-white/50 dark:bg-[#1a1c23]/60 p-2.5 rounded-2xl flex items-center space-x-3 mb-3 shadow-sm border border-black/5 dark:border-white/5 backdrop-blur-md transition-all hover:shadow-md">
                         <div className="w-10 h-10 rounded-full border-2 border-white dark:border-[#2a2c33] shadow-sm overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 relative group">
                             {merchant?.user_profiles?.avatar_url ? (
-                                <img 
-                                    src={merchant.user_profiles.avatar_url} 
-                                    alt={merchant.business_name} 
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                <Image 
+                                    src={merchant.user_profiles.avatar_url || '/placeholder.png'} 
+                                    alt={merchant.business_name || 'Merchant Avatar'} 
+                                    fill
+                                    sizes="40px"
+                                    className="object-cover transition-transform duration-500 group-hover:scale-110"
                                 />
                             ) : (
                                 <span className="material-icons-round text-slate-400 text-2xl">storefront</span>

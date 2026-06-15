@@ -5,6 +5,7 @@ import AdminSidebar from './AdminSidebar';
 import AdminBottomNav from './AdminBottomNav';
 import { Menu } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import Image from 'next/image';
 
 export default function AdminLayout({ children, adminProfile }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -57,9 +58,9 @@ export default function AdminLayout({ children, adminProfile }) {
                                         {isSuperAdmin ? 'Super Admin' : 'Platform Access'}
                                     </p>
                                 </div>
-                                <div className={`w-10 h-10 rounded-xl ${accentBg} flex items-center justify-center text-white font-bold shadow-lg ${accentShadow} overflow-hidden shrink-0`}>
+                                <div className={`w-10 h-10 rounded-xl ${accentBg} flex items-center justify-center text-white font-bold shadow-lg ${accentShadow} overflow-hidden shrink-0 relative`}>
                                     {adminProfile?.avatar_url ? (
-                                        <img src={adminProfile.avatar_url} alt={adminName} className="w-full h-full object-cover" />
+                                        <Image src={adminProfile.avatar_url || '/placeholder.png'} alt={adminName} fill sizes="40px" className="object-cover" />
                                     ) : (
                                         getInitials(adminName)
                                     )}

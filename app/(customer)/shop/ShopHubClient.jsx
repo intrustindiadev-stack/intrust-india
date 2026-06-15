@@ -4,8 +4,10 @@ import { useState, useEffect, useRef, lazy, Suspense, memo, useCallback } from '
 import { Search, Store, X, Sparkles, ChevronRight, BadgeCheck, Star, MapPin, Heart } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 import RatingStars from '@/components/ui/RatingStars';
+import PullToRefresh from '@/components/ui/PullToRefresh';
 
 // Lazy load below-fold components
 const AdBannerCarousel = lazy(() => import('@/components/customer/dashboard/AdBannerCarousel'));
@@ -230,8 +232,15 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
         merchants.forEach(m => { map[m.id] = m.is_open !== false; });
         return map;
     });
+    const router = useRouter();
     const inputRef = useRef(null);
     const debounceRef = useRef(null);
+
+    const handleRefresh = useCallback(async () => {
+        router.refresh();
+        // Artificial delay for UI feedback
+        await new Promise(resolve => setTimeout(resolve, 800));
+    }, [router]);
 
     // Debounce search — 150 ms so mobile keyboards don't trigger on every character
     const handleSearchChange = useCallback((e) => {
@@ -298,6 +307,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
     const showFeatured = !searchQuery && official;
 
     return (
+        <PullToRefresh onRefresh={handleRefresh}>
         <div className="space-y-5">
 
             {/* ── Illustrative Ad Component (lazy loaded) ──── */}
@@ -391,5 +401,6 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
                 </div>
             )}
         </div>
+        </PullToRefresh>
     );
 }

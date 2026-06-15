@@ -21,6 +21,7 @@ import PersonalInfoForm from '@/components/customer/profile/PersonalInfoForm';
 import AddressSection from '@/components/customer/profile/AddressSection';
 import RecentShoppingOrders from '@/components/customer/RecentShoppingOrders';
 import AccountSummaryCard from '@/components/customer/profile/AccountSummaryCard';
+import MerchantOpportunityBanner from '@/components/customer/MerchantOpportunityBanner';
 
 // ── Icons & Utils ──
 import { Star, Gift, ArrowRight, Trophy, MessageCircle, LayoutDashboard } from 'lucide-react';
@@ -66,6 +67,7 @@ function CustomerProfileContent() {
     const [udhariCount, setUdhariCount] = useState(0);
     const [udhariPaise, setUdhariPaise] = useState(0);
     const [purchaseCount, setPurchaseCount] = useState(0);
+    const [merchantData, setMerchantData] = useState(null);
     const [totalSavedPaise, setTotalSavedPaise] = useState(0);
     const [graphData, setGraphData] = useState([]);
     const [profileLoading, setProfileLoading] = useState(true);
@@ -101,12 +103,14 @@ function CustomerProfileContent() {
             try {
                 const results = await Promise.allSettled([
                     supabase.from('user_profiles').select('*').eq('id', authUser.id).single(),
-                    supabase.from('customer_wallets').select('*').eq('user_id', authUser.id).single()
+                    supabase.from('customer_wallets').select('*').eq('user_id', authUser.id).single(),
+                    supabase.from('merchants').select('status, subscription_status, subscription_expires_at').eq('user_id', authUser.id).maybeSingle()
                 ]);
 
                 if (!cancelled) {
                     const profileResult = results[0];
                     const walletResult = results[1];
+                    const merchantResult = results[2];
 
                     if (profileResult.status === 'fulfilled' && profileResult.value.data) {
                         setProfile(profileResult.value.data);
@@ -119,6 +123,9 @@ function CustomerProfileContent() {
                             .select('*')
                             .single();
                         if (newWallet) setWallet(newWallet);
+                    }
+                    if (merchantResult?.status === 'fulfilled' && merchantResult.value.data) {
+                        setMerchantData(merchantResult.value.data);
                     }
 
                     const { data: udhariRequests } = await supabase.from('udhari_requests').select('amount_paise').eq('customer_id', authUser.id).in('status', ['pending', 'approved']);
@@ -302,6 +309,18 @@ function CustomerProfileContent() {
                                     activeUdhariPaise={udhariPaise}
                                     onManageWallet={() => router.push('/wallet')}
                                     onManageUdhari={() => router.push('/store-credits')}
+                                />
+                            </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.21 }}
+                            >
+                                <MerchantOpportunityBanner
+                                    merchantStatus={merchantData?.status}
+                                    subscriptionStatus={merchantData?.subscription_status}
+                                    subscriptionExpiresAt={merchantData?.subscription_expires_at}
                                 />
                             </motion.div>
 

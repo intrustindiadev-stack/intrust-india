@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
+import Image from "next/image";
 
 export default function ProcurementClient({ initialProducts }) {
     const [products, setProducts] = useState(initialProducts || []);
@@ -258,9 +259,9 @@ export default function ProcurementClient({ initialProducts }) {
                                             {/* Product */}
                                             <td className="px-5 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+                                                    <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 relative">
                                                         {product.product_images?.[0]
-                                                            ? <img src={product.product_images[0]} alt="" className="w-full h-full object-cover" />
+                                                            ? <Image src={product.product_images[0]} alt="" fill sizes="48px" className="object-cover" />
                                                             : <Package size={20} className="text-slate-200" />
                                                         }
                                                     </div>

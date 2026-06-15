@@ -6,6 +6,7 @@ import { Home, Clock, Calendar, FileText, BookOpen, User, X, LogOut, Loader2, Sh
 import { useState } from 'react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { createClient } from '@/lib/supabaseClient';
+import Image from 'next/image';
 
 export default function EmployeeSidebar({ isOpen, setIsOpen, userProfile }) {
     const pathname = usePathname();
@@ -125,9 +126,9 @@ export default function EmployeeSidebar({ isOpen, setIsOpen, userProfile }) {
                 <div className="p-4 border-t border-gray-100 bg-gray-50/50">
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-200/60 shadow-sm">
-                            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold border-2 border-white overflow-hidden shadow-sm">
+                            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold border-2 border-white overflow-hidden shadow-sm relative">
                                 {userProfile?.avatar_url ? (
-                                    <img src={userProfile.avatar_url} alt={userName} className="w-full h-full object-cover" />
+                                    <Image src={userProfile.avatar_url || '/placeholder.png'} alt={userName} fill sizes="40px" className="object-cover" />
                                 ) : (
                                     getInitials(userName)
                                 )}

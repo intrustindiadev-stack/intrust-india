@@ -15,9 +15,10 @@ import MerchantProfileCard from '@/components/customer/shop/MerchantProfileCard'
 import { isStorefrontItemOOS } from '@/lib/shopping/stock';
 import { isValidUUID } from '@/lib/utils';
 import React, { Suspense } from 'react';
-import Pagination from '@/components/search/Pagination';
+
 
 const PAGE_SIZE = 24;
+const storeCache = new Map();
 
 // Lazy load below-fold and modal components
 const AdBannerCarousel = React.lazy(() => import('@/components/customer/dashboard/AdBannerCarousel'));
@@ -70,29 +71,57 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
     }, [merchant]);
 
     const fetchItems = useCallback(async (pageNum, searchVal, catVal, lastIdVal) => {
+        const queryParams = new URLSearchParams({
+            merchantSlug: liveMerchant.slug,
+            offset: ((pageNum - 1) * PAGE_SIZE).toString(),
+            limit: PAGE_SIZE.toString(),
+        });
+        if (searchVal) {
+            queryParams.append('search', searchVal);
+        }
+        if (catVal && catVal !== 'All') {
+            queryParams.append('category', catVal);
+        }
+        if (lastIdVal) {
+            queryParams.append('lastId', lastIdVal);
+        }
+
+        const cacheKey = queryParams.toString();
+        
+        if (storeCache.has(cacheKey)) {
+            const cachedData = storeCache.get(cacheKey);
+            if (pageNum === 1) {
+                setLiveInventory(cachedData.items);
+            } else {
+                setLiveInventory(prev => {
+                    const existingIds = new Set(prev.map(i => i.id));
+                    const newItems = cachedData.items.filter(i => !existingIds.has(i.id));
+                    return [...prev, ...newItems];
+                });
+            }
+            setTotalCount(cachedData.totalCount);
+            setPage(pageNum);
+            return;
+        }
+
         setLoading(true);
         try {
-            const queryParams = new URLSearchParams({
-                merchantSlug: liveMerchant.slug,
-                offset: ((pageNum - 1) * PAGE_SIZE).toString(),
-                limit: PAGE_SIZE.toString(),
-            });
-            if (searchVal) {
-                queryParams.append('search', searchVal);
-            }
-            if (catVal && catVal !== 'All') {
-                queryParams.append('category', catVal);
-            }
-            if (lastIdVal) {
-                queryParams.append('lastId', lastIdVal);
-            }
-
-            const res = await fetch(`/api/shopping/storefront?${queryParams.toString()}`);
+            const res = await fetch(`/api/shopping/storefront?${cacheKey}`);
             if (!res.ok) throw new Error('Failed to fetch storefront items');
             const data = await res.json();
 
             const items = data.items || [];
-            setLiveInventory(items);
+            storeCache.set(cacheKey, { items, totalCount: data.totalCount ?? 0 });
+
+            if (pageNum === 1) {
+                setLiveInventory(items);
+            } else {
+                setLiveInventory(prev => {
+                    const existingIds = new Set(prev.map(i => i.id));
+                    const newItems = items.filter(i => !existingIds.has(i.id));
+                    return [...prev, ...newItems];
+                });
+            }
             setTotalCount(data.totalCount ?? 0);
             setPage(pageNum);
 
@@ -121,6 +150,23 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         const lastId = pageLastIds[page] || null;
         fetchItems(page, searchQuery, activeSubCategory, lastId);
     }, [page, fetchItems]);
+
+    const loadMoreRef = useRef(null);
+
+    // IntersectionObserver for infinite scrolling
+    useEffect(() => {
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !loading && liveInventory.length < totalCount) {
+                setPage(p => p + 1);
+            }
+        }, { threshold: 0.1 });
+
+        if (loadMoreRef.current) {
+            observer.observe(loadMoreRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loading, liveInventory.length, totalCount]);
 
     // Search and Category resets page to 1
     useEffect(() => {
@@ -626,15 +672,11 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                 ))}
                             </div>
 
-                            <div className="mt-8 flex justify-center">
-                                <Pagination
-                                    page={page}
-                                    totalPages={Math.ceil(totalCount / PAGE_SIZE)}
-                                    onPageChange={setPage}
-                                    totalCount={totalCount}
-                                    pageSize={PAGE_SIZE}
-                                />
-                            </div>
+                            {liveInventory.length < totalCount && (
+                                <div ref={loadMoreRef} className="w-full h-20 flex items-center justify-center mt-6">
+                                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                </div>
+                            )}
                         </>
                     )}
                 </div>

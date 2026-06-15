@@ -4,6 +4,7 @@ import { useState, memo } from 'react';
 import { Plus, Minus, Package, BadgeCheck, Check, Heart, Store } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { isStorefrontItemOOS } from '@/lib/shopping/stock';
 import OutOfStockOverlay from '@/components/ui/OutOfStockOverlay';
@@ -20,6 +21,9 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#00000
 
     const handleAdd = (e) => {
         e.stopPropagation();
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate(50);
+        }
         if (!isStoreOpen) {
             setIsClosedAnimation(true);
             setTimeout(() => setIsClosedAnimation(false), 1200);
@@ -58,9 +62,15 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#00000
             </div>
 
             <div
-                onClick={() => router.push(`/shop/product/${product.slug}`)}
-                className="relative cursor-pointer flex flex-col flex-1 p-2 md:p-3"
+                onClick={() => {
+                    // Guard: only navigate if slug exists — prevents /shop/product/undefined
+                    if (product?.slug) {
+                        router.push(`/shop/product/${product.slug}`);
+                    }
+                }}
+                className={`relative flex flex-col flex-1 p-2 md:p-3 ${product?.slug ? 'cursor-pointer' : 'cursor-default'}`}
             >
+
                 {/* Product Image - Enforced aspect ratio for layout stability */}
                 <div
                     className={`w-full aspect-square relative mb-3 rounded-xl flex items-center justify-center overflow-hidden ${isDark ? 'bg-[#0c0e14]' : 'bg-slate-50/50'}`}
@@ -167,28 +177,39 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#00000
                                     boxShadow: isDark ? `0 4px 16px ${primaryColor}30` : `0 2px 8px ${primaryColor}25`
                                 }}
                             >
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
+                                        onRemove();
+                                    }}
                                     className="w-10 h-full flex items-center justify-center hover:bg-black/10 transition-colors active:bg-black/20"
                                 >
                                     <Minus size={14} strokeWidth={3} />
-                                </button>
+                                </motion.button>
                                 <span
                                     className="text-sm font-black w-8 text-center bg-black/10 h-full flex flex-col justify-center shadow-inner"
                                 >
                                     {cartItem.quantity}
                                 </span>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); onAdd(); }}
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
+                                        onAdd();
+                                    }}
                                     className="w-10 h-full flex items-center justify-center hover:bg-black/10 transition-colors active:bg-black/20"
                                 >
                                     <Plus size={14} strokeWidth={3} />
-                                </button>
+                                </motion.button>
                             </div>
                         ) : (
-                            <button
+                            <motion.button
+                                whileTap={{ scale: 0.95 }}
                                 onClick={handleAdd}
-                                className={`w-full h-full rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-all active:scale-[0.96] duration-200 ${
+                                className={`w-full h-full rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-all duration-200 ${
                                     isClosedAnimation ? 'animate-bounce' : ''
                                 } ${isDark
                                     ? 'border text-white hover:bg-white/[0.08]'
@@ -206,7 +227,7 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#00000
                                 ) : (
                                     <Plus size={13} strokeWidth={3} />
                                 )}
-                            </button>
+                            </motion.button>
                         )}
                     </div>
                 )}

@@ -1,29 +1,13 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, Store, TrendingUp, ShieldCheck, Banknote, ChevronRight, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import BottomSheet from '@/components/ui/BottomSheet';
 
 export default function MerchantApplyPopup({ isOpen, onClose }) {
     const router = useRouter();
-    const sheetRef = useRef(null);
-
-    // Close on outside tap
-    const handleBackdropClick = (e) => {
-        if (e.target === e.currentTarget) onClose();
-    };
-
-    // Prevent body scroll when open
-    useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
-        }
-        return () => { document.body.style.overflow = ''; };
-    }, [isOpen]);
-
     const handleApply = () => {
         onClose();
         router.push('/merchant-apply');
@@ -36,36 +20,13 @@ export default function MerchantApplyPopup({ isOpen, onClose }) {
     ];
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <>
-                    {/* Backdrop */}
-                    <motion.div
-                        key="merchant-backdrop"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        onClick={handleBackdropClick}
-                        className="fixed inset-0 z-[900] bg-black/60 backdrop-blur-sm"
-                    />
-
-                    {/* Centered modal on desktop, bottom sheet on mobile */}
-                    <motion.div
-                        key="merchant-sheet"
-                        ref={sheetRef}
-                        initial={{ y: '100%', opacity: 0, scale: 0.95 }}
-                        animate={{ y: 0, opacity: 1, scale: 1 }}
-                        exit={{ y: '100%', opacity: 0, scale: 0.95 }}
-                        transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-                        className="fixed bottom-0 left-0 right-0 z-[910] md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-[440px] md:w-full
-                                   bg-white dark:bg-[#0f111a] rounded-t-[2.5rem] md:rounded-[2rem] shadow-2xl overflow-hidden border border-gray-100 dark:border-white/10"
-                        style={{ maxHeight: '92vh' }}
-                    >
-                        {/* Drag handle (mobile) */}
-                        <div className="flex justify-center pt-3 pb-1 md:hidden">
-                            <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-white/10" />
-                        </div>
+        <BottomSheet
+            isOpen={isOpen}
+            onClose={onClose}
+            noPadding
+            className="md:max-w-[440px] md:w-full bg-white dark:bg-[#0f111a]"
+        >
+            <div className="flex flex-col">
 
                         {/* Banner Image / Graphic Area */}
                         <div className="relative w-full h-40 bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-600 flex items-center justify-center overflow-hidden">
@@ -143,9 +104,7 @@ export default function MerchantApplyPopup({ isOpen, onClose }) {
                                 Instant Approval with KYC 🚀
                             </p>
                         </div>
-                    </motion.div>
-                </>
-            )}
-        </AnimatePresence>
+                    </div>
+        </BottomSheet>
     );
 }

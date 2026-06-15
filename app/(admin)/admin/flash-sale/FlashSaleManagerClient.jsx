@@ -22,6 +22,7 @@ import {
     RefreshCw,
     AlertCircle
 } from 'lucide-react';
+import Image from 'next/image';
 
 // --- Helpers ---
 
@@ -365,7 +366,9 @@ export default function FlashSaleManagerClient({ initialItems }) {
                                                         >
                                                             <div className="w-10 h-10 rounded-lg bg-slate-100 flex-shrink-0">
                                                                 {p.product_images?.[0] ? (
-                                                                    <img src={p.product_images[0]} className="w-full h-full object-cover rounded-lg" />
+                                                                    <div className="relative w-full h-full">
+                                                                        <Image src={p.product_images[0]} fill sizes="40px" className="object-cover rounded-lg" alt="" />
+                                                                    </div>
                                                                 ) : (
                                                                     <div className="w-full h-full flex items-center justify-center"><Package size={16} className="text-slate-300" /></div>
                                                                 )}
@@ -383,7 +386,9 @@ export default function FlashSaleManagerClient({ initialItems }) {
                                         <div className="flex items-center gap-3 p-2 bg-blue-50 border border-blue-100 rounded-xl">
                                             <div className="w-10 h-10 rounded-lg bg-white p-1">
                                                 {selectedProduct.product_images?.[0] ? (
-                                                    <img src={selectedProduct.product_images[0]} className="w-full h-full object-cover rounded-lg" />
+                                                    <div className="relative w-full h-full">
+                                                        <Image src={selectedProduct.product_images[0]} fill sizes="40px" className="object-cover rounded-lg" alt="" />
+                                                    </div>
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center"><Package size={16} className="text-slate-300" /></div>
                                                 )}
@@ -494,7 +499,9 @@ export default function FlashSaleManagerClient({ initialItems }) {
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
                                         <div className="w-12 h-12 rounded-xl bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200">
                                             {p?.product_images?.[0] ? (
-                                                <img src={p.product_images[0]} className="w-full h-full object-cover" />
+                                                <div className="relative w-full h-full">
+                                                    <Image src={p.product_images[0]} fill sizes="48px" className="object-cover" alt="" />
+                                                </div>
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center"><Package size={20} className="text-slate-300" /></div>
                                             )}
@@ -598,7 +605,9 @@ export default function FlashSaleManagerClient({ initialItems }) {
                                     <div key={item.id} className="bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-4 group">
                                         <div className="w-10 h-10 rounded-lg bg-slate-50 flex-shrink-0 border border-slate-100 grayscale group-hover:grayscale-0 transition-all">
                                             {p?.product_images?.[0] ? (
-                                                <img src={p.product_images[0]} className="w-full h-full object-cover rounded-lg" />
+                                                <div className="relative w-full h-full">
+                                                    <Image src={p.product_images[0]} fill sizes="40px" className="object-cover rounded-lg" alt="" />
+                                                </div>
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center"><Package size={16} className="text-slate-300" /></div>
                                             )}

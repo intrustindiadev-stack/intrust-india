@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
+import PullToRefresh from '@/components/ui/PullToRefresh';
 import {
     Wallet, Package, TrendingUp, Gift, Heart, Star,
     CheckCircle, Clock, ChevronRight, Check, Lock, Calendar, AlertCircle, X, Shield, Sparkles, Sun,
@@ -273,132 +274,131 @@ export default function CustomerDashboardPage() {
         setRecentActivity(combined);
     };
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            if (!user) return;
+    const fetchDashboardData = useCallback(async () => {
+        if (!user) return;
+        try {
+            const now = new Date().toISOString();
 
-            try {
-                const now = new Date().toISOString();
+            // Create a timeout promise to reject after 5s
+            const timeoutTx = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Dashboard fetch timeout')), 5000)
+            );
 
-                // Create a timeout promise to reject after 5s
-                const timeoutTx = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Dashboard fetch timeout')), 5000)
-                );
+            // Race the fetch bundle against timeout
+            const mainFetch = Promise.allSettled([
+                supabase.from('user_profiles').select('full_name, role, is_gold_verified, subscription_expiry, kyc_status, completed_onboarding, referral_code').eq('id', user.id).single(),
+                supabase.from('kyc_records').select('status, verification_status').eq('user_id', user.id).maybeSingle(),
+                supabase.from('customer_wallets').select('balance_paise').eq('user_id', user.id).maybeSingle(),
+                // Query through orders table (same as My Gift Cards page) for accurate counts
+                supabase.from('orders').select(`
+                    id, amount, created_at,
+                    coupons:coupons!orders_giftcard_id_fkey (
+                        id, brand, title, face_value_paise, selling_price_paise, status, purchased_at, valid_until
+                    )
+                `).eq('user_id', user.id).eq('payment_status', 'paid').order('created_at', { ascending: false }),
+                supabase.from('customer_wallet_transactions').select('id, type, amount_paise, description, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
+                supabase.from('merchants').select('status, subscription_status').eq('user_id', user.id).maybeSingle(),
+                supabase.from('reward_points_balance').select('total_earned').eq('user_id', user.id).maybeSingle()
+            ]);
 
-                // Race the fetch bundle against timeout
-                const mainFetch = Promise.allSettled([
-                    supabase.from('user_profiles').select('full_name, role, is_gold_verified, subscription_expiry, kyc_status, completed_onboarding, referral_code').eq('id', user.id).single(),
-                    supabase.from('kyc_records').select('status, verification_status').eq('user_id', user.id).maybeSingle(),
-                    supabase.from('customer_wallets').select('balance_paise').eq('user_id', user.id).maybeSingle(),
-                    // Query through orders table (same as My Gift Cards page) for accurate counts
-                    supabase.from('orders').select(`
-                        id, amount, created_at,
-                        coupons:coupons!orders_giftcard_id_fkey (
-                            id, brand, title, face_value_paise, selling_price_paise, status, purchased_at, valid_until
-                        )
-                    `).eq('user_id', user.id).eq('payment_status', 'paid').order('created_at', { ascending: false }),
-                    supabase.from('customer_wallet_transactions').select('id, type, amount_paise, description, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
-                    supabase.from('merchants').select('status, subscription_status').eq('user_id', user.id).maybeSingle(),
-                    supabase.from('reward_points_balance').select('total_earned').eq('user_id', user.id).maybeSingle()
-                ]);
+            const results = await Promise.race([mainFetch, timeoutTx]);
 
-                const results = await Promise.race([mainFetch, timeoutTx]);
+            // Process results (allSettled returns objects with { status, value })
+            const profileResult = results[0];
+            const kycResult = results[1];
+            const walletResult = results[2];
+            const couponsResult = results[3];
+            const walletTxResult = results[4];
+            const merchantResult = results[5];
+            const rewardsResult = results[6];
 
-                // Process results (allSettled returns objects with { status, value })
-                const profileResult = results[0];
-                const kycResult = results[1];
-                const walletResult = results[2];
-                const couponsResult = results[3];
-                const walletTxResult = results[4];
-                const merchantResult = results[5];
-                const rewardsResult = results[6];
-
-                // 1. Process Profile
-                let profile = null;
-                if (profileResult.status === 'fulfilled' && profileResult.value.data) {
-                    profile = profileResult.value.data;
-                }
-
-                // 2. Process KYC (Prioritize user_profiles, fallback to kyc_records)
-                let kycStatus = profile?.kyc_status || 'not_started';
-                if (kycStatus === 'not_started' && kycResult.status === 'fulfilled' && kycResult.value.data) {
-                    kycStatus = kycResult.value.data.verification_status || kycResult.value.data.status;
-                }
-
-                // 3. Process Orders → Coupons (matches My Gift Cards logic)
-                let coupons = [];
-                if (couponsResult.status === 'fulfilled' && couponsResult.value.data) {
-                    // Flatten: extract coupon from each order, attach order info
-                    coupons = couponsResult.value.data
-                        .filter(order => order.coupons) // Only orders with linked coupons
-                        .map(order => ({
-                            ...order.coupons,
-                            order_amount: order.amount,
-                            purchased_at: order.coupons.purchased_at || order.created_at,
-                        }));
-                }
-
-                let totalSavings = 0;
-                let activeCards = 0;
-                let totalPurchases = 0;
-
-                if (coupons.length > 0) {
-                    totalPurchases = coupons.length;
-                    coupons.forEach(coupon => {
-                        const faceValue = coupon.face_value_paise || 0;
-                        const sellingPrice = coupon.selling_price_paise || 0;
-                        totalSavings += (faceValue - sellingPrice);
-
-                        // Active = sold + not expired (same logic as My Gift Cards page)
-                        const isExpired = new Date(coupon.valid_until) < new Date();
-                        if (coupon.status === 'sold' && !isExpired) {
-                            activeCards++;
-                        }
-                    });
-                }
-
-                // Convert savings from paise to Rupee
-                totalSavings = totalSavings / 100;
-
-                // 4. Wallet Balance
-                let walletBalance = 0.00;
-                if (walletResult.status === 'fulfilled' && walletResult.value.data) {
-                    walletBalance = (walletResult.value.data.balance_paise || 0) / 100;
-                }
-
-                // 5. Build Recent Activity
-                let walletTxs = [];
-                if (walletTxResult.status === 'fulfilled' && walletTxResult.value.data) {
-                    walletTxs = walletTxResult.value.data;
-                }
-                processActivityFeed(coupons.slice(0, 5), walletTxs);
-
-                const rewardPoints = rewardsResult.status === 'fulfilled' && rewardsResult.value.data ? rewardsResult.value.data.total_earned : 0;
-
-                setUserData({
-                    name: displayName(profile, user),
-                    totalPurchases,
-                    totalSavings,
-                    kycStatus,
-                    isGoldVerified: profile?.is_gold_verified || false,
-                    subscriptionExpiry: profile?.subscription_expiry || null,
-                    walletBalance,
-                    rewardPoints,
-                    activeCards,
-                    completedOnboarding: profile?.completed_onboarding ?? true,
-                    referralCode: profile?.referral_code || null,
-                    merchantStatus: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.status : null,
-                    merchantSubscriptionStatus: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.subscription_status : null,
-                    merchantSubscriptionExpiresAt: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.subscription_expires_at : null
-                });
-
-            } catch (error) {
-                console.error('Error fetching dashboard data:', error);
-            } finally {
-                setLoading(false);
+            // 1. Process Profile
+            let profile = null;
+            if (profileResult.status === 'fulfilled' && profileResult.value.data) {
+                profile = profileResult.value.data;
             }
-        };
 
+            // 2. Process KYC (Prioritize user_profiles, fallback to kyc_records)
+            let kycStatus = profile?.kyc_status || 'not_started';
+            if (kycStatus === 'not_started' && kycResult.status === 'fulfilled' && kycResult.value.data) {
+                kycStatus = kycResult.value.data.verification_status || kycResult.value.data.status;
+            }
+
+            // 3. Process Orders → Coupons (matches My Gift Cards logic)
+            let coupons = [];
+            if (couponsResult.status === 'fulfilled' && couponsResult.value.data) {
+                // Flatten: extract coupon from each order, attach order info
+                coupons = couponsResult.value.data
+                    .filter(order => order.coupons) // Only orders with linked coupons
+                    .map(order => ({
+                        ...order.coupons,
+                        order_amount: order.amount,
+                        purchased_at: order.coupons.purchased_at || order.created_at,
+                    }));
+            }
+
+            let totalSavings = 0;
+            let activeCards = 0;
+            let totalPurchases = 0;
+
+            if (coupons.length > 0) {
+                totalPurchases = coupons.length;
+                coupons.forEach(coupon => {
+                    const faceValue = coupon.face_value_paise || 0;
+                    const sellingPrice = coupon.selling_price_paise || 0;
+                    totalSavings += (faceValue - sellingPrice);
+
+                    // Active = sold + not expired (same logic as My Gift Cards page)
+                    const isExpired = new Date(coupon.valid_until) < new Date();
+                    if (coupon.status === 'sold' && !isExpired) {
+                        activeCards++;
+                    }
+                });
+            }
+
+            // Convert savings from paise to Rupee
+            totalSavings = totalSavings / 100;
+
+            // 4. Wallet Balance
+            let walletBalance = 0.00;
+            if (walletResult.status === 'fulfilled' && walletResult.value.data) {
+                walletBalance = (walletResult.value.data.balance_paise || 0) / 100;
+            }
+
+            // 5. Build Recent Activity
+            let walletTxs = [];
+            if (walletTxResult.status === 'fulfilled' && walletTxResult.value.data) {
+                walletTxs = walletTxResult.value.data;
+            }
+            processActivityFeed(coupons.slice(0, 5), walletTxs);
+
+            const rewardPoints = rewardsResult.status === 'fulfilled' && rewardsResult.value.data ? rewardsResult.value.data.total_earned : 0;
+
+            setUserData({
+                name: displayName(profile, user),
+                totalPurchases,
+                totalSavings,
+                kycStatus,
+                isGoldVerified: profile?.is_gold_verified || false,
+                subscriptionExpiry: profile?.subscription_expiry || null,
+                walletBalance,
+                rewardPoints,
+                activeCards,
+                completedOnboarding: profile?.completed_onboarding ?? true,
+                referralCode: profile?.referral_code || null,
+                merchantStatus: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.status : null,
+                merchantSubscriptionStatus: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.subscription_status : null,
+                merchantSubscriptionExpiresAt: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.subscription_expires_at : null
+            });
+
+        } catch (error) {
+            console.error('Error fetching dashboard data:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, [user]);
+
+    useEffect(() => {
         let walletSub;
         let activitySub;
         if (!authLoading) {
@@ -490,8 +490,9 @@ export default function CustomerDashboardPage() {
                 />
             )}
 
-            <div className="pt-24 sm:pt-32 px-4 sm:px-6 flex-grow">
-                <div className="max-w-7xl mx-auto">
+            <PullToRefresh onRefresh={fetchDashboardData}>
+                <div className="pt-24 sm:pt-32 px-4 sm:px-6 flex-grow">
+                    <div className="max-w-7xl mx-auto">
                     <div className="mb-4 sm:mb-8">
                         <Breadcrumbs items={[{ label: 'Dashboard' }]} />
                     </div>
@@ -566,6 +567,7 @@ export default function CustomerDashboardPage() {
                     <OpportunitiesSection />
                 </div>
             </div>
+            </PullToRefresh>
             {userData.completedOnboarding && <CustomerBottomNav />}
             <DisclaimerNote />
 

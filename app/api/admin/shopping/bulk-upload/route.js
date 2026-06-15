@@ -152,7 +152,7 @@ export async function POST(request) {
                         is_active: p.is_active,
                         gst_percentage: p.gst_percentage,
                         hsn_code: p.hsn_code,
-                        platform_listed: true,
+                        platform_listed: false,
                         approval_status: 'live',
                         submitted_by_merchant_id: merchantId
                     }).select('id').single();

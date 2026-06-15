@@ -3,6 +3,7 @@
 import { Mail, Phone, Camera, Loader2, Star, Link as LinkIcon } from 'lucide-react';
 import GoldBadge from '@/components/ui/GoldBadge';
 import { useRef, useState } from 'react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabaseClient';
 import { displayName as authDisplayName, displayEmail, formatIndianPhone } from '@/lib/auth';
 
@@ -44,10 +45,12 @@ function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
             onClick={() => !uploading && fileRef.current?.click()}
         >
             {avatarUrl ? (
-                <img
+                <Image
                     src={avatarUrl}
                     alt="Avatar"
-                    className="w-28 h-28 rounded-full object-cover shadow-2xl ring-4 ring-white/10 group-hover:ring-amber-500/50 transition-all duration-500"
+                    fill
+                    sizes="112px"
+                    className="rounded-full object-cover shadow-2xl ring-4 ring-white/10 group-hover:ring-amber-500/50 transition-all duration-500"
                 />
             ) : (
                 <div className="w-28 h-28 rounded-full bg-gradient-to-br from-gray-800 to-gray-950 flex items-center justify-center text-white text-4xl font-black shadow-2xl ring-4 ring-white/10 group-hover:ring-amber-500/50 transition-all duration-500">

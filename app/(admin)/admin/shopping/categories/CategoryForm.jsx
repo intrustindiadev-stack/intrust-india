@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Loader2, Save, Tags, Palette, Eye, ArrowRight } from 'lucide-react';
+import Image from 'next/image';
 
 // No longer using fixed gradients list
 
@@ -157,8 +158,8 @@ export default function CategoryForm({ initialData = null }) {
                                     className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold"
                                 />
                                 {formData.image_url && (
-                                    <div className="mt-4 w-16 h-16 rounded-2xl overflow-hidden border border-slate-200">
-                                        <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
+                                    <div className="mt-4 w-16 h-16 rounded-2xl overflow-hidden border border-slate-200 relative">
+                                        <Image src={formData.image_url} alt="Preview" fill sizes="64px" className="object-cover" />
                                     </div>
                                 )}
                             </div>

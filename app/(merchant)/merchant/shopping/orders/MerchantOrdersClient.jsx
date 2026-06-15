@@ -17,6 +17,7 @@ import StoreCreditRequestsTab from "./StoreCreditRequestsTab";
 import { generateOrderInvoice } from "@/lib/invoiceGenerator";
 import { calculatePlatformFeePercentage } from "@/lib/utils/ledger";
 import { toast } from "react-hot-toast";
+import Image from "next/image";
 
 const STATUS_CONFIG = {
     pending: { label: "Pending", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20 dark:border-amber-500/30", icon: Clock },
@@ -135,9 +136,9 @@ const OrderCard = ({ order, cfg, nextStatus, isExpanded, isUpdating, onUpdate, o
 
                                         return (
                                             <div key={item.id} className="relative group/item flex gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/[0.05] hover:border-emerald-500/20 dark:hover:border-white/10 transition-all">
-                                                <div className="w-16 h-16 bg-white dark:bg-white/[0.03] rounded-xl overflow-hidden shrink-0 flex items-center justify-center border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-none">
+                                                <div className="w-16 h-16 bg-white dark:bg-white/[0.03] rounded-xl overflow-hidden shrink-0 flex items-center justify-center border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-none relative">
                                                     {item.product_image ? (
-                                                        <img src={item.product_image} alt="" className="w-full h-full object-cover dark:opacity-80 group-hover/item:opacity-100 transition-opacity" />
+                                                        <Image src={item.product_image} alt="" fill sizes="64px" className="object-cover dark:opacity-80 group-hover/item:opacity-100 transition-opacity" />
                                                     ) : (
                                                         <Package size={24} className="text-slate-300 dark:text-gray-600" />
                                                     )}

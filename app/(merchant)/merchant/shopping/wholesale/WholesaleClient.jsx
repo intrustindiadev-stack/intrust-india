@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import MerchantFloatingCart from '@/components/merchant/shopping/MerchantFloatingCart';
 import SuccessAnimation from '@/components/ui/SuccessAnimation';
 import WholesaleProductModal from '@/components/merchant/shopping/WholesaleProductModal';
@@ -55,10 +56,12 @@ function PartnerCard({ partner, i }) {
                                 {partner.name ? partner.name[0] : ''}
                             </div>
                         ) : (
-                            <img 
+                            <Image 
                                 src={partner.logo} 
                                 alt={partner.name} 
-                                className="w-full h-full object-contain"
+                                fill
+                                sizes="80px"
+                                className="object-contain"
                                 onError={() => setImgFailed(true)}
                             />
                         )}
@@ -527,7 +530,7 @@ export default function WholesaleClient({
                 >
                     {item.image ? (
                         <div className="w-full h-full relative rounded-full overflow-hidden">
-                            <img src={item.image} className="w-full h-full object-cover" alt="Flying item" />
+                            <Image src={item.image} className="object-cover" alt="Flying item" fill sizes="48px" />
                             {/* Premium Overlay inside the image flying orb */}
                             <div className="absolute inset-0 bg-emerald-500/20 mix-blend-overlay"></div>
                         </div>
@@ -697,12 +700,14 @@ export default function WholesaleClient({
                                             className={`aspect-[4/3] relative bg-gradient-to-br ${gradientClass} p-1 cursor-pointer`}
                                             onClick={() => setSelectedProduct(product)}
                                         >
-                                            <div className="w-full h-full bg-white rounded-[1.7rem] overflow-hidden">
+                                            <div className="w-full h-full bg-white rounded-[1.7rem] overflow-hidden relative">
                                                 {product.product_images?.[0] ? (
-                                                    <img
+                                                    <Image
                                                         src={product.product_images[0]}
                                                         alt={product.title}
-                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                                                        fill
+                                                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                                        className="object-cover group-hover:scale-105 transition-transform duration-700"
                                                     />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center">

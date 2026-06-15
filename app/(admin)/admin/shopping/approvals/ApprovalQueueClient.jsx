@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Package, CheckCircle, XCircle, ChevronLeft, CalendarClock } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
+import Image from "next/image";
 
 export default function ApprovalQueueClient({ initialProducts }) {
     const [products, setProducts] = useState(initialProducts || []);
@@ -168,9 +169,9 @@ export default function ApprovalQueueClient({ initialProducts }) {
                                 className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col gap-4"
                             >
                                 <div className="flex items-start gap-4">
-                                    <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 border border-slate-100">
+                                    <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 border border-slate-100 relative">
                                         {product.product_images?.[0] ? (
-                                            <img src={product.product_images[0]} alt="" className="w-full h-full object-cover" />
+                                            <Image src={product.product_images[0]} alt="" fill sizes="64px" className="object-cover" />
                                         ) : (
                                             <Package size={24} className="text-slate-300" />
                                         )}

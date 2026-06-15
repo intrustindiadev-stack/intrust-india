@@ -4,6 +4,16 @@ import AdminBottomNav from '@/components/layout/admin/AdminBottomNav';
 
 import UnauthorizedRedirect from '@/components/auth/UnauthorizedRedirect';
 
+// Maps a role to its home portal
+function portalForRole(role) {
+    if (!role) return '/login';
+    if (role === 'merchant') return '/merchant/dashboard';
+    if (role === 'hr_manager') return '/hrm';
+    if (role === 'employee') return '/employee';
+    if (role?.startsWith('sales_') || role === 'sales_exec' || role === 'sales_agent') return '/crm';
+    return '/dashboard'; // customer or unknown
+}
+
 export default async function AdminRootLayout({ children }) {
     // Use session-aware client to identify the user (reads cookies)
     const authSupabase = await createServerSupabaseClient();
@@ -22,7 +32,9 @@ export default async function AdminRootLayout({ children }) {
         .single();
 
     if (!['admin', 'super_admin'].includes(profile?.role)) {
-        return <UnauthorizedRedirect to="/" message="Admin Access Required. Redirecting..." />;
+        // Route them to their actual portal, not just "/" (which would cause a loop)
+        const destination = portalForRole(profile?.role);
+        return <UnauthorizedRedirect to={destination} message="Admin Access Required. Redirecting..." />;
     }
 
     return (

@@ -114,8 +114,8 @@ export default async function MerchantHubPage() {
             <main className="pt-[88px] md:pt-[104px]">
 
                 {/* ── Top Header Bar ── */}
-                <div className="sticky top-[76px] md:top-[92px] z-30 px-4 md:px-8 max-w-7xl mx-auto w-full mb-6 pointer-events-none">
-                    <div className="bg-white dark:bg-[#0c0e16] md:bg-white/95 md:dark:bg-[#0c0e16]/95 md:backdrop-blur-2xl rounded-2xl md:rounded-[2rem] border border-slate-200/80 dark:border-white/[0.08] shadow-lg py-3 px-4 md:px-5 flex items-center justify-between gap-3 pointer-events-auto transition-shadow hover:shadow-xl">
+                <div className="px-4 md:px-8 max-w-7xl mx-auto w-full mb-6">
+                    <div className="bg-white dark:bg-[#0c0e16] md:bg-white/95 md:dark:bg-[#0c0e16]/95 md:backdrop-blur-2xl rounded-2xl md:rounded-[2rem] border border-slate-200/80 dark:border-white/[0.08] shadow-lg py-3 px-4 md:px-5 flex items-center justify-between gap-3 transition-shadow hover:shadow-xl">
 
                         {/* Title */}
                         <div className="flex items-center gap-2.5">

@@ -26,6 +26,20 @@ export default function CustomerLayout({ children }) {
         }
     }, [user, profile, loading, router, pathname]);
 
+    // While auth is resolving, render a blank screen instead of the customer UI.
+    // This prevents admins/merchants from seeing a flash of the customer layout
+    // before the redirect fires — eliminating the race condition that caused
+    // the login-loop bug.
+    if (loading) {
+        return <div className="min-h-screen bg-[var(--bg-primary)]" />;
+    }
+
+    // If a non-customer role is loaded but redirect hasn't fired yet, suppress render
+    if (profile && profile.role !== 'customer' && !pathname?.startsWith('/merchant-apply')) {
+        return <div className="min-h-screen bg-[var(--bg-primary)]" />;
+    }
+
     return children;
 }
+
 
