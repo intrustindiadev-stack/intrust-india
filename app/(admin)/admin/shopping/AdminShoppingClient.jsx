@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { isInventoryRowOOS, OOS_LABEL } from '@/lib/shopping/stock';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 import BulkProductUpload from '@/components/admin/shopping/BulkProductUpload';
@@ -535,9 +536,9 @@ export default function AdminShoppingClient({
                                 className="group relative bg-white p-4 sm:p-5 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-blue-500/5 transition-all duration-500 flex items-start gap-4 sm:gap-6"
                             >
                                 {/* Image */}
-                                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-3xl bg-slate-50 dark:bg-slate-900/50 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform duration-500 border border-slate-100">
+                                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-3xl bg-slate-50 dark:bg-slate-900/50 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform duration-500 border border-slate-100 relative">
                                     {product.product_images?.[0] ? (
-                                        <img src={product.product_images[0]} alt="" className="w-full h-full object-cover" />
+                                        <Image src={product.product_images[0]} alt="" fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover" />
                                     ) : (
                                         <Package size={32} className="text-slate-200" />
                                     )}

@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { Tags, Plus, LayoutGrid, ChevronRight, Edit2 } from 'lucide-react';
 import Link from 'next/link';
 import * as LucideIcons from 'lucide-react';
+import Image from 'next/image';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,7 +91,7 @@ export default async function AdminCategoriesPage() {
 
                                 <div className={`w-20 h-20 rounded-[1.5rem] bg-slate-50 flex items-center justify-center overflow-hidden shadow-lg shadow-blue-900/5 group-hover:scale-110 transition-transform duration-500 mt-6 mb-4 relative z-10 border border-slate-100`}>
                                     {cat.image_url ? (
-                                        <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
+                                        <Image src={cat.image_url} alt={cat.name} fill sizes="80px" className="object-cover" />
                                     ) : (
                                         <div 
                                             className="w-full h-full opacity-30 bg-blue-500" 

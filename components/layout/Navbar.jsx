@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Menu, X, ChevronRight, User, Moon, Sun } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -179,10 +179,12 @@ export default function Navbar() {
                                             >
                                                 <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                                                     {hasImage ? (
-                                                        <img
+                                                        <Image
                                                             src={profile.avatar_url}
                                                             alt="Profile"
-                                                            className="w-full h-full object-cover"
+                                                            fill
+                                                            sizes="40px"
+                                                            className="object-cover"
                                                         />
                                                     ) : (
                                                         <span className="font-bold text-[#7A93AC] text-lg">
@@ -233,8 +235,8 @@ export default function Navbar() {
                                 </div>
                             ) : (
                                 <div className="hidden lg:flex items-center gap-2">
-                                    <button
-                                        onClick={() => router.push('/login')}
+                                    <Link
+                                        href="/login"
                                         className="
                       px-5 py-2 text-[15px] font-medium 
                       text-[#617073] dark:text-gray-300 hover:text-[#171A21] dark:hover:text-white 
@@ -244,9 +246,9 @@ export default function Navbar() {
                     "
                                     >
                                         Log In
-                                    </button>
-                                    <button
-                                        onClick={() => router.push('/login')}
+                                    </Link>
+                                    <Link
+                                        href="/signup"
                                         className="
                       px-6 py-2 rounded-full font-semibold text-[15px]
                       bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] 
@@ -255,7 +257,7 @@ export default function Navbar() {
                     "
                                     >
                                         Sign Up
-                                    </button>
+                                    </Link>
                                 </div>
                             )}
 

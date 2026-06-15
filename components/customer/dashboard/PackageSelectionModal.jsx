@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Wallet, Star, Smartphone, CheckCircle, X, ChevronRight, CreditCard, Sparkles, AlertCircle } from 'lucide-react';
 import { GOLD_SUBSCRIPTION_PLANS } from '@/lib/constants';
+import BottomSheet from '@/components/ui/BottomSheet';
 
 export default function PackageSelectionModal({ showPackages, setShowPackages, handleBuyPackage, userData }) {
     const [selectedPackage, setSelectedPackage] = useState(null);
@@ -15,19 +16,6 @@ export default function PackageSelectionModal({ showPackages, setShowPackages, h
         popular: plan.key === 'GOLD_3M'
     }));
 
-    // Prevent background scrolling when modal is open
-    useEffect(() => {
-        if (showPackages) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-            setSelectedPackage(null); // reset state when closed externally
-        }
-        return () => {
-            document.body.style.overflow = 'unset';
-        };
-    }, [showPackages]);
-
     const resetAndClose = () => {
         setSelectedPackage(null);
         setShowPackages(false);
@@ -39,30 +27,18 @@ export default function PackageSelectionModal({ showPackages, setShowPackages, h
         resetAndClose();
     };
 
-    if (!showPackages) return null;
-
     return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] flex justify-center items-end sm:items-center bg-black/60 backdrop-blur-sm sm:p-4"
-            >
-                <div className="absolute inset-0" onClick={resetAndClose}></div>
+        <BottomSheet
+            isOpen={showPackages}
+            onClose={resetAndClose}
+            noPadding
+            className="md:max-w-3xl bg-[#0a0a0a] border-white/10 flex flex-col md:flex-row h-full md:h-auto z-[1000]"
+        >
+            {/* Subtle Top Glow */}
+            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent z-20"></div>
 
-                <motion.div
-                    initial={{ y: '100%', scale: 0.95 }}
-                    animate={{ y: 0, scale: 1 }}
-                    exit={{ y: '100%', scale: 0.95 }}
-                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                    className="w-full max-w-3xl bg-[#0a0a0a] rounded-t-3xl sm:rounded-3xl border-t sm:border border-white/10 overflow-hidden relative shadow-2xl flex flex-col md:flex-row max-h-[85vh] z-10"
-                >
-                    {/* Subtle Top Glow */}
-                    <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent"></div>
-
-                    {/* Left Panel: Luxury Benefits (Hidden on small screens) */}
-                    <div className="hidden md:flex flex-col w-72 bg-white/[0.02] border-r border-white/5 p-6 relative">
+            {/* Left Panel: Luxury Benefits (Hidden on small screens) */}
+            <div className="hidden md:flex flex-col w-72 bg-white/[0.02] border-r border-white/5 p-6 relative">
                         <div className="mb-6">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-900/20 mb-4 relative group">
                                 <Shield className="text-[#111] fill-[#111]" size={20} />
@@ -265,8 +241,6 @@ export default function PackageSelectionModal({ showPackages, setShowPackages, h
                             </AnimatePresence>
                         </div>
                     </div>
-                </motion.div>
-            </motion.div>
-        </AnimatePresence>
+        </BottomSheet>
     );
 }

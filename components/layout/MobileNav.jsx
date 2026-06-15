@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, Moon, Sun, Gift, Sparkles, History, ShoppingBag, CreditCard, ScanFace, ChevronDown } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { displayInitial, displayEmail } from '@/lib/auth';
 
@@ -86,30 +87,30 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                             <div className="space-y-2">
                                 {/* Navigation Links */}
                                 {menuItems.map((item, index) => (
-                                    <motion.a
-                                        key={item.label}
-                                        href={item.href}
-                                        custom={index}
-                                        variants={itemVariants}
-                                        initial="hidden"
-                                        animate="visible"
-                                        onClick={onClose}
-                                        className="
-                                            group flex items-center justify-between 
-                                            px-4 py-4 text-[#171A21] dark:text-gray-100
-                                            active:bg-gray-50 dark:active:bg-gray-800
-                                            rounded-2xl font-medium text-[16px]
-                                            transition-colors duration-200
-                                            border border-transparent hover:border-gray-100 dark:hover:border-gray-800
-                                        "
-                                    >
-                                        <span>{item.label}</span>
-                                        <ChevronRight
-                                            size={18}
-                                            className="text-gray-300 group-active:text-[#92BCEA] transition-colors"
-                                            strokeWidth={2.5}
-                                        />
-                                    </motion.a>
+                                    <Link key={item.label} href={item.href} passHref legacyBehavior>
+                                        <motion.a
+                                            custom={index}
+                                            variants={itemVariants}
+                                            initial="hidden"
+                                            animate="visible"
+                                            onClick={onClose}
+                                            className="
+                                                group flex items-center justify-between 
+                                                px-4 py-4 text-[#171A21] dark:text-gray-100
+                                                active:bg-gray-50 dark:active:bg-gray-800
+                                                rounded-2xl font-medium text-[16px]
+                                                transition-colors duration-200
+                                                border border-transparent hover:border-gray-100 dark:hover:border-gray-800
+                                            "
+                                        >
+                                            <span>{item.label}</span>
+                                            <ChevronRight
+                                                size={18}
+                                                className="text-gray-300 group-active:text-[#92BCEA] transition-colors"
+                                                strokeWidth={2.5}
+                                            />
+                                        </motion.a>
+                                    </Link>
                                 ))}
                             </div>
 
@@ -147,27 +148,30 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                                 transition={{ duration: 0.3 }}
                                                 className="overflow-hidden pl-11 space-y-1"
                                             >
-                                                <button
-                                                    onClick={() => { router.push('/nfc-service'); onClose(); }}
+                                                <Link
+                                                    href="/nfc-service"
+                                                    onClick={onClose}
                                                     className="w-full flex items-center gap-3 py-3 px-2 text-sm text-gray-600 dark:text-gray-400 hover:text-[#92BCEA] transition-colors"
                                                 >
                                                     <ScanFace size={16} />
                                                     <span>NFC Orders</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => { router.push('/my-giftcards'); onClose(); }}
+                                                </Link>
+                                                <Link
+                                                    href="/my-giftcards"
+                                                    onClick={onClose}
                                                     className="w-full flex items-center gap-3 py-3 px-2 text-sm text-gray-600 dark:text-gray-400 hover:text-[#92BCEA] transition-colors"
                                                 >
                                                     <CreditCard size={16} />
                                                     <span>Gift Cards</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => { router.push('/orders'); onClose(); }}
+                                                </Link>
+                                                <Link
+                                                    href="/orders"
+                                                    onClick={onClose}
                                                     className="w-full flex items-center gap-3 py-3 px-2 text-sm text-gray-600 dark:text-gray-400 hover:text-[#92BCEA] transition-colors"
                                                 >
                                                     <ShoppingBag size={16} />
                                                     <span>Shopping</span>
-                                                </button>
+                                                </Link>
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
@@ -178,25 +182,27 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
 
                                 {/* Genz Sidebar CTA */}
                                 {isAuthenticated && (
-                                    <motion.button
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: 0.3 }}
-                                        onClick={() => { router.push('/refer'); onClose(); }}
-                                        className="mt-4 w-full p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white relative overflow-hidden group shadow-lg shadow-indigo-500/20"
-                                    >
-                                        <div className="absolute top-0 right-0 -mr-4 -mt-4 w-16 h-16 bg-white/20 blur-xl rounded-full" />
-                                        <div className="relative flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                                                <Gift size={20} className="text-white" />
+                                    <Link href="/refer" passHref legacyBehavior>
+                                        <motion.button
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ delay: 0.3 }}
+                                            onClick={onClose}
+                                            className="mt-4 w-full p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white relative overflow-hidden group shadow-lg shadow-indigo-500/20 block"
+                                        >
+                                            <div className="absolute top-0 right-0 -mr-4 -mt-4 w-16 h-16 bg-white/20 blur-xl rounded-full" />
+                                            <div className="relative flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                                                    <Gift size={20} className="text-white" />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-sm font-black uppercase tracking-tighter">Refer & Earn</p>
+                                                    <p className="text-[10px] font-medium opacity-80">Earn ₹100 for every successful referral</p>
+                                                </div>
+                                                <ChevronRight size={16} className="ml-auto opacity-60" />
                                             </div>
-                                            <div className="text-left">
-                                                <p className="text-sm font-black uppercase tracking-tighter">Refer & Earn</p>
-                                                <p className="text-[10px] font-medium opacity-80">Earn ₹100 for every successful referral</p>
-                                            </div>
-                                            <ChevronRight size={16} className="ml-auto opacity-60" />
-                                        </div>
-                                    </motion.button>
+                                        </motion.button>
+                                    </Link>
                                 )}
                             </div>
 
@@ -208,43 +214,47 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                 {isAuthenticated ? (
                                     <>
                                         {/* Profile Card */}
-                                        <motion.button
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.15 }}
-                                            onClick={() => { router.push('/profile'); onClose(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-4 bg-gradient-to-r from-[#92BCEA]/10 to-[#AFB3F7]/10 rounded-2xl"
-                                        >
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] flex-shrink-0">
-                                                <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                                                    {profile?.avatar_url ? (
-                                                        <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <span className="font-bold text-[#7A93AC] text-sm">
-                                                            {displayInitial(profile, user)}
-                                                        </span>
-                                                    )}
+                                        <Link href="/profile" passHref legacyBehavior>
+                                            <motion.button
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: 0.15 }}
+                                                onClick={onClose}
+                                                className="w-full flex items-center gap-3 px-4 py-4 bg-gradient-to-r from-[#92BCEA]/10 to-[#AFB3F7]/10 rounded-2xl text-left block"
+                                            >
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] flex-shrink-0">
+                                                    <div className="relative w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                                        {profile?.avatar_url ? (
+                                                            <Image src={profile.avatar_url} alt="Avatar" fill sizes="40px" className="object-cover" />
+                                                        ) : (
+                                                            <span className="font-bold text-[#7A93AC] text-sm">
+                                                                {displayInitial(profile, user)}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="flex-1 text-left min-w-0">
-                                                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                                                    {profile?.full_name || 'Your Profile'}
-                                                </p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{displayEmail(user?.email) || profile?.phone || 'Phone user'}</p>
-                                            </div>
-                                            <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
-                                        </motion.button>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                                        {profile?.full_name || 'Your Profile'}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{displayEmail(user?.email) || profile?.phone || 'Phone user'}</p>
+                                                </div>
+                                                <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
+                                            </motion.button>
+                                        </Link>
 
-                                        <motion.button
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.2 }}
-                                            onClick={() => { router.push('/dashboard'); onClose(); }}
-                                            className="w-full flex items-center justify-between px-4 py-4 text-[#171A21] dark:text-gray-100 bg-gray-50 dark:bg-gray-800 rounded-2xl font-medium"
-                                        >
-                                            <span>Dashboard</span>
-                                            <ChevronRight size={18} className="text-gray-400" />
-                                        </motion.button>
+                                        <Link href="/dashboard" passHref legacyBehavior>
+                                            <motion.button
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: 0.2 }}
+                                                onClick={onClose}
+                                                className="w-full flex items-center justify-between px-4 py-4 text-[#171A21] dark:text-gray-100 bg-gray-50 dark:bg-gray-800 rounded-2xl font-medium block"
+                                            >
+                                                <span>Dashboard</span>
+                                                <ChevronRight size={18} className="text-gray-400" />
+                                            </motion.button>
+                                        </Link>
 
 
 
@@ -260,25 +270,29 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                     </>
                                 ) : (
                                     <>
-                                        <motion.button
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.2 }}
-                                            onClick={() => { router.push('/login'); onClose(); }}
-                                            className="w-full flex items-center justify-between px-4 py-4 text-[#171A21] dark:text-gray-100 bg-gray-50 dark:bg-gray-800 rounded-2xl font-medium"
-                                        >
-                                            <span>Login</span>
-                                            <ChevronRight size={18} className="text-gray-400" />
-                                        </motion.button>
-                                        <motion.button
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.25 }}
-                                            onClick={() => { router.push('/login'); onClose(); }}
-                                            className="w-full px-4 py-4 bg-[#171A21] text-white rounded-2xl font-semibold shadow-lg shadow-[#171A21]/20 active:scale-95 transition-all"
-                                        >
-                                            Sign Up
-                                        </motion.button>
+                                        <Link href="/login" passHref legacyBehavior>
+                                            <motion.button
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: 0.2 }}
+                                                onClick={onClose}
+                                                className="w-full flex items-center justify-between px-4 py-4 text-[#171A21] dark:text-gray-100 bg-gray-50 dark:bg-gray-800 rounded-2xl font-medium block"
+                                            >
+                                                <span>Login</span>
+                                                <ChevronRight size={18} className="text-gray-400" />
+                                            </motion.button>
+                                        </Link>
+                                        <Link href="/login" passHref legacyBehavior>
+                                            <motion.button
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: 0.25 }}
+                                                onClick={onClose}
+                                                className="w-full px-4 py-4 bg-[#171A21] text-white rounded-2xl font-semibold shadow-lg shadow-[#171A21]/20 active:scale-95 transition-all block text-center"
+                                            >
+                                                Sign Up
+                                            </motion.button>
+                                        </Link>
                                     </>
                                 )}
                             </div>

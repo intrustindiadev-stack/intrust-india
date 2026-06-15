@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingBag, Clock, CreditCard, Loader2, Info, Smartphone, Package, Calendar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { RequestTimeline, UdhariStatusBadge } from '@/components/customer/store-credits/UdhariSharedComponents';
 
@@ -101,11 +102,15 @@ export default function ShopOrderCreditCard({ req, payingId, onPaySuccess }) {
                                         className="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-gray-50 border border-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0"
                                     >
                                         {item.shopping_products?.product_images?.[0] ? (
-                                            <img
-                                                src={item.shopping_products.product_images[0]}
-                                                alt={item.shopping_products.title}
-                                                className="w-full h-full object-contain p-1.5"
-                                            />
+                                            <div className="relative w-full h-full p-1.5">
+                                                <Image
+                                                    src={item.shopping_products.product_images[0]}
+                                                    alt={item.shopping_products.title}
+                                                    fill
+                                                    sizes="80px"
+                                                    className="object-contain"
+                                                />
+                                            </div>
                                         ) : (
                                             <Package size={20} className="text-gray-300" />
                                         )}

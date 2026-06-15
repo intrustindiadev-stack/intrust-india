@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
+import Image from "next/image";
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion } from "framer-motion";
 
@@ -122,7 +123,9 @@ export default function RecentShoppingOrders({ userId, limit = 3 }) {
                     <div className={`w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden shrink-0 ${isDark ? 'bg-slate-700' : 'bg-white border border-slate-100'
                       }`}>
                       {itemImage ? (
-                        <img src={itemImage} alt="" className="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal" />
+                        <div className="relative w-full h-full">
+                          <Image src={itemImage} alt="" fill sizes="56px" className="object-cover mix-blend-multiply dark:mix-blend-normal" />
+                        </div>
                       ) : (
                         <Package className="w-6 h-6 text-slate-400" />
                       )}

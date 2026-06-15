@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabaseClient';
 import {
     LayoutDashboard,
@@ -272,7 +273,9 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                             <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200/60 shadow-sm">
                                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold border-2 border-white overflow-hidden shadow-sm">
                                     {adminProfile?.avatar_url ? (
-                                        <img src={adminProfile.avatar_url} alt={adminName} className="w-full h-full object-cover" />
+                                        <div className="relative w-full h-full">
+                                            <Image src={adminProfile.avatar_url || '/placeholder.png'} alt={adminName} fill sizes="40px" className="object-cover" />
+                                        </div>
                                     ) : (
                                         getInitials(adminName)
                                     )}

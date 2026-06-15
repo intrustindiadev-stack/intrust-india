@@ -62,7 +62,10 @@ export default function FloatingCart({ count, total, savings, items, customer, o
                     <motion.button 
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => router.push('/shop/cart')}
+                        onClick={() => {
+                            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
+                            router.push('/shop/cart');
+                        }}
                         className="bg-white px-5 py-3 rounded-xl text-sm font-black flex items-center gap-2 transition-all shadow-xl"
                         style={{ color: primaryColor }}
                     >

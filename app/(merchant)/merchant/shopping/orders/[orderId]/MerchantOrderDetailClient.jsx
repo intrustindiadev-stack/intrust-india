@@ -14,6 +14,7 @@ import { calculatePlatformFeePercentage } from "@/lib/utils/ledger";
 import { toast } from "react-hot-toast";
 import { createClient } from "@/lib/supabaseClient";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import Image from "next/image";
 
 // ─── Delivery Stage Config ───────────────────────────────────────────────────
 const STAGES = [
@@ -308,9 +309,9 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
                         const gstAmt = Math.round((item.total_price_paise || 0) * (item.gst_percentage || 0) / 100);
                         return (
                             <div key={item.id} className="flex gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5">
-                                <div className="w-14 h-14 bg-white dark:bg-white/5 rounded-xl overflow-hidden flex items-center justify-center border border-slate-100 dark:border-white/5 shrink-0">
+                                <div className="w-14 h-14 bg-white dark:bg-white/5 rounded-xl overflow-hidden flex items-center justify-center border border-slate-100 dark:border-white/5 shrink-0 relative">
                                     {item.product_image ? (
-                                        <img src={item.product_image} alt="" className="w-full h-full object-cover" />
+                                        <Image src={item.product_image} alt="" fill sizes="56px" className="object-cover" />
                                     ) : (
                                         <Package size={20} className="text-slate-300 dark:text-gray-600" />
                                     )}

@@ -4,6 +4,7 @@ import React from 'react';
 import { ChevronRight, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 export default function DashboardStats({ stats }) {
     const router = useRouter();
@@ -20,13 +21,12 @@ export default function DashboardStats({ stats }) {
                 const Icon = stat.icon;
                 const href = stat.href || (stat.label === 'Wallet Balance' ? '/wallet' : null);
                 
-                return (
+                const cardContent = (
                     <motion.div
                         key={stat.label}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
-                        onClick={() => handleNavigation(href)}
                         className={`relative overflow-hidden group bg-white/70 dark:bg-gray-800/40 backdrop-blur-xl rounded-2xl sm:rounded-[2.5rem] border border-white dark:border-white/5 p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] dark:hover:bg-gray-800/60 transition-all ${href ? 'cursor-pointer hover:border-emerald-200 dark:hover:border-emerald-500/30' : ''}`}
                     >
                         {/* Abstract background glow */}
@@ -58,6 +58,16 @@ export default function DashboardStats({ stats }) {
                             </div>
                         </div>
                     </motion.div>
+                );
+
+                return href ? (
+                    <Link href={href} key={stat.label} className="block">
+                        {cardContent}
+                    </Link>
+                ) : (
+                    <React.Fragment key={stat.label}>
+                        {cardContent}
+                    </React.Fragment>
                 );
             })}
         </div>

@@ -14,6 +14,7 @@ import { generateOrderInvoice } from "@/lib/invoiceGenerator";
 import { calculatePlatformFeePercentage } from "@/lib/utils/ledger";
 import { PLATFORM_CONFIG } from "@/lib/config/platform";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 const STATUS_CONFIG = {
     pending: { label: "Pending", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", dot: "bg-amber-400", icon: Clock },
@@ -306,9 +307,9 @@ export default function AdminOrderDetailClient({ order: initialOrder, sellerDeta
                             const gstAmount = Math.round((item.total_price_paise || 0) * gstRate / 100);
                             return (
                                 <div key={item.id} className="flex gap-3 p-4">
-                                    <div className="w-14 h-14 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden p-1">
+                                    <div className="w-14 h-14 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden p-1 relative">
                                         {item.product_image
-                                            ? <img src={item.product_image} alt="" className="w-full h-full object-contain mix-blend-multiply" />
+                                            ? <Image src={item.product_image} alt="" fill sizes="56px" className="object-contain mix-blend-multiply" />
                                             : <Package size={18} className="text-slate-200" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
