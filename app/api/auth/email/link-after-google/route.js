@@ -67,6 +67,16 @@ export async function POST(request) {
             );
         }
 
+        // ── Ensure email identity exists in auth.identities ───────────────────────
+        const { error: rpcErr } = await admin.rpc('admin_link_email_identity', {
+            target_user_id: user.id,
+            target_email: user.email,
+        });
+
+        if (rpcErr) {
+            console.error('[link-after-google] admin_link_email_identity error:', rpcErr.message);
+        }
+
         // ── Update user_profiles ──────────────────────────────────────────────────
         await admin
             .from('user_profiles')

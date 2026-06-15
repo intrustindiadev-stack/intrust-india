@@ -96,9 +96,9 @@ export async function POST(request) {
             const provider = existing.app_metadata?.provider;
             const metaProviders = Array.isArray(existing.app_metadata?.providers) ? existing.app_metadata.providers : [];
             const identityProviders = Array.isArray(existing.identities) ? existing.identities.map(i => i.provider) : [];
-            const hasEmailCredential = metaProviders.includes('email') || identityProviders.includes('email');
+            const hasEmailIdentity = identityProviders.includes('email');
 
-            if (provider === 'google' && !hasEmailCredential) {
+            if (!hasEmailIdentity && (provider === 'google' || metaProviders.includes('google'))) {
                 // Return a structured conflict response so the frontend can show
                 // the "Link Your Accounts" UI instead of a plain error.
                 return NextResponse.json(

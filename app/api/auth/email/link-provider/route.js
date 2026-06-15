@@ -26,12 +26,27 @@ export async function POST(request) {
 
         // Add email+password auth to the existing account
         const { error: updateError } = await admin.auth.admin.updateUserById(user.id, {
-            password
+            password,
+            app_metadata: {
+                providers: user.app_metadata?.providers?.includes('email') 
+                    ? user.app_metadata.providers 
+                    : [...(user.app_metadata?.providers || []), 'email']
+            }
         });
 
         if (updateError) {
             console.error('[LINK-PROVIDER] updateUserById error:', updateError);
             return NextResponse.json({ error: 'Failed to link email provider.' }, { status: 500 });
+        }
+
+        // Ensure email identity exists in auth.identities
+        const { error: rpcErr } = await admin.rpc('admin_link_email_identity', {
+            target_user_id: user.id,
+            target_email: user.email,
+        });
+
+        if (rpcErr) {
+            console.error('[LINK-PROVIDER] admin_link_email_identity error:', rpcErr.message);
         }
 
         // Update auth_provider to 'multiple' in user_profiles

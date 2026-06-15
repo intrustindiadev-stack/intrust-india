@@ -257,8 +257,13 @@ export async function GET(request) {
                 // 1. Update the surviving user's Supabase auth record to include the
                 //    Google identity (add google as additional provider).
                 //    Supabase admin updateUserById can add app_metadata identities.
+                const { data: existingUserObj } = await supabaseAdmin.auth.admin.getUserById(survivingId);
+                const currentProvider = existingUserObj?.user?.app_metadata?.provider || 'email';
+                const currentProviders = existingUserObj?.user?.app_metadata?.providers || ['email'];
+                const newProviders = Array.from(new Set([...currentProviders, 'google']));
+
                 await supabaseAdmin.auth.admin.updateUserById(survivingId, {
-                    app_metadata: { provider: 'google', providers: ['email', 'google'] },
+                    app_metadata: { provider: currentProvider, providers: newProviders },
                     email_verified: true,
                 });
 

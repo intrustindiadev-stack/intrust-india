@@ -26,6 +26,9 @@ const pool = new pg.Pool({
     password: DB_PASSWORD,
     database: DB_NAME,
     port: DB_PORT,
+    connectionTimeoutMillis: 10000, // wait up to 10 seconds for a connection
+    idleTimeoutMillis: 30000,       // close idle clients after 30 seconds
+    keepAlive: true,                // enable TCP keep-alive
 });
 
 // Create MCP Server

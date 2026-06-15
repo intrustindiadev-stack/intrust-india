@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, CheckCircle, XCircle, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
+import { supabase } from '@/lib/supabaseClient';
 
 /**
  * /link-complete
@@ -25,6 +26,24 @@ export default function LinkCompletePage() {
     const [loading, setLoading]           = useState(false);
     const [error, setError]               = useState('');
     const [done, setDone]                 = useState(false);
+    const [checkingStatus, setCheckingStatus] = useState(true);
+
+    useEffect(() => {
+        const checkExistingIdentity = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const providers = user.app_metadata?.providers || [];
+                const identities = user.identities?.map(i => i.provider) || [];
+                if (providers.includes('email') || identities.includes('email')) {
+                    // Already has email password setup, redirect immediately
+                    router.push('/dashboard');
+                    return;
+                }
+            }
+            setCheckingStatus(false);
+        };
+        checkExistingIdentity();
+    }, [router]);
 
     const handleLink = async (e) => {
         e.preventDefault();
@@ -69,8 +88,15 @@ export default function LinkCompletePage() {
         <div className="min-h-screen flex items-center justify-center bg-[var(--bg-secondary)] p-4">
             <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-[var(--border-color)] p-8">
 
-                {/* Header */}
-                <div className="flex flex-col items-center mb-6">
+                {checkingStatus ? (
+                    <div className="flex flex-col items-center py-6 gap-4">
+                        <Loader2 className="animate-spin text-[#92BCEA]" size={48} />
+                        <p className="text-sm text-[var(--text-secondary)]">Checking account status...</p>
+                    </div>
+                ) : (
+                    <>
+                        {/* Header */}
+                        <div className="flex flex-col items-center mb-6">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
                         <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" />
                     </div>
@@ -153,6 +179,8 @@ export default function LinkCompletePage() {
                             Skip — go to dashboard without setting a password
                         </button>
                     </form>
+                )}
+                    </>
                 )}
             </div>
         </div>

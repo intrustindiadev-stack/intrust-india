@@ -363,6 +363,50 @@ describe('WhatsApp Login Alerts Router Integration Tests', () => {
       expect(res.status).toBe(200);
       expect(sendWhatsAppLoginAlert).toHaveBeenCalled();
     });
+
+    it('should return 401 invalid-credentials for wrong password when email identity exists', async () => {
+      const mockAdminClient = require('@/lib/supabaseServer').createAdminClient();
+      // Simulate existing user with email identity
+      mockAdminClient.auth.admin.listUsers.mockResolvedValueOnce({
+        data: { users: [{ id: 'user-id-123', email: 'test@example.com', app_metadata: { provider: 'google', providers: ['google', 'email'] }, identities: [{ provider: 'email' }] }] },
+        error: null
+      });
+      // Simulate wrong password
+      const mockServerClient = require('@supabase/ssr').createServerClient();
+      mockServerClient.auth.signInWithPassword.mockResolvedValueOnce({
+        data: { session: null, user: null },
+        error: { message: 'Invalid login credentials' }
+      });
+
+      const req = makeEmailRequest({ email: 'test@example.com', password: 'wrong' });
+      const res = await emailSigninHandler(req);
+
+      expect(res.status).toBe(401);
+      const json = await res.json();
+      expect(json.error).toBe('Invalid email or password.');
+    });
+
+    it('should return 409 conflict when user lacks email identity (genuine Google user)', async () => {
+      const mockAdminClient = require('@/lib/supabaseServer').createAdminClient();
+      // Simulate existing user WITHOUT email identity
+      mockAdminClient.auth.admin.listUsers.mockResolvedValueOnce({
+        data: { users: [{ id: 'user-id-123', email: 'test@example.com', app_metadata: { provider: 'google', providers: ['google'] }, identities: [{ provider: 'google' }] }] },
+        error: null
+      });
+      const mockServerClient = require('@supabase/ssr').createServerClient();
+      mockServerClient.auth.signInWithPassword.mockResolvedValueOnce({
+        data: { session: null, user: null },
+        error: { message: 'Invalid login credentials' }
+      });
+
+      const req = makeEmailRequest({ email: 'test@example.com', password: 'password123' });
+      const res = await emailSigninHandler(req);
+
+      expect(res.status).toBe(409);
+      const json = await res.json();
+      expect(json.conflict).toBe(true);
+      expect(json.provider).toBe('google');
+    });
   });
 
   describe('TRIGGER-TEST-LOGIN Route handler', () => {
