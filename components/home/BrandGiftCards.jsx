@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase/client';
 const FALLBACK_BRANDS = [
     {
         brand: 'Amazon',
-        image_url: 'https://bhgbylyzlwmmabegxlfc.supabase.co/storage/v1/object/public/gift-cards/giftcard_1771957430032_bxssld.png',
+        image_url: 'https://intrustindia.com/api/supabase/storage/v1/object/public/gift-cards/giftcard_1771957430032_bxssld.png',
         min_price: 27847,
         max_face: 200000,
         color: '#FF9900',
@@ -19,7 +19,7 @@ const FALLBACK_BRANDS = [
     },
     {
         brand: 'Apple',
-        image_url: 'https://bhgbylyzlwmmabegxlfc.supabase.co/storage/v1/object/public/gift-cards/giftcard_1772965220676_80j2s.png',
+        image_url: 'https://intrustindia.com/api/supabase/storage/v1/object/public/gift-cards/giftcard_1772965220676_80j2s.png',
         min_price: 50000,
         max_face: 500000,
         color: '#1D1D1F',
@@ -27,7 +27,7 @@ const FALLBACK_BRANDS = [
     },
     {
         brand: 'Netflix',
-        image_url: 'https://bhgbylyzlwmmabegxlfc.supabase.co/storage/v1/object/public/gift-cards/giftcard_1771679655860_2de74l.png',
+        image_url: 'https://intrustindia.com/api/supabase/storage/v1/object/public/gift-cards/giftcard_1771679655860_2de74l.png',
         min_price: 50000,
         max_face: 129900,
         color: '#E50914',
@@ -35,7 +35,7 @@ const FALLBACK_BRANDS = [
     },
     {
         brand: 'Zomato',
-        image_url: 'https://bhgbylyzlwmmabegxlfc.supabase.co/storage/v1/object/public/gift-cards/giftcard_1773032684399_0x72ad.png',
+        image_url: 'https://intrustindia.com/api/supabase/storage/v1/object/public/gift-cards/giftcard_1773032684399_0x72ad.png',
         min_price: 66690,
         max_face: 100000,
         color: '#E23744',
@@ -43,7 +43,7 @@ const FALLBACK_BRANDS = [
     },
     {
         brand: 'Amazon Prime',
-        image_url: 'https://bhgbylyzlwmmabegxlfc.supabase.co/storage/v1/object/public/gift-cards/giftcard_1774852466393_qo50xm.png',
+        image_url: 'https://intrustindia.com/api/supabase/storage/v1/object/public/gift-cards/giftcard_1774852466393_qo50xm.png',
         min_price: 37565,
         max_face: 149900,
         color: '#00A8E0',
@@ -51,7 +51,7 @@ const FALLBACK_BRANDS = [
     },
     {
         brand: 'Bhima Jewellers',
-        image_url: 'https://bhgbylyzlwmmabegxlfc.supabase.co/storage/v1/object/public/gift-cards/giftcard_1774855064721_3ntogj.png',
+        image_url: 'https://intrustindia.com/api/supabase/storage/v1/object/public/gift-cards/giftcard_1774855064721_3ntogj.png',
         min_price: 970000,
         max_face: 5000000,
         color: '#C9A84C',

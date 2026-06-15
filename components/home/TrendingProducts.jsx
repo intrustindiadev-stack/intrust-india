@@ -15,7 +15,7 @@ const FALLBACK_PRODUCTS = [
         category: 'Fashion',
         suggested_retail_price_paise: 296299,
         mrp_paise: 299900,
-        product_images: ['https://bhgbylyzlwmmabegxlfc.supabase.co/storage/v1/object/public/product-images/merchant/e942151a-4026-4488-8cd3-edbe6d679460/1775556668138_0a5sg.jpeg'],
+        product_images: ['https://intrustindia.com/api/supabase/storage/v1/object/public/product-images/merchant/e942151a-4026-4488-8cd3-edbe6d679460/1775556668138_0a5sg.jpeg'],
         slug: 'adidas-sneaker',
     },
     {
@@ -24,7 +24,7 @@ const FALLBACK_PRODUCTS = [
         category: 'Beauty',
         suggested_retail_price_paise: 29500,
         mrp_paise: 29900,
-        product_images: ['https://bhgbylyzlwmmabegxlfc.supabase.co/storage/v1/object/public/product-images/admin/1775019590842_96zav.jpg'],
+        product_images: ['https://intrustindia.com/api/supabase/storage/v1/object/public/product-images/admin/1775019590842_96zav.jpg'],
         slug: 'vaseline-intensive-care-lotion-400ml',
     },
     {
@@ -33,7 +33,7 @@ const FALLBACK_PRODUCTS = [
         category: 'Groceries',
         suggested_retail_price_paise: 34500,
         mrp_paise: 35000,
-        product_images: ['https://bhgbylyzlwmmabegxlfc.supabase.co/storage/v1/object/public/product-images/admin/1775709258168_u6lz9.jpg'],
+        product_images: ['https://intrustindia.com/api/supabase/storage/v1/object/public/product-images/admin/1775709258168_u6lz9.jpg'],
         slug: 'kohinoor-charminar-basmati-5kg',
     },
     {
@@ -42,7 +42,7 @@ const FALLBACK_PRODUCTS = [
         category: 'Beauty',
         suggested_retail_price_paise: 30500,
         mrp_paise: 31000,
-        product_images: ['https://bhgbylyzlwmmabegxlfc.supabase.co/storage/v1/object/public/product-images/admin/1774955174468_gxdeq8.jpg'],
+        product_images: ['https://intrustindia.com/api/supabase/storage/v1/object/public/product-images/admin/1774955174468_gxdeq8.jpg'],
         slug: 'lakme-sun-expert-spf-50-60ml',
     },
 ];

@@ -1,63 +1,13 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-    /*
-    turbopack: {
-      root: process.cwd(),
-    },
-    */
-    images: {
-        remotePatterns: [
-            {
-                protocol: 'https',
-                hostname: '**', // Allow all external images
-            },
-            {
-                protocol: 'https',
-                hostname: 'bhgbylyzlwmmabegxlfc.supabase.co',
-            },
-        ],
-    },
-    // Performance optimizations
-    compress: true,
-    poweredByHeader: false,
-    reactStrictMode: true,
+/**
+ * DEPRECATED — this file is no longer the canonical Next.js config.
+ *
+ * All settings have been merged into next.config.mjs, which is the single
+ * source of truth used by both local development and the VPS deploy pipeline
+ * (deploy_vps.py packs next.config.mjs into every build artifact).
+ *
+ * This file is kept to avoid breaking any legacy references. It simply
+ * re-exports the canonical config unchanged.
+ */
 
-    // Remove development features in production
-    productionBrowserSourceMaps: false,
-
-    serverActions: {
-        bodySizeLimit: '5mb',
-    },
-
-    serverExternalPackages: ['jsonwebtoken'],
-
-    // Optimize imports
-    modularizeImports: {
-        'lucide-react': {
-            transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}',
-        },
-    },
-    async headers() {
-        const sabpaisaInitUrl = process.env.SABPAISA_INIT_URL || process.env.NEXT_PUBLIC_SABPAISA_INIT_URL || 'https://securepay.sabpaisa.in';
-        let sabpaisaDomain = 'https://securepay.sabpaisa.in';
-        try {
-            sabpaisaDomain = new URL(sabpaisaInitUrl).origin;
-        } catch (e) {
-            console.warn('Invalid SABPAISA_INIT_URL, falling back to default live domain for CSP');
-        }
-
-        return [
-            {
-                source: '/:path*',
-                headers: [
-                    {
-                        key: 'Content-Security-Policy',
-                        value: `form-action 'self' ${sabpaisaDomain};`
-                    },
-                ],
-            },
-        ];
-    },
-};
-
-export default nextConfig;
+// eslint-disable-next-line import/no-unresolved
+export { default } from './next.config.mjs';

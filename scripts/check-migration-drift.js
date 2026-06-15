@@ -34,15 +34,47 @@ async function main() {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     console.log('Fetching applied migrations from remote database...');
-    const { data: remoteMigrations, error } = await supabase
-        .rpc('get_applied_migrations');
+    let remoteVersions = new Set();
+    const { execSync } = require('child_process');
+    try {
+        // Run psql inside docker to get actual tables and policies, and migrations
+        const psqlCmd = `docker exec supabase-db psql -U supabase_admin -d postgres -t -c "SELECT version FROM supabase_migrations.schema_migrations;"`;
+        const output = execSync(psqlCmd, { encoding: 'utf-8' });
+        output.split('\n').forEach(line => {
+            const v = line.trim();
+            if (v) remoteVersions.add(v);
+        });
+        
+        // Also verify key tables exist
+        const tablesCmd = `docker exec supabase-db psql -U supabase_admin -d postgres -t -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public';"`;
+        const tablesOut = execSync(tablesCmd, { encoding: 'utf-8' });
+        const tables = new Set(tablesOut.split('\n').map(l => l.trim()).filter(Boolean));
+        if (!tables.has('user_profiles') || !tables.has('shopping_products')) {
+            console.warn('⚠️ WARNING: Essential tables (user_profiles, shopping_products) missing from public schema!');
+        } else {
+            console.log('✅ Verified essential tables exist in public schema.');
+        }
 
-    if (error) {
-        console.error('Error fetching remote migrations:', error);
-        process.exit(1);
+        // Verify policies exist
+        const policiesCmd = `docker exec supabase-db psql -U supabase_admin -d postgres -t -c "SELECT policyname FROM pg_policies WHERE schemaname = 'public';"`;
+        const policiesOut = execSync(policiesCmd, { encoding: 'utf-8' });
+        const policies = new Set(policiesOut.split('\n').map(l => l.trim()).filter(Boolean));
+        if (policies.size === 0) {
+            console.warn('⚠️ WARNING: No RLS policies found in public schema!');
+        } else {
+            console.log(`✅ Verified ${policies.size} RLS policies exist.`);
+        }
+        
+    } catch (e) {
+        console.warn('⚠️ Could not connect to docker container for deep inspection. Falling back to RPC...');
+        const { data: remoteMigrations, error } = await supabase.rpc('get_applied_migrations');
+        if (error) {
+            console.error('Error fetching remote migrations:', error);
+            process.exit(1);
+        }
+        remoteVersions = new Set((remoteMigrations || []).map(m => m.version));
     }
 
-    const remoteVersions = new Set((remoteMigrations || []).map(m => m.version));
     console.log(`Found ${remoteVersions.size} applied migrations in remote database.`);
 
     const migrationsDir = path.join(__dirname, '..', 'supabase', 'migrations');

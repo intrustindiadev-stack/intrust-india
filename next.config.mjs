@@ -15,7 +15,11 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'bhgbylyzlwmmabegxlfc.supabase.co',
+        hostname: 'intrustindia.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'supabase.intrustindia.com', // future CDN subdomain
       },
     ],
   },

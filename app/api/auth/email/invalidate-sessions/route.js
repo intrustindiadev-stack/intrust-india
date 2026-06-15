@@ -18,7 +18,7 @@ export async function POST(request) {
         }
 
         // Sign out all OTHER sessions for this user (keep the current one)
-        const { error: signOutError } = await admin.auth.admin.signOut(user.id, 'others');
+        const { error: signOutError } = await admin.auth.admin.signOut(token, 'others');
 
         if (signOutError) {
             console.error('[INVALIDATE-SESSIONS] signOut error:', signOutError);

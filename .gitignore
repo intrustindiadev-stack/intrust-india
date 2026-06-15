@@ -73,6 +73,12 @@ claude.json
 # project documentation
 BRD-Intrust.pdf
 
+# Supabase self-hosted stack — generated secrets and populated env
+scripts/supabase-stack/.env
+scripts/supabase-stack-secrets.txt
+*secrets*
+/etc/intrust/*
+
 node_modules/
 .next/
 dist/

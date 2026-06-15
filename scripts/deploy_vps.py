@@ -35,7 +35,11 @@ REMOTE_APP_DIR = "/var/www/intrustindia.com/app"
 
 # What to include in the deployment package
 INCLUDE_PATHS  = [".next", "public", "package.json", "package-lock.json", "next.config.mjs"]
-EXCLUDE_DIRS   = [".next/cache", ".next/dev"]
+# NOTE: .next/cache is intentionally NOT excluded.
+# Keeping the image optimisation cache means Next.js does NOT re-fetch and
+# re-encode every source image after each deploy (was the main egress amplifier).
+# Only .next/dev (dev-mode artefacts) is excluded as it is never needed in prod.
+EXCLUDE_DIRS   = [".next/dev"]
 
 
 def divider(title):
