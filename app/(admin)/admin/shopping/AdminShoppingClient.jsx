@@ -486,31 +486,42 @@ export default function AdminShoppingClient({
                             <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">No Merchants Found</p>
                         </div>
                     ) : (
-                        merchants.filter(m => !search || m.business_name.toLowerCase().includes(search.toLowerCase())).map(merchant => {
-                            const productCount = merchantCounts[merchant.id] || 0;
-                            return (
-                                <div
-                                    key={merchant.id}
-                                    onClick={() => setSelectedMerchant(merchant.id)}
-                                    className="group cursor-pointer bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-violet-500/10 hover:border-violet-100 transition-all duration-300 flex flex-col items-center text-center gap-3"
-                                >
-                                    <div className="w-16 h-16 rounded-[1.2rem] bg-violet-50 text-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 border border-violet-100">
-                                        <Store size={24} />
+                        (() => {
+                            const filteredMerchants = merchants.filter(m => !search || m.business_name.toLowerCase().includes(search.toLowerCase()));
+                            if (filteredMerchants.length === 0) {
+                                return (
+                                    <div className="col-span-full py-24 text-center bg-white rounded-[2rem] border border-dashed border-slate-200 shadow-inner">
+                                        <Search className="mx-auto text-slate-100 mb-4" size={56} />
+                                        <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">No merchants match "{search}"</p>
                                     </div>
-                                    <div>
-                                        <h3 className="text-base font-black text-slate-900 truncate tracking-tight px-2">{merchant.business_name}</h3>
-                                        <div className="flex items-center justify-center gap-2 mt-2">
-                                            <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border ${merchant.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
-                                                {merchant.status}
-                                            </span>
-                                            <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border bg-blue-50 text-blue-600 border-blue-100">
-                                                {productCount} Items
-                                            </span>
+                                );
+                            }
+                            return filteredMerchants.map(merchant => {
+                                const productCount = merchantCounts[merchant.id] || 0;
+                                return (
+                                    <div
+                                        key={merchant.id}
+                                        onClick={() => setSelectedMerchant(merchant.id)}
+                                        className="group cursor-pointer bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-violet-500/10 hover:border-violet-100 transition-all duration-300 flex flex-col items-center text-center gap-3"
+                                    >
+                                        <div className="w-16 h-16 rounded-[1.2rem] bg-violet-50 text-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 border border-violet-100">
+                                            <Store size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-base font-black text-slate-900 truncate tracking-tight px-2">{merchant.business_name}</h3>
+                                            <div className="flex items-center justify-center gap-2 mt-2">
+                                                <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border ${merchant.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                                                    {merchant.status}
+                                                </span>
+                                                <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border bg-blue-50 text-blue-600 border-blue-100">
+                                                    {productCount} Items
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            );
-                        })
+                                );
+                            });
+                        })()
                     )}
                 </div>
             ) : (
