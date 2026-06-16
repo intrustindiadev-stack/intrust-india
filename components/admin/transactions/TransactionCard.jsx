@@ -2,6 +2,7 @@
 
 import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, XCircle, Layers, Download } from 'lucide-react';
 import { generateOrderInvoice } from '@/lib/invoiceGenerator';
+import { displayEmail } from '@/lib/auth';
 
 export default function TransactionCard({ txn }) {
     const isCredit = txn.type === 'Credit';
@@ -104,7 +105,11 @@ export default function TransactionCard({ txn }) {
                         )}
                     </div>
                     <p className="font-medium text-sm text-slate-900 truncate">{txn.user}</p>
-                    <p className="text-[11px] text-slate-500 truncate">{txn.email}</p>
+                    <p className="text-[11px] text-slate-500 truncate">
+                        {displayEmail(txn.email) ?? (
+                            <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No email linked</span>
+                        )}
+                    </p>
                 </div>
                 <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-slate-500">
                     <Clock size={12} className="text-slate-400 shrink-0" />

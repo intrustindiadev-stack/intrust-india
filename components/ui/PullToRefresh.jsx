@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, useAnimation, useMotionValue } from 'framer-motion';
 import { Loader2, ArrowDown } from 'lucide-react';
 
@@ -15,21 +15,49 @@ export default function PullToRefresh({ onRefresh, children }) {
     const MAX_PULL = 120;
     const THRESHOLD = 80;
 
-    const handleDrag = (e, info) => {
+    // Touch state
+    const touchStartY = useRef(0);
+    const isDragging = useRef(false);
+
+    const handleTouchStart = useCallback((e) => {
         if (isRefreshing) return;
-        
         // Only allow pull to refresh when at the top of the scroll container
         if (window.scrollY > 0) return;
         
-        const y = info.offset.y * PULL_RESISTANCE;
-        if (y > 0) {
-            pullY.set(Math.min(y, MAX_PULL));
-        }
-    };
+        touchStartY.current = e.touches[0].clientY;
+        isDragging.current = true;
+    }, [isRefreshing]);
 
-    const handleDragEnd = async () => {
-        if (isRefreshing) return;
-        
+    const handleTouchMove = useCallback((e) => {
+        if (!isDragging.current || isRefreshing) return;
+        if (window.scrollY > 0) {
+            isDragging.current = false;
+            return;
+        }
+
+        const currentY = e.touches[0].clientY;
+        const diff = currentY - touchStartY.current;
+
+        // Only handle pulling down
+        if (diff > 0) {
+            // Prevent default behavior (like overscroll glow/refresh on some browsers)
+            // Note: cancelable check is needed for passive event listeners issue,
+            // but we might not be able to preventDefault if event is passive.
+            // However, just applying the transform is often enough.
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+            const y = diff * PULL_RESISTANCE;
+            pullY.set(Math.min(y, MAX_PULL));
+        } else {
+            pullY.set(0);
+        }
+    }, [isRefreshing, pullY]);
+
+    const handleTouchEnd = useCallback(async () => {
+        if (!isDragging.current || isRefreshing) return;
+        isDragging.current = false;
+
         const currentY = pullY.get();
         
         if (currentY >= THRESHOLD) {
@@ -53,7 +81,25 @@ export default function PullToRefresh({ onRefresh, children }) {
             controls.start({ y: 0, transition: { type: 'spring', stiffness: 400, damping: 30 } });
             pullY.set(0);
         }
-    };
+    }, [isRefreshing, onRefresh, controls, pullY]);
+
+    useEffect(() => {
+        const element = containerRef.current;
+        if (!element) return;
+
+        // We use non-passive listener for touchmove so we can preventDefault
+        element.addEventListener('touchstart', handleTouchStart, { passive: true });
+        element.addEventListener('touchmove', handleTouchMove, { passive: false });
+        element.addEventListener('touchend', handleTouchEnd, { passive: true });
+        element.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+
+        return () => {
+            element.removeEventListener('touchstart', handleTouchStart);
+            element.removeEventListener('touchmove', handleTouchMove);
+            element.removeEventListener('touchend', handleTouchEnd);
+            element.removeEventListener('touchcancel', handleTouchEnd);
+        };
+    }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
 
     // Calculate rotation and opacity based on pull distance
     const [pullProgress, setPullProgress] = useState(0);
@@ -65,7 +111,7 @@ export default function PullToRefresh({ onRefresh, children }) {
     }, [pullY]);
 
     return (
-        <div ref={containerRef} className="relative w-full h-full overflow-hidden touch-pan-y">
+        <div ref={containerRef} className="relative w-full h-full min-h-screen overflow-hidden">
             {/* Refresh Indicator */}
             <motion.div 
                 className="absolute top-0 left-0 right-0 flex items-center justify-center pointer-events-none z-50 h-16"
@@ -91,11 +137,6 @@ export default function PullToRefresh({ onRefresh, children }) {
 
             {/* Draggable Content */}
             <motion.div
-                drag="y"
-                dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={0}
-                onDrag={handleDrag}
-                onDragEnd={handleDragEnd}
                 animate={controls}
                 className="w-full h-full min-h-screen"
                 style={{ y: pullY }}
@@ -105,3 +146,4 @@ export default function PullToRefresh({ onRefresh, children }) {
         </div>
     );
 }
+

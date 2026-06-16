@@ -1,7 +1,7 @@
-import { POST as verifyOtpHandler } from '../app/api/auth/verify-otp/route';
-import { GET as googleCallbackHandler } from '../app/api/auth/google/callback/route';
-import { POST as emailSigninHandler } from '../app/api/auth/email/signin/route';
-import { POST as triggerTestLoginHandler } from '../app/api/admin/trigger-test-login/route';
+let verifyOtpHandler;
+let googleCallbackHandler;
+let emailSigninHandler;
+let triggerTestLoginHandler;
 import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
 import { sendWhatsAppLoginAlert } from '@/lib/notifications/authWhatsapp';
 import { applySupabaseCookies } from '@/lib/supabaseCookieHelper';
@@ -58,11 +58,14 @@ function mockCreateClient() {
         error: null
       }).then(onfulfilled);
     }),
-    rpc: jest.fn().mockResolvedValue({ data: 'user-id-123', error: null }),
+    rpc: jest.fn().mockImplementation((name) => {
+      if (name === 'check_rate_limit') return Promise.resolve({ data: { allowed: true }, error: null });
+      return Promise.resolve({ data: 'user-id-123', error: null });
+    }),
     auth: {
       admin: {
         getUserById: jest.fn().mockResolvedValue({
-          data: { user: { id: 'user-id-123', phone_confirmed_at: '2026-06-12' } },
+          data: { user: { id: 'user-id-123', email: 'test@example.com', phone_confirmed_at: '2026-06-12' } },
           error: null
         }),
         createUser: jest.fn().mockResolvedValue({
@@ -102,22 +105,25 @@ function mockCreateClient() {
         error: null
       }),
       setSession: jest.fn().mockResolvedValue({ data: {}, error: null }),
+      refreshSession: jest.fn().mockResolvedValue({ data: {}, error: null }),
     }
   };
   return client;
 }
 
+const mockSharedClient = mockCreateClient();
+
 // Mock Supabase modules with the helper
 jest.mock('@/lib/supabaseServer', () => ({
-  createAdminClient: jest.fn(() => mockCreateClient()),
+  createAdminClient: jest.fn(() => mockSharedClient),
 }));
 
 jest.mock('@supabase/ssr', () => ({
-  createServerClient: jest.fn(() => mockCreateClient()),
+  createServerClient: jest.fn(() => mockSharedClient),
 }));
 
 jest.mock('@supabase/supabase-js', () => ({
-  createClient: jest.fn(() => mockCreateClient()),
+  createClient: jest.fn(() => mockSharedClient),
 }));
 
 jest.mock('@/lib/whatsapp/ensureBinding', () => ({
@@ -137,7 +143,7 @@ jest.mock('@/lib/otpUtils', () => ({
   validatePhoneNumber: jest.fn(() => true),
   getStablePhoneEmail: jest.fn((phone) => `phone-${phone}@intrust.in`),
   isPseudoEmail: jest.fn(() => true),
-  normalizePhone: jest.fn((phone) => ({ cleanPhone: '9999999999', isValid: true })),
+  normalizePhone: jest.fn((phone) => ({ cleanPhone: '9999999999', formattedPhone: '+919999999999', isValid: true })),
 }));
 
 jest.mock('@/lib/apiAuth', () => ({
@@ -152,6 +158,10 @@ describe('WhatsApp Login Alerts Router Integration Tests', () => {
 
   beforeAll(() => {
     originalFetch = global.fetch;
+    verifyOtpHandler = require('../app/api/auth/verify-otp/route').POST;
+    googleCallbackHandler = require('../app/api/auth/google/callback/route').GET;
+    emailSigninHandler = require('../app/api/auth/email/signin/route').POST;
+    triggerTestLoginHandler = require('../app/api/admin/trigger-test-login/route').POST;
   });
 
   beforeEach(() => {
@@ -367,8 +377,8 @@ describe('WhatsApp Login Alerts Router Integration Tests', () => {
     it('should return 401 invalid-credentials for wrong password when email identity exists', async () => {
       const mockAdminClient = require('@/lib/supabaseServer').createAdminClient();
       // Simulate existing user with email identity
-      mockAdminClient.auth.admin.listUsers.mockResolvedValueOnce({
-        data: { users: [{ id: 'user-id-123', email: 'test@example.com', app_metadata: { provider: 'google', providers: ['google', 'email'] }, identities: [{ provider: 'email' }] }] },
+      mockAdminClient.auth.admin.getUserById.mockResolvedValueOnce({
+        data: { user: { id: 'user-id-123', email: 'test@example.com', app_metadata: { provider: 'google', providers: ['google', 'email'] }, identities: [{ provider: 'email' }] } },
         error: null
       });
       // Simulate wrong password
@@ -389,8 +399,8 @@ describe('WhatsApp Login Alerts Router Integration Tests', () => {
     it('should return 409 conflict when user lacks email identity (genuine Google user)', async () => {
       const mockAdminClient = require('@/lib/supabaseServer').createAdminClient();
       // Simulate existing user WITHOUT email identity
-      mockAdminClient.auth.admin.listUsers.mockResolvedValueOnce({
-        data: { users: [{ id: 'user-id-123', email: 'test@example.com', app_metadata: { provider: 'google', providers: ['google'] }, identities: [{ provider: 'google' }] }] },
+      mockAdminClient.auth.admin.getUserById.mockResolvedValueOnce({
+        data: { user: { id: 'user-id-123', email: 'test@example.com', app_metadata: { provider: 'google', providers: ['google'] }, identities: [{ provider: 'google' }] } },
         error: null
       });
       const mockServerClient = require('@supabase/ssr').createServerClient();

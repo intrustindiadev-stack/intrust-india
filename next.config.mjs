@@ -89,4 +89,16 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default (phase) => {
+  if (process.env.NODE_ENV === 'production' && phase === 'phase-production-server') {
+    if (!process.env.OTP_PEPPER) {
+      throw new Error(
+        '\n\n========================================================================\n' +
+        'CRITICAL: OTP_PEPPER environment variable is not set in production.\n' +
+        'Refusing to start the server to avoid insecure legacy or failing OTPs.\n' +
+        '========================================================================\n'
+      );
+    }
+  }
+  return nextConfig;
+};

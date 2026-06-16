@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabaseServer';
+import { displayEmail } from '@/lib/auth';
 import Link from 'next/link';
 import { Users, CalendarCheck, DollarSign, Clock, CheckCircle, XCircle, ArrowRight, UserPlus } from 'lucide-react';
 
@@ -121,7 +122,11 @@ export default async function AdminHRMPage() {
                                                 <span className="font-semibold text-gray-900 text-sm">{emp.full_name || 'N/A'}</span>
                                             </div>
                                         </td>
-                                        <td className="p-4 text-sm text-gray-500">{emp.email}</td>
+                                        <td className="p-4 text-sm text-gray-500">
+                                            {displayEmail(emp.email) ?? (
+                                                <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No email linked</span>
+                                            )}
+                                        </td>
                                         <td className="p-4">
                                             <span className={`inline-flex text-xs font-bold px-2.5 py-1 rounded-lg border ${roleColor[emp.role] || 'bg-gray-50 border-gray-200 text-gray-600'}`}>
                                                 {roleLabel[emp.role] || emp.role}
@@ -169,7 +174,11 @@ export default async function AdminHRMPage() {
                                         <tr key={lr.id} className="hover:bg-amber-50/20 transition-colors">
                                             <td className="p-4 pl-6">
                                                 <p className="font-semibold text-gray-900 text-sm">{lr.user_profiles?.full_name || 'Unknown'}</p>
-                                                <p className="text-xs text-gray-400">{lr.user_profiles?.email}</p>
+                                                <p className="text-xs text-gray-400">
+                                                    {displayEmail(lr.user_profiles?.email) ?? (
+                                                        <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No email linked</span>
+                                                    )}
+                                                </p>
                                             </td>
                                             <td className="p-4 text-sm text-gray-600 capitalize">{lr.leave_type || '—'}</td>
                                             <td className="p-4 text-xs text-gray-500">

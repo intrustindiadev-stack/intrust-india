@@ -28,8 +28,10 @@ export async function POST(request) {
         // Audit log
         try {
             await admin.from('audit_logs').insert({
-                user_id: user.id,
+                actor_id: user.id,
                 action: 'password_reset_completed',
+                entity_type: 'auth',
+                description: 'Password reset completed and sessions invalidated',
                 metadata: { note: 'All other sessions invalidated after password reset.' }
             });
         } catch (e) { /* non-fatal */ }

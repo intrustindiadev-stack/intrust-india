@@ -117,8 +117,9 @@ const mockSupabase = {
         trackDbAccess();
         return mockChain;
     }),
-    rpc: jest.fn().mockImplementation(() => {
+    rpc: jest.fn().mockImplementation((name) => {
         trackDbAccess();
+        if (name === 'check_rate_limit') return Promise.resolve({ data: { allowed: true }, error: null });
         return Promise.resolve({ data: mockDbResult, error: null });
     })
 };
@@ -252,8 +253,8 @@ function extractParams(routePath) {
 
 // ── Whitelist of Public API Routes ────────────────────────────────────────
 const PUBLIC_ROUTES = [
-    /^\/api\/auth\/email\/(signin|signup|resend-verification)$/,
-    /^\/api\/auth\/(verify-otp|google|google\/callback|send-otp|verify-phone|logout)$/,
+    /^\/api\/auth\/email\/(signin|signup|signup\/precheck|resend-verification)$/,
+    /^\/api\/auth\/(verify-otp|signup-otp|google|google\/callback|request-otp|verify-phone|logout|check-phone)$/,
     /^\/api\/webhooks\/omniflow$/,
     /^\/api\/sabpaisa\/(callback|webhook)$/,
     /^\/api\/contact$/,

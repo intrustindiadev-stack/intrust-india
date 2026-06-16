@@ -442,6 +442,7 @@ function CustomerProfileContent() {
                                     }}
                                     showToast={showToast}
                                     supabase={supabase}
+                                    refreshUser={refreshUser}
                                 />
                             </motion.div>
 

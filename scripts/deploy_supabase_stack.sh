@@ -291,6 +291,18 @@ scp_up "${STACK_DIR}/volumes/db/init/99-extensions.sql" \
 scp_up "${STACK_DIR}/volumes/db/init/98-fix-init.sql" \
   "${REMOTE_DIR}/volumes/db/init/98-fix-init.sql"
 
+# Upload OTP auth hardening migration
+scp_up "${SCRIPT_DIR}/../supabase/migrations/20260616_otp_auth_hardening.sql" \
+  "${REMOTE_DIR}/volumes/db/init/97-otp-auth-hardening.sql"
+
+# Upload Admin Link Email Identity migration (Ticket 2)
+scp_up "${SCRIPT_DIR}/../supabase/migrations/20260617_admin_link_email_identity.sql" \
+  "${REMOTE_DIR}/volumes/db/init/96-admin-link-email-identity.sql"
+
+# Upload Backfill NULL Auth Emails migration (Ticket 5)
+scp_up "${SCRIPT_DIR}/../supabase/migrations/20260616120000_backfill_null_auth_emails.sql" \
+  "${REMOTE_DIR}/volumes/db/init/95-backfill-null-auth-emails.sql"
+
 success "Files uploaded."
 
 header "PHASE 6 — Bring Up the Stack"

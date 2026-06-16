@@ -487,7 +487,7 @@ export default function AdminShoppingClient({
                         </div>
                     ) : (
                         (() => {
-                            const filteredMerchants = merchants.filter(m => !search || m.business_name.toLowerCase().includes(search.toLowerCase()));
+                            const filteredMerchants = merchants.filter(m => !search || (m.business_name || '').toLowerCase().includes(search.toLowerCase()));
                             if (filteredMerchants.length === 0) {
                                 return (
                                     <div className="col-span-full py-24 text-center bg-white rounded-[2rem] border border-dashed border-slate-200 shadow-inner">

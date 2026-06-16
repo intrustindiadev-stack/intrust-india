@@ -34,7 +34,24 @@ export async function GET(request) {
 
         const purged = data?.length ?? count ?? 0;
         console.log(`[Purge Expired OTPs] Deleted ${purged} rows`);
-        return NextResponse.json({ success: true, purged });
+
+        // Cleanup ip_rate_limit_store (older than 1 hour)
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        const { count: rateLimitPurged, error: rlError } = await supabaseAdmin
+            .from('ip_rate_limit_store')
+            .delete()
+            .lt('updated_at', oneHourAgo)
+            .select('key', { count: 'exact' });
+
+        if (rlError) console.error('[Purge Rate Limits Error]:', rlError);
+
+        console.log(`[Purge Cleanup] Rate limits: ${rateLimitPurged ?? 0}`);
+
+        return NextResponse.json({ 
+            success: true, 
+            purged,
+            rateLimitsPurged: rateLimitPurged ?? 0
+        });
 
     } catch (error) {
         console.error('[Purge Expired OTPs Exception]:', error);

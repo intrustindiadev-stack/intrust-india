@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
-import { hashOTP, validatePhoneNumber, normalizePhone } from '@/lib/otpUtils';
+import { normalizePhone } from '@/lib/otpUtils';
+import { verifyOTPHash } from '@/lib/otpHmac';
 import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
+import { authError } from '@/lib/authHelpers';
 
 /**
  * Profile Phone Verification API
@@ -16,7 +18,7 @@ export async function POST(request) {
         const { phone, otp, userId } = body;
 
         // 1. Validate inputs using unified normalizePhone
-        const { cleanPhone, isValid } = normalizePhone(phone);
+        const { cleanPhone, formattedPhone, isValid } = normalizePhone(phone);
 
         if (!isValid || !otp || otp.length !== 6) {
             return NextResponse.json(
@@ -38,7 +40,7 @@ export async function POST(request) {
         const { data: otpRecord, error: fetchError } = await supabaseAdmin
             .from('otp_codes')
             .select('*')
-            .eq('phone', cleanPhone)
+            .eq('phone', formattedPhone)
             .eq('is_used', false)
             .order('created_at', { ascending: false })
             .limit(1)
@@ -61,15 +63,15 @@ export async function POST(request) {
             );
         }
 
-        if (otpRecord.attempts >= otpRecord.max_attempts) {
+        if (otpRecord.attempts >= (otpRecord.max_attempts || 3)) {
             return NextResponse.json(
                 { success: false, error: 'Too many failed attempts. Please request a new OTP.' },
                 { status: 400 }
             );
         }
 
-        const inputHash = hashOTP(otp);
-        if (inputHash !== otpRecord.otp_hash) {
+        const isValidOTP = verifyOTPHash(otp, otpRecord.otp_hash, otpRecord.pepper_hash);
+        if (!isValidOTP) {
             await supabaseAdmin
                 .from('otp_codes')
                 .update({ attempts: otpRecord.attempts + 1 })
@@ -85,10 +87,8 @@ export async function POST(request) {
         // transient downstream failures do not force an unnecessary resend cycle.
 
         // 3. Link or verify link status
-        const authPhone = `+91${cleanPhone}`;
-
         // Check who has this phone in auth
-        const { data: rpcUserId, error: rpcError } = await supabaseAdmin.rpc('get_user_id_by_phone', { phone_number: cleanPhone });
+        const { data: rpcUserId, error: rpcError } = await supabaseAdmin.rpc('get_user_id_by_phone', { phone_number: formattedPhone });
 
         if (rpcError) {
             console.error('[VERIFY-PHONE] RPC error:', rpcError);
@@ -99,7 +99,7 @@ export async function POST(request) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: 'This phone number is already registered to a different account. To use this number, please sign in with mobile number instead.',
+                    error: 'This phone number is already registered to a different account. To use this number, please sign in with this mobile number instead.',
                     code: 'PHONE_EXISTS_OTHER_ACCOUNT'
                 },
                 { status: 409 }
@@ -109,17 +109,15 @@ export async function POST(request) {
         // 4. Update the CURRENT user's phone in auth.users if not already set
         const { data: currentUser } = await supabaseAdmin.auth.admin.getUserById(userId);
 
-        if (currentUser?.user?.phone !== authPhone) {
+        if (currentUser?.user?.phone !== formattedPhone) {
             const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
                 userId,
-                { phone: authPhone, phone_confirm: true }
+                { phone: formattedPhone, phone_confirm: true }
             );
 
             if (updateError) {
-                console.error('[VERIFY-PHONE] Failed to update auth user phone:', updateError);
                 return NextResponse.json(
-                    { success: false, error: 'Failed to link phone to account: ' + updateError.message },
-                    { status: 500 }
+                    authError('Failed to link phone to account.', updateError.message, 'UPDATE_FAILED', 500)
                 );
             }
         }
@@ -128,7 +126,7 @@ export async function POST(request) {
         const { error: profileError } = await supabaseAdmin
             .from('user_profiles')
             .update({
-                phone: authPhone,
+                phone: formattedPhone,
                 updated_at: new Date().toISOString()
             })
             .eq('id', userId);
@@ -148,13 +146,11 @@ export async function POST(request) {
         );
 
         console.log('[VERIFY-PHONE] Phone verified and linked for user:', userId);
-        return NextResponse.json({ success: true, phone: authPhone });
+        return NextResponse.json({ success: true, phone: formattedPhone });
 
     } catch (error) {
-        console.error('[VERIFY-PHONE] Unexpected error:', error);
         return NextResponse.json(
-            { success: false, error: `Internal server error: ${error.message}` },
-            { status: 500 }
+            authError('Internal server error', error.message, 'INTERNAL_ERROR', 500)
         );
     }
 }

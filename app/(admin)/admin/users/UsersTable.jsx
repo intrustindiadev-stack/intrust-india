@@ -6,6 +6,7 @@ import VerifiedBadge from '@/components/ui/VerifiedBadge';
 import KYCModal from '@/components/admin/KYCModal';
 import { createClient } from '@/lib/supabaseClient';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { displayEmail } from '@/lib/auth';
 
 export default function UsersTable({ initialUsers, initialTotal, currentPage, totalPages }) {
     const supabase = createClient();
@@ -268,7 +269,11 @@ export default function UsersTable({ initialUsers, initialTotal, currentPage, to
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="text-sm text-gray-900">{user.email}</div>
+                                            <div className="text-sm text-gray-900">
+                                                {displayEmail(user.email) ?? (
+                                                    <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No email linked</span>
+                                                )}
+                                            </div>
                                             <div className="text-sm text-gray-500">{user.phone || '-'}</div>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-600">

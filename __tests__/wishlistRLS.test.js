@@ -73,10 +73,31 @@ describe('CUST-06: Wishlist rows scoped to authenticated user only (RLS)', () =>
             });
 
             // 2. Login as test customer (User A)
-            const { data: authData, error: loginErr } = await customerSupabase.auth.signInWithPassword({
+            let { data: authData, error: loginErr } = await customerSupabase.auth.signInWithPassword({
                 email: CUSTOMER_EMAIL,
                 password: CUSTOMER_PASS
             });
+            if (loginErr && (loginErr.message.includes('Invalid login credentials') || loginErr.status === 400)) {
+                const { data: signUpData, error: signUpErr } = await customerSupabase.auth.signUp({
+                    email: CUSTOMER_EMAIL,
+                    password: CUSTOMER_PASS,
+                    options: {
+                        data: {
+                            full_name: 'Tester A'
+                        }
+                    }
+                });
+                if (!signUpErr && signUpData?.user) {
+                    const adminClient = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+                    await adminClient.auth.admin.updateUserById(signUpData.user.id, { email_confirm: true });
+                    const retry = await customerSupabase.auth.signInWithPassword({
+                        email: CUSTOMER_EMAIL,
+                        password: CUSTOMER_PASS
+                    });
+                    authData = retry.data;
+                    loginErr = retry.error;
+                }
+            }
             expect(loginErr).toBeNull();
             expect(authData.user).toBeDefined();
 

@@ -67,7 +67,7 @@ async function seedTestUser(supabase, { balancePaise = 50000 } = {}) {
         full_name: 'Rewards Test User',
         kyc_status: 'verified',
         address: '123 Test St, City, State, 110001',
-        phone: '+919999000000',
+        phone: `+919999${Math.floor(100000 + Math.random() * 900000)}`,
     });
     if (profErr) throw new Error(`seedTestUser profile upsert: ${profErr.message}`);
 

@@ -86,6 +86,7 @@ function OTPBoxInput({ value, onChange, onComplete, loading }) {
                     ref={(el) => (refs.current[i] = el)}
                     type="text"
                     inputMode="numeric"
+                    autoComplete="one-time-code"
                     maxLength={1}
                     value={value[i] || ''}
                     onChange={(e) => handleChange(e, i)}
@@ -102,8 +103,7 @@ function LoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // ─── Shared ─────────────────────────────────────────────────────────────────
-    const [step, setStep] = useState('email'); // 'email' | 'google-conflict' | 'email-otp' | 'phone' | 'otp'
+    const [step, setStep] = useState('email'); // 'email' | 'google-conflict' | 'email-otp' | 'phone' | 'otp' | 'no-account'
     const [phone, setPhone] = useState('');
     const [otp, setOtp] = useState('');
     const [loading, setLoading] = useState(false);
@@ -120,8 +120,8 @@ function LoginContent() {
         }
     }, [timer]);
 
-    const startTimer = () => {
-        setTimer(60);
+    const startTimer = (seconds = 60) => {
+        setTimer(seconds);
     };
 
     // ─── Email-specific ──────────────────────────────────────────────────────────
@@ -129,6 +129,7 @@ function LoginContent() {
     const [password, setPassword] = useState('');
     const [conflictEmail, setConflictEmail] = useState(''); // email returned by 409 conflict
     const [showPassword, setShowPassword] = useState(false);
+    const [phoneGuidance, setPhoneGuidance] = useState(false); // true when server returns PSEUDO_EMAIL
 
     // ─── Query-param notices ─────────────────────────────────────────────────────
     const verified = searchParams?.get('verified') === 'true';
@@ -165,24 +166,53 @@ function LoginContent() {
         window.location.href = url;
     };
 
-    // ─── Phone OTP ──────────────────────────────────────────────────────────────
     const handleSendOTP = async (e) => {
         if (e) e.preventDefault();
         setLoading(true);
-        const { formattedPhone, isValid } = normalizePhone(phone);
+        const { formattedPhone, isValid, cleanPhone } = normalizePhone(phone);
         if (!isValid) {
             toast.error('Invalid phone number. Must be 10 digits.');
             setLoading(false);
             return;
         }
-        const { error: otpError } = await signInWithOTP(formattedPhone, 'login');
+
+        // 1. Check if account exists
+        try {
+            const checkRes = await fetch('/api/auth/check-phone', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: formattedPhone })
+            });
+            if (checkRes.ok) {
+                const { exists } = await checkRes.json();
+                if (exists === false) {
+                    setStep('no-account');
+                    setLoading(false);
+                    return; // DO NOT SEND OTP
+                }
+            }
+        } catch (checkErr) {
+            console.error('[LOGIN] check-phone failed, falling back to sending OTP', checkErr);
+        }
+
+        // 2. Send OTP
+        const { error: otpError } = await signInWithOTP(formattedPhone);
         if (otpError) {
-            toast.error(otpError.message || 'Failed to send OTP');
+            const msg = otpError.message.toLowerCase();
+            if (otpError.retry_after) {
+                toast.error(`Rate limited. Try again in ${otpError.retry_after}s.`);
+                setStep('otp'); // Go to OTP step to show countdown
+                startTimer(otpError.retry_after);
+            } else if (msg.includes('rate') || msg.includes('security') || msg.includes('too many')) {
+                toast.error('For your security, please wait a moment before trying again.');
+            } else {
+                toast.error(otpError.message || 'Failed to send OTP');
+            }
             setLoading(false);
             return;
         }
         setStep('otp');
-        startTimer();
+        startTimer(60);
         setLoading(false);
     };
 
@@ -195,19 +225,34 @@ function LoginContent() {
         try {
             const { formattedPhone } = normalizePhone(phone);
             const { data, error: verifyError } = await verifyOTP(formattedPhone, otpValue);
+            
             if (verifyError) {
-                toast.error(verifyError.message || 'Invalid OTP');
+                const attemptsRemaining = data?.attempts_remaining;
+                if (attemptsRemaining !== undefined) {
+                    toast.error(`That code didn't match. ${attemptsRemaining} attempts left.`);
+                } else if (verifyError.message.toLowerCase().includes('expired')) {
+                    toast.error('Your code expired. Tap resend to get a new one.');
+                } else if (verifyError.message.toLowerCase().includes('rate') || verifyError.message.toLowerCase().includes('security') || verifyError.message.toLowerCase().includes('too many')) {
+                    toast.error('For your security, please wait a moment before trying again.');
+                } else {
+                    toast.error(verifyError.message || 'Something went wrong. Please try again.');
+                }
                 setLoading(false);
                 return;
             }
+
+            if (data?.outcome === 'no_account') {
+                setStep('no-account');
+                setLoading(false);
+                return;
+            }
+
             const user = data?.user;
             if (user) {
                 await redirectByRole(user, data.role, data.is_suspended, postLoginRedirect);
                 if (data.is_suspended) {
                     setLoading(false);
                 }
-                // Redirect is navigating away; do not clear loading so the button
-                // stays disabled until the navigation completes.
             } else {
                 toast.error('Login failed. Please try again.');
                 setLoading(false);
@@ -222,6 +267,7 @@ function LoginContent() {
     const handleEmailSignIn = async (e) => {
         if (e) e.preventDefault();
         setLoading(true);
+        setPhoneGuidance(false);
         try {
             const res = await fetch('/api/auth/email/signin', {
                 method: 'POST',
@@ -229,6 +275,13 @@ function LoginContent() {
                 body: JSON.stringify({ email: emailAddress, password })
             });
             const data = await res.json();
+
+            // 400 PSEUDO_EMAIL — account is phone-only; guide user to Phone tab
+            if (res.status === 400 && data.code === 'PSEUDO_EMAIL') {
+                setPhoneGuidance(true);
+                setLoading(false);
+                return;
+            }
 
             // 409 = account exists with a different provider (e.g. Google)
             if (res.status === 409 && data.conflict) {
@@ -354,6 +407,39 @@ function LoginContent() {
                                 </div>
                             </div>
 
+                            {/* Phone-OTP guidance banner (shown when server returns PSEUDO_EMAIL) */}
+                            {phoneGuidance && (
+                                <div
+                                    id="phone-guidance-banner"
+                                    className="flex items-start gap-3 p-3.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/40 rounded-xl text-sm"
+                                >
+                                    <Phone size={16} className="text-blue-500 mt-0.5 shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-blue-800 dark:text-blue-300 text-xs">
+                                            This account uses Phone OTP login.
+                                        </p>
+                                        <button
+                                            id="switch-to-phone-btn"
+                                            type="button"
+                                            onClick={() => { setPhoneGuidance(false); setStep('phone'); }}
+                                            className="mt-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                                        >
+                                            Switch to Phone OTP <ArrowRight size={12} />
+                                        </button>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPhoneGuidance(false)}
+                                        className="text-blue-400 hover:text-blue-600 shrink-0 mt-0.5"
+                                        aria-label="Dismiss"
+                                    >
+                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            )}
+
                             <button
                                 type="submit"
                                 disabled={loading || !emailAddress || !password}
@@ -391,7 +477,7 @@ function LoginContent() {
                             </button>
 
                             <button
-                                onClick={() => { setStep('phone'); }}
+                                onClick={() => { setPhoneGuidance(false); setStep('phone'); }}
                                 className="w-full py-3.5 border border-[var(--border-color)] rounded-xl flex items-center justify-center gap-3 text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-all"
                             >
                                 <Phone size={18} className="text-[#92BCEA]" />
@@ -584,6 +670,35 @@ function LoginContent() {
                                 className="w-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm transition-colors disabled:opacity-50"
                             >
                                 Didn&apos;t receive OTP? <span className="underline font-semibold">{canResend ? 'Resend' : `Resend in ${timer}s`}</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+
+                {/* ── NO ACCOUNT ── */}
+                {step === 'no-account' && (
+                    <div className="animate-fadeIn text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
+                        </div>
+                        <h2 className="text-2xl font-bold text-[var(--text-primary)] mt-2">Let&apos;s get you set up</h2>
+                        <p className="text-sm text-[var(--text-secondary)] mt-2 mb-8">
+                            Looks like you don&apos;t have an account with <span className="font-semibold text-[var(--text-primary)]">+91 {phone}</span> yet.
+                        </p>
+                        
+                        <div className="space-y-4">
+                            <button
+                                onClick={() => router.push(`/signup?phone=${phone}`)}
+                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all"
+                            >
+                                Create my account
+                            </button>
+                            <button
+                                onClick={() => setStep('phone')}
+                                className="w-full py-3.5 border border-[var(--border-color)] text-[var(--text-primary)] font-semibold rounded-xl hover:bg-[var(--bg-secondary)] transition-all"
+                            >
+                                Use a different number
                             </button>
                         </div>
                     </div>

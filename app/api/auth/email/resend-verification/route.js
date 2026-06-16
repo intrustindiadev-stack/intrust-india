@@ -15,11 +15,14 @@ export async function POST(request) {
 
         const admin = createAdminClient();
 
-        // Find user by email (efficient enough for current scale)
-        const { data: existingUsers } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-        const user = existingUsers?.users?.find(
-            (u) => u.email?.toLowerCase() === email.toLowerCase()
-        );
+        // Find user ID by email using RPC
+        const { data: userId } = await admin.rpc('get_user_id_by_email', { email_address: email });
+        
+        let user = null;
+        if (userId) {
+            const { data: userResponse } = await admin.auth.admin.getUserById(userId);
+            user = userResponse?.user;
+        }
 
         if (!user) {
             // Return success anyway to prevent email enumeration
@@ -59,11 +62,15 @@ export async function POST(request) {
             { auth: { persistSession: false, autoRefreshToken: false } }
         );
 
+        const host = request.headers.get('host') || 'localhost:3000';
+        const protocol = (host.includes('localhost') || host.match(/^[0-9.]+(?::[0-9]+)?$/)) ? 'http' : (request.headers.get('x-forwarded-proto') || 'https');
+        const appUrl = (process.env.APP_URL || `${protocol}://${host}`).trim();
+
         const { error: resendError } = await anonClient.auth.resend({
             type: 'signup',
             email,
             options: {
-                emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
+                emailRedirectTo: `${appUrl}/auth/callback`
             }
         });
 

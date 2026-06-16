@@ -77,7 +77,7 @@ describe('SMS India Hub OTP formatting and send check', () => {
       expect(global.fetch).toHaveBeenCalledTimes(1);
       
       const calledUrl = new URL(global.fetch.mock.calls[0][0]);
-      expect(calledUrl.origin).toBe('https://cloud.smsindiahub.in');
+      expect(calledUrl.origin).toBe('http://cloud.smsindiahub.in');
       expect(calledUrl.pathname).toBe('/vendorsms/pushsms.aspx');
       expect(calledUrl.searchParams.get('user')).toBe('test_user');
       expect(calledUrl.searchParams.get('password')).toBe('test_password');

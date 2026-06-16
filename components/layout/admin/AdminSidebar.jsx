@@ -42,6 +42,7 @@ import {
     BookOpen,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { displayEmail } from '@/lib/auth';
 
 const navigationGroups = [
     {
@@ -284,7 +285,7 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                                 <div className="flex-1 min-w-0">
                                     <div className="text-slate-900 font-bold text-sm truncate">{adminName}</div>
                                     <div className={`${profileEmailColor} text-xs font-medium truncate flex items-center gap-1`}>
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {adminProfile?.email || 'Online'}
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {displayEmail(adminProfile?.email) || 'Online'}
                                     </div>
                                 </div>
                             </div>

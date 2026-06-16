@@ -1,16 +1,90 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signInWithOTP, verifyOTP } from '@/lib/supabase';
-import { supabase } from '@/lib/supabaseClient';
+import { signInWithOTP } from '@/lib/supabase';
 import { redirectByRole } from '@/lib/auth';
-import { Phone, ArrowRight, Loader2, ShieldCheck, User, Sparkles, Mail, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Phone, ArrowRight, Loader2, User, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { normalizePhone } from '@/lib/phoneUtils';
 import AccountLinkingPrompt from '@/components/auth/AccountLinkingPrompt';
+
+function OTPBoxInput({ value, onChange, onComplete, loading }) {
+    const refs = useRef([]);
+    const submittingRef = useRef(false);
+
+    const fireComplete = (completed) => {
+        if (completed.length === 6 && !submittingRef.current) {
+            submittingRef.current = true;
+            onComplete && onComplete(completed);
+        }
+    };
+
+    useEffect(() => {
+        if (!loading) submittingRef.current = false;
+    }, [loading]);
+
+    useEffect(() => {
+        if (!value || value.replace(/\s+/g, '').length < 6) submittingRef.current = false;
+    }, [value]);
+
+    const handleChange = (e, index) => {
+        const char = e.target.value.replace(/[^0-9]/g, '').slice(-1);
+        const chars = value.split('');
+        if (char) {
+            chars[index] = char;
+            const newString = chars.join('').padEnd(6, ' ').slice(0, 6);
+            const completed = newString.replace(/\s+/g, '');
+            onChange(completed);
+            if (index < 5) refs.current[index + 1]?.focus();
+            else if (completed.length === 6) fireComplete(completed);
+        }
+    };
+
+    const handleKeyDown = (e, index) => {
+        if (e.key === 'Backspace') {
+            const chars = value.split('');
+            if (value[index]) {
+                chars[index] = '';
+                onChange(chars.join(''));
+            } else if (index > 0) refs.current[index - 1]?.focus();
+        }
+    };
+
+    const handlePaste = (e) => {
+        e.preventDefault();
+        const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+        if (pasted) {
+            onChange(pasted);
+            if (pasted.length === 6) {
+                refs.current[5]?.focus();
+                fireComplete(pasted);
+            } else refs.current[pasted.length]?.focus();
+        }
+    };
+
+    return (
+        <div className="flex justify-center gap-2">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+                <input
+                    key={i}
+                    ref={(el) => (refs.current[i] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={1}
+                    value={value[i] || ''}
+                    onChange={(e) => handleChange(e, i)}
+                    onKeyDown={(e) => handleKeyDown(e, i)}
+                    onPaste={i === 0 ? handlePaste : undefined}
+                    className="w-10 h-10 sm:w-12 sm:h-12 text-center text-xl font-bold border border-[var(--border-color)] rounded-xl focus:border-[#92BCEA] focus:ring-2 focus:ring-[#92BCEA]/20 outline-none transition-all"
+                />
+            ))}
+        </div>
+    );
+}
 
 // Inner component that uses useSearchParams (must be wrapped in Suspense)
 function SignupPageInner() {
@@ -45,8 +119,8 @@ function SignupPageInner() {
         }
     }, [timer]);
 
-    const startTimer = () => {
-        setTimer(60);
+    const startTimer = (seconds = 60) => {
+        setTimer(seconds);
     };
 
     useEffect(() => {
@@ -60,6 +134,16 @@ function SignupPageInner() {
             const normalised = refCode.toUpperCase().trim();
             if (normalised.length > 0) {
                 sessionStorage.setItem('intrust_pending_ref', normalised);
+            }
+        }
+
+        // ── Seamless phone handoff from login ───────────────────────────────────
+        const phoneParam = searchParams.get('phone');
+        if (phoneParam) {
+            const { cleanPhone, isValid } = normalizePhone(phoneParam);
+            if (isValid) {
+                setPhone(cleanPhone);
+                setStep('details');
             }
         }
     }, [searchParams]);
@@ -86,26 +170,50 @@ function SignupPageInner() {
             setLoading(false);
             return;
         }
-        const { error: otpError } = await signInWithOTP(formattedPhone, 'signup');
+        const { error: otpError } = await signInWithOTP(formattedPhone);
         if (otpError) { 
-            toast.error(otpError.message || 'Failed to send OTP.'); 
+            if (otpError.retry_after) {
+                toast.error(`Rate limited. Try again in ${otpError.retry_after}s.`);
+                setStep('otp');
+                startTimer(otpError.retry_after);
+            } else {
+                toast.error(otpError.message || 'Failed to send OTP.'); 
+            }
             setLoading(false); 
             return; 
         }
         setStep('otp');
-        startTimer();
+        startTimer(60);
         setLoading(false);
     };
 
-    const handleVerifyOTP = async (e) => {
+    const handleVerifyOTP = async (e, otpOverride) => {
         if (e) e.preventDefault();
         if (loading) return;
-        if (otp.length !== 6) { toast.error('Please enter the 6-digit OTP'); return; }
+        const otpValue = otpOverride || otp;
+        if (otpValue.replace(/\s+/g, '').length !== 6) { toast.error('Please enter the 6-digit OTP'); return; }
         setLoading(true);
         try {
             const { formattedPhone } = normalizePhone(phone);
-            const { data, error: verifyError } = await verifyOTP(formattedPhone, otp, name);
-            if (verifyError) { toast.error(verifyError.message || 'Invalid OTP.'); setLoading(false); return; }
+            const res = await fetch('/api/auth/signup-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: formattedPhone, otp: otpValue, full_name: name })
+            });
+            const data = await res.json();
+            
+            if (!res.ok || data.error) {
+                toast.error(data.error || 'Invalid OTP.');
+                setLoading(false);
+                return;
+            }
+            if (data.outcome === 'account_exists') {
+                toast.error('Account already exists. Please log in instead.');
+                setLoading(false);
+                router.push('/login');
+                return;
+            }
+            
             await redirectByRole(data?.user, data?.role, data?.is_suspended);
             if (data?.is_suspended) {
                 setLoading(false);
@@ -121,15 +229,88 @@ function SignupPageInner() {
     const handleEmailSignup = async (e) => {
         e.preventDefault();
         if (name.trim().length < 2) { toast.error('Please enter your full name.'); return; }
+        
+        const { formattedPhone, isValid } = normalizePhone(phone);
+        if (!isValid || phone.length !== 10) {
+            toast.error('Please enter a valid 10-digit mobile number.');
+            return;
+        }
+
         if (!password || password.length < 8) { toast.error('Password must be at least 8 characters.'); return; }
         if (password !== confirmPassword) { toast.error('Passwords do not match.'); return; }
 
         setLoading(true);
         try {
+            // 1. Precheck phone & email
+            const precheckRes = await fetch('/api/auth/email/signup/precheck', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: emailAddress, phone: formattedPhone })
+            });
+            const precheckData = await precheckRes.json();
+
+            if (precheckData.conflict) {
+                setConflictProvider(precheckData.provider);
+                setStep('email-conflict');
+                setLoading(false);
+                return;
+            }
+
+            if (precheckData.code === 'PHONE_EXISTS') {
+                toast.error(precheckData.error || 'Phone number already registered');
+                setLoading(false);
+                return;
+            }
+
+            if (!precheckRes.ok || !precheckData.ok) {
+                toast.error(precheckData.error || 'Validation failed. Please try again.');
+                setLoading(false);
+                return;
+            }
+
+            // 2. Dispatch OTP
+            const { error: otpError } = await signInWithOTP(formattedPhone);
+            if (otpError) {
+                if (otpError.retry_after) {
+                    toast.error(`Rate limited. Try again in ${otpError.retry_after}s.`);
+                    setStep('email-otp');
+                    startTimer(otpError.retry_after);
+                } else {
+                    toast.error(otpError.message || 'Failed to send OTP.');
+                }
+                setLoading(false);
+                return;
+            }
+
+            setStep('email-otp');
+            startTimer(60);
+        } catch (err) {
+            console.error('[SIGNUP] Email precheck error:', err);
+            toast.error('Network error. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyEmailOTP = async (e, otpOverride) => {
+        if (e) e.preventDefault();
+        if (loading) return;
+        const otpValue = otpOverride || otp;
+        if (otpValue.replace(/\s+/g, '').length !== 6) { toast.error('Please enter the 6-digit OTP'); return; }
+        
+        setLoading(true);
+        try {
+            const { formattedPhone } = normalizePhone(phone);
             const res = await fetch('/api/auth/email/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: emailAddress, password, full_name: name })
+                body: JSON.stringify({ 
+                    email: emailAddress, 
+                    password, 
+                    full_name: name, 
+                    phone: formattedPhone, 
+                    otp: otpValue 
+                })
             });
             const data = await res.json();
 
@@ -148,8 +329,8 @@ function SignupPageInner() {
 
             setStep('email-pending');
         } catch (err) {
-            console.error('[SIGNUP] Email signup error:', err);
-            toast.error('Network error. Please try again.');
+            console.error('[SIGNUP] Email OTP verify error:', err);
+            toast.error('An unexpected error occurred. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -177,8 +358,7 @@ function SignupPageInner() {
     };
 
     // ─── Shared UI helpers ───────────────────────────────────────────────────────
-    const providerLabel = { google: 'Google', phone_otp: 'Phone', multiple: 'Google/Phone' };
-
+    // ─── Shared UI helpers ───────────────────────────────────────────────────────
     return (
         <div className="min-h-screen flex items-center justify-center bg-[var(--bg-secondary)] p-4">
             <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-[var(--border-color)] p-8">
@@ -215,6 +395,23 @@ function SignupPageInner() {
                                     className="w-full px-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all"
                                     required
                                 />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Mobile Number</label>
+                                <div className="relative">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pr-3 border-r border-[var(--border-color)]">
+                                        <span className="text-sm font-semibold text-[var(--text-secondary)]">+91</span>
+                                    </div>
+                                    <input
+                                        type="tel"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                                        placeholder="00000 00000"
+                                        className="w-full pl-20 pr-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] text-lg tracking-widest placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all"
+                                        required pattern="[0-9]{10}" maxLength={10}
+                                    />
+                                </div>
                             </div>
 
                             <div>
@@ -262,7 +459,7 @@ function SignupPageInner() {
 
                             <button
                                 type="submit"
-                                disabled={loading || !name.trim() || !emailAddress || !password || !confirmPassword}
+                                disabled={loading || !name.trim() || !emailAddress || phone.length !== 10 || !password || !confirmPassword}
                                 className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all flex justify-center"
                             >
                                 {loading ? <Loader2 className="animate-spin" size={20} /> : 'Create Account'}
@@ -408,21 +605,17 @@ function SignupPageInner() {
                             Enter 6-digit code sent to <br /><span className="font-semibold text-[var(--text-primary)]">+91 {phone}</span>
                         </p>
 
-                        <form onSubmit={handleVerifyOTP} className="space-y-6">
-                            <div className="flex justify-center">
-                                <input
-                                    type="text"
-                                    value={otp}
-                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                                    placeholder="••••••"
-                                    className="w-full px-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] text-center text-4xl font-bold tracking-[0.4em] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all"
-                                    required pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" autoFocus
-                                />
-                            </div>
+                        <form onSubmit={(e) => handleVerifyOTP(e, otp)} className="space-y-6">
+                            <OTPBoxInput
+                                value={otp}
+                                onChange={(v) => { setOtp(v); }}
+                                onComplete={(completedOtp) => handleVerifyOTP({ preventDefault: () => {} }, completedOtp)}
+                                loading={loading}
+                            />
 
                             <button
                                 type="submit"
-                                disabled={loading || otp.length !== 6}
+                                disabled={loading || otp.replace(/\s+/g, '').length !== 6}
                                 className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center transition-all disabled:opacity-50"
                             >
                                 {loading ? <Loader2 className="animate-spin" size={20} /> : 'Finalize Signup'}
@@ -433,6 +626,45 @@ function SignupPageInner() {
                                     {canResend ? 'Resend Code' : `Resend in ${timer}s`}
                                 </button>
                                 <button type="button" onClick={() => setStep('phone')} className="text-sm font-semibold text-[#92BCEA] hover:underline">
+                                    Update Number
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+
+                {/* ── EMAIL OTP ── */}
+                {step === 'email-otp' && (
+                    <div className="animate-fadeIn">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                            <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
+                        </div>
+                        <h2 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Verify your mobile</h2>
+                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
+                            Enter 6-digit code sent to <br /><span className="font-semibold text-[var(--text-primary)]">+91 {phone}</span>
+                        </p>
+
+                        <form onSubmit={(e) => handleVerifyEmailOTP(e, otp)} className="space-y-6">
+                            <OTPBoxInput
+                                value={otp}
+                                onChange={(v) => { setOtp(v); }}
+                                onComplete={(completedOtp) => handleVerifyEmailOTP({ preventDefault: () => {} }, completedOtp)}
+                                loading={loading}
+                            />
+
+                            <button
+                                type="submit"
+                                disabled={loading || otp.replace(/\s+/g, '').length !== 6}
+                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center transition-all disabled:opacity-50"
+                            >
+                                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Verify & Create Account'}
+                            </button>
+
+                            <div className="flex flex-col gap-4 text-center">
+                                <button type="button" onClick={(e) => { if (canResend) handleSendOTP(e); }} disabled={loading || !canResend} className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors disabled:opacity-50">
+                                    {canResend ? 'Resend code' : `Resend in ${timer}s`}
+                                </button>
+                                <button type="button" onClick={() => setStep('email-form')} className="text-sm font-semibold text-[#92BCEA] hover:underline">
                                     Update Number
                                 </button>
                             </div>

@@ -90,12 +90,12 @@ export async function middleware(request) {
     // after the page renders.
     let session = null;
     let userRole = null;
+    let isSuspended = false;
     try {
         const { data } = await supabase.auth.getSession()
         session = data?.session ?? null
-        // Role is written to user_metadata during sign-up and embedded in the JWT.
-        // Reading it here costs zero extra DB round-trips.
         userRole = session?.user?.user_metadata?.role ?? null
+        isSuspended = session?.user?.user_metadata?.is_suspended ?? false
     } catch (err) {
         // Cookie reading should never fail, but if it does — do NOT redirect.
         // Fail safe: let the request through; the layout will re-verify.
@@ -112,17 +112,33 @@ export async function middleware(request) {
         pathname === prefix || pathname.startsWith(prefix + '/')
     )
 
-    if (isProtected && !user) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/login'
-        url.searchParams.set('returnUrl', pathname + request.nextUrl.search)
+    if (isProtected) {
+        if (!user) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/login'
+            url.searchParams.set('returnUrl', pathname + request.nextUrl.search)
 
-        const redirectResponse = NextResponse.redirect(url)
-        // Propagate any cookie mutations (e.g. cleared tokens) to the redirect response
-        response.cookies.getAll().forEach(cookie => {
-            redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
-        })
-        return redirectResponse
+            const redirectResponse = NextResponse.redirect(url)
+            // Propagate any cookie mutations (e.g. cleared tokens) to the redirect response
+            response.cookies.getAll().forEach(cookie => {
+                redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+            })
+            return redirectResponse
+        }
+
+        if (isSuspended) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/login'
+            url.searchParams.set('reason', 'suspended')
+
+            const redirectResponse = NextResponse.redirect(url)
+            response.cookies.getAll().forEach(cookie => {
+                if (cookie.name.includes('-auth-token') || cookie.name.includes('sb-')) {
+                    redirectResponse.cookies.delete(cookie.name)
+                }
+            })
+            return redirectResponse
+        }
     }
 
     // ─── 2. Role gate ─────────────────────────────────────────────────────────

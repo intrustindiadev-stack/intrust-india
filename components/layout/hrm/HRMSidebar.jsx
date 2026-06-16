@@ -7,6 +7,7 @@ import { useState } from 'react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { createClient } from '@/lib/supabaseClient';
 import Image from 'next/image';
+import { displayEmail } from '@/lib/auth';
 
 export default function HRMSidebar({ isOpen, setIsOpen, userProfile }) {
     const pathname = usePathname();
@@ -131,7 +132,7 @@ export default function HRMSidebar({ isOpen, setIsOpen, userProfile }) {
                             <div className="flex-1 min-w-0">
                                 <div className="text-gray-900 font-bold text-sm truncate">{userName}</div>
                                 <div className="text-gray-500 text-xs font-medium truncate flex items-center gap-1">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {userProfile?.email || 'Online'}
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {displayEmail(userProfile?.email) || 'Online'}
                                 </div>
                             </div>
                         </div>

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabaseServer';
+import { displayEmail } from '@/lib/auth';
 import { notFound, redirect } from 'next/navigation';
 import {
     User,
@@ -247,7 +248,14 @@ export default async function AdminUserDetailPage({ params }) {
                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-gray-600 mb-4 font-medium">
                             <div className="flex items-center gap-2">
                                 <Mail size={18} className="text-gray-400" />
-                                <span>{user.email}</span>
+                                {displayEmail(user.email) ? (
+                                    <span>{displayEmail(user.email)}</span>
+                                ) : (
+                                    <>
+                                        <span style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '13px' }}>No email linked</span>
+                                        <a href={`/admin/users/${user.id}`} style={{ fontSize: '12px', color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>Add Email →</a>
+                                    </>
+                                )}
                             </div>
                             <div className="flex items-center gap-2">
                                 <Phone size={18} className="text-gray-400" />
@@ -440,7 +448,11 @@ export default async function AdminUserDetailPage({ params }) {
                                 {referrer ? (
                                     <div>
                                         <p className="font-bold text-gray-900">{referrer.full_name}</p>
-                                        <p className="text-sm text-gray-500">{referrer.email}</p>
+                                        {displayEmail(referrer.email) ? (
+                                            <p className="text-sm text-gray-500">{displayEmail(referrer.email)}</p>
+                                        ) : (
+                                            <p className="text-sm" style={{ color: '#9ca3af', fontStyle: 'italic' }}>No email linked</p>
+                                        )}
                                     </div>
                                 ) : (
                                     <p className="text-sm font-medium text-gray-500 italic">Organic Sign up (No referrer)</p>

@@ -145,16 +145,18 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Section 5: Cleanup — clear user_profiles.phone for Google/email users whose phone
--- is already owned by a phone-only auth.users row, so Priority 3 never shadows them.
-UPDATE public.user_profiles up
-SET phone = NULL
-WHERE up.phone IS NOT NULL
-  AND EXISTS (
-    SELECT 1 FROM auth.users au
-    WHERE right(regexp_replace(au.phone, '\D', '', 'g'), 10)
-          = right(regexp_replace(up.phone, '\D', '', 'g'), 10)
-      AND au.phone IS NOT NULL
-      AND au.email ~ '^p[0-9]+@phone\.intrust\.internal$'
-      AND au.id <> up.id
-  );
+-- Section 5: Cleanup (NEUTRALIZED for one-phone-one-account architecture)
+-- Originally cleared user_profiles.phone for email/Google users when phone-only accounts existed.
+-- Commented out to ensure phone is kept normalized and never set to NULL.
+--
+-- UPDATE public.user_profiles up
+-- SET phone = NULL
+-- WHERE up.phone IS NOT NULL
+--   AND EXISTS (
+--     SELECT 1 FROM auth.users au
+--     WHERE right(regexp_replace(au.phone, '\D', '', 'g'), 10)
+--           = right(regexp_replace(up.phone, '\D', '', 'g'), 10)
+--       AND au.phone IS NOT NULL
+--       AND au.email ~ '^p[0-9]+@phone\.intrust\.internal$'
+--       AND au.id <> up.id
+--   );

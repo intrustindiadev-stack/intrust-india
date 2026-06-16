@@ -8,8 +8,8 @@ import { NextResponse } from 'next/server';
 export async function GET(request) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const host = request.headers.get('host') || 'localhost:3000';
-    const protocol = (host.includes('localhost') || host.includes('127.0.0.1')) ? 'http' : 'https';
-    const appUrl = `${protocol}://${host}`;
+    const protocol = (host.includes('localhost') || host.match(/^[0-9.]+(?::[0-9]+)?$/)) ? 'http' : (request.headers.get('x-forwarded-proto') || 'https');
+    const appUrl = (process.env.APP_URL || `${protocol}://${host}`).trim();
     const redirectUri = `${appUrl}/api/auth/google/callback`;
 
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');

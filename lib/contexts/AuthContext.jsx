@@ -253,7 +253,7 @@ export function AuthProvider({ children }) {
         isAuthenticated: !!user,
         isAdmin: profile?.role === 'admin' || profile?.role === 'super_admin',
         isSuperAdmin: profile?.role === 'super_admin',
-        isCustomer: profile?.role === 'customer',
+        isCustomer: ['user', 'customer'].includes(profile?.role),
         isMerchant: profile?.role === 'merchant',
         refreshProfile,
         refreshUser,

@@ -2,6 +2,7 @@
 
 import { Mail, Phone, Calendar, MoreVertical, Shield, User, Star } from 'lucide-react';
 import Link from 'next/link';
+import { displayEmail } from '@/lib/auth';
 
 export default function UserCard({ user }) {
 
@@ -104,7 +105,11 @@ export default function UserCard({ user }) {
                     <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:bg-blue-50 transition-colors">
                         <Mail size={16} strokeWidth={2.5} />
                     </div>
-                    <span className="truncate font-medium">{user.email}</span>
+                    <span className="truncate font-medium">
+                        {displayEmail(user.email) ?? (
+                            <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No email linked</span>
+                        )}
+                    </span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-slate-500 group-hover:text-slate-700 transition-colors">
                     <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 group-hover:bg-emerald-50 transition-colors">

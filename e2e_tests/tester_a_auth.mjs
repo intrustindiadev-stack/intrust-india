@@ -91,9 +91,9 @@ async function run() {
         fail(`Expected 409 conflict, got ${res2.status}`, data2);
     }
 
-    // TC-A-004: POST /api/auth/send-otp
+    // TC-A-004: POST /api/auth/request-otp
     console.log(`\n🧪 TC-A-004: Send OTP`);
-    let res4 = await fetch(`${APP_URL}/api/auth/send-otp`, {
+    let res4 = await fetch(`${APP_URL}/api/auth/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: TEST_PHONE })
@@ -127,11 +127,11 @@ async function run() {
         fail(`Verified expired OTP! VULNERABILITY!`);
     }
 
-    // TC-A-006: Rate limit send OTP
-    console.log(`\n🧪 TC-A-006: Rate limit send-otp`);
+    // TC-A-006: Rate limit request-otp
+    console.log(`\n🧪 TC-A-006: Rate limit request-otp`);
     let status6 = 200;
     for (let i = 0; i < 4; i++) {
-        const r = await fetch(`${APP_URL}/api/auth/send-otp`, {
+        const r = await fetch(`${APP_URL}/api/auth/request-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone: TEST_PHONE })

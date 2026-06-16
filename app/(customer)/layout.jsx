@@ -35,7 +35,7 @@ export default function CustomerLayout({ children }) {
     }
 
     // If a non-customer role is loaded but redirect hasn't fired yet, suppress render
-    if (profile && profile.role !== 'customer' && !pathname?.startsWith('/merchant-apply')) {
+    if (profile && ['admin', 'super_admin', 'merchant'].includes(profile.role) && !pathname?.startsWith('/merchant-apply')) {
         return <div className="min-h-screen bg-[var(--bg-primary)]" />;
     }
 

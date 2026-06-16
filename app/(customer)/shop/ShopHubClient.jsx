@@ -92,7 +92,7 @@ const MerchantCard = memo(function MerchantCard({ merchant, rating, isOpen, prio
         avatarUrl = merchant.user_profiles?.avatar_url;
     }
 
-    const initials = merchant.business_name.substring(0, 2).toUpperCase();
+    const initials = (merchant.business_name || '??').substring(0, 2).toUpperCase();
     const rawAddress = merchant.business_address || '';
     const addressLine = rawAddress ? rawAddress.split(',')[0]?.trim() : 'Premium Hub';
 
@@ -301,7 +301,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
     const rest = merchants.filter(m => m.id !== 'official');
 
     const filtered = rest.filter(m =>
-        m.business_name.toLowerCase().includes(searchQuery.toLowerCase())
+        (m.business_name || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const showFeatured = !searchQuery && official;

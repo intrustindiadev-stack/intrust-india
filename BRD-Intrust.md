@@ -26,7 +26,7 @@
 | Customer login                        | ✅      | file:app/`(auth)/login/page.jsx`, file:app/api/auth/login/route.js                                   |
 | Vendor (Merchant) login               | ✅      | file:app/`(merchant)/merchant/page.jsx`, merchant sidebar                                            |
 | Admin login                           | ✅      | file:app/`(admin)/admin/page.jsx`, file:app/api/admin/admins/route.js                                |
-| OTP-based authentication              | ✅      | file:app/api/auth/send-otp/route.js, file:app/api/auth/verify-otp/route.js                           |
+| OTP-based authentication              | ✅      | file:app/api/auth/request-otp/route.js, file:app/api/auth/verify-otp/route.js                        |
 | Role-based access control (RBAC)      | ✅      | file:lib/auth.js, file:lib/apiAuth.js, file:lib/intentEnforcer.js, Supabase RLS migrations           |
 | Forgot password / Reset password      | ✅      | file:app/`(auth)/forgot-password/page.jsx`, file:app/`(auth)/reset-password/page.jsx`                |
 | Google OAuth                          | 🚀     | file:app/api/auth/google/route.js — not in BRD                                                       |
@@ -168,7 +168,7 @@
 | BRD Requirement   | Status | Evidence                                                                                   |
 | ----------------- | ------ | ------------------------------------------------------------------------------------------ |
 | Employee profiles | ✅      | file:app/`(hrm)/hrm/employees/page.jsx`, file:app/`(employee)/employee/profile/page.jsx`   |
-| Departments       | 🟡     | Employee records exist; no dedicated department management page found                      |
+| Departments       | ✅      | Standardized dropdown departments (Engineering, Sales, Operations, HR, Customer Support, Marketing, Finance) are integrated into Core HR employee profiles. |
 | KYC documents     | ✅      | file:app/api/kyc/submit/route.js, file:app/`(admin)/admin/users/[id]/KYCReviewSection.jsx` |
 | NDA documents     | 🟡     | Document upload exists in HRM; NDA-specific flow not confirmed                             |
 
@@ -179,8 +179,8 @@
 | BRD Requirement                         | Status | Evidence                                                                                                      |
 | --------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------- |
 | Clock-in / Clock-out                    | ✅      | file:app/`(hrm)/hrm/attendance/page.jsx`, file:app/`(employee)/employee/attendance/page.jsx`                  |
-| Location capture                        | 🟡     | Attendance page exists; location capture not confirmed from file structure                                    |
-| Late rules                              | 🟡     | HRM schema migration exists; late rule config not confirmed                                                   |
+| Location capture                        | ✅      | file:app/`(employee)/employee/attendance/page.jsx` — Geolocated clock-in/out with onsite detection (within 300m of Mumbai HQ coordinates) and Google Maps links. |
+| Late rules                              | 🟡      | Manual late status classification available via HR override; automated late policy logic not implemented.      |
 | Attendance overrides with audit logging | ✅      | file:supabase/migrations/20260507_add_hrm_audit_columns_and_policies.sql, file:app/`(hrm)/hrm/audit/page.jsx` |
 
 
@@ -229,7 +229,7 @@
 | ------------------------------- | ------ | ----------------------------------------------------------------------------------------------- |
 | Job postings management         | 🚀     | file:app/`(hrm)/hrm/jobs/page.jsx` — not in BRD                                                 |
 | Recruitment pipeline            | 🚀     | file:app/`(hrm)/hrm/recruitment/page.jsx` — not in BRD                                          |
-| Career portal (customer-facing) | 🚀     | file:app/`(customer)/career/page.jsx`, file:app/`(customer)/career/apply/page.jsx` — not in BRD |
+| Career portal (customer-facing) | 🚀     | file:app/`(customer)/career/page.jsx`, file:app/`(customer)/career/apply/page.jsx` — Career KYC gates and resume uploads integrated |
 | HRM settings                    | 🚀     | file:app/`(hrm)/hrm/settings/page.jsx` — not in BRD                                             |
 | Hire candidate API              | 🚀     | file:app/api/hrm/hire-candidate/route.js — not in BRD                                           |
 
@@ -349,6 +349,11 @@ These are significant additions not mentioned in the BRD:
 | **Cron Jobs**                      | Automated stock checks and order timeouts                        | file:app/api/cron/check-stock/route.js, file:app/api/cron/order-timeout/route.js                        |
 | **Referral Network**               | Customer referral network                                        | file:app/api/referral/network/route.js, file:app/`(customer)/(protected)/refer/page.jsx`                |
 | **Restock Notifications**          | Notify customers when products are back in stock                 | file:app/api/notify/restock/route.js                                                                    |
+| **Lead Task Scheduler**            | Task manager inside CRM Lead details                              | file:app/`(crm)/crm/leads/[id]/page.jsx`, crm_tasks table                                                |
+| **Atomic Rate Limiter**            | Database-level atomic rate limiter with retry time & rollbacks   | file:supabase/migrations/20260618000000_otp_rate_limit_improvements.sql, check_rate_limit                |
+| **Wholesale Procurement**          | Admin/merchant wholesale procurement from merchants               | file:supabase/migrations/20260531_procurement_schema.sql, procure_from_merchant_rpc                      |
+| **Wallet Payout Atomicity**        | Audit-logged secure payout transaction database-level locks      | file:supabase/migrations/20260611_fix_payout_atomicity.sql, payout ledger safety                         |
+| **Onboarding Security & Merges**   | Duplicate account merge RPC & bank details verification gates     | file:supabase/migrations/20260620000000_add_merge_duplicate_user_data_rpc.sql, bank verification details |
 
 
 ---
@@ -393,14 +398,14 @@ graph TD
 | AI Chatbot              | 1         | 1            | 0           | 0            |
 | Rewards & Subscriptions | 3         | 3            | 0           | 0            |
 | Sales CRM               | 6         | 6            | 0           | 0            |
-| HRM — Employee Master   | 4         | 2            | 2           | 0            |
-| HRM — Attendance        | 4         | 2            | 2           | 0            |
+| HRM — Employee Master   | 4         | 3            | 1           | 0            |
+| HRM — Attendance        | 4         | 3            | 1           | 0            |
 | HRM — Leave             | 3         | 3            | 0           | 0            |
 | HRM — Salary            | 3         | 3            | 0           | 0            |
 | HRM — Training          | 2         | 2            | 0           | 0            |
 | HRM — AI Assistant      | 2         | 1            | 1           | 0            |
 | Mobile App (Unit C)     | 11        | 0            | 0           | 11           |
-| **Total**               | **70**    | **43 (61%)** | **7 (10%)** | **20 (29%)** |
+| **Total**               | **70**    | **45 (64%)** | **5 (7%)**  | **20 (29%)** |
 
 
 > **Key Gaps:** Loan facilitation (4 items), utility payments/recharges (5 items), and the entire Mobile App (11 items) account for all 20 missing BRD requirements.

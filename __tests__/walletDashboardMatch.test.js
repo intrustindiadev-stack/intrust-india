@@ -15,6 +15,7 @@ jest.mock('react', () => {
     const actualReact = jest.requireActual('react');
     return {
         ...actualReact,
+        useCallback: jest.fn((fn) => fn),
         useState: jest.fn((init) => {
             if (init && typeof init === 'object' && 'walletBalance' in init) {
                 if (!mockUserDataState) {

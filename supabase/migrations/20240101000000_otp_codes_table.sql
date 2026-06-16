@@ -20,19 +20,19 @@ create index if not exists idx_otp_codes_phone_created_at on public.otp_codes (p
 comment on table public.otp_codes is 'Stores hashed OTP codes for phone verification with rate limiting and expiry tracking.';
 
 -- Helper function to get user ID by phone
--- Required because strictly querying auth.users is restricted
-create or replace function public.get_user_id_by_phone(phone_number text)
-returns uuid
-language plpgsql
-security definer
-as $$
-declare
-  _user_id uuid;
-begin
-  select id into _user_id
-  from auth.users
-  where phone = phone_number
-  limit 1;
-  return _user_id;
-end;
-$$;
+-- SUPERSEDED by 20260615_restore_get_user_id_by_phone.sql
+-- create or replace function public.get_user_id_by_phone(phone_number text)
+-- returns uuid
+-- language plpgsql
+-- security definer
+-- as $$
+-- declare
+--   _user_id uuid;
+-- begin
+--   select id into _user_id
+--   from auth.users
+--   where phone = phone_number
+--   limit 1;
+--   return _user_id;
+-- end;
+-- $$;

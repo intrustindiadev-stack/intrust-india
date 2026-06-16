@@ -11,7 +11,207 @@ import { useSubscription } from '@/components/merchant/SubscriptionContext';
 import { useMerchant } from '@/hooks/useMerchant';
 import { displayEmail } from '@/lib/auth';
 
+// ─── Login & Security card (Account tab) ────────────────────────────────────
+// Mirrors the customer LoginMethodsSection (Ticket 2) but styled for merchant
+// gold palette. Calls the shared /api/auth/email/link-to-phone-user route.
+function MerchantLoginSecurity({ authUser, userProfile, onLinked }) {
+    const [formOpen, setFormOpen] = useState(false);
+    const [emailInput, setEmailInput] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPw, setShowPw] = useState(false);
+    const [showCpw, setShowCpw] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [err, setErr] = useState('');
+
+    // Safe display email via helper already imported at top
+    const safeEmail = displayEmail(authUser?.email);
+
+    // Derive active providers
+    const providers = Array.isArray(authUser?.app_metadata?.providers)
+        ? authUser.app_metadata.providers
+        : (authUser?.app_metadata?.provider ? [authUser.app_metadata.provider] : []);
+
+    const hasPhone   = providers.includes('phone') || !!authUser?.phone;
+    const hasEmailPw = !!safeEmail && (providers.includes('email') || providers.includes('multiple'));
+    const hasGoogle  = providers.includes('google');
+
+    const handleSubmit = async () => {
+        setErr('');
+        const targetEmail = safeEmail || emailInput;
+
+        if (!safeEmail && !targetEmail.includes('@')) { setErr('Enter a valid email address.'); return; }
+        if (password.length < 8)                      { setErr('Password must be at least 8 characters.'); return; }
+        if (password !== confirmPassword)              { setErr('Passwords do not match.'); return; }
+
+        setLoading(true);
+        try {
+            const res = await fetch('/api/auth/email/link-to-phone-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: targetEmail, password, confirmPassword }),
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                setErr(res.status === 409
+                    ? 'That email is already in use by another account.'
+                    : (data.error || 'Something went wrong. Please try again.'));
+                return;
+            }
+
+            setFormOpen(false);
+            setPassword('');
+            setConfirmPassword('');
+            if (onLinked) await onLinked();
+        } catch {
+            setErr('Network error. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const MethodRow = ({ icon, label, active }) => (
+        <div className="flex items-center justify-between py-2.5 text-sm">
+            <div className="flex items-center gap-3">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                    active
+                        ? 'bg-emerald-500/10 text-emerald-500'
+                        : 'bg-black/5 dark:bg-white/10 text-slate-400'
+                }`}>
+                    <span className="material-icons-round text-sm">{icon}</span>
+                </div>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">{label}</span>
+            </div>
+            {active
+                ? <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">✓ Active</span>
+                : <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">✗ Not set</span>
+            }
+        </div>
+    );
+
+    if (!authUser) return null;
+
+    return (
+        <div className="mt-6 p-6 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 shadow-sm">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-xl flex items-center justify-center">
+                        <span className="material-icons-round text-[#D4AF37]">lock</span>
+                    </div>
+                    <div>
+                        <h3 className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mb-0.5">Login & Security</h3>
+                        <p className="text-slate-800 dark:text-slate-100 font-bold text-sm">Authentication Methods</p>
+                    </div>
+                </div>
+                {!formOpen && (
+                    <button
+                        id="merchant-link-email-btn"
+                        onClick={() => setFormOpen(true)}
+                        className="px-4 py-2 border border-[#D4AF37]/50 rounded-xl text-[#B8860B] dark:text-[#D4AF37] font-bold text-xs hover:bg-[#D4AF37] hover:text-white transition-all whitespace-nowrap"
+                    >
+                        {safeEmail ? 'Change Password' : 'Link Email →'}
+                    </button>
+                )}
+            </div>
+
+            {/* Method status rows */}
+            <div className="bg-black/[0.03] dark:bg-white/[0.03] rounded-xl px-4 py-1 mb-4 divide-y divide-black/5 dark:divide-white/5">
+                <MethodRow icon="phone_iphone"  label="Phone OTP"        active={hasPhone} />
+                <MethodRow icon="email"          label="Email + Password" active={hasEmailPw} />
+                <MethodRow icon="language"       label="Google"           active={hasGoogle} />
+            </div>
+
+            {/* Form */}
+            {formOpen && (
+                <div className="space-y-4 mt-2">
+                    {/* Email field — hidden when user already has a real email */}
+                    {safeEmail ? (
+                        <div className="flex items-center gap-3 px-4 py-3.5 bg-[#D4AF37]/5 border border-[#D4AF37]/20 rounded-xl">
+                            <span className="material-icons-round text-[#D4AF37] text-sm">mail_outline</span>
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate flex-1">{safeEmail}</span>
+                            <span className="text-[9px] font-black text-[#D4AF37] uppercase tracking-widest bg-[#D4AF37]/10 px-2 py-0.5 rounded-full border border-[#D4AF37]/20">Confirmed</span>
+                        </div>
+                    ) : (
+                        <input
+                            id="merchant-link-email"
+                            type="email"
+                            value={emailInput}
+                            onChange={e => setEmailInput(e.target.value)}
+                            placeholder="your@email.com"
+                            className="w-full px-5 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                        />
+                    )}
+
+                    {/* Password */}
+                    <div className="relative">
+                        <input
+                            id="merchant-link-password"
+                            type={showPw ? 'text' : 'password'}
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                            placeholder="Password (min 8 chars)"
+                            className="w-full px-5 py-4 pr-12 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                        />
+                        <button type="button" onClick={() => setShowPw(s => !s)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" tabIndex={-1}>
+                            <span className="material-icons-round text-sm">{showPw ? 'visibility_off' : 'visibility'}</span>
+                        </button>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div className="relative">
+                        <input
+                            id="merchant-link-confirm-password"
+                            type={showCpw ? 'text' : 'password'}
+                            value={confirmPassword}
+                            onChange={e => setConfirmPassword(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                            placeholder="Confirm password"
+                            className="w-full px-5 py-4 pr-12 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-slate-800 dark:text-slate-100 font-medium transition-all"
+                        />
+                        <button type="button" onClick={() => setShowCpw(s => !s)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" tabIndex={-1}>
+                            <span className="material-icons-round text-sm">{showCpw ? 'visibility_off' : 'visibility'}</span>
+                        </button>
+                    </div>
+
+                    {err && (
+                        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-600 dark:text-red-400 text-xs font-bold">
+                            <span className="material-icons-round text-sm">error_outline</span> {err}
+                        </div>
+                    )}
+
+                    <div className="flex gap-3 pt-1">
+                        <button
+                            id="merchant-link-email-submit"
+                            onClick={handleSubmit}
+                            disabled={loading}
+                            className="flex-1 py-4 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2 gold-glow shadow-lg shadow-[#D4AF37]/20 text-sm"
+                        >
+                            {loading
+                                ? <><span className="material-icons-round animate-spin text-sm">autorenew</span> Linking...</>
+                                : <><span className="material-icons-round text-sm">lock</span> {safeEmail ? 'Update Password' : 'Link Email + Password'}</>
+                            }
+                        </button>
+                        <button
+                            onClick={() => { setFormOpen(false); setErr(''); setPassword(''); setConfirmPassword(''); }}
+                            className="px-6 py-4 bg-black/5 dark:bg-white/5 text-slate-500 font-bold rounded-xl transition-all text-sm hover:bg-black/10 dark:hover:bg-white/10"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 const lockedTabIds = ['store', 'bank'];
+
 
 const tabs = [
     { id: 'business', label: 'Business Info', icon: 'business', locked: false },
@@ -34,6 +234,7 @@ export default function MerchantSettingsPage() {
 
     const [merchantProfile, setMerchantProfile] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
+    const [authUser, setAuthUser] = useState(null);
     const [kycStatus, setKycStatus] = useState(null);
 
     const {
@@ -140,6 +341,8 @@ export default function MerchantSettingsPage() {
 
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
+
+            setAuthUser(user);
 
             const { data: profile } = await supabase
                 .from('user_profiles')
@@ -845,6 +1048,16 @@ export default function MerchantSettingsPage() {
                                 </p>
                             </div>
                         </div>
+
+                        {/* ── Login & Security ─────────────────────────────── */}
+                        <MerchantLoginSecurity
+                            authUser={authUser}
+                            userProfile={userProfile}
+                            onLinked={async () => {
+                                toast.success('Your merchant account is now secured with email login.');
+                                await fetchSettings();
+                            }}
+                        />
                     </div>
                 )}
 

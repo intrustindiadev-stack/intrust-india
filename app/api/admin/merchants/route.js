@@ -23,6 +23,8 @@ export async function GET(request) {
                 id,
                 user_id,
                 business_name,
+                business_phone,
+                business_email,
                 gst_number,
                 status,
                 subscription_status,
@@ -56,6 +58,8 @@ export async function GET(request) {
             
             return {
                 ...m,
+                business_phone: m.business_phone || null,
+                business_email: m.business_email || null,
                 user_profiles: profileMap[m.user_id] || null,
                 udhari_enabled: mus.udhari_enabled || false,
             };

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { User, Mail, Phone, Calendar, Edit2, Check, X, Loader2, Lock, ShieldCheck, AlertCircle } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Edit2, Check, X, Loader2, Lock, ShieldCheck, AlertCircle, Key, Eye, EyeOff, Chrome } from 'lucide-react';
 import { signInWithOTP } from '@/lib/supabase';
 import { displayEmail } from '@/lib/auth';
 import { normalizePhone } from '@/lib/phoneUtils';
@@ -287,124 +287,223 @@ function PhoneVerification({ currentPhone, authPhone, userId, onVerified, showTo
 }
 
 /**
- * Shown only for phone-only accounts (no real email linked).
- * Lets the user send a Supabase magic link to a real email address.
+ * Login Methods / Security block.
+ *
+ * Shows which authentication methods are active for the account:
+ *   • Phone OTP (always active for phone-based accounts)
+ *   • Email + Password
+ *   • Google
+ *
+ * For phone-only users (no real email): shows an email + password form.
+ * For users who already have a real email: shows a password-change-only form.
  */
-function EmailLinkSection({ showToast, supabase }) {
-    const [step, setStep] = useState('idle');   // 'idle' | 'input' | 'sent'
-    const [email, setEmail] = useState('');
+function PasswordInput({ id, value, onChange, placeholder, onKeyDown }) {
+    const [show, setShow] = useState(false);
+    return (
+        <div className="relative">
+            <input
+                id={id}
+                type={show ? 'text' : 'password'}
+                value={value}
+                onChange={onChange}
+                onKeyDown={onKeyDown}
+                placeholder={placeholder}
+                className="w-full text-sm bg-gray-50 dark:bg-white/5 border border-transparent focus:border-[#92BCEA] rounded-2xl px-5 py-3.5 pr-12 text-gray-900 dark:text-gray-100 outline-none transition-all shadow-inner"
+            />
+            <button
+                type="button"
+                onClick={() => setShow(s => !s)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                tabIndex={-1}
+            >
+                {show ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+        </div>
+    );
+}
+
+function LoginMethodsSection({ user, safeEmail, showToast, refreshUser }) {
+    const [formOpen, setFormOpen] = useState(false);
+    const [email, setEmail] = useState(safeEmail || '');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const handleSend = async () => {
-        if (!email.includes('@')) { setError('Enter a valid email address.'); return; }
+    // Derive active providers from app_metadata
+    const providers = Array.isArray(user?.app_metadata?.providers)
+        ? user.app_metadata.providers
+        : (user?.app_metadata?.provider ? [user.app_metadata.provider] : []);
+
+    const hasPhone = providers.includes('phone') || !!user?.phone;
+    const hasEmailPw = !!safeEmail && (providers.includes('email') || user?.app_metadata?.auth_provider === 'multiple');
+    const hasGoogle = providers.includes('google');
+
+    const handleSubmit = async () => {
         setError('');
+
+        // Client-side validation
+        const targetEmail = safeEmail || email;
+        if (!safeEmail && !targetEmail.includes('@')) {
+            setError('Enter a valid email address.');
+            return;
+        }
+        if (password.length < 8) {
+            setError('Password must be at least 8 characters.');
+            return;
+        }
+        if (password !== confirmPassword) {
+            setError('Passwords do not match.');
+            return;
+        }
+
         setLoading(true);
         try {
-            const redirectTo = `${window.location.origin}/auth/callback?next=/profile`;
-            const { error: updateError } = await supabase.auth.updateUser(
-                { email },
-                { emailRedirectTo: redirectTo }
-            );
-            if (updateError) throw updateError;
-            setStep('sent');
-            showToast?.('Confirmation email sent! Check your inbox.');
+            const res = await fetch('/api/auth/email/link-to-phone-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: targetEmail,
+                    password,
+                    confirmPassword,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                if (res.status === 409) {
+                    setError('That email is already in use by another account.');
+                } else {
+                    setError(data.error || 'Something went wrong. Please try again.');
+                }
+                return;
+            }
+
+            showToast?.('Email linked! You can now also log in with email + password.');
+            setFormOpen(false);
+            setPassword('');
+            setConfirmPassword('');
+            if (refreshUser) await refreshUser();
         } catch (err) {
-            setError(err.message || 'Could not send link. Try again.');
+            setError('Network error. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
-    if (step === 'idle') {
-        return (
-            <div className="group flex items-start gap-5 py-5 border-b border-gray-100 dark:border-white/5 last:border-0">
-                <div className="mt-1 flex-shrink-0 w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                    <Mail size={18} />
+    const MethodRow = ({ icon: Icon, label, active, iconColor }) => (
+        <div className="flex items-center justify-between py-2.5 text-sm">
+            <div className="flex items-center gap-3">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${active ? iconColor || 'bg-green-500/10 text-green-500' : 'bg-gray-100 dark:bg-white/5 text-gray-400'}`}>
+                    <Icon size={14} />
                 </div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Primary Email</p>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-400 italic">Not Linked</p>
-                </div>
-                <button
-                    onClick={() => setStep('input')}
-                    className="mt-1 px-4 py-2 bg-[#1a1a1a] text-amber-500 text-[10px] font-black rounded-xl hover:bg-black transition-all border border-amber-500/20 uppercase tracking-widest active:scale-95 shadow-xl"
-                >
-                    Link Now
-                </button>
+                <span className="font-semibold text-gray-700 dark:text-gray-300">{label}</span>
             </div>
-        );
-    }
+            {active ? (
+                <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">✓ Active</span>
+            ) : (
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">✗ Not set</span>
+            )}
+        </div>
+    );
 
-    if (step === 'sent') {
-        return (
-            <div className="group flex items-start gap-5 py-5 border-b border-gray-100 dark:border-white/5 last:border-0">
-                <div className="mt-1 flex-shrink-0 w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
-                    <Mail size={18} />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Primary Email</p>
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                        Confirmation email sent to <span className="text-blue-500">{email}</span>
-                    </p>
-                    <p className="text-[11px] text-gray-400 mt-1">Click the link in the email to confirm linking.</p>
-                </div>
-                <button onClick={() => { setStep('idle'); setEmail(''); setError(''); }}
-                    className="mt-1 px-3 py-2 text-[10px] font-black text-gray-400 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 uppercase tracking-widest transition-all">
-                    Reset
-                </button>
-            </div>
-        );
-    }
-
-    // step === 'input'
     return (
-        <div className="py-6 border-b border-gray-100 dark:border-white/5 last:border-0">
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
-                    <Mail size={20} />
-                </div>
-                <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Link Email Address</p>
-                    <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Receive a confirmation link to verify</p>
-                </div>
-            </div>
-            <div className="space-y-4">
-                <input
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSend()}
-                    placeholder="your@email.com"
-                    className="w-full text-sm bg-gray-50 dark:bg-white/5 border border-transparent focus:border-[#92BCEA] rounded-2xl px-5 py-3.5 text-gray-900 dark:text-gray-100 outline-none transition-all shadow-inner"
-                />
-                <div className="flex gap-3">
-                    <button
-                        onClick={handleSend}
-                        disabled={loading || !email.includes('@')}
-                        className="flex-1 py-3.5 bg-black text-white text-[11px] font-black rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-gray-900 transition-all uppercase tracking-[0.15em] shadow-2xl"
-                    >
-                        {loading ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
-                        Send Confirmation Link
-                    </button>
-                    <button onClick={() => { setStep('idle'); setEmail(''); setError(''); }}
-                        className="px-6 py-3.5 bg-gray-100 dark:bg-white/5 text-gray-500 text-[11px] font-black rounded-2xl transition-all uppercase tracking-widest">
-                        Cancel
-                    </button>
-                </div>
-                {error && (
-                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                        <AlertCircle size={14} /> {error}
+        <div className="py-5 border-b border-gray-100 dark:border-white/5 last:border-0">
+            {/* Section header */}
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#92BCEA]/10 text-[#92BCEA] flex items-center justify-center flex-shrink-0">
+                        <Key size={18} />
                     </div>
+                    <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Login Methods</p>
+                        <p className="text-sm font-bold text-gray-700 dark:text-gray-200">Security</p>
+                    </div>
+                </div>
+                {!formOpen && (
+                    <button
+                        onClick={() => setFormOpen(true)}
+                        className="px-4 py-2 bg-[#1a1a1a] text-[#92BCEA] text-[10px] font-black rounded-xl hover:bg-black transition-all border border-[#92BCEA]/20 uppercase tracking-widest active:scale-95 shadow-xl"
+                    >
+                        {safeEmail ? 'Change Password' : 'Link Email'}
+                    </button>
                 )}
             </div>
+
+            {/* Method status rows */}
+            <div className="bg-gray-50 dark:bg-white/[0.03] rounded-2xl px-4 py-1 mb-4 divide-y divide-gray-100 dark:divide-white/5">
+                <MethodRow icon={Phone} label="Phone OTP" active={hasPhone} iconColor="bg-green-500/10 text-green-500" />
+                <MethodRow icon={Mail}  label="Email + Password" active={hasEmailPw} iconColor="bg-blue-500/10 text-blue-500" />
+                <MethodRow icon={Chrome} label="Google" active={hasGoogle} iconColor="bg-red-500/10 text-red-500" />
+            </div>
+
+            {/* Form */}
+            {formOpen && (
+                <div className="space-y-3 mt-2">
+                    {/* Email field — hidden if user already has a real email */}
+                    {!safeEmail && (
+                        <input
+                            id="link-email"
+                            type="email"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            placeholder="your@email.com"
+                            className="w-full text-sm bg-gray-50 dark:bg-white/5 border border-transparent focus:border-[#92BCEA] rounded-2xl px-5 py-3.5 text-gray-900 dark:text-gray-100 outline-none transition-all shadow-inner"
+                        />
+                    )}
+                    {safeEmail && (
+                        <div className="flex items-center gap-3 px-5 py-3.5 bg-blue-500/5 border border-blue-500/20 rounded-2xl">
+                            <Mail size={15} className="text-blue-500 flex-shrink-0" />
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">{safeEmail}</span>
+                            <span className="ml-auto text-[9px] font-black text-blue-500 uppercase tracking-widest bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">Confirmed</span>
+                        </div>
+                    )}
+                    <PasswordInput
+                        id="link-password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        placeholder="Password (min 8 chars)"
+                        onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                    />
+                    <PasswordInput
+                        id="link-confirm-password"
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm password"
+                        onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                    />
+
+                    {error && (
+                        <div className="p-3.5 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                            <AlertCircle size={14} /> {error}
+                        </div>
+                    )}
+
+                    <div className="flex gap-3">
+                        <button
+                            id="link-email-submit"
+                            onClick={handleSubmit}
+                            disabled={loading}
+                            className="flex-1 py-3.5 bg-[#1E3A5F] text-white text-[11px] font-black rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-[#16304f] transition-all uppercase tracking-[0.15em] shadow-2xl shadow-blue-900/20"
+                        >
+                            {loading ? <Loader2 size={16} className="animate-spin" /> : <Key size={16} />}
+                            {safeEmail ? 'Update Password' : 'Link Email + Password'}
+                        </button>
+                        <button
+                            onClick={() => { setFormOpen(false); setError(''); setPassword(''); setConfirmPassword(''); }}
+                            className="px-6 py-3.5 bg-gray-100 dark:bg-white/5 text-gray-500 text-[11px] font-black rounded-2xl transition-all uppercase tracking-widest"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
-export default function PersonalInfoForm({ user, profile, onSave, onPhoneVerified, showToast, supabase }) {
+export default function PersonalInfoForm({ user, profile, onSave, onPhoneVerified, showToast, supabase, refreshUser }) {
     // Mask pseudo-emails — phone-only users must never see their internal identifier
     const safeEmail = displayEmail(user?.email);
 
@@ -423,13 +522,12 @@ export default function PersonalInfoForm({ user, profile, onSave, onPhoneVerifie
             <div className="divide-y divide-gray-50 dark:divide-white/5">
                 <EditableRow label="Full Legal Name" icon={User} value={profile?.full_name} placeholder="Enter your full name" onSave={v => onSave('full_name', v)} />
 
-                {safeEmail ? (
-                    <EditableRow label="Primary Email" icon={Mail} value={safeEmail} readOnly
-                        badge={<span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 uppercase tracking-widest border border-blue-500/20">Verified</span>}
-                    />
-                ) : (
-                    <EmailLinkSection showToast={showToast} supabase={supabase} />
-                )}
+                <LoginMethodsSection
+                    user={user}
+                    safeEmail={safeEmail}
+                    showToast={showToast}
+                    refreshUser={refreshUser}
+                />
 
                 <PhoneVerification
                     currentPhone={profile?.phone}

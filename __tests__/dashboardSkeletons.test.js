@@ -23,6 +23,7 @@ jest.mock('react', () => {
     const actualReact = jest.requireActual('react');
     return {
         ...actualReact,
+        useCallback: jest.fn((fn) => fn),
         useState: jest.fn((init) => {
             if (init === true) {
                 return [mockLoadingState, (val) => { mockLoadingState = val; }];

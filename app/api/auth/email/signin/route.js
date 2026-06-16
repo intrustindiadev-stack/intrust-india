@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr';
 import { sendWhatsAppLoginAlert } from '@/lib/notifications/authWhatsapp';
 import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
 import { applySupabaseCookies } from '@/lib/supabaseCookieHelper';
+import { isPseudoEmail } from '@/lib/auth';
 
 const MAX_ATTEMPTS = 5;
 const LOCK_DURATION_MINUTES = 15;
@@ -16,31 +17,52 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 });
         }
 
+        // ── B2: Explicit pseudo-email guard ──────────────────────────────────────
+        // Reject placeholder emails immediately — before any DB round-trip.
+        // Phone-only accounts have pseudo-emails that look real but cannot be used
+        // for email+password login.
+        if (isPseudoEmail(email)) {
+            return NextResponse.json(
+                {
+                    error: 'This account uses Phone OTP login. Please switch to the Phone tab.',
+                    code: 'PSEUDO_EMAIL',
+                },
+                { status: 400 }
+            );
+        }
+
         const admin = createAdminClient();
 
-        // 1. Look up the user by email (using listUsers because direct auth.users access via PostgREST is blocked)
-        const { data: existingUsers, error: listError } = await admin.auth.admin.listUsers({
-            page: 1,
-            perPage: 1000
-        });
-        if (listError) {
-            console.error('[SIGNIN] listUsers error:', listError);
+        // 1. Look up the user ID by email via RPC to avoid >1000 users limitation
+        const { data: userId, error: rpcError } = await admin.rpc('get_user_id_by_email', { email_address: email });
+        
+        if (rpcError) {
+            console.error('[SIGNIN] RPC error:', rpcError);
             return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
         }
 
-        const existing = existingUsers?.users?.find(
-            (u) => u.email?.toLowerCase() === email.toLowerCase()
-        );
+        if (!userId) {
+            return NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 });
+        }
+
+        const { data: userResponse, error: getUserError } = await admin.auth.admin.getUserById(userId);
+        
+        if (getUserError || !userResponse?.user) {
+            console.error('[SIGNIN] getUserById error:', getUserError);
+            return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
+        }
+        
+        const existing = userResponse.user;
 
         if (!existing) {
             // Generic message to prevent email enumeration
             return NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 });
         }
 
-        // 2. Check account lock status
+        // 2. Check account lock status and role for JWT metadata
         const { data: profile } = await admin
             .from('user_profiles')
-            .select('failed_login_attempts, locked_until')
+            .select('failed_login_attempts, locked_until, role, is_suspended')
             .eq('id', existing.id)
             .maybeSingle();
 
@@ -60,7 +82,53 @@ export async function POST(request) {
             }
         }
 
-        // 3. Attempt sign-in
+        // ── C3: Rate limit (email + IP) ─────────────────────────────────────────
+        // Complements the per-account lockout below; protects against credential
+        // stuffing across many accounts from a single IP.
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+        try {
+            const rlChecks = [
+                { key: `email-signin:email:${email.toLowerCase()}`, max: 10, windowSec: 900 },
+                { key: `email-signin:ip:${ip}`, max: 50, windowSec: 900 },
+            ];
+            for (const { key, max, windowSec } of rlChecks) {
+                const { data: rl, error: rlErr } = await admin.rpc('check_rate_limit', {
+                    p_key: key,
+                    p_max_requests: max,
+                    p_window_seconds: windowSec,
+                });
+                if (rlErr) {
+                    console.error('[SIGNIN] Rate limit RPC error:', rlErr.message);
+                    break; // fail open
+                }
+                if (rl && !rl.allowed) {
+                    return NextResponse.json(
+                        {
+                            error: 'Too many sign-in attempts. Please wait before trying again.',
+                            retryAfter: rl.retry_after ?? 900,
+                        },
+                        { status: 429 }
+                    );
+                }
+            }
+        } catch (rlEx) {
+            console.error('[SIGNIN] Rate limit check failed (non-blocking):', rlEx.message);
+        }
+
+        // 3. Short-circuit if suspended
+        if (profile?.is_suspended) {
+            return NextResponse.json({ error: 'Your account has been suspended.', is_suspended: true }, { status: 403 });
+        }
+
+        // 4. Pre-populate user_metadata so the JWT minted by signInWithPassword carries these claims
+        await admin.auth.admin.updateUserById(existing.id, {
+            user_metadata: {
+                role: profile?.role ?? null,
+                is_suspended: profile?.is_suspended ?? false
+            }
+        });
+
+        // 5. Attempt sign-in
         const cookiesToSet = [];
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -156,31 +224,24 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 });
         }
 
-        // 4. Success — reset failed attempts
-        await admin
-            .from('user_profiles')
-            .update({ failed_login_attempts: 0, locked_until: null })
-            .eq('id', existing.id);
-
-        // Fetch role and suspension status (service-role bypasses RLS — no cookie issue)
-        const { data: prof } = await admin
-            .from('user_profiles')
-            .select('role, is_suspended')
-            .eq('id', existing.id)
-            .single();
-
-        // 5. Set auth cookie on the response
+        // 6. Set auth cookie on the response
         const response = NextResponse.json({
             success: true,
             user: signInData.user,
-            role: prof?.role ?? null,
-            is_suspended: prof?.is_suspended ?? false
+            role: profile?.role ?? null,
+            is_suspended: profile?.is_suspended ?? false
         });
 
         // Replay collected cookies onto the response
         applySupabaseCookies(response, cookiesToSet);
 
-        // 6. Audit log successful login
+        // 7. Success — reset failed attempts
+        await admin
+            .from('user_profiles')
+            .update({ failed_login_attempts: 0, locked_until: null })
+            .eq('id', existing.id);
+
+        // 8. Audit log successful login
         try {
             await admin.from('audit_logs').insert({
                 user_id: existing.id,
@@ -189,7 +250,7 @@ export async function POST(request) {
             });
         } catch (e) { /* non-fatal */ }
 
-        // 7. WhatsApp login security alert (non-blocking, dedup: 5-min cooldown)
+        // 9. WhatsApp login security alert (non-blocking, dedup: 5-min cooldown)
         try {
             const binding = await ensureWhatsAppBinding({ userId: existing.id });
             if (binding?.phone) {

@@ -219,7 +219,7 @@ export default function ActiveOrdersOverlay() {
                                             transition={{ duration: 0.2 }}
                                         >
                                             <div className="flex items-center justify-between mb-0.5">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Order #{currentOrder.id.slice(0, 6)}</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Order #{String(currentOrder.id).slice(0, 6)}</span>
                                                 <button 
                                                     onClick={handleDismiss}
                                                     className="w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-red-500 transition-colors"

@@ -88,8 +88,8 @@ export async function GET(request) {
     const code  = requestUrl.searchParams.get('code');
     const state = requestUrl.searchParams.get('state');
     const host  = request.headers.get('host') || 'localhost:3000';
-    const protocol = (host.includes('localhost') || host.includes('127.0.0.1')) ? 'http' : 'https';
-    const appUrl   = `${protocol}://${host}`;
+    const protocol = (host.includes('localhost') || host.match(/^[0-9.]+(?::[0-9]+)?$/)) ? 'http' : (request.headers.get('x-forwarded-proto') || 'https');
+    const appUrl   = (process.env.APP_URL || `${protocol}://${host}`).trim();
 
     if (!code) {
         console.error('[Google OAuth] No code in callback');
@@ -150,9 +150,12 @@ export async function GET(request) {
         });
 
         if (authError) {
-            console.error('[Google OAuth] Supabase signInWithIdToken error:', authError.message);
+            console.error('[Google OAuth] Supabase signInWithIdToken error:', authError);
+            const errMsg = authError?.message && typeof authError.message === 'string' 
+                ? authError.message 
+                : 'Authentication failed due to a server error. Please try again.';
             return NextResponse.redirect(
-                new URL(`/login?error=${encodeURIComponent(authError.message)}`, appUrl)
+                new URL(`/login?error=${encodeURIComponent(errMsg)}`, appUrl)
             );
         }
 
@@ -180,6 +183,20 @@ export async function GET(request) {
                 .from('user_profiles')
                 .update({ auth_provider: 'multiple' })
                 .eq('id', user.id);
+
+            // Fetch profile for metadata enforcement
+            const { data: flowAProf } = await supabaseAdmin
+                .from('user_profiles')
+                .select('role, is_suspended')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            await supabaseAdmin.auth.admin.updateUserById(user.id, {
+                user_metadata: {
+                    role: flowAProf?.role ?? null,
+                    is_suspended: flowAProf?.is_suspended ?? false
+                }
+            });
 
             // Audit log
             try {
@@ -213,6 +230,7 @@ export async function GET(request) {
                 access_token:  session.access_token,
                 refresh_token: session.refresh_token,
             });
+            await rbSupabase.auth.refreshSession(); // Force updated metadata into cookies
             console.log('[Google OAuth][Flow A] Merged Google user:', user.id, '→ /link-complete');
             return redirectResp;
         }
@@ -366,22 +384,33 @@ export async function GET(request) {
             console.warn('[Google OAuth] Could not create wallet:', walletErr.message);
         }
 
+        // ── Pre-Step 3: Enforce metadata for middleware ─────────────
+        const { data: finalProfile } = await supabaseAdmin
+            .from('user_profiles')
+            .select('role, is_suspended')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        await supabaseAdmin.auth.admin.updateUserById(user.id, {
+            user_metadata: {
+                role: finalProfile?.role ?? null,
+                is_suspended: finalProfile?.is_suspended ?? false
+            }
+        });
+
         // ── Step 3: Determine redirect path ──────────────────────────────────────
         let redirectPath = '/dashboard';
-        if (nextPath && nextPath.startsWith('/')) {
+        if (finalProfile?.is_suspended) {
+            redirectPath = '/login?reason=suspended';
+        } else if (nextPath && nextPath.startsWith('/')) {
             redirectPath = nextPath;
         } else {
-            const { data: profile } = await supabaseAdmin
-                .from('user_profiles')
-                .select('role')
-                .eq('id', user.id)
-                .maybeSingle();
-
-            if (profile?.role === 'admin' || profile?.role === 'super_admin') redirectPath = '/admin';
-            else if (profile?.role === 'merchant') redirectPath = '/merchant/dashboard';
-            else if (profile?.role === 'hr_manager') redirectPath = '/hrm';
-            else if (profile?.role?.startsWith('sales_') || profile?.role === 'sales_exec' || profile?.role === 'sales_agent') redirectPath = '/crm';
-            else if (profile?.role === 'employee') redirectPath = '/employee';
+            const r = finalProfile?.role;
+            if (r === 'admin' || r === 'super_admin') redirectPath = '/admin';
+            else if (r === 'merchant') redirectPath = '/merchant/dashboard';
+            else if (r === 'hr_manager') redirectPath = '/hrm';
+            else if (r?.startsWith('sales_') || r === 'sales_exec' || r === 'sales_agent') redirectPath = '/crm';
+            else if (r === 'employee') redirectPath = '/employee';
         }
 
         // ── Step 4: Build redirect response and set session cookies ──────────────
@@ -413,6 +442,9 @@ export async function GET(request) {
                 new URL(`/login?error=${encodeURIComponent(setSessionError.message)}`, appUrl)
             );
         }
+
+        // Force refresh to bake updated user_metadata into the JWT cookie
+        await responseBoundSupabase.auth.refreshSession();
 
         // Non-blocking: ensure WhatsApp binding is up-to-date and send login alert for returning user.
         const userAgent = request.headers.get('user-agent') || '';
