@@ -91,6 +91,20 @@ export async function POST(request, { params }) {
             );
         }
 
+        // Sync user_metadata.is_suspended so the JWT carries the correct flag on next refresh.
+        // The middleware reads is_suspended from the JWT to block suspended users.
+        try {
+            const { data: existingAuthUser } = await adminSupabase.auth.admin.getUserById(existingMerchant.user_id);
+            await adminSupabase.auth.admin.updateUserById(existingMerchant.user_id, {
+                user_metadata: {
+                    ...existingAuthUser?.user?.user_metadata,
+                    is_suspended: suspend,
+                },
+            });
+        } catch (metaErr) {
+            console.error('[toggle-suspend] Failed to sync user_metadata.is_suspended:', metaErr.message);
+        }
+
         // 7. Log Action to audit_logs
         const description = suspend
             ? `Suspended merchant "${existingMerchant.business_name || existingMerchant.id}"${reason ? `: ${reason}` : ''}`

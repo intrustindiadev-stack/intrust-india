@@ -129,6 +129,23 @@ export async function POST(request) {
             );
         }
 
+        // 6.5 Sync user_metadata.role so the JWT carries the correct role on next token refresh.
+        // Without this, the middleware reads a stale 'user' role from the JWT and blocks /merchant/* routes,
+        // causing an infinite redirect loop (white screen) on mobile where sessions persist.
+        try {
+            const { data: existingAuthUser } = await adminSupabase.auth.admin.getUserById(targetUserId);
+            await adminSupabase.auth.admin.updateUserById(targetUserId, {
+                user_metadata: {
+                    ...existingAuthUser?.user?.user_metadata,
+                    role: 'merchant',
+                },
+            });
+        } catch (metaErr) {
+            // Best-effort — don't roll back a successful approval if only metadata fails.
+            // The loop-breaker in customer layout (refreshSession) still recovers this case.
+            console.error('[approve-merchant] Failed to sync user_metadata.role:', metaErr.message);
+        }
+
         // 7. Notify User to complete subscription
         await adminSupabase.from('notifications').insert({
             user_id: targetUserId,

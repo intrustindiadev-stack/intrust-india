@@ -3,17 +3,35 @@ import { createAdminClient } from '@/lib/supabaseServer';
 import { generateOTP, normalizePhone, hashOTP } from '@/lib/otpUtils';
 import { hmacOTP } from '@/lib/otpHmac';
 import { sendOTP } from '@/lib/smsClient';
+import { sendWhatsAppOtp } from '@/lib/notifications/otpWhatsapp';
 import { checkLayeredRateLimit } from '@/lib/sharedRateLimit';
 import { authError, logAuthEvent } from '@/lib/authHelpers';
+
+const VALID_CHANNELS = ['sms', 'whatsapp'];
 
 export async function POST(request) {
     try {
         const body = await request.json();
-        let { phone } = body;
+        let { phone, channel } = body;
+
+        // Default to SMS if channel is not provided
+        channel = channel || 'sms';
+
+        if (!VALID_CHANNELS.includes(channel)) {
+            return authError('Invalid channel. Must be "sms" or "whatsapp".', 'Invalid channel value', 'INVALID_INPUT', 400);
+        }
 
         const { cleanPhone, formattedPhone, isValid } = normalizePhone(phone);
         if (!isValid) {
             return authError('Invalid phone number. Must be 10 digits.', 'Invalid phone format', 'INVALID_INPUT', 400);
+        }
+
+        // Feature flag gate: reject WhatsApp requests when the flag is off
+        if (channel === 'whatsapp' && process.env.WHATSAPP_OTP_ENABLED !== 'true') {
+            return NextResponse.json(
+                { success: false, error: 'WhatsApp OTP delivery is not currently available.', code: 'WHATSAPP_DISABLED' },
+                { status: 400 }
+            );
         }
 
         const supabaseAdmin = createAdminClient();
@@ -23,7 +41,8 @@ export async function POST(request) {
         const { allowed, reason, retryAfter, consumedKeys } = await checkLayeredRateLimit({
             supabaseAdmin,
             phone: formattedPhone,
-            ip
+            ip,
+            channel
         });
 
         if (!allowed) {
@@ -32,7 +51,7 @@ export async function POST(request) {
                 action: 'otp_request_blocked',
                 ip,
                 userAgent,
-                metadata: { phone: `+91******${cleanPhone.slice(-4)}`, reason, retry_after: retryAfter }
+                metadata: { phone: `+91******${cleanPhone.slice(-4)}`, reason, retry_after: retryAfter, channel }
             });
             // We can pass extra data in the error details or construct a custom response.
             // Since authError takes (message, details, code, status), we might need to modify authError or 
@@ -63,15 +82,18 @@ export async function POST(request) {
             return authError('Failed to generate OTP', insertError.message, 'DB_ERROR', 500);
         }
 
-        const smsResult = await sendOTP(cleanPhone, otp);
+        // Branch the send based on channel
+        const sendResult = channel === 'whatsapp'
+            ? await sendWhatsAppOtp(cleanPhone, otp)
+            : await sendOTP(cleanPhone, otp);
 
-        if (!smsResult.success) {
+        if (!sendResult.success) {
             await logAuthEvent({
                 supabaseAdmin,
                 action: 'otp_send_failed',
                 ip,
                 userAgent,
-                metadata: { phone: `+91******${cleanPhone.slice(-4)}`, error_message: smsResult.error }
+                metadata: { phone: `+91******${cleanPhone.slice(-4)}`, error_message: sendResult.error, channel }
             });
 
             await supabaseAdmin
@@ -80,14 +102,15 @@ export async function POST(request) {
                 .eq('phone', formattedPhone)
                 .eq('pepper_hash', pepperHash);
 
-            // Rollback rate limits since the SMS send failed
+            // Rollback rate limits since the send failed
             if (consumedKeys && consumedKeys.length > 0) {
                 for (const key of consumedKeys) {
                     await supabaseAdmin.rpc('rollback_rate_limit', { p_key: key });
                 }
             }
 
-            return authError('Failed to send OTP. Please try again.', smsResult.error, 'SMS_FAILED', 500);
+            const failCode = channel === 'whatsapp' ? 'WHATSAPP_FAILED' : 'SMS_FAILED';
+            return authError('Failed to send OTP. Please try again.', sendResult.error, failCode, 500);
         }
 
 
@@ -96,10 +119,10 @@ export async function POST(request) {
             action: 'otp_requested',
             ip,
             userAgent,
-            metadata: { phone: `+91******${cleanPhone.slice(-4)}` }
+            metadata: { phone: `+91******${cleanPhone.slice(-4)}`, channel }
         });
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, channel });
 
     } catch (error) {
         return authError('Something went wrong. Please try again.', error.message, 'INTERNAL_ERROR', 500);

@@ -118,6 +118,19 @@ export async function POST(request) {
                     { status: 500 }
                 );
             }
+
+            // Sync user_metadata.role so the JWT carries the correct role on next refresh.
+            try {
+                const { data: existingAuthUser } = await adminSupabase.auth.admin.getUserById(targetUserId);
+                await adminSupabase.auth.admin.updateUserById(targetUserId, {
+                    user_metadata: {
+                        ...existingAuthUser?.user?.user_metadata,
+                        role: 'user',
+                    },
+                });
+            } catch (metaErr) {
+                console.error('[reject-merchant] Failed to sync user_metadata.role:', metaErr.message);
+            }
         }
 
         // 7. Log Action

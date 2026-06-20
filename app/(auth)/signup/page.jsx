@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithOTP } from '@/lib/supabase';
 import { redirectByRole } from '@/lib/auth';
-import { Phone, ArrowRight, Loader2, User, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Phone, ArrowRight, Loader2, User, CheckCircle, Eye, EyeOff, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
@@ -109,6 +109,8 @@ function SignupPageInner() {
     const [resendLoading, setResendLoading] = useState(false);
     const [timer, setTimer] = useState(0);
     const canResend = timer === 0;
+    const [otpChannel, setOtpChannel] = useState('sms'); // 'sms' | 'whatsapp'
+    const [whatsappLoading, setWhatsappLoading] = useState(false);
 
     useEffect(() => {
         if (timer > 0) {
@@ -161,30 +163,40 @@ function SignupPageInner() {
         setStep('phone');
     };
 
-    const handleSendOTP = async (e) => {
+    const handleSendOTP = async (e, channel = 'sms') => {
         if (e) e.preventDefault();
-        setLoading(true);
+        const isWhatsApp = channel === 'whatsapp';
+        if (isWhatsApp) setWhatsappLoading(true); else setLoading(true);
         const { formattedPhone, isValid } = normalizePhone(phone);
         if (!isValid) {
             toast.error('Please enter a valid 10-digit phone number');
-            setLoading(false);
+            setLoading(false); setWhatsappLoading(false);
             return;
         }
-        const { error: otpError } = await signInWithOTP(formattedPhone);
-        if (otpError) { 
+        const { data: otpData, error: otpError } = await signInWithOTP(formattedPhone, channel);
+        if (otpError) {
+            const msg = otpError.message.toLowerCase();
+            // Handle WHATSAPP_DISABLED gracefully
+            if (msg.includes('whatsapp') && msg.includes('not') && msg.includes('available')) {
+                toast.error('WhatsApp OTP is not available right now. Please use SMS.');
+                setLoading(false); setWhatsappLoading(false);
+                return;
+            }
             if (otpError.retry_after) {
                 toast.error(`Rate limited. Try again in ${otpError.retry_after}s.`);
+                setOtpChannel(channel);
                 setStep('otp');
                 startTimer(otpError.retry_after);
             } else {
                 toast.error(otpError.message || 'Failed to send OTP.'); 
             }
-            setLoading(false); 
+            setLoading(false); setWhatsappLoading(false);
             return; 
         }
+        setOtpChannel(channel);
         setStep('otp');
         startTimer(60);
-        setLoading(false);
+        setLoading(false); setWhatsappLoading(false);
     };
 
     const handleVerifyOTP = async (e, otpOverride) => {
@@ -268,11 +280,12 @@ function SignupPageInner() {
                 return;
             }
 
-            // 2. Dispatch OTP
+            // 2. Dispatch OTP (email signup always uses SMS for the phone verification step)
             const { error: otpError } = await signInWithOTP(formattedPhone);
             if (otpError) {
                 if (otpError.retry_after) {
                     toast.error(`Rate limited. Try again in ${otpError.retry_after}s.`);
+                    setOtpChannel('sms');
                     setStep('email-otp');
                     startTimer(otpError.retry_after);
                 } else {
@@ -282,6 +295,7 @@ function SignupPageInner() {
                 return;
             }
 
+            setOtpChannel('sms');
             setStep('email-otp');
             startTimer(60);
         } catch (err) {
@@ -565,7 +579,7 @@ function SignupPageInner() {
                             Welcome, <span className="font-bold text-[var(--text-primary)]">{name.split(' ')[0]}</span>
                         </p>
 
-                        <form onSubmit={handleSendOTP} className="space-y-5">
+                        <form onSubmit={(e) => handleSendOTP(e, 'sms')} className="space-y-5">
                             <div>
                                 <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Mobile Number</label>
                                 <div className="relative">
@@ -583,13 +597,24 @@ function SignupPageInner() {
                                 </div>
                             </div>
 
-                            <button
-                                type="submit"
-                                disabled={loading || phone.length !== 10}
-                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                            >
-                                {loading ? <><Loader2 className="animate-spin" size={20} /> Sending...</> : <>Verify Number <ArrowRight size={18} /></>}
-                            </button>
+                            <div className="space-y-3">
+                                <button
+                                    type="submit"
+                                    disabled={loading || whatsappLoading || phone.length !== 10}
+                                    className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                                >
+                                    {loading ? <><Loader2 className="animate-spin" size={20} /> Sending...</> : <>Send code via SMS <ArrowRight size={18} /></>}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={(e) => handleSendOTP(e, 'whatsapp')}
+                                    disabled={loading || whatsappLoading || phone.length !== 10}
+                                    className="w-full py-3.5 border border-[#25D366]/30 rounded-xl flex items-center justify-center gap-2 text-[#25D366] font-medium hover:bg-[#25D366]/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {whatsappLoading ? <><Loader2 className="animate-spin" size={20} /> Sending...</> : <><MessageCircle size={18} /> Get code on WhatsApp</>}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 )}
@@ -601,8 +626,15 @@ function SignupPageInner() {
                             <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
                         <h2 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Secure Code</h2>
-                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
+                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-1">
                             Enter 6-digit code sent to <br /><span className="font-semibold text-[var(--text-primary)]">+91 {phone}</span>
+                        </p>
+                        {/* Channel badge */}
+                        <p className="text-xs text-center mb-6">
+                            {otpChannel === 'whatsapp'
+                                ? <span className="inline-flex items-center gap-1 text-[#25D366] font-medium"><MessageCircle size={13} /> via WhatsApp</span>
+                                : <span className="inline-flex items-center gap-1 text-[var(--text-secondary)] font-medium"><Phone size={13} /> via SMS</span>
+                            }
                         </p>
 
                         <form onSubmit={(e) => handleVerifyOTP(e, otp)} className="space-y-6">
@@ -621,10 +653,26 @@ function SignupPageInner() {
                                 {loading ? <Loader2 className="animate-spin" size={20} /> : 'Finalize Signup'}
                             </button>
 
-                            <div className="flex flex-col gap-4 text-center">
-                                <button type="button" onClick={(e) => { if (canResend) handleSendOTP(e); }} disabled={loading || !canResend} className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors disabled:opacity-50">
+                            <div className="flex flex-col gap-3 text-center">
+                                {/* Same-channel resend */}
+                                <button type="button" onClick={(e) => { if (canResend) handleSendOTP(e, otpChannel); }} disabled={loading || !canResend} className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors disabled:opacity-50">
                                     {canResend ? 'Resend Code' : `Resend in ${timer}s`}
                                 </button>
+                                {/* Cross-channel resend */}
+                                {canResend && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => handleSendOTP(e, otpChannel === 'whatsapp' ? 'sms' : 'whatsapp')}
+                                        disabled={loading || whatsappLoading}
+                                        className="text-sm font-medium transition-colors disabled:opacity-50"
+                                        style={{ color: otpChannel === 'whatsapp' ? 'var(--text-secondary)' : '#25D366' }}
+                                    >
+                                        {otpChannel === 'whatsapp'
+                                            ? <>Resend via SMS instead</>
+                                            : <span className="inline-flex items-center justify-center gap-1"><MessageCircle size={14} /> Resend via WhatsApp instead</span>
+                                        }
+                                    </button>
+                                )}
                                 <button type="button" onClick={() => setStep('phone')} className="text-sm font-semibold text-[#92BCEA] hover:underline">
                                     Update Number
                                 </button>
@@ -640,8 +688,15 @@ function SignupPageInner() {
                             <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
                         <h2 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Verify your mobile</h2>
-                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
+                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-1">
                             Enter 6-digit code sent to <br /><span className="font-semibold text-[var(--text-primary)]">+91 {phone}</span>
+                        </p>
+                        {/* Channel badge */}
+                        <p className="text-xs text-center mb-6">
+                            {otpChannel === 'whatsapp'
+                                ? <span className="inline-flex items-center gap-1 text-[#25D366] font-medium"><MessageCircle size={13} /> via WhatsApp</span>
+                                : <span className="inline-flex items-center gap-1 text-[var(--text-secondary)] font-medium"><Phone size={13} /> via SMS</span>
+                            }
                         </p>
 
                         <form onSubmit={(e) => handleVerifyEmailOTP(e, otp)} className="space-y-6">
@@ -660,10 +715,26 @@ function SignupPageInner() {
                                 {loading ? <Loader2 className="animate-spin" size={20} /> : 'Verify & Create Account'}
                             </button>
 
-                            <div className="flex flex-col gap-4 text-center">
-                                <button type="button" onClick={(e) => { if (canResend) handleSendOTP(e); }} disabled={loading || !canResend} className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors disabled:opacity-50">
+                            <div className="flex flex-col gap-3 text-center">
+                                {/* Same-channel resend */}
+                                <button type="button" onClick={(e) => { if (canResend) handleSendOTP(e, otpChannel); }} disabled={loading || !canResend} className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors disabled:opacity-50">
                                     {canResend ? 'Resend code' : `Resend in ${timer}s`}
                                 </button>
+                                {/* Cross-channel resend */}
+                                {canResend && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => handleSendOTP(e, otpChannel === 'whatsapp' ? 'sms' : 'whatsapp')}
+                                        disabled={loading || whatsappLoading}
+                                        className="text-sm font-medium transition-colors disabled:opacity-50"
+                                        style={{ color: otpChannel === 'whatsapp' ? 'var(--text-secondary)' : '#25D366' }}
+                                    >
+                                        {otpChannel === 'whatsapp'
+                                            ? <>Resend via SMS instead</>
+                                            : <span className="inline-flex items-center justify-center gap-1"><MessageCircle size={14} /> Resend via WhatsApp instead</span>
+                                        }
+                                    </button>
+                                )}
                                 <button type="button" onClick={() => setStep('email-form')} className="text-sm font-semibold text-[#92BCEA] hover:underline">
                                     Update Number
                                 </button>

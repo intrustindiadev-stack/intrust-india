@@ -3,7 +3,7 @@
 > [!WARNING]
 > This file is the master reference for all WhatsApp templates. Keep this document strictly in sync with `lib/omniflow.js`.
 
-**Meta Category Note:** All templates here belong to the **Utility** category. The Authentication (OTP) template has been decommissioned and removed.
+**Meta Category Note:** Most templates here belong to the **Utility** category. The `intrust_otp_verification` template is **Authentication** category (re-added, gated by `WHATSAPP_OTP_ENABLED` feature flag).
 
 **Variable Rule:** Variables must exactly match the `{{1}}` format.
 
@@ -33,8 +33,52 @@
 | 15 | `intrust_merchant_subscription_status` | Utility | en_US | 2 | `MERCHANT_SUBSCRIPTION_STATUS_TEMPLATE` | Billing |
 | 16 | `intrust_merchant_product_approved` | Utility | en_US | 3 | `MERCHANT_PRODUCT_APPROVED_TEMPLATE` | Catalogue Audit |
 | 17 | `intrust_merchant_procurement_sale` | Utility | en_US | 3 | `MERCHANT_PROCUREMENT_SALE_TEMPLATE` | Procurement |
+| 18 | `intrust_otp_verification` | **Authentication** | en_US | 1 | `OTP_TEMPLATE` | `request-otp` (WhatsApp channel) |
 
 ## §2 — Customer utility templates
+
+### §2.0 — Authentication template (OTP)
+
+> [!IMPORTANT]
+> This template is **Authentication** category, not Utility. Meta controls the body/footer text for Authentication templates. The OTP is delivered via a **copy-code button**, not a body variable.
+
+#### 18. `intrust_otp_verification`
+- **Category**: Authentication
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  🔐 *Secure Login — InTrust India*
+
+  Your one-time verification code is: *{{1}}*
+
+  This code is valid for 5 minutes. Do not share this code with anyone.
+  InTrust will never ask for your OTP via call, SMS, or email.
+
+  If you did not request this code, please ignore this message or
+  contact support at intrustindia.com.
+  ```
+- **Variables**: {{1}} = OTP code (e.g. `"482913"`)
+- **Footer**: InTrust India | Secure Authentication
+- **Buttons**:
+  - [Copy Code] — OTP value delivered via copy-code button
+- **Component shape** (submitted to Omniflow/Meta):
+  ```json
+  [
+    {
+      "type": "button",
+      "sub_type": "url",
+      "index": "0",
+      "parameters": [
+        { "type": "text", "text": "<OTP>" }
+      ]
+    }
+  ]
+  ```
+- **Feature flag**: Only used when `WHATSAPP_OTP_ENABLED=true`. Otherwise, OTP is delivered via SMS.
+- **Code symbol**: `OTP_TEMPLATE` in `lib/omniflow.js`
+- **Helper**: `sendWhatsAppOtp()` in `lib/notifications/otpWhatsapp.js`
+
+### §2.1 — Customer utility templates
 
 ### 1. `intrust_welcome_linked`
 - **Body**:
@@ -364,6 +408,6 @@ graph TD
 
 ## §5 — Notes for maintainers
 - Keep the catalogue in sync with `lib/omniflow.js`.
-- The `OTP_TEMPLATE` and `MERCHANT_OTP_TEMPLATE` are deprecated and removed.
+- The `intrust_otp_verification` template has been re-added as an **Authentication** category template, gated by the `WHATSAPP_OTP_ENABLED` feature flag. It is used by `lib/notifications/otpWhatsapp.js`.
 - Follow exactly the specified Footer and Buttons instructions.
 - Refer to `docs/runbooks/omniflow-setup.md` for overall setup.

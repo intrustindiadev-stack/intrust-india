@@ -89,6 +89,12 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                         setNotifications(prev => [payload.new, ...prev]);
                         setUnreadCount(prev => prev + 1);
                         setOffset(prev => prev + 1);
+
+                        // When merchant approval arrives, refresh the JWT so middleware
+                        // picks up the corrected user_metadata.role immediately.
+                        if (payload.new?.reference_type === 'merchant_approved') {
+                            supabase.auth.refreshSession().catch(() => {});
+                        }
                     }
                 )
                 .subscribe();
