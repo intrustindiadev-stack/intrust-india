@@ -9,38 +9,14 @@ import MerchantGlobalChat from '@/components/chat/merchant/MerchantGlobalChat';
 
 import { SubscriptionProvider } from '@/components/merchant/SubscriptionContext';
 import { getPricingSettings } from '@/app/(admin)/admin/settings/actions';
+import { buildMerchantSubscriptionPlans } from '@/lib/merchant/subscriptionPricing';
 import { getPayerContact } from '@/lib/merchant/getPayerContact';
 
 export default async function MerchantRootLayout({ children }) {
     const supabase = await createServerSupabaseClient();
     const pricing = await getPricingSettings();
 
-    const dynamicPlans = [
-        {
-            key: 'MSUB_1M',
-            label: '1 Month',
-            price: pricing.sub1m,
-            priceFormatted: pricing.sub1m.toFixed(2),
-            durationDays: 30,
-            description: null,
-        },
-        {
-            key: 'MSUB_6M',
-            label: '6 Months',
-            price: pricing.sub6m,
-            priceFormatted: pricing.sub6m.toFixed(2),
-            durationDays: 180,
-            description: 'Best Value',
-        },
-        {
-            key: 'MSUB_12M',
-            label: '12 Months',
-            price: pricing.sub12m,
-            priceFormatted: pricing.sub12m.toFixed(2),
-            durationDays: 365,
-            description: 'Most Savings',
-        },
-    ];
+    const dynamicPlans = buildMerchantSubscriptionPlans(pricing);
 
     // 1. Check User
     const {

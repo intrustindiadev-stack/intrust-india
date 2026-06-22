@@ -68,6 +68,7 @@ function CustomerProfileContent() {
     const [udhariPaise, setUdhariPaise] = useState(0);
     const [purchaseCount, setPurchaseCount] = useState(0);
     const [merchantData, setMerchantData] = useState(null);
+    const [merchantSub1mPrice, setMerchantSub1mPrice] = useState(null);
     const [totalSavedPaise, setTotalSavedPaise] = useState(0);
     const [graphData, setGraphData] = useState([]);
     const [profileLoading, setProfileLoading] = useState(true);
@@ -104,13 +105,15 @@ function CustomerProfileContent() {
                 const results = await Promise.allSettled([
                     supabase.from('user_profiles').select('*').eq('id', authUser.id).single(),
                     supabase.from('customer_wallets').select('*').eq('user_id', authUser.id).single(),
-                    supabase.from('merchants').select('status, subscription_status, subscription_expires_at').eq('user_id', authUser.id).maybeSingle()
+                    supabase.from('merchants').select('status, subscription_status, subscription_expires_at').eq('user_id', authUser.id).maybeSingle(),
+                    supabase.from('platform_settings').select('value').eq('key', 'merchant_sub_price_1m').maybeSingle(),
                 ]);
 
                 if (!cancelled) {
-                    const profileResult = results[0];
-                    const walletResult = results[1];
+                    const profileResult  = results[0];
+                    const walletResult   = results[1];
                     const merchantResult = results[2];
+                    const sub1mResult    = results[3];
 
                     if (profileResult.status === 'fulfilled' && profileResult.value.data) {
                         setProfile(profileResult.value.data);
@@ -126,6 +129,10 @@ function CustomerProfileContent() {
                     }
                     if (merchantResult?.status === 'fulfilled' && merchantResult.value.data) {
                         setMerchantData(merchantResult.value.data);
+                    }
+                    if (sub1mResult?.status === 'fulfilled' && sub1mResult.value?.data?.value != null) {
+                        const parsed = Number(sub1mResult.value.data.value);
+                        if (Number.isFinite(parsed) && parsed > 0) setMerchantSub1mPrice(parsed);
                     }
 
                     const { data: udhariRequests } = await supabase.from('udhari_requests').select('amount_paise').eq('customer_id', authUser.id).in('status', ['pending', 'approved']);
@@ -321,6 +328,7 @@ function CustomerProfileContent() {
                                     merchantStatus={merchantData?.status}
                                     subscriptionStatus={merchantData?.subscription_status}
                                     subscriptionExpiresAt={merchantData?.subscription_expires_at}
+                                    startingPriceRupees={merchantSub1mPrice ?? undefined}
                                 />
                             </motion.div>
 

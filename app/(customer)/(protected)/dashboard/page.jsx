@@ -97,7 +97,8 @@ export default function CustomerDashboardPage() {
         activeCards: 0,
         completedOnboarding: true, // Optimistically true until fetched
         referralCode: null,
-        merchantStatus: null
+        merchantStatus: null,
+        merchantSub1mPrice: null,
     });
 
     // Populate name from AuthContext profile immediately (before async DB fetch completes)
@@ -298,7 +299,8 @@ export default function CustomerDashboardPage() {
                 `).eq('user_id', user.id).eq('payment_status', 'paid').order('created_at', { ascending: false }),
                 supabase.from('customer_wallet_transactions').select('id, type, amount_paise, description, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
                 supabase.from('merchants').select('status, subscription_status').eq('user_id', user.id).maybeSingle(),
-                supabase.from('reward_points_balance').select('total_earned').eq('user_id', user.id).maybeSingle()
+                supabase.from('reward_points_balance').select('total_earned').eq('user_id', user.id).maybeSingle(),
+                supabase.from('platform_settings').select('value').eq('key', 'merchant_sub_price_1m').maybeSingle(),
             ]);
 
             const results = await Promise.race([mainFetch, timeoutTx]);
@@ -311,6 +313,7 @@ export default function CustomerDashboardPage() {
             const walletTxResult = results[4];
             const merchantResult = results[5];
             const rewardsResult = results[6];
+            const sub1mResult   = results[7];
 
             // 1. Process Profile
             let profile = null;
@@ -388,7 +391,10 @@ export default function CustomerDashboardPage() {
                 referralCode: profile?.referral_code || null,
                 merchantStatus: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.status : null,
                 merchantSubscriptionStatus: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.subscription_status : null,
-                merchantSubscriptionExpiresAt: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.subscription_expires_at : null
+                merchantSubscriptionExpiresAt: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.subscription_expires_at : null,
+                merchantSub1mPrice: sub1mResult?.status === 'fulfilled' && sub1mResult.value?.data?.value != null
+                    ? Number(sub1mResult.value.data.value) || null
+                    : null,
             });
 
         } catch (error) {
@@ -547,6 +553,7 @@ export default function CustomerDashboardPage() {
                                     merchantStatus={userData.merchantStatus}
                                     subscriptionStatus={userData.merchantSubscriptionStatus}
                                     subscriptionExpiresAt={userData.merchantSubscriptionExpiresAt}
+                                    startingPriceRupees={userData.merchantSub1mPrice ?? undefined}
                                 />
                             )}
                         </div>

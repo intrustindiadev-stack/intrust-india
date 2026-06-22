@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabaseServer';
 import { PLATFORM_CONFIG } from '@/lib/config/platform';
+import { validatePricingSettings } from '@/lib/pricing/validate';
 
 export async function getAdminSettings() {
     try {
@@ -31,6 +32,19 @@ export async function updateAdminSettings(settingsObject) {
     try {
         const adminClient = createAdminClient();
         
+        if (settingsObject.merchant_sub_price_1m !== undefined) {
+            const pricingObj = {
+                sub1m: Number(settingsObject.merchant_sub_price_1m),
+                sub6m: Number(settingsObject.merchant_sub_price_6m),
+                sub12m: Number(settingsObject.merchant_sub_price_12m),
+                autoFirst: Number(settingsObject.auto_mode_price_first),
+                autoRenewal: Number(settingsObject.auto_mode_price_renewal),
+                merchantReferralPrize: Number(settingsObject.merchant_referral_prize_paise) / 100
+            };
+            const errorMsg = validatePricingSettings(pricingObj);
+            if (errorMsg) return { success: false, error: errorMsg };
+        }
+
         // Convert the simple object map into an array of rows to upsert
         const rows = Object.entries(settingsObject).map(([key, value]) => ({
             key,
@@ -81,13 +95,19 @@ export async function getPricingSettings() {
             return acc;
         }, {});
 
+        const parsePrice = (val, fallback) => {
+            if (val == null || val === '') return fallback;
+            const num = Number(val);
+            return Number.isFinite(num) ? num : fallback;
+        };
+
         return {
-            sub1m:                 Number(map['merchant_sub_price_1m'])   || 499,
-            sub6m:                 Number(map['merchant_sub_price_6m'])   || 1999,
-            sub12m:                Number(map['merchant_sub_price_12m'])  || 3999,
-            autoFirst:             Number(map['auto_mode_price_first'])   || 999,
-            autoRenewal:           Number(map['auto_mode_price_renewal']) || 1999,
-            merchantReferralPrize: Number(map['merchant_referral_prize_paise']) / 100 || 500,
+            sub1m:                 parsePrice(map['merchant_sub_price_1m'], 499),
+            sub6m:                 parsePrice(map['merchant_sub_price_6m'], 1999),
+            sub12m:                parsePrice(map['merchant_sub_price_12m'], 3999),
+            autoFirst:             parsePrice(map['auto_mode_price_first'], 999),
+            autoRenewal:           parsePrice(map['auto_mode_price_renewal'], 1999),
+            merchantReferralPrize: parsePrice(map['merchant_referral_prize_paise'], 50000) / 100,
         };
     } catch (err) {
         console.error('getPricingSettings caught error:', err);

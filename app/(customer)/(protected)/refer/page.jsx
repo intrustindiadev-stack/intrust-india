@@ -141,6 +141,55 @@ function NetworkNode({ node, depth = 0 }) {
     );
 }
 
+// ─── Single upline node row ───────────────────────────────────────────────────
+function UplineNode({ node }) {
+    const initial = node.full_name?.charAt(0)?.toUpperCase() || '?';
+    const kycVerified = node.kyc_status === 'verified' || node.kyc_status === 'approved';
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-3 p-4 rounded-[1.5rem] sm:rounded-[2rem] bg-white dark:bg-[#020617] border border-gray-100 dark:border-white/10 shadow-sm"
+        >
+            <div className={`w-12 h-12 flex-shrink-0 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white font-black text-lg shadow-lg relative overflow-hidden`}>
+                {node.avatar_url ? (
+                    <Image
+                        src={node.avatar_url}
+                        alt=""
+                        fill
+                        sizes="48px"
+                        className="object-cover"
+                        quality={60}
+                    />
+                ) : (
+                    initial
+                )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+                <p className="font-black text-sm sm:text-base truncate tracking-tight text-gray-900 dark:text-white">
+                    {node.full_name}
+                </p>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-[9px] px-2 py-0.5 rounded-lg font-black bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 uppercase tracking-[0.1em]">
+                        REFERRED YOU
+                    </span>
+                    <span className={`text-[9px] px-2 py-0.5 rounded-lg font-black border flex items-center gap-1 uppercase tracking-widest
+                        ${kycVerified
+                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20'
+                            : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-500/20'
+                        }`}
+                    >
+                        {kycVerified ? <ShieldCheck size={10} /> : <Clock size={10} />}
+                        {kycVerified ? 'Verified' : 'Pending'}
+                    </span>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
 export default function ReferAndEarnPage() {
     const { user } = useAuth();
     const router = useRouter();
@@ -149,6 +198,8 @@ export default function ReferAndEarnPage() {
     const [copied, setCopied] = useState(false);
     const [loading, setLoading] = useState(true);
     const [networkData, setNetworkData] = useState(null);
+    const [networkError, setNetworkError] = useState(false);
+    const [retryingNetwork, setRetryingNetwork] = useState(false);
     const [hasReferrer, setHasReferrer] = useState(false);
     
     // Modal & Sheet state
@@ -166,6 +217,25 @@ export default function ReferAndEarnPage() {
         }
     }, [user, loading, router]);
 
+    const fetchNetworkData = async (isRetry = false) => {
+        if (isRetry) setRetryingNetwork(true);
+        setNetworkError(false);
+        try {
+            const res = await fetch('/api/referral/network');
+            if (res.ok) {
+                const data = await res.json();
+                setNetworkData(data);
+            } else {
+                setNetworkError(true);
+            }
+        } catch (err) {
+            console.error('Error fetching referral network data:', err);
+            setNetworkError(true);
+        } finally {
+            if (isRetry) setRetryingNetwork(false);
+        }
+    };
+
     useEffect(() => {
         if (!user) return;
 
@@ -180,11 +250,7 @@ export default function ReferAndEarnPage() {
                 if (profile?.referral_code) setReferralCode(profile.referral_code);
                 setHasReferrer(!!profile?.referred_by);
 
-                const res = await fetch('/api/referral/network');
-                if (res.ok) {
-                    const data = await res.json();
-                    setNetworkData(data);
-                }
+                await fetchNetworkData();
             } catch (err) {
                 console.error('Error fetching referral data:', err);
             } finally {
@@ -270,11 +336,7 @@ export default function ReferAndEarnPage() {
                 toast.success('Joined successfully!');
                 setCodeApplied(true);
                 setHasReferrer(true);
-                const networkRes = await fetch('/api/referral/network');
-                if (networkRes.ok) {
-                    const networkData = await networkRes.json();
-                    setNetworkData(networkData);
-                }
+                await fetchNetworkData();
             } else {
                 toast.error(data.error || 'Failed to join');
             }
@@ -436,6 +498,16 @@ export default function ReferAndEarnPage() {
                     </motion.div>
                 )}
 
+                {/* Upline Section */}
+                {networkData?.upline?.length > 0 && (
+                    <section className="mb-8">
+                        <div className="flex items-center justify-between mb-4 px-1">
+                            <h3 className="font-black text-xl text-slate-900 dark:text-white tracking-tight leading-none">Your Sponsor</h3>
+                        </div>
+                        <UplineNode node={networkData.upline[0]} />
+                    </section>
+                )}
+
                 {/* Network Chain Tree */}
                 <section className="mb-14">
                     <div className="flex items-center justify-between mb-8 px-1">
@@ -450,8 +522,30 @@ export default function ReferAndEarnPage() {
                         <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#10b981 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
                         
                         <div className="relative z-10">
-                            {hasNetwork ? (
+                            {networkError ? (
+                                <div className="text-center py-24">
+                                    <div className="w-24 h-24 mx-auto bg-red-50 dark:bg-red-500/10 rounded-[2.5rem] flex items-center justify-center mb-8 border border-red-100 dark:border-red-500/20 shadow-inner">
+                                        <X size={40} className="text-red-500" />
+                                    </div>
+                                    <h4 className="font-black text-slate-900 dark:text-white text-xl mb-3 tracking-tight">Chain Unavailable</h4>
+                                    <p className="text-sm font-medium text-slate-400 max-w-[250px] mx-auto leading-relaxed">We encountered an anomaly while mapping your network. Please try again.</p>
+                                    <button
+                                        onClick={() => fetchNetworkData(true)}
+                                        disabled={retryingNetwork}
+                                        className="mt-10 px-10 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-[2rem] shadow-xl hover:bg-slate-800 dark:hover:bg-gray-100 transition-all active:scale-95 uppercase tracking-widest text-xs flex items-center justify-center gap-2 mx-auto disabled:opacity-50"
+                                    >
+                                        <RefreshCw size={16} className={retryingNetwork ? "animate-spin" : ""} />
+                                        {retryingNetwork ? 'Retrying...' : 'Retry Connection'}
+                                    </button>
+                                </div>
+                            ) : hasNetwork ? (
                                 <NetworkNode node={networkData.tree} depth={0} />
+                            ) : networkData?.upline?.length > 0 ? (
+                                <div className="text-center py-10 px-4">
+                                    <p className="text-sm font-medium text-slate-400 max-w-[200px] mx-auto leading-relaxed">
+                                        No referrals yet — share your code to grow your network.
+                                    </p>
+                                </div>
                             ) : (
                                 <div className="text-center py-24">
                                     <div className="w-24 h-24 mx-auto bg-gray-50 dark:bg-white/5 rounded-[2.5rem] flex items-center justify-center mb-8 border border-gray-100 dark:border-white/10 shadow-inner">

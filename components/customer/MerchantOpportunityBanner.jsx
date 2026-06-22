@@ -6,7 +6,10 @@ import Link from 'next/link';
 import { Loader2, CheckCircle, AlertCircle, ShieldAlert, RefreshCw } from 'lucide-react';
 import { MERCHANT_SUBSCRIPTION_PLANS } from '@/lib/constants';
 
-export default function MerchantOpportunityBanner({ merchantStatus, subscriptionStatus, subscriptionExpiresAt }) {
+export default function MerchantOpportunityBanner({ merchantStatus, subscriptionStatus, subscriptionExpiresAt, startingPriceRupees }) {
+    // Use admin-set live price when available; fall back to constant so the
+    // banner always renders something sensible even if the fetch failed.
+    const startingPrice = `₹${startingPriceRupees ?? MERCHANT_SUBSCRIPTION_PLANS[0].price}`;
     const isPending = merchantStatus === 'pending';
     const isRejected = merchantStatus === 'rejected';
     const isSuspended = merchantStatus === 'suspended';
@@ -73,7 +76,6 @@ export default function MerchantOpportunityBanner({ merchantStatus, subscription
     };
 
     const getBody = () => {
-        const startingPrice = `₹${MERCHANT_SUBSCRIPTION_PLANS[0].price}`;
         if (isPending) return "We are currently reviewing your merchant application. This usually takes 24-48 hours. We'll notify you once processed!";
         if (isExpired) return `Your monthly subscription expired on ${expiryFormatted}. Renew with plans from ${startingPrice}/month to restore full access to your Merchant Dashboard.`;
         if (isEffectivelyBlocked) return `Your application has been approved! Choose a subscription plan (starting ${startingPrice}/month) to activate your merchant panel.`;
@@ -160,7 +162,7 @@ export default function MerchantOpportunityBanner({ merchantStatus, subscription
                         <div className="text-xs sm:text-sm text-green-100">Avg. Monthly Earning</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl sm:text-3xl font-bold text-white">₹{MERCHANT_SUBSCRIPTION_PLANS[0].price}</div>
+                        <div className="text-2xl sm:text-3xl font-bold text-white">{startingPrice}</div>
                         <div className="text-xs sm:text-sm text-green-100">Starting/Month</div>
                     </div>
                 </div>

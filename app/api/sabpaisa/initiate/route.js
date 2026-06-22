@@ -8,7 +8,9 @@ import { buildEncryptedPayload } from '@/lib/sabpaisa/payload';
 import { sabpaisaConfig, validateCallbackConfig } from '@/lib/sabpaisa/config';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
-import { MERCHANT_SUBSCRIPTION_PLANS, GOLD_SUBSCRIPTION_PLANS } from '@/lib/constants';
+import { GOLD_SUBSCRIPTION_PLANS } from '@/lib/constants';
+import { getPricingSettings } from '@/app/(admin)/admin/settings/actions';
+import { resolveMerchantPlanPaise } from '@/lib/merchant/subscriptionPricing';
 import { validatePayerContact } from '@/lib/merchant/validatePayerContact';
 import { isTopupUdf1, WALLET_TOPUP_FALLBACK_MOBILE } from '@/lib/sabpaisa/topupFallback';
 import { normalizePayerMobile, DENIED_PAYER_MOBILES } from '@/lib/merchant/payerContactRules';
@@ -182,11 +184,12 @@ export async function POST(request) {
                 );
             }
 
-            const plan = MERCHANT_SUBSCRIPTION_PLANS.find(p => p.key === udf3);
-            if (!plan) {
+            const pricing = await getPricingSettings();
+            const resolvedPaise = resolveMerchantPlanPaise(pricing, udf3);
+            if (resolvedPaise === null) {
                 return failResponse(400, 'Invalid subscription plan selection.', correlationId);
             }
-            canonicalAmountPaise = Math.round(plan.price * 100);
+            canonicalAmountPaise = resolvedPaise;
         } else if (udf1 === 'GIFT_CARD') {
             // udf2 = coupons.id (the specific coupon being purchased)
             const { data: coupon, error: couponErr } = await supabaseAdmin

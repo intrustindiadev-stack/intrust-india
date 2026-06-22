@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Save } from "lucide-react";
 import { getAdminSettings, updateAdminSettings, getPricingSettings } from "./actions";
+import { validatePricingSettings } from '@/lib/pricing/validate';
 
 export default function SettingsPage() {
     const [loading, setLoading] = useState(true);
@@ -78,12 +79,9 @@ export default function SettingsPage() {
         setSaving(true);
         setMessage({ text: '', type: '' });
 
-        if (
-            !Number.isInteger(pricingSettings.merchantReferralPrize) ||
-            pricingSettings.merchantReferralPrize < 0 ||
-            pricingSettings.merchantReferralPrize > 10000
-        ) {
-            setMessage({ text: 'Referral prize must be an integer between 0 and 10000.', type: 'error' });
+        const pricingError = validatePricingSettings(pricingSettings);
+        if (pricingError) {
+            setMessage({ text: pricingError, type: 'error' });
             setSaving(false);
             return;
         }
