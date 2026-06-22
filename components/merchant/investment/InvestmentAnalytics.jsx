@@ -24,12 +24,12 @@ const DONUT_COLORS = {
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
-        <div className="bg-white border border-slate-200 p-3 rounded-2xl shadow-2xl shadow-slate-200/50 min-w-[140px]">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-2xl shadow-slate-200/50 dark:shadow-none min-w-[140px]">
             <p className="text-slate-400 font-black text-[9px] uppercase tracking-[0.2em] mb-2">{label}</p>
             {payload.map((p, i) => (
                 <div key={i} className="flex items-center justify-between gap-6">
                     <span className="text-[10px] font-bold" style={{ color: p.color }}>{p.name}</span>
-                    <span className="font-black text-xs text-slate-900">₹{Number(p.value).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span className="font-black text-xs text-slate-900 dark:text-white">₹{Number(p.value).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                 </div>
             ))}
         </div>
@@ -85,9 +85,9 @@ export default function InvestmentAnalytics({ orders, investments = [] }) {
 
     if (!orders?.length && !investments?.length) {
         return (
-            <div className="h-64 flex flex-col items-center justify-center gap-4 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
-                <BarChart2 size={32} className="text-slate-300" />
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No data yet — create your first fund</p>
+            <div className="h-64 flex flex-col items-center justify-center gap-4 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+                <BarChart2 size={32} className="text-slate-300 dark:text-slate-600" />
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No data yet — create your first plan</p>
             </div>
         );
     }
@@ -104,7 +104,7 @@ export default function InvestmentAnalytics({ orders, investments = [] }) {
             {/* Chart selector + period filter */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 {/* Chart type tabs */}
-                <div className="flex items-center p-1 bg-slate-100 rounded-2xl gap-0.5">
+                <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/50 rounded-2xl gap-0.5">
                     {charts.map(c => {
                         const Icon = c.icon;
                         return (
@@ -112,8 +112,8 @@ export default function InvestmentAnalytics({ orders, investments = [] }) {
                                 key={c.id}
                                 onClick={() => setActiveChart(c.id)}
                                 className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeChart === c.id
-                                    ? 'bg-white text-slate-900 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
+                                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                                     }`}
                             >
                                 <Icon size={12} /> {c.label}
@@ -124,14 +124,14 @@ export default function InvestmentAnalytics({ orders, investments = [] }) {
 
                 {/* Period filter (only for profit/volume/location charts) */}
                 {activeChart !== 'portfolio' && (
-                    <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl">
+                    <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl">
                         {PERIOD_OPTIONS.map(p => (
                             <button
                                 key={p.label}
                                 onClick={() => setActivePeriod(p.days)}
                                 className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activePeriod === p.days
-                                    ? 'bg-white text-slate-900 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
+                                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                                     }`}
                             >
                                 {p.label}
@@ -144,15 +144,15 @@ export default function InvestmentAnalytics({ orders, investments = [] }) {
             {/* Summary pills */}
             {activeChart !== 'portfolio' && (
                 <div className="flex flex-wrap gap-3">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-xl">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-xl">
                         <TrendingUp size={13} className="text-emerald-500" />
-                        <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Profit</span>
-                        <span className="text-sm font-black text-emerald-800">₹{totalProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Profit</span>
+                        <span className="text-sm font-black text-emerald-800 dark:text-emerald-400">₹{totalProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                     </div>
-                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-xl">
                         <IndianRupee size={13} className="text-blue-500" />
-                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Volume</span>
-                        <span className="text-sm font-black text-blue-800">₹{totalVolume.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Volume</span>
+                        <span className="text-sm font-black text-blue-800 dark:text-blue-400">₹{totalVolume.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                     </div>
                 </div>
             )}
@@ -231,7 +231,7 @@ export default function InvestmentAnalytics({ orders, investments = [] }) {
                             </Pie>
                             <Tooltip formatter={(val) => [`₹${val.toLocaleString('en-IN')}`, 'Capital']} />
                             <Legend
-                                formatter={(value) => <span className="text-xs font-bold text-slate-600 capitalize">{value}</span>}
+                                formatter={(value) => <span className="text-xs font-bold text-slate-600 dark:text-slate-400 capitalize">{value}</span>}
                                 iconType="circle"
                                 iconSize={8}
                             />

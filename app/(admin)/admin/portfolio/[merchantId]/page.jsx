@@ -53,7 +53,7 @@ export default function MerchantPortfolioPage({ params }) {
     const handleReleaseInvestment = async (id, type) => {
         const confirmMsg = type === 'lockin' 
             ? 'Are you sure you want to release this Lockin back to the merchant portfolio?'
-            : 'Are you sure you want to release this AI Grow Investment back to the merchant portfolio?';
+            : 'Are you sure you want to release this AI Grow Plan back to the merchant portfolio?';
             
         if (!confirm(confirmMsg)) return;
         
@@ -72,7 +72,7 @@ export default function MerchantPortfolioPage({ params }) {
                 const d = await res.json();
                 throw new Error(d.error);
             }
-            toast.success(`${type === 'lockin' ? 'Lockin' : 'Investment'} released to portfolio`);
+            toast.success(`${type === 'lockin' ? 'Lockin' : 'Plan'} released to portfolio`);
             fetchPortfolio();
         } catch (err) {
             toast.error(err.message);
@@ -113,7 +113,7 @@ export default function MerchantPortfolioPage({ params }) {
     };
 
     const handleSettleCash = async (id, type) => {
-        if (!confirm(`Are you sure you want to settle this ${type === 'lockin' ? 'Lockin' : 'Investment'} in cash? This will mark it as completed without crediting the merchant's wallet.`)) return;
+        if (!confirm(`Are you sure you want to settle this ${type === 'lockin' ? 'Lockin' : 'Plan'} in cash? This will mark it as completed without crediting the merchant's wallet.`)) return;
         
         setProcessingId(id);
         try {
@@ -254,12 +254,12 @@ export default function MerchantPortfolioPage({ params }) {
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 px-2">
                             <Activity size={18} className="text-indigo-600" />
-                            <h2 className="text-lg font-bold text-slate-900">AI Grow Investments</h2>
+                            <h2 className="text-lg font-bold text-slate-900">AI Grow Plans</h2>
                         </div>
                         
                         {investments.length === 0 ? (
                             <div className="bg-white border border-slate-200 border-dashed rounded-[2rem] p-8 text-center text-slate-400">
-                                No AI Grow investments found.
+                                No AI Grow plans found.
                             </div>
                         ) : (
                             <div className="space-y-4">

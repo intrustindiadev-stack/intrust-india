@@ -125,7 +125,7 @@ export default function AdminInvestmentsPage() {
                         <p className="text-2xl md:text-3xl font-black">₹{stats.totalAUM.toLocaleString('en-IN')}</p>
                     </motion.div>
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Active Funds</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Active Plans</p>
                         <p className="text-2xl md:text-3xl font-black text-slate-900">{stats.totalActive}</p>
                     </motion.div>
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm relative overflow-hidden">
@@ -169,7 +169,7 @@ export default function AdminInvestmentsPage() {
                         {loading && investments.length === 0 ? (
                             <div className="px-8 py-32 text-center">
                                 <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Funds...</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Plans...</p>
                             </div>
                         ) : filtered.length === 0 ? (
                             <div className="px-8 py-32 text-center">
@@ -188,7 +188,7 @@ export default function AdminInvestmentsPage() {
                                             <tr className="bg-white border-b border-slate-100">
                                                 <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Merchant</th>
                                                 <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Total AUM</th>
-                                                <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Active Funds</th>
+                                                <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Active Plans</th>
                                                 <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Pending Review</th>
                                                 <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Summary</th>
                                                 <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>

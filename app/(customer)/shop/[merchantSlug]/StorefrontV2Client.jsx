@@ -693,6 +693,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                     onClear={() => setCart([])}
                     primaryColor={primaryColor}
                     secondaryColor={secondaryColor}
+                    merchant={liveMerchant}
                 />
             )}
 

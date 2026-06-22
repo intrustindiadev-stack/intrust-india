@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { ChevronDown, TrendingUp, Calendar, Clock } from 'lucide-react';
 
 const STATUS_COLORS = {
-    pending: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100', dot: 'bg-amber-400' },
-    active: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100', dot: 'bg-emerald-400' },
-    completed: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100', dot: 'bg-blue-400' },
-    rejected: { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-100', dot: 'bg-red-400' },
+    pending: { bg: 'bg-amber-50 dark:bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-100 dark:border-amber-500/20', dot: 'bg-amber-400' },
+    active: { bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-100 dark:border-emerald-500/20', dot: 'bg-emerald-400' },
+    completed: { bg: 'bg-blue-50 dark:bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-100 dark:border-blue-500/20', dot: 'bg-blue-400' },
+    rejected: { bg: 'bg-red-50 dark:bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-100 dark:border-red-500/20', dot: 'bg-red-400' },
 };
 
 const STATUS_LABELS = { pending: 'Under Review', active: 'Active', completed: 'Completed', rejected: 'Rejected' };
@@ -45,9 +45,9 @@ export default function FundROICard({ inv, orders, isSelected, onClick }) {
 
     return (
         <div
-            className={`bg-white border rounded-[2rem] transition-all duration-300 overflow-hidden ${isSelected
-                ? 'border-indigo-300 shadow-lg shadow-indigo-100/50'
-                : 'border-slate-100 hover:border-slate-200 hover:shadow-md'
+            className={`bg-white dark:bg-slate-900 border rounded-[2rem] transition-all duration-300 overflow-hidden ${isSelected
+                ? 'border-indigo-300 dark:border-indigo-500/50 shadow-lg shadow-indigo-100/50 dark:shadow-none'
+                : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-md'
                 }`}
         >
             {/* Card header — clickable to select */}
@@ -66,7 +66,7 @@ export default function FundROICard({ inv, orders, isSelected, onClick }) {
 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-2">
-                        <p className="text-xl font-black text-slate-900 tracking-tight">₹{principal.toLocaleString('en-IN')}</p>
+                        <p className="text-xl font-black text-slate-900 dark:text-white tracking-tight">₹{principal.toLocaleString('en-IN')}</p>
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot} ${inv.status === 'active' ? 'animate-pulse' : ''}`} />
                             {STATUS_LABELS[inv.status] || inv.status}
@@ -76,7 +76,7 @@ export default function FundROICard({ inv, orders, isSelected, onClick }) {
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                         <div className="flex items-center gap-1">
                             <TrendingUp size={11} className="text-emerald-500" />
-                            <span className="text-xs font-black text-emerald-600">+₹{totalProfit.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">+₹{totalProfit.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                         </div>
                         {daysActive > 0 && (
                             <div className="flex items-center gap-1">
@@ -99,18 +99,18 @@ export default function FundROICard({ inv, orders, isSelected, onClick }) {
                 <>
                     <button
                         onClick={() => setExpanded(e => !e)}
-                        className="w-full flex items-center justify-between px-5 py-2.5 border-t border-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:bg-slate-50 transition-colors"
+                        className="w-full flex items-center justify-between px-5 py-2.5 border-t border-slate-50 dark:border-slate-800/50 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                     >
                         <span>{orders.length} trade order{orders.length > 1 ? 's' : ''}</span>
                         <ChevronDown size={13} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
                     </button>
 
                     {expanded && (
-                        <div className="divide-y divide-slate-50 border-t border-slate-50">
+                        <div className="divide-y divide-slate-50 dark:divide-slate-800/50 border-t border-slate-50 dark:border-slate-800/50">
                             {orders.slice(0, 5).map(order => (
                                 <div key={order.id} className="px-5 py-3 flex items-center justify-between gap-3">
                                     <div className="min-w-0">
-                                        <p className="text-xs font-bold text-slate-700 truncate">{order.order_details}</p>
+                                        <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{order.order_details}</p>
                                         <p className="text-[9px] font-bold text-slate-400 mt-0.5">
                                             {new Date(order.order_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                                             {order.category ? ` · ${order.category}` : ''}

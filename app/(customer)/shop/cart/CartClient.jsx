@@ -747,12 +747,31 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
             {/* Delivery Address */}
             <motion.div
               initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
-              className={`rounded-2xl p-4 sm:p-5 relative overflow-hidden ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white border border-slate-100 shadow-sm'}`}
+              className={`rounded-2xl p-4 sm:p-5 relative overflow-hidden transition-all duration-300 ${
+                !hasValidAddress
+                  ? isDark
+                    ? 'bg-[#1a1408] border border-amber-500/40 shadow-[0_0_24px_rgba(245,158,11,0.15)]'
+                    : 'bg-amber-50 border border-amber-300 shadow-[0_0_24px_rgba(245,158,11,0.2)]'
+                  : isDark
+                    ? 'bg-[#12151c] border border-white/[0.06]'
+                    : 'bg-white border border-slate-100 shadow-sm'
+              }`}
             >
-              <div className={`absolute top-0 left-0 w-1 h-full bg-blue-600`} />
+              {/* Left accent bar */}
+              <div className={`absolute top-0 left-0 w-1 h-full ${!hasValidAddress ? 'bg-amber-500' : 'bg-blue-600'}`} />
+
+              {/* Animated ring when no address */}
+              {!hasValidAddress && (
+                <span className="absolute inset-0 rounded-2xl ring-2 ring-amber-400/40 animate-pulse pointer-events-none" />
+              )}
+
               <div className="flex items-start justify-between gap-3">
                 <div className="flex gap-3 min-w-0">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isDark ? 'bg-blue-900/20 text-blue-500' : 'bg-blue-50 text-blue-600'}`}>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                    !hasValidAddress
+                      ? isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-600'
+                      : isDark ? 'bg-blue-900/20 text-blue-500' : 'bg-blue-50 text-blue-600'
+                  }`}>
                     <MapPin size={16} />
                   </div>
                   <div className="min-w-0">
@@ -764,11 +783,21 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                         {profile.phone && <p className="flex items-center gap-1 mt-1"><Phone size={10} /> {profile.phone}</p>}
                       </div>
                     ) : (
-                      <p className="text-xs text-amber-500 font-bold">Please update your address in profile.</p>
+                      <p className="text-xs text-amber-500 font-bold flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse inline-block" />
+                        Tap below to add your delivery address
+                      </p>
                     )}
                   </div>
                 </div>
-                <button onClick={() => setIsAddressModalOpen(true)} className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg shrink-0 transition-colors ${isDark ? 'bg-white/[0.04] text-white/40 hover:text-white/70' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
+                <button
+                  onClick={() => setIsAddressModalOpen(true)}
+                  className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg shrink-0 transition-all active:scale-95 ${
+                    !hasValidAddress
+                      ? 'bg-amber-500 text-white shadow-sm hover:bg-amber-600'
+                      : isDark ? 'bg-white/[0.04] text-white/40 hover:text-white/70' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
                   {hasValidAddress ? 'Change' : 'Add Info'}
                 </button>
               </div>
@@ -1195,27 +1224,41 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
           </div>
 
           <button
-            disabled={checkingOut || !canCheckout}
-            onClick={handleCheckout}
-            className={`flex-1 py-3 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] ${!canCheckout
+            disabled={checkingOut}
+            onClick={() => {
+              // If no address — open the delivery info modal directly
+              if (!hasValidAddress) {
+                setIsAddressModalOpen(true);
+                return;
+              }
+              handleCheckout();
+            }}
+            className={`flex-1 py-3 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] relative overflow-hidden ${
+              !hasValidAddress
+                ? 'bg-amber-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.5)]'
+                : !canCheckout
                 ? `cursor-not-allowed ${isDark ? 'bg-white/[0.04] text-white/20' : 'bg-slate-100 text-slate-400'}`
-                : "bg-blue-600 text-white shadow-[0_4px_14px_rgba(37,99,235,0.25)]"
-              }`}
+                : 'bg-blue-600 text-white shadow-[0_4px_14px_rgba(37,99,235,0.25)]'
+            }`}
           >
+            {/* Pulsing glow ring when address is missing */}
+            {!hasValidAddress && (
+              <span className="absolute inset-0 rounded-xl animate-pulse bg-amber-400/30 pointer-events-none" />
+            )}
             {checkingOut ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : isAnyStoreClosed ? (
-              "Store Closed"
+              'Store Closed'
             ) : !isMinOrderMet ? (
               `Add ₹${((MIN_ORDER_VALUE - billDetails.sellingTotal) / 100).toLocaleString('en-IN')} more`
             ) : hasStockIssues ? (
-              "Out of stock items"
+              'Out of stock items'
             ) : !hasValidAddress ? (
-              "Add Address"
+              <><MapPin size={15} strokeWidth={2.5} /> Add Delivery Address</>
             ) : !canPay ? (
-              paymentMode === 'wallet' ? "Low Balance" : paymentMode === 'store_credit' ? "Not Available" : " Coming Soon"
+              paymentMode === 'wallet' ? 'Low Balance' : paymentMode === 'store_credit' ? 'Not Available' : ' Coming Soon'
             ) : !isPaymentModeValid ? (
-              "Coming Soon"
+              'Coming Soon'
             ) : (
               <>Place Order <ArrowRight size={14} strokeWidth={3} /></>
             )}

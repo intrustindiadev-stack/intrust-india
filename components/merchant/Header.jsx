@@ -3,6 +3,7 @@
 import { useWallet } from "@/hooks/useWallet";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import MerchantControlCenter from "@/components/merchant/dashboard/MerchantControlCenter";
 
 export default function Header({ setSidebarOpen }) {
     const { balance, loading } = useWallet();
@@ -19,15 +20,8 @@ export default function Header({ setSidebarOpen }) {
                     <span className="material-icons-round text-xl">menu</span>
                 </button>
 
-                {/* Search Bar */}
-                <div className="relative w-full max-w-md hidden sm:block group">
-                    <span className="material-icons-round absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm group-focus-within:text-[#D4AF37] transition-colors">search</span>
-                    <input
-                        className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full py-2.5 pl-11 pr-4 text-sm text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-[#D4AF37] focus:border-[#D4AF37] placeholder:text-slate-500 transition-all outline-none"
-                        placeholder="Search for coupons, transactions..."
-                        type="text"
-                    />
-                </div>
+                {/* Control Center Trigger (replaces search bar) */}
+                <MerchantControlCenter />
             </div>
 
             <div className="flex items-center space-x-4 sm:space-x-6">

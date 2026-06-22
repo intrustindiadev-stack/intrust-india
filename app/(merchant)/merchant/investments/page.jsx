@@ -106,7 +106,7 @@ export default function AIGrowPage() {
     );
 
     return (
-        <div className="p-4 md:p-6 lg:p-8 min-h-screen bg-[#FAFBFC] max-w-7xl mx-auto space-y-6">
+        <div className="p-4 md:p-6 lg:p-8 min-h-screen bg-[#FAFBFC] dark:bg-[#020617] max-w-7xl mx-auto space-y-6">
 
             {/* Toast */}
             <AnimatePresence>
@@ -122,14 +122,14 @@ export default function AIGrowPage() {
             {/* ── Page Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-gradient-to-r from-emerald-50 to-indigo-50 text-indigo-600 border border-indigo-100">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-gradient-to-r from-emerald-50 to-indigo-50 dark:from-emerald-500/10 dark:to-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20">
                         <Sparkles size={11} /> AI-Powered Growth
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">AI Grow</h1>
-                    <p className="text-sm font-medium text-slate-500 max-w-md">Your capital deployed into verified trade orders — earning profit while you focus on business.</p>
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">AI Grow</h1>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 max-w-md">Your capital deployed into verified trade orders — earning profit while you focus on business.</p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                    <button onClick={fetchData} className="p-2.5 bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 rounded-xl transition-all shadow-sm">
+                    <button onClick={fetchData} className="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all shadow-sm">
                         <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                     </button>
                     <button onClick={() => setShowModal(true)}
@@ -140,12 +140,12 @@ export default function AIGrowPage() {
             </div>
 
             {/* ── Mobile Tab Bar ── */}
-            <div className="md:hidden flex items-center p-1 bg-white border border-slate-200 rounded-2xl shadow-sm gap-0.5 overflow-x-auto no-scrollbar">
+            <div className="md:hidden flex items-center p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm gap-0.5 overflow-x-auto no-scrollbar">
                 {MOBILE_TABS.map(tab => {
                     const Icon = tab.icon;
                     return (
                         <button key={tab.id} onClick={() => setMobileTab(tab.id)}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all flex-1 justify-center ${mobileTab === tab.id ? 'bg-[#1e3a5f] text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}>
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all flex-1 justify-center ${mobileTab === tab.id ? 'bg-[#1e3a5f] dark:bg-indigo-600 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}>
                             <Icon size={12} /> {tab.label}
                         </button>
                     );
@@ -214,15 +214,15 @@ export default function AIGrowPage() {
                 {/* Right info cards */}
                 <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
                     {/* Profit sharing model */}
-                    <div className="bg-white border border-slate-200 rounded-[2.5rem] p-6 flex flex-col justify-between group hover:border-indigo-300 transition-all shadow-sm hover:shadow-md">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 flex flex-col justify-between group hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all shadow-sm hover:shadow-md">
                         <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                            <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all">
                                 <BarChart2 size={22} />
                             </div>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dynamic Model</span>
                         </div>
                         <div>
-                            <p className="text-2xl font-extrabold text-slate-900 tracking-tighter uppercase">Profit Sharing</p>
+                            <p className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tighter uppercase">Profit Sharing</p>
                             <div className="flex items-center gap-2 mt-2">
                                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
                                 <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-tight">Trade Performance Returns</p>
@@ -258,22 +258,22 @@ export default function AIGrowPage() {
             {/* ── Charts Section ── */}
             <div className={mobileTab !== 'charts' ? 'hidden md:block' : 'block'}>
                 {(allOrders.length > 0 || investments.length > 0) ? (
-                    <div className="bg-white border border-slate-100 rounded-[2.5rem] p-6 sm:p-8 shadow-sm space-y-2">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm space-y-2">
                         <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none">
                                 <BarChart2 size={18} />
                             </div>
                             <div>
-                                <h3 className="text-lg font-black text-slate-900">Growth Analytics</h3>
-                                <p className="text-slate-400 text-xs font-medium">Visualize your fund performance</p>
+                                <h3 className="text-lg font-black text-slate-900 dark:text-white">Growth Analytics</h3>
+                                <p className="text-slate-400 text-xs font-medium">Visualize your plan performance</p>
                             </div>
                         </div>
                         <InvestmentAnalytics orders={allOrders} investments={investments} />
                     </div>
                 ) : (
-                    <div className="bg-white border border-dashed border-slate-200 rounded-[2.5rem] p-12 text-center">
-                        <BarChart2 size={32} className="text-slate-300 mx-auto mb-3" />
-                        <p className="text-slate-500 font-bold text-sm">Charts will appear after your first fund is activated</p>
+                    <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-12 text-center">
+                        <BarChart2 size={32} className="text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                        <p className="text-slate-500 dark:text-slate-400 font-bold text-sm">Charts will appear after your first plan is activated</p>
                     </div>
                 )}
             </div>
@@ -283,22 +283,22 @@ export default function AIGrowPage() {
                 {/* Fund Cards */}
                 <div className="lg:col-span-5 space-y-4">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-black text-slate-900">
-                            My Funds
-                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full ml-2">{investments.length}</span>
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                            My Growth Plans
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full ml-2">{investments.length}</span>
                         </h3>
                     </div>
 
                     {investments.length === 0 ? (
-                        <div className="bg-white border border-dashed border-slate-200 rounded-[2rem] p-10 text-center flex flex-col items-center gap-4">
-                            <div className="w-16 h-16 bg-gradient-to-br from-indigo-50 to-emerald-50 rounded-2xl flex items-center justify-center">
+                        <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] p-10 text-center flex flex-col items-center gap-4">
+                            <div className="w-16 h-16 bg-gradient-to-br from-indigo-50 to-emerald-50 dark:from-indigo-500/10 dark:to-emerald-500/10 rounded-2xl flex items-center justify-center">
                                 <Sparkles size={28} className="text-indigo-400" />
                             </div>
                             <div>
-                                <h4 className="font-black text-slate-800">No funds yet</h4>
+                                <h4 className="font-black text-slate-800 dark:text-slate-100">No active plans</h4>
                                 <p className="text-slate-400 text-xs mt-1 font-medium">Submit a request to start earning</p>
                             </div>
-                            <button onClick={() => setShowModal(true)} className="px-6 py-3 bg-gradient-to-r from-[#1e3a5f] to-indigo-700 text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all shadow-lg">
+                            <button onClick={() => setShowModal(true)} className="px-6 py-3 bg-gradient-to-r from-[#1e3a5f] to-indigo-700 text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all shadow-lg shadow-indigo-500/20">
                                 Start Earning
                             </button>
                         </div>
@@ -319,42 +319,42 @@ export default function AIGrowPage() {
 
                 {/* Activity Feed */}
                 <div className="lg:col-span-7">
-                    <div className="bg-white border border-slate-100 rounded-[2.5rem] shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-slate-50 dark:border-slate-800/50 flex items-center justify-between">
                             <div>
-                                <h3 className="font-extrabold text-slate-900">Capital Activity Feed</h3>
+                                <h3 className="font-extrabold text-slate-900 dark:text-white">Capital Activity Feed</h3>
                                 <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                                    {selectedInv ? 'Showing selected fund orders' : 'All fund orders'}
+                                    {selectedInv ? 'Showing selected plan orders' : 'All plan orders'}
                                 </p>
                             </div>
                             <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{currentOrders.length} Orders</span>
                         </div>
 
-                        <div className="max-h-[480px] overflow-y-auto divide-y divide-slate-50">
+                        <div className="max-h-[480px] overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800/50">
                             {currentOrders.length === 0 ? (
                                 <div className="p-20 text-center flex flex-col items-center gap-4">
-                                    <div className="w-16 h-16 bg-indigo-50 rounded-[2rem] flex items-center justify-center">
+                                    <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-500/10 rounded-[2rem] flex items-center justify-center">
                                         <Sparkles size={28} className="text-indigo-400" />
                                     </div>
                                     <div>
-                                        <h4 className="font-black text-slate-800">
-                                            {investments.length === 0 ? 'Start Your AI Grow Journey' : 'Select a Fund to View Orders'}
+                                        <h4 className="font-black text-slate-800 dark:text-slate-100">
+                                            {investments.length === 0 ? 'Start Your AI Grow Journey' : 'Select a Plan to View Orders'}
                                         </h4>
                                         <p className="text-slate-400 text-sm font-medium mt-1 max-w-[240px] mx-auto leading-relaxed">
                                             {investments.length === 0
-                                                ? 'Create your first fund request to start earning.'
-                                                : 'Tap on a fund card to see its trade orders.'}
+                                                ? 'Create your first plan request to start earning.'
+                                                : 'Tap on a plan card to see its trade orders.'}
                                         </p>
                                     </div>
                                 </div>
                             ) : (
                                 currentOrders.map(order => (
-                                    <div key={order.id} className="p-5 hover:bg-slate-50/60 transition-colors flex items-center gap-4">
+                                    <div key={order.id} className="p-5 hover:bg-slate-50/60 dark:hover:bg-slate-800/50 transition-colors flex items-center gap-4">
                                         <div className="flex-1 min-w-0 space-y-1">
-                                            <p className="text-sm font-bold text-slate-800 truncate">{order.order_details}</p>
+                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{order.order_details}</p>
                                             <div className="flex flex-wrap items-center gap-2">
                                                 {order.category && (
-                                                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[9px] font-black uppercase tracking-widest text-slate-500">{order.category}</span>
+                                                    <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{order.category}</span>
                                                 )}
                                                 {order.location && (
                                                     <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-[9px] font-black uppercase tracking-widest text-indigo-500 flex items-center gap-1">
@@ -386,7 +386,7 @@ export default function AIGrowPage() {
                         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
                         <div className="absolute inset-0" onClick={() => !processing && setShowModal(false)} />
                         <motion.div initial={{ scale: 0.96, opacity: 0, y: 16 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.96, opacity: 0, y: 16 }}
-                            className="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative z-10 border border-slate-100">
+                            className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative z-10 border border-slate-100 dark:border-slate-800">
                             <div className="flex justify-between items-start mb-8">
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
@@ -395,9 +395,9 @@ export default function AIGrowPage() {
                                         </div>
                                         <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">AI Grow</p>
                                     </div>
-                                    <h3 className="text-2xl font-black text-slate-800">New Fund Request</h3>
+                                    <h3 className="text-2xl font-black text-slate-800 dark:text-white">New Growth Request</h3>
                                 </div>
-                                <button onClick={() => setShowModal(false)} className="w-9 h-9 bg-slate-100 rounded-full text-slate-400 hover:text-slate-900 flex items-center justify-center transition-all text-sm font-bold">✕</button>
+                                <button onClick={() => setShowModal(false)} className="w-9 h-9 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all text-sm font-bold">✕</button>
                             </div>
 
                             <form onSubmit={handleRequest} className="space-y-5">
@@ -406,14 +406,14 @@ export default function AIGrowPage() {
                                     <div className="relative">
                                         <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg">₹</span>
                                         <input type="number" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="Min ₹10,000"
-                                            className="w-full pl-10 pr-5 bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 text-xl font-black focus:border-indigo-500 focus:bg-white outline-none transition-all [appearance:textfield]" />
+                                            className="w-full pl-10 pr-5 bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-4 text-xl font-black text-slate-900 dark:text-white focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all [appearance:textfield]" />
                                     </div>
                                     <p className="text-[10px] text-slate-400 font-bold">Dynamic profit-sharing model — no fixed interest.</p>
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Notes (Optional)</label>
                                     <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Any context for this request..."
-                                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold focus:border-indigo-500 focus:bg-white outline-none transition-all min-h-[90px] resize-none" />
+                                        className="w-full bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all min-h-[90px] resize-none" />
                                 </div>
                                 <button type="submit" disabled={processing}
                                     className="w-full bg-gradient-to-r from-[#1e3a5f] to-indigo-700 hover:opacity-90 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 text-[11px] uppercase tracking-widest flex items-center justify-center gap-2">

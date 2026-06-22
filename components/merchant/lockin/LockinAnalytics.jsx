@@ -65,16 +65,16 @@ export default function LockinAnalytics({ balances }) {
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
             return (
-                <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-2xl shadow-slate-200/50">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-2xl shadow-slate-200/50 dark:shadow-none">
                     <p className="text-slate-400 font-black text-[9px] uppercase tracking-[0.2em] mb-3">{label}</p>
                     <div className="space-y-2">
                         <div className="flex items-center justify-between gap-8">
-                            <span className="text-slate-500 text-[10px] font-bold">Partnership Capital</span>
-                            <span className="text-slate-900 font-black text-xs">₹{payload[0].value.toLocaleString('en-IN')}</span>
+                            <span className="text-slate-500 dark:text-slate-400 text-[10px] font-bold">Partnership Capital</span>
+                            <span className="text-slate-900 dark:text-white font-black text-xs">₹{payload[0].value.toLocaleString('en-IN')}</span>
                         </div>
                         <div className="flex items-center justify-between gap-8">
-                            <span className="text-blue-600 text-[10px] font-bold">Growth Projection</span>
-                            <span className="text-blue-600 font-black text-xs">₹{payload[1].value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                            <span className="text-blue-600 dark:text-blue-400 text-[10px] font-bold">Growth Projection</span>
+                            <span className="text-blue-600 dark:text-blue-400 font-black text-xs">₹{payload[1].value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                         </div>
                     </div>
                 </div>
@@ -131,11 +131,11 @@ export default function LockinAnalytics({ balances }) {
 
             {/* Distribution/Meta Box */}
             <div className="lg:col-span-4 space-y-6">
-                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex flex-col justify-between h-full">
+                <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-100 dark:border-slate-800 flex flex-col justify-between h-full">
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Portfolio Health</h4>
-                            <div className="p-1.5 bg-blue-50 rounded-lg text-blue-500">
+                            <div className="p-1.5 bg-blue-50 dark:bg-blue-500/10 rounded-lg text-blue-500 dark:text-blue-400">
                                 <ShieldCheck size={14} />
                             </div>
                         </div>
@@ -167,20 +167,20 @@ export default function LockinAnalytics({ balances }) {
                                 <div key={idx} className="flex items-center justify-between text-[10px]">
                                     <div className="flex items-center gap-2">
                                         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
-                                        <span className="font-bold text-slate-600">{item.name} Contracts</span>
+                                        <span className="font-bold text-slate-600 dark:text-slate-300">{item.name} Contracts</span>
                                     </div>
-                                    <span className="font-black text-slate-900">{item.value}</span>
+                                    <span className="font-black text-slate-900 dark:text-white">{item.value}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    <div className="mt-6 pt-6 border-t border-slate-200/60">
+                    <div className="mt-6 pt-6 border-t border-slate-200/60 dark:border-slate-800/60">
                         <div className="flex items-start gap-3">
-                            <div className="p-1.5 bg-white rounded-lg shadow-sm border border-slate-100">
+                            <div className="p-1.5 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
                                 <Info size={12} className="text-slate-400" />
                             </div>
-                            <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
+                            <p className="text-[9px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
                                 Growth projections reflect operational inventory turnover performance. Values reset upon maturity and reallocation.
                             </p>
                         </div>

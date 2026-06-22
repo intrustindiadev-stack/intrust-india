@@ -89,10 +89,10 @@ export async function PATCH(request) {
             if (merchant) {
                 await supabase.from('notifications').insert({
                     user_id: merchant.user_id,
-                    title: status === 'active' ? 'Aapka Paisa Kaam Pe Laga! 🎉' : 'Investment Update',
+                    title: status === 'active' ? 'AI Grow Plan Activated' : 'AI Grow Plan Update',
                     body: status === 'active'
-                        ? `Badhai ho! Aapka ₹${(investment.amount_paise / 100).toLocaleString('en-IN')} ka investment approve ho gaya. Abhi se returns milna shuru honge.`
-                        : `Aapki ₹${(investment.amount_paise / 100).toLocaleString('en-IN')} ki request ${status} ho gayi.`,
+                        ? `Your Growth Plan request for ₹${(investment.amount_paise / 100).toLocaleString('en-IN')} has been approved. Capital is now deployed.`
+                        : `Your Growth Plan request for ₹${(investment.amount_paise / 100).toLocaleString('en-IN')} has been ${status}.`,
                     type: status === 'active' ? 'success' : 'info',
                     reference_id: id,
                     reference_type: 'investment'
@@ -152,8 +152,8 @@ export async function POST(request) {
             if (merchant) {
                 await supabase.from('notifications').insert({
                     user_id: merchant.user_id,
-                    title: 'Naya Paisa Aaya! 💰',
-                    body: `InTrust ne aapke account mein ₹${Number(amountRupees).toLocaleString('en-IN')} ka investment deploy kiya. Aapka paisa ab kaam pe laga hai!`,
+                    title: 'Growth Plan Deployed',
+                    body: `A new Growth Plan of ₹${Number(amountRupees).toLocaleString('en-IN')} has been activated for your account. Capital is now deployed.`,
                     type: 'success',
                     reference_id: data.id,
                     reference_type: 'investment'

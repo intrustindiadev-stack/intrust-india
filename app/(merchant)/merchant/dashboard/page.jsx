@@ -8,6 +8,7 @@ import LiveButton from '@/components/merchant/LiveButton';
 import AutoModePromo from '@/components/merchant/AutoModePromo';
 import StoreStatusToggle from '@/components/merchant/StoreStatusToggle';
 import WelcomeCard from '@/components/merchant/WelcomeCard';
+import MerchantDisclaimerNote from '@/components/merchant/dashboard/MerchantDisclaimerNote';
 
 export const dynamic = 'force-dynamic';
 
@@ -237,6 +238,7 @@ export default async function MerchantDashboardPage() {
             <StatsCards stats={stats} />
 
             <TransactionsTable coupons={transformedCoupons} />
+            <MerchantDisclaimerNote />
         </div>
     );
 }
