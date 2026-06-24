@@ -14,12 +14,14 @@ function TransactionsContent() {
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(parseInt(searchParams.get('page') || '1'));
     const [hasMore, setHasMore] = useState(true);
+    const [userId, setUserId] = useState(null);
 
     const fetchTransactions = useCallback(async (pageNum) => {
         setLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
+            setUserId(session.user.id);
 
             const res = await fetch(`/api/wallet/transactions?page=${pageNum}&limit=50`, {
                 headers: { Authorization: `Bearer ${session.access_token}` }
@@ -45,6 +47,43 @@ function TransactionsContent() {
     useEffect(() => {
         fetchTransactions(1);
     }, [fetchTransactions]);
+
+    useEffect(() => {
+        if (!userId) return;
+
+        const channel = supabase.channel('payout-updates-feed')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'payout_requests',
+                    filter: `user_id=eq.${userId}`
+                },
+                (payload) => {
+                    setTransactions(prev => prev.map(tx => {
+                        if (tx.id === String(payload.new.id) && tx.source === 'payout') {
+                            const isCredit = payload.new.status === 'rejected' || payload.new.status === 'refunded';
+                            const statusLabel = { pending: 'Pending', approved: 'Approved', rejected: 'Rejected (Refunded)', released: 'Released' };
+                            return {
+                                ...tx,
+                                admin_note: payload.new.admin_note,
+                                utr_reference: payload.new.utr_reference,
+                                status: payload.new.status,
+                                transaction_type: isCredit ? 'CREDIT' : 'DEBIT',
+                                description: `Withdrawal Request — ${statusLabel[payload.new.status] || payload.new.status}`
+                            };
+                        }
+                        return tx;
+                    }));
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [userId]);
 
     const loadMore = () => {
         const nextPage = page + 1;
@@ -113,6 +152,31 @@ function TransactionsContent() {
                                     })}
                                 </span>
                             </div>
+                            
+                            {tx.source === 'payout' && ((tx.admin_note) || (tx.status === 'released' && tx.utr_reference)) && (
+                                <div className={`mt-3 p-3 rounded-xl flex gap-3 text-sm border items-start ${
+                                    tx.status === 'rejected' 
+                                        ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20 text-amber-800 dark:text-amber-400' 
+                                        : tx.status === 'released' 
+                                            ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-800 dark:text-emerald-400' 
+                                            : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300'
+                                }`}>
+                                    <span className="material-icons-round text-[18px] shrink-0 mt-0.5">
+                                        {tx.status === 'rejected' ? 'warning' : tx.status === 'released' ? 'check_circle' : 'info'}
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-bold text-xs uppercase tracking-wider mb-0.5 opacity-80">
+                                            {tx.status === 'rejected' ? 'Rejection Reason' : tx.status === 'released' ? 'Transfer Confirmed' : 'Admin Note'}
+                                        </div>
+                                        {tx.admin_note && <div className="leading-relaxed whitespace-pre-wrap">{tx.admin_note}</div>}
+                                        {tx.status === 'released' && tx.utr_reference && (
+                                            <div className="font-mono text-xs mt-1 bg-white/50 dark:bg-black/20 px-2 py-1 rounded w-fit tracking-tight">
+                                                UTR: {tx.utr_reference}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 ))}

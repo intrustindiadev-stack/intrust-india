@@ -316,28 +316,28 @@ function StatusBanner({ status, rejectionReason }) {
     /** @type {Record<string, { bg: string, border: string, icon: JSX.Element, iconBg: string, title: string, description: string }>} */
     const statusConfig = {
         pending: {
-            bg: isManualReview ? 'bg-amber-900/20' : 'bg-yellow-900/20',
-            border: isManualReview ? 'border-amber-500/30' : 'border-yellow-500/30',
-            icon: <Clock size={24} className={isManualReview ? 'text-amber-400' : 'text-yellow-400'} />,
-            iconBg: isManualReview ? 'bg-amber-500/20' : 'bg-yellow-500/20',
+            bg: isManualReview ? 'bg-amber-50' : 'bg-yellow-50',
+            border: isManualReview ? 'border-amber-200' : 'border-yellow-200',
+            icon: <Clock size={24} className={isManualReview ? 'text-amber-600' : 'text-yellow-600'} />,
+            iconBg: isManualReview ? 'bg-amber-100' : 'bg-yellow-100',
             title: isManualReview ? 'KYC Under Review' : 'KYC Verification in Progress',
             description: isManualReview
                 ? 'Your KYC application is currently under manual review by our team. This usually takes 24-48 hours.'
                 : 'Your KYC is being processed automatically via SprintVerify. This usually takes just a few seconds.',
         },
         verified: {
-            bg: 'bg-green-900/20',
-            border: 'border-green-500/30',
-            icon: <CheckCircle size={24} className="text-green-400" />,
-            iconBg: 'bg-green-500/20',
+            bg: 'bg-green-50',
+            border: 'border-green-200',
+            icon: <CheckCircle size={24} className="text-green-600" />,
+            iconBg: 'bg-green-100',
             title: 'KYC Verified Instantly ✓',
             description: 'Your identity has been verified automatically via SprintVerify. You have full access to all platform features.',
         },
         rejected: {
-            bg: 'bg-red-900/20',
-            border: 'border-red-500/30',
-            icon: <XCircle size={24} className="text-red-400" />,
-            iconBg: 'bg-red-500/20',
+            bg: 'bg-red-50',
+            border: 'border-red-200',
+            icon: <XCircle size={24} className="text-red-600" />,
+            iconBg: 'bg-red-100',
             title: 'KYC Verification Rejected',
             description: rejectionReason || 'Your KYC verification was rejected. Please update your information and resubmit.',
         },

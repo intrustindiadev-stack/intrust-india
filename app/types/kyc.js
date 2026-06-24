@@ -18,7 +18,10 @@
  * @property {string} state - State name
  * @property {string} pinCode - 6-digit Indian PIN code
  * @property {boolean} bankGradeSecurity - Opt-in for bank-grade security
+ * @property {boolean} [termsAccepted] - User accepted the KYC terms and conditions
  */
+
+export const TERMS_VERSION = 'terms_2026_03_31';
 
 /**
  * @typedef {Object} KYCRecord
@@ -151,7 +154,8 @@ export function sanitizeKYCData(data) {
         city: data.city?.trim().replace(/[<>]/g, '') || '',
         state: data.state?.trim().replace(/[<>]/g, '') || '',
         pinCode: data.pinCode?.replace(/\D/g, '').substring(0, 6) || '',
-        bankGradeSecurity: Boolean(data.bankGradeSecurity)
+        bankGradeSecurity: Boolean(data.bankGradeSecurity),
+        termsAccepted: Boolean(data.termsAccepted)
     };
 }
 
@@ -203,6 +207,11 @@ export function validateKYCForm(data) {
     // Validate PIN code (6-digit Indian postal code)
     if (!data.pinCode || !/^\d{6}$/.test(data.pinCode)) {
         errors.pinCode = 'Please enter a valid 6-digit PIN code';
+    }
+
+    // Validate terms accepted
+    if (!data.termsAccepted) {
+        errors.termsAccepted = 'You must accept the terms and conditions';
     }
 
     return {

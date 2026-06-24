@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Scale, FileText, Lock, RefreshCcw, ChevronRight, Truck, ShieldCheck, AlertCircle } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
@@ -8,6 +8,14 @@ import Footer from '@/components/layout/Footer';
 
 export default function LegalCenterPage() {
     const [activeTab, setActiveTab] = useState('terms');
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        if (tab && ['terms', 'privacy', 'shipping', 'product', 'refund'].includes(tab)) {
+            setActiveTab(tab);
+        }
+    }, []);
 
     const tabs = [
         { id: 'terms', label: 'Terms & Conditions', icon: FileText },

@@ -456,16 +456,35 @@ export default function TransactionDetailPage() {
                                 <div className="text-[10px] bg-[#D4AF37]/10 text-[#D4AF37] px-2 py-0.5 rounded-md font-bold uppercase tracking-tight">Verified</div>
                             </div>
 
-                            {/* Description */}
-                            <div className="py-4 flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-                                    <Receipt size={18} />
+                            {/* Description / Remark */}
+                            {!(source === 'payout' && !transaction.admin_note) && (
+                                <div className="py-4 flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                                        <Receipt size={18} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Remark</p>
+                                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                                            {source === 'payout' 
+                                                ? transaction.admin_note 
+                                                : (transaction.description || 'System generated update')}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Remark</p>
-                                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{transaction.description || 'System generated update'}</p>
+                            )}
+
+                            {/* UTR Reference */}
+                            {source === 'payout' && transaction.utr_reference && (
+                                <div className="py-4 flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                                        <CheckCircle2 size={18} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-[9px] font-bold text-emerald-600 dark:text-emerald-500 uppercase tracking-widest mb-0.5">Transfer Reference (UTR)</p>
+                                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300 font-mono tracking-tight">{transaction.utr_reference}</p>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* Balance After - if applicable */}
                             {(transaction.balance_after_paise || transaction.balance_after) && (
@@ -667,6 +686,41 @@ export default function TransactionDetailPage() {
                 )}
             </div>
 
+
+            {/* Prominent Callout */}
+            {source === 'payout' && transaction.status === 'rejected' && transaction.admin_note && (
+                <div className="mt-8 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-[2rem] p-6 sm:p-8 flex items-start gap-4">
+                    <div className="w-12 h-12 bg-white dark:bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-500 shrink-0 shadow-sm border border-amber-100 dark:border-transparent">
+                        <Info size={24} />
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-black text-amber-800 dark:text-amber-400 uppercase tracking-wider mb-2">Why was this rejected?</h3>
+                        <p className="text-amber-700 dark:text-amber-200/80 leading-relaxed font-medium whitespace-pre-wrap">{transaction.admin_note}</p>
+                    </div>
+                </div>
+            )}
+
+            {source === 'payout' && transaction.status === 'released' && (
+                <div className="mt-8 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-[2rem] p-6 sm:p-8 flex items-start gap-4">
+                    <div className="w-12 h-12 bg-white dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-500 shrink-0 shadow-sm border border-emerald-100 dark:border-transparent">
+                        <CheckCircle2 size={24} />
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="text-sm font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-wider mb-2">Transfer Confirmed</h3>
+                        {transaction.admin_note && (
+                            <p className="text-emerald-700 dark:text-emerald-200/80 leading-relaxed font-medium mb-3 whitespace-pre-wrap">{transaction.admin_note}</p>
+                        )}
+                        {transaction.utr_reference && (
+                            <div>
+                                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-500 uppercase tracking-widest mb-1 block">UTR Reference</span>
+                                <div className="font-mono text-sm bg-white dark:bg-emerald-900/40 border border-emerald-100 dark:border-emerald-500/20 rounded-xl px-4 py-2 w-fit tracking-tight text-emerald-800 dark:text-emerald-300">
+                                    {transaction.utr_reference}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Security Footer */}
             <div className="mt-10 py-12 text-center space-y-4 border-t border-slate-100 dark:border-slate-800/50 pt-10">

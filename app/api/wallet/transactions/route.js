@@ -52,7 +52,7 @@ export async function GET(request) {
         // 4. Fetch Payout / Withdrawal requests
         const { data: payoutTxs } = await supabase
             .from('payout_requests')
-            .select('id, amount, status, requested_at')
+            .select('id, amount, status, requested_at, admin_note, utr_reference')
             .eq('user_id', user.id)
             .order('requested_at', { ascending: false })
             .limit(fetchLimit);
@@ -96,6 +96,9 @@ export async function GET(request) {
                 description: `Withdrawal Request — ${statusLabel[tx.status] || tx.status}`,
                 amount: Number(tx.amount || 0).toFixed(2),
                 created_at: tx.requested_at,
+                admin_note: tx.admin_note,
+                utr_reference: tx.utr_reference,
+                status: tx.status
             };
         });
 

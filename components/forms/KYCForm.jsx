@@ -282,6 +282,7 @@ export default function KYCForm({
                 submitData.append('city', formData.city);
                 submitData.append('state', formData.state);
                 submitData.append('pinCode', formData.pinCode);
+                submitData.append('termsAccepted', String(formData.termsAccepted));
 
                 const result = await submitKYC(submitData);
 

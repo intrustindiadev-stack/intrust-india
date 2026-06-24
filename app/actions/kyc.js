@@ -11,7 +11,7 @@
 
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
-import { validateKYCForm, sanitizeKYCData } from '@/app/types/kyc';
+import { validateKYCForm, sanitizeKYCData, TERMS_VERSION } from '@/app/types/kyc';
 import { sprintVerify } from '@/lib/sprintVerify';
 import { encryptCouponCode as encryptData } from '@/lib/encryption';
 import { logRewardRpcResult } from '@/lib/rewardRpcResult';
@@ -47,7 +47,8 @@ export async function submitKYC(formData) {
             city: formData.get('city'),
             state: formData.get('state'),
             pinCode: formData.get('pinCode'),
-            bankGradeSecurity: formData.get('bankGradeSecurity') === 'true'
+            bankGradeSecurity: formData.get('bankGradeSecurity') === 'true',
+            termsAccepted: formData.get('termsAccepted') === 'true'
         };
 
         const sanitizedData = sanitizeKYCData(rawData);
@@ -156,6 +157,9 @@ export async function submitKYC(formData) {
 
             // Security
             bank_grade_security: sanitizedData.bankGradeSecurity,
+            terms_accepted: true,
+            terms_accepted_at: new Date().toISOString(),
+            terms_version: TERMS_VERSION,
 
             // Files (disabled — no document upload)
             selfie_url: null,

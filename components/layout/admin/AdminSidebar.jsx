@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useCollapsibleNav } from '@/hooks/useCollapsibleNav';
 import {
     LayoutDashboard,
     Users,
@@ -40,6 +42,7 @@ import {
     Bell,
     ShieldCheck,
     BookOpen,
+    ChevronDown,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { displayEmail } from '@/lib/auth';
@@ -105,6 +108,19 @@ const navigationGroups = [
     }
 ];
 
+const checkIsActive = (item, pathname) => {
+    const isNestedUdhariRoute = /^\/admin\/merchants\/[^/]+\/udhari(|-settings)$/.test(pathname || '');
+    return item.href === '/admin'
+        ? pathname === '/admin'
+        : item.href === '/admin/merchants'
+            ? (pathname === '/admin/merchants' || (pathname?.startsWith('/admin/merchants/') && !pathname?.startsWith('/admin/merchants/udhari'))) && !isNestedUdhariRoute
+            : item.href === '/admin/merchants/udhari'
+                ? pathname === item.href || pathname?.startsWith(item.href + '/') || isNestedUdhariRoute
+                : item.href === '/admin/shopping'
+                    ? pathname === '/admin/shopping' || (pathname?.startsWith('/admin/shopping/') && !pathname?.startsWith('/admin/shopping/orders/takeover'))
+                    : pathname === item.href || pathname?.startsWith(item.href + '/');
+};
+
 export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
     const pathname = usePathname();
     const router = useRouter();
@@ -112,6 +128,16 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const isSuperAdmin = adminProfile?.role === 'super_admin';
+
+    const activeGroupTitle = navigationGroups.find(group => 
+        group.items.some(item => checkIsActive(item, pathname))
+    )?.title;
+
+    const { isOpen: isGroupOpen, toggleGroup } = useCollapsibleNav({
+        storageKey: 'intrust:admin:sidebar-groups',
+        groupTitles: navigationGroups.map(g => g.title),
+        activeGroupTitle
+    });
 
     // REALTIME TAKEOVER COUNT
     useEffect(() => {
@@ -226,45 +252,62 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                     <nav className="flex-1 py-4 px-4 space-y-6 overflow-y-auto hide-scrollbar">
                         {navigationGroups.map((group, groupIdx) => (
                             <div key={groupIdx} className="space-y-1.5">
-                                <div className="px-3 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                    {group.title}
-                                </div>
-                                {group.items.map((item) => {
-                                    const Icon = item.icon;
-                                    const isNestedUdhariRoute = /^\/admin\/merchants\/[^/]+\/udhari(|-settings)$/.test(pathname || '');
-                                    const isActive = item.href === '/admin'
-                                        ? pathname === '/admin'
-                                        : item.href === '/admin/merchants'
-                                            ? (pathname === '/admin/merchants' || (pathname?.startsWith('/admin/merchants/') && !pathname?.startsWith('/admin/merchants/udhari'))) && !isNestedUdhariRoute
-                                            : item.href === '/admin/merchants/udhari'
-                                                ? pathname === item.href || pathname?.startsWith(item.href + '/') || isNestedUdhariRoute
-                                                : item.href === '/admin/shopping'
-                                                    ? pathname === '/admin/shopping' || (pathname?.startsWith('/admin/shopping/') && !pathname?.startsWith('/admin/shopping/orders/takeover'))
-                                                    : pathname === item.href || pathname?.startsWith(item.href + '/');
-
-                                    return (
-                                        <Link
-                                            key={item.name}
-                                            href={item.href}
-                                            onClick={() => setIsOpen(false)}
-                                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group relative overflow-hidden ${isActive
-                                                ? activeItemBg
-                                                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                                                }`}
+                                <button
+                                    onClick={() => toggleGroup(group.title)}
+                                    className="w-full flex items-center justify-between px-3 mb-2 group/header"
+                                    aria-expanded={isGroupOpen(group.title)}
+                                    aria-controls={`group-${groupIdx}`}
+                                >
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover/header:text-slate-600 transition-colors">
+                                        {group.title}
+                                    </span>
+                                    <ChevronDown 
+                                        size={14} 
+                                        className={`text-slate-400 transition-transform duration-200 ${isGroupOpen(group.title) ? 'rotate-180' : ''}`} 
+                                    />
+                                </button>
+                                <AnimatePresence initial={false}>
+                                    {isGroupOpen(group.title) && (
+                                        <motion.div
+                                            id={`group-${groupIdx}`}
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="overflow-hidden"
                                         >
-                                            {isActive && (
-                                                <div className={activeBar} />
-                                            )}
-                                            <Icon size={18} className={`transition-colors ${isActive ? activeIcon : 'text-slate-400 group-hover:text-slate-700'}`} />
-                                            <span className="font-bold text-sm tracking-tight flex-1">{item.name}</span>
-                                            {item.name === 'Priority Takeovers' && takeoverCount > 0 && (
-                                                <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-sm animate-pulse">
-                                                    {takeoverCount}
-                                                </span>
-                                            )}
-                                        </Link>
-                                    );
-                                })}
+                                            <div className="space-y-1.5 pb-2">
+                                                {group.items.map((item) => {
+                                                    const Icon = item.icon;
+                                                    const isActive = checkIsActive(item, pathname);
+
+                                                    return (
+                                                        <Link
+                                                            key={item.name}
+                                                            href={item.href}
+                                                            onClick={() => setIsOpen(false)}
+                                                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group relative overflow-hidden ${isActive
+                                                                ? activeItemBg
+                                                                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                                                                }`}
+                                                        >
+                                                            {isActive && (
+                                                                <div className={activeBar} />
+                                                            )}
+                                                            <Icon size={18} className={`transition-colors ${isActive ? activeIcon : 'text-slate-400 group-hover:text-slate-700'}`} />
+                                                            <span className="font-bold text-sm tracking-tight flex-1">{item.name}</span>
+                                                            {item.name === 'Priority Takeovers' && takeoverCount > 0 && (
+                                                                <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-sm animate-pulse">
+                                                                    {takeoverCount}
+                                                                </span>
+                                                            )}
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         ))}
                     </nav>

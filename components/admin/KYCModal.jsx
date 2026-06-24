@@ -181,6 +181,12 @@ export default function KYCModal({ kyc, onClose }) {
                             highlight={kyc.bank_grade_security}
                         />
                         <DetailField
+                            icon={<CheckCircle size={18} className="text-gray-400" />}
+                            label="Terms Consent"
+                            value={kyc.terms_accepted ? `Accepted on ${new Date(kyc.terms_accepted_at).toLocaleString('en-IN')} (${kyc.terms_version})` : 'Not recorded'}
+                            highlight={kyc.terms_accepted}
+                        />
+                        <DetailField
                             icon={<Clock size={18} className="text-gray-400" />}
                             label="Submitted On"
                             value={new Date(kyc.created_at).toLocaleString('en-IN', {

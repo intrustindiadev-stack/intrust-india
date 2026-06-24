@@ -8,9 +8,10 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import { useState } from 'react';
 import KycStatusCard from "./KycStatusCard";
 import WalletCard from "./WalletCard";
-import { motion, LayoutGroup } from "framer-motion";
+import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { useSubscription } from "./SubscriptionContext";
 import Image from "next/image";
+import { useCollapsibleNav } from "@/hooks/useCollapsibleNav";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
     const pathname = usePathname();
@@ -38,6 +39,18 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { label: "Ratings", href: "/merchant/ratings", icon: "star" },
         { label: "Analytics", href: "/merchant/analytics", icon: "analytics" },
     ];
+
+    const activeGroupTitle = operationsItems.some(item => pathname === item.href) 
+        ? "Operations" 
+        : accountItems.some(item => pathname === item.href || pathname?.startsWith(item.href.split('?')[0] + '/')) 
+            ? "Account" 
+            : undefined;
+
+    const { isOpen: isGroupOpen, toggleGroup } = useCollapsibleNav({
+        storageKey: 'intrust:merchant:sidebar-groups',
+        groupTitles: ['Operations', 'Account'],
+        activeGroupTitle
+    });
 
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -132,85 +145,127 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                     <LayoutGroup>
                         {/* Operations Section — gated behind subscription */}
                         <div className="pb-2 px-6">
-                            <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 font-black">Operations</p>
+                            <button
+                                onClick={() => toggleGroup('Operations')}
+                                className="w-full flex items-center justify-between group/header"
+                                aria-expanded={isGroupOpen('Operations')}
+                                aria-controls="group-operations"
+                            >
+                                <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 font-black group-hover/header:text-slate-600 dark:group-hover/header:text-slate-300 transition-colors">Operations</p>
+                                <span className={`material-icons-round text-slate-400 dark:text-slate-500 text-[14px] transition-transform duration-200 ${isGroupOpen('Operations') ? 'rotate-180' : ''}`}>expand_more</span>
+                            </button>
                         </div>
 
-                        {operationsItems.map((item) => {
-                            const isActive = pathname === item.href;
-                            const locked = !isSubscribed;
-
-                            if (locked) {
-                                return (
-                                    <button
-                                        key={item.href}
-                                        onClick={() => requireSubscription(item.label)}
-                                        className="group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-400 w-full text-left opacity-60 hover:opacity-80"
-                                    >
-                                        <span className="material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 group-hover:scale-110">{item.icon}</span>
-                                        <span className="text-[13px] font-bold tracking-wide z-10 flex-1">{item.label}</span>
-                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[8px] font-black uppercase tracking-wider z-10">
-                                            <span className="material-icons-round text-[10px]">lock</span>
-                                        </span>
-                                    </button>
-                                );
-                            }
-
-                            return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    onClick={() => setIsOpen(false)}
-                                    className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative ${isActive
-                                        ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
-                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                                        }`}
+                        <AnimatePresence initial={false}>
+                            {isGroupOpen('Operations') && (
+                                <motion.div
+                                    id="group-operations"
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="overflow-hidden"
                                 >
-                                    {isActive && (
-                                        <span className="absolute inset-0 rounded-2xl overflow-hidden z-0 pointer-events-none">
-                                            <motion.span 
-                                                layoutId="sidebar-active"
-                                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                                className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent border-l-4 border-slate-900 dark:border-[#D4AF37]" 
-                                            />
-                                        </span>
-                                    )}
-                                    <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
-                                    <span className="text-[13px] font-bold tracking-wide z-10">{item.label}</span>
-                                </Link>
-                            );
-                        })}
+                                    {operationsItems.map((item) => {
+                                        const isActive = pathname === item.href;
+                                        const locked = !isSubscribed;
+
+                                        if (locked) {
+                                            return (
+                                                <button
+                                                    key={item.href}
+                                                    onClick={() => requireSubscription(item.label)}
+                                                    className="group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-400 w-full text-left opacity-60 hover:opacity-80"
+                                                >
+                                                    <span className="material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 group-hover:scale-110">{item.icon}</span>
+                                                    <span className="text-[13px] font-bold tracking-wide z-10 flex-1">{item.label}</span>
+                                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[8px] font-black uppercase tracking-wider z-10">
+                                                        <span className="material-icons-round text-[10px]">lock</span>
+                                                    </span>
+                                                </button>
+                                            );
+                                        }
+
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                onClick={() => setIsOpen(false)}
+                                                className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative ${isActive
+                                                    ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
+                                                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                                    }`}
+                                            >
+                                                {isActive && (
+                                                    <span className="absolute inset-0 rounded-2xl overflow-hidden z-0 pointer-events-none">
+                                                        <motion.span 
+                                                            layoutId="sidebar-active"
+                                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                                            className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent border-l-4 border-slate-900 dark:border-[#D4AF37]" 
+                                                        />
+                                                    </span>
+                                                )}
+                                                <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
+                                                <span className="text-[13px] font-bold tracking-wide z-10">{item.label}</span>
+                                            </Link>
+                                        );
+                                    })}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Account Section — always accessible */}
-                        <div className="pt-8 pb-2 px-6">
-                            <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 font-black">Account</p>
+                        <div className="pt-6 pb-2 px-6">
+                            <button
+                                onClick={() => toggleGroup('Account')}
+                                className="w-full flex items-center justify-between group/header"
+                                aria-expanded={isGroupOpen('Account')}
+                                aria-controls="group-account"
+                            >
+                                <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 font-black group-hover/header:text-slate-600 dark:group-hover/header:text-slate-300 transition-colors">Account</p>
+                                <span className={`material-icons-round text-slate-400 dark:text-slate-500 text-[14px] transition-transform duration-200 ${isGroupOpen('Account') ? 'rotate-180' : ''}`}>expand_more</span>
+                            </button>
                         </div>
 
-                        {accountItems.map((item) => {
-                            const isActive = pathname === item.href || pathname?.startsWith(item.href.split('?')[0] + '/');
-                            return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    onClick={() => setIsOpen(false)}
-                                    className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative ${isActive
-                                        ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
-                                        : `text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white ${!isSubscribed ? 'font-semibold' : ''}`
-                                        }`}
+                        <AnimatePresence initial={false}>
+                            {isGroupOpen('Account') && (
+                                <motion.div
+                                    id="group-account"
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="overflow-hidden"
                                 >
-                                    {isActive && (
-                                        <span className="absolute inset-0 rounded-2xl overflow-hidden z-0 pointer-events-none">
-                                            <motion.span 
-                                                layoutId="sidebar-active"
-                                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                                className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent border-l-4 border-slate-900 dark:border-[#D4AF37]" 
-                                            />
-                                        </span>
-                                    )}
-                                    <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
-                                    <span className="text-[13px] font-bold tracking-wide z-10">{item.label}</span>
-                                </Link>
-                            );
-                        })}
+                                    {accountItems.map((item) => {
+                                        const isActive = pathname === item.href || pathname?.startsWith(item.href.split('?')[0] + '/');
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                onClick={() => setIsOpen(false)}
+                                                className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative ${isActive
+                                                    ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
+                                                    : `text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white ${!isSubscribed ? 'font-semibold' : ''}`
+                                                    }`}
+                                            >
+                                                {isActive && (
+                                                    <span className="absolute inset-0 rounded-2xl overflow-hidden z-0 pointer-events-none">
+                                                        <motion.span 
+                                                            layoutId="sidebar-active"
+                                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                                            className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent border-l-4 border-slate-900 dark:border-[#D4AF37]" 
+                                                        />
+                                                    </span>
+                                                )}
+                                                <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
+                                                <span className="text-[13px] font-bold tracking-wide z-10">{item.label}</span>
+                                            </Link>
+                                        );
+                                    })}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </LayoutGroup>
                 </nav>
 
