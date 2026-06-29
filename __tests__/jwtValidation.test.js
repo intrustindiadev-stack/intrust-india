@@ -259,7 +259,7 @@ const PUBLIC_ROUTES = [
     /^\/api\/sabpaisa\/(callback|webhook)$/,
     /^\/api\/contact$/,
     /^\/api\/whatsapp\/(status|opt-out)$/,
-    /^\/api\/cron\/(check-stock|order-timeout|purge-expired-otps)$/,
+    /^\/api\/cron\/(check-stock|order-timeout|purge-expired-otps|morning-greeting)$/,
     /^\/api\/shopping\/(trending-products|storefront)$/,
     /^\/api\/search$/,
     /^\/api\/test-(sprint|wallet)$/,
