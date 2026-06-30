@@ -1,225 +1,93 @@
 'use client';
 
 import { useState, useEffect, useRef, lazy, Suspense, memo, useCallback } from 'react';
-import { Search, Store, X, Sparkles, ChevronRight, BadgeCheck, Star, MapPin, Heart } from 'lucide-react';
+import { Search, Store, X, Sparkles, Star, MapPin, Heart, Clock, SlidersHorizontal, ChevronRight, CheckCircle2, Package, Truck, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabaseClient';
-import RatingStars from '@/components/ui/RatingStars';
 import PullToRefresh from '@/components/ui/PullToRefresh';
 
-// Lazy load below-fold components
-const AdBannerCarousel = lazy(() => import('@/components/customer/dashboard/AdBannerCarousel'));
-const HeroIllustrativeAd = lazy(() => import('@/components/customer/shop/HeroIllustrativeAd'));
-
-// Placeholder for blur loading
 const BLUR_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZTJlOGYwIi8+PC9zdmc+';
 
-// ── Featured Card (Intrust Official) – full-width ─────────────────────────
-const FeaturedCard = memo(function FeaturedCard({ merchant, isOpen }) {
-    return (
-        <div className="col-span-full mb-4 animate-fadeIn">
-            <Link href="/shop/official" className="group block focus-visible:outline-none">
-                <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] bg-slate-950 p-8 md:p-12 shadow-[0_32px_64px_rgba(0,0,0,0.2)] hover:shadow-[0_48px_96px_rgba(0,0,0,0.3)] transition-shadow duration-700 min-h-[280px] md:min-h-[340px] flex flex-col justify-end">
-                    
-                    {/* Hero Background */}
-                    <Image
-                        src="/images/intrust_mart_bg.png"
-                        alt="Intrust Mart"
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1200px"
-                        className="object-cover scale-100 group-hover:scale-105 transition-transform duration-[2000ms] opacity-60"
-                        priority
-                        quality={75}
-                    />
-                    
-                    {/* Cinematic Gradient Overlays */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-transparent to-transparent" />
-
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white/10 border border-white/20 shadow-2xl flex items-center justify-center overflow-hidden">
-                                {merchant.user_profiles?.avatar_url ? (
-                                    <Image src={merchant.user_profiles.avatar_url} alt="Official" width={80} height={80} className="object-contain p-2" />
-                                ) : (
-                                    <Sparkles className="text-white w-8 h-8" />
-                                )}
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2 mb-1.5">
-                                    <span className="bg-emerald-500 text-black text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest shadow-lg shadow-emerald-500/20">Official Store</span>
-                                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${isOpen ? 'bg-black/40 border-white/10' : 'bg-rose-500/20 border-rose-500/30'}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? 'bg-emerald-400' : 'bg-rose-500'}`} />
-                                        <span className="text-[9px] font-black text-white/90 uppercase tracking-widest">{isOpen ? 'Live' : 'Closed'}</span>
-                                    </div>
-                                </div>
-                                <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter leading-none mb-3">Intrust Mart</h2>
-                                <RatingStars 
-                                    rating={merchant.rating?.avg_rating || 4.9} 
-                                    totalRatings={merchant.rating?.total_ratings || 50000} 
-                                    size={16} 
-                                />
-                            </div>
-                        </div>
-
-                        <p className="text-white/60 text-base md:text-lg font-medium max-w-lg leading-relaxed mb-8">
-                            Experience the future of shopping with platform-verified products and lightning-fast fulfillment.
-                        </p>
-
-                        <div className="flex items-center gap-4">
-                            <div className="inline-flex items-center gap-3 bg-white text-black px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-[0_20px_40px_rgba(255,255,255,0.2)] group-hover:bg-emerald-400 group-hover:shadow-emerald-500/40 transition-all active:scale-95">
-                                Start Shopping <ChevronRight size={18} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Decorative Elements */}
-                    <div className="absolute -bottom-12 -right-12 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-                </div>
-            </Link>
-        </div>
-    );
-});
-
-// ── Quick-Commerce Card (Optimized) ──────────────────────────────────────
-const MerchantCard = memo(function MerchantCard({ merchant, rating, isOpen, priority }) {
-    let avatarUrl = null;
-    if (Array.isArray(merchant.user_profiles)) {
-        avatarUrl = merchant.user_profiles[0]?.avatar_url;
-    } else {
-        avatarUrl = merchant.user_profiles?.avatar_url;
-    }
-
-    const initials = (merchant.business_name || '??').substring(0, 2).toUpperCase();
-    const rawAddress = merchant.business_address || '';
-    const addressLine = rawAddress ? rawAddress.split(',')[0]?.trim() : 'Premium Hub';
-
+// ── E-commerce Feed Card ──────────────────────────────────────────────
+const FeedCard = memo(function FeedCard({ merchant, rating, isOpen, isOfficial, priority }) {
+    const [isSaved, setIsSaved] = useState(false);
+    
     const bannerImage = merchant.shopping_banner_url || '/images/default_merchant_banner.png';
+    const mockOffer = Math.random() > 0.5 ? 'Free Shipping' : 'Up to 50% OFF';
+    const shipsIn = Math.random() > 0.5 ? 'Ships in 24 hrs' : 'Next Day Delivery';
 
     return (
-        <div className="h-full animate-fadeIn">
-            <Link
-                href={`/shop/${merchant.slug}`}
-                className="group relative flex flex-col h-full bg-white dark:bg-[#0c0e16] rounded-2xl md:rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/[0.04] shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_24px_48px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_24px_48px_rgba(0,0,0,0.6)] hover:-translate-y-1 transition-all duration-300 focus-visible:outline-none"
-            >
-                {/* ── Visual Area ── */}
-                <div className="relative w-full h-[180px] sm:h-[200px] overflow-hidden">
+        <Link href={isOfficial ? "/shop/official" : `/shop/${merchant.slug}`} className="block group h-full">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-sm hover:shadow-md border border-gray-100 dark:border-gray-700 transition-all duration-300 h-full flex flex-col">
+                
+                {/* ── Image Header ── */}
+                <div className="relative w-full aspect-[4/3] sm:aspect-[16/9]">
                     <Image
-                        src={bannerImage}
-                        alt={merchant.business_name}
+                        src={isOfficial ? "/images/intrust_mart_bg.png" : bannerImage}
+                        alt={merchant.business_name || 'Intrust Store'}
                         fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         className="object-cover group-hover:scale-105 transition-transform duration-700"
                         loading={priority ? 'eager' : 'lazy'}
                         priority={priority}
-                        quality={70}
                         placeholder="blur"
                         blurDataURL={BLUR_PLACEHOLDER}
                     />
                     
-                    {/* Vignette & Depth Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/10" />
 
-                    {/* Floating Badges */}
-                    <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-                        <div className="flex items-center gap-1.5 bg-white/30 border border-white/30 text-white px-3 py-1.5 rounded-full shadow-lg">
-                            <BadgeCheck size={11} className="text-emerald-400 fill-emerald-400/20" />
-                            <span className="text-[10px] font-black uppercase tracking-widest leading-none mt-[1px]">Partner</span>
-                        </div>
+                    <button 
+                        onClick={(e) => { e.preventDefault(); setIsSaved(!isSaved); }}
+                        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center transition-colors hover:bg-white/40"
+                    >
+                        <Heart size={18} className={isSaved ? "fill-red-500 text-red-500" : "text-white"} />
+                    </button>
+
+                    <div className="absolute bottom-3 left-3 bg-blue-600 text-white text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-lg">
+                        <Sparkles size={12} />
+                        {mockOffer}
                     </div>
 
-                    <div className="absolute top-4 right-4 z-10">
-                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border shadow-lg transition-colors ${isOpen ? 'bg-black/50 border-white/20' : 'bg-rose-500/80 border-rose-400/50'}`}>
-                            {isOpen ? (
-                                <>
-                                    <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                    <span className="text-[9px] font-black uppercase tracking-widest leading-none mt-[1px] text-white">LIVE</span>
-                                </>
-                            ) : (
-                                <span className="text-[9px] font-black uppercase tracking-widest leading-none mt-[1px] text-white">CLOSED</span>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Branding Overlay (if default banner) */}
-                    {!merchant.shopping_banner_url && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <span className="font-black text-2xl tracking-[0.2em] uppercase text-white/40 mix-blend-overlay">
-                                InTrust
-                            </span>
+                    {isOfficial && (
+                        <div className="absolute top-3 left-3 bg-emerald-500 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded shadow-lg flex items-center gap-1">
+                            <CheckCircle2 size={12} /> Official Store
                         </div>
                     )}
                 </div>
 
                 {/* ── Content Area ── */}
-                <div className="relative flex flex-col flex-1 px-6 pt-12 pb-6 bg-white dark:bg-[#0c0e16]">
-                    {/* Floating Avatar (Large) */}
-                    <div className="absolute -top-10 left-6 z-20">
-                        <div className="w-20 h-20 rounded-[1.5rem] overflow-hidden bg-white dark:bg-[#13161f] p-1.5 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 group-hover:-translate-y-1 transition-transform duration-300">
-                            <div className="w-full h-full rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-800 flex items-center justify-center">
-                                {avatarUrl ? (
-                                    <Image src={avatarUrl} alt={merchant.business_name} width={68} height={68} className="object-cover w-full h-full" />
-                                ) : (
-                                    <span className="font-black text-2xl text-slate-400">{initials}</span>
-                                )}
-                            </div>
+                <div className="p-4 md:p-5 flex-1 flex flex-col">
+                    <div className="flex justify-between items-start gap-4 mb-2">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            {isOfficial ? 'Intrust Mart' : merchant.business_name}
+                        </h3>
+                        <div className="flex items-center gap-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-2 py-0.5 rounded-lg flex-shrink-0">
+                            <span className="text-xs font-bold">{rating?.avg_rating || (isOfficial ? 4.9 : 4.2)}</span>
+                            <Star size={10} className={isOfficial ? "fill-white" : "fill-current"} />
                         </div>
                     </div>
-
-                    {/* Store Title & Quick Info */}
-                    <div className="flex justify-between items-start gap-3 mb-4">
-                        <div className="flex-1 min-w-0">
-                            <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                                {merchant.business_name}
-                            </h3>
-                            <div className="mt-2 mb-3">
-                                <RatingStars 
-                                    rating={rating?.avg_rating || 0} 
-                                    totalRatings={rating?.total_ratings || 0} 
-                                    size={14} 
-                                />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-bold text-slate-500 dark:text-white/40 truncate max-w-[120px]">
-                                    {addressLine}
-                                </span>
-                                <span className="text-[10px] font-bold text-slate-400 dark:text-white/30 uppercase tracking-widest">•</span>
-                                <div className="flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
-                                    <Sparkles size={10} className="text-emerald-500" />
-                                    <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
-                                        Fast Delivery
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            {/* Detailed info */}
-                            <div className="flex items-center gap-3 mt-3">
-                                <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                                    <span className="w-1 h-1 rounded-full bg-slate-300" />
-                                    <span>Fast Delivery</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                                    <span className="w-1 h-1 rounded-full bg-slate-300" />
-                                    <span>Premium Quality</span>
-                                </div>
-                            </div>
-                        </div>
+                    
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mb-3 truncate">
+                        <MapPin size={14} />
+                        <span className="truncate">{merchant.business_address?.split(',')[0] || (isOfficial ? 'Premium Fulfillment Hub' : 'Local Area')}</span>
                     </div>
 
-                    <div className="flex-1" />
-
-                    {/* CTA Button */}
-                    <div className="mt-6">
-                        <div className="w-full h-12 rounded-2xl bg-slate-900 dark:bg-white/[0.05] border border-slate-800 dark:border-white/10 flex items-center justify-center gap-2 group-hover:bg-emerald-500 group-hover:border-emerald-400 group-hover:text-black transition-all duration-300 shadow-xl group-hover:shadow-emerald-500/25">
-                            <span className="text-xs font-black uppercase tracking-[0.1em] text-white group-hover:text-black">Shop Now</span>
-                            <ChevronRight size={16} className="text-white/50 group-hover:text-black transition-colors" />
+                    <div className="mt-auto pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
+                                <ShieldCheck size={12} className="text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                            <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">Verified Seller</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 text-xs font-medium">
+                            <Truck size={14} />
+                            {shipsIn}
                         </div>
                     </div>
                 </div>
-            </Link>
-        </div>
+            </div>
+        </Link>
     );
 });
 
@@ -227,180 +95,129 @@ const MerchantCard = memo(function MerchantCard({ merchant, rating, isOpen, prio
 export default function ShopHubClient({ merchants = [], ratingsMap = {} }) {
     const [searchInput, setSearchInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
-    const [merchantStatuses, setMerchantStatuses] = useState(() => {
-        const map = {};
-        merchants.forEach(m => { map[m.id] = m.is_open !== false; });
-        return map;
-    });
+    const [activeFilter, setActiveFilter] = useState('Sort');
     const router = useRouter();
-    const inputRef = useRef(null);
     const debounceRef = useRef(null);
 
     const handleRefresh = useCallback(async () => {
         router.refresh();
-        // Artificial delay for UI feedback
         await new Promise(resolve => setTimeout(resolve, 800));
     }, [router]);
 
-    // Debounce search — 150 ms so mobile keyboards don't trigger on every character
     const handleSearchChange = useCallback((e) => {
         const val = e.target.value;
         setSearchInput(val);
         clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => setSearchQuery(val), 150);
+        debounceRef.current = setTimeout(() => setSearchQuery(val), 200);
     }, []);
-
-    // Consolidated realtime: single channel for platform + all merchants
-    useEffect(() => {
-        const supabase = createClient();
-        const nonOfficialMerchantIds = merchants
-            .map(m => m.id)
-            .filter(id => id && id !== 'official');
-
-        if (nonOfficialMerchantIds.length === 0) {
-            const channel = supabase
-                .channel('shop_hub_sync_platform')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'platform_settings', filter: 'key=eq.platform_store' }, (payload) => {
-                    if (payload.new?.value) {
-                        try {
-                            const parsed = typeof payload.new.value === 'string' ? JSON.parse(payload.new.value) : payload.new.value;
-                            setMerchantStatuses(prev => ({ ...prev, official: !!parsed.is_open }));
-                        } catch (e) {}
-                    }
-                })
-                .subscribe();
-            return () => { supabase.removeChannel(channel); };
-        }
-
-        const channel = supabase
-            .channel('shop_hub_sync')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'platform_settings', filter: 'key=eq.platform_store' }, (payload) => {
-                if (payload.new?.value) {
-                    try {
-                        const parsed = typeof payload.new.value === 'string' ? JSON.parse(payload.new.value) : payload.new.value;
-                        setMerchantStatuses(prev => ({ ...prev, official: !!parsed.is_open }));
-                    } catch (e) {}
-                }
-            })
-            .on('postgres_changes', { 
-                event: 'UPDATE', 
-                schema: 'public', 
-                table: 'merchants',
-                filter: `id=in.(${nonOfficialMerchantIds.join(',')})`
-            }, (payload) => {
-                if (payload.new) {
-                    setMerchantStatuses(prev => ({ ...prev, [payload.new.id]: payload.new.is_open !== false }));
-                }
-            })
-            .subscribe();
-
-        return () => { supabase.removeChannel(channel); };
-    }, [merchants]);
 
     const official = merchants.find(m => m.id === 'official');
     const rest = merchants.filter(m => m.id !== 'official');
+    
+    // Apply search and filter logic
+    let processedMerchants = rest.filter(m => (m.business_name || '').toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const filtered = rest.filter(m =>
-        (m.business_name || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    if (activeFilter === 'Top Rated') {
+        processedMerchants.sort((a, b) => {
+            const ratingA = ratingsMap[a.id]?.avg_rating || 4.0;
+            const ratingB = ratingsMap[b.id]?.avg_rating || 4.0;
+            return ratingB - ratingA;
+        });
+    } else if (activeFilter === 'New Arrivals') {
+        processedMerchants.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    } else if (activeFilter === 'Free Shipping') {
+        // Mock free shipping filter deterministic on ID length or character code
+        processedMerchants = processedMerchants.filter(m => (m.id.charCodeAt(0) % 2 === 0));
+    }
 
-    const showFeatured = !searchQuery && official;
+    const filters = ['Sort', 'Free Shipping', 'Top Rated', 'New Arrivals'];
 
     return (
         <PullToRefresh onRefresh={handleRefresh}>
-        <div className="space-y-5">
+            <div className="bg-white dark:bg-gray-900 min-h-screen pb-24 font-[family-name:var(--font-outfit)]">
+                
+                {/* ── Search Header ── */}
+                <div className="sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md pt-4 pb-3 px-4 shadow-sm border-b border-gray-100 dark:border-gray-800">
+                    <div className="max-w-7xl mx-auto flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Package size={24} className="text-blue-600 dark:text-blue-400" />
+                            <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Shop</h1>
+                        </div>
+                        <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden border border-gray-200 dark:border-gray-700">
+                            <Image src="/images/avatar-placeholder.png" alt="Profile" width={40} height={40} />
+                        </div>
+                    </div>
 
-            {/* ── Illustrative Ad Component (lazy loaded) ──── */}
-            {!searchQuery && (
-                <Suspense fallback={<div className="w-full h-[200px] bg-slate-100 dark:bg-white/5 rounded-2xl animate-pulse" />}>
-                    <HeroIllustrativeAd />
-                </Suspense>
-            )}
-
-            {/* ── Banner Carousel (lazy loaded) ────────────── */}
-            {!searchQuery && (
-                <Suspense fallback={<div className="w-full aspect-[16/9] bg-slate-100 dark:bg-white/5 rounded-2xl animate-pulse" />}>
-                    <AdBannerCarousel />
-                </Suspense>
-            )}
-
-            {/* ── Sticky Search bar ─────────────────────────── */}
-            <div className="sticky top-[148px] md:top-[164px] z-30 pt-4 pb-6 -mx-4 px-4 md:-mx-8 md:px-8 bg-[#f7f8fa]/95 dark:bg-[#080a10]/95">
-                <div className="relative group max-w-4xl mx-auto">
-                    <div className="relative">
-                        <Search
-                            size={18}
-                            className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/20 z-10 pointer-events-none group-focus-within:text-emerald-500 transition-colors"
-                        />
+                    <div className="max-w-7xl mx-auto relative">
+                        <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
-                            ref={inputRef}
                             type="text"
                             value={searchInput}
                             onChange={handleSearchChange}
-                            placeholder="Search for stores, items or cuisines…"
-                            className="w-full pl-12 pr-12 py-4 rounded-[1.5rem] bg-white dark:bg-[#13161f] border border-slate-200 dark:border-white/[0.08] shadow-[0_4px_12px_rgba(0,0,0,0.03)] focus:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:focus:shadow-[0_8px_30px_rgba(0,0,0,0.4)] focus:border-emerald-500/30 outline-none font-bold text-base placeholder:text-slate-400 dark:placeholder:text-white/20 text-slate-900 dark:text-white transition-all"
+                            placeholder="Search for electronics, fashion, groceries..."
+                            className="w-full pl-12 pr-10 py-3.5 bg-gray-100 dark:bg-gray-800 border-0 rounded-2xl text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-blue-500/50 shadow-inner transition-shadow"
                         />
                         {searchInput && (
-                            <button
-                                onClick={() => { setSearchInput(''); setSearchQuery(''); inputRef.current?.focus(); }}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-6 h-6 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors"
-                            >
-                                <X size={12} />
+                            <button onClick={() => { setSearchInput(''); setSearchQuery(''); }} className="absolute right-4 top-1/2 -translate-y-1/2">
+                                <X size={16} className="text-gray-500" />
                             </button>
                         )}
                     </div>
                 </div>
-            </div>
 
-            {/* ── Section header ─────────────────────────────── */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                        <Sparkles size={13} className="text-indigo-500" />
-                    </span>
+                <div className="max-w-7xl mx-auto px-4 md:px-8">
+                    {/* ── Sticky Filter Chips ── */}
+                    <div className="sticky top-[140px] z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md py-3 overflow-x-auto no-scrollbar flex gap-2 -mx-4 px-4 md:mx-0 md:px-0 mb-6 mt-4">
+                        <button className="flex items-center justify-center w-9 h-9 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <SlidersHorizontal size={14} className="text-gray-700 dark:text-gray-300" />
+                        </button>
+                        {filters.map(f => (
+                            <button 
+                                key={f}
+                                onClick={() => setActiveFilter(f)}
+                                className={`px-4 py-2 rounded-full border text-sm font-semibold whitespace-nowrap transition-colors ${
+                                    activeFilter === f 
+                                    ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400' 
+                                    : 'bg-white border-gray-300 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                }`}
+                            >
+                                {f}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* ── Feed Content ── */}
                     <div>
-                        <p className="text-sm font-black text-slate-900 dark:text-white leading-none">
-                            {searchQuery ? `"${searchQuery}"` : 'All Stores'}
-                        </p>
-                        <p className="text-[10px] font-medium text-slate-400 dark:text-white/30 mt-0.5">
-                            {searchQuery
-                                ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''}`
-                                : `${rest.length + (official ? 1 : 0)} merchants available`}
-                        </p>
+                        <h2 className="text-lg font-black text-gray-900 dark:text-white tracking-tight mb-6 uppercase flex items-center gap-2">
+                            <span className="w-6 h-[3px] bg-blue-600 rounded-full" />
+                            {searchQuery ? 'Search Results' : 'Featured Stores'}
+                        </h2>
+
+                        {processedMerchants.length === 0 && (!official || (activeFilter === 'Free Shipping' && official.id.charCodeAt(0) % 2 !== 0)) ? (
+                            <div className="py-20 text-center">
+                                <Store size={48} className="mx-auto text-gray-300 dark:text-gray-700 mb-4" />
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">No stores found</h3>
+                                <p className="text-gray-500 text-sm mt-1">Try adjusting your filters.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {!searchQuery && official && activeFilter !== 'Free Shipping' && (
+                                    <FeedCard merchant={official} rating={ratingsMap['official']} isOpen={true} isOfficial={true} priority={true} />
+                                )}
+                                {processedMerchants.map((merchant, idx) => (
+                                    <FeedCard 
+                                        key={merchant.id} 
+                                        merchant={merchant} 
+                                        rating={ratingsMap[merchant.id]} 
+                                        isOpen={true} 
+                                        priority={idx < 4} 
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
-
-                {/* Live indicator */}
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800/30">
-                    <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Live</span>
-                </span>
             </div>
-
-            {/* ── Content ────────────────────────────────────── */}
-            {!showFeatured && filtered.length === 0 ? (
-                <div className="py-16 text-center bg-white dark:bg-[#13161f] rounded-2xl border border-slate-100 dark:border-white/[0.04] animate-fadeIn">
-                    <div className="w-14 h-14 bg-slate-100 dark:bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                        <Store size={22} className="text-slate-400" />
-                    </div>
-                    <p className="font-black text-slate-800 dark:text-white/60 mb-1">No stores found</p>
-                    <p className="text-sm text-slate-400 mb-4">Try a different search</p>
-                    <button
-                        onClick={() => setSearchQuery('')}
-                        className="px-5 py-2 bg-indigo-500 text-white text-sm font-black rounded-full shadow-lg shadow-indigo-500/25 hover:bg-indigo-600 transition-colors"
-                    >
-                        Clear search
-                    </button>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
-                    {showFeatured && <FeaturedCard merchant={official} isOpen={merchantStatuses['official'] !== false} />}
-                    {filtered.map((merchant, idx) => (
-                        <MerchantCard key={merchant.id} merchant={merchant} rating={ratingsMap[merchant.id]} isOpen={merchantStatuses[merchant.id] !== false} priority={idx < 3} />
-                    ))}
-                </div>
-            )}
-        </div>
         </PullToRefresh>
     );
 }

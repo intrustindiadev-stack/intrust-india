@@ -1,178 +1,109 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import FeatureAdvertiser from '@/components/ui/FeatureAdvertiser';
 import {
-    Zap, Banknote, ShoppingBag, Headphones,
-    Smartphone, Tv, Car, Flame, Wallet, CreditCard,
-    Landmark, Gift, FileText, Heart, HelpCircle,
-    ArrowRight, Search, LayoutGrid, ChevronRight, Sun
+    Zap, ShoppingBag, Smartphone, Tv, Car, Flame,
+    Landmark, Gift, FileText, ChevronRight, Sun, Wallet
 } from 'lucide-react';
 
 export default function ServicesPage() {
-    const [activeTab, setActiveTab] = useState('all');
-    const [searchQuery, setSearchQuery] = useState('');
-    const tabsContainerRef = useRef(null);
     const router = useRouter();
 
-    const tabs = [
-        { id: 'all', label: 'All', icon: LayoutGrid },
-        { id: 'shopping', label: 'Shopping', icon: ShoppingBag },
+    const serviceSections = [
+        {
+            title: "Recharge & Pay Bills",
+            items: [
+                { id: 'mobile', title: "Mobile", icon: Smartphone, href: "/recharge/mobile", color: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" },
+                { id: 'dth', title: "DTH", icon: Tv, href: "/recharge/dth", color: "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" },
+                { id: 'electricity', title: "Electricity", icon: Zap, href: "/recharge/electricity", color: "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400" },
+                { id: 'fastag', title: "FASTag", icon: Car, href: "/recharge/fastag", color: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" },
+                { id: 'gas', title: "Gas Booking", icon: Flame, href: "/recharge/gas", color: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" },
+                { id: 'water', title: "Water", icon: Zap, href: "/recharge/water", color: "bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400" }
+            ]
+        },
+        {
+            title: "Loans & Credit",
+            items: [
+                { id: 'cibil', title: "Credit Score", icon: FileText, href: "/cibil", color: "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400", badge: "Free" },
+                { id: 'loan', title: "Personal Loan", icon: Landmark, href: "/cibil", color: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" },
+                { id: 'credit', title: "Credit Cards", icon: Wallet, href: "#", color: "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" }
+            ]
+        },
+        {
+            title: "Explore Intrust",
+            items: [
+                { id: 'store', title: "Intrust Shop", icon: ShoppingBag, href: "/shop", color: "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400", badge: "New" },
+                { id: 'gift', title: "Gift Cards", icon: Gift, href: "/gift-cards", color: "bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400" },
+                { id: 'nfc', title: "Smart Card", icon: Smartphone, href: "/nfc-service", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
+                { id: 'solar', title: "Solar Power", icon: Sun, href: "/solar", color: "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400" },
+            ]
+        }
     ];
-
-    const allServices = [
-        { id: 'store', category: 'shopping', title: "Online Store", subtitle: "Exclusive Deals", icon: ShoppingBag, href: "/shop", badge: "New" },
-        { id: 'nfc', category: 'shopping', title: "NFC Smart Card", subtitle: "Nexus 2040 Edition", icon: Smartphone, href: "/nfc-service", highlight: true, badge: "Elite" },
-        { id: 'gift', category: 'shopping', title: "Gift Cards", subtitle: "For your loved ones", icon: Gift, href: "/gift-cards" },
-        { id: 'solar', category: 'shopping', title: "Solar Power", subtitle: "₹0 upfront · Free survey", icon: Sun, href: "/solar", badge: "New" },
-    ];
-
-    const filteredServices = allServices.filter(service => {
-        const matchesTab = activeTab === 'all' || service.category === activeTab;
-        const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesTab && matchesSearch;
-    });
 
     return (
-        <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900 font-[family-name:var(--font-outfit)] pb-28">
+        <div className="min-h-screen bg-gray-50/80 dark:bg-gray-950 font-[family-name:var(--font-outfit)] pb-28">
             <Navbar theme="light" />
 
-            <div className="pt-28 px-4 md:px-8 max-w-7xl mx-auto">
+            <div className="pt-24 px-4 md:px-8 max-w-7xl mx-auto">
 
                 {/* Header Section */}
-                <div className="mb-4">
-                    {/* Breadcrumbs */}
+                <div className="mb-6">
                     <nav className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 mb-6">
-                        <button onClick={() => router.push('/dashboard')} className="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Dashboard</button>
+                        <button onClick={() => router.push('/dashboard')} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Dashboard</button>
                         <ChevronRight size={14} />
                         <span className="text-gray-900 dark:text-white font-bold">Services</span>
                     </nav>
 
-                    <h1 className="text-3xl md:text-4xl font-bold text-[#171A21] dark:text-gray-100 mb-3 tracking-tight">
-                        Services
+                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                        All Services
                     </h1>
-                    <p className="text-slate-500 dark:text-gray-400 text-sm md:text-base mb-8 max-w-2xl">
-                        Everything you need to manage your payments and finances.
-                    </p>
-
-                    {/* Ad Banner */}
-                    <div className="mb-8">
-                        <FeatureAdvertiser />
-                    </div>
-
-                    {/* Premium Search Bar */}
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-gray-400 dark:text-gray-500 group-focus-within:text-[#171A21] dark:group-focus-within:text-gray-100 transition-colors" />
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="Find a service (e.g., Mobile, Loan)..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="block w-full pl-11 pr-4 py-4 bg-white dark:bg-gray-800 border-0 ring-1 ring-gray-200 dark:ring-gray-700 rounded-2xl text-[#171A21] dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-[#171A21]/10 dark:focus:ring-gray-600 focus:outline-none shadow-sm transition-all"
-                        />
-                    </div>
                 </div>
 
-                {/* Categories - Premium Horizontal Scroll */}
-                <div className="sticky top-[4.5rem] z-20 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-xl py-4 -mx-4 px-4 md:mx-0 md:px-0 mb-6 border-b border-gray-100/50 dark:border-gray-800/50 md:border-none">
-                    <div
-                        ref={tabsContainerRef}
-                        className="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth md:flex-wrap pb-1"
-                    >
-                        {tabs.map((tab) => {
-                            const isActive = activeTab === tab.id;
-                            return (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap border ${isActive
-                                        ? 'bg-[#171A21] dark:bg-gray-700 text-white border-[#171A21] dark:border-gray-700 shadow-lg shadow-[#171A21]/10 scale-100'
-                                        : 'bg-white dark:bg-gray-800 text-slate-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 scale-95 hover:scale-100'
-                                        }`}
-                                >
-                                    <tab.icon size={16} strokeWidth={isActive ? 2.5 : 2} />
-                                    {tab.label}
-                                </button>
-                            );
-                        })}
-                    </div>
+                {/* Ad Banner */}
+                <div className="mb-8">
+                    <FeatureAdvertiser />
                 </div>
 
-                {/* Services Grid */}
-                <motion.div
-                    layout
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-                >
-                    <AnimatePresence mode="popLayout">
-                        {filteredServices.map((service) => (
-                            <motion.div
-                                key={service.id}
-                                layout
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                <Link href={service.href} className="block h-full">
-                                    <div className={`group h-full bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-300 relative overflow-hidden flex items-center gap-4`}>
-
-                                        {/* Icon Container */}
-                                        <div className={`p-4 rounded-xl ${service.category === 'bills' ? 'bg-blue-50 text-blue-600' : service.category === 'finance' ? 'bg-emerald-50 text-emerald-600' : service.category === 'shopping' ? 'bg-pink-50 text-pink-600' : 'bg-gray-100 text-gray-600'} group-hover:scale-110 transition-transform duration-300`}>
-                                            <service.icon size={24} strokeWidth={2} />
-                                        </div>
-
-                                        {/* Text Content */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <h3 className="text-base font-semibold text-[#171A21] dark:text-gray-100 truncate">
-                                                    {service.title}
-                                                </h3>
-                                                {service.badge && (
-                                                    <span className="bg-[#171A21] text-white text-[10px] uppercase font-bold px-1.5 py-0.5 rounded flex-shrink-0">
-                                                        {service.badge}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="text-xs text-slate-500 dark:text-gray-400 truncate group-hover:text-slate-700 dark:group-hover:text-gray-300 transition-colors">
-                                                {service.subtitle}
-                                            </p>
-                                        </div>
-
-                                        {/* Arrow */}
-                                        <div className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                                            <ChevronRight size={18} className="text-gray-400" />
-                                        </div>
-
-                                    </div>
-                                </Link>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
-                </motion.div>
-
-                {/* Empty State */}
-                {filteredServices.length === 0 && (
-                    <div className="text-center py-32">
-                        <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Search size={24} className="text-gray-400" />
-                        </div>
-                        <h3 className="text-lg font-bold text-[#171A21] dark:text-gray-100">No services found</h3>
-                        <p className="text-slate-500 dark:text-gray-400">We couldn't find anything matching "{searchQuery}"</p>
-                        <button
-                            onClick={() => { setSearchQuery(''); setActiveTab('all'); }}
-                            className="mt-4 text-sm font-semibold text-[#171A21] hover:underline"
+                {/* Categorized Sections */}
+                <div className="space-y-6">
+                    {serviceSections.map((section, idx) => (
+                        <motion.div
+                            key={section.title}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            className="bg-white dark:bg-gray-900 rounded-3xl p-5 md:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-gray-100 dark:border-gray-800"
                         >
-                            Clear filters
-                        </button>
-                    </div>
-                )}
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 tracking-tight">{section.title}</h2>
+                            
+                            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-y-6 gap-x-2">
+                                {section.items.map(item => (
+                                    <Link key={item.id} href={item.href} className="group flex flex-col items-center text-center focus-visible:outline-none">
+                                        <div className="relative mb-2">
+                                            <div className={`w-14 h-14 md:w-16 md:h-16 rounded-[1.25rem] md:rounded-3xl flex items-center justify-center ${item.color} group-hover:scale-105 group-active:scale-95 transition-transform shadow-sm`}>
+                                                <item.icon className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.5} />
+                                            </div>
+                                            {item.badge && (
+                                                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded shadow-sm border border-white dark:border-gray-900 z-10">
+                                                    {item.badge}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span className="text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors px-1 leading-tight max-w-[80px]">
+                                            {item.title}
+                                        </span>
+                                    </Link>
+                                ))}
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
             </div>
 
             <CustomerBottomNav />

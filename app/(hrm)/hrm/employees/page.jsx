@@ -146,11 +146,119 @@ function EmployeeDrawer({ employee, onClose, onSave }) {
     );
 }
 
+function AddEmployeeDrawer({ onClose, onSave }) {
+    const [form, setForm] = useState({
+        full_name: '',
+        email: '',
+        phone: '',
+        department: '',
+        employee_id: '',
+        joining_date: new Date().toISOString().split('T')[0],
+        employment_type: 'full_time',
+        city: '',
+        base_salary: 0,
+        role: 'employee',
+    });
+    const [saving, setSaving] = useState(false);
+    const up = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+    const handleSave = async () => {
+        if (!form.full_name || !form.email) {
+            toast.error('Name and Email are required');
+            return;
+        }
+        setSaving(true);
+        try {
+            // Usually we create Auth user first, but let's insert into profiles for this demo
+            const { data, error } = await supabase.from('user_profiles').insert([form]).select().single();
+            if (error) throw error;
+            toast.success('New employee added!');
+            onSave(data);
+            onClose();
+        } catch (err) { toast.error(err.message); }
+        finally { setSaving(false); }
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex">
+            <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                className="w-full max-w-md bg-white flex flex-col h-full shadow-2xl">
+                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-900">Add New Employee</h2>
+                        <p className="text-xs text-gray-400 mt-0.5">Onboard a new team member</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl"><X size={18} className="text-gray-500" /></button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                    {[
+                        { label: 'Full Name *', key: 'full_name', placeholder: 'John Doe' },
+                        { label: 'Email *', key: 'email', placeholder: 'john@intrust.com', type: 'email' },
+                        { label: 'Phone', key: 'phone', placeholder: '10-digit mobile' },
+                        { label: 'Employee ID', key: 'employee_id', placeholder: 'e.g. EMP001' },
+                        { label: 'City', key: 'city', placeholder: 'e.g. Mumbai' },
+                        { label: 'Base Salary (₹/month)', key: 'base_salary', placeholder: '30000', type: 'number' },
+                    ].map(f => (
+                        <div key={f.key}>
+                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">{f.label}</label>
+                            <input type={f.type || 'text'} value={form[f.key]} onChange={e => up(f.key, e.target.value)} placeholder={f.placeholder}
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all" />
+                        </div>
+                    ))}
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Department</label>
+                        <select value={form.department} onChange={e => up('department', e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all">
+                            <option value="">Select Department...</option>
+                            {['Engineering', 'Sales', 'Operations', 'HR', 'Customer Support', 'Marketing', 'Finance'].map(dept => (
+                                <option key={dept} value={dept}>{dept}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Joining Date</label>
+                        <input type="date" value={form.joining_date} onChange={e => up('joining_date', e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Employment Type</label>
+                        <select value={form.employment_type} onChange={e => up('employment_type', e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            {['full_time', 'part_time', 'contract', 'intern'].map(t => (
+                                <option key={t} value={t}>{t.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Role</label>
+                        <select value={form.role} onChange={e => up('role', e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select>
+                    </div>
+                </div>
+                <div className="p-5 border-t border-gray-100 flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">Cancel</button>
+                    <button onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">
+                        {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Plus size={16} /> Add Employee</>}
+                    </button>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+}
+
 export default function EmployeesPage() {
     const [employees, setEmployees] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [editing, setEditing] = useState(null);
+    const [showAdd, setShowAdd] = useState(false);
 
     const fetchEmployees = useCallback(async () => {
         setIsLoading(true);
@@ -177,12 +285,14 @@ export default function EmployeesPage() {
         e.employee_id?.toLowerCase().includes(search.toLowerCase())
     );
 
-    const handleSave = (updated) => setEmployees(prev => prev.map(e => e.id === updated.id ? updated : e));
+    const handleUpdate = (updated) => setEmployees(prev => prev.map(e => e.id === updated.id ? updated : e));
+    const handleAdd = (newEmp) => setEmployees(prev => [newEmp, ...prev]);
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 min-h-screen">
             <AnimatePresence>
-                {editing && <EmployeeDrawer employee={editing} onClose={() => setEditing(null)} onSave={handleSave} />}
+                {editing && <EmployeeDrawer employee={editing} onClose={() => setEditing(null)} onSave={handleUpdate} />}
+                {showAdd && <AddEmployeeDrawer onClose={() => setShowAdd(false)} onSave={handleAdd} />}
             </AnimatePresence>
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -190,9 +300,14 @@ export default function EmployeesPage() {
                     <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Employees</h1>
                     <p className="text-sm text-gray-500 mt-1">{filtered.length} team member{filtered.length !== 1 ? 's' : ''}</p>
                 </div>
-                <button onClick={fetchEmployees} className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50">
-                    <RefreshCw size={16} className="text-gray-500" />
-                </button>
+                <div className="flex items-center gap-2">
+                    <button onClick={fetchEmployees} className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50">
+                        <RefreshCw size={16} className="text-gray-500" />
+                    </button>
+                    <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-emerald-500/25 text-sm">
+                        <Plus size={16} /> New Employee
+                    </button>
+                </div>
             </div>
 
             <div className="relative">
