@@ -5,7 +5,7 @@ import { Store, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 
-export default function StoreStatusToggle({ initialStoreData }) {
+export default function StoreStatusToggle({ initialStoreData, compact = false }) {
     const supabase = createClient();
     const [isOpen, setIsOpen] = useState(initialStoreData?.is_open ?? true);
     const [isLoading, setIsLoading] = useState(false);
@@ -55,6 +55,42 @@ export default function StoreStatusToggle({ initialStoreData }) {
         }
     };
 
+    if (compact) {
+        return (
+            <div className="relative flex items-center justify-between gap-3 w-full">
+                <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-start">
+                        <span className="text-[10px] sm:text-xs font-bold text-slate-900 uppercase tracking-wide">
+                            Store Status
+                        </span>
+                        <span className={`text-[10px] font-black ${isOpen ? 'text-emerald-700' : 'text-slate-700'}`}>
+                            {isOpen ? 'LIVE' : 'OFFLINE'}
+                        </span>
+                    </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={isOpen}
+                        onChange={(e) => {
+                            const val = e.target.checked;
+                            setIsOpen(val);
+                            handleSave(val);
+                        }}
+                        disabled={isLoading}
+                    />
+                    <div className="w-9 h-5 bg-slate-400/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></div>
+                </label>
+                {isLoading && (
+                    <div className="absolute inset-0 bg-white/50 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                        <Loader2 className="w-4 h-4 animate-spin text-slate-800" />
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     return (
         <div className="relative bg-white dark:bg-[#0c0e16] border border-slate-200 dark:border-white/10 rounded-2xl p-4 sm:p-5 shadow-lg shadow-slate-200/50 dark:shadow-none w-full sm:w-auto flex flex-col justify-center overflow-hidden transition-all duration-300 hover:border-blue-400/30 group min-w-[280px]">
             <div className="relative flex items-center justify-between gap-4 z-10">
@@ -92,7 +128,6 @@ export default function StoreStatusToggle({ initialStoreData }) {
                     <div className="w-[56px] h-8 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700/50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-slate-300 dark:after:border-slate-600 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-slate-600 peer-checked:bg-emerald-500 peer-checked:dark:bg-emerald-500/80 shadow-inner"></div>
                 </label>
             </div>
-
 
             {isLoading && (
                 <div className="absolute inset-0 bg-white/60 dark:bg-black/60 backdrop-blur-[4px] flex items-center justify-center z-20 transition-all rounded-[2rem]">

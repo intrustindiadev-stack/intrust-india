@@ -18,37 +18,62 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     const { merchant } = useMerchant();
     const { isSubscribed, requireSubscription } = useSubscription();
 
-    const accountItems = [
-        { label: "Profile", href: "/merchant/profile", icon: "person_outline" },
-        { label: "Settings", href: "/merchant/settings", icon: "settings" },
-        { label: "Subscription", href: "/merchant/subscription", icon: "card_membership" },
+    const groups = [
+        {
+            title: "Home",
+            items: [
+                { label: "Dashboard", href: "/merchant/dashboard", icon: "grid_view" },
+            ]
+        },
+        {
+            title: "E-Commerce",
+            items: [
+                { label: "Wholesale", href: "/merchant/shopping/wholesale", icon: "storefront" },
+                { label: "Inventory", href: "/merchant/shopping/inventory", icon: "inventory_2" },
+                { label: "Orders", href: "/merchant/shopping/orders", icon: "shopping_basket" },
+                { label: "Auto Mode", href: "/merchant/shopping/auto-mode", icon: "offline_bolt" },
+            ]
+        },
+        {
+            title: "Gift Cards",
+            items: [
+                { label: "Purchase Coupons", href: "/merchant/purchase", icon: "add_shopping_cart" },
+                { label: "Inventory", href: "/merchant/inventory/giftcards", icon: "card_giftcard" },
+                { label: "NFC Card", href: "/merchant/nfc-service", icon: "contactless" },
+            ]
+        },
+        {
+            title: "Finance & Growth",
+            items: [
+                { label: "Portfolio", href: "/merchant/wallet", icon: "account_balance_wallet" },
+                { label: "Store Credits", href: "/merchant/udhari", icon: "credit_score" },
+                { label: "Lockin Portfolio", href: "/merchant/lockin", icon: "lock_clock" },
+                { label: "AI Grow", href: "/merchant/investments", icon: "auto_graph" },
+                { label: "My Network", href: "/merchant/referrals", icon: "share" },
+            ]
+        },
+        {
+            title: "Analytics",
+            items: [
+                { label: "Analytics", href: "/merchant/analytics", icon: "analytics" },
+                { label: "Ratings", href: "/merchant/ratings", icon: "star" },
+            ]
+        },
+        {
+            title: "Account",
+            items: [
+                { label: "Profile", href: "/merchant/profile", icon: "person_outline" },
+                { label: "Settings", href: "/merchant/settings", icon: "settings" },
+                { label: "Subscription", href: "/merchant/subscription", icon: "card_membership" },
+            ]
+        }
     ];
 
-    const operationsItems = [
-        { label: "Dashboard", href: "/merchant/dashboard", icon: "grid_view" },
-        { label: "Inventory", href: "/merchant/inventory", icon: "inventory_2" },
-        { label: "Purchase Coupons", href: "/merchant/purchase", icon: "add_shopping_cart" },
-        { label: "Store Credits", href: "/merchant/udhari", icon: "credit_score" },
-        { label: "NFC Card", href: "/merchant/nfc-service", icon: "contactless" },
-        { label: "Lockin Portfolio", href: "/merchant/lockin", icon: "lock_clock" },
-        { label: "AI Grow", href: "/merchant/investments", icon: "auto_graph" },
-        { label: "Portfolio", href: "/merchant/wallet", icon: "account_balance_wallet" },
-        { label: "My Network", href: "/merchant/referrals", icon: "share" },
-        { label: "Shopping Orders", href: "/merchant/shopping/orders", icon: "shopping_basket" },
-        { label: "Auto Mode", href: "/merchant/shopping/auto-mode", icon: "offline_bolt" },
-        { label: "Ratings", href: "/merchant/ratings", icon: "star" },
-        { label: "Analytics", href: "/merchant/analytics", icon: "analytics" },
-    ];
-
-    const activeGroupTitle = operationsItems.some(item => pathname === item.href) 
-        ? "Operations" 
-        : accountItems.some(item => pathname === item.href || pathname?.startsWith(item.href.split('?')[0] + '/')) 
-            ? "Account" 
-            : undefined;
+    const activeGroupTitle = groups.find(g => g.items.some(item => pathname === item.href || pathname?.startsWith(item.href.split('?')[0] + '/')))?.title || "Home";
 
     const { isOpen: isGroupOpen, toggleGroup } = useCollapsibleNav({
-        storageKey: 'intrust:merchant:sidebar-groups',
-        groupTitles: ['Operations', 'Account'],
+        storageKey: 'intrust:merchant:sidebar-groups-v2',
+        groupTitles: groups.map(g => g.title),
         activeGroupTitle
     });
 
@@ -143,129 +168,80 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
                 <nav className="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar pb-6 relative z-10">
                     <LayoutGroup>
-                        {/* Operations Section — gated behind subscription */}
-                        <div className="pb-2 px-6">
-                            <button
-                                onClick={() => toggleGroup('Operations')}
-                                className="w-full flex items-center justify-between group/header"
-                                aria-expanded={isGroupOpen('Operations')}
-                                aria-controls="group-operations"
-                            >
-                                <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 font-black group-hover/header:text-slate-600 dark:group-hover/header:text-slate-300 transition-colors">Operations</p>
-                                <span className={`material-icons-round text-slate-400 dark:text-slate-500 text-[14px] transition-transform duration-200 ${isGroupOpen('Operations') ? 'rotate-180' : ''}`}>expand_more</span>
-                            </button>
-                        </div>
+                        {groups.map((group, groupIndex) => (
+                            <div key={group.title} className={groupIndex > 0 ? "pt-4" : ""}>
+                                <div className="pb-2 px-6">
+                                    <button
+                                        onClick={() => toggleGroup(group.title)}
+                                        className="w-full flex items-center justify-between group/header"
+                                        aria-expanded={isGroupOpen(group.title)}
+                                        aria-controls={`group-${group.title}`}
+                                    >
+                                        <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 font-black group-hover/header:text-slate-600 dark:group-hover/header:text-slate-300 transition-colors">{group.title}</p>
+                                        <span className={`material-icons-round text-slate-400 dark:text-slate-500 text-[14px] transition-transform duration-200 ${isGroupOpen(group.title) ? 'rotate-180' : ''}`}>expand_more</span>
+                                    </button>
+                                </div>
 
-                        <AnimatePresence initial={false}>
-                            {isGroupOpen('Operations') && (
-                                <motion.div
-                                    id="group-operations"
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: 'auto', opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="overflow-hidden"
-                                >
-                                    {operationsItems.map((item) => {
-                                        const isActive = pathname === item.href;
-                                        const locked = !isSubscribed;
+                                <AnimatePresence initial={false}>
+                                    {isGroupOpen(group.title) && (
+                                        <motion.div
+                                            id={`group-${group.title}`}
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="overflow-hidden"
+                                        >
+                                            {group.items.map((item) => {
+                                                const isActive = pathname === item.href || (item.href !== '/merchant/dashboard' && pathname?.startsWith(item.href.split('?')[0] + '/'));
+                                                // Lock all items except Home and Account if not subscribed
+                                                const locked = !isSubscribed && group.title !== "Home" && group.title !== "Account";
 
-                                        if (locked) {
-                                            return (
-                                                <button
-                                                    key={item.href}
-                                                    onClick={() => requireSubscription(item.label)}
-                                                    className="group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-400 w-full text-left opacity-60 hover:opacity-80"
-                                                >
-                                                    <span className="material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 group-hover:scale-110">{item.icon}</span>
-                                                    <span className="text-[13px] font-bold tracking-wide z-10 flex-1">{item.label}</span>
-                                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[8px] font-black uppercase tracking-wider z-10">
-                                                        <span className="material-icons-round text-[10px]">lock</span>
-                                                    </span>
-                                                </button>
-                                            );
-                                        }
+                                                if (locked) {
+                                                    return (
+                                                        <button
+                                                            key={item.href}
+                                                            onClick={() => requireSubscription(item.label)}
+                                                            className="group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-400 w-full text-left opacity-60 hover:opacity-80"
+                                                        >
+                                                            <span className="material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 group-hover:scale-110">{item.icon}</span>
+                                                            <span className="text-[13px] font-bold tracking-wide z-10 flex-1">{item.label}</span>
+                                                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[8px] font-black uppercase tracking-wider z-10">
+                                                                <span className="material-icons-round text-[10px]">lock</span>
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                }
 
-                                        return (
-                                            <Link
-                                                key={item.href}
-                                                href={item.href}
-                                                onClick={() => setIsOpen(false)}
-                                                className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative ${isActive
-                                                    ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
-                                                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                                                    }`}
-                                            >
-                                                {isActive && (
-                                                    <span className="absolute inset-0 rounded-2xl overflow-hidden z-0 pointer-events-none">
-                                                        <motion.span 
-                                                            layoutId="sidebar-active"
-                                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                                            className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent border-l-4 border-slate-900 dark:border-[#D4AF37]" 
-                                                        />
-                                                    </span>
-                                                )}
-                                                <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
-                                                <span className="text-[13px] font-bold tracking-wide z-10">{item.label}</span>
-                                            </Link>
-                                        );
-                                    })}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        {/* Account Section — always accessible */}
-                        <div className="pt-6 pb-2 px-6">
-                            <button
-                                onClick={() => toggleGroup('Account')}
-                                className="w-full flex items-center justify-between group/header"
-                                aria-expanded={isGroupOpen('Account')}
-                                aria-controls="group-account"
-                            >
-                                <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 font-black group-hover/header:text-slate-600 dark:group-hover/header:text-slate-300 transition-colors">Account</p>
-                                <span className={`material-icons-round text-slate-400 dark:text-slate-500 text-[14px] transition-transform duration-200 ${isGroupOpen('Account') ? 'rotate-180' : ''}`}>expand_more</span>
-                            </button>
-                        </div>
-
-                        <AnimatePresence initial={false}>
-                            {isGroupOpen('Account') && (
-                                <motion.div
-                                    id="group-account"
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: 'auto', opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="overflow-hidden"
-                                >
-                                    {accountItems.map((item) => {
-                                        const isActive = pathname === item.href || pathname?.startsWith(item.href.split('?')[0] + '/');
-                                        return (
-                                            <Link
-                                                key={item.href}
-                                                href={item.href}
-                                                onClick={() => setIsOpen(false)}
-                                                className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative ${isActive
-                                                    ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
-                                                    : `text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white ${!isSubscribed ? 'font-semibold' : ''}`
-                                                    }`}
-                                            >
-                                                {isActive && (
-                                                    <span className="absolute inset-0 rounded-2xl overflow-hidden z-0 pointer-events-none">
-                                                        <motion.span 
-                                                            layoutId="sidebar-active"
-                                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                                            className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent border-l-4 border-slate-900 dark:border-[#D4AF37]" 
-                                                        />
-                                                    </span>
-                                                )}
-                                                <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
-                                                <span className="text-[13px] font-bold tracking-wide z-10">{item.label}</span>
-                                            </Link>
-                                        );
-                                    })}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                                return (
+                                                    <Link
+                                                        key={item.href}
+                                                        href={item.href}
+                                                        onClick={() => setIsOpen(false)}
+                                                        className={`group flex items-center space-x-3 px-4 py-3 mx-2 rounded-2xl transition-all duration-300 relative ${isActive
+                                                            ? "text-slate-900 dark:text-[#D4AF37] shadow-sm"
+                                                            : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                                            }`}
+                                                    >
+                                                        {isActive && (
+                                                            <span className="absolute inset-0 rounded-2xl overflow-hidden z-0 pointer-events-none">
+                                                                <motion.span 
+                                                                    layoutId="sidebar-active"
+                                                                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                                                    className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent border-l-4 border-slate-900 dark:border-[#D4AF37]" 
+                                                                />
+                                                            </span>
+                                                        )}
+                                                        <span className={`material-icons-round text-[20px] transition-transform duration-300 z-10 shrink-0 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
+                                                        <span className="text-[13px] font-bold tracking-wide z-10">{item.label}</span>
+                                                    </Link>
+                                                );
+                                            })}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        ))}
                     </LayoutGroup>
                 </nav>
 
