@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import FeatureAdvertiser from '@/components/ui/FeatureAdvertiser';
 import {
-    Zap, ShoppingBag, Car, Flame,
+    Zap, ShoppingBag, Smartphone, Car, Flame,
     Landmark, Gift, ChevronRight, Sun, Wallet
 } from 'lucide-react';
 
