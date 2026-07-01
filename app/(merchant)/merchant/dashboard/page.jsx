@@ -146,7 +146,7 @@ export default async function MerchantDashboardPage() {
     return (
         <div className="relative min-h-screen bg-slate-50 dark:bg-[#020617] -mx-4 sm:-mx-8 -mt-4 sm:-mt-8">
             {/* Header Layer (Normal Flow) */}
-            <DashboardHeader merchant={merchant} stats={stats} profile={profile} />
+            <DashboardHeader merchant={merchant} profile={profile} walletBalancePaise={merchant.wallet_balance_paise || 0} />
 
             {/* Overlapping Content Layer */}
             <div className="relative z-10 -mt-16 px-4 sm:px-6 md:px-8 pb-32 max-w-7xl mx-auto">

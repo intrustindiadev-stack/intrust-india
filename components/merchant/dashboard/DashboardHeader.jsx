@@ -5,7 +5,7 @@ import Link from 'next/link';
 import LiveButton from '@/components/merchant/LiveButton';
 import StoreStatusToggle from '@/components/merchant/StoreStatusToggle';
 
-export default function DashboardHeader({ merchant, stats, profile }) {
+export default function DashboardHeader({ merchant, profile, walletBalancePaise }) {
     const [showBalance, setShowBalance] = useState(false);
     const [animatedRevenue, setAnimatedRevenue] = useState(0);
 
@@ -13,7 +13,7 @@ export default function DashboardHeader({ merchant, stats, profile }) {
         if (showBalance) {
             let startTimestamp = null;
             const duration = 800; // ms
-            const target = stats.totalRevenue || 0;
+            const target = walletBalancePaise / 100;
 
             const step = (timestamp) => {
                 if (!startTimestamp) startTimestamp = timestamp;
@@ -33,7 +33,7 @@ export default function DashboardHeader({ merchant, stats, profile }) {
         } else {
             setAnimatedRevenue(0);
         }
-    }, [showBalance, stats.totalRevenue]);
+    }, [showBalance, walletBalancePaise]);
 
     // Determine greeting
     const hour = new Date().getHours();
@@ -81,7 +81,7 @@ export default function DashboardHeader({ merchant, stats, profile }) {
                     className="flex items-center gap-2 text-slate-800/80 mb-1 cursor-pointer hover:text-slate-900 transition-colors inline-flex"
                     onClick={() => setShowBalance(!showBalance)}
                 >
-                    <p className="text-sm font-bold">Total Revenue</p>
+                    <p className="text-sm font-bold">My Portfolio</p>
                     <span className="material-icons-round text-[16px]">
                         {showBalance ? 'visibility' : 'visibility_off'}
                     </span>

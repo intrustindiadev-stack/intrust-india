@@ -13,9 +13,17 @@ export function useWallet() {
     // Helper to get auth headers
     const getAuthHeaders = async () => {
         try {
-            const { data: { session }, error } = await supabase.auth.getSession();
-            if (error || !session?.access_token) {
-                console.warn('[useWallet] No active session');
+            // Validate user server-side first to avoid stale sessions
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (userError || !user) {
+                console.warn('[useWallet] Invalid user or no active user');
+                return null;
+            }
+
+            // Get session token
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError || !session?.access_token) {
+                console.warn('[useWallet] No active session token');
                 return null;
             }
             return {
