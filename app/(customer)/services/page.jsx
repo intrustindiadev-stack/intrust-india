@@ -8,30 +8,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import FeatureAdvertiser from '@/components/ui/FeatureAdvertiser';
 import {
-    Zap, ShoppingBag, Smartphone, Car, Flame,
-    Landmark, Gift, ChevronRight, Sun, Wallet
+    ShoppingBag, Smartphone,
+    Gift, ChevronRight, Sun
 } from 'lucide-react';
 
 export default function ServicesPage() {
     const router = useRouter();
 
     const serviceSections = [
-        {
-            title: "Recharge & Pay Bills",
-            items: [
-                { id: 'electricity', title: "Electricity", icon: Zap, href: "/recharge/electricity", color: "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400" },
-                { id: 'fastag', title: "FASTag", icon: Car, href: "/recharge/fastag", color: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" },
-                { id: 'gas', title: "Gas Booking", icon: Flame, href: "/recharge/gas", color: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" },
-                { id: 'water', title: "Water", icon: Zap, href: "/recharge/water", color: "bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400" }
-            ]
-        },
-        {
-            title: "Loans & Credit",
-            items: [
-                { id: 'loan', title: "Personal Loan", icon: Landmark, href: "/cibil", color: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" },
-                { id: 'credit', title: "Credit Cards", icon: Wallet, href: "#", color: "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" }
-            ]
-        },
         {
             title: "Explore Intrust",
             items: [
