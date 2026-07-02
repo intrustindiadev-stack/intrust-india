@@ -26,7 +26,7 @@ export default async function MerchantDashboardPage() {
     // 2. Get Merchant Profile & Role
     const { data: profile } = await supabase
         .from('user_profiles')
-        .select('role')
+        .select('role, avatar_url')
         .eq('id', user.id)
         .single();
 

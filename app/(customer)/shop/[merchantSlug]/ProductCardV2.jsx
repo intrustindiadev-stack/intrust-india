@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, memo } from 'react';
-import { Plus, Minus, Package, BadgeCheck, Check, Heart, Store } from 'lucide-react';
+import { Plus, Minus, Package, BadgeCheck, Check, Heart } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -10,7 +10,7 @@ import { isStorefrontItemOOS } from '@/lib/shopping/stock';
 import OutOfStockOverlay from '@/components/ui/OutOfStockOverlay';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 
-function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#000000', secondaryColor = '#1e293b', isWishlisted = false, onWishlist, isStoreOpen = true }) {
+function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#ff477e', secondaryColor = '#ff477e', isWishlisted = false, onWishlist, isStoreOpen = true }) {
     const router = useRouter();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -45,204 +45,93 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#00000
 
     return (
         <div
-            className={`group relative flex flex-col h-full rounded-2xl overflow-hidden transition-all duration-300 ${isDark
-                ? 'bg-[#12151c] hover:bg-[#161a24] border shadow-lg'
-                : 'bg-white border-slate-200 shadow-sm hover:shadow-md border'
+            className={`group relative flex flex-col h-full rounded-2xl p-2.5 sm:p-3 transition-all duration-300 ${isDark
+                ? 'bg-[#0c0e16] hover:bg-[#12151c] border border-white/[0.04] shadow-[0_4px_20px_rgb(0,0,0,0.1)]'
+                : 'bg-white border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.04)] border hover:shadow-[0_4px_20px_rgb(0,0,0,0.08)]'
                 }`}
-            style={isDark ? {
-                borderColor: `${primaryColor}12`,
-                boxShadow: `0 4px 24px ${primaryColor}06`
-            } : {}}
         >
+            {/* Product Image */}
             <div
-                className={`absolute top-0 left-0 text-white text-[10px] font-black px-2.5 py-1 rounded-br-xl z-10`}
-                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+                onClick={() => product?.slug && router.push(`/shop/product/${product.slug}`)}
+                className={`relative w-full aspect-square shrink-0 rounded-xl flex items-center justify-center overflow-hidden cursor-pointer mb-3 ${isDark ? 'bg-gray-800' : 'bg-slate-50'}`}
             >
-                {discountPct}% OFF
+                {product.product_images?.[0] ? (
+                    <Image
+                        src={product.product_images[0]}
+                        alt={product.title}
+                        fill
+                        sizes="(max-width: 640px) 150px, 200px"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                    />
+                ) : (
+                    <Package size={24} className={isDark ? 'text-white/20' : 'text-slate-300'} />
+                )}
+                {oos && <OutOfStockOverlay />}
             </div>
 
+            {/* Product Details */}
             <div
-                onClick={() => {
-                    // Guard: only navigate if slug exists — prevents /shop/product/undefined
-                    if (product?.slug) {
-                        router.push(`/shop/product/${product.slug}`);
-                    }
-                }}
-                className={`relative flex flex-col flex-1 p-2 md:p-3 ${product?.slug ? 'cursor-pointer' : 'cursor-default'}`}
+                onClick={() => product?.slug && router.push(`/shop/product/${product.slug}`)}
+                className={`flex flex-col flex-1 w-full justify-between ${product?.slug ? 'cursor-pointer' : 'cursor-default'} ${oos ? 'opacity-50' : ''}`}
             >
-
-                {/* Product Image - Enforced aspect ratio for layout stability */}
-                <div
-                    className={`w-full aspect-square relative mb-3 rounded-xl flex items-center justify-center overflow-hidden ${isDark ? 'bg-[#0c0e14]' : 'bg-slate-50/50'}`}
-                    style={{
-                        aspectRatio: '1 / 1',
-                        ...(isDark ? { boxShadow: `inset 0 0 40px ${primaryColor}08` } : {})
-                    }}
-                >
-                    {product.product_images?.[0] ? (
-                        <Image
-                            src={product.product_images[0]}
-                            alt={product.title}
-                            fill
-                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                            className={`object-contain p-[7.5%] transition-transform duration-500 group-hover:scale-105 ${isDark ? '' : 'mix-blend-multiply'}`}
-                            loading="lazy"
-                            quality={75}
-                        />
-                    ) : (
-                        <div className={`w-full h-full flex items-center justify-center ${isDark ? 'text-white/10' : 'text-slate-200'}`}>
-                            <Package size={32} strokeWidth={1} />
-                        </div>
-                    )}
-
-                    {/* Wishlist Heart Button */}
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onWishlist?.(); }}
-                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm transition-all hover:scale-110 active:scale-95 z-10 border border-white/20"
-                        style={isDark ? { background: 'rgba(12,14,20,0.85)', borderColor: 'rgba(255,255,255,0.06)' } : {}}
-                    >
-                        <Heart
-                            size={14}
-                            className={isWishlisted ? 'text-pink-500' : (isDark ? 'text-white/30' : 'text-slate-400')}
-                            fill={isWishlisted ? 'currentColor' : 'none'}
-                            strokeWidth={isWishlisted ? 0 : 2}
-                        />
-                    </button>
-
-                    {oos && <OutOfStockOverlay />}
-                </div>
-
-                <div className={`flex flex-col flex-1 text-left px-1 ${oos ? 'opacity-50' : ''}`}>
-                    <div className="flex items-center justify-between gap-1 mb-1.5">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                            <p className="text-[11px] font-black uppercase tracking-wider truncate" style={{ color: isDark ? `${primaryColor}CC` : primaryColor }}>
-                                {item.merchants?.business_name || 'InTrust Official'}
-                            </p>
-                            <BadgeCheck size={12} className="shrink-0" style={{ color: primaryColor }} />
-                        </div>
-                    </div>
-                    <h3 className={`text-xs md:text-sm font-bold leading-[1.3] line-clamp-2 min-h-[2.6em] mb-2 ${isDark ? 'text-white/80' : 'text-slate-800'}`}>
+                <div>
+                    <h3 className={`text-[13px] sm:text-[15px] font-bold leading-tight line-clamp-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                         {item.custom_title || product.title}
                     </h3>
+                    <p className={`text-[11px] mt-1 line-clamp-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {product.category || 'Food & Drink'}
+                    </p>
+                </div>
 
-                    <div className="mt-auto">
-                        {/* Savings row */}
+                <div className="flex items-end justify-between mt-3 w-full">
+                    <div className="flex flex-col">
                         {savings > 0 && (
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className={`text-xs font-medium line-through ${isDark ? 'text-white/20' : 'text-slate-400'}`}>
-                                    ₹{mrp.toLocaleString('en-IN', { minimumFractionDigits: 0 })}
-                                </span>
-                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded transition-colors`}
-                                    style={{ 
-                                        backgroundColor: isDark ? `${primaryColor}20` : `${primaryColor}10`,
-                                        color: primaryColor 
-                                    }}
-                                >
-                                    Save ₹{savings.toLocaleString('en-IN', { minimumFractionDigits: 0 })}
-                                </span>
-                            </div>
+                            <span className={`text-[10px] font-bold line-through ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
+                                ₹{mrp.toLocaleString('en-IN')}
+                            </span>
                         )}
-
-                        {/* Price */}
-                        <div className={`text-base md:text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        <div className={`text-[14px] sm:text-base font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
                             ₹{sellingPrice.toLocaleString('en-IN', { minimumFractionDigits: 0 })}
                         </div>
                     </div>
-                </div>
-            </div>
 
-            {/* Action Bar */}
-            <div className={`p-2 w-full pt-1 border-t ${isDark ? 'border-white/[0.04]' : 'border-slate-100'}`}>
-                {oos ? (
-                    <div className="flex items-center justify-center h-9 md:h-10 w-full">
-                        <OutOfStockBadge variant="soft" size="sm" />
-                    </div>
-                ) : (
-                    <div className="w-full h-9 md:h-10 relative">
-                        {justAdded ? (
-                            <div
-                                className="flex items-center justify-center gap-1.5 text-white shadow-sm h-full w-full rounded-xl transition-all duration-200"
-                                style={{ background: 'linear-gradient(135deg, #10b981, #34d399)', boxShadow: '0 4px 16px rgba(16,185,129,0.40)' }}
-                            >
-                                <Check size={16} strokeWidth={3} className="scale-100 transition-transform duration-200" />
-                                <span className="text-xs font-black">
-                                    Added!
-                                </span>
-                            </div>
+                    {/* Action Button */}
+                    <div className="shrink-0 relative z-10" onClick={e => e.stopPropagation()}>
+                        {oos ? (
+                            <OutOfStockBadge variant="soft" size="sm" />
                         ) : cartItem ? (
-                            <div
-                                className="mx-auto flex items-center justify-between text-white rounded-xl overflow-hidden shadow-sm h-full w-full transition-all duration-200"
-                                style={{
-                                    background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-                                    boxShadow: isDark ? `0 4px 16px ${primaryColor}30` : `0 2px 8px ${primaryColor}25`
-                                }}
-                            >
+                            <div className="flex items-center bg-blue-600 text-white rounded-lg h-8 px-1 shadow-md">
                                 <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
-                                        onRemove();
-                                    }}
-                                    className="w-10 h-full flex items-center justify-center hover:bg-black/10 transition-colors active:bg-black/20"
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={(e) => { e.stopPropagation(); if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50); onRemove(); }}
+                                    className="w-7 h-7 flex items-center justify-center hover:bg-white/20 rounded-md"
                                 >
                                     <Minus size={14} strokeWidth={3} />
                                 </motion.button>
-                                <span
-                                    className="text-sm font-black w-8 text-center bg-black/10 h-full flex flex-col justify-center shadow-inner"
-                                >
-                                    {cartItem.quantity}
-                                </span>
+                                <span className="text-xs font-bold w-6 text-center">{cartItem.quantity}</span>
                                 <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
-                                        onAdd();
-                                    }}
-                                    className="w-10 h-full flex items-center justify-center hover:bg-black/10 transition-colors active:bg-black/20"
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={handleAdd}
+                                    className="w-7 h-7 flex items-center justify-center hover:bg-white/20 rounded-md"
                                 >
                                     <Plus size={14} strokeWidth={3} />
                                 </motion.button>
                             </div>
                         ) : (
                             <motion.button
-                                whileTap={{ scale: 0.95 }}
+                                whileTap={{ scale: 0.9 }}
                                 onClick={handleAdd}
-                                className={`w-full h-full rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition-all duration-200 ${
-                                    isClosedAnimation ? 'animate-bounce' : ''
-                                } ${isDark
-                                    ? 'border text-white hover:bg-white/[0.08]'
-                                    : 'border shadow-sm hover:brightness-110 text-white'
-                                    }`}
-                                style={{
-                                    borderColor: isClosedAnimation ? '#ef4444' : `${primaryColor}40`,
-                                    backgroundColor: isClosedAnimation ? '#ef4444' : (isDark ? 'transparent' : primaryColor),
-                                    color: isClosedAnimation ? 'white' : (isDark ? primaryColor : 'white'),
-                                }}
+                                className={`h-8 px-3 sm:px-4 rounded-lg flex items-center justify-center text-[11px] sm:text-xs font-black uppercase tracking-widest shadow-sm border ${justAdded ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 dark:bg-blue-600/10 dark:text-blue-500 dark:border-blue-600/20'}`}
                             >
-                                <span className="font-black tracking-wide">{isClosedAnimation ? 'CLOSED' : 'ADD'}</span>
-                                {isClosedAnimation ? (
-                                    <Store size={13} strokeWidth={3} />
-                                ) : (
-                                    <Plus size={13} strokeWidth={3} />
-                                )}
+                                {justAdded ? <Check size={14} strokeWidth={3} /> : 'ADD'}
                             </motion.button>
                         )}
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );
 }
 
-export default memo(ProductCardV2, (prevProps, nextProps) => {
-    return (
-        prevProps.isStoreOpen === nextProps.isStoreOpen &&
-        prevProps.isWishlisted === nextProps.isWishlisted &&
-        prevProps.primaryColor === nextProps.primaryColor &&
-        prevProps.secondaryColor === nextProps.secondaryColor &&
-        prevProps.item === nextProps.item &&
-        prevProps.cartItem?.quantity === nextProps.cartItem?.quantity
-    );
-});
+export default memo(ProductCardV2);

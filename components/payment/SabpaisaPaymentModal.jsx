@@ -197,6 +197,14 @@ export default function SabpaisaPaymentModal({
         clientTxnId = `NFC_${Date.now()}_${uniqueRandomStr}`;
         udf1 = "NFC_ORDER";
         udf2 = metadata.orderId; // Consistent with nfc-service/page.jsx and NFCOrderForm.jsx
+      } else if (metadata?.type === 'merchant_lockin') {
+        clientTxnId = `LKN_${Date.now()}_${uniqueRandomStr}`;
+        udf1 = "MERCHANT_LOCKIN";
+        udf2 = metadata.description || 'Lockin request';
+      } else if (metadata?.type === 'merchant_aigrow') {
+        clientTxnId = `AIG_${Date.now()}_${uniqueRandomStr}`;
+        udf1 = "MERCHANT_AIGROW";
+        udf2 = metadata.description || 'AI Grow request';
       } else {
         // Hard error: never silently misfile an unknown type as GIFT_CARD
         throw new Error(

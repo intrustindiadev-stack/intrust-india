@@ -86,9 +86,9 @@ export default function LeaderboardPage() {
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#020617] text-gray-900 dark:text-white pb-20 relative overflow-hidden font-[family-name:var(--font-outfit)]">
             {/* Background effects */}
-            <div className="absolute top-0 inset-x-0 h-[800px] bg-gradient-to-b from-emerald-500/10 via-teal-500/5 to-transparent pointer-events-none" />
-            <div className="absolute top-1/4 left-0 w-96 h-96 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
-            <div className="absolute top-1/3 right-0 w-96 h-96 bg-teal-500/10 blur-[120px] rounded-full pointer-events-none" />
+            <div className="absolute top-0 inset-x-0 h-[800px] bg-gradient-to-b from-[#ff477e]/10 via-[#ff7096]/5 to-transparent pointer-events-none" />
+            <div className="absolute top-1/4 left-0 w-96 h-96 bg-[#ff477e]/10 blur-[120px] rounded-full pointer-events-none" />
+            <div className="absolute top-1/3 right-0 w-96 h-96 bg-[#ff7096]/10 blur-[120px] rounded-full pointer-events-none" />
 
             {/* Header */}
             <div className="sticky top-0 z-50 bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 px-4 py-4 flex items-center justify-between">
@@ -99,11 +99,11 @@ export default function LeaderboardPage() {
                     <ChevronLeft className="w-6 h-6 text-gray-600 dark:text-gray-300" />
                 </button>
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#ff477e] to-[#ff7096] flex items-center justify-center shadow-lg shadow-[#ff477e]/20">
                         <Trophy size={18} className="text-white" />
                     </div>
                     <h1 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic">
-                        Empire <span className="text-emerald-500">Top 10</span>
+                        Empire <span className="text-[#ff477e]">Top 10</span>
                     </h1>
                 </div>
                 <div className="w-10" />
@@ -118,12 +118,12 @@ export default function LeaderboardPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center mb-16 mt-8"
                 >
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 mb-6">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#ff477e]/10 border border-[#ff477e]/20 text-[#ff477e] mb-6">
                         <Sparkles size={14} className="animate-pulse" />
                         <span className="text-[10px] font-black uppercase tracking-[0.3em]">Global Ascension Feed</span>
                     </div>
                     <h2 className="text-4xl md:text-7xl font-black mb-4 tracking-tighter text-slate-900 dark:text-white leading-none">
-                        The <span className="text-transparent bg-clip-text bg-gradient-to-b from-emerald-400 to-emerald-600">Champion's</span> Circle
+                        The <span className="text-transparent bg-clip-text bg-gradient-to-b from-[#ff477e] to-[#ff7096]">Champion's</span> Circle
                     </h2>
                     <p className="text-slate-500 dark:text-gray-400 text-sm md:text-lg max-w-xl mx-auto font-bold uppercase tracking-widest opacity-60">
                         Ranked by total unspent reward points
@@ -141,11 +141,11 @@ export default function LeaderboardPage() {
                             const isThird = user.rank === 3;
                             
                             const height = isFirst ? 'h-[240px]' : isSecond ? 'h-[190px]' : 'h-[150px]';
-                            const badgeColor = isFirst ? 'text-white bg-emerald-500 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.5)]' : 
+                            const badgeColor = isFirst ? 'text-white bg-[#ff477e] border-[#ff7096] shadow-[0_0_20px_rgba(255,71,126,0.5)]' : 
                                                isSecond ? 'text-white bg-slate-500 border-slate-400 shadow-[0_0_15px_rgba(100,116,139,0.3)]' : 
                                                'text-white bg-orange-600 border-orange-500 shadow-[0_0_15px_rgba(234,88,12,0.3)]';
                             
-                            const borderGlow = isFirst ? 'shadow-[0_0_40px_rgba(16,185,129,0.4)] border-emerald-400/50' :
+                            const borderGlow = isFirst ? 'shadow-[0_0_40px_rgba(255,71,126,0.4)] border-[#ff7096]/50' :
                                                isSecond ? 'shadow-[0_0_25px_rgba(100,116,139,0.2)] border-slate-400/30' :
                                                'shadow-[0_0_20px_rgba(234,88,12,0.2)] border-orange-500/30';
 
@@ -166,10 +166,10 @@ export default function LeaderboardPage() {
                                                 transition={{ delay: 0.8, type: 'spring' }}
                                                 className="absolute -top-12 z-20"
                                             >
-                                                <Crown className="w-12 h-12 text-emerald-500 fill-emerald-500/20 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                                                <Crown className="w-12 h-12 text-[#ff477e] fill-[#ff477e]/20 drop-shadow-[0_0_10px_rgba(255,71,126,0.5)]" />
                                             </motion.div>
                                         )}
-                                        <div className={`rounded-full p-1.5 border-2 ${isFirst ? 'border-emerald-500 bg-white/10 backdrop-blur-xl' : 'border-transparent'}`}>
+                                        <div className={`rounded-full p-1.5 border-2 ${isFirst ? 'border-[#ff477e] bg-white/10 backdrop-blur-xl' : 'border-transparent'}`}>
                                             <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#020617] border-2 ${borderGlow} flex items-center justify-center overflow-hidden relative shadow-2xl`}>
                                                 {user.avatarUrl ? (
                                                     <Image src={user.avatarUrl} alt={user.name} fill className="object-cover" />
@@ -187,11 +187,11 @@ export default function LeaderboardPage() {
 
                                     {/* Podium Block */}
                                     <div className={`w-full ${height} bg-white dark:bg-white/[0.03] backdrop-blur-3xl rounded-t-[2.5rem] border border-gray-200 dark:border-white/10 flex flex-col items-center pt-12 px-3 text-center relative overflow-hidden shadow-2xl group`}>
-                                        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
+                                        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-[#ff477e]/50 to-transparent" />
                                         
                                         <p className="font-black text-sm md:text-base text-slate-900 dark:text-white line-clamp-1 italic tracking-tight">{user.name}</p>
                                         
-                                        <div className="mt-3 flex items-center gap-1.5 text-emerald-500">
+                                        <div className="mt-3 flex items-center gap-1.5 text-[#ff477e]">
                                             <TrendingUp size={16} />
                                             <span className="font-black text-lg md:text-2xl tracking-tighter italic">{user.points.toLocaleString()}</span>
                                         </div>
@@ -210,9 +210,9 @@ export default function LeaderboardPage() {
                 {rest.length > 0 && (
                     <div className="flex flex-col gap-4 max-w-2xl mx-auto">
                         <div className="flex items-center gap-3 mb-4 px-2 opacity-40">
-                            <Zap size={14} className="text-emerald-500" />
+                            <Zap size={14} className="text-[#ff477e]" />
                             <span className="text-[10px] font-black uppercase tracking-[0.4em]">Rising Contenders</span>
-                            <div className="flex-1 h-[1px] bg-gradient-to-r from-emerald-500/50 to-transparent" />
+                            <div className="flex-1 h-[1px] bg-gradient-to-r from-[#ff477e]/50 to-transparent" />
                         </div>
                         {rest.map((user, idx) => (
                             <motion.div
@@ -224,7 +224,7 @@ export default function LeaderboardPage() {
                             >
                                 {/* Rank */}
                                 <div className="w-10 flex justify-center">
-                                    <span className="text-slate-400 dark:text-gray-600 font-black text-2xl group-hover:text-emerald-500 transition-colors italic">#{user.rank}</span>
+                                    <span className="text-slate-400 dark:text-gray-600 font-black text-2xl group-hover:text-[#ff477e] transition-colors italic">#{user.rank}</span>
                                 </div>
 
                                 {/* Avatar */}
@@ -248,7 +248,7 @@ export default function LeaderboardPage() {
 
                                 {/* Points */}
                                 <div className="text-right">
-                                    <div className="flex items-center justify-end gap-2 text-emerald-500">
+                                    <div className="flex items-center justify-end gap-2 text-[#ff477e]">
                                         <Target size={18} className="opacity-50" />
                                         <span className="font-black text-2xl tracking-tighter italic">{user.points.toLocaleString()}</span>
                                     </div>
@@ -261,7 +261,7 @@ export default function LeaderboardPage() {
                 
                 {leaderboard.length === 0 && !loading && (
                     <div className="text-center py-24 bg-white/50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-[3rem] backdrop-blur-3xl">
-                        <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 text-emerald-500 border border-emerald-500/20">
+                        <div className="w-20 h-20 bg-[#ff477e]/10 rounded-3xl flex items-center justify-center mx-auto mb-6 text-[#ff477e] border border-[#ff477e]/20">
                             <Award size={40} />
                         </div>
                         <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">No Champions Yet</h3>

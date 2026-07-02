@@ -390,13 +390,13 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                     {/* ====== LEFT: PRODUCT IMAGE ====== */}
                     <div className="lg:col-span-6">
                         <div
-                            className={`aspect-[4/3] sm:aspect-square rounded-2xl sm:rounded-[2rem] p-4 sm:p-8 md:p-16 flex items-center justify-center relative overflow-hidden ${isDark ? 'bg-[#0c0e16]' : 'bg-white shadow-sm'
+                            className={`aspect-[4/3] sm:aspect-square rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-8 md:p-16 flex items-center justify-center relative overflow-hidden ${isDark ? 'bg-[#0c0e16]' : 'bg-white shadow-[0_8px_30px_rgb(0,0,0,0.06)]'
                                 }`}
                             style={{
                                 border: isDark ? `1px solid ${primaryColor}15` : '1px solid #e2e8f0',
                                 boxShadow: isDark
                                     ? `0 0 80px ${primaryColor}08, inset 0 0 60px ${primaryColor}05`
-                                    : '0 4px 24px rgba(0,0,0,0.04)'
+                                    : '0 8px 40px rgba(0,0,0,0.06)'
                             }}
                         >
                             {isDark && (
@@ -777,7 +777,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                         <h2 className={`text-lg sm:text-xl font-black mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                             More in {categoryName}
                         </h2>
-                        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-4 -mx-3 px-3">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                             {recommendedProducts.map(item => {
                                 const rProduct = item.shopping_products;
                                 const rPrice = (item.retail_price_paise || 0) / 100;
@@ -788,7 +788,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                     <Link
                                         key={item.id}
                                         href={`/shop/product/${item.shopping_products?.slug}`}
-                                        className={`flex-shrink-0 w-[140px] sm:w-[160px] rounded-xl overflow-hidden transition-all hover:shadow-md group ${isDark ? 'bg-[#12151c] border' : 'bg-white border border-slate-100 shadow-sm'
+                                        className={`flex flex-col rounded-2xl overflow-hidden transition-all hover:shadow-[0_4px_20px_rgb(0,0,0,0.08)] group ${isDark ? 'bg-[#0c0e16] border border-white/[0.04]' : 'bg-white border border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.04)]'
                                             }`}
                                         style={isDark ? { borderColor: `${primaryColor}10` } : {}}
                                     >

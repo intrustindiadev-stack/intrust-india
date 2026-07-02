@@ -20,7 +20,8 @@ export default async function MerchantHubPage() {
     // Batch 1: Independent fetches using static client (cachable)
     const [
         merchantsResult,
-        platformResult
+        platformResult,
+        categoriesResult
     ] = await Promise.all([
         supabase
             .from('merchants')
@@ -33,7 +34,12 @@ export default async function MerchantHubPage() {
             .from('platform_settings')
             .select('value')
             .eq('key', 'platform_store')
-            .single()
+            .single(),
+        supabase
+            .from('shopping_categories')
+            .select('id, name, slug, icon_url')
+            .eq('is_active', true)
+            .order('sort_order', { ascending: true })
     ]);
 
     if (merchantsResult.error) {
@@ -107,6 +113,8 @@ export default async function MerchantHubPage() {
         ...merchants
     ];
 
+    const categories = categoriesResult?.data || [];
+
     return (
         <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#080a10] relative pb-32 transition-colors">
             <Navbar />
@@ -140,7 +148,7 @@ export default async function MerchantHubPage() {
                 {/* ── Main Content ── */}
                 <div className="max-w-7xl mx-auto px-4 md:px-8 pt-4 pb-8">
                     <Breadcrumbs items={[{ label: 'Intrust Mart' }]} />
-                    <ShopHubClient merchants={allMerchants} ratingsMap={ratingsMap} />
+                    <ShopHubClient merchants={allMerchants} ratingsMap={ratingsMap} categories={categories} />
                 </div>
 
             </main>

@@ -21,10 +21,10 @@ import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 const POINTS_PER_RUPEE = 100;
 
 const LEVEL_GRADIENTS = [
-    'from-emerald-400 to-teal-500',     // root / You
+    'from-blue-600 to-blue-400',     // root / You
     'from-amber-400 to-orange-500',     // L1
     'from-indigo-400 to-violet-500',    // L2
-    'from-pink-400 to-rose-500',        // L3
+    'from-blue-400 to-cyan-500',        // L3
     'from-sky-400 to-blue-500',         // L4
     'from-lime-400 to-green-500',       // L5
     'from-fuchsia-400 to-purple-500',   // L6
@@ -85,7 +85,7 @@ function NetworkNode({ node, depth = 0 }) {
                             {isRoot ? 'Executive Master' : node.full_name}
                         </p>
                         {isRoot && (
-                            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                         )}
                     </div>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -391,18 +391,18 @@ export default function ReferAndEarnPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="relative bg-gradient-to-br from-[#0F172A] to-black rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-white shadow-2xl mb-10 overflow-hidden group border border-white/5"
                 >
-                    <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 blur-[100px] rounded-full pointer-events-none" />
                     
                     <div className="relative z-10 text-center sm:text-left flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
                         <motion.div
                             whileHover={{ rotate: 12, scale: 1.1 }}
-                            className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-2xl border border-white/20 shrink-0"
+                            className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-600 to-blue-400 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-2xl border border-white/20 shrink-0"
                         >
                             <Network className="w-10 h-10 sm:w-11 sm:h-11 text-white" />
                         </motion.div>
                         
                         <div>
-                            <h1 className="text-3xl sm:text-5xl font-black mb-3 tracking-tighter leading-none">Empire <span className="text-emerald-400">Builder</span></h1>
+                            <h1 className="text-3xl sm:text-5xl font-black mb-3 tracking-tighter leading-none">Empire <span className="text-blue-500">Builder</span></h1>
                             <p className="text-slate-400 text-xs sm:text-base font-medium max-w-sm">Grow a 7-level deep network and unlock unlimited liquid rewards.</p>
                         </div>
                     </div>
@@ -427,7 +427,7 @@ export default function ReferAndEarnPage() {
                             <TrendingUp size={20} className="sm:w-6 sm:h-6" />
                         </div>
                         <h4 className="font-black text-xs sm:text-base text-slate-900 dark:text-white mb-1">Cash Value</h4>
-                        <p className="text-lg sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tighter leading-none">₹{totalRupees}</p>
+                        <p className="text-lg sm:text-2xl font-black text-blue-600 dark:text-blue-400 tracking-tighter leading-none">₹{totalRupees}</p>
                     </div>
                 </div>
 
@@ -435,7 +435,7 @@ export default function ReferAndEarnPage() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-emerald-600 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-white shadow-2xl shadow-emerald-500/20 mb-10 relative overflow-hidden group"
+                    className="bg-gradient-to-br from-blue-600 to-blue-400 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-white shadow-2xl shadow-blue-600/20 mb-10 relative overflow-hidden group"
                 >
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
                     <div className="absolute -top-32 -right-32 w-80 h-80 bg-white/10 blur-[100px] rounded-full group-hover:bg-white/20 transition-all duration-700" />
@@ -452,19 +452,26 @@ export default function ReferAndEarnPage() {
                             {referralCode || '------'}
                         </div>
 
-                        <div className="flex gap-3 sm:gap-4 w-full">
+                        <div className="flex gap-2 sm:gap-3 w-full">
                             <button
                                 onClick={handleCopy}
-                                className="flex-1 flex items-center justify-center gap-2 bg-white text-emerald-700 py-4 rounded-[2rem] font-black text-sm shadow-xl hover:bg-emerald-50 active:scale-95 transition-all"
+                                className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 bg-white text-blue-600 py-3.5 sm:py-4 rounded-[1.5rem] sm:rounded-[2rem] font-black text-xs sm:text-sm shadow-xl hover:bg-blue-50 active:scale-95 transition-all"
                             >
-                                {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
+                                {copied ? <CheckCircle size={16} className="sm:w-[18px] sm:h-[18px]" /> : <Copy size={16} className="sm:w-[18px] sm:h-[18px]" />}
                                 {copied ? 'Secured' : 'Secure Code'}
                             </button>
                             <button
-                                onClick={handleMainShare}
-                                className="p-4 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all active:scale-95"
+                                onClick={() => handleChannelShare('WhatsApp')}
+                                className="px-4 sm:px-6 rounded-[1.5rem] sm:rounded-[2rem] bg-[#25D366] text-white hover:bg-[#20bd5a] shadow-xl transition-all active:scale-95 flex items-center gap-2 justify-center font-bold text-xs sm:text-sm"
                             >
-                                <Share2 size={24} />
+                                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                                <span className="hidden sm:inline">WhatsApp</span>
+                            </button>
+                            <button
+                                onClick={handleShare}
+                                className="p-3.5 sm:p-4 rounded-[1.5rem] sm:rounded-2xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all active:scale-95 flex items-center justify-center"
+                            >
+                                <Share2 size={20} className="sm:w-6 sm:h-6" />
                             </button>
                         </div>
                     </div>
@@ -512,7 +519,7 @@ export default function ReferAndEarnPage() {
                 <section className="mb-14">
                     <div className="flex items-center justify-between mb-8 px-1">
                         <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.8)]" />
+                            <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse shadow-[0_0_12px_rgba(59,130,246,0.8)]" />
                             <h3 className="font-black text-2xl text-slate-900 dark:text-white tracking-tight leading-none">Empire Chain</h3>
                         </div>
                         <div className="px-4 py-1.5 rounded-full bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest border border-white/10">7 Levels Deep</div>
@@ -555,7 +562,7 @@ export default function ReferAndEarnPage() {
                                     <p className="text-sm font-medium text-slate-400 max-w-[200px] mx-auto leading-relaxed">Your network empire starts with a single share.</p>
                                     <button
                                         onClick={handleShare}
-                                        className="mt-10 px-10 py-4 bg-emerald-500 text-white font-black rounded-[2rem] shadow-2xl shadow-emerald-500/20 hover:bg-emerald-400 transition-all active:scale-95 uppercase tracking-widest text-xs"
+                                        className="mt-10 px-10 py-4 bg-blue-600 text-white font-black rounded-[2rem] shadow-2xl shadow-blue-600/20 hover:bg-blue-500 transition-all active:scale-95 uppercase tracking-widest text-xs"
                                     >
                                         Initiate Share
                                     </button>
@@ -664,7 +671,7 @@ export default function ReferAndEarnPage() {
 
                             <button 
                                 onClick={handleCopy}
-                                className="w-full py-5 bg-emerald-500 text-white font-black rounded-[2rem] shadow-2xl shadow-emerald-500/20 active:scale-95 transition-all uppercase tracking-[0.2em] text-xs"
+                                className="w-full py-5 bg-blue-600 text-white font-black rounded-[2rem] shadow-2xl shadow-blue-600/20 active:scale-95 transition-all uppercase tracking-[0.2em] text-xs"
                             >
                                 Copy Private Link
                             </button>

@@ -13,12 +13,15 @@ import {
     ArrowUpRight,
     Clock,
     AlertCircle,
-    RefreshCw
+    RefreshCw,
+    Plus,
+    Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import LockinAnalytics from '@/components/merchant/lockin/LockinAnalytics';
+import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
 
 export default function MerchantLockinPage() {
     const [balances, setBalances] = useState([]);
@@ -26,6 +29,13 @@ export default function MerchantLockinPage() {
     const [isRevealed, setIsRevealed] = useState(false);
     const [lastSynced, setLastSynced] = useState(new Date());
     const [syncText, setSyncText] = useState('Updated just now');
+    const [user, setUser] = useState(null);
+
+    // Modal states
+    const [showModal, setShowModal] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [amount, setAmount] = useState('');
+    const [desc, setDesc] = useState('');
 
     // Animated Counter Component
     const AnimatedNumber = ({ value, decimals = 0 }) => {
@@ -68,6 +78,7 @@ export default function MerchantLockinPage() {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
+            setUser(user);
 
             const { data: merchant } = await supabase
                 .from('merchants')
@@ -141,6 +152,10 @@ export default function MerchantLockinPage() {
                                 <RefreshCw size={16} className={`${loading ? 'animate-spin text-blue-500' : 'group-hover:rotate-180 transition-all duration-500'}`} />
                             </button>
                         </div>
+                        <button onClick={() => setShowModal(true)}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-black text-[11px] uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-blue-900/20 active:scale-95">
+                            <Plus size={16} /> New Request
+                        </button>
                     </div>
                 </div>
 
@@ -358,6 +373,71 @@ export default function MerchantLockinPage() {
                     )}
                 </div>
             </div>
+
+            {/* ── New Fund Request Modal ── */}
+            <AnimatePresence>
+                {showModal && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+                        <div className="absolute inset-0" onClick={() => setShowModal(false)} />
+                        <motion.div initial={{ scale: 0.96, opacity: 0, y: 16 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.96, opacity: 0, y: 16 }}
+                            className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative z-10 border border-slate-100 dark:border-slate-800">
+                            <div className="flex justify-between items-start mb-8">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                                            <Sparkles size={15} className="text-white" />
+                                        </div>
+                                        <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Growth Portfolio</p>
+                                    </div>
+                                    <h3 className="text-2xl font-black text-slate-800 dark:text-white">New Lockin Request</h3>
+                                </div>
+                                <button onClick={() => setShowModal(false)} className="w-9 h-9 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all text-sm font-bold">✕</button>
+                            </div>
+
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                if (Number(amount) < 10000) return toast.error('Minimum ₹10,000 required');
+                                setShowModal(false);
+                                setShowPaymentModal(true);
+                            }} className="space-y-5">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount (₹)</label>
+                                    <div className="relative">
+                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg">₹</span>
+                                        <input type="number" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="Min ₹10,000"
+                                            className="w-full pl-10 pr-5 bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-4 text-xl font-black text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all [appearance:textfield]" />
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 font-bold">Fixed 15% P.A interest rate applies.</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Notes (Optional)</label>
+                                    <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Any context for this request..."
+                                        className="w-full bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all min-h-[90px] resize-none" />
+                                </div>
+                                <button type="submit"
+                                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:opacity-90 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 text-[11px] uppercase tracking-widest flex items-center justify-center gap-2">
+                                    <Plus size={16} /> Proceed to Pay
+                                </button>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Payment Modal */}
+            <SabpaisaPaymentModal
+                isOpen={showPaymentModal}
+                onClose={() => {
+                    setShowPaymentModal(false);
+                    setAmount('');
+                    setDesc('');
+                }}
+                amount={amount}
+                user={user}
+                productInfo="Lockin Growth Portfolio"
+                metadata={{ type: "merchant_lockin", description: desc || 'Lockin request' }}
+            />
         </div>
     );
 }

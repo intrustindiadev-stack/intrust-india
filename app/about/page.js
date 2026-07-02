@@ -13,33 +13,33 @@ export default function AboutPage() {
     const values = [
         {
             icon: ShieldCheck,
-            title: "Uncompromising Trust",
-            description: "Security isn't a feature; it's our foundation. We employ bank-grade encryption and transparent protocols to ensure your data and money are always safe.",
+            title: "Uncompromising Quality",
+            description: "Quality isn't a feature; it's our foundation. We employ rigorous checks and transparent processes to ensure every product and service exceeds expectations.",
             gradient: "from-blue-500/20 to-cyan-400/20",
             iconColor: "text-blue-600"
         },
         {
             icon: Users,
             title: "Customer Obsession",
-            description: "We don't just build products; we solve problems. Every feature is designed with empathy, ensuring it adds real value to the daily lives of our users.",
+            description: "We don't just sell products; we deliver experiences. Every feature is designed with empathy, ensuring it adds real value to the daily lives of our users.",
             gradient: "from-purple-500/20 to-pink-400/20",
             iconColor: "text-purple-600"
         },
         {
             icon: Lightbulb,
-            title: "Financial Innovation",
-            description: "We bridge the gap between complex financial systems and simple user experiences, making advanced tools accessible to everyone in Bharat.",
+            title: "E-Commerce Innovation",
+            description: "We bridge the gap between complex supply chains and simple user experiences, making premium products accessible to everyone in Bharat.",
             gradient: "from-amber-500/20 to-orange-400/20",
             iconColor: "text-amber-600"
         }
     ];
 
     const storySteps = [
-        { year: '2014', title: 'The Foundation', description: 'InTrust was established with a singular vision: to bring transparent financial services to the underserved markets of India.' },
-        { year: '2016', title: 'Building Trust', description: 'Launched our first offline network, serving over 10,000 customers in rural Madhya Pradesh and building deep community roots.' },
-        { year: '2019', title: 'Digital First', description: 'Pivoted to a digital-first approach, launching our mobile platform to scale operations across 5 states.' },
-        { year: '2022', title: 'Pan-India Scale', description: 'Crossed 1 Million users. Recognized as one of the fastest-growing fintech startups in the consumer trust space.' },
-        { year: '2025', title: 'The Super App', description: 'Evolution into a complete financial ecosystem, unifying payments, credit, and commerce in one seamless experience.' },
+        { year: '2014', title: 'The Foundation', description: 'InTrust was established with a singular vision: to bring premium and transparent shopping experiences to the underserved markets of India.' },
+        { year: '2016', title: 'Building Trust', description: 'Launched our first offline retail network, serving over 10,000 customers in rural Madhya Pradesh and building deep community roots.' },
+        { year: '2019', title: 'Digital First', description: 'Pivoted to a digital-first approach, launching our mobile commerce platform to scale operations across 5 states.' },
+        { year: '2022', title: 'Pan-India Scale', description: 'Crossed 1 Million users. Recognized as one of the fastest-growing premium e-commerce startups in the consumer trust space.' },
+        { year: '2025', title: 'The Super App', description: 'Evolution into a complete lifestyle ecosystem, unifying premium shopping, rewards, and exclusive services in one seamless experience.' },
     ];
 
     const aboutStats = [
@@ -54,7 +54,7 @@ export default function AboutPage() {
 
             <PageHero
                 title="We Are InTrust"
-                subtitle="Building the digital trust layer for India's financial future. Simplification, security, and smart solutions for everyone."
+                subtitle="Building the ultimate premium e-commerce experience for India. Quality, exclusivity, and smart shopping solutions for everyone."
                 variant="about"
             />
 
@@ -82,11 +82,11 @@ export default function AboutPage() {
                             </div>
 
                             <h2 className="text-4xl md:text-5xl font-black font-outfit text-gray-900 dark:text-gray-100 leading-tight">
-                                Empowering India with <span className="gradient-text">Financial Freedom</span>
+                                Empowering India with <span className="gradient-text">Premium Commerce</span>
                             </h2>
 
                             <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed font-inter">
-                                We envision a world where financial services are not just accessible but intuitive and empowering. By combining cutting-edge technology with deep consumer insights, we are removing friction from money management.
+                                We envision a world where premium shopping is not just accessible but intuitive and empowering. By combining cutting-edge technology with deep consumer insights, we are redefining the modern retail experience.
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -130,7 +130,7 @@ export default function AboutPage() {
                                             transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
                                             className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border border-white/50 dark:border-gray-700 p-6 rounded-2xl shadow-xl text-center"
                                         >
-                                            <p className="text-gray-500 dark:text-gray-400 text-sm font-semibold mb-1">Total Trust Secured</p>
+                                            <p className="text-gray-500 dark:text-gray-400 text-sm font-semibold mb-1">Total Value Delivered</p>
                                             <h3 className="text-4xl font-black text-gray-900 dark:text-gray-100 gradient-text">₹500Cr+</h3>
                                         </motion.div>
                                     </div>
@@ -192,7 +192,7 @@ export default function AboutPage() {
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-20"></div>
 
                 <div className="max-w-4xl mx-auto px-6 relative z-10 text-center text-white">
-                    <h2 className="text-4xl md:text-5xl font-bold font-outfit mb-8 leading-tight">Ready to experience <br />the future of finance?</h2>
+                    <h2 className="text-4xl md:text-5xl font-bold font-outfit mb-8 leading-tight">Ready to experience <br />the future of shopping?</h2>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                         <a href="/contact" className="px-8 py-4 bg-white text-gray-900 font-bold rounded-full hover:bg-gray-100 transition-all duration-300 transform hover:-translate-y-1 shadow-[0_0_20px_rgba(255,255,255,0.3)] flex items-center gap-2">
                             Start the Conversation <ArrowRight size={20} />

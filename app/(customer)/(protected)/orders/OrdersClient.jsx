@@ -12,7 +12,10 @@ import {
   ArrowRight,
   Clock,
   MapPin,
-  X
+  X,
+  CreditCard,
+  Zap,
+  Ticket
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -22,6 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import ScratchCard from "@/components/ui/ScratchCard";
 import { useRewardsRealtime } from "@/lib/contexts/RewardsRealtimeContext";
+import { useTheme } from "@/lib/contexts/ThemeContext";
 
 const OrdersClient = ({ userId }) => {
   const [groups, setGroups] = useState([]);
@@ -31,6 +35,11 @@ const OrdersClient = ({ userId }) => {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const pathname = usePathname();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  
+  const primaryColor = '#2563EB';
+  const secondaryColor = '#3B82F6';
 
   // ── Rewards Context Consumption (Step 3) ───────────────────────────────────
   let unscratchedCards = [], lastArrival = null, markScratched = () => {};
@@ -116,7 +125,7 @@ const OrdersClient = ({ userId }) => {
           *,
           shopping_order_items (
             *,
-            shopping_products (title, product_images, mrp_paise, suggested_retail_price_paise),
+            shopping_products (title, product_images, mrp_paise, suggested_retail_price_paise, category),
             merchants (business_name)
           )
         `)
@@ -140,23 +149,23 @@ const OrdersClient = ({ userId }) => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-        <div className="w-10 h-10 border-4 border-gray-200 border-t-green-600 rounded-full animate-spin"></div>
-        <p className="text-sm font-semibold text-gray-500">Loading your orders...</p>
+        <div className="w-10 h-10 border-4 border-slate-200 dark:border-white/10 border-t-blue-600 dark:border-t-blue-500 rounded-full animate-spin"></div>
+        <p className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Loading your orders...</p>
       </div>
     );
   }
 
   if (groups.length === 0) {
     return (
-      <div className="text-center py-16 bg-white rounded-xl border border-gray-200 shadow-sm mt-4">
-        <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <ShoppingBag className="w-10 h-10 text-gray-300" />
+      <div className={`text-center py-20 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] border mt-4 ${isDark ? 'bg-[#0c0e16] border-white/[0.04]' : 'bg-white border-slate-100'}`}>
+        <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 ${isDark ? 'bg-blue-600/10 text-blue-500' : 'bg-blue-50 text-blue-600'}`}>
+          <ShoppingBag size={40} />
         </div>
-        <h3 className="text-xl font-bold text-gray-800 mb-2">No orders found</h3>
-        <p className="text-gray-500 mb-6 text-sm">Looks like you haven't made any purchases yet.</p>
+        <h3 className={`text-2xl font-black mb-2 tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>No orders found</h3>
+        <p className={`text-sm mb-8 max-w-xs mx-auto ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Looks like you haven't made any purchases yet. Discover amazing deals today!</p>
         <Link
           href="/shop"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-full transition-colors uppercase tracking-widest text-sm shadow-lg shadow-blue-600/30"
         >
           Start Shopping
         </Link>
@@ -165,115 +174,176 @@ const OrdersClient = ({ userId }) => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4 pb-12">
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
       {isSuccess && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
-          <CheckCircle2 className="w-6 h-6 text-green-600 shrink-0 mt-0.5" />
+        <div className={`rounded-2xl p-5 flex items-start gap-4 shadow-sm border ${isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'}`}>
+          <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20">
+             <CheckCircle2 size={20} className="text-white" />
+          </div>
           <div>
-            <h3 className="text-green-800 font-bold">Order Placed Successfully</h3>
-            <p className="text-green-700 text-sm mt-1">Your items are being processed. Thank you for shopping with us!</p>
+            <h3 className={`text-lg font-black tracking-tight ${isDark ? 'text-emerald-400' : 'text-emerald-800'}`}>Order Placed Successfully!</h3>
+            <p className={`text-sm font-medium mt-1 ${isDark ? 'text-emerald-500/70' : 'text-emerald-700'}`}>Your items are being processed. Thank you for shopping with us!</p>
           </div>
         </div>
       )}
 
-      {groups.map((group) => {
-        const itemCount = group.shopping_order_items?.length || 0;
+      {/* Visual Hero Header */}
+      <div className={`p-8 rounded-[2rem] sm:rounded-[3rem] relative overflow-hidden flex items-center justify-between shadow-2xl ${isDark ? 'bg-gradient-to-br from-blue-900 to-black border border-blue-500/20' : 'bg-gradient-to-br from-blue-600 to-blue-400'}`}>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[80px] rounded-full pointer-events-none" />
+        <div className="relative z-10 text-white">
+          <h1 className="text-3xl sm:text-5xl font-black mb-2 tracking-tighter">My Orders</h1>
+          <p className="text-sm font-medium opacity-80 max-w-sm">Track your recent purchases, view details, and scratch cards for rewards.</p>
+        </div>
+        <div className="hidden sm:flex relative z-10 w-20 h-20 bg-white/20 rounded-full items-center justify-center backdrop-blur-md shadow-inner border border-white/30">
+          <Package size={40} className="text-white" />
+        </div>
+      </div>
 
-        return (
-          <div
-            key={group.id}
-            className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm"
-          >
-            {/* Header */}
-            <div className="bg-gray-50 border-b border-gray-200 p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm text-gray-500">Order ID:</span>
-                    <span className="font-semibold text-gray-800 uppercase">{group.id.slice(0, 8)}</span>
-                    <span className={`ml-2 inline-block px-2 py-0.5 text-[10px] uppercase font-bold rounded ${group.delivery_status === 'delivered' ? 'bg-green-100 text-green-800' :
-                      group.delivery_status === 'shipped' ? 'bg-blue-100 text-blue-800' :
-                        group.delivery_status === 'packed' ? 'bg-orange-100 text-orange-800' :
-                          'bg-yellow-100 text-yellow-800'
+      <div className="space-y-5">
+        {groups.map((group) => {
+          const itemCount = group.shopping_order_items?.length || 0;
+
+          return (
+            <div
+              key={group.id}
+              className={`relative overflow-hidden rounded-[2rem] border shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] transition-all ${
+                  isDark ? 'bg-[#0c0e16] border-white/[0.04]' : 'bg-white border-slate-100'
+              }`}
+            >
+              {/* Header */}
+              <div className={`p-5 sm:p-6 border-b ${isDark ? 'border-white/[0.04] bg-white/[0.01]' : 'border-slate-100 bg-slate-50'}`}>
+                <div className="flex flex-col sm:flex-row justify-between gap-4">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-3 mb-2">
+                      <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${
+                        group.delivery_status === 'delivered' ? (isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-800') :
+                        group.delivery_status === 'shipped' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-800') :
+                        group.delivery_status === 'packed' ? (isDark ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-800') :
+                        (isDark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-100 text-yellow-800')
                       }`}>
-                      {group.delivery_status || 'pending'}
-                    </span>
+                        {group.delivery_status || 'Pending'}
+                      </span>
+                      <span className={`text-xs font-bold uppercase tracking-wider opacity-60 ${isDark ? 'text-white' : 'text-slate-500'}`}>
+                        Order #{group.id.slice(0, 8)}
+                      </span>
+                    </div>
+                    <div className={`flex flex-wrap items-center gap-y-1.5 gap-x-4 text-xs font-semibold ${isDark ? 'text-white/40' : 'text-slate-500'}`}>
+                      <span className="flex items-center gap-1.5"><Clock size={14} /> {format(new Date(group.created_at), "dd MMM yyyy, h:mm a")}</span>
+                      <span className="flex items-center gap-1.5"><MapPin size={14} /> {group.delivery_address ? (group.delivery_address.slice(0, 30) + (group.delivery_address.length > 30 ? '...' : '')) : 'No address'}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-gray-500">
-                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {format(new Date(group.created_at), "dd MMM yyyy, h:mm a")}</span>
-                    <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {group.delivery_address ? (group.delivery_address.slice(0, 30) + (group.delivery_address.length > 30 ? '...' : '')) : 'No address'}</span>
-                    <span>{itemCount} {itemCount === 1 ? 'Item' : 'Items'}</span>
+
+                  <div className="flex flex-col items-start sm:items-end">
+                    <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-white/30' : 'text-slate-400'}`}>Order Total</p>
+                    <p className={`text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        ₹{(group.total_amount_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
+                    </p>
+                    {group.shopping_order_items?.some(item => (item.shopping_products?.suggested_retail_price_paise || 0) > item.unit_price_paise) && (
+                      <div className={`mt-1.5 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-lg border ${
+                          isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                      }`}>
+                        You saved ₹{((group.shopping_order_items.reduce((acc, item) => {
+                          const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || item.unit_price_paise;
+                          return acc + (Math.max(0, mrp - item.unit_price_paise) * item.quantity);
+                        }, 0)) / 100).toLocaleString('en-IN')}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="text-left sm:text-right flex flex-col items-start sm:items-end">
-                  <p className="text-xs text-gray-500 mb-0.5">Order Total</p>
-                  <p className="text-lg font-black text-gray-900">₹{(group.total_amount_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-                  {group.shopping_order_items?.some(item => (item.shopping_products?.suggested_retail_price_paise || 0) > item.unit_price_paise) && (
-                    <div className="mt-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded border border-emerald-100 italic">
-                      You saved ₹{((group.shopping_order_items.reduce((acc, item) => {
-                        const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || item.unit_price_paise;
-                        return acc + (Math.max(0, mrp - item.unit_price_paise) * item.quantity);
-                      }, 0)) / 100).toLocaleString('en-IN')}
-                    </div>
-                  )}
+                {/* Visual Order Status Tracker */}
+                <div className={`mt-5 pt-5 border-t ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+                  {(() => {
+                    const statuses = ['pending', 'packed', 'shipped', 'delivered'];
+                    const currentStatusIdx = Math.max(0, statuses.indexOf(group.delivery_status || 'pending'));
+                    return (
+                      <div className="flex items-center justify-between relative px-2 sm:px-6">
+                        <div className="absolute top-3 left-6 right-6 h-1 bg-slate-200 dark:bg-slate-800 -translate-y-1/2 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-blue-500 transition-all duration-1000 ease-out" 
+                            style={{ width: `${(currentStatusIdx / (statuses.length - 1)) * 100}%` }}
+                          />
+                        </div>
+                        {statuses.map((status, idx) => {
+                          const isCompleted = idx <= currentStatusIdx;
+                          const isCurrent = idx === currentStatusIdx;
+                          return (
+                            <div key={status} className="relative z-10 flex flex-col items-center gap-2">
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-colors duration-500 ${
+                                isCompleted 
+                                  ? 'bg-blue-500 border-blue-500 text-white shadow-[0_0_12px_rgba(59,130,246,0.5)]' 
+                                  : 'bg-slate-100 dark:bg-[#0c0e16] border-slate-300 dark:border-slate-700 text-slate-400'
+                              }`}>
+                                {isCompleted ? <CheckCircle2 size={12} /> : idx + 1}
+                              </div>
+                              <span className={`text-[9px] font-black uppercase tracking-wider hidden sm:block ${
+                                isCurrent ? 'text-blue-600 dark:text-blue-400' : 
+                                isCompleted ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'
+                              }`}>
+                                {status}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
-            </div>
 
-            {/* Items List */}
-            <div className="divide-y divide-gray-100">
-              {group.shopping_order_items?.map((item) => (
-                <div key={item.id} className="p-4 flex gap-4">
-                  {/* Thumbnail */}
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-md border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center">
-                    {item.shopping_products?.product_images?.[0] ? (
-                      <div className="relative w-full h-full">
+              {/* Items List */}
+              <div className={`divide-y ${isDark ? 'divide-white/[0.04]' : 'divide-slate-100'}`}>
+                {group.shopping_order_items?.map((item) => (
+                  <div key={item.id} className="p-5 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-5 group-hover:bg-slate-50/50 transition-colors">
+                    {/* Thumbnail */}
+                    <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden relative ${isDark ? 'bg-white/5' : 'bg-slate-50'}`}>
+                      {item.shopping_products?.product_images?.[0] ? (
                         <Image
                           src={item.shopping_products.product_images[0]}
                           alt={item.shopping_products.title}
                           fill
-                          sizes="(max-width: 640px) 20vw, 80px"
-                          className="object-contain p-1 mix-blend-multiply"
+                          sizes="100px"
+                          className="object-contain p-2 mix-blend-multiply dark:mix-blend-normal"
                           quality={60}
                         />
-                      </div>
-                    ) : (
-                      <Package className="w-8 h-8 text-gray-300" />
-                    )}
-                  </div>
-
-                  {/* Item Details */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-between">
-                    <div>
-                      <h4 className="font-semibold text-gray-800 text-sm sm:text-base leading-snug line-clamp-2">
-                        {item.shopping_products?.title}
-                      </h4>
-                      <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                        <Store className="w-3.5 h-3.5" strokeWidth={2.5} />
-                        <span>Sold by {item.merchants?.business_name || "InTrust Official"}</span>
-                      </div>
+                      ) : (
+                        <Package size={32} className={isDark ? 'text-white/10' : 'text-slate-300'} />
+                      )}
                     </div>
 
-                    <div className="mt-2 flex items-end justify-between">
-                      <div className="font-bold text-gray-900">
-                        ₹{((item.unit_price_paise) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    {/* Item Details */}
+                    <div className="flex-1 flex flex-col justify-between min-w-0">
+                      <div>
+                        <h4 className={`font-black text-sm sm:text-base leading-snug line-clamp-2 mb-1 tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                          {item.shopping_products?.title}
+                        </h4>
+                        <div className={`text-[10px] sm:text-xs font-bold ${isDark ? 'text-white/40' : 'text-slate-500'}`}>
+                             {item.shopping_products?.category || 'Category'}
+                        </div>
+                        <div className="mt-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider" style={{ color: primaryColor }}>
+                          <Store size={14} />
+                          <span>{item.merchants?.business_name || "InTrust Official"}</span>
+                        </div>
                       </div>
-                      <div className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium">
-                        Qty: {item.quantity}
+
+                      <div className="mt-4 flex items-end justify-between">
+                        <div className={`font-black text-lg ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                          ₹{((item.unit_price_paise) / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
+                        </div>
+                        <div className={`text-xs font-bold px-3 py-1.5 rounded-xl uppercase tracking-widest ${isDark ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                          Qty: {item.quantity}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            {/* Footer */}
-            <div className="bg-gray-50 border-t border-gray-200 p-4">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div className="text-sm">
-                  <span className="text-gray-500">Paid via: </span>
-                  <span className="font-semibold text-gray-700">
+              {/* Footer */}
+              <div className={`p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-center gap-4 ${isDark ? 'bg-white/[0.01] border-t border-white/[0.04]' : 'bg-slate-50 border-t border-slate-100'}`}>
+                <div className={`flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-slate-500'}`}>
+                  <CreditCard size={14} />
+                  <span>
                     {group.payment_method === 'gateway' ? "Online Payment (SabPaisa)" :
                       group.payment_method === 'cod' ? "Cash on Delivery" :
                         group.payment_method === 'store_credit' ? "Store Credit (Udhari)" :
@@ -283,15 +353,16 @@ const OrdersClient = ({ userId }) => {
 
                 <Link
                   href={`/orders/${group.id}`}
-                  className="w-full sm:w-auto text-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded transition-colors"
+                  className="w-full sm:w-auto text-center px-6 py-2.5 bg-transparent border hover:bg-slate-50 dark:hover:bg-white/5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all"
+                  style={{ borderColor: primaryColor, color: primaryColor }}
                 >
                   View Details
                 </Link>
               </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
       
       {/* Premium Reward Scratch Modal (Step 7) */}
       <AnimatePresence>

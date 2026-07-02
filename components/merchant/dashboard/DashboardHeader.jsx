@@ -51,8 +51,12 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
             {/* Top Bar: Profile & Notifications */}
             <div className="relative z-10 flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40 shadow-sm backdrop-blur-sm">
-                        <span className="material-icons-round text-slate-900 text-2xl">storefront</span>
+                    <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40 shadow-sm backdrop-blur-sm overflow-hidden">
+                        {profile?.avatar_url ? (
+                            <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                            <span className="material-icons-round text-slate-900 text-2xl">storefront</span>
+                        )}
                     </div>
                     <div>
                         <p className="text-sm text-slate-800/80 font-bold">{greeting}</p>

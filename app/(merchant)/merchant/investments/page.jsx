@@ -10,6 +10,7 @@ import {
 import InvestmentAnalytics from '@/components/merchant/investment/InvestmentAnalytics';
 import AIGrowHowItWorks from '@/components/merchant/investment/AIGrowHowItWorks';
 import FundROICard from '@/components/merchant/investment/FundROICard';
+import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
 
 function AnimatedNumber({ value, decimals = 0, prefix = '₹' }) {
     const [display, setDisplay] = useState(0);
@@ -43,6 +44,8 @@ export default function AIGrowPage() {
     const [toast, setToast] = useState(null);
     const [selectedInv, setSelectedInv] = useState(null);
     const [mobileTab, setMobileTab] = useState('overview');
+    const [user, setUser] = useState(null);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
 
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
@@ -54,6 +57,8 @@ export default function AIGrowPage() {
             setLoading(true);
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (authUser) setUser(authUser);
             const res = await fetch('/api/merchant/investments', { headers: { Authorization: `Bearer ${session.access_token}` } });
             const json = await res.json();
             const invs = json.data || [];
@@ -80,20 +85,8 @@ export default function AIGrowPage() {
     const handleRequest = async (e) => {
         e.preventDefault();
         if (Number(amount) < 10000) return showToast('Minimum ₹10,000 required', 'error');
-        setProcessing(true);
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch('/api/merchant/investments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-                body: JSON.stringify({ amountRupees: amount, description: desc }),
-            });
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.error);
-            showToast('Request submitted! Admin will review soon.');
-            setShowModal(false); setAmount(''); setDesc('');
-            fetchData();
-        } catch (err) { showToast(err.message, 'error'); } finally { setProcessing(false); }
+        setShowModal(false);
+        setShowPaymentModal(true);
     };
 
     if (loading) return (
@@ -425,6 +418,20 @@ export default function AIGrowPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Payment Modal */}
+            <SabpaisaPaymentModal
+                isOpen={showPaymentModal}
+                onClose={() => {
+                    setShowPaymentModal(false);
+                    setAmount('');
+                    setDesc('');
+                }}
+                amount={amount}
+                user={user}
+                productInfo="AI Grow Request"
+                metadata={{ type: "merchant_aigrow", description: desc || 'AI Grow request' }}
+            />
         </div>
     );
 }

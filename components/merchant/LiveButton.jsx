@@ -23,13 +23,13 @@ export default function LiveButton() {
                 whileTap={{ scale: 0.95 }}
                 onHoverStart={() => setTooltip(true)}
                 onHoverEnd={() => setTooltip(false)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-full border border-emerald-100 dark:border-emerald-800/30 shadow-sm transition-all hover:scale-105 cursor-default select-none"
+                className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-950/30 rounded-full border border-emerald-100 dark:border-emerald-800/30 shadow-sm transition-all hover:scale-105 cursor-default select-none"
             >
-                <span className="relative flex h-2.5 w-2.5">
+                <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                 </span>
-                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest min-w-[65px] text-center">
+                <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest min-w-[55px] text-center">
                     {timeStr ? `LIVE: ${timeStr}` : 'LIVE'}
                 </span>
             </motion.div>

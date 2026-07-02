@@ -643,7 +643,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                         </div>
                     )}
                     {(isLoading || loading) ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
                             {Array.from({ length: PAGE_SIZE }).map((_, i) => (
                                 <ProductCardSkeleton key={`psk-${i}`} />
                             ))}
@@ -655,7 +655,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                         </div>
                     ) : (
                         <>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
                                 {filteredItems.map(item => (
                                     <ProductCardV2
                                         key={item.id}
