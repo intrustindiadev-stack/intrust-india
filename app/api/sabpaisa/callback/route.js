@@ -6,18 +6,9 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { decrypt } from '@/lib/sabpaisa/encrypt';
 import { createClient } from '@supabase/supabase-js';
-import { 
-    notifyMerchantSubscriptionStatus,
-    notifyMerchantGiftCardSold,
-    notifyMerchantStoreCreditPaid
-} from '@/lib/notifications/merchantWhatsapp';
-import { notifyRewardEarned } from '@/lib/rewardNotifications';
 import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '@/lib/supabase/queries';
-import { CustomerWalletService } from '@/lib/wallet/customerWalletService';
 import { mapStatusToInternal } from '@/lib/sabpaisa/utils';
-import { sabpaisaConfig } from '@/lib/sabpaisa/config';
-import { MERCHANT_SUBSCRIPTION_PLANS } from '@/lib/constants';
-import { logRewardRpcResult } from '@/lib/rewardRpcResult';
+import { fulfillTransaction } from '@/lib/sabpaisa/fulfillment';
 
 const ALLOWED_IPS = (process.env.SABPAISA_ALLOWED_IPS || '').split(',').map(ip => ip.trim()).filter(Boolean);
 
@@ -63,7 +54,7 @@ export async function POST(request) {
             return NextResponse.redirect(buildRedirectUrl('/payment/failure?reason=missing_payload'), 303);
         }
 
-        // Decrypt the response using our internal Sabpaisa Kit 2.0 GCM decryption 
+        // Decrypt the response using our internal Sabpaisa Kit 2.0 GCM decryption
         // to guarantee server-side compatibility (SDK uses HEX encoding)
         const decryptedString = decrypt(encResponse);
 
@@ -106,7 +97,14 @@ export async function POST(request) {
 
         // 3. Get Existing Transaction to Check Type
         const existingTxn = await getTransactionByClientTxnId(clientTxnId);
+
+        // ── Idempotency: gate on fulfilled_at, NOT on raw gateway_success ──────
+        // wasAlreadySuccess alone is no longer sufficient: a prior callback may have
+        // written gateway_success and then crashed before fulfillTransaction() finished.
+        // wasAlreadyFulfilled = true means all fulfillment side-effects completed
+        // durably; only then do we skip fulfillment on retries.
         const wasAlreadySuccess = existingTxn && existingTxn.status === 'gateway_success';
+        const wasAlreadyFulfilled = existingTxn?.fulfilled_at != null;
 
         // Critical guard: if no DB record exists, log it prominently.
         // This happens when: (a) initiate failed before INSERT, (b) service key misconfigured,
@@ -142,8 +140,8 @@ export async function POST(request) {
 
         // ── Idempotency: Persist gateway_success BEFORE fulfillment ──────────
         // Writing the status to the DB now means any concurrent or retried
-        // callback will find wasAlreadySuccess=true and skip all fulfillment
-        // blocks, preventing double-crediting of rewards/wallets.
+        // callback will find wasAlreadySuccess=true (useful for the status field),
+        // but fulfillment is only skipped when fulfilled_at is also set.
         if (existingTxn && internalStatus === 'gateway_success' && !wasAlreadySuccess && !fulfillmentFailed) {
             try {
                 await updateTransaction(clientTxnId, {
@@ -162,356 +160,54 @@ export async function POST(request) {
             }
         }
 
-        // 5. Handle Wallet Credit for WALLET_TOPUP safely
-        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'WALLET_TOPUP' && !wasAlreadySuccess) {
-            try {
-                await CustomerWalletService.creditWallet(
-                    existingTxn.user_id,
-                    amount,
-                    'TOPUP',
-                    `Wallet Topup via Sabpaisa (${result.paymentMode || 'Gateway'})`,
-                    { id: clientTxnId, type: 'TOPUP' }
-                );
-                console.log(`[Callback] Wallet credited for txn ${clientTxnId}`);
+        // ── Success fulfillment — delegated to shared fulfillTransaction() ───
+        // Guard: skip only when fulfilled_at is already set (all side-effects durably complete).
+        // If gateway_success is set but fulfilled_at is NULL, a prior attempt crashed mid-way
+        // and we MUST retry. Each branch inside fulfillment.js enforces its own idempotency
+        // (WALLET_TOPUP: checks customer_wallet_transactions; GOLD_SUBSCRIPTION/MERCHANT_SUBSCRIPTION:
+        // check gateway_txn_id/last_sub_gateway_txn_id on the record; MERCHANT_LOCKIN/AIGROW:
+        // check gateway_txn_id on the created row) so re-running fulfillment is safe.
+        if (!fulfillmentFailed && !wasAlreadyFulfilled) {
+            const supabaseAdmin = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL,
+                process.env.SUPABASE_SERVICE_ROLE_KEY
+            );
 
-                // 5.1 ADDED: Notify Customer
-                const supabaseAdmin = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL,
-                    process.env.SUPABASE_SERVICE_ROLE_KEY
-                );
-                await supabaseAdmin.from('notifications').insert([{
-                    user_id: existingTxn.user_id,
-                    title: 'Wallet Topped Up ✅',
-                    body: `Your wallet has been credited with ₹${amount}.`,
-                    type: 'success',
-                    reference_type: 'wallet_topup',
-                    reference_id: clientTxnId
-                }]);
+            const fulfillResult = await fulfillTransaction(supabaseAdmin, existingTxn, internalStatus, {
+                clientTxnId,
+                amount,
+                paymentMode: result.paymentMode,
+                sabpaisaTxnId,
+                transMsg: result.transMsg
+            });
 
-                // 5.2 Distribute wallet_topup reward (non-blocking — must not fail the credit)
+            fulfillmentFailed = fulfillResult.fulfillmentFailed;
+            internalStatus = fulfillResult.internalStatus;
+            result.transMsg = fulfillResult.transMsg;
+
+            // ── Stamp fulfilled_at on durable completion ──────────────────
+            // Only written when fulfillTransaction() reports no failure.
+            // A future retry will see fulfilled_at IS NOT NULL and skip.
+            if (fulfillResult.fulfillmentComplete && clientTxnId) {
                 try {
-                    const { data: rewardData, error: rewardError } = await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
-                        p_event_type: 'wallet_topup',
-                        p_source_user_id: existingTxn.user_id,
-                        p_reference_id: existingTxn.id,
-                        p_reference_type: 'wallet_topup',
-                        p_amount_paise: Math.round(parseFloat(amount) * 100)
-                    });
-                    if (rewardError) {
-                        console.error('[Callback] Wallet topup reward RPC error:', rewardError);
-                    } else {
-                        logRewardRpcResult({
-                            event_type: 'wallet_topup',
-                            source_user_id: existingTxn.user_id,
-                            reference_id: existingTxn.id,
-                            reference_type: 'wallet_topup',
-                        }, rewardData);
-                        await notifyRewardEarned({
-                            supabaseAdmin,
-                            userId: existingTxn.user_id,
-                            eventType: 'wallet_topup',
-                            totalDistributed: rewardData?.total_distributed,
-                            referenceId: existingTxn.id,
-                            referenceType: 'wallet_topup'
-                        }).catch(() => {});
-                    }
-                } catch (rewardErr) {
-                    console.error('[Callback] Wallet topup reward distribution error:', rewardErr.message);
+                    await updateTransaction(clientTxnId, { fulfilled_at: new Date().toISOString() });
+                    console.log(`[Callback] fulfilled_at stamped for txn ${clientTxnId}`);
+                } catch (stampErr) {
+                    // Non-fatal — the next retry will re-run fulfillment (idempotent inside fulfillment.js).
+                    console.error(`[Callback] Failed to stamp fulfilled_at for txn ${clientTxnId}:`, stampErr.message);
                 }
-            } catch (walletError) {
-                console.error('[Callback] Failed to credit wallet:', walletError.message);
-                fulfillmentFailed = true;
-                internalStatus = 'failed';
-                result.transMsg = 'Wallet credit failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
             }
+        } else if (wasAlreadyFulfilled) {
+            console.log(`[Callback] txn ${clientTxnId} already fulfilled (fulfilled_at set). Skipping fulfillment.`);
         }
 
-        // 5b. Handle Merchant Wallet Credit for MERCHANT_TOPUP safely
-        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'MERCHANT_TOPUP' && !wasAlreadySuccess) {
-            try {
-                const supabaseAdmin = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL,
-                    process.env.SUPABASE_SERVICE_ROLE_KEY
-                );
+        // ── Failure / Abort-path: type-specific DB cleanup ───────────────────
+        // These blocks are callback-specific and intentionally NOT part of
+        // fulfillTransaction() — the webhook never needs to undo pending records
+        // because it only fires for confirmed outcomes, whereas the browser
+        // redirect flow can arrive with FAILED/ABORTED after a live user session.
 
-                // Check for idempotency
-                const { data: existingCredit } = await supabaseAdmin
-                    .from('merchant_transactions')
-                    .select('id')
-                    .eq('metadata->>id', clientTxnId)
-                    .eq('metadata->>type', 'MERCHANT_TOPUP')
-                    .maybeSingle();
-
-                if (existingCredit) {
-                    console.log(`[Callback] Merchant Wallet credit already applied for txn ${clientTxnId}`);
-                } else {
-                    // Get merchant ID for user
-                    const { data: merchant, error: merchantErr } = await supabaseAdmin
-                        .from('merchants')
-                        .select('id, wallet_balance_paise')
-                        .eq('user_id', existingTxn.user_id)
-                        .single();
-
-                    if (merchantErr) throw merchantErr;
-
-                    if (merchant) {
-                        const amountPaise = Math.round(parseFloat(amount) * 100);
-                        const newBalance = merchant.wallet_balance_paise + amountPaise;
-
-                        // Update balance
-                        const { error: balanceUpdateErr } = await supabaseAdmin
-                            .from('merchants')
-                            .update({
-                                wallet_balance_paise: newBalance,
-                                updated_at: new Date().toISOString()
-                            })
-                            .eq('id', merchant.id);
-
-                        if (balanceUpdateErr) throw balanceUpdateErr;
-
-                        // Insert transaction
-                        const { error: txInsertErr } = await supabaseAdmin
-                            .from('merchant_transactions')
-                            .insert({
-                                merchant_id: merchant.id,
-                                transaction_type: 'wallet_topup',
-                                amount_paise: amountPaise,
-                                commission_paise: 0,
-                                balance_after_paise: newBalance,
-                                description: `Wallet Topup via Sabpaisa (${result.paymentMode || 'Gateway'})`,
-                                metadata: { id: clientTxnId, type: 'MERCHANT_TOPUP' }
-                            });
-
-                        if (txInsertErr) {
-                            console.error('[Callback] History insert failed, rolling back merchant balance:', txInsertErr.message);
-                            // Rollback
-                            await supabaseAdmin
-                                .from('merchants')
-                                .update({
-                                    wallet_balance_paise: merchant.wallet_balance_paise,
-                                    updated_at: new Date().toISOString()
-                                })
-                                .eq('id', merchant.id);
-                            throw txInsertErr;
-                        }
-
-                        console.log(`[Callback] Merchant Wallet credited for txn ${clientTxnId}`);
-
-                        // 5b.1 ADDED: Notify Merchant
-                        await supabaseAdmin.from('notifications').insert([{
-                            user_id: existingTxn.user_id,
-                            title: 'Wallet Funded ✅',
-                            body: `Your merchant wallet has been credited with ₹${amount}.`,
-                            type: 'success',
-                            reference_type: 'merchant_wallet_topup',
-                            reference_id: clientTxnId
-                        }]);
-                    } else {
-                        console.error('[Callback] Merchant not found for topup:', existingTxn.user_id);
-                        fulfillmentFailed = true;
-                        internalStatus = 'failed';
-                        result.transMsg = 'Merchant account not found. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-                    }
-                }
-            } catch (walletError) {
-                console.error('[Callback] Failed to credit merchant wallet:', walletError.message);
-                fulfillmentFailed = true;
-                internalStatus = 'failed';
-                result.transMsg = 'Merchant wallet credit error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-            }
-        }
-
-        // 5c. Handle Udhari Payment Settlement via SabPaisa (gateway-funded)
-        // NOTE: Uses settle_udhari_gateway_payment — NOT settle_udhari_payment.
-        // The gateway already collected funds, so we must NOT debit the customer wallet.
-        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'UDHARI_PAYMENT' && !wasAlreadySuccess) {
-            try {
-                const supabaseAdmin = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL,
-                    process.env.SUPABASE_SERVICE_ROLE_KEY
-                );
-
-                const udhariRequestId = existingTxn.udf2;
-                const merchantId = existingTxn.udf3;
-
-                // Idempotency check — has this udhari already been settled?
-                const { data: existingSettlement } = await supabaseAdmin
-                    .from('udhari_requests')
-                    .select('id, status')
-                    .eq('id', udhariRequestId)
-                    .eq('status', 'completed')
-                    .maybeSingle();
-
-                if (existingSettlement) {
-                    console.log(`[Callback] Udhari already settled for txn ${clientTxnId}`);
-                } else {
-                    // Convert gateway amount to paise
-                    const amountPaise = Math.round(parseFloat(amount) * 100);
-
-                    // Call the gateway-specific settlement RPC:
-                    //   - marks coupon sold
-                    //   - creates order
-                    //   - credits merchant wallet
-                    //   - writes merchant ledger
-                    //   - marks udhari completed
-                    //   - does NOT touch customer_wallets
-                    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
-                        'settle_udhari_gateway_payment',
-                        {
-                            p_udhari_request_id: udhariRequestId,
-                            p_customer_user_id: existingTxn.user_id,
-                            p_amount_paise: amountPaise,
-                            p_customer_email: existingTxn.payer_email || null
-                        }
-                    );
-
-                    if (rpcError) {
-                        console.error('[Callback] Udhari gateway settlement RPC error:', rpcError.message);
-                        fulfillmentFailed = true;
-                        internalStatus = 'failed';
-                        result.transMsg = 'Udhari settlement failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-                    } else {
-                        console.log(`[Callback] Udhari settled (gateway) for txn ${clientTxnId}`, rpcResult);
-
-                        // Notify merchant of payment receipt
-                        const { data: merchant } = await supabaseAdmin
-                            .from('merchants')
-                            .select('user_id')
-                            .eq('id', merchantId)
-                            .single();
-
-                        if (merchant) {
-                            await supabaseAdmin.from('notifications').insert({
-                                user_id: merchant.user_id,
-                                title: 'Store Credit Payment Received ✅',
-                                body: `A store credit payment of ₹${amount} has been received via UPI/Card.`,
-                                type: 'success',
-                                reference_id: udhariRequestId,
-                                reference_type: 'udhari_completed'
-                            });
-
-                            // 5c.1 WhatsApp Notification (Non-blocking)
-                            notifyMerchantStoreCreditPaid({
-                                merchantUserId: merchant.user_id,
-                                amountRs: amount,
-                                item: udhariRequestId.slice(0, 8).toUpperCase()
-                            }).catch(e => console.error('[Callback] Udhari WhatsApp notification failed:', e));
-                        }
-                    }
-                }
-            } catch (udhariError) {
-                console.error('[Callback] Udhari payment processing error:', udhariError.message);
-                fulfillmentFailed = true;
-                internalStatus = 'failed';
-                result.transMsg = 'Udhari processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-            }
-        }
-
-
-
-        // 5d. Handle Cart Checkout
-        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'CART_CHECKOUT' && !wasAlreadySuccess) {
-            try {
-                const supabaseAdmin = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL,
-                    process.env.SUPABASE_SERVICE_ROLE_KEY
-                );
-
-                const groupId = existingTxn.udf2;
-                const amountPaise = Math.round(parseFloat(amount) * 100);
-
-                const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
-                    'finalize_gateway_orders',
-                    {
-                        p_group_id: groupId,
-                        p_customer_id: existingTxn.user_id,
-                        p_amount_paise: amountPaise
-                    }
-                );
-
-                if (rpcError || (rpcResult && !rpcResult.success)) {
-                    const detailedError = rpcError?.message || rpcResult?.message || 'Unknown fulfillment error';
-                    console.error('[Callback] Cart checkout finalize error:', detailedError);
-                    fulfillmentFailed = true;
-                    internalStatus = 'failed';
-                    result.transMsg = `Cart order fulfillment failed: ${detailedError}. Payment cannot be fulfilled automatically. Manual verification required. Contact support.`;
-                } else {
-                    console.log(`[Callback] Cart checkout fulfilled for txn ${clientTxnId}`);
-
-                    // Distribute purchase rewards
-                    try {
-                        const amountPaise = Math.round(parseFloat(amount) * 100);
-                        const { data: rewardData, error: rewardError } = await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
-                            p_event_type: 'purchase',
-                            p_source_user_id: existingTxn.user_id,
-                            p_reference_id: groupId,
-                            p_reference_type: 'shopping_order',
-                            p_amount_paise: amountPaise
-                        });
-                        if (rewardError) {
-                            console.error('[Callback] Cart checkout reward RPC error:', rewardError);
-                        } else {
-                            logRewardRpcResult({
-                                event_type: 'purchase',
-                                source_user_id: existingTxn.user_id,
-                                reference_id: groupId,
-                                reference_type: 'shopping_order',
-                            }, rewardData);
-                            await notifyRewardEarned({
-                                supabaseAdmin,
-                                userId: existingTxn.user_id,
-                                eventType: 'purchase',
-                                totalDistributed: rewardData?.total_distributed,
-                                referenceId: groupId,
-                                referenceType: 'shopping_order'
-                            }).catch(() => {});
-                        }
-                    } catch (rewardErr) {
-                        console.error('[Callback] Cart checkout reward distribution error:', rewardErr.message);
-                    }
-
-                    try {
-                        await supabaseAdmin.from('notifications').insert({
-                            user_id: existingTxn.user_id,
-                            title: 'Order Placed Successfully ✅',
-                            body: `Your order of ₹${amount} has been confirmed. Track it in your orders.`,
-                            type: 'success',
-                            reference_id: groupId,
-                            reference_type: 'shopping_order'
-                        });
-
-                        // Notify all admins of the new order
-                        const { data: adminProfiles } = await supabaseAdmin
-                            .from('user_profiles')
-                            .select('id')
-                            .eq('role', 'admin');
-
-                        if (adminProfiles && adminProfiles.length > 0) {
-                            const adminNotifs = adminProfiles.map((ap) => ({
-                                user_id: ap.id,
-                                title: 'New Platform Order 🛍️',
-                                body: `A new shopping order of ₹${amount} has been placed (ID: ${groupId.slice(0, 8).toUpperCase()}).`,
-                                type: 'info',
-                                reference_id: groupId,
-                                reference_type: 'shopping_order'
-                            }));
-
-                            await supabaseAdmin.from('notifications').insert(adminNotifs);
-                        }
-
-                    } catch (notificationError) {
-                        console.error('[Callback] Failed to insert notifications:', notificationError.message);
-                    }
-                }
-            } catch (cartError) {
-                console.error('[Callback] Cart checkout processing error:', cartError.message);
-                fulfillmentFailed = true;
-                internalStatus = 'failed';
-                result.transMsg = 'Cart checkout processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-            }
-        }
-
-        // 5e. Handle Cart Checkout Failure
+        // 5e. CART_CHECKOUT — mark shopping_order_group as failed/aborted
         if (existingTxn && internalStatus !== 'gateway_success' && existingTxn.udf1 === 'CART_CHECKOUT') {
             try {
                 const supabaseAdmin = createClient(
@@ -528,7 +224,7 @@ export async function POST(request) {
                     .neq('payment_status', 'paid');
                 console.log(`[Callback] Cart checkout marked as failed/aborted for txn ${clientTxnId}`);
 
-                // 5e.1 ADDED: Notify Customer of Payment Failure
+                // Notify Customer of Payment Failure
                 await supabaseAdmin.from('notifications').insert([{
                     user_id: existingTxn.user_id,
                     title: 'Checkout Payment Failed ❌',
@@ -542,82 +238,7 @@ export async function POST(request) {
             }
         }
 
-        // 5f-nfc. Handle NFC Order Payment — Success path
-        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'NFC_ORDER' && !wasAlreadySuccess) {
-            try {
-                const supabaseAdmin = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL,
-                    process.env.SUPABASE_SERVICE_ROLE_KEY
-                );
-                const nfcOrderId = existingTxn.udf2;
-
-                // Idempotency: check current payment_status before mutating
-                const { data: nfcOrder } = await supabaseAdmin
-                    .from('nfc_orders')
-                    .select('id, payment_status')
-                    .eq('id', nfcOrderId)
-                    .single();
-
-                if (nfcOrder?.payment_status === 'paid') {
-                    console.log(`[Callback] NFC order ${nfcOrderId} already paid — skipping duplicate fulfillment.`);
-                } else {
-                    const { error: nfcUpdateErr } = await supabaseAdmin
-                        .from('nfc_orders')
-                        .update({ payment_status: 'paid', status: 'confirmed' })
-                        .eq('id', nfcOrderId)
-                        .neq('payment_status', 'paid'); // idempotency guard
-
-                    if (nfcUpdateErr) {
-                        console.error('[Callback] NFC order update failed:', nfcUpdateErr.message);
-                        fulfillmentFailed = true;
-                        internalStatus = 'failed';
-                        result.transMsg = 'NFC order fulfillment failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-                    } else {
-                        console.log(`[Callback] NFC order ${nfcOrderId} marked paid/confirmed for txn ${clientTxnId}`);
-                        try {
-                            await supabaseAdmin.from('notifications').insert({
-                                user_id: existingTxn.user_id,
-                                title: 'NFC Card Order Confirmed ✅',
-                                body: `Your NFC card order of ₹${amount} has been confirmed and will be dispatched soon.`,
-                                type: 'success',
-                                reference_id: nfcOrderId,
-                                reference_type: 'nfc_order'
-                            });
-                        } catch (notifErr) {
-                            console.error('[Callback] NFC order notification failed:', notifErr.message);
-                        }
-
-                        try {
-                            const { data: adminProfiles } = await supabaseAdmin
-                                .from('user_profiles')
-                                .select('id')
-                                .in('role', ['admin', 'super_admin']);
-
-                            if (adminProfiles && adminProfiles.length > 0) {
-                                const adminNotifs = adminProfiles.map((ap) => ({
-                                    user_id: ap.id,
-                                    title: 'New NFC Card Order 📇',
-                                    body: `NFC card order #${nfcOrderId.slice(0, 8).toUpperCase()} confirmed via gateway payment of ₹${amount}.`,
-                                    type: 'info',
-                                    reference_id: nfcOrderId,
-                                    reference_type: 'nfc_order'
-                                }));
-                                await supabaseAdmin.from('notifications').insert(adminNotifs);
-                            }
-                        } catch (adminNotifErr) {
-                            console.error('[Callback] NFC order admin notification failed:', adminNotifErr.message);
-                        }
-                    }
-                }
-            } catch (nfcError) {
-                console.error('[Callback] NFC order processing error:', nfcError.message);
-                fulfillmentFailed = true;
-                internalStatus = 'failed';
-                result.transMsg = 'NFC order processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-            }
-        }
-
-        // 5f-nfc-fail. Handle NFC Order Payment — Failure / Abort path
+        // 5f-nfc-fail. NFC_ORDER — mark nfc_order payment as failed
         if (existingTxn && internalStatus !== 'gateway_success' && existingTxn.udf1 === 'NFC_ORDER') {
             try {
                 const supabaseAdmin = createClient(
@@ -637,405 +258,57 @@ export async function POST(request) {
             }
         }
 
-        // 6. Handle Gift Card Purchase — Atomic coupon+order with rollback safety
-        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'GIFT_CARD' && !wasAlreadySuccess) {
-            try {
-                const supabaseAdmin = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL,
-                    process.env.SUPABASE_SERVICE_ROLE_KEY
-                );
-
-                // Add KYC Check Defensive Verification
-                const { data: profile } = await supabaseAdmin
-                    .from('user_profiles')
-                    .select('kyc_status')
-                    .eq('id', existingTxn.user_id)
-                    .single();
-
-                if (!profile || profile.kyc_status !== 'verified') {
-                    console.error(`[Callback] KYC check failed for GIFT_CARD transaction ${clientTxnId}`);
-                    // Ensure the transaction is marked as failed or policy-blocked
-                    internalStatus = 'failed';
-                    result.transMsg = 'KYC Policy Block: Verification required for gift cards';
-                    fulfillmentFailed = true;
-                } else {
-                    const couponId = existingTxn.udf2;
-                    if (couponId) {
-                        // Step A: Mark coupon as sold (only if still available)
-                        const { data: updatedCoupon, error: updateCouponError } = await supabaseAdmin
-                            .from('coupons')
-                            .update({
-                                status: 'sold',
-                                purchased_by: existingTxn.user_id,
-                                purchased_at: new Date().toISOString()
-                            })
-                            .eq('id', couponId)
-                            .eq('status', 'available')
-                            .select('id, merchant_id')
-                            .single();
-
-                        if (!updateCouponError && updatedCoupon) {
-                            // Step B: Create order record
-                            const amountPaise = Math.round(parseFloat(amount) * 100);
-                            const { data: newOrder, error: orderError } = await supabaseAdmin
-                                .from('orders')
-                                .insert({
-                                    user_id: existingTxn.user_id,
-                                    merchant_id: updatedCoupon.merchant_id,
-                                    giftcard_id: couponId,
-                                    amount: amountPaise,
-                                    payment_status: 'paid',
-                                    created_at: new Date().toISOString()
-                                })
-                                .select('id')
-                                .single();
-
-                            if (orderError) {
-                                console.error('[Callback] Order insert failed, rolling back coupon:', orderError.message);
-                                await supabaseAdmin
-                                    .from('coupons')
-                                    .update({ status: 'available', purchased_by: null, purchased_at: null })
-                                    .eq('id', couponId)
-                                    .eq('purchased_by', existingTxn.user_id);
-                                fulfillmentFailed = true;
-                                internalStatus = 'failed';
-                                result.transMsg = 'Order creation failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-                            } else {
-                                try {
-                                    // Customer Notification
-                                    await supabaseAdmin.from('notifications').insert({
-                                        user_id: existingTxn.user_id,
-                                        title: 'Gift Card Purchased ✅',
-                                        body: `You successfully purchased a gift card worth ₹${amount}.`,
-                                        type: 'success',
-                                        reference_id: newOrder.id,
-                                        reference_type: 'gift_card_purchase'
-                                    });
-
-                                    // Merchant Notification
-                                    const { data: merchantDetails } = await supabaseAdmin
-                                        .from('merchants')
-                                        .select('user_id')
-                                        .eq('id', updatedCoupon.merchant_id)
-                                        .single();
-
-                                    if (merchantDetails?.user_id) {
-                                        await supabaseAdmin.from('notifications').insert({
-                                            user_id: merchantDetails.user_id,
-                                            title: 'Gift Card Sold 💳',
-                                            body: `A customer purchased a gift card worth ₹${amount}.`,
-                                            type: 'success',
-                                            reference_id: newOrder.id,
-                                            reference_type: 'gift_card_purchase'
-                                        });
-
-                                        // 6.1 WhatsApp Notification (Non-blocking)
-                                        notifyMerchantGiftCardSold({
-                                            merchantUserId: merchantDetails.user_id,
-                                            amountRs: amount,
-                                            brand: 'Store Gift Card'
-                                        }).catch(e => console.error('[Callback] Gift card WhatsApp notification failed:', e));
-                                    }
-
-                                    // Distribute purchase rewards for gift card
-                                    try {
-                                        const amountPaise = Math.round(parseFloat(amount) * 100);
-                                        const { data: rewardData, error: rewardError } = await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
-                                            p_event_type: 'purchase',
-                                            p_source_user_id: existingTxn.user_id,
-                                            p_reference_id: couponId,
-                                            p_reference_type: 'gift_card_purchase',
-                                            p_amount_paise: amountPaise
-                                        });
-                                        if (rewardError) {
-                                            console.error('[Callback] Gift card reward RPC error:', rewardError);
-                                        } else {
-                                            logRewardRpcResult({
-                                                event_type: 'purchase',
-                                                source_user_id: existingTxn.user_id,
-                                                reference_id: couponId,
-                                                reference_type: 'gift_card_purchase',
-                                            }, rewardData);
-                                            await notifyRewardEarned({
-                                                supabaseAdmin,
-                                                userId: existingTxn.user_id,
-                                                eventType: 'purchase',
-                                                totalDistributed: rewardData?.total_distributed,
-                                                referenceId: couponId,
-                                                referenceType: 'gift_card_purchase'
-                                            }).catch(() => {});
-                                        }
-                                    } catch (rewardErr) {
-                                        console.error('[Callback] Gift card reward distribution error:', rewardErr.message);
-                                    }
-                                } catch (notificationError) {
-                                    console.error('[Callback] Gift card notifications failed:', notificationError.message);
-                                }
-                            }
-                        } else {
-                            console.error('[Callback] Coupon mark-as-sold failed or already sold');
-                            fulfillmentFailed = true;
-                            internalStatus = 'failed';
-                            result.transMsg = 'Gift card is no longer available. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-                        }
-                    } else {
-                        console.error('[Callback] Missing couponId in udf2');
-                        fulfillmentFailed = true;
-                        internalStatus = 'failed';
-                        result.transMsg = 'Invalid gift card selection. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-                    }
-                }
-            } catch (gcError) {
-                console.error('[Callback] Gift card processing error:', gcError.message);
-                fulfillmentFailed = true;
-                internalStatus = 'failed';
-                result.transMsg = 'Gift card processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-            }
+        // 5g-gold-fail. GOLD_SUBSCRIPTION — no persistent record to mark, but log for ops visibility.
+        // (Gold activation only updates user_profiles; if it failed during fulfillment, the profile
+        // was not mutated, so no rollback is needed here.)
+        if (existingTxn && internalStatus !== 'gateway_success' && existingTxn.udf1 === 'GOLD_SUBSCRIPTION') {
+            console.log(`[Callback] GOLD_SUBSCRIPTION payment did not succeed for txn ${clientTxnId} — no pending record to clean up.`);
         }
 
-        // 7. Handle Gold Subscription Activation
-        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'GOLD_SUBSCRIPTION' && !wasAlreadySuccess) {
-            try {
-                const packageId = existingTxn.udf2;
-                const monthsToAdd = packageId === 'GOLD_1M' ? 1 : packageId === 'GOLD_3M' ? 3 : 12;
-
-                const supabaseAdmin = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL,
-                    process.env.SUPABASE_SERVICE_ROLE_KEY
-                );
-
-                const { data: profile } = await supabaseAdmin
-                    .from('user_profiles')
-                    .select('is_gold_verified, subscription_expiry')
-                    .eq('id', existingTxn.user_id)
-                    .single();
-
-                let baseDate = new Date();
-                if (profile?.is_gold_verified && profile?.subscription_expiry) {
-                    const currentExpiry = new Date(profile.subscription_expiry);
-                    if (currentExpiry > baseDate) baseDate = currentExpiry;
-                }
-
-                const newExpiryDate = new Date(baseDate);
-                newExpiryDate.setMonth(newExpiryDate.getMonth() + monthsToAdd);
-
-                await supabaseAdmin
-                    .from('user_profiles')
-                    .update({
-                        is_gold_verified: true,
-                        subscription_expiry: newExpiryDate.toISOString()
-                    })
-                    .eq('id', existingTxn.user_id);
-
-                console.log(`[Callback] Gold subscription activated for user ${existingTxn.user_id}`);
-            } catch (goldError) {
-                console.error('[Callback] Gold subscription activation error:', goldError.message);
-                fulfillmentFailed = true;
-                internalStatus = 'failed';
-                result.transMsg = 'Gold subscription activation failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-            }
-        }
-
-        // 5f. Handle Wholesale Purchase Fulfillment
-        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'WHOLESALE_PURCHASE' && !wasAlreadySuccess) {
+        // 5h-wholesale-fail. WHOLESALE_PURCHASE — mark draft as failed in wholesale_order_drafts.
+        // Table: wholesale_order_drafts (status column: 'pending' | 'completed' | 'failed').
+        // failure_reason column added by 20260517_wholesale_draft_failure_reason.sql.
+        // Guard: never overwrite an already-completed draft with failure.
+        if (existingTxn && internalStatus !== 'gateway_success' && existingTxn.udf1 === 'WHOLESALE_PURCHASE') {
             try {
                 const supabaseAdmin = createClient(
                     process.env.NEXT_PUBLIC_SUPABASE_URL,
                     process.env.SUPABASE_SERVICE_ROLE_KEY
                 );
-
                 const draftId = existingTxn.udf2;
-                const amountPaise = Math.round(parseFloat(amount) * 100);
-
-                const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
-                    'finalize_wholesale_gateway_purchase',
-                    {
-                        p_draft_id: draftId,
-                        p_amount_paise: amountPaise
-                    }
-                );
-
-                if (rpcError || (rpcResult && !rpcResult.success)) {
-                    console.error('[Callback] Wholesale fulfillment error:', rpcError?.message || rpcResult?.message);
-                    fulfillmentFailed = true;
-                    internalStatus = 'failed';
-                    result.transMsg = 'Wholesale fulfillment failed. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-                } else {
-                    console.log(`[Callback] Wholesale purchase fulfilled for txn ${clientTxnId}`);
-
-                    try {
-                        // Notify Merchant of successful stock purchase
-                        await supabaseAdmin.from('notifications').insert({
-                            user_id: existingTxn.user_id,
-                            title: 'Stock Purchased Successfully 📦',
-                            body: `Your wholesale order of ₹${amount} has been processed. Items are now in your inventory.`,
-                            type: 'success',
-                            reference_id: draftId,
-                            reference_type: 'wholesale_purchase'
-                        });
-                    } catch (notificationError) {
-                        console.error('[Callback] Failed to insert wholesale notification:', notificationError.message);
-                    }
+                if (draftId) {
+                    await supabaseAdmin
+                        .from('wholesale_order_drafts')
+                        .update({
+                            status: 'failed',
+                            failure_reason: result.transMsg || 'Payment failed or aborted'
+                        })
+                        .eq('id', draftId)
+                        .neq('status', 'completed');
+                    console.log(`[Callback] Wholesale draft ${draftId} marked as failed for txn ${clientTxnId}`);
                 }
-            } catch (wholesaleError) {
-                console.error('[Callback] Wholesale processing error:', wholesaleError.message);
-                fulfillmentFailed = true;
-                internalStatus = 'failed';
-                result.transMsg = 'Wholesale processing error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
+            } catch (failErr) {
+                console.error('[Callback] Failed to mark wholesale draft as failed:', failErr.message);
             }
         }
 
-        // 5g. Handle Merchant Subscription Fulfillment (first-time OR renewal)
-        if (existingTxn && internalStatus === 'gateway_success' && existingTxn.udf1 === 'MERCHANT_SUBSCRIPTION' && !wasAlreadySuccess) {
-            try {
-                const supabaseAdmin = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL,
-                    process.env.SUPABASE_SERVICE_ROLE_KEY
-                );
+        // 5i-msub-fail. MERCHANT_SUBSCRIPTION — no additional record needed; subscription_status
+        // remains at its prior state if fulfillment didn't run, so no cleanup required.
+        // Log for ops visibility.
+        if (existingTxn && internalStatus !== 'gateway_success' && existingTxn.udf1 === 'MERCHANT_SUBSCRIPTION') {
+            console.log(`[Callback] MERCHANT_SUBSCRIPTION payment did not succeed for txn ${clientTxnId} — subscription_status unchanged.`);
+        }
 
-                const merchantId = existingTxn.udf2;
+        // 5j-lockin-fail. MERCHANT_LOCKIN — no lockin_balance row is created until fulfillment succeeds,
+        // so there is nothing to roll back on failure. Log for ops visibility.
+        if (existingTxn && internalStatus !== 'gateway_success' && existingTxn.udf1 === 'MERCHANT_LOCKIN') {
+            console.log(`[Callback] MERCHANT_LOCKIN payment did not succeed for txn ${clientTxnId} — no lockin record to clean up.`);
+        }
 
-                // ── Security: Re-verify merchant ownership before mutating ──
-                // Guards against tampered UDFs or replayed legacy transaction records.
-                const { data: ownerCheck, error: ownerCheckErr } = await supabaseAdmin
-                    .from('merchants')
-                    .select('user_id')
-                    .eq('id', merchantId)
-                    .single();
-
-                if (ownerCheckErr || !ownerCheck || ownerCheck.user_id !== existingTxn.user_id) {
-                    console.error(
-                        `[Callback] SECURITY: Merchant ownership mismatch for txn ${clientTxnId}. ` +
-                        `Transaction user: ${existingTxn.user_id}, Merchant owner: ${ownerCheck?.user_id}. ` +
-                        `Blocking subscription activation.`
-                    );
-                    throw new Error('Merchant ownership verification failed. Refusing to activate subscription.');
-                }
-
-                // Resolve plan duration from udf3 (e.g. "MSUB_6M").
-                // Fall back to 30 days for any legacy ₹149 transactions with no plan key.
-                const planKey = existingTxn.udf3 || null;
-                const plan = MERCHANT_SUBSCRIPTION_PLANS.find(p => p.key === planKey);
-                const durationDays = plan ? plan.durationDays : 30;
-                const planLabel = plan ? plan.label : '1 Month (legacy)';
-
-                // Fetch current merchant to know if first-time or renewal
-                const { data: merchantCheck } = await supabaseAdmin
-                    .from('merchants')
-                    .select('subscription_status, subscription_expires_at')
-                    .eq('id', merchantId)
-                    .single();
-
-                const currentExpiry = merchantCheck?.subscription_expires_at
-                    ? new Date(merchantCheck.subscription_expires_at)
-                    : null;
-                const isRenewal = merchantCheck?.subscription_status === 'active' || Boolean(currentExpiry);
-                const expiryBase = currentExpiry && currentExpiry > new Date() ? currentExpiry : new Date();
-
-                // Compute new expiry based on existing expiry for renewals so active plans are extended.
-                const newExpiry = new Date(expiryBase.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString();
-                const expiryFormatted = new Date(newExpiry).toLocaleDateString('en-IN', {
-                    day: 'numeric', month: 'short', year: 'numeric'
-                });
-
-                // 1. Activate / Renew Subscription — always extend expiry on successful payment
-                const { error: merchUpdateErr } = await supabaseAdmin
-                    .from('merchants')
-                    .update({
-                        subscription_status: 'active',
-                        subscription_expires_at: newExpiry
-                    })
-                    .eq('id', merchantId);
-
-                if (merchUpdateErr) throw merchUpdateErr;
-
-                // 1.5 Notify Merchant via WhatsApp
-                try {
-                    await notifyMerchantSubscriptionStatus({
-                        merchantUserId: existingTxn.user_id,
-                        status: isRenewal ? 'renewed' : 'activated',
-                        expiry: expiryFormatted
-                    });
-                } catch (notifErr) {
-                    console.error('[Callback] Failed to send merchant subscription notification:', notifErr);
-                }
-
-                // 2. Grant Merchant Role (only needed for first-time activation)
-                if (!isRenewal) {
-                    const { error: roleUpdateErr } = await supabaseAdmin
-                        .from('user_profiles')
-                        .update({ role: 'merchant' })
-                        .eq('id', existingTxn.user_id);
-
-                    if (roleUpdateErr) throw roleUpdateErr;
-
-                    // 2.5 Distribute Referral Reward
-                    try {
-                        const { data: rewardData, error: rewardError } = await supabaseAdmin.rpc('distribute_merchant_referral_reward', {
-                            p_new_merchant_id: merchantId
-                        });
-                        if (rewardError) {
-                            console.error('[Callback] Error distributing merchant referral reward:', rewardError);
-                        } else {
-                            console.log('[Callback] Merchant referral reward result:', rewardData);
-                        }
-                    } catch (err) {
-                        console.error('[Callback] Unexpected error distributing merchant referral reward:', err);
-                    }
-
-                    // 2.6 Distribute merchant_onboard reward points to customer referral upline
-                    try {
-                        const { data: rewardData, error: rewardError } = await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
-                            p_event_type: 'merchant_onboard',
-                            p_source_user_id: existingTxn.user_id,
-                            p_reference_id: merchantId,
-                            p_reference_type: 'merchant'
-                        });
-                        if (rewardError) {
-                            console.error('[Callback] merchant_onboard reward RPC error:', rewardError);
-                        } else {
-                            logRewardRpcResult({
-                                event_type: 'merchant_onboard',
-                                source_user_id: existingTxn.user_id,
-                                reference_id: merchantId,
-                                reference_type: 'merchant',
-                            }, rewardData);
-                        }
-                    } catch (rewardErr) {
-                        console.error('[Callback] merchant_onboard reward distribution error (non-fatal):', rewardErr.message);
-                    }
-                }
-
-                // 2.7 Distribute subscription_renewal reward points to customer referral upline
-                if (isRenewal) {
-                    try {
-                        const renewalReferenceId = existingTxn.id;
-                        const { data: rewardData, error: rewardError } = await supabaseAdmin.rpc('calculate_and_distribute_rewards', {
-                            p_event_type: 'subscription_renewal',
-                            p_source_user_id: existingTxn.user_id,
-                            p_reference_id: renewalReferenceId,
-                            p_reference_type: 'merchant_subscription'
-                        });
-                        if (rewardError) {
-                            console.error('[Callback] subscription_renewal reward RPC error:', rewardError);
-                        } else {
-                            logRewardRpcResult({
-                                event_type: 'subscription_renewal',
-                                source_user_id: existingTxn.user_id,
-                                reference_id: renewalReferenceId,
-                                reference_type: 'merchant_subscription',
-                            }, rewardData);
-                        }
-                    } catch (rewardErr) {
-                        console.error('[Callback] subscription_renewal reward distribution error (non-fatal):', rewardErr.message);
-                    }
-                }
-            } catch (msubError) {
-                console.error('[Callback] Merchant subscription processing error:', msubError.message);
-                fulfillmentFailed = true;
-                internalStatus = 'failed';
-                result.transMsg = 'Merchant subscription activation error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
-            }
+        // 5k-aigrow-fail. MERCHANT_AIGROW — no investment row is created until fulfillment succeeds,
+        // so there is nothing to roll back on failure. Log for ops visibility.
+        if (existingTxn && internalStatus !== 'gateway_success' && existingTxn.udf1 === 'MERCHANT_AIGROW') {
+            console.log(`[Callback] MERCHANT_AIGROW payment did not succeed for txn ${clientTxnId} — no investment record to clean up.`);
         }
 
         // 7b. Catch-all: Downgrade to failure if fulfillment failed on any path but status wasn't reset

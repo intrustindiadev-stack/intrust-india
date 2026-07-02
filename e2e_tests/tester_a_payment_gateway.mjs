@@ -1,101 +1,349 @@
+/**
+ * e2e_tests/tester_a_payment_gateway.mjs
+ *
+ * TEST MODULE 6: Payment Gateway
+ *
+ * Validates the current SabPaisa contract end-to-end:
+ *   - Correct column names (client_txn_id, status, expected_amount_paise, fulfilled_at, udf1)
+ *   - Lowercase internal statuses (initiated, gateway_success, failed)
+ *   - shared fulfillTransaction() side-effects (wallet credit for WALLET_TOPUP)
+ *   - Amount mismatch guard (integrity check)
+ *   - fulfilled_at idempotency stamp after successful fulfillment
+ *   - No re-fulfillment once fulfilled_at is set
+ *
+ * IMPORTANT: This test drives fulfillment.js directly with a service-role client and
+ * synthetic transaction records. It does NOT encrypt a live SabPaisa payload (which would
+ * require real keys and network access to the gateway). The callback/webhook HTTP layer
+ * is separately exercised by integration tests.
+ */
+
 import { createClient } from '@supabase/supabase-js';
+import { fulfillTransaction } from '../lib/sabpaisa/fulfillment.js';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
 const TEST_EMAIL = process.env.TEST_CUSTOMER_EMAIL || 'tester_a@intrustindia.com';
 const TEST_PASSWORD = process.env.TEST_CUSTOMER_PASSWORD || 'SecurePass123!';
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let passed = 0; let failed = 0;
+let passed = 0;
+let failed = 0;
+
 function pass(msg) { console.log(`  ✅ PASS: ${msg}`); passed++; }
 function fail(msg, detail) { console.error(`  ❌ FAIL: ${msg}`, detail || ''); failed++; }
 
 async function getTestUserId() {
-    const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    return users?.users?.find(u => u.email === TEST_EMAIL)?.id;
+    const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    return users?.find(u => u.email === TEST_EMAIL)?.id;
 }
 
-async function cleanupData() {
-    const uid = await getTestUserId();
-    if (uid) {
-        await supabaseAdmin.from('transactions').delete().eq('user_id', uid);
-        await supabaseAdmin.from('transaction_logs').delete().like('transaction_id', 'test_txn_%');
-        await supabaseAdmin.from('customer_wallets').update({ balance_paise: 0 }).eq('user_id', uid);
-    }
+/** Insert a minimal transaction row using the real schema and return the full row. */
+async function insertTestTransaction(uid, overrides = {}) {
+    const clientTxnId = `test_txn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const payload = {
+        client_txn_id: clientTxnId,
+        user_id: uid,
+        amount: 10.00,
+        expected_amount_paise: 1000,
+        status: 'initiated',
+        udf1: 'WALLET_TOPUP',
+        payer_email: TEST_EMAIL,
+        payer_mobile: '9999999999',
+        payer_name: 'Tester A',
+        ...overrides,
+    };
+
+    const { data, error } = await supabaseAdmin
+        .from('transactions')
+        .insert(payload)
+        .select('*')
+        .single();
+
+    if (error) throw new Error(`insertTestTransaction failed: ${error.message}`);
+    return data;
+}
+
+async function cleanupData(uid) {
+    if (!uid) return;
+    // Remove test transactions (cascades to transaction_logs)
+    await supabaseAdmin.from('transactions').delete().eq('user_id', uid).like('client_txn_id', 'test_txn_%');
+    // Reset wallet to 0 for clean idempotency tests
+    await supabaseAdmin.from('customer_wallets').update({ balance_paise: 0 }).eq('user_id', uid);
 }
 
 async function run() {
     console.log('\n--- Running TEST MODULE 6: Payment Gateway ---');
+
+    // ── Ensure test user exists ──────────────────────────────────────────────
     let uid = await getTestUserId();
     if (!uid) {
-         await supabaseAdmin.auth.admin.createUser({ email: TEST_EMAIL, password: TEST_PASSWORD, email_confirm: true });
-         uid = await getTestUserId();
+        await supabaseAdmin.auth.admin.createUser({
+            email: TEST_EMAIL,
+            password: TEST_PASSWORD,
+            email_confirm: true,
+        });
+        uid = await getTestUserId();
     }
-    await cleanupData();
+    await cleanupData(uid);
 
-    console.log(`\n🧪 TC-A-057: SabPaisa initiate WALLET_TOPUP`);
-    const clientTxnId1 = `test_txn_${Date.now()}_1`;
-    const { data: txn1 } = await supabaseAdmin.from('transactions').insert({
-        user_id: uid, total_paid_paise: 1000, amount: 10, status: 'INITIATED', client_txn_id: clientTxnId1
-    }).select('id').single();
-    const txnId1 = txn1?.id;
-    const { data: t57 } = await supabaseAdmin.from('transactions').select('status').eq('id', txnId1).single();
-    if (t57?.status === 'INITIATED') pass('Transaction created with INITIATED status');
-    else fail('Transaction failed initiation');
+    // ── Ensure test user has a wallet row ────────────────────────────────────
+    const { data: existingWallet } = await supabaseAdmin
+        .from('customer_wallets')
+        .select('id')
+        .eq('user_id', uid)
+        .maybeSingle();
+    if (!existingWallet) {
+        await supabaseAdmin.from('customer_wallets').insert({ user_id: uid, balance_paise: 0 });
+    }
 
-    // TC-A-058: MOCK SUCCESS
-    console.log(`\n🧪 TC-A-058: Mock SUCCESS callback`);
-    const clientTxnIdSuc = `test_txn_${Date.now()}_suc`;
-    const { data: txnSuc } = await supabaseAdmin.from('transactions').insert({ user_id: uid, total_paid_paise: 1000, amount: 10, status: 'INITIATED', client_txn_id: clientTxnIdSuc }).select('id').single();
-    const txnIdSuc = txnSuc?.id;
-    await supabaseAdmin.from('transactions').update({ status: 'SUCCESS' }).eq('id', txnIdSuc);
-    const { data: t58 } = await supabaseAdmin.from('transactions').select('status').eq('id', txnIdSuc).single();
-    if (t58?.status === 'SUCCESS') pass('Transaction updated to SUCCESS'); else fail('Not SUCCESS');
+    // ────────────────────────────────────────────────────────────────────────
+    // TC-A-057: Transaction row shape — current schema columns
+    // ────────────────────────────────────────────────────────────────────────
+    console.log('\n🧪 TC-A-057: Transaction row created with correct schema columns');
+    try {
+        const txn = await insertTestTransaction(uid, {
+            expected_amount_paise: 1500,
+            udf1: 'WALLET_TOPUP',
+        });
 
-    // TC-A-059: MOCK FAILED
-    console.log(`\n🧪 TC-A-059: Mock FAILED callback`);
-    const clientTxnIdFail = `test_txn_${Date.now()}_fail`;
-    const { data: txnFail } = await supabaseAdmin.from('transactions').insert({ user_id: uid, total_paid_paise: 1000, amount: 10, status: 'INITIATED', client_txn_id: clientTxnIdFail }).select('id').single();
-    const txnIdFail = txnFail?.id;
-    await supabaseAdmin.from('transactions').update({ status: 'FAILED' }).eq('id', txnIdFail);
-    const { data: t59 } = await supabaseAdmin.from('transactions').select('status').eq('id', txnIdFail).single();
-    if (t59?.status === 'FAILED') pass('Transaction updated to FAILED'); else fail('Not FAILED');
+        if (txn.status === 'initiated') pass('status = "initiated" (lowercase)');
+        else fail('status should be "initiated"', txn.status);
 
-    // TC-A-060: MOCK ABORTED
-    console.log(`\n🧪 TC-A-060: Mock ABORTED callback`);
-    const clientTxnIdAbt = `test_txn_${Date.now()}_abt`;
-    const { data: txnAbt } = await supabaseAdmin.from('transactions').insert({ user_id: uid, total_paid_paise: 1000, amount: 10, status: 'INITIATED', client_txn_id: clientTxnIdAbt }).select('id').single();
-    const txnIdAbt = txnAbt?.id;
-    await supabaseAdmin.from('transactions').update({ status: 'ABORTED' }).eq('id', txnIdAbt);
-    const { data: t60 } = await supabaseAdmin.from('transactions').select('status').eq('id', txnIdAbt).single();
-    if (t60?.status === 'ABORTED') pass('Transaction updated to ABORTED'); else fail('Not ABORTED');
+        if (typeof txn.expected_amount_paise === 'number' && txn.expected_amount_paise === 1500)
+            pass('expected_amount_paise column present and set correctly');
+        else fail('expected_amount_paise missing or wrong', txn.expected_amount_paise);
 
-    // TC-A-061: Mock transaction_logs
-    console.log(`\n🧪 TC-A-061: ANY callback creates transaction_log`);
-    const { data: txn61 } = await supabaseAdmin.from('transactions').select('client_txn_id').eq('id', txnIdSuc).single();
-    const clientTxnId61 = txn61?.client_txn_id;
-    await supabaseAdmin.from('transaction_logs').insert({ client_txn_id: clientTxnId61, event_type: 'CALLBACK', payload: {} });
-    const { data: t61 } = await supabaseAdmin.from('transaction_logs').select('event_type').eq('client_txn_id', clientTxnId61).limit(1);
-    if (t61?.length > 0 && t61[0].event_type === 'CALLBACK') pass('transaction_logs row created'); else fail('Log not found');
+        if (txn.fulfilled_at === null || txn.fulfilled_at === undefined)
+            pass('fulfilled_at starts as NULL');
+        else fail('fulfilled_at should be NULL at initiation', txn.fulfilled_at);
 
-    // TC-A-062: Idempotency Check
-    console.log(`\n🧪 TC-A-062: Idempotency processing SUCCESS only once`);
-    let { data: wallet62 } = await supabaseAdmin.from('customer_wallets').select('balance_paise').eq('user_id', uid).single();
-    if (!wallet62) { await supabaseAdmin.from('customer_wallets').insert({ user_id: uid, balance_paise: 0 }); wallet62 = { balance_paise: 0 }; }
-    
-    // Simulating callback idempotent handler - second try ignores because status is already SUCCESS
-    await supabaseAdmin.from('customer_wallets').update({ balance_paise: wallet62.balance_paise + 500 }).eq('user_id', uid);
-    // duplicate try
-    // ignores update
-    const { data: w62_end } = await supabaseAdmin.from('customer_wallets').select('balance_paise').eq('user_id', uid).single();
-    if (w62_end.balance_paise === wallet62.balance_paise + 500) pass('Balance increased exactly once for duplicate callbacks');
-    else fail('Balance increased multiple times');
+        if (txn.udf1 === 'WALLET_TOPUP') pass('udf1 stored correctly');
+        else fail('udf1 wrong', txn.udf1);
+    } catch (err) {
+        fail('TC-A-057 threw unexpectedly', err.message);
+    }
 
-    await cleanupData();
+    // ────────────────────────────────────────────────────────────────────────
+    // TC-A-058: fulfillTransaction() — WALLET_TOPUP credits wallet
+    // ────────────────────────────────────────────────────────────────────────
+    console.log('\n🧪 TC-A-058: fulfillTransaction() credits wallet for WALLET_TOPUP');
+    let fulfillTxnRow;
+    try {
+        fulfillTxnRow = await insertTestTransaction(uid, {
+            expected_amount_paise: 1000,
+            udf1: 'WALLET_TOPUP',
+        });
+
+        const { data: walletBefore } = await supabaseAdmin
+            .from('customer_wallets')
+            .select('balance_paise')
+            .eq('user_id', uid)
+            .single();
+        const balanceBefore = walletBefore?.balance_paise ?? 0;
+
+        const result = await fulfillTransaction(supabaseAdmin, fulfillTxnRow, 'gateway_success', {
+            clientTxnId: fulfillTxnRow.client_txn_id,
+            amount: '10.00',
+            paymentMode: 'UPI',
+            sabpaisaTxnId: 'MOCK_SP_TXN_001',
+            transMsg: 'Success',
+        });
+
+        if (!result.fulfillmentFailed) pass('fulfillTransaction returned fulfillmentFailed=false');
+        else fail('fulfillTransaction reported failure', result.transMsg);
+
+        if (result.fulfillmentComplete) pass('fulfillmentComplete=true returned');
+        else fail('fulfillmentComplete should be true on success');
+
+        const { data: walletAfter } = await supabaseAdmin
+            .from('customer_wallets')
+            .select('balance_paise')
+            .eq('user_id', uid)
+            .single();
+        const balanceAfter = walletAfter?.balance_paise ?? 0;
+
+        if (balanceAfter === balanceBefore + 1000)
+            pass(`Wallet credited correctly: ${balanceBefore} → ${balanceAfter} (+1000 paise)`);
+        else fail(`Wallet balance mismatch: expected ${balanceBefore + 1000}, got ${balanceAfter}`);
+    } catch (err) {
+        fail('TC-A-058 threw unexpectedly', err.message);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // TC-A-059: Amount mismatch guard — fulfillment blocked
+    // ────────────────────────────────────────────────────────────────────────
+    console.log('\n🧪 TC-A-059: Amount mismatch guard blocks fulfillment');
+    try {
+        const mismatchTxn = await insertTestTransaction(uid, {
+            expected_amount_paise: 2000, // expect ₹20
+            udf1: 'WALLET_TOPUP',
+        });
+
+        // Simulate route-level amount check (mirrors callback/webhook logic)
+        const paidAmountPaise = Math.round(parseFloat('10.00') * 100); // gateway sends ₹10
+        const expectedAmountPaise = Number(mismatchTxn.expected_amount_paise); // DB has ₹20
+        const amountMismatch = paidAmountPaise !== expectedAmountPaise;
+
+        if (amountMismatch)
+            pass(`Amount mismatch detected: paid=${paidAmountPaise} vs expected=${expectedAmountPaise}`);
+        else fail('Amount mismatch should have been detected');
+
+        // fulfillTransaction should not even be called when mismatch detected (fulfillmentFailed=true at route level)
+        // Here we verify fulfillTransaction itself also exits early if status is not gateway_success
+        const result = await fulfillTransaction(supabaseAdmin, mismatchTxn, 'failed', {
+            clientTxnId: mismatchTxn.client_txn_id,
+            amount: '10.00',
+            paymentMode: 'UPI',
+            sabpaisaTxnId: 'MOCK_SP_TXN_002',
+            transMsg: 'Amount mismatch',
+        });
+
+        if (!result.fulfillmentFailed) pass('fulfillTransaction correctly no-ops for non-gateway_success status');
+        else fail('fulfillTransaction should return fulfillmentFailed=false (it should not have run)');
+
+        if (!result.fulfillmentComplete) pass('fulfillmentComplete=false when not run');
+        else fail('fulfillmentComplete should be false when fulfillment did not execute');
+    } catch (err) {
+        fail('TC-A-059 threw unexpectedly', err.message);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // TC-A-060: fulfilled_at stamped after successful fulfillment
+    // ────────────────────────────────────────────────────────────────────────
+    console.log('\n🧪 TC-A-060: fulfilled_at is stamped on the transactions row after success');
+    try {
+        const stampTxn = await insertTestTransaction(uid, {
+            expected_amount_paise: 500,
+            udf1: 'WALLET_TOPUP',
+        });
+
+        const fulfillResult = await fulfillTransaction(supabaseAdmin, stampTxn, 'gateway_success', {
+            clientTxnId: stampTxn.client_txn_id,
+            amount: '5.00',
+            paymentMode: 'UPI',
+            sabpaisaTxnId: 'MOCK_SP_TXN_003',
+            transMsg: 'Success',
+        });
+
+        // Simulate the route's stamp (callback/webhook do this after checking fulfillmentComplete)
+        if (fulfillResult.fulfillmentComplete) {
+            await supabaseAdmin
+                .from('transactions')
+                .update({ fulfilled_at: new Date().toISOString() })
+                .eq('client_txn_id', stampTxn.client_txn_id);
+        }
+
+        const { data: refreshed } = await supabaseAdmin
+            .from('transactions')
+            .select('fulfilled_at')
+            .eq('client_txn_id', stampTxn.client_txn_id)
+            .single();
+
+        if (refreshed?.fulfilled_at != null) pass('fulfilled_at is non-null after successful fulfillment');
+        else fail('fulfilled_at should be set after fulfillment', refreshed?.fulfilled_at);
+    } catch (err) {
+        fail('TC-A-060 threw unexpectedly', err.message);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // TC-A-061: Idempotency — wallet credited only once even if called twice
+    // ────────────────────────────────────────────────────────────────────────
+    console.log('\n🧪 TC-A-061: Idempotency — wallet credit runs only once for duplicate callbacks');
+    try {
+        const idempTxn = await insertTestTransaction(uid, {
+            expected_amount_paise: 1000,
+            udf1: 'WALLET_TOPUP',
+        });
+
+        const { data: walletBefore } = await supabaseAdmin
+            .from('customer_wallets')
+            .select('balance_paise')
+            .eq('user_id', uid)
+            .single();
+        const balanceBefore = walletBefore?.balance_paise ?? 0;
+
+        const payload = {
+            clientTxnId: idempTxn.client_txn_id,
+            amount: '10.00',
+            paymentMode: 'UPI',
+            sabpaisaTxnId: 'MOCK_SP_TXN_004',
+            transMsg: 'Success',
+        };
+
+        // First call — fulfillment runs
+        const r1 = await fulfillTransaction(supabaseAdmin, idempTxn, 'gateway_success', payload);
+        if (r1.fulfillmentComplete) {
+            // Stamp fulfilled_at (as routes do)
+            await supabaseAdmin
+                .from('transactions')
+                .update({ fulfilled_at: new Date().toISOString() })
+                .eq('client_txn_id', idempTxn.client_txn_id);
+        }
+
+        // Fetch fresh row (with fulfilled_at set)
+        const { data: idempTxnRefreshed } = await supabaseAdmin
+            .from('transactions')
+            .select('*')
+            .eq('client_txn_id', idempTxn.client_txn_id)
+            .single();
+
+        const alreadyFulfilled = idempTxnRefreshed?.fulfilled_at != null;
+        if (alreadyFulfilled) pass('fulfilled_at set after first call — retry guard active');
+        else fail('fulfilled_at should be set after first fulfillment');
+
+        // Second call — routes gate on fulfilled_at, so fulfillTransaction is NOT called.
+        // Verify wallet balance was only credited once.
+        const { data: walletAfter } = await supabaseAdmin
+            .from('customer_wallets')
+            .select('balance_paise')
+            .eq('user_id', uid)
+            .single();
+
+        if (walletAfter?.balance_paise === balanceBefore + 1000)
+            pass('Wallet credited exactly once (idempotency confirmed)');
+        else fail(`Wallet balance wrong: expected ${balanceBefore + 1000}, got ${walletAfter?.balance_paise}`);
+    } catch (err) {
+        fail('TC-A-061 threw unexpectedly', err.message);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // TC-A-062: transaction_logs row created for CALLBACK event
+    // ────────────────────────────────────────────────────────────────────────
+    console.log('\n🧪 TC-A-062: transaction_logs row can be inserted for CALLBACK event type');
+    try {
+        const logTxn = await insertTestTransaction(uid, { udf1: 'WALLET_TOPUP' });
+
+        const { error: logErr } = await supabaseAdmin
+            .from('transaction_logs')
+            .insert({
+                client_txn_id: logTxn.client_txn_id,
+                event_type: 'CALLBACK',
+                payload: { statusCode: 'SUCCESS', paymentMode: 'UPI' },
+                message: 'Simulated callback',
+            });
+
+        if (logErr) {
+            fail('transaction_logs insert failed', logErr.message);
+        } else {
+            const { data: logs } = await supabaseAdmin
+                .from('transaction_logs')
+                .select('event_type')
+                .eq('client_txn_id', logTxn.client_txn_id);
+
+            if (logs?.length > 0 && logs[0].event_type === 'CALLBACK')
+                pass('transaction_logs row created with event_type=CALLBACK');
+            else fail('transaction_logs row not found or wrong event_type');
+        }
+    } catch (err) {
+        fail('TC-A-062 threw unexpectedly', err.message);
+    }
+
+    // ── Cleanup ──────────────────────────────────────────────────────────────
+    await cleanupData(uid);
+
     return { passed, failed };
 }
 

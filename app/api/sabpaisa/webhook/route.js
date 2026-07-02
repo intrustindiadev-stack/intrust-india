@@ -84,9 +84,13 @@ export async function POST(request) {
             }, { status: 404 });
         }
 
-        // Idempotency: Already in a terminal state
-        if (['gateway_success', 'failed', 'aborted'].includes(existingTxn.status)) {
-            console.log(`[Webhook] txn ${clientTxnId} already in terminal state: ${existingTxn.status}. Acknowledging.`);
+        // Idempotency: Already fully fulfilled — both payment confirmed AND all side-effects
+        // completed durably. We gate on fulfilled_at (not raw gateway_success) so that a
+        // prior attempt that crashed mid-fulfillment is retried here rather than silently
+        // discarded, which would leave the order permanently stranded.
+        const alreadyFulfilled = existingTxn.fulfilled_at != null;
+        if (alreadyFulfilled) {
+            console.log(`[Webhook] txn ${clientTxnId} already fulfilled (fulfilled_at set). Acknowledging.`);
             return NextResponse.json({
                 status: 200,
                 message: 'API_SUCCESSFULL_MESSAGE',
@@ -135,7 +139,13 @@ export async function POST(request) {
         }
 
         // 7. Run fulfillment (shared with callback)
-        if (!fulfillmentFailed && !wasAlreadySuccess) {
+        // Guard: skip only when fulfilled_at is set (durable completion confirmed).
+        // If gateway_success is set but fulfilled_at is NULL, a prior attempt crashed mid-way
+        // and we MUST retry. Each branch inside fulfillment.js enforces its own idempotency
+        // (WALLET_TOPUP: checks customer_wallet_transactions; GOLD_SUBSCRIPTION/MERCHANT_SUBSCRIPTION:
+        // check gateway_txn_id/last_sub_gateway_txn_id on the record; MERCHANT_LOCKIN/AIGROW:
+        // check gateway_txn_id on the created row) so re-running fulfillment is safe.
+        if (!fulfillmentFailed && !alreadyFulfilled) {
             const fulfillResult = await fulfillTransaction(supabaseAdmin, existingTxn, internalStatus, {
                 clientTxnId,
                 amount,
@@ -146,6 +156,16 @@ export async function POST(request) {
             fulfillmentFailed = fulfillResult.fulfillmentFailed;
             internalStatus = fulfillResult.internalStatus;
             result.transMsg = fulfillResult.transMsg;
+
+            // ── Stamp fulfilled_at on durable completion ──────────────────
+            if (fulfillResult.fulfillmentComplete && clientTxnId) {
+                try {
+                    await updateTransaction(clientTxnId, { fulfilled_at: new Date().toISOString() });
+                    console.log(`[Webhook] fulfilled_at stamped for txn ${clientTxnId}`);
+                } catch (stampErr) {
+                    console.error(`[Webhook] Failed to stamp fulfilled_at for txn ${clientTxnId}:`, stampErr.message);
+                }
+            }
         }
 
         // 8. Final status update for non-success outcomes

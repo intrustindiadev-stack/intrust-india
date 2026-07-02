@@ -1,6 +1,6 @@
-> **Status:** SUPERSEDED — All flows now route through /payment/success first. See ticket:b33ec303-9dfc-4554-a21e-5731ae4f40d1/74a166f1-b4f6-46ec-a38d-593ff7940254
+> **Status:** CURRENT — All flows route through /payment/success first. See ticket:b33ec303-9dfc-4554-a21e-5731ae4f40d1/74a166f1-b4f6-46ec-a38d-593ff7940254
 
-# Payment Redirect Fix - Merchant Dashboard
+# Payment Redirect Fix — Merchant Dashboard
 
 ## What's Changed
 - Every `gateway_success` outcome (merchant and customer) now redirects to `/payment/success?txnId=…` first.
@@ -12,32 +12,43 @@
 Fixed the payment callback system to redirect merchants directly to their dashboard after successful payment, instead of showing a generic success page.
 
 ## Problem
-After completing payment (subscription, wallet topup, or wholesale purchase), merchants were redirected to a generic `/payment/success` page, which then waited 5 seconds before redirecting to the dashboard. This created a poor user experience with unnecessary delays.
+After completing payment (subscription, wallet topup, wholesale purchase, Lockin funding, or AI Grow requests), merchants were redirected to a generic `/payment/success` page, which either showed the wrong copy or fell back to the customer dashboard link. `MERCHANT_LOCKIN` and `MERCHANT_AIGROW` were completely unhandled in the success page routing.
 
 ## Solution
 Modified both payment callback handlers to intelligently redirect users based on:
 1. **Payment status** (SUCCESS, PENDING, FAILED, ABORTED, TIMEOUT)
 2. **Transaction type** (merchant vs customer transactions)
-3. **Specific merchant transaction types** (subscription, topup, wholesale)
+3. **Specific merchant transaction types** (subscription, topup, wholesale, lockin, aigrow)
 
 ## Files Modified
 
-### 1. `app/api/sabpaisa/callback/route.js` (Primary Callback Handler)
-**Lines 687-720**: Enhanced redirect logic with merchant-specific routing
+### 1. `pages/payment/success.jsx` (Success Page Config)
+**`getConfig()`** — extended with two new branches:
+- **MERCHANT_LOCKIN** (`LKN_` prefix) → `/merchant/dashboard?tab=lockin`, "Growth Portfolio Funded 📈"
+- **MERCHANT_AIGROW** (`AIG_` prefix) → `/merchant/dashboard?tab=aigrow`, "AI Grow Request Submitted 🤖"
 
-**Changes:**
-- **MERCHANT_SUBSCRIPTION** → `/merchant/dashboard?welcome=true&txnId={id}`
-- **MERCHANT_TOPUP** → `/merchant/wallet?success=true&txnId={id}`
-- **WHOLESALE_PURCHASE** → `/merchant/inventory?success=true&txnId={id}`
-- **Customer transactions** → `/payment/success?txnId={id}` (unchanged)
-- **PENDING status** → `/payment/processing?txnId={id}`
-- **FAILED/ABORTED** → `/payment/failure?txnId={id}&msg={error}`
-- **TIMEOUT/Unknown** → `/payment/processing?txnId={id}&status=timeout`
+**Sessionless prefix inference** — extended with:
+- `LKN_` → `MERCHANT_LOCKIN`
+- `AIG_` → `MERCHANT_AIGROW`
 
-### 2. `pages/api/payment/callback.js` (Legacy Callback Handler)
-**Lines 261-278**: Applied same redirect logic for backward compatibility
+### 2. `app/api/sabpaisa/callback/route.js` (Primary Callback Handler)
+All payment types redirect to `/payment/success?txnId={id}` on success. The success page then handles per-flow ACK copy and destination.
 
-**Note:** This handler is deprecated but maintained for in-flight transactions.
+## Redirect Mapping
+
+| udf1 / txnId prefix | Success destination | Copy |
+|---|---|---|
+| `MERCHANT_SUBSCRIPTION` / `MSUB_` | `/merchant/dashboard?welcome=true` | Store Activated 🎉 |
+| `MERCHANT_TOPUP` | `/merchant/wallet` (via default) | Payment Successful |
+| `WHOLESALE_PURCHASE` | `/merchant/inventory` (via default) | Payment Successful |
+| `MERCHANT_LOCKIN` / `LKN_` | `/merchant/lockin` | Growth Portfolio Funded 📈 |
+| `MERCHANT_AIGROW` / `AIG_` | `/merchant/investments` | AI Grow Request Submitted 🤖 |
+| `GOLD_SUBSCRIPTION` / `GOLD_` | dashboardLink | Elite Gold Activated ⭐ |
+| `GIFT_CARD` / `GC_` | `/my-giftcards` or `/merchant/inventory` | Gift Card Secured 💳 |
+| `CART_CHECKOUT` / `CART_` | `/orders?success=true` | Order Placed 🛍️ |
+| `UDHARI_PAYMENT` / `UDR_` | dashboardLink | Store Credit Paid ✅ |
+| `WALLET_TOPUP` / `WLT_` | `/wallet` or `/merchant/wallet` | Payment Successful ✅ |
+| `NFC_ORDER` / `NFC_` | dashboardLink | Payment Successful ✅ |
 
 ## Edge Cases Handled
 
@@ -48,119 +59,79 @@ Modified both payment callback handlers to intelligently redirect users based on
 
 ### ✅ Timeout/Unknown Status
 - Redirects to `/payment/processing` with timeout indicator
-- Allows user to check status or retry
-- Prevents confusion from ambiguous states
 
 ### ✅ Pending Payments
 - Redirects to `/payment/processing` page
-- Shows loading state while payment is being confirmed
-- Prevents premature success/failure messaging
 
-### ✅ Duplicate Callbacks
-- Idempotency checks prevent double-processing
-- Existing `wasAlreadySuccess` flag prevents duplicate wallet credits
-- Transaction status updates are atomic
+### ✅ Duplicate Callbacks / Crashed Mid-Fulfillment
+- `fulfilled_at` column gates idempotency — a prior attempt that wrote `gateway_success` but crashed before fulfillment completes will be retried on the next callback/webhook, avoiding permanently stranded orders.
 
-### ✅ Fulfillment Failures
-- If payment succeeds but fulfillment fails (e.g., wallet credit error)
-- Status is downgraded to FAILED
-- User is informed payment will be refunded
-- Prevents charging without delivering service
+### ✅ Session-Dropped Clients
+- `txnId` prefix inference infers `udf1` without a DB query, allowing the success page to render the correct ACK and redirect even when the user's Supabase session has expired.
 
 ## Query Parameters
 
 ### Success Redirects
-- `welcome=true` - Indicates first-time merchant activation
-- `success=true` - Indicates successful transaction completion
-- `txnId={id}` - Transaction reference for verification
+- `txnId={id}` — transaction reference for verification
 
 ### Failure Redirects
-- `msg={error}` - Error message from payment gateway
-- `reason={code}` - System error code (e.g., `decryption_failed`, `internal_error`)
+- `msg={error}` — error message from payment gateway
+- `reason={code}` — system error code (e.g. `decryption_failed`, `internal_error`)
 
 ### Processing Redirects
-- `status=timeout` - Indicates payment timeout scenario
+- `status=timeout` — indicates payment timeout scenario
 
 ## Transaction Types Supported
 
 ### Merchant Transactions
-1. **MERCHANT_SUBSCRIPTION** - Monthly subscription payment (₹149)
-2. **MERCHANT_TOPUP** - Merchant wallet recharge
-3. **WHOLESALE_PURCHASE** - Bulk inventory purchase
+1. **MERCHANT_SUBSCRIPTION** — Monthly subscription payment
+2. **MERCHANT_TOPUP** — Merchant wallet recharge
+3. **WHOLESALE_PURCHASE** — Bulk inventory purchase
+4. **MERCHANT_LOCKIN** — Growth portfolio funding (Lockin product)
+5. **MERCHANT_AIGROW** — AI Grow investment request
 
 ### Customer Transactions
-1. **WALLET_TOPUP** - Customer wallet recharge
-2. **GIFT_CARD** - Gift card purchase
-3. **GOLD_SUBSCRIPTION** - Premium membership
-4. **CART_CHECKOUT** - Shopping cart payment
-5. **UDHARI_PAYMENT** - Store credit settlement
+1. **WALLET_TOPUP** — Customer wallet recharge
+2. **GIFT_CARD** — Gift card purchase
+3. **GOLD_SUBSCRIPTION** — Premium membership
+4. **CART_CHECKOUT** — Shopping cart payment
+5. **UDHARI_PAYMENT** — Store credit settlement
+6. **NFC_ORDER** — NFC card order
 
 ## Testing Checklist
 
-- [ ] Merchant subscription payment → redirects to `/payment/success?txnId=...` then auto-redirects to `/merchant/dashboard?welcome=true`
-- [ ] Merchant wallet topup → redirects to `/payment/success?txnId=...` then auto-redirects to `/merchant/wallet`
-- [ ] Wholesale purchase → redirects to `/payment/success?txnId=...` then auto-redirects to `/merchant/inventory`
-- [ ] Customer wallet topup → redirects to `/payment/success?txnId=...` then auto-redirects to `/wallet`
-- [ ] Failed payment → redirects to `/payment/failure` with error
-- [ ] Pending payment → redirects to `/payment/processing`
-- [ ] Payment timeout → redirects to `/payment/processing?status=timeout`
-- [ ] Duplicate callback → doesn't double-credit wallet
-- [ ] Fulfillment failure → marks payment as failed
-
-## Benefits
-
-### 🚀 Improved User Experience
-- **Instant access** to merchant dashboard after payment
-- **No unnecessary delays** or intermediate pages
-- **Context-aware redirects** based on transaction type
-
-### 🎯 Better Conversion
-- Merchants can immediately start using their account
-- Reduces drop-off from confusion or delays
-- Clear success indicators with query parameters
-
-### 🛡️ Robust Error Handling
-- All payment states properly handled
-- Clear error messages for failed payments
-- Timeout scenarios don't leave users stuck
-
-### 📊 Better Analytics
-- Query parameters enable tracking of payment sources
-- Can measure time-to-first-action after payment
-- Distinguish between new activations and renewals
-
-## Backward Compatibility
-
-- Legacy callback handler updated with same logic
-- Existing customer payment flows unchanged
-- Query parameters are optional (pages work without them)
-- No breaking changes to existing integrations
-
-## Future Enhancements
-
-1. **Welcome Tour**: Use `welcome=true` to trigger onboarding flow
-2. **Success Notifications**: Show toast/banner based on `success=true`
-3. **Analytics Events**: Track conversion funnel completion
-4. **A/B Testing**: Test different post-payment experiences
+- [ ] Merchant subscription → `/payment/success?txnId=MSUB_...` → auto-redirect `/merchant/dashboard?welcome=true`
+- [ ] Merchant wallet topup → `/payment/success?txnId=WLT_...` → auto-redirect `/merchant/wallet`
+- [ ] Wholesale purchase → `/payment/success?txnId=WLS_...` → generic success, `/merchant/inventory`
+- [ ] **Merchant Lockin** → `/payment/success?txnId=LKN_...` → "Growth Portfolio Funded 📈" card → `/merchant/lockin`
+- [ ] **Merchant AI Grow** → `/payment/success?txnId=AIG_...` → "AI Grow Request Submitted 🤖" card → `/merchant/investments`
+- [ ] Customer wallet topup → `/payment/success?txnId=WLT_...` → `/wallet`
+- [ ] Failed payment → `/payment/failure` with error
+- [ ] Pending payment → `/payment/processing`
+- [ ] Duplicate callback (fulfilled_at already set) → no double-credit, idempotent ACK
+- [ ] Session-dropped: load `/payment/success?txnId=LKN_xxx` without auth → correct Lockin card → redirects to `/merchant/lockin`
 
 ## Related Files
 
-- `pages/payment/success.jsx` - Generic success page (still used for customers)
-- `lib/sabpaisa/utils.js` - Status mapping utilities
-- `lib/supabase/queries.js` - Transaction update functions
-- `database_scripts/sabpaisa_schema.sql` - Transaction schema
+- `pages/payment/success.jsx` — success page config and display
+- `app/api/sabpaisa/callback/route.js` — browser-redirect callback handler
+- `app/api/sabpaisa/webhook/route.js` — server-to-server webhook handler
+- `lib/sabpaisa/fulfillment.js` — shared fulfillment logic
+- `lib/sabpaisa/utils.js` — status mapping utilities
+- `lib/supabase/queries.js` — transaction update functions
+- `supabase/migrations/20260703_add_fulfilled_at_to_transactions.sql` — `fulfilled_at` + `expected_amount_paise` columns
 
 ## Support
 
-If merchants report not being redirected properly:
-1. Check transaction logs for callback receipt
-2. Verify `udf1` field contains correct transaction type
-3. Check for JavaScript errors preventing redirect
-4. Verify merchant dashboard route is accessible
-5. Check for middleware blocking the redirect
+If merchants report not being redirected properly after Lockin or AI Grow payment:
+1. Check `transactions` table for `status = 'gateway_success'` and `fulfilled_at IS NOT NULL`
+2. Verify `udf1` field contains `MERCHANT_LOCKIN` or `MERCHANT_AIGROW`
+3. Check for `txnId` prefix match (`LKN_` / `AIG_`) in the browser URL
+4. Confirm session state — if session expired, prefix-based inference handles the redirect
+5. Check for JavaScript errors preventing redirect
 
 ---
 
-**Last Updated:** April 8, 2026  
+**Last Updated:** July 3, 2026  
 **Author:** Development Team  
 **Status:** ✅ Implemented & Ready for Testing

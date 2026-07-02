@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabaseClient';
 import dynamic from 'next/dynamic';
 import { motion, useReducedMotion } from 'framer-motion';
-import { CheckCircle, Clock, Star, ShoppingBag, CreditCard, Wallet } from 'lucide-react';
+import { CheckCircle, Clock, Star, ShoppingBag, CreditCard, Wallet, TrendingUp } from 'lucide-react';
 
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 
@@ -18,6 +18,8 @@ const getConfig = (txnId, transaction, userRole) => {
     const isWalletTopup = txnId?.startsWith('WLT_') || type === 'WALLET_TOPUP';
     const isCartCheckout = type === 'CART_CHECKOUT';
     const isUdhari = type === 'UDHARI_PAYMENT';
+    const isMerchantLockin = txnId?.startsWith('LKN_') || type === 'MERCHANT_LOCKIN';
+    const isMerchantAiGrow = txnId?.startsWith('AIG_') || type === 'MERCHANT_AIGROW';
 
     if (isMerchantSub) return {
         icon: <Star size={48} className="text-white" strokeWidth={2.5} />,
@@ -67,6 +69,26 @@ const getConfig = (txnId, transaction, userRole) => {
         redirectTo: dashboardLink,
         redirectDelay: 3500,
         redirectLabel: 'Go to Dashboard',
+        showConfetti: false,
+    };
+    if (isMerchantLockin) return {
+        icon: <TrendingUp size={48} className="text-white" strokeWidth={2.5} />,
+        color: '#7c3aed',
+        title: 'Growth Portfolio Funded! 📈',
+        subtitle: 'Your Lockin portfolio has been funded. Watch your returns grow from your Lockin dashboard.',
+        redirectTo: '/merchant/lockin',
+        redirectDelay: 4000,
+        redirectLabel: 'View Lockin Portfolio',
+        showConfetti: false,
+    };
+    if (isMerchantAiGrow) return {
+        icon: <TrendingUp size={48} className="text-white" strokeWidth={2.5} />,
+        color: '#0891b2',
+        title: 'AI Grow Request Submitted! 🤖',
+        subtitle: 'Your AI Grow investment is being processed. Track its progress from your investments dashboard.',
+        redirectTo: '/merchant/investments',
+        redirectDelay: 4000,
+        redirectLabel: 'View Investments',
         showConfetti: false,
     };
     // Default: Wallet Topup or generic
@@ -132,6 +154,8 @@ const SuccessPage = () => {
                     else if (txnId.startsWith('CART_')) inferredUdf1 = 'CART_CHECKOUT';
                     else if (txnId.startsWith('NFC_')) inferredUdf1 = 'NFC_ORDER';
                     else if (txnId.startsWith('UDR_')) inferredUdf1 = 'UDHARI_PAYMENT';
+                    else if (txnId.startsWith('LKN_')) inferredUdf1 = 'MERCHANT_LOCKIN';
+                    else if (txnId.startsWith('AIG_')) inferredUdf1 = 'MERCHANT_AIGROW';
                     
                     setTransaction({ udf1: inferredUdf1 });
                     setState('verified');
