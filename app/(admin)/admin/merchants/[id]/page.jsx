@@ -143,6 +143,13 @@ export default async function AdminMerchantDetailPage({ params }) {
         });
     };
 
+    const formatDesc = (desc) => {
+        if (!desc) return 'Merchant earnings';
+        return desc.replace(/(?:Rs\.?|₹)\s*([\d.]+)/g, (match, num) => {
+            return `₹${parseFloat(num).toFixed(2)}`;
+        });
+    };
+
     const isPending = merchant.status === 'pending';
     const isApproved = merchant.status === 'approved';
 
@@ -502,7 +509,7 @@ export default async function AdminMerchantDetailPage({ params }) {
                                                 </span>
                                             </td>
                                             <td className="py-4">
-                                                <p className="font-bold text-slate-900 text-xs sm:text-sm">{tx.description || 'Merchant earnings'}</p>
+                                                <p className="font-bold text-slate-900 text-xs sm:text-sm">{formatDesc(tx.description)}</p>
                                                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 sm:hidden">{formatDate(tx.created_at)}</p>
                                             </td>
                                             <td className="py-4 text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-tighter hidden sm:table-cell">

@@ -69,14 +69,19 @@ const FeedCard = memo(function FeedCard({ merchant, rating, isOpen, isOfficial, 
                         </div>
                     </div>
                     
-                    <div className="mt-auto flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700/50 px-3 py-1.5 rounded-xl flex-1 justify-center">
-                            <Star size={14} className="fill-[#ffb703] text-[#ffb703]" />
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">{rating?.avg_rating || (isOfficial ? 4.9 : 4.2)}</span>
+                    <div className="mt-auto flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700/50 px-3 py-1.5 rounded-xl flex-1 justify-center">
+                                <Star size={14} className="fill-[#ffb703] text-[#ffb703]" />
+                                <span className="text-sm font-bold text-gray-900 dark:text-white">{rating?.avg_rating || (isOfficial ? 4.9 : 4.2)}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700/50 px-3 py-1.5 rounded-xl flex-1 justify-center text-sm font-bold text-gray-900 dark:text-white">
+                                {mockOffer}
+                            </div>
                         </div>
-                        <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700/50 px-3 py-1.5 rounded-xl flex-1 justify-center text-sm font-bold text-gray-900 dark:text-white">
-                            {mockOffer}
-                        </div>
+                        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-sm transition-colors shadow-sm active:scale-95">
+                            Shop Now
+                        </button>
                     </div>
                 </div>
             </motion.div>
@@ -87,6 +92,7 @@ const FeedCard = memo(function FeedCard({ merchant, rating, isOpen, isOfficial, 
 export default function ShopHubClient({ merchants = [], ratingsMap = {}, categories = [] }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const router = useRouter();
     const { profile } = useAuth();
@@ -113,8 +119,61 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
     });
 
     return (
-        <PullToRefresh onRefresh={handleRefresh}>
-            <div className="bg-[#f7f8fa] dark:bg-[#080a10] min-h-screen pb-24 font-[family-name:var(--font-outfit)]">
+        <>
+            <AnimatePresence>
+                {isFilterOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsFilterOpen(false)}
+                            className="fixed inset-0 bg-black/50 z-[100] backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ x: '-100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '-100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="fixed top-0 left-0 bottom-0 w-[80%] max-w-sm bg-white dark:bg-[#080a10] z-[110] shadow-2xl flex flex-col"
+                        >
+                            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+                                <h2 className="text-xl font-black text-gray-900 dark:text-white">Filters</h2>
+                                <button onClick={() => setIsFilterOpen(false)} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
+                                    <X size={18} />
+                                </button>
+                            </div>
+                            <div className="flex-1 p-6 overflow-y-auto">
+                                <p className="text-sm font-bold text-gray-400 mb-4 uppercase tracking-widest">Filter Options</p>
+                                <div className="space-y-4">
+                                    <label className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
+                                        <input type="checkbox" className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                        <span className="font-bold text-gray-700 dark:text-gray-300">Free Delivery</span>
+                                    </label>
+                                    <label className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
+                                        <input type="checkbox" className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                        <span className="font-bold text-gray-700 dark:text-gray-300">Top Rated (4.5+)</span>
+                                    </label>
+                                    <label className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
+                                        <input type="checkbox" className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                        <span className="font-bold text-gray-700 dark:text-gray-300">Open Now</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex gap-3">
+                                <button onClick={() => setIsFilterOpen(false)} className="flex-1 py-3 px-4 font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                                    Clear
+                                </button>
+                                <button onClick={() => setIsFilterOpen(false)} className="flex-[2] py-3 px-4 font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30">
+                                    Apply
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+            <PullToRefresh onRefresh={handleRefresh}>
+                <div className="bg-[#f7f8fa] dark:bg-[#080a10] min-h-screen pb-24 font-[family-name:var(--font-outfit)]">
                 
                 {/* ── Search Header (Image 3 Style) ── */}
                 <div className="pt-2 pb-6 px-4">
@@ -146,9 +205,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                                         {profile?.avatar_url ? (
                                             <Image src={profile.avatar_url} alt="Profile" width={48} height={48} className="object-cover w-full h-full" />
                                         ) : (
-                                            <span className="text-lg font-bold text-gray-500 dark:text-gray-400 uppercase">
-                                                {profile?.first_name?.[0] || profile?.email?.[0] || 'U'}
-                                            </span>
+                                            <Image src="/logo.png" alt="InTrust" width={28} height={28} className="object-contain" />
                                         )}
                                     </div>
                                     <div>
@@ -158,19 +215,25 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 sm:gap-3">
                                     <button 
                                         onClick={() => setIsSearchOpen(true)}
-                                        className="w-11 h-11 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-gray-900 dark:text-white transition-transform hover:scale-105 border border-gray-100 dark:border-gray-700"
+                                        className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-gray-900 dark:text-white transition-transform hover:scale-105 border border-gray-100 dark:border-gray-700"
                                     >
-                                        <Search size={20} />
+                                        <Search size={18} />
+                                    </button>
+                                    <button 
+                                        onClick={() => setIsFilterOpen(true)}
+                                        className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-gray-900 dark:text-white transition-transform hover:scale-105 border border-gray-100 dark:border-gray-700"
+                                    >
+                                        <SlidersHorizontal size={18} />
                                     </button>
                                     <button 
                                         onClick={() => toast.success('You have no new notifications.')}
-                                        className="w-11 h-11 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-gray-900 dark:text-white transition-transform hover:scale-105 border border-gray-100 dark:border-gray-700 relative"
+                                        className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-gray-900 dark:text-white transition-transform hover:scale-105 border border-gray-100 dark:border-gray-700 relative"
                                     >
-                                        <Bell size={20} />
-                                        <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-red-500" />
+                                        <Bell size={18} />
+                                        <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-red-500" />
                                     </button>
                                 </div>
                             </>
@@ -263,5 +326,6 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                 </div>
             </div>
         </PullToRefresh>
+        </>
     );
 }

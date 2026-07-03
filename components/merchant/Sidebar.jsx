@@ -43,7 +43,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             ]
         },
         {
-            title: "Finance & Growth",
+            title: "Growth",
             items: [
                 { label: "Portfolio", href: "/merchant/wallet", icon: "account_balance_wallet" },
                 { label: "Store Credits", href: "/merchant/udhari", icon: "credit_score" },
