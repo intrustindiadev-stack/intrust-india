@@ -89,7 +89,16 @@ export default function MerchantLockinDetailPage({ params }) {
     }
 
     const handleClaim = async () => {
-        const totalAmount = (lockin.amount_paise + (lockin.accumulated_interest_paise || 0)) / 100;
+        let interestPaise = lockin.accumulated_interest_paise || 0;
+        if (lockin.status === 'matured' || lockin.status === 'active') {
+            const start = new Date(lockin.start_date);
+            const end = lockin.end_date ? new Date(lockin.end_date) : new Date();
+            const boundedEnd = Math.min(new Date().getTime(), end.getTime());
+            const days = Math.max(0, boundedEnd - start.getTime()) / (1000 * 60 * 60 * 24);
+            const calcInterest = Math.round(lockin.amount_paise * (lockin.interest_rate / 100 / 365) * days);
+            interestPaise = Math.max(interestPaise, calcInterest);
+        }
+        const totalAmount = (lockin.amount_paise + interestPaise) / 100;
 
         const confirm = window.confirm(`Request release of ₹${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} to your bank account?`);
         if (!confirm) return;

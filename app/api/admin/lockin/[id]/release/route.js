@@ -13,7 +13,7 @@ export async function POST(request, { params }) {
         // Fetch lockin details
         const { data: lockin, error: lockinError } = await supabase
             .from('merchant_lockin_balances')
-            .select('amount_paise, merchant_id, status, start_date, interest_rate')
+            .select('amount_paise, merchant_id, status, start_date, end_date, interest_rate')
             .eq('id', id)
             .single();
 
@@ -23,6 +23,10 @@ export async function POST(request, { params }) {
 
         if (lockin.status === 'completed' || lockin.status === 'matured' || lockin.status === 'released') {
             return NextResponse.json({ error: 'Already released or matured' }, { status: 400 });
+        }
+
+        if (lockin.end_date && new Date() < new Date(lockin.end_date)) {
+            return NextResponse.json({ error: 'Cannot release before maturity date' }, { status: 400 });
         }
 
         // Fetch merchant
@@ -42,7 +46,9 @@ export async function POST(request, { params }) {
         let interestPaise = 0;
         if (lockin.start_date) {
             const startDate = new Date(lockin.start_date);
-            const daysElapsed = Math.max(0, (new Date() - startDate) / (1000 * 60 * 60 * 24));
+            const endDate = lockin.end_date ? new Date(lockin.end_date) : new Date();
+            const boundedEnd = Math.min(new Date().getTime(), endDate.getTime());
+            const daysElapsed = Math.max(0, boundedEnd - startDate.getTime()) / (1000 * 60 * 60 * 24);
             interestPaise = Math.round(principalPaise * (rate / 365) * daysElapsed);
         }
         const totalAmountToRelease = principalPaise + interestPaise;

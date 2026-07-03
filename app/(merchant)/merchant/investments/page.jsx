@@ -101,17 +101,7 @@ export default function AIGrowPage() {
         const totalDeployed = active.reduce((s, i) => s + i.amount_paise / 100, 0);
         const totalProfitFromOrders = allOrders.reduce((s, o) => s + (o.profit_paise || 0) / 100, 0);
 
-        const totalContinuousTick = active.reduce((sum, b) => {
-            const principal = b.amount_paise / 100;
-            const rate = (b.interest_rate_percent || 12) / 100;
-            if (!b.approved_at) return sum;
-            const startDate = new Date(b.approved_at);
-            const elapsedMs = Math.max(0, now - startDate.getTime());
-            const daysElapsed = elapsedMs / (1000 * 60 * 60 * 24);
-            return sum + (principal * (rate / 365) * daysElapsed);
-        }, 0);
-
-        const totalProfit = totalProfitFromOrders + totalContinuousTick;
+        const totalProfit = totalProfitFromOrders;
 
         if (showTotal) {
             const total = totalDeployed + totalProfit;

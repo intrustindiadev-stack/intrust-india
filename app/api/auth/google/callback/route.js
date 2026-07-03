@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
 import { sendWhatsAppLoginAlert } from '@/lib/notifications/authWhatsapp';
+import { applySupabaseCookies } from '@/lib/supabaseCookieHelper';
 
 // Service role client to upsert user_profiles bypassing RLS
 const supabaseAdmin = createClient(
@@ -89,7 +90,7 @@ export async function GET(request) {
     const state = requestUrl.searchParams.get('state');
     const host  = request.headers.get('host') || 'localhost:3000';
     const protocol = (host.includes('localhost') || host.match(/^[0-9.]+(?::[0-9]+)?$/)) ? 'http' : (request.headers.get('x-forwarded-proto') || 'https');
-    const appUrl   = (process.env.APP_URL || `${protocol}://${host}`).trim();
+    const appUrl   = `${protocol}://${host}`;
 
     if (!code) {
         console.error('[Google OAuth] No code in callback');
@@ -137,7 +138,7 @@ export async function GET(request) {
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
             {
                 cookies: {
-                    getAll: () => [],
+                    getAll: () => request.cookies.getAll(),
                     setAll: () => { },
                 },
             }
@@ -212,25 +213,47 @@ export async function GET(request) {
             // Fall through to set session and redirect to /link-complete
             const redirectPath = '/link-complete';
             const redirectResp = NextResponse.redirect(new URL(redirectPath, appUrl));
+            
+            let currentCookies = request.cookies.getAll();
+            const cookiesToSet = [];
             const rbSupabase   = createServerClient(
                 process.env.NEXT_PUBLIC_SUPABASE_URL,
                 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
                 {
                     cookies: {
-                        getAll: () => [],
-                        setAll: (cookiesToSet) => {
-                            cookiesToSet.forEach(({ name, value, options }) =>
-                                redirectResp.cookies.set(name, value, options)
-                            );
+                        getAll: () => currentCookies,
+                        setAll: (cookies) => {
+                            cookies.forEach((c) => {
+                                const index = currentCookies.findIndex(ext => ext.name === c.name);
+                                if (index >= 0) {
+                                    currentCookies[index] = { name: c.name, value: c.value, options: c.options };
+                                } else {
+                                    currentCookies.push({ name: c.name, value: c.value, options: c.options });
+                                }
+                                cookiesToSet.push(c);
+                            });
                         },
                     },
                 }
             );
-            await rbSupabase.auth.setSession({
+            
+            const { error: setSessionErr } = await rbSupabase.auth.setSession({
                 access_token:  session.access_token,
                 refresh_token: session.refresh_token,
             });
-            await rbSupabase.auth.refreshSession(); // Force updated metadata into cookies
+            if (setSessionErr) {
+                 console.error('[Google OAuth][Flow A] setSession error:', setSessionErr.message);
+                 return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(setSessionErr.message)}`, appUrl));
+            }
+            
+            const { error: refreshErr } = await rbSupabase.auth.refreshSession(); // Force updated metadata into cookies
+            if (refreshErr) {
+                 console.error('[Google OAuth][Flow A] refreshSession error:', refreshErr.message);
+                 return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(refreshErr.message)}`, appUrl));
+            }
+            
+            applySupabaseCookies(redirectResp, cookiesToSet);
+            
             console.log('[Google OAuth][Flow A] Merged Google user:', user.id, '→ /link-complete');
             return redirectResp;
         }
@@ -416,16 +439,24 @@ export async function GET(request) {
         // ── Step 4: Build redirect response and set session cookies ──────────────
         const redirectResponse = NextResponse.redirect(new URL(redirectPath, appUrl));
 
+        let currentCookies = request.cookies.getAll();
+        const cookiesToSet = [];
         const responseBoundSupabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
             {
                 cookies: {
-                    getAll: () => [],
-                    setAll: (cookiesToSet) => {
-                        cookiesToSet.forEach(({ name, value, options }) =>
-                            redirectResponse.cookies.set(name, value, options)
-                        );
+                    getAll: () => currentCookies,
+                    setAll: (cookies) => {
+                        cookies.forEach((c) => {
+                            const index = currentCookies.findIndex(ext => ext.name === c.name);
+                            if (index >= 0) {
+                                currentCookies[index] = { name: c.name, value: c.value, options: c.options };
+                            } else {
+                                currentCookies.push({ name: c.name, value: c.value, options: c.options });
+                            }
+                            cookiesToSet.push(c);
+                        });
                     },
                 },
             }
@@ -444,7 +475,15 @@ export async function GET(request) {
         }
 
         // Force refresh to bake updated user_metadata into the JWT cookie
-        await responseBoundSupabase.auth.refreshSession();
+        const { error: refreshError } = await responseBoundSupabase.auth.refreshSession();
+        if (refreshError) {
+            console.error('[Google OAuth] refreshSession error:', refreshError.message);
+            return NextResponse.redirect(
+                new URL(`/login?error=${encodeURIComponent(refreshError.message)}`, appUrl)
+            );
+        }
+        
+        applySupabaseCookies(redirectResponse, cookiesToSet);
 
         // Non-blocking: ensure WhatsApp binding is up-to-date and send login alert for returning user.
         const userAgent = request.headers.get('user-agent') || '';
