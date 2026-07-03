@@ -1,7 +1,5 @@
-import { createAdminClient } from '@/lib/supabaseServer';
 import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
-
 // GET /api/merchant/investments — fetch all investments + aggregated order profit
 export async function GET(request) {
     try {
@@ -43,45 +41,3 @@ export async function GET(request) {
     }
 }
 
-// POST /api/merchant/investments — create investment request
-export async function POST(request) {
-    try {
-        const { user, admin: supabase } = await getAuthUser(request);
-        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-        const { data: merchant } = await supabase
-            .from('merchants')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
-
-        if (!merchant) return NextResponse.json({ error: 'Merchant profile not found' }, { status: 404 });
-
-        const { amountRupees, description } = await request.json();
-        if (!amountRupees) return NextResponse.json({ error: 'Amount is required' }, { status: 400 });
-
-        const amount = Number(amountRupees);
-        if (amount < 10000) return NextResponse.json({ error: 'Minimum investment is ₹10,000' }, { status: 400 });
-
-        const amountPaise = Math.round(amount * 100);
-
-        const { data, error } = await supabase
-            .from('merchant_investments')
-            .insert({
-                merchant_id: merchant.id,
-                amount_paise: amountPaise,
-                description: description || '',
-                status: 'pending',
-                interest_rate_percent: 12.0,
-                duration_days: 365,
-            })
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        return NextResponse.json({ data });
-    } catch (err) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
-    }
-}

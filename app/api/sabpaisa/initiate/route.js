@@ -114,10 +114,10 @@ export async function POST(request) {
 
         // 4. Validate amount
         const parsedAmount = Number(orderData.amount);
-        if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 1000000) {
+        if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 10000000) {
             validationLog('amount');
             return NextResponse.json(
-                { error: 'INVALID_AMOUNT', message: 'A valid payment amount is required.', field: 'amount' },
+                { error: 'INVALID_AMOUNT', message: 'A valid payment amount (up to ₹1 Crore) is required.', field: 'amount' },
                 { status: 400 }
             );
         }
@@ -150,8 +150,15 @@ export async function POST(request) {
         // ── Canonical Amount Derivation (Security Guard) ──
         let canonicalAmountPaise = 0;
         const udf1 = orderData.udf1 || '';
-        const udf2 = orderData.udf2 || ''; // groupId for CART, productId for GIFT
+        let udf2 = orderData.udf2 || ''; // groupId for CART, productId for GIFT
         const udf3 = orderData.udf3 || ''; // planKey for SUB
+
+        if (typeof udf2 === 'string') {
+            // Remove special characters that gateways reject, keeping basic punctuation.
+            // Truncate to 50 characters to stay within typical UDF limits.
+            udf2 = udf2.replace(/[^a-zA-Z0-9\s\-_.,@]/g, '').trim().substring(0, 50);
+            orderData.udf2 = udf2;
+        }
 
         if (udf1 === 'CART_CHECKOUT') {
             const { data: group, error: groupErr } = await supabaseAdmin

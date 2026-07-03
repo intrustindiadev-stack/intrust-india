@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -46,6 +46,14 @@ export default function SabpaisaPaymentModal({
   // Wallet topup states
   const [showTopupInput, setShowTopupInput] = useState(false);
   const [topupAmount, setTopupAmount] = useState("");
+  
+  const walletIdempotencyKeyRef = useRef(null);
+  
+  useEffect(() => {
+    if (!isOpen) {
+      walletIdempotencyKeyRef.current = null;
+    }
+  }, [isOpen]);
   const firstInvalidField = Object.keys(payerContact.validation.errors)[0] || null;
   const recoveryField = serverContactError?.field || firstInvalidField;
   const isAddToWalletActive = showTopupInput;
@@ -146,6 +154,10 @@ export default function SabpaisaPaymentModal({
           const { data: { session } } = await supabase.auth.getSession();
           if (!session) throw new Error("Please log in to continue");
 
+          if (!walletIdempotencyKeyRef.current) {
+            walletIdempotencyKeyRef.current = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 8);
+          }
+
           const response = await fetch("/api/wallet/pay-investment", {
             method: "POST",
             headers: {
@@ -156,6 +168,7 @@ export default function SabpaisaPaymentModal({
               type: metadata.type,
               amount: paymentAmount,
               description: metadata.description || productInfo?.title || 'Investment',
+              idempotencyKey: walletIdempotencyKeyRef.current
             }),
           });
 
@@ -435,7 +448,7 @@ export default function SabpaisaPaymentModal({
                   <span className="text-indigo-300 text-2xl font-bold mr-0.5">
                     ₹
                   </span>
-                  {amount?.toLocaleString("en-IN") || "0"}
+                  {amount ? Number(amount).toLocaleString("en-IN") : "0"}
                 </p>
               </div>
 
@@ -451,14 +464,14 @@ export default function SabpaisaPaymentModal({
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-indigo-300/80">Face Value</span>
                     <span className="font-semibold text-white">
-                      ₹{metadata.face_value?.toLocaleString("en-IN")}
+                      ₹{metadata.face_value ? Number(metadata.face_value).toLocaleString("en-IN") : "0"}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-indigo-300/80">Selling Price</span>
                   <span className="font-semibold text-white">
-                    ₹{amount?.toLocaleString("en-IN")}
+                    ₹{amount ? Number(amount).toLocaleString("en-IN") : "0"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm">

@@ -451,7 +451,7 @@ export default function AIGrowPage() {
                                         <input type="number" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="Min ₹10,000"
                                             className="w-full pl-10 pr-5 bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-4 text-xl font-black text-slate-900 dark:text-white focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all [appearance:textfield]" />
                                     </div>
-                                    <p className="text-[10px] text-slate-400 font-bold">Dynamic profit-sharing model — no fixed interest.</p>
+                                    <p className="text-[10px] text-slate-400 font-bold">Dynamic profit-sharing model — target 12% p.a. returns.</p>
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Notes (Optional)</label>

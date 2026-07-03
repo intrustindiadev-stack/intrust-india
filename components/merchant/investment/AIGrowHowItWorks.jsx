@@ -18,8 +18,8 @@ const STEPS = [
         color: 'from-emerald-500 to-teal-600',
         bg: 'bg-emerald-50 dark:bg-emerald-500/10',
         text: 'text-emerald-600 dark:text-emerald-400',
-        title: 'Admin Activates Plan',
-        detail: 'Our team reviews your request and deploys your capital into verified supply chain trade orders.',
+        title: 'Capital Deployed Instantly',
+        detail: 'Your request is automatically approved and your capital is ready for deployment into verified supply chain trade orders.',
         tag: 'Step 2',
     },
     {
@@ -37,7 +37,7 @@ const STEPS = [
         bg: 'bg-amber-50 dark:bg-amber-500/10',
         text: 'text-amber-600 dark:text-amber-400',
         title: 'Profits Are Generated',
-        detail: 'Each completed order adds profit to your account via our dynamic profit-sharing model.',
+        detail: 'Each completed order adds profit to your account via our dynamic profit-sharing model (target 12% p.a.).',
         tag: 'Step 4',
     },
     {

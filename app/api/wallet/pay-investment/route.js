@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { WalletService } from '@/lib/wallet/walletService';
+import { MERCHANT_INVESTMENT_TERMS } from '@/lib/constants';
 
 export async function POST(request) {
     const authHeader = request.headers.get('authorization');
@@ -20,7 +21,7 @@ export async function POST(request) {
     }
 
     try {
-        const { type, amount, description } = await request.json();
+        const { type, amount, description, idempotencyKey } = await request.json();
 
         if (!amount || amount <= 0) {
             return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
@@ -28,6 +29,10 @@ export async function POST(request) {
 
         if (type !== 'merchant_lockin' && type !== 'merchant_aigrow') {
             return NextResponse.json({ error: 'Invalid investment type' }, { status: 400 });
+        }
+
+        if (!idempotencyKey) {
+            return NextResponse.json({ error: 'Idempotency key is required' }, { status: 400 });
         }
 
         const amountPaise = Math.round(parseFloat(amount) * 100);
@@ -45,7 +50,16 @@ export async function POST(request) {
 
         // 2. Debit the Wallet
         const referenceType = type;
-        const referenceId = `WLT_INV_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        const referenceId = `WLT_INV_${idempotencyKey}`;
+        
+        // Pre-check Idempotency
+        if (type === 'merchant_lockin') {
+            const { data: existing } = await supabaseAdmin.from('merchant_lockin_balances').select('id').eq('gateway_txn_id', referenceId).maybeSingle();
+            if (existing) return NextResponse.json({ success: true, txnId: referenceId, message: 'Investment already processed' });
+        } else {
+            const { data: existing } = await supabaseAdmin.from('merchant_investments').select('id').eq('gateway_txn_id', referenceId).maybeSingle();
+            if (existing) return NextResponse.json({ success: true, txnId: referenceId, message: 'Investment already processed' });
+        }
         
         const debitResult = await WalletService.debitWallet(
             user.id,
@@ -66,28 +80,39 @@ export async function POST(request) {
         if (type === 'merchant_lockin') {
             const startDate = new Date();
             const endDate = new Date(startDate);
-            endDate.setFullYear(endDate.getFullYear() + 1);
+            endDate.setMonth(endDate.getMonth() + MERCHANT_INVESTMENT_TERMS.LOCKIN.DURATION_MONTHS);
 
             const { error: lockinErr } = await supabaseAdmin
                 .from('merchant_lockin_balances')
                 .insert({
                     merchant_id: merchantCheck.id,
                     amount_paise: amountPaise,
-                    interest_rate: 15.0, // Standard Lockin APR
-                    lockin_period_months: 12,
+                    interest_rate: MERCHANT_INVESTMENT_TERMS.LOCKIN.INTEREST_RATE_PERCENT,
+                    lockin_period_months: MERCHANT_INVESTMENT_TERMS.LOCKIN.DURATION_MONTHS,
                     status: 'active',
                     start_date: startDate.toISOString(),
-                    end_date: endDate.toISOString()
+                    end_date: endDate.toISOString(),
+                    gateway_txn_id: referenceId,
+                    notes: description
                 });
 
-            if (lockinErr) throw new Error(`Lockin creation failed: ${lockinErr.message}`);
-
-            await supabaseAdmin.from('notifications').insert({
-                user_id: user.id,
-                title: 'Growth Portfolio Funded ✅',
-                body: `Your Lockin portfolio has been funded with ₹${amount} via Wallet.`,
-                type: 'success'
-            });
+            if (lockinErr) {
+                // Rollback debit
+                await WalletService.creditWallet(user.id, amount, `${referenceId}_ROLLBACK`, 'REFUND', `Rollback for failed lockin investment`);
+                
+                if (lockinErr.code === '23505') {
+                    console.warn(`[WalletInvestment] Unique constraint hit for txn ${referenceId} - concurrent duplicate suppressed and rolled back.`);
+                } else {
+                    throw new Error(`Lockin creation failed: ${lockinErr.message}`);
+                }
+            } else {
+                await supabaseAdmin.from('notifications').insert({
+                    user_id: user.id,
+                    title: 'Growth Portfolio Funded ✅',
+                    body: `Your Lockin portfolio has been funded with ₹${amount} via Wallet.`,
+                    type: 'success'
+                });
+            }
 
         } else if (type === 'merchant_aigrow') {
             const { error: aiGrowErr } = await supabaseAdmin
@@ -98,11 +123,21 @@ export async function POST(request) {
                     description: description || 'AI Grow Request',
                     status: 'active',
                     approved_at: new Date().toISOString(),
-                    interest_rate_percent: 12.0,
-                    duration_days: 365
+                    interest_rate_percent: MERCHANT_INVESTMENT_TERMS.AIGROW.INTEREST_RATE_PERCENT,
+                    duration_days: MERCHANT_INVESTMENT_TERMS.AIGROW.DURATION_DAYS,
+                    gateway_txn_id: referenceId
                 });
             
-            if (aiGrowErr) throw new Error(`AI Grow creation failed: ${aiGrowErr.message}`);
+            if (aiGrowErr) {
+                // Rollback debit
+                await WalletService.creditWallet(user.id, amount, `${referenceId}_ROLLBACK`, 'REFUND', `Rollback for failed AI Grow investment`);
+                
+                if (aiGrowErr.code === '23505') {
+                    console.warn(`[WalletInvestment] Unique constraint hit for txn ${referenceId} - concurrent duplicate suppressed and rolled back.`);
+                } else {
+                    throw new Error(`AI Grow creation failed: ${aiGrowErr.message}`);
+                }
+            }
         }
 
         return NextResponse.json({
