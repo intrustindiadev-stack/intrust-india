@@ -32,12 +32,14 @@ const MOBILE_TABS = [
     { id: 'funds', label: 'My Funds', icon: Layers },
 ];
 
+
 export default function AIGrowPage() {
     const [investments, setInvestments] = useState([]);
     const [allOrders, setAllOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isRevealed, setIsRevealed] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [amount, setAmount] = useState('');
     const [desc, setDesc] = useState('');
     const [processing, setProcessing] = useState(false);
@@ -45,7 +47,6 @@ export default function AIGrowPage() {
     const [selectedInv, setSelectedInv] = useState(null);
     const [mobileTab, setMobileTab] = useState('overview');
     const [user, setUser] = useState(null);
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
 
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
@@ -82,11 +83,50 @@ export default function AIGrowPage() {
         return allOrders.filter(o => o.investment_id === selectedInv);
     }, [allOrders, selectedInv]);
 
-    const handleRequest = async (e) => {
-        e.preventDefault();
-        if (Number(amount) < 10000) return showToast('Minimum ₹10,000 required', 'error');
-        setShowModal(false);
-        setShowPaymentModal(true);
+    // Real-time counter component
+    const RealtimeAccumulated = ({ investments, allOrders, isRevealed, showTotal = false }) => {
+        const [now, setNow] = useState(Date.now());
+
+        useEffect(() => {
+            if (!isRevealed) return;
+            const timer = setInterval(() => setNow(Date.now()), 50);
+            return () => clearInterval(timer);
+        }, [isRevealed]);
+
+        if (!isRevealed) {
+            return <span>• • • •</span>;
+        }
+
+        const active = investments.filter(i => i.status === 'active');
+        const totalDeployed = active.reduce((s, i) => s + i.amount_paise / 100, 0);
+        const totalProfitFromOrders = allOrders.reduce((s, o) => s + (o.profit_paise || 0) / 100, 0);
+
+        const totalContinuousTick = active.reduce((sum, b) => {
+            const principal = b.amount_paise / 100;
+            const rate = (b.interest_rate_percent || 12) / 100;
+            if (!b.approved_at) return sum;
+            const startDate = new Date(b.approved_at);
+            const elapsedMs = Math.max(0, now - startDate.getTime());
+            const daysElapsed = elapsedMs / (1000 * 60 * 60 * 24);
+            return sum + (principal * (rate / 365) * daysElapsed);
+        }, 0);
+
+        const totalProfit = totalProfitFromOrders + totalContinuousTick;
+
+        if (showTotal) {
+            const total = totalDeployed + totalProfit;
+            const whole = Math.floor(total);
+            const fraction = (total - whole).toFixed(2).substring(2);
+            return (
+                <div className="flex items-baseline">
+                    <span>{whole.toLocaleString('en-IN')}</span>
+                    <span className="text-2xl md:text-4xl font-medium text-slate-500 ml-1 tracking-normal font-mono w-[60px] inline-block opacity-80">.{fraction}</span>
+                </div>
+            );
+        }
+
+        const totalValue = totalDeployed + totalProfit;
+        return <span className="font-mono tracking-tight">{totalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
     };
 
     if (loading) return (
@@ -180,7 +220,7 @@ export default function AIGrowPage() {
                                     <motion.div key="revealed" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-baseline gap-2">
                                         <span className="text-xl font-bold text-slate-400 align-top mt-1">₹</span>
                                         <h2 className="text-5xl md:text-6xl font-extrabold tracking-tighter">
-                                            <AnimatedNumber value={stats.totalDeployed + stats.totalProfit} prefix="" />
+                                            <RealtimeAccumulated investments={investments} allOrders={allOrders} isRevealed={isRevealed} showTotal={true} />
                                         </h2>
                                     </motion.div>
                                 )}
@@ -193,8 +233,10 @@ export default function AIGrowPage() {
                                 <p className="text-xl font-extrabold">{isRevealed ? `₹${stats.totalDeployed.toLocaleString('en-IN')}` : '• • • •'}</p>
                             </div>
                             <div>
-                                <p className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest mb-1">Total Profit</p>
-                                <p className="text-xl font-extrabold text-emerald-400">{isRevealed ? `₹${stats.totalProfit.toLocaleString('en-IN')}` : '• • • •'}</p>
+                                <p className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest mb-1">Current Value</p>
+                                <p className="text-xl font-extrabold text-emerald-400 flex items-center">
+                                    {isRevealed ? <span className="flex items-center">₹<RealtimeAccumulated investments={investments} allOrders={allOrders} isRevealed={isRevealed} showTotal={false} /></span> : '• • • •'}
+                                </p>
                             </div>
                             <div>
                                 <p className="text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest mb-1">Active Funds</p>
@@ -396,7 +438,12 @@ export default function AIGrowPage() {
                                 <button onClick={() => setShowModal(false)} className="w-9 h-9 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all text-sm font-bold">✕</button>
                             </div>
 
-                            <form onSubmit={handleRequest} className="space-y-5">
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                if (Number(amount) < 10000) return showToast('Minimum ₹10,000 required', 'error');
+                                setShowModal(false);
+                                setShowPaymentModal(true);
+                            }} className="space-y-5">
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount (₹)</label>
                                     <div className="relative">
@@ -411,10 +458,9 @@ export default function AIGrowPage() {
                                     <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Any context for this request..."
                                         className="w-full bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all min-h-[90px] resize-none" />
                                 </div>
-                                <button type="submit" disabled={processing}
+                                <button type="submit"
                                     className="w-full bg-gradient-to-r from-[#1e3a5f] to-indigo-700 hover:opacity-90 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 text-[11px] uppercase tracking-widest flex items-center justify-center gap-2">
-                                    {processing ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Plus size={16} />}
-                                    {processing ? 'Submitting...' : 'Submit Request'}
+                                    <Plus size={16} /> Pay Now
                                 </button>
                             </form>
                         </motion.div>
@@ -433,7 +479,7 @@ export default function AIGrowPage() {
                 amount={amount}
                 user={user}
                 productInfo="AI Grow Request"
-                metadata={{ type: "merchant_aigrow", description: desc || 'AI Grow request' }}
+                metadata={{ type: "merchant_aigrow", description: desc || 'AI Grow Request' }}
             />
         </div>
     );

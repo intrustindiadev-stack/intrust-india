@@ -79,7 +79,7 @@ const getConfig = (txnId, transaction, userRole) => {
         redirectTo: '/merchant/lockin',
         redirectDelay: 4000,
         redirectLabel: 'View Lockin Portfolio',
-        showConfetti: false,
+        showConfetti: true,
     };
     if (isMerchantAiGrow) return {
         icon: <TrendingUp size={48} className="text-white" strokeWidth={2.5} />,
@@ -89,7 +89,7 @@ const getConfig = (txnId, transaction, userRole) => {
         redirectTo: '/merchant/investments',
         redirectDelay: 4000,
         redirectLabel: 'View Investments',
-        showConfetti: false,
+        showConfetti: true,
     };
     // Default: Wallet Topup or generic
     return {

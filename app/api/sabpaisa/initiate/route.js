@@ -287,6 +287,14 @@ export async function POST(request) {
                 return failResponse(403, 'Unauthorized: You do not own this store credit request.', correlationId);
             }
             canonicalAmountPaise = (udhariReq.amount_paise || 0) + (udhariReq.fee_paise || 0);
+        } else if (udf1 === 'MERCHANT_LOCKIN' || udf1 === 'MERCHANT_AIGROW') {
+            const clientPaise = Math.round(Number(orderData.amount) * 100);
+            const MIN_PAISE = 10000 * 100; // Minimum 10,000 INR
+            const MAX_PAISE = 1_00_00_000 * 100; // Maximum 1 Crore INR
+            if (isNaN(clientPaise) || clientPaise < MIN_PAISE || clientPaise > MAX_PAISE) {
+                return failResponse(400, `Invalid investment amount. Minimum is ₹${MIN_PAISE / 100}.`, correlationId);
+            }
+            canonicalAmountPaise = clientPaise;
         } else {
             return failResponse(400, 'Unsupported payment type.', correlationId, `Unknown udf1 value: "${udf1}"`);
         }

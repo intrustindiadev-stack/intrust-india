@@ -26,6 +26,41 @@ export default function MerchantPortfolioPage({ params }) {
     const [showFeedModal, setShowFeedModal] = useState(false);
     const [selectedInvestment, setSelectedInvestment] = useState(null);
 
+    const RealtimeAssetTicker = ({ items, type = 'lockin', color = 'text-white' }) => {
+        const [now, setNow] = useState(Date.now());
+
+        useEffect(() => {
+            const timer = setInterval(() => setNow(Date.now()), 50);
+            return () => clearInterval(timer);
+        }, []);
+
+        const active = items.filter(b => b.status === 'active');
+        const total = active.reduce((sum, b) => {
+            const principal = b.amount_paise / 100;
+            const rate = (b.interest_rate || b.interest_rate_percent || (type === 'lockin' ? 15 : 12)) / 100;
+            const startStr = b.start_date || b.approved_at;
+            if (!startStr) return sum + principal;
+            const startDate = new Date(startStr);
+            const elapsedMs = Math.max(0, now - startDate.getTime());
+            const daysElapsed = elapsedMs / (1000 * 60 * 60 * 24);
+            return sum + principal + (principal * (rate / 365) * daysElapsed);
+        }, 0);
+
+        if (active.length === 0) {
+            return <span>₹0</span>;
+        }
+
+        const whole = Math.floor(total);
+        const fraction = (total - whole).toFixed(2).substring(2);
+        
+        return (
+            <div className="flex items-baseline">
+                <span>₹{whole.toLocaleString('en-IN')}</span>
+                <span className={`text-[0.5em] ${color} ml-1 font-mono tracking-tighter opacity-80`}>.{fraction}</span>
+            </div>
+        );
+    };
+
     const fetchPortfolio = async () => {
         setLoading(true);
         try {
@@ -192,7 +227,9 @@ export default function MerchantPortfolioPage({ params }) {
                         <div className="bg-slate-900 rounded-[2rem] p-6 text-white relative overflow-hidden shadow-xl">
                             <div className="absolute right-4 top-4 opacity-10"><Briefcase size={64} /></div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Total Deployed Capital</p>
-                            <p className="text-3xl font-black tracking-tight">₹{(merchant.total_active_capital_paise / 100).toLocaleString('en-IN')}</p>
+                            <p className="text-3xl font-black tracking-tight">
+                                <RealtimeAssetTicker items={[...lockins, ...investments]} type="mixed" color="text-slate-400" />
+                            </p>
                         </div>
                         <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between">
                             <div>
@@ -201,7 +238,9 @@ export default function MerchantPortfolioPage({ params }) {
                                 </div>
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">AI Grow Funds</p>
                             </div>
-                            <p className="text-2xl font-black text-slate-900 tracking-tight">₹{(merchant.total_ai_grow_paise / 100).toLocaleString('en-IN')}</p>
+                            <p className="text-2xl font-black text-slate-900 tracking-tight">
+                                <RealtimeAssetTicker items={investments} type="aigrow" color="text-indigo-400" />
+                            </p>
                         </div>
                         <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between">
                             <div>
@@ -210,7 +249,9 @@ export default function MerchantPortfolioPage({ params }) {
                                 </div>
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Secured Lockin</p>
                             </div>
-                            <p className="text-2xl font-black text-slate-900 tracking-tight">₹{(merchant.total_lockin_paise / 100).toLocaleString('en-IN')}</p>
+                            <p className="text-2xl font-black text-slate-900 tracking-tight">
+                                <RealtimeAssetTicker items={lockins} type="lockin" color="text-emerald-400" />
+                            </p>
                         </div>
                     </div>
                     <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm lg:col-span-1 h-[200px] flex flex-col relative overflow-hidden">
@@ -282,24 +323,7 @@ export default function MerchantPortfolioPage({ params }) {
                                         </div>
                                         
                                         <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-slate-50">
-                                            {inv.status === 'pending' && (
-                                                <>
-                                                    <button 
-                                                        onClick={() => handleUpdateStatus(inv.id, 'ai_grow', 'active')}
-                                                        disabled={processingId === inv.id}
-                                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-bold transition-all"
-                                                    >
-                                                        {processingId === inv.id ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle size={14} />} Approve
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleUpdateStatus(inv.id, 'ai_grow', 'rejected')}
-                                                        disabled={processingId === inv.id}
-                                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white rounded-xl text-xs font-bold transition-all"
-                                                    >
-                                                        {processingId === inv.id ? <RefreshCw size={14} className="animate-spin" /> : <XCircle size={14} />} Reject
-                                                    </button>
-                                                </>
-                                            )}
+
                                             {inv.status === 'active' && (
                                                 <>
                                                     <button 

@@ -37,6 +37,49 @@ export default function MerchantLockinPage() {
     const [amount, setAmount] = useState('');
     const [desc, setDesc] = useState('');
 
+    // Real-time counter component
+    const RealtimeAccumulated = ({ balances, isRevealed, showTotal = false }) => {
+        const [now, setNow] = useState(Date.now());
+
+        useEffect(() => {
+            if (!isRevealed) return;
+            const timer = setInterval(() => setNow(Date.now()), 50);
+            return () => clearInterval(timer);
+        }, [isRevealed]);
+
+        if (!isRevealed) {
+            return <span>• • • •</span>;
+        }
+
+        const activeBalances = balances.filter(b => b.status === 'active');
+        const totalPrincipal = activeBalances.reduce((sum, b) => sum + (b.amount_paise || 0), 0) / 100;
+        
+        const totalAccumulated = activeBalances.reduce((sum, b) => {
+            const principal = b.amount_paise / 100;
+            const rate = b.interest_rate / 100;
+            if (!b.start_date) return sum;
+            const startDate = new Date(b.start_date);
+            const elapsedMs = Math.max(0, now - startDate.getTime());
+            const daysElapsed = elapsedMs / (1000 * 60 * 60 * 24);
+            return sum + (principal * (rate / 365) * daysElapsed);
+        }, 0);
+
+        if (showTotal) {
+            const total = totalPrincipal + totalAccumulated;
+            const whole = Math.floor(total);
+            const fraction = (total - whole).toFixed(2).substring(2);
+            return (
+                <div className="flex items-baseline">
+                    <span>{whole.toLocaleString('en-IN')}</span>
+                    <span className="text-xl md:text-2xl font-medium text-slate-500 ml-1 tracking-normal font-mono w-[60px] inline-block">.{fraction}</span>
+                </div>
+            );
+        }
+
+        const totalValue = totalPrincipal + totalAccumulated;
+        return <span className="font-mono">{totalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+    };
+
     // Animated Counter Component
     const AnimatedNumber = ({ value, decimals = 0 }) => {
         const [displayValue, setDisplayValue] = useState(0);
@@ -112,14 +155,6 @@ export default function MerchantLockinPage() {
 
     const activeBalances = balances.filter(b => b.status === 'active');
     const totalPrincipal = activeBalances.reduce((sum, b) => sum + (b.amount_paise || 0), 0) / 100;
-
-    const totalAccumulated = activeBalances.reduce((sum, b) => {
-        const principal = b.amount_paise / 100;
-        const rate = b.interest_rate / 100;
-        const startDate = new Date(b.start_date);
-        const daysElapsed = Math.max(0, (new Date() - startDate) / (1000 * 60 * 60 * 24));
-        return sum + (principal * (rate / 365) * daysElapsed);
-    }, 0);
 
     return (
         <div className="p-4 md:p-6 bg-[#FAFBFC] min-h-screen font-sans selection:bg-blue-100 italic-none">
@@ -209,8 +244,7 @@ export default function MerchantLockinPage() {
                                             >
                                                 <span className="text-xl md:text-3xl font-bold text-slate-400 align-top mt-2">₹</span>
                                                 <h2 className="text-5xl md:text-8xl font-extrabold tracking-tighter text-white">
-                                                    <AnimatedNumber value={totalPrincipal + totalAccumulated} />
-                                                    <span className="text-xl md:text-2xl font-medium text-slate-500 ml-1 tracking-normal">.{(totalAccumulated % 1).toFixed(2).split('.')[1]}</span>
+                                                    <RealtimeAccumulated balances={balances} isRevealed={isRevealed} showTotal={true} />
                                                 </h2>
                                             </motion.div>
                                         )}
@@ -226,20 +260,11 @@ export default function MerchantLockinPage() {
                                     </p>
                                 </div>
                                 <div className="space-y-2">
-                                    <p className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest">Retention Bonus</p>
+                                    <p className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest">Current Value</p>
                                     <div className="flex items-center gap-4">
-                                        <p className="text-2xl md:text-3xl font-extrabold text-emerald-400 tracking-tight">
-                                            ₹{isRevealed ? <AnimatedNumber value={totalAccumulated} decimals={2} /> : '• • • •'}
+                                        <p className="text-2xl md:text-3xl font-extrabold text-emerald-400 tracking-tight flex items-center">
+                                            ₹<RealtimeAccumulated balances={balances} isRevealed={isRevealed} showTotal={false} />
                                         </p>
-                                        {isRevealed && (
-                                            <motion.div
-                                                initial={{ opacity: 0, scale: 0.8 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full text-[11px] font-black text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
-                                            >
-                                                +{(totalAccumulated / totalPrincipal * 100 || 0).toFixed(2)}%
-                                            </motion.div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -417,7 +442,7 @@ export default function MerchantLockinPage() {
                                 </div>
                                 <button type="submit"
                                     className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:opacity-90 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 text-[11px] uppercase tracking-widest flex items-center justify-center gap-2">
-                                    <Plus size={16} /> Proceed to Pay
+                                    <Plus size={16} /> Pay Now
                                 </button>
                             </form>
                         </motion.div>

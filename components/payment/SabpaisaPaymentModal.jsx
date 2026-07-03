@@ -11,6 +11,7 @@ import {
   Tag,
   Gift,
   Package,
+  TrendingUp,
 } from "lucide-react";
 import PaymentMethodCard from "./PaymentMethodCard";
 import WalletPaymentOption from "./WalletPaymentOption";
@@ -141,6 +142,31 @@ export default function SabpaisaPaymentModal({
           // Success - refresh balance and redirect
           await fetchBalance();
           router.push(`/payment/success?txnId=WALLET_${Date.now()}&amount=${amount}&type=GIFT_CARD`);
+        } else if (metadata?.type === 'merchant_lockin' || metadata?.type === 'merchant_aigrow') {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) throw new Error("Please log in to continue");
+
+          const response = await fetch("/api/wallet/pay-investment", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              type: metadata.type,
+              amount: paymentAmount,
+              description: metadata.description || productInfo?.title || 'Investment',
+            }),
+          });
+
+          const result = await response.json();
+          if (!response.ok) {
+            throw new Error(result.error || "Failed to process investment via wallet");
+          }
+
+          await fetchBalance();
+          const pType = metadata.type === 'merchant_lockin' ? 'MERCHANT_LOCKIN' : 'MERCHANT_AIGROW';
+          router.push(`/payment/success?txnId=${result.txnId || 'WALLET_' + Date.now()}&amount=${amount}&type=${pType}`);
         } else {
           // Default generic Wallet Payment
           const txn = await debitWallet(
@@ -357,20 +383,31 @@ export default function SabpaisaPaymentModal({
                       <Package size={20} className="text-indigo-200" />
                     ) : metadata?.type === 'wallet_topup' ? (
                       <Wallet size={20} className="text-indigo-200" />
+                    ) : metadata?.type === 'merchant_lockin' ? (
+                      <Building size={20} className="text-indigo-200" />
+                    ) : metadata?.type === 'merchant_aigrow' ? (
+                      <TrendingUp size={20} className="text-indigo-200" />
                     ) : (
                       <Gift size={20} className="text-indigo-200" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-white truncate">
-                      {productInfo?.title || "Gift Card"}
+                      {productInfo?.title || (
+                        metadata?.type === 'merchant_lockin' ? "Secure Lockin Plan" : 
+                        metadata?.type === 'merchant_aigrow' ? "AI Grow Request" : "Gift Card"
+                      )}
                     </p>
                     <p className="text-xs text-indigo-300/80">
                       {metadata?.type === 'cart_checkout'
                         ? 'Shopping Cart Order'
                         : metadata?.type === 'wallet_topup'
                           ? 'Wallet Top-Up'
-                          : 'Digital Gift Card'}
+                          : metadata?.type === 'merchant_lockin'
+                            ? 'Capital Protection'
+                            : metadata?.type === 'merchant_aigrow'
+                              ? 'Dynamic Growth Portfolio'
+                              : 'Digital Gift Card'}
                     </p>
                   </div>
                 </div>

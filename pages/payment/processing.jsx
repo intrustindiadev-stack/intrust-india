@@ -22,16 +22,16 @@ const ProcessingPage = () => {
                 return;
             }
 
-            const response = await fetch(`/api/payment/verify?clientTxnId=${txnId}`, {
+            const response = await fetch(`/api/transaction/details?id=${txnId}`, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`
                 }
             });
             const data = await response.json();
 
-            if (data.latestStatus === 'gateway_success') {
+            if (data?.transaction?.status === 'gateway_success') {
                 router.replace(`/payment/success?txnId=${txnId}`);
-            } else if (data.latestStatus === 'failed') {
+            } else if (data?.transaction?.status === 'failed' || data?.transaction?.status === 'payment_failed') {
                 router.replace(`/payment/failure?txnId=${txnId}`);
             } else {
                 pollCountRef.current += 1;

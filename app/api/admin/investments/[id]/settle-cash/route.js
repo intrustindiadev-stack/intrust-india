@@ -25,7 +25,7 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Already completed' }, { status: 400 });
         }
 
-        // Fetch merchant for notification and balance
+        // Fetch merchant for notification
         const { data: merchant, error: merError } = await supabase
             .from('merchants')
             .select('user_id, wallet_balance_paise')
@@ -36,7 +36,14 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
         }
 
-        const currentBalance = merchant.wallet_balance_paise || 0;
+        // Fetch associated orders to calculate profit
+        const { data: orders } = await supabase
+            .from('merchant_investment_orders')
+            .select('profit_paise')
+            .eq('investment_id', id);
+        
+        const totalProfitPaise = orders?.reduce((sum, order) => sum + (order.profit_paise || 0), 0) || 0;
+        const totalSettledPaise = investment.amount_paise + totalProfitPaise;
 
         // 1. Update investment status
         const { error: updateInvError } = await supabase
@@ -52,7 +59,7 @@ export async function POST(request, { params }) {
                 await supabase.from('notifications').insert({
                     user_id: merchant.user_id,
                     title: 'Investment Settled',
-                    body: `Your AI Grow investment of ₹${(investment.amount_paise / 100).toLocaleString('en-IN')} has been settled in cash.`,
+                    body: `Your AI Grow investment of ₹${(totalSettledPaise / 100).toLocaleString('en-IN')} (including profits) has been settled in cash.`,
                     type: 'success',
                     reference_id: id,
                     reference_type: 'investment'

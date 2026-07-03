@@ -54,6 +54,26 @@ export async function GET(request) {
             transaction = data;
         }
 
+        // Check wallet_transactions if still not found
+        if (!transaction && isUUID) {
+            const { data } = await userClient
+                .from('wallet_transactions')
+                .select('*')
+                .eq('id', id)
+                .eq('user_id', user.id)
+                .single();
+            
+            // Map wallet transaction to match expected structure
+            if (data) {
+                transaction = {
+                    ...data,
+                    amount_paise: Math.round(data.amount * 100), // Map amount to amount_paise
+                    udf1: data.reference_type?.toUpperCase() || 'WALLET_PAYMENT',
+                    status: 'gateway_success' // Wallet transactions are always successful
+                };
+            }
+        }
+
         if (!transaction) {
             return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
         }

@@ -13,7 +13,7 @@ export async function POST(request, { params }) {
         // Fetch lockin details
         const { data: lockin, error: lockinError } = await supabase
             .from('merchant_lockin_balances')
-            .select('amount_paise, merchant_id, status')
+            .select('amount_paise, merchant_id, status, start_date, interest_rate')
             .eq('id', id)
             .single();
 

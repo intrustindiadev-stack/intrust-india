@@ -13,7 +13,7 @@ export async function POST(request, { params }) {
         // Fetch lockin details
         const { data: lockin, error: lockinError } = await supabase
             .from('merchant_lockin_balances')
-            .select('amount_paise, merchant_id, status')
+            .select('amount_paise, merchant_id, status, start_date, interest_rate')
             .eq('id', id)
             .single();
 
@@ -25,7 +25,7 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Already completed or matured' }, { status: 400 });
         }
 
-        // Fetch merchant for notification and balance
+        // Fetch merchant for notification
         const { data: merchant, error: merError } = await supabase
             .from('merchants')
             .select('user_id, wallet_balance_paise')
@@ -36,7 +36,16 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
         }
 
-        const currentBalance = merchant.wallet_balance_paise || 0;
+        // Calculate accumulated interest
+        const principalPaise = lockin.amount_paise;
+        const rate = (lockin.interest_rate || lockin.interest_rate_percent || 0) / 100;
+        let interestPaise = 0;
+        if (lockin.start_date) {
+            const startDate = new Date(lockin.start_date);
+            const daysElapsed = Math.max(0, (new Date() - startDate) / (1000 * 60 * 60 * 24));
+            interestPaise = Math.round(principalPaise * (rate / 365) * daysElapsed);
+        }
+        const totalSettledPaise = principalPaise + interestPaise;
 
         // 1. Update lockin status
         const { error: updateLockinError } = await supabase
@@ -52,7 +61,7 @@ export async function POST(request, { params }) {
                 await supabase.from('notifications').insert({
                     user_id: merchant.user_id,
                     title: 'Lockin Settled',
-                    body: `Your Lockin of ₹${(lockin.amount_paise / 100).toLocaleString('en-IN')} has been settled in cash.`,
+                    body: `Your Lockin of ₹${(totalSettledPaise / 100).toLocaleString('en-IN')} (including interest) has been settled in cash.`,
                     type: 'success',
                     reference_id: id,
                     reference_type: 'lockin_balance'
