@@ -227,93 +227,62 @@ export default function ProcurementClient({ initialProducts }) {
                         </p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b border-slate-100 bg-slate-50/70">
-                                    <th className="text-left px-5 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Product</th>
-                                    <th className="text-left px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Merchant</th>
-                                    <th className="text-left px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">HSN / GST</th>
-                                    <th className="text-right px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Wholesale</th>
-                                    <th className="text-right px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Avail. Stock</th>
-                                    <th className="text-center px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Qty to Buy</th>
-                                    <th className="text-center px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Sell Price (₹)</th>
-                                    <th className="text-center px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {filtered.map(product => {
-                                    const inv = product.merchant_inventory?.find(i => i.is_platform_product === false) || product.merchant_inventory?.[0];
-                                    const merchantName = inv?.merchants?.business_name || "Unknown";
-                                    const availStock = inv?.stock_quantity ?? 0;
-                                    const qty = parseInt(qtyEdits[product.id]) || 1;
-                                    const priceRs = priceEdits[product.id] ?? "";
-                                    const platformPricePaise = Math.round(parseFloat(priceRs) * 100) || 0;
+                    <>
+                        {/* Mobile View: Cards */}
+                        <div className="md:hidden flex flex-col gap-4 p-4 bg-slate-50/50">
+                            {filtered.map(product => {
+                                const inv = product.merchant_inventory?.find(i => i.is_platform_product === false) || product.merchant_inventory?.[0];
+                                const merchantName = inv?.merchants?.business_name || "Unknown";
+                                const availStock = inv?.stock_quantity ?? 0;
+                                const qty = parseInt(qtyEdits[product.id]) || 1;
+                                const priceRs = priceEdits[product.id] ?? "";
+                                const platformPricePaise = Math.round(parseFloat(priceRs) * 100) || 0;
 
-                                    const isQtyInvalid = qty < 1 || qty > availStock;
-                                    const isPriceInvalid = !priceRs || parseFloat(priceRs) <= 0;
-                                    const canProcure = !isQtyInvalid && !isPriceInvalid && availStock > 0;
+                                const isQtyInvalid = qty < 1 || qty > availStock;
+                                const isPriceInvalid = !priceRs || parseFloat(priceRs) <= 0;
+                                const canProcure = !isQtyInvalid && !isPriceInvalid && availStock > 0;
 
-                                    return (
-                                        <tr key={product.id} className="hover:bg-indigo-50/30 transition-colors group">
-                                            {/* Product */}
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 relative">
-                                                        {product.product_images?.[0]
-                                                            ? <Image src={product.product_images[0]} alt="" fill sizes="48px" className="object-cover" />
-                                                            : <Package size={20} className="text-slate-200" />
-                                                        }
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-sm font-black text-slate-950 truncate max-w-[180px] tracking-tight">{product.title}</p>
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
-                                                            {product.shopping_categories?.name || "General"}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            {/* Merchant */}
-                                            <td className="px-4 py-4">
-                                                <div className="flex items-center gap-1.5">
+                                return (
+                                    <div key={product.id} className="bg-white rounded-[1.5rem] p-5 border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+                                        {/* Subtle accent line */}
+                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-400 to-violet-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        
+                                        <div className="flex gap-4">
+                                            <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 relative overflow-hidden">
+                                                {product.product_images?.[0] ? (
+                                                    <Image src={product.product_images[0]} alt="" fill sizes="80px" className="object-cover" />
+                                                ) : (
+                                                    <Package size={24} className="text-slate-300" />
+                                                )}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-black text-slate-950 leading-tight">{product.title}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                    {product.shopping_categories?.name || "General"}
+                                                </p>
+                                                <div className="flex items-center gap-1.5 mt-3">
                                                     <Store size={12} className="text-violet-500 shrink-0" />
-                                                    <span className="text-xs font-black text-violet-700 bg-violet-50 px-2 py-0.5 rounded-lg border border-violet-100 uppercase tracking-wider truncate max-w-[120px]">
+                                                    <span className="text-[10px] font-black text-violet-700 bg-violet-50 px-2 py-0.5 rounded-lg border border-violet-100 uppercase tracking-wider truncate">
                                                         {merchantName}
                                                     </span>
                                                 </div>
-                                            </td>
+                                            </div>
+                                        </div>
 
-                                            {/* HSN / GST */}
-                                            <td className="px-4 py-4">
-                                                <div className="space-y-1">
-                                                    <span className="block text-[10px] font-black text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg w-fit">
-                                                        {product.hsn_code || "—"}
-                                                    </span>
-                                                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                                        GST {product.gst_percentage ?? 0}%
-                                                    </span>
-                                                </div>
-                                            </td>
+                                        <div className="grid grid-cols-2 gap-3 bg-slate-50/50 rounded-2xl p-4 mt-5 border border-slate-100/50">
+                                            <div>
+                                                <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-0.5">Wholesale Rate</p>
+                                                <p className="text-sm font-black text-slate-900">{fmt(product.wholesale_price_paise)}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-0.5">Available Stock</p>
+                                                <span className={`text-sm font-black ${availStock <= 0 ? 'text-red-500' : 'text-emerald-600'}`}>{availStock}</span>
+                                            </div>
+                                        </div>
 
-                                            {/* Wholesale price */}
-                                            <td className="px-4 py-4 text-right">
-                                                <p className="text-sm font-black text-slate-950 tracking-tighter">
-                                                    {fmt(product.wholesale_price_paise)}
-                                                </p>
-                                                <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">per unit</p>
-                                            </td>
-
-                                            {/* Available stock */}
-                                            <td className="px-4 py-4 text-right">
-                                                <span className={`text-sm font-black tracking-tighter ${availStock <= 0 ? 'text-red-500' : availStock < 5 ? 'text-amber-500' : 'text-emerald-600'}`}>
-                                                    {availStock}
-                                                </span>
-                                                <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">units</p>
-                                            </td>
-
-                                            {/* Qty input */}
-                                            <td className="px-4 py-4 text-center">
+                                        <div className="flex gap-3 mt-4">
+                                            <div className="flex-1">
+                                                <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1.5 pl-1">Buy Qty</p>
                                                 <input
                                                     type="number"
                                                     min={1}
@@ -321,44 +290,170 @@ export default function ProcurementClient({ initialProducts }) {
                                                     value={qtyEdits[product.id] ?? 1}
                                                     onChange={e => setQtyEdits(prev => ({ ...prev, [product.id]: e.target.value }))}
                                                     disabled={availStock <= 0}
-                                                    className={`w-20 px-2 py-2 text-center bg-slate-50 border rounded-xl text-xs font-black outline-none focus:ring-4 transition-all disabled:opacity-50 ${isQtyInvalid ? 'border-red-300 focus:ring-red-500/10 text-red-600' : 'border-slate-200 focus:ring-indigo-500/10 text-slate-900'}`}
+                                                    className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-xs font-black outline-none focus:ring-4 transition-all disabled:opacity-50 text-center ${isQtyInvalid ? 'border-red-300 focus:ring-red-500/10 text-red-600' : 'border-slate-200 focus:ring-indigo-500/10 text-slate-900'}`}
                                                 />
-                                            </td>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1.5 pl-1">Sell Price (₹)</p>
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    step={0.01}
+                                                    value={priceRs}
+                                                    onChange={e => setPriceEdits(prev => ({ ...prev, [product.id]: e.target.value }))}
+                                                    placeholder="0.00"
+                                                    disabled={availStock <= 0}
+                                                    className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-xs font-black outline-none focus:ring-4 transition-all disabled:opacity-50 text-center ${isPriceInvalid && priceRs !== "" ? 'border-red-300 focus:ring-red-500/10 text-red-600' : 'border-slate-200 focus:ring-indigo-500/10 text-slate-900'}`}
+                                                />
+                                            </div>
+                                        </div>
 
-                                            {/* Platform sell price */}
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="relative inline-block">
-                                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">₹</span>
+                                        <button
+                                            onClick={() => openConfirm(product)}
+                                            disabled={!canProcure}
+                                            className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-indigo-600/20 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                                        >
+                                            <ArrowDownToLine size={14} /> Procure Stock
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Desktop View: Table */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-slate-100 bg-slate-50/70">
+                                        <th className="text-left px-5 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Product</th>
+                                        <th className="text-left px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Merchant</th>
+                                        <th className="text-left px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">HSN / GST</th>
+                                        <th className="text-right px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Wholesale</th>
+                                        <th className="text-right px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Avail. Stock</th>
+                                        <th className="text-center px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Qty to Buy</th>
+                                        <th className="text-center px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Sell Price (₹)</th>
+                                        <th className="text-center px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {filtered.map(product => {
+                                        const inv = product.merchant_inventory?.find(i => i.is_platform_product === false) || product.merchant_inventory?.[0];
+                                        const merchantName = inv?.merchants?.business_name || "Unknown";
+                                        const availStock = inv?.stock_quantity ?? 0;
+                                        const qty = parseInt(qtyEdits[product.id]) || 1;
+                                        const priceRs = priceEdits[product.id] ?? "";
+                                        const platformPricePaise = Math.round(parseFloat(priceRs) * 100) || 0;
+
+                                        const isQtyInvalid = qty < 1 || qty > availStock;
+                                        const isPriceInvalid = !priceRs || parseFloat(priceRs) <= 0;
+                                        const canProcure = !isQtyInvalid && !isPriceInvalid && availStock > 0;
+
+                                        return (
+                                            <tr key={product.id} className="hover:bg-indigo-50/30 transition-colors group">
+                                                {/* Product */}
+                                                <td className="px-5 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 relative">
+                                                            {product.product_images?.[0]
+                                                                ? <Image src={product.product_images[0]} alt="" fill sizes="48px" className="object-cover" />
+                                                                : <Package size={20} className="text-slate-200" />
+                                                            }
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-black text-slate-950 truncate max-w-[180px] tracking-tight">{product.title}</p>
+                                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+                                                                {product.shopping_categories?.name || "General"}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                {/* Merchant */}
+                                                <td className="px-4 py-4">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Store size={12} className="text-violet-500 shrink-0" />
+                                                        <span className="text-xs font-black text-violet-700 bg-violet-50 px-2 py-0.5 rounded-lg border border-violet-100 uppercase tracking-wider truncate max-w-[120px]">
+                                                            {merchantName}
+                                                        </span>
+                                                    </div>
+                                                </td>
+
+                                                {/* HSN / GST */}
+                                                <td className="px-4 py-4">
+                                                    <div className="space-y-1">
+                                                        <span className="block text-[10px] font-black text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg w-fit">
+                                                            {product.hsn_code || "—"}
+                                                        </span>
+                                                        <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                                            GST {product.gst_percentage ?? 0}%
+                                                        </span>
+                                                    </div>
+                                                </td>
+
+                                                {/* Wholesale price */}
+                                                <td className="px-4 py-4 text-right">
+                                                    <p className="text-sm font-black text-slate-950 tracking-tighter">
+                                                        {fmt(product.wholesale_price_paise)}
+                                                    </p>
+                                                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">per unit</p>
+                                                </td>
+
+                                                {/* Available stock */}
+                                                <td className="px-4 py-4 text-right">
+                                                    <span className={`text-sm font-black tracking-tighter ${availStock <= 0 ? 'text-red-500' : availStock < 5 ? 'text-amber-500' : 'text-emerald-600'}`}>
+                                                        {availStock}
+                                                    </span>
+                                                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">units</p>
+                                                </td>
+
+                                                {/* Qty input */}
+                                                <td className="px-4 py-4 text-center">
                                                     <input
                                                         type="number"
-                                                        min={0}
-                                                        step={0.01}
-                                                        value={priceRs}
-                                                        onChange={e => setPriceEdits(prev => ({ ...prev, [product.id]: e.target.value }))}
-                                                        placeholder="0.00"
+                                                        min={1}
+                                                        max={availStock}
+                                                        value={qtyEdits[product.id] ?? 1}
+                                                        onChange={e => setQtyEdits(prev => ({ ...prev, [product.id]: e.target.value }))}
                                                         disabled={availStock <= 0}
-                                                        className={`w-28 pl-6 pr-2 py-2 bg-slate-50 border rounded-xl text-xs font-black outline-none focus:ring-4 transition-all disabled:opacity-50 ${isPriceInvalid && priceRs !== "" ? 'border-red-300 focus:ring-red-500/10 text-red-600' : 'border-slate-200 focus:ring-indigo-500/10 text-slate-900'}`}
+                                                        className={`w-20 px-2 py-2 text-center bg-slate-50 border rounded-xl text-xs font-black outline-none focus:ring-4 transition-all disabled:opacity-50 ${isQtyInvalid ? 'border-red-300 focus:ring-red-500/10 text-red-600' : 'border-slate-200 focus:ring-indigo-500/10 text-slate-900'}`}
                                                     />
-                                                </div>
-                                            </td>
+                                                </td>
 
-                                            {/* Action */}
-                                            <td className="px-4 py-4 text-center">
-                                                <button
-                                                    onClick={() => openConfirm(product)}
-                                                    disabled={!canProcure}
-                                                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-indigo-600/20 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:active:scale-100"
-                                                >
-                                                    <ArrowDownToLine size={12} />
-                                                    Procure
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                                {/* Platform sell price */}
+                                                <td className="px-4 py-4 text-center">
+                                                    <div className="relative inline-block">
+                                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">₹</span>
+                                                        <input
+                                                            type="number"
+                                                            min={0}
+                                                            step={0.01}
+                                                            value={priceRs}
+                                                            onChange={e => setPriceEdits(prev => ({ ...prev, [product.id]: e.target.value }))}
+                                                            placeholder="0.00"
+                                                            disabled={availStock <= 0}
+                                                            className={`w-28 pl-6 pr-2 py-2 bg-slate-50 border rounded-xl text-xs font-black outline-none focus:ring-4 transition-all disabled:opacity-50 ${isPriceInvalid && priceRs !== "" ? 'border-red-300 focus:ring-red-500/10 text-red-600' : 'border-slate-200 focus:ring-indigo-500/10 text-slate-900'}`}
+                                                        />
+                                                    </div>
+                                                </td>
+
+                                                {/* Action */}
+                                                <td className="px-4 py-4 text-center">
+                                                    <button
+                                                        onClick={() => openConfirm(product)}
+                                                        disabled={!canProcure}
+                                                        className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-indigo-600/20 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:active:scale-100"
+                                                    >
+                                                        <ArrowDownToLine size={12} />
+                                                        Procure
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
             </div>
 

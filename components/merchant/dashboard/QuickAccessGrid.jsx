@@ -60,6 +60,13 @@ export default function QuickAccessGrid({ pendingUdhariCount, pendingOrdersCount
             color: 'text-slate-800 dark:text-[#D4AF37]',
             bg: 'bg-slate-100 dark:bg-[#D4AF37]/10',
         },
+        {
+            icon: 'smart_toy',
+            label: 'Auto Mode',
+            href: '/merchant/shopping/auto-mode',
+            color: 'text-slate-800 dark:text-emerald-400',
+            bg: 'bg-slate-100 dark:bg-emerald-500/10',
+        },
     ];
 
     return (

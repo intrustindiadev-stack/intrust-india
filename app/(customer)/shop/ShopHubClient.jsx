@@ -9,29 +9,39 @@ import PullToRefresh from '@/components/ui/PullToRefresh';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import HeroIllustrativeAd from '@/components/customer/shop/HeroIllustrativeAd';
+import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
 
 const BLUR_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZTJlOGYwIi8+PC9zdmc+';
 
 const FeedCard = memo(function FeedCard({ merchant, rating, isOpen, isOfficial, priority, horizontal = false }) {
     const [isSaved, setIsSaved] = useState(false);
     
-    const bannerImage = merchant.shopping_banner_url || '/images/default_merchant_banner.png';
-    const mockOffer = Math.random() > 0.5 ? 'Free delivery' : '15 min';
+    const defaultBanners = [
+        'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800',
+        'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&q=80&w=800',
+        'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=800',
+        'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&q=80&w=800'
+    ];
+    const defaultBannerIndex = (merchant.id?.charCodeAt(0) || 0) % defaultBanners.length;
+    const bannerImage = merchant.shopping_banner_url || defaultBanners[defaultBannerIndex];
+    const mockOffer = Math.random() > 0.5 ? 'Free delivery' : 'Assured Quality';
 
     return (
         <Link href={isOfficial ? "/shop/official" : `/shop/${merchant.slug}`} className={`block group ${horizontal ? 'min-w-[280px] sm:min-w-[320px]' : 'h-full'}`}>
             <motion.div 
-                whileHover={{ y: -4 }}
-                className="bg-white dark:bg-gray-800 rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] transition-all duration-300 flex flex-col border border-gray-100/50 dark:border-gray-700/50 h-full"
+                whileHover={{ y: -6 }}
+                className="bg-white dark:bg-[#12141c] rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] dark:hover:shadow-[0_20px_40px_rgb(0,0,0,0.4)] transition-all duration-500 flex flex-col border border-slate-100 dark:border-slate-800 h-full"
             >
                 {/* ── Image Header ── */}
-                <div className={`relative w-full ${horizontal ? 'aspect-[4/3]' : 'aspect-[16/9] sm:aspect-[4/3]'}`}>
+                <div className={`relative w-full overflow-hidden ${horizontal ? 'aspect-[4/3]' : 'aspect-[16/9] sm:aspect-[4/3]'}`}>
+                    <div className="absolute inset-0 bg-slate-900/10 group-hover:bg-transparent transition-colors z-10" />
                     <Image
                         src={isOfficial ? "/images/intrust_mart_bg.png" : bannerImage}
                         alt={merchant.business_name || 'Intrust Store'}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="object-cover"
+                        className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                         loading={priority ? 'eager' : 'lazy'}
                         priority={priority}
                         placeholder="blur"
@@ -40,47 +50,47 @@ const FeedCard = memo(function FeedCard({ merchant, rating, isOpen, isOfficial, 
                     
                     <button 
                         onClick={(e) => { e.preventDefault(); setIsSaved(!isSaved); }}
-                        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center transition-colors hover:bg-white/50 shadow-sm z-10"
+                        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center transition-colors hover:bg-white shadow-sm z-20"
                     >
-                        <Heart size={20} className={isSaved ? "fill-red-500 text-red-500" : "text-white"} />
+                        <Heart size={20} className={isSaved ? "fill-rose-500 text-rose-500" : "text-slate-700"} />
                     </button>
                 </div>
 
                 {/* ── Content Area ── */}
-                <div className="p-5 flex-1 flex flex-col bg-white dark:bg-gray-800">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700 overflow-hidden relative shrink-0">
+                <div className="p-5 flex-1 flex flex-col bg-white dark:bg-[#12141c]">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 overflow-hidden relative shrink-0 border border-slate-100 dark:border-slate-700 shadow-sm">
                             {merchant.user_profiles?.avatar_url ? (
                                 <Image src={merchant.user_profiles.avatar_url} fill alt="Avatar" className="object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-indigo-500 text-white font-bold text-sm">
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-violet-600 text-white font-black text-lg shadow-inner">
                                     {merchant.business_name?.[0]?.toUpperCase() || 'M'}
                                 </div>
                             )}
                         </div>
                         <div>
-                            <h3 className="text-[17px] font-black text-gray-900 dark:text-white line-clamp-1 leading-tight">
+                            <h3 className="text-[17px] font-black text-slate-900 dark:text-white line-clamp-1 leading-tight tracking-tight">
                                 {isOfficial ? 'Intrust Mart' : merchant.business_name}
                             </h3>
-                            <div className="flex items-center gap-1 text-[13px] text-gray-500 font-semibold mt-0.5">
-                                <MapPin size={12} className="text-gray-400" />
+                            <div className="flex items-center gap-1.5 text-[12px] text-slate-500 font-bold mt-1 uppercase tracking-wider">
+                                <MapPin size={12} className="text-indigo-400" />
                                 <span className="truncate">{merchant.business_address?.split(',')[0] || (isOfficial ? 'Premium Fulfillment Hub' : 'Local Area')}</span>
                             </div>
                         </div>
                     </div>
                     
-                    <div className="mt-auto flex flex-col gap-2">
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700/50 px-3 py-1.5 rounded-xl flex-1 justify-center">
-                                <Star size={14} className="fill-[#ffb703] text-[#ffb703]" />
-                                <span className="text-sm font-bold text-gray-900 dark:text-white">{rating?.avg_rating || (isOfficial ? 4.9 : 4.2)}</span>
+                    <div className="mt-auto flex flex-col gap-3">
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 rounded-xl flex-1 justify-center border border-amber-100 dark:border-amber-500/20">
+                                <Star size={14} className="fill-amber-500 text-amber-500" />
+                                <span className="text-sm font-black text-amber-700 dark:text-amber-400">{rating?.avg_rating || (isOfficial ? 4.9 : 4.2)}</span>
                             </div>
-                            <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700/50 px-3 py-1.5 rounded-xl flex-1 justify-center text-sm font-bold text-gray-900 dark:text-white">
+                            <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 rounded-xl flex-1 justify-center border border-emerald-100 dark:border-emerald-500/20 text-[13px] font-black text-emerald-700 dark:text-emerald-400">
                                 {mockOffer}
                             </div>
                         </div>
-                        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-sm transition-colors shadow-sm active:scale-95">
-                            Shop Now
+                        <button className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black py-3.5 rounded-xl text-[13px] uppercase tracking-widest transition-all shadow-md active:scale-95 hover:bg-slate-800 dark:hover:bg-slate-100">
+                            Visit Store
                         </button>
                     </div>
                 </div>
@@ -243,6 +253,16 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
 
                 <div className="max-w-7xl mx-auto px-4 md:px-8">
                     
+                    {/* ── Hero Ad ── */}
+                    <div className="mb-6">
+                        <HeroIllustrativeAd />
+                    </div>
+
+                    {/* ── Ad Banner Carousel ── */}
+                    <div className="mb-10">
+                        <AdBannerCarousel />
+                    </div>
+
                     {/* ── Categories ── */}
                     {categories.length > 0 && (
                         <div className="mb-10">

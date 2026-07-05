@@ -10,7 +10,7 @@ import { isStorefrontItemOOS } from '@/lib/shopping/stock';
 import OutOfStockOverlay from '@/components/ui/OutOfStockOverlay';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 
-function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#ff477e', secondaryColor = '#ff477e', isWishlisted = false, onWishlist, isStoreOpen = true }) {
+function ProductCardV2({ item, cartItem, onAdd, onRemove, onSelect, primaryColor = '#ff477e', secondaryColor = '#ff477e', isWishlisted = false, onWishlist, isStoreOpen = true }) {
     const router = useRouter();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -52,7 +52,7 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#ff477
         >
             {/* Product Image */}
             <div
-                onClick={() => product?.slug && router.push(`/shop/product/${product.slug}`)}
+                onClick={() => onSelect ? onSelect() : (product?.slug && router.push(`/shop/product/${product.slug}`))}
                 className={`relative w-full aspect-square shrink-0 rounded-xl flex items-center justify-center overflow-hidden cursor-pointer mb-3 ${isDark ? 'bg-gray-800' : 'bg-slate-50'}`}
             >
                 {product.product_images?.[0] ? (
@@ -72,7 +72,7 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, primaryColor = '#ff477
 
             {/* Product Details */}
             <div
-                onClick={() => product?.slug && router.push(`/shop/product/${product.slug}`)}
+                onClick={() => onSelect ? onSelect() : (product?.slug && router.push(`/shop/product/${product.slug}`))}
                 className={`flex flex-col flex-1 w-full justify-between ${product?.slug ? 'cursor-pointer' : 'cursor-default'} ${oos ? 'opacity-50' : ''}`}
             >
                 <div>

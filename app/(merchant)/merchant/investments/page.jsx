@@ -83,30 +83,27 @@ export default function AIGrowPage() {
         return allOrders.filter(o => o.investment_id === selectedInv);
     }, [allOrders, selectedInv]);
 
-    // Real-time counter component
-    const RealtimeAccumulated = ({ investments, allOrders, isRevealed, showTotal = false }) => {
-        const [now, setNow] = useState(Date.now());
+    const AnimatedValue = ({ value, isRevealed, showTotal = false }) => {
+        const [displayValue, setDisplayValue] = useState(0);
 
         useEffect(() => {
-            if (!isRevealed) return;
-            const timer = setInterval(() => setNow(Date.now()), 50);
-            return () => clearInterval(timer);
-        }, [isRevealed]);
+            if (!isRevealed) {
+                setDisplayValue(0);
+                return;
+            }
+            const anim = animate(0, value, {
+                duration: 1.2,
+                ease: "easeOut",
+                onUpdate: (latest) => setDisplayValue(latest)
+            });
+            return () => anim.stop();
+        }, [isRevealed, value]);
 
-        if (!isRevealed) {
-            return <span>• • • •</span>;
-        }
-
-        const active = investments.filter(i => i.status === 'active');
-        const totalDeployed = active.reduce((s, i) => s + i.amount_paise / 100, 0);
-        const totalProfitFromOrders = allOrders.reduce((s, o) => s + (o.profit_paise || 0) / 100, 0);
-
-        const totalProfit = totalProfitFromOrders;
+        if (!isRevealed) return <span>• • • •</span>;
 
         if (showTotal) {
-            const total = totalDeployed + totalProfit;
-            const whole = Math.floor(total);
-            const fraction = (total - whole).toFixed(2).substring(2);
+            const whole = Math.floor(displayValue);
+            const fraction = (displayValue - whole).toFixed(2).substring(2);
             return (
                 <div className="flex items-baseline">
                     <span>{whole.toLocaleString('en-IN')}</span>
@@ -115,8 +112,7 @@ export default function AIGrowPage() {
             );
         }
 
-        const totalValue = totalDeployed + totalProfit;
-        return <span className="font-mono tracking-tight">{totalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+        return <span className="font-mono tracking-tight">{displayValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
     };
 
     if (loading) return (
@@ -210,27 +206,31 @@ export default function AIGrowPage() {
                                     <motion.div key="revealed" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-baseline gap-2">
                                         <span className="text-xl font-bold text-slate-400 align-top mt-1">₹</span>
                                         <h2 className="text-5xl md:text-6xl font-extrabold tracking-tighter">
-                                            <RealtimeAccumulated investments={investments} allOrders={allOrders} isRevealed={isRevealed} showTotal={true} />
+                                            <AnimatedValue value={stats.totalDeployed + stats.totalProfit} isRevealed={isRevealed} showTotal={true} />
                                         </h2>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
                         </div>
 
-                        <div className="flex flex-wrap gap-8 pt-6 border-t border-white/5">
-                            <div>
+                        <div className="flex flex-wrap gap-6 md:gap-16 pt-6 border-t border-white/5">
+                            <div className="space-y-2">
                                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Deployed Capital</p>
-                                <p className="text-xl font-extrabold">{isRevealed ? `₹${stats.totalDeployed.toLocaleString('en-IN')}` : '• • • •'}</p>
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest mb-1">Current Value</p>
-                                <p className="text-xl font-extrabold text-emerald-400 flex items-center">
-                                    {isRevealed ? <span className="flex items-center">₹<RealtimeAccumulated investments={investments} allOrders={allOrders} isRevealed={isRevealed} showTotal={false} /></span> : '• • • •'}
+                                <p className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+                                    {isRevealed ? <AnimatedNumber value={stats.totalDeployed} prefix="₹" /> : '• • • • • •'}
                                 </p>
                             </div>
-                            <div>
-                                <p className="text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest mb-1">Active Funds</p>
-                                <p className="text-xl font-extrabold text-indigo-300">{stats.activeCount}</p>
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest mb-1">Current Value</p>
+                                <p className="text-2xl md:text-3xl font-extrabold text-emerald-400 tracking-tight flex items-center">
+                                    {isRevealed ? <span className="flex items-center">₹<AnimatedValue value={stats.totalDeployed + stats.totalProfit} isRevealed={isRevealed} showTotal={false} /></span> : '• • • •'}
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest mb-1">Total Profit</p>
+                                <p className="text-2xl md:text-3xl font-extrabold text-indigo-300 tracking-tight flex items-center">
+                                    {isRevealed ? <span className="flex items-center">₹<AnimatedValue value={stats.totalProfit} isRevealed={isRevealed} showTotal={false} /></span> : '• • • •'}
+                                </p>
                             </div>
                         </div>
                     </div>

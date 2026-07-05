@@ -38,46 +38,77 @@ export default function MerchantLockinPage() {
     const [desc, setDesc] = useState('');
 
     // Real-time counter component
-    const RealtimeAccumulated = ({ balances, isRevealed, showTotal = false }) => {
-        const [now, setNow] = useState(Date.now());
+    const RealtimeAccumulated = ({ balances, isRevealed, showTotal = false, showProfitOnly = false }) => {
+        const [displayValue, setDisplayValue] = useState(0);
+        const [isAnimatingReveal, setIsAnimatingReveal] = useState(false);
 
+        const getAccumulatedAt = (timestamp) => {
+            const activeBalances = balances.filter(b => b.status === 'active');
+            return activeBalances.reduce((sum, b) => {
+                const principal = b.amount_paise / 100;
+                const rate = b.interest_rate / 100;
+                if (!b.start_date) return sum;
+                const startDate = new Date(b.start_date);
+                
+                let endDate = new Date();
+                if (b.end_date) {
+                    endDate = new Date(b.end_date);
+                } else if (b.lockin_period_months) {
+                    endDate = new Date(startDate);
+                    endDate.setMonth(endDate.getMonth() + b.lockin_period_months);
+                }
+                
+                const boundedNow = Math.min(timestamp, endDate.getTime());
+                const elapsedMs = Math.max(0, boundedNow - startDate.getTime());
+                const daysElapsed = elapsedMs / (1000 * 60 * 60 * 24);
+                return sum + (principal * (rate / 365) * daysElapsed);
+            }, 0);
+        };
+
+        const activeBalances = balances.filter(b => b.status === 'active');
+        const totalPrincipal = activeBalances.reduce((sum, b) => sum + (b.amount_paise || 0), 0) / 100;
+
+        // On reveal, animate from 0 to current target
         useEffect(() => {
-            if (!isRevealed) return;
-            const timer = setInterval(() => setNow(Date.now()), 50);
+            if (!isRevealed) {
+                setDisplayValue(0);
+                setIsAnimatingReveal(false);
+                return;
+            }
+
+            setIsAnimatingReveal(true);
+            const targetProfit = getAccumulatedAt(Date.now());
+            const target = showProfitOnly ? targetProfit : (totalPrincipal + targetProfit);
+            
+            const anim = animate(0, target, {
+                duration: 1.2,
+                ease: "easeOut",
+                onUpdate: (latest) => setDisplayValue(latest),
+                onComplete: () => setIsAnimatingReveal(false)
+            });
+
+            return () => anim.stop();
+        }, [isRevealed, balances]);
+
+        // Real-time ticking after reveal is done
+        useEffect(() => {
+            if (!isRevealed || isAnimatingReveal) return;
+
+            const timer = setInterval(() => {
+                const currentProfit = getAccumulatedAt(Date.now());
+                const currentTarget = showProfitOnly ? currentProfit : (totalPrincipal + currentProfit);
+                setDisplayValue(currentTarget);
+            }, 50);
             return () => clearInterval(timer);
-        }, [isRevealed]);
+        }, [isRevealed, isAnimatingReveal, balances]);
 
         if (!isRevealed) {
             return <span>• • • •</span>;
         }
 
-        const activeBalances = balances.filter(b => b.status === 'active');
-        const totalPrincipal = activeBalances.reduce((sum, b) => sum + (b.amount_paise || 0), 0) / 100;
-        
-        const totalAccumulated = activeBalances.reduce((sum, b) => {
-            const principal = b.amount_paise / 100;
-            const rate = b.interest_rate / 100;
-            if (!b.start_date) return sum;
-            const startDate = new Date(b.start_date);
-            
-            let endDate = new Date();
-            if (b.end_date) {
-                endDate = new Date(b.end_date);
-            } else if (b.lockin_period_months) {
-                endDate = new Date(startDate);
-                endDate.setMonth(endDate.getMonth() + b.lockin_period_months);
-            }
-            
-            const boundedNow = Math.min(now, endDate.getTime());
-            const elapsedMs = Math.max(0, boundedNow - startDate.getTime());
-            const daysElapsed = elapsedMs / (1000 * 60 * 60 * 24);
-            return sum + (principal * (rate / 365) * daysElapsed);
-        }, 0);
-
         if (showTotal) {
-            const total = totalPrincipal + totalAccumulated;
-            const whole = Math.floor(total);
-            const fraction = (total - whole).toFixed(2).substring(2);
+            const whole = Math.floor(displayValue);
+            const fraction = (displayValue - whole).toFixed(2).substring(2);
             return (
                 <div className="flex items-baseline">
                     <span>{whole.toLocaleString('en-IN')}</span>
@@ -86,8 +117,7 @@ export default function MerchantLockinPage() {
             );
         }
 
-        const totalValue = totalPrincipal + totalAccumulated;
-        return <span className="font-mono">{totalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+        return <span className="font-mono">{displayValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
     };
 
     // Animated Counter Component
@@ -274,6 +304,14 @@ export default function MerchantLockinPage() {
                                     <div className="flex items-center gap-4">
                                         <p className="text-2xl md:text-3xl font-extrabold text-emerald-400 tracking-tight flex items-center">
                                             ₹<RealtimeAccumulated balances={balances} isRevealed={isRevealed} showTotal={false} />
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest">Total Profit</p>
+                                    <div className="flex items-center gap-4">
+                                        <p className="text-2xl md:text-3xl font-extrabold text-blue-400 tracking-tight flex items-center">
+                                            ₹<RealtimeAccumulated balances={balances} isRevealed={isRevealed} showProfitOnly={true} />
                                         </p>
                                     </div>
                                 </div>

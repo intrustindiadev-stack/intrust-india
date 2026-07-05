@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart, Zap, Shirt, Pill, Home, Utensils, Grid, Star, MapPin, Store } from 'lucide-react';
+import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart, Zap, Shirt, Pill, Home, Utensils, Grid, Star, MapPin, Store, Plus, Minus, X, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
@@ -12,6 +12,7 @@ import FloatingCart from './FloatingCart';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCardSkeleton from '@/components/customer/shop/ProductCardSkeleton';
 import MerchantProfileCard from '@/components/customer/shop/MerchantProfileCard';
+import Image from 'next/image';
 import { isStorefrontItemOOS } from '@/lib/shopping/stock';
 import { isValidUUID } from '@/lib/utils';
 import React, { Suspense } from 'react';
@@ -39,6 +40,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
     const [searchQuery, setSearchQuery] = useState('');
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingCartItem, setPendingCartItem] = useState(null);
+    const [selectedProductItem, setSelectedProductItem] = useState(null);
     const [liveMerchant, setLiveMerchant] = useState(merchant);
     const [liveInventory, setLiveInventory] = useState(initialInventory);
     const debounceRef = useRef(null);
@@ -663,6 +665,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                         cartItem={cart.find(i => i.id === item.id)}
                                         onAdd={() => addToCart(item)}
                                         onRemove={() => removeFromCart(item)}
+                                        onSelect={() => setSelectedProductItem(item)}
                                         primaryColor={primaryColor}
                                         secondaryColor={secondaryColor}
                                         isWishlisted={wishlistIds.has(item.product_id)}
@@ -710,6 +713,162 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                     />
                 )}
             </Suspense>
+
+            {/* PRODUCT DETAIL MODAL (BLINKIT STYLE BOTTOM SHEET) */}
+            <AnimatePresence>
+                {selectedProductItem && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedProductItem(null)}
+                            className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 z-[100] backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 28, stiffness: 250, mass: 0.8 }}
+                            className={`fixed bottom-0 left-0 right-0 z-[110] rounded-t-[2rem] max-h-[85vh] flex flex-col shadow-2xl ${isDark ? 'bg-[#0f111a]' : 'bg-white'}`}
+                        >
+                            {/* Drag handle */}
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full z-20" />
+                            
+                            <button onClick={() => setSelectedProductItem(null)} className={`absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center z-20 shadow-md ${isDark ? 'bg-black/50 text-white backdrop-blur-md' : 'bg-white/80 text-slate-700 backdrop-blur-md border border-slate-100'}`}>
+                                <X size={18} />
+                            </button>
+
+                            {/* Modal Content - Scrollable */}
+                            <div className="overflow-y-auto w-full no-scrollbar">
+                                {(() => {
+                                    const pItem = selectedProductItem;
+                                    const pProduct = pItem.shopping_products;
+                                    const pOos = isStorefrontItemOOS(pItem);
+                                    const pCartItem = cart.find(i => i.id === pItem.id);
+                                    const pMrp = (pProduct.mrp_paise || pProduct.suggested_retail_price_paise || pItem.retail_price_paise || 0) / 100;
+                                    const pSellingPrice = pItem.is_platform_product
+                                        ? ((pProduct?.platform_price_paise ?? pProduct?.suggested_retail_price_paise) || pItem.retail_price_paise || 0) / 100
+                                        : (pItem.retail_price_paise || 0) / 100;
+                                    const pSavings = pMrp > pSellingPrice ? pMrp - pSellingPrice : 0;
+                                    const discountPct = pMrp > 0 ? Math.round((pSavings / pMrp) * 100) : 0;
+                                    
+                                    return (
+                                        <div className="flex flex-col md:flex-row w-full max-w-5xl mx-auto md:p-6 md:gap-8">
+                                            
+                                            {/* Image Area - Edge to edge on mobile, rounded on desktop */}
+                                            <div className={`relative w-full aspect-square md:w-1/2 md:rounded-3xl flex items-center justify-center shrink-0 ${isDark ? 'bg-[#151822]' : 'bg-[#f4f6f9]'}`}>
+                                                {pProduct.product_images?.[0] ? (
+                                                    <Image
+                                                        src={pProduct.product_images[0]}
+                                                        alt={pProduct.title}
+                                                        fill
+                                                        sizes="(max-width: 768px) 100vw, 50vw"
+                                                        className="object-contain p-8 md:p-12 mix-blend-multiply dark:mix-blend-normal"
+                                                    />
+                                                ) : (
+                                                    <Package size={80} className={isDark ? 'text-white/10' : 'text-slate-200'} />
+                                                )}
+                                                {discountPct > 0 && (
+                                                    <div className="absolute bottom-4 left-4 bg-blue-600 text-white text-xs font-black px-3 py-1.5 rounded-lg shadow-lg uppercase tracking-widest flex items-center gap-1">
+                                                        <Zap size={12} className="fill-white" /> {discountPct}% OFF
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Details Area */}
+                                            <div className="flex-1 flex flex-col p-5 sm:p-6 md:p-0 md:py-4">
+                                                <h2 className={`text-[22px] md:text-3xl font-black leading-tight tracking-tight mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                                    {pItem.custom_title || pProduct.title}
+                                                </h2>
+                                                
+                                                <div className={`text-sm font-bold mt-1 mb-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                                    {pProduct.category || 'General'} • 1 Unit
+                                                </div>
+
+                                                {/* Delivery Badge */}
+                                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl self-start mb-6 ${isDark ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-300' : 'bg-indigo-50 border border-indigo-100 text-indigo-600'}`}>
+                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-indigo-500/20' : 'bg-indigo-100'}`}>
+                                                        <Clock size={12} className={isDark ? 'text-indigo-400' : 'text-indigo-600'} />
+                                                    </div>
+                                                    <span className="text-[13px] font-bold">Standard Delivery</span>
+                                                </div>
+                                                
+                                                {/* Product Info / Description */}
+                                                <div className="mb-8">
+                                                    <h4 className={`text-sm font-black uppercase tracking-widest mb-3 ${isDark ? 'text-slate-300' : 'text-slate-900'}`}>Product Details</h4>
+                                                    <p className={`text-sm leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                                                        {pProduct.description || 'Premium quality product delivered directly to your doorstep. Guaranteed freshness and authenticity.'}
+                                                    </p>
+                                                </div>
+
+                                                {/* Features */}
+                                                <div className="grid grid-cols-2 gap-3 mb-8">
+                                                    <div className={`flex items-center gap-2 p-3 rounded-xl ${isDark ? 'bg-white/[0.02]' : 'bg-slate-50'}`}>
+                                                        <BadgeCheck size={18} className="text-blue-500" />
+                                                        <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>100% Genuine</span>
+                                                    </div>
+                                                    <div className={`flex items-center gap-2 p-3 rounded-xl ${isDark ? 'bg-white/[0.02]' : 'bg-slate-50'}`}>
+                                                        <Package size={18} className="text-blue-500" />
+                                                        <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Safe Packaging</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Bottom Action Bar - Sticky on Mobile */}
+                                                <div className={`sticky bottom-0 -mx-5 -mb-5 p-5 md:mx-0 md:mb-0 md:p-0 border-t md:border-none flex items-center justify-between gap-4 mt-auto z-10 ${isDark ? 'bg-[#0f111a] border-white/5' : 'bg-white border-slate-100'}`}>
+                                                    <div className="flex flex-col">
+                                                        {pSavings > 0 && (
+                                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                                <span className={`text-xs font-bold line-through ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                                                    MRP ₹{pMrp.toLocaleString('en-IN')}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        <div className={`text-2xl md:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                                            ₹{pSellingPrice.toLocaleString('en-IN', { minimumFractionDigits: 0 })}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="w-[140px] md:w-[160px] shrink-0">
+                                                        {pOos ? (
+                                                            <div className={`w-full py-3.5 rounded-xl text-center font-black uppercase tracking-widest text-xs border ${isDark ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                                                                Out of Stock
+                                                            </div>
+                                                        ) : pCartItem ? (
+                                                            <div className="flex items-center bg-blue-600 text-white rounded-xl h-[48px] px-1 shadow-[0_8px_20px_rgb(59,130,246,0.3)] w-full overflow-hidden">
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50); removeFromCart(pItem); }}
+                                                                    className="w-12 h-full flex items-center justify-center hover:bg-black/10 transition-colors"
+                                                                >
+                                                                    <Minus size={18} strokeWidth={3} />
+                                                                </button>
+                                                                <span className="flex-1 text-lg font-black text-center">{pCartItem.quantity}</span>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); addToCart(pItem); }}
+                                                                    className="w-12 h-full flex items-center justify-center hover:bg-black/10 transition-colors"
+                                                                >
+                                                                    <Plus size={18} strokeWidth={3} />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); addToCart(pItem); }}
+                                                                className="w-full h-[48px] rounded-xl bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 dark:bg-blue-600/10 dark:text-blue-400 dark:border-blue-500/20 dark:hover:bg-blue-600/20 font-black text-[13px] uppercase tracking-widest shadow-sm transition-all active:scale-95 flex items-center justify-center"
+                                                            >
+                                                                ADD TO CART
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
