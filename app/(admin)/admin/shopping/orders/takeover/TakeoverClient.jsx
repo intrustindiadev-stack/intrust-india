@@ -85,23 +85,23 @@ export default function TakeoverClient({ orders: initialOrders, stats: initialSt
             console.log('Updating order status:', { orderId, newStatus, tracking, estAt, notes });
 
             // Standard status update
-            const { data, error } = await supabase.rpc("update_order_delivery_v3", {
-                p_order_id: orderId,
-                p_new_status: newStatus,
-                p_tracking_number: tracking,
-                p_estimated_at: estAt,
-                p_status_notes: notes,
-                p_is_admin: true
+            const res = await fetch(`/api/orders/${orderId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    newStatus,
+                    trackingNumber: tracking,
+                    estimatedAt: estAt,
+                    statusNotes: notes,
+                    isAdmin: true
+                })
             });
+            const data = await res.json();
 
-            if (error) {
-                console.error('RPC Error:', error);
-                throw new Error(error.message);
-            }
-
-            if (!data?.success) {
-                console.error('Logic Error:', data);
-                throw new Error(data?.message || "Status update failed");
+            if (!res.ok || !data?.success) {
+                console.error('API Error:', data?.error || data?.message);
+                toast.error(data?.message || data?.error || "Status update failed");
+                return;
             }
 
             toast.success(`Order marked as ${newStatus}`);

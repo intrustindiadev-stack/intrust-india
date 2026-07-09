@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { WalletService } from '@/lib/wallet/walletService';
+import { notifyMerchantTransaction } from '@/lib/notifications/merchantWhatsapp';
 
 export async function POST(request) {
     const authHeader = request.headers.get('authorization');
@@ -33,6 +34,14 @@ export async function POST(request) {
             referenceType,
             description
         );
+        notifyMerchantTransaction({
+            merchantUserId: user.id,
+            amountRs: Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+            direction: 'debited from',
+            newBalanceRs: ((result.newBalancePaise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+            source: referenceType === 'SUBSCRIPTION' ? 'Subscription Charge' : 'Wallet Debit',
+            dedupeId: referenceId
+        }).catch(err => console.error('[wallet/debit] WhatsApp transaction alert failed:', err));
 
         return NextResponse.json({
             success: true,

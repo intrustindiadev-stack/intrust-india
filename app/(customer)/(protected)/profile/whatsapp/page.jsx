@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -16,16 +16,22 @@ export default function WhatsAppLinkPage() {
   const [retrying, setRetrying] = useState(false);
   const [retried, setRetried] = useState(false);
 
+  // — Marketing consent toggle —
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const [marketingLoading, setMarketingLoading] = useState(false);
+
   useEffect(() => {
     fetchStatus();
   }, []);
 
-  async function fetchStatus() {
+  const fetchStatus = useCallback(async () => {
     try {
       const res = await fetch('/api/whatsapp/status');
       const data = await res.json();
-      
+
       setStatus(data);
+      // Sync marketing toggle from persisted value
+      setMarketingOptIn(data.whatsappMarketingOptIn ?? false);
 
       if (data.linked === false && data.hasPhone === true && !retried) {
         setRetrying(true);
@@ -34,6 +40,7 @@ export default function WhatsAppLinkPage() {
             const retryRes = await fetch('/api/whatsapp/status');
             const retryData = await retryRes.json();
             setStatus(retryData);
+            setMarketingOptIn(retryData.whatsappMarketingOptIn ?? false);
           } catch {
             setStatus({ linked: false, hasPhone: data.hasPhone });
           } finally {
@@ -47,7 +54,7 @@ export default function WhatsAppLinkPage() {
     } finally {
       setStatusLoading(false);
     }
-  }
+  }, [retried]);
 
   const handleOptOut = async () => {
     try {
@@ -60,6 +67,28 @@ export default function WhatsAppLinkPage() {
       }
     } catch {
       setStatusLoading(false);
+    }
+  };
+
+  const handleMarketingToggle = async (newValue) => {
+    // Optimistic update
+    setMarketingOptIn(newValue);
+    setMarketingLoading(true);
+    try {
+      const res = await fetch('/api/whatsapp/marketing-consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ optIn: newValue }),
+      });
+      if (!res.ok) {
+        // Rollback on failure
+        setMarketingOptIn(!newValue);
+      }
+    } catch {
+      // Rollback on network error
+      setMarketingOptIn(!newValue);
+    } finally {
+      setMarketingLoading(false);
     }
   };
 
@@ -193,7 +222,7 @@ export default function WhatsAppLinkPage() {
           box-shadow: 0 6px 22px rgba(26,115,232,0.45);
         }
         .wa-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
-        
+
         .wa-skeleton {
           height: 20px;
           background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
@@ -207,7 +236,7 @@ export default function WhatsAppLinkPage() {
           0%   { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
-        
+
         .wa-optout-link {
           background: none;
           border: none;
@@ -222,7 +251,7 @@ export default function WhatsAppLinkPage() {
         .wa-optout-link:hover {
           color: #c62828;
         }
-        
+
         .wa-spinner {
           display: inline-block;
           width: 16px;
@@ -233,9 +262,91 @@ export default function WhatsAppLinkPage() {
           animation: spin 1s ease-in-out infinite;
           margin-right: 8px;
         }
-        
+
         @keyframes spin {
           to { transform: rotate(360deg); }
+        }
+
+        /* ── Notification preference toggles ─────────────────────────────────── */
+        .wa-prefs-divider {
+          border: none;
+          border-top: 1px solid #e8edf5;
+          margin: 20px 0 0;
+        }
+        .wa-pref-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 0;
+          border-bottom: 1px solid #f0f4ff;
+        }
+        .wa-pref-row:last-child {
+          border-bottom: none;
+          padding-bottom: 0;
+        }
+        .wa-pref-label .title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1a1a2e;
+        }
+        .wa-pref-label .sub {
+          font-size: 12px;
+          color: #6b7a99;
+          margin-top: 2px;
+        }
+        .wa-toggle {
+          position: relative;
+          width: 44px;
+          height: 24px;
+          flex-shrink: 0;
+        }
+        .wa-toggle input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+          position: absolute;
+        }
+        .wa-toggle-track {
+          position: absolute;
+          inset: 0;
+          border-radius: 12px;
+          background: #ccc;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .wa-toggle input:checked + .wa-toggle-track {
+          background: #25d366;
+        }
+        .wa-toggle input:disabled + .wa-toggle-track {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+        .wa-toggle-track::after {
+          content: '';
+          position: absolute;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #fff;
+          top: 2px;
+          left: 2px;
+          transition: transform 0.2s;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+        }
+        .wa-toggle input:checked + .wa-toggle-track::after {
+          transform: translateX(20px);
+        }
+        .wa-toggle-spinner {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          width: 16px;
+          height: 16px;
+          border: 2px solid rgba(255,255,255,0.5);
+          border-top-color: #fff;
+          border-radius: 50%;
+          animation: spin 0.7s linear infinite;
+          pointer-events: none;
         }
       `}</style>
 
@@ -271,7 +382,7 @@ export default function WhatsAppLinkPage() {
               <div className="wa-instructions">
                 Your WhatsApp is connected. Message InTrust to check your balance and KYC status anytime.
               </div>
-              
+
               {status.whatsappOptIn === false ? (
                 <div className="wa-status-chip opted-out" style={{ marginBottom: 0, marginTop: '8px' }}>
                   <span className="dot" aria-hidden="true" />
@@ -282,6 +393,62 @@ export default function WhatsAppLinkPage() {
                   Opt out of WhatsApp alerts
                 </button>
               )}
+
+              {/* ── Notification preferences ─────────────────────────────────── */}
+              <hr className="wa-prefs-divider" />
+
+              {/* Row 1: Master WhatsApp notifications (read-only reflect of whatsapp_opt_in) */}
+              <div className="wa-pref-row">
+                <div className="wa-pref-label">
+                  <div className="title">WhatsApp notifications</div>
+                  <div className="sub">Order, wallet &amp; account alerts</div>
+                </div>
+                <label
+                  className="wa-toggle"
+                  htmlFor="toggle-whatsapp"
+                  title={status.whatsappOptIn ? 'Active' : 'Opted out'}
+                >
+                  <input
+                    id="toggle-whatsapp"
+                    type="checkbox"
+                    checked={status.whatsappOptIn ?? true}
+                    readOnly
+                    disabled
+                    aria-label="WhatsApp notifications"
+                  />
+                  <span className="wa-toggle-track" />
+                </label>
+              </div>
+
+              {/* Row 2: Promotional / marketing consent */}
+              <div className="wa-pref-row">
+                <div className="wa-pref-label">
+                  <div className="title">Promotional messages</div>
+                  <div className="sub">Good morning/evening, offers, rewards</div>
+                </div>
+                <label
+                  className="wa-toggle"
+                  htmlFor="toggle-marketing"
+                  title={
+                    !status.whatsappOptIn
+                      ? 'Enable WhatsApp alerts first'
+                      : marketingOptIn
+                      ? 'Receiving promotional messages'
+                      : 'Opt in to promotional messages'
+                  }
+                >
+                  <input
+                    id="toggle-marketing"
+                    type="checkbox"
+                    checked={marketingOptIn}
+                    disabled={!status.whatsappOptIn || marketingLoading}
+                    onChange={(e) => handleMarketingToggle(e.target.checked)}
+                    aria-label="Promotional messages"
+                  />
+                  <span className="wa-toggle-track" />
+                  {marketingLoading && <span className="wa-toggle-spinner" aria-hidden="true" />}
+                </label>
+              </div>
             </>
           ) : status?.hasPhone && !retried ? (
             <div style={{ display: 'flex', alignItems: 'center', color: '#5c6880', fontSize: '14px' }}>
@@ -312,4 +479,3 @@ export default function WhatsAppLinkPage() {
     </>
   );
 }
-

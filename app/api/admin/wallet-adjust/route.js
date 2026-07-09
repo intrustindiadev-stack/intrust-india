@@ -5,6 +5,7 @@ import { CustomerWalletService } from '@/lib/wallet/customerWalletService';
 import { WalletService } from '@/lib/wallet/walletService';
 import { WalletAuditService } from '@/lib/wallet/walletAuditService';
 import { sendTemplateMessage, TRANSACTION_ALERT_TEMPLATE } from '@/lib/omniflow';
+import { notifyMerchantTransaction } from '@/lib/notifications/merchantWhatsapp';
 import crypto from 'crypto';
 
 // --- Constants ---
@@ -343,48 +344,63 @@ export async function POST(request) {
                     const newBalanceRs = ((newBalancePaise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 });
                     const amountRs = parsedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 });
                     const direction = operation === 'credit' ? 'credited to' : 'debited from';
-                    const phoneHash = crypto.createHash('sha256').update(binding.phone).digest('hex');
 
-                    const audience = binding.audience || (walletType === 'merchant' ? 'merchant' : 'customer');
-                    const audienceLabel = audience === 'merchant' ? 'Merchant' : 'Customer';
-                    const directionLabel = `${direction} (${audienceLabel})`;
+                    if (walletType === 'merchant') {
+                        try {
+                            await notifyMerchantTransaction({
+                                merchantUserId: userId,
+                                amountRs,
+                                direction,
+                                newBalanceRs,
+                                source: 'Admin Adjustment',
+                                dedupeId: auditLogId
+                            });
+                        } catch (waErr) {
+                            console.error('[wallet-adjust] Merchant WhatsApp transaction alert failed:', waErr);
+                        }
+                    } else {
+                        const phoneHash = crypto.createHash('sha256').update(binding.phone).digest('hex');
+                        const audience = 'customer';
+                        const audienceLabel = 'Customer';
+                        const directionLabel = `${direction} (${audienceLabel})`;
 
-                    try {
-                        const res = await sendTemplateMessage(
-                            binding.phone,
-                            TRANSACTION_ALERT_TEMPLATE.name,
-                            TRANSACTION_ALERT_TEMPLATE.language,
-                            TRANSACTION_ALERT_TEMPLATE.buildComponents(amountRs, directionLabel, newBalanceRs)
-                        );
-                        console.log(`[wallet-adjust] WhatsApp transaction alert sent to user ${userId}`);
+                        try {
+                            const res = await sendTemplateMessage(
+                                binding.phone,
+                                TRANSACTION_ALERT_TEMPLATE.name,
+                                TRANSACTION_ALERT_TEMPLATE.language,
+                                TRANSACTION_ALERT_TEMPLATE.buildComponents(amountRs, directionLabel, newBalanceRs)
+                            );
+                            console.log(`[wallet-adjust] WhatsApp transaction alert sent to user ${userId}`);
 
-                        const { error } = await supabase.from('whatsapp_message_logs').insert({
-                            user_id: userId,
-                            phone_hash: phoneHash,
-                            direction: 'outbound',
-                            message_type: 'template',
-                            channel: 'whatsapp',
-                            status: 'sent',
-                            wamid: res?.messageId ?? null,
-                            content_preview: alertTag,
-                            audience,
-                        });
-                        if (error) console.warn('[wallet-adjust] Failed to log transaction alert:', error.message);
-                    } catch (sendError) {
-                        console.error('[wallet-adjust] WhatsApp transaction alert failed:', sendError.message);
-                        const { error } = await supabase.from('whatsapp_message_logs').insert({
-                            user_id: userId,
-                            phone_hash: phoneHash,
-                            direction: 'outbound',
-                            message_type: 'template',
-                            channel: 'whatsapp',
-                            status: 'failed',
-                            content_preview: `[FAILED] ${alertTag} :: ` + sendError.message.slice(0, 150),
-                            error_code: sendError.code || null,
-                            error_detail: sendError.rawSnippet || sendError.message || null,
-                            audience,
-                        });
-                        if (error) console.warn('[wallet-adjust] Failed to log failed transaction alert:', error.message);
+                            const { error } = await supabase.from('whatsapp_message_logs').insert({
+                                user_id: userId,
+                                phone_hash: phoneHash,
+                                direction: 'outbound',
+                                message_type: 'template',
+                                channel: 'whatsapp',
+                                status: 'sent',
+                                wamid: res?.messageId ?? null,
+                                content_preview: alertTag,
+                                audience,
+                            });
+                            if (error) console.warn('[wallet-adjust] Failed to log transaction alert:', error.message);
+                        } catch (sendError) {
+                            console.error('[wallet-adjust] WhatsApp transaction alert failed:', sendError.message);
+                            const { error } = await supabase.from('whatsapp_message_logs').insert({
+                                user_id: userId,
+                                phone_hash: phoneHash,
+                                direction: 'outbound',
+                                message_type: 'template',
+                                channel: 'whatsapp',
+                                status: 'failed',
+                                content_preview: `[FAILED] ${alertTag} :: ` + sendError.message.slice(0, 150),
+                                error_code: sendError.code || null,
+                                error_detail: sendError.rawSnippet || sendError.message || null,
+                                audience,
+                            });
+                            if (error) console.warn('[wallet-adjust] Failed to log failed transaction alert:', error.message);
+                        }
                     }
                 }
             }

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { notifyMerchantStoreCreditPaid } from '@/lib/notifications/merchantWhatsapp';
+import { notifyMerchantStoreCreditPaid, notifyMerchantTransaction } from '@/lib/notifications/merchantWhatsapp';
 
 /**
  * POST /api/shopping/settle-store-credit
@@ -119,6 +119,15 @@ export async function POST(request) {
                         }).catch(err => {
                             console.error('[settle-store-credit] WhatsApp notification error:', err);
                         });
+
+                        notifyMerchantTransaction({
+                            merchantUserId: merchantData.user_id,
+                            amountRs: (udhari.amount_paise / 100).toFixed(2),
+                            direction: 'credited to',
+                            newBalanceRs: (data.new_balance_paise / 100).toFixed(2),
+                            source: 'Store Credit Settlement',
+                            dedupeId: udhariRequestId
+                        }).catch(err => console.error('[settle-store-credit] Merchant WhatsApp transaction alert failed:', err));
                     });
                 } else {
                     console.error('[settle-store-credit] Missing merchantData or error during notification:', merchantError);

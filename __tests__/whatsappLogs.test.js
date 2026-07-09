@@ -1,4 +1,5 @@
 import { notifyMerchantNewOrder } from '../lib/notifications/merchantWhatsapp';
+import { broadcastMorningGreeting } from '../lib/notifications/userWhatsapp';
 import { createAdminClient } from '@/lib/supabaseServer';
 import { sendTemplateMessage, OmniflowError } from '@/lib/omniflow';
 
@@ -111,5 +112,39 @@ describe('WhatsApp Error Logging for Merchant Dispatcher', () => {
     expect(successLogPayload.status).toBe('sent');
     expect(successLogPayload.wamid).toBe('mock-wamid-999');
     expect(successLogPayload.error_code).toBeUndefined();
+  });
+});
+
+describe('Customer Marketing Consent Gate', () => {
+  let mockSupabase;
+  let mockEq;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    mockEq = jest.fn().mockReturnThis();
+
+    const chain = {
+      select: jest.fn().mockReturnThis(),
+      eq: mockEq,
+      in: jest.fn().mockReturnThis(),
+      insert: jest.fn().mockResolvedValue({ error: null }),
+      then: jest.fn().mockImplementation((cb) => cb({ data: [], error: null }))
+    };
+
+    mockSupabase = {
+      from: jest.fn().mockReturnValue(chain)
+    };
+
+    createAdminClient.mockReturnValue(mockSupabase);
+  });
+
+  it('should query for both whatsapp_opt_in and whatsapp_marketing_opt_in during broadcast', async () => {
+    await broadcastMorningGreeting();
+    
+    // We expect .eq to have been called with whatsapp_marketing_opt_in, true
+    expect(mockEq).toHaveBeenCalledWith('whatsapp_opt_in', true);
+    expect(mockEq).toHaveBeenCalledWith('whatsapp_marketing_opt_in', true);
+    expect(mockEq).toHaveBeenCalledWith('audience', 'customer');
   });
 });

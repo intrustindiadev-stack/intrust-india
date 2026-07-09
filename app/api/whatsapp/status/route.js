@@ -26,7 +26,7 @@ export async function GET() {
 
     const { data: binding, error } = await admin
       .from('user_channel_bindings')
-      .select('phone, whatsapp_opt_in, linked_at')
+      .select('phone, whatsapp_opt_in, whatsapp_marketing_opt_in, linked_at')
       .eq('user_id', user.id)
       .eq('audience', audience)
       .maybeSingle();
@@ -44,6 +44,7 @@ export async function GET() {
       linked: true,
       phone: binding.phone,
       whatsappOptIn: binding.whatsapp_opt_in,
+      whatsappMarketingOptIn: binding.whatsapp_marketing_opt_in ?? false,
       linkedAt: binding.linked_at,
     });
   } catch (err) {

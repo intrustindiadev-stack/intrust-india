@@ -12,7 +12,7 @@
 ## §1 — Master catalogue table
 
 > [!NOTE]
-> Templates 9 & 17 are NEW. Templates 3–5 are health-tracked.
+> Templates 9 &amp; 17 are NEW. Templates 3–5 are health-tracked. Templates 19–21 are **Marketing** category.
 
 | # | Template Name | Category | Lang | Vars | Code Symbol | Fired By |
 |---|---|---|---|---|---|---|
@@ -34,6 +34,23 @@
 | 16 | `intrust_merchant_product_approved` | Utility | en_US | 3 | `MERCHANT_PRODUCT_APPROVED_TEMPLATE` | Catalogue Audit |
 | 17 | `intrust_merchant_procurement_sale` | Utility | en_US | 3 | `MERCHANT_PROCUREMENT_SALE_TEMPLATE` | Procurement |
 | 18 | `intrust_otp_verification` | **Authentication** | en_US | 1 | `OTP_TEMPLATE` | `request-otp` (WhatsApp channel) |
+| 19 | `intrust_gm_greet_v1` | **Marketing** | en_US | 1 | `GM_GREET_TEMPLATE` | Morning cron (even days) |
+| 20 | `intrust_gm_tip_v1` | **Marketing** | en_US | 1 | `GM_TIP_TEMPLATE` | Morning cron (odd days) |
+| 21 | `intrust_ge_greet_v1` | **Marketing** | en_US | 1 | `GE_GREET_TEMPLATE` | Evening cron |
+| 22 | `intrust_reward_milestone_v1` | **Marketing** | en_US | 2 | `REWARD_MILESTONE_TEMPLATE` | Reward milestone crossing |
+| 23 | `intrust_referral_invite_v1` | **Marketing** | en_US | 2 | `REFERRAL_INVITE_TEMPLATE` | Admin broadcast |
+| 24 | `intrust_giftcard_promo_v1` | **Marketing** | en_US | 2 | `GIFTCARD_PROMO_TEMPLATE` | Admin broadcast |
+| 25 | `intrust_winback_v1` | **Marketing** | en_US | 2 | `WINBACK_TEMPLATE` | Win-back cron (weekly) |
+| 26 | `intrust_feature_announce_v1` | **Marketing** | en_US | 2 | `FEATURE_ANNOUNCE_TEMPLATE` | Admin broadcast |
+| 27 | `intrust_festival_greeting_v1` | **Marketing** | en_US | 2 | `FESTIVAL_GREETING_TEMPLATE` | Admin broadcast |
+| 28 | `intrust_order_status_v1` | Utility | en_US | 2 | `ORDER_STATUS_TEMPLATE` | Order Status Change |
+| 29 | `intrust_wallet_low_balance_v1` | Utility | en_US | 1 | `WALLET_LOW_BALANCE_TEMPLATE` | Wallet Debit |
+| 30 | `intrust_kyc_reminder_v1` | Utility | en_US | 0 | `KYC_REMINDER_TEMPLATE` | KYC Cron |
+| 31 | `intrust_udhari_due_reminder_v1` | Utility | en_US | 2 | `UDHARI_DUE_REMINDER_TEMPLATE` | Udhari Cron |
+| 32 | `intrust_merchant_subscription_expiring_v1` | Utility | en_US | 1 | `MERCHANT_SUBSCRIPTION_EXPIRING_TEMPLATE` | Subscription Cron |
+| 33 | `intrust_merchant_payout_failed_v1` | Utility | en_US | 2 | `MERCHANT_PAYOUT_FAILED_TEMPLATE` | Payout Admin |
+| 34 | `intrust_investment_maturity_v1` | Utility | en_US | 3 | `INVESTMENT_MATURITY_TEMPLATE` | Investment Cron |
+| 35 | `intrust_merchant_transaction_alert_v1` | Utility | en_US | 4 | `MERCHANT_TRANSACTION_ALERT_TEMPLATE` | Money Events |
 
 ## §2 — Customer utility templates
 
@@ -411,3 +428,348 @@ graph TD
 - The `intrust_otp_verification` template has been re-added as an **Authentication** category template, gated by the `WHATSAPP_OTP_ENABLED` feature flag. It is used by `lib/notifications/otpWhatsapp.js`.
 - Follow exactly the specified Footer and Buttons instructions.
 - Refer to `docs/runbooks/omniflow-setup.md` for overall setup.
+
+---
+
+## §6 — Marketing templates
+
+> [!IMPORTANT]
+> These templates are **Marketing** category. Users must have `whatsapp_opt_in = true` AND `whatsapp_marketing_opt_in = true` to receive them. Submit under **Marketing** in the Omniflow/Meta dashboard, not Utility.
+
+### 19. `intrust_gm_greet_v1`
+- **Category**: Marketing
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  ☀️ Good Morning, *{{1}}*!
+
+  A new day is a new opportunity to grow your finances. 💰
+
+  Your InTrust wallet is safe, secure, and always ready for you.
+  Check your balance, review recent transactions, or explore
+  what's new — all in one place.
+
+  Have a productive and prosperous day! 🚀
+  ```
+- **Variables**: `{{1}}` = First name (e.g. `"Rahul"`)
+- **Footer**: InTrust India | Your Trusted Financial Partner
+- **Buttons**:
+  - [Quick Reply] `Check My Balance`
+  - [Quick Reply] `Recent Transactions`
+- **Code symbol**: `GM_GREET_TEMPLATE` in `lib/omniflow.js`
+- **Fired by**: `broadcastMorningGreeting()` on even days of the year
+- **Cron**: `GET /api/cron/morning-greeting` at 08:00 IST daily
+
+### 20. `intrust_gm_tip_v1`
+- **Category**: Marketing
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  🌅 *Good Morning from InTrust India!*
+
+  💡 *Today's Financial Tip:*
+  {{1}}
+
+  Small, consistent steps lead to lasting financial freedom.
+  Your InTrust account is the perfect place to start. 🌱
+  ```
+- **Variables**: `{{1}}` = Financial tip text (rotates daily, 7-tip pool in `DAILY_TIPS`)
+- **Footer**: InTrust India | Smart Money Habits
+- **Buttons**:
+  - [Quick Reply] `Explore Features`
+  - [Quick Reply] `My Wallet`
+- **Code symbol**: `GM_TIP_TEMPLATE` in `lib/omniflow.js`
+- **Fired by**: `broadcastMorningGreeting()` on odd days of the year
+- **Cron**: `GET /api/cron/morning-greeting` at 08:00 IST daily
+
+### 21. `intrust_ge_greet_v1` *(NEW)*
+- **Category**: Marketing
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  🌙 Good Evening, *{{1}}*!
+
+  Hope your day was productive and full of good moments. 🌟
+
+  Before you wind down, take a quick look at your InTrust wallet —
+  your savings, transactions, and balance are always a tap away.
+
+  Rest well and keep growing! 💰
+  ```
+- **Variables**: `{{1}}` = First name (e.g. `"Rahul"`)
+- **Footer**: InTrust India | Your Trusted Financial Partner
+- **Buttons**:
+  - [Quick Reply] `Check My Balance`
+  - [Quick Reply] `Recent Transactions`
+- **Code symbol**: `GE_GREET_TEMPLATE` in `lib/omniflow.js`
+- **Fired by**: `broadcastEveningGreeting()` in `lib/notifications/userWhatsapp.js`
+- **Cron**: `GET /api/cron/evening-greeting` at 20:00 IST daily
+
+> [!IMPORTANT]
+> **Submission checklist for `intrust_ge_greet_v1`:**
+> 1. Log in to Omniflow dashboard → Templates → New Template
+> 2. Set **Category** = Marketing, **Language** = English (en_US)
+> 3. Paste the body above exactly, with `{{1}}` as the only variable
+> 4. Add footer: `InTrust India | Your Trusted Financial Partner`
+> 5. Add two Quick Reply buttons: `Check My Balance` and `Recent Transactions`
+> 6. Submit for Meta review (typically 24–48 hours)
+> 7. Once approved, verify via `GET /api/admin/whatsapp-health` → `intrust_ge_greet_v1: approved: true`
+
+## §7 — Customer promotional marketing templates
+
+> [!IMPORTANT]
+> **Marketing Templates Compliance:** All these templates must be submitted to Omniflow under the **Marketing** category. They require `whatsapp_opt_in = true` AND `whatsapp_marketing_opt_in = true` to send.
+
+### 22. `intrust_reward_milestone_v1`
+- **Category**: Marketing
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  🎉 Congratulations! You've earned *{{1}}* reward points!
+
+  Your total InTrust reward balance is now *{{2}} points*.
+
+  Keep earning — every purchase, referral, and action brings you
+  closer to bigger rewards and exclusive benefits. 💰
+  ```
+- **Variables**: {{1}} = Points just earned (e.g. "100"), {{2}} = Total balance (e.g. "500")
+- **Footer**: InTrust India | Reward Programme
+- **Buttons**:
+  - [Quick Reply] `View My Rewards`
+  - [Quick Reply] `Redeem Points`
+
+### 23. `intrust_referral_invite_v1`
+- **Category**: Marketing
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  📣 Share InTrust India with your friends — and earn together!
+
+  Your personal referral code is: *{{1}}*
+
+  Every friend who joins using your code earns you *{{2}} bonus points*.
+  There's no limit — the more you share, the more you earn! 🌟
+
+  Share your code today and start growing your rewards.
+  ```
+- **Variables**: {{1}} = User's referral code, {{2}} = Bonus points
+- **Footer**: InTrust India | Referral Programme
+- **Buttons**:
+  - [Quick Reply] `Share My Code`
+  - [Quick Reply] `View Rewards`
+
+### 24. `intrust_giftcard_promo_v1`
+- **Category**: Marketing
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  🎁 *Special Offer — InTrust Gift Cards!*
+
+  Get *{{1}}% off* on selected gift cards — today only!
+
+  {{2}}
+
+  Shop gift cards in the InTrust app and treat yourself or someone special.
+  ```
+- **Variables**: {{1}} = Discount percentage, {{2}} = Promo details
+- **Footer**: InTrust India | Gift Card Store
+- **Buttons**:
+  - [Quick Reply] `Browse Gift Cards`
+  - [Quick Reply] `My Wallet`
+
+### 25. `intrust_winback_v1`
+- **Category**: Marketing
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  👋 We miss you, *{{1}}*!
+
+  It's been a while since you last visited InTrust India. Your
+  account is safe and your *{{2}} reward points* are waiting for you.
+
+  Come back and explore what's new — new offers, features, and
+  ways to grow your money are just a tap away. 🚀
+  ```
+- **Variables**: {{1}} = First name, {{2}} = Current reward balance
+- **Footer**: InTrust India | We Miss You
+- **Buttons**:
+  - [Quick Reply] `Open My Account`
+  - [Quick Reply] `View Offers`
+
+### 26. `intrust_feature_announce_v1`
+- **Category**: Marketing
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  ✨ *New on InTrust India: {{1}}*
+
+  {{2}}
+
+  Log in to explore this update and make the most of your InTrust account.
+  ```
+- **Variables**: {{1}} = Feature name, {{2}} = Short description
+- **Footer**: InTrust India | Product Update
+- **Buttons**:
+  - [Quick Reply] `Learn More`
+  - [Quick Reply] `Open App`
+
+### 27. `intrust_festival_greeting_v1`
+- **Category**: Marketing
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  🎉 Happy *{{2}}*, *{{1}}*!
+
+  Wishing you and your family joy, prosperity, and financial growth
+  this festive season. 🌸
+
+  From all of us at InTrust India — may your savings grow and your
+  goals come true.
+  ```
+- **Variables**: {{1}} = First name, {{2}} = Festival name
+- **Footer**: InTrust India | Festive Wishes
+- **Buttons**:
+  - [Quick Reply] `View My Wallet`
+  - [Quick Reply] `Explore Offers`
+
+## §8 — Additional Utility & Transaction Templates
+
+### 28. `intrust_order_status_v1`
+- **Category**: Utility
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  📦 *Order Status Update*
+
+  Your order (ID: {{1}}) is now *{{2}}*.
+
+  Thank you for shopping with InTrust India!
+  ```
+- **Variables**: {{1}} = Order ID, {{2}} = Status
+- **Footer**: InTrust India | Orders
+- **Buttons**:
+  - [Quick Reply] `View Order`
+
+### 29. `intrust_wallet_low_balance_v1`
+- **Category**: Utility
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  ⚠️ *Low Wallet Balance Alert*
+
+  Your InTrust wallet balance has dropped below ₹50.
+  Current Balance: ₹{{1}}
+
+  Top up now to ensure uninterrupted services and purchases.
+  ```
+- **Variables**: {{1}} = Balance
+- **Footer**: InTrust India | Wallet Services
+- **Buttons**:
+  - [Quick Reply] `Top Up Now`
+  - [Quick Reply] `View Balance`
+
+### 30. `intrust_kyc_reminder_v1`
+- **Category**: Utility
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  📄 *Action Required: Complete Your KYC*
+
+  Your InTrust account is pending KYC verification.
+  Complete it today to unlock all platform features and higher limits.
+
+  Need help? Our support team is here to assist you.
+  ```
+- **Variables**: (none)
+- **Footer**: InTrust India | Compliance
+- **Buttons**:
+  - [URL] `Complete KYC`
+  - [Quick Reply] `Contact Support`
+
+### 31. `intrust_udhari_due_reminder_v1`
+- **Category**: Utility
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  ⏰ *Store Credit (Udhari) Payment Due*
+
+  A payment of ₹{{1}} for your Store Credit is due on {{2}}.
+
+  Please settle this amount to maintain your credit score and limit.
+  ```
+- **Variables**: {{1}} = Amount, {{2}} = Due Date
+- **Footer**: InTrust India | Credit Management
+- **Buttons**:
+  - [Quick Reply] `Pay Now`
+  - [Quick Reply] `View Details`
+
+### 32. `intrust_merchant_subscription_expiring_v1`
+- **Category**: Utility
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  ⚠️ *Subscription Expiring Soon*
+
+  Your InTrust Merchant subscription will expire on {{1}}.
+
+  Renew your subscription to avoid any interruption to your storefront.
+  ```
+- **Variables**: {{1}} = Expiry Date
+- **Footer**: InTrust India | Merchant Services
+- **Buttons**:
+  - [Quick Reply] `Renew Subscription`
+  - [Quick Reply] `View Plans`
+
+### 33. `intrust_merchant_payout_failed_v1`
+- **Category**: Utility
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  ❌ *Payout Request Failed*
+
+  Your payout request of ₹{{1}} was rejected or failed.
+
+  Reason: {{2}}
+
+  Please review the details and try again or contact support.
+  ```
+- **Variables**: {{1}} = Amount, {{2}} = Reason
+- **Footer**: InTrust India | Settlements
+- **Buttons**:
+  - [Quick Reply] `View Details`
+  - [Quick Reply] `Contact Support`
+
+### 34. `intrust_investment_maturity_v1`
+- **Category**: Utility
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  📈 *Investment Maturity Notice*
+
+  Your {{1}} investment of ₹{{2}} has matured today ({{3}}).
+
+  The returns have been credited to your wallet.
+  ```
+- **Variables**: {{1}} = Investment Type, {{2}} = Amount, {{3}} = Date
+- **Footer**: InTrust India | Wealth
+- **Buttons**:
+  - [Quick Reply] `View Wallet`
+  - [Quick Reply] `Reinvest`
+
+### 35. `intrust_merchant_transaction_alert_v1`
+- **Category**: Utility
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  Your wallet has been updated.
+
+  Amount: ₹{{1}}
+  Type: {{2}}
+  New Balance: ₹{{3}}
+  Reference: {{4}}
+  
+  Please check your merchant dashboard for more details.
+  ```
+- **Variables**: {{1}} = Amount, {{2}} = Credited/Debited, {{3}} = New balance, {{4}} = Source/Reference
+- **Footer**: InTrust India | Merchant Services
+- **Buttons**: (none)

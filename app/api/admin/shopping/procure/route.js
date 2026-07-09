@@ -1,7 +1,7 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 import { getPlatformConfig } from '@/lib/config/platform-server';
-import { notifyMerchantProcurementSale } from '@/lib/notifications/merchantWhatsapp';
+import { notifyMerchantProcurementSale, notifyMerchantTransaction } from '@/lib/notifications/merchantWhatsapp';
 
 export async function POST(request) {
     try {
@@ -108,16 +108,17 @@ export async function POST(request) {
 
             // ── Step 6.5: Fire WhatsApp Notification ─────────────────────
             try {
-                // Fetch merchant user_id
+                // Fetch merchant user_id and new balance
                 const { data: merchantData } = await adminSupabase
                     .from('merchants')
-                    .select('user_id')
+                    .select('user_id, wallet_balance_paise')
                     .eq('id', merchantId)
                     .single();
 
                 if (merchantData?.user_id) {
                     const amountRs = (total_amount_paise / 100).toFixed(2);
                     const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+                    const newBalanceRs = ((merchantData.wallet_balance_paise || 0) / 100).toFixed(2);
 
                     // fire-and-forget (non-fatal)
                     notifyMerchantProcurementSale({
@@ -126,6 +127,15 @@ export async function POST(request) {
                         itemCount,
                         procurementId: procurement_id
                     }).catch(err => console.error('[procure/route] WhatsApp notification failed:', err));
+
+                    notifyMerchantTransaction({
+                        merchantUserId: merchantData.user_id,
+                        amountRs,
+                        direction: 'credited to',
+                        newBalanceRs,
+                        source: 'Inventory Procurement',
+                        dedupeId: procurement_id
+                    }).catch(err => console.error('[procure/route] WhatsApp transaction alert failed:', err));
                 }
             } catch (notifyErr) {
                 console.error('[procure/route] WhatsApp notification wrapper failed:', notifyErr);

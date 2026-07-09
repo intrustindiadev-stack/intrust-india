@@ -210,16 +210,19 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
         if (!nextStatus) return;
         setUpdatingStatus(true);
         try {
-            const { data, error } = await supabase.rpc("update_order_delivery_v3", {
-                p_order_id: order.id,
-                p_new_status: nextStatus,
-                p_tracking_number: order.tracking_number || null,
-                p_estimated_at: null,
-                p_status_notes: null,
-                p_is_merchant: true
+            const res = await fetch(`/api/orders/${order.id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    newStatus: nextStatus,
+                    trackingNumber: order.tracking_number || null,
+                    estimatedAt: null,
+                    statusNotes: null,
+                    isMerchant: true
+                })
             });
-            if (error) throw error;
-            if (!data?.success) throw new Error(data?.message || "Failed");
+            const data = await res.json();
+            if (!res.ok || !data?.success) throw new Error(data?.message || data?.error || "Failed");
             setCurrentStatus(nextStatus);
             toast.success(`Order marked as ${nextStatus}!`);
         } catch (err) {

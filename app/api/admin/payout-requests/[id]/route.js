@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
-import { notifyMerchantPayoutStatus } from '@/lib/notifications/merchantWhatsapp';
+import { notifyMerchantPayoutStatus, notifyMerchantPayoutFailed } from '@/lib/notifications/merchantWhatsapp';
 
 // PATCH /api/admin/payout-requests/[id]
 // body: { action: 'approved' | 'rejected' | 'released', admin_note?: string, utr_reference?: string }
@@ -148,13 +148,21 @@ export async function PATCH(request, { params }) {
 
         // Awaited WhatsApp notification (with error logging, no fire-and-forget)
         try {
-            const statusMap = { approved: 'Approved', rejected: 'Rejected', released: 'Paid' };
-            await notifyMerchantPayoutStatus({
-                merchantUserId: merchant.user_id,
-                amountRs:       Number(payoutReq.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-                status:         statusMap[action],
-                note:           admin_note || '',
-            });
+            if (action === 'rejected') {
+                await notifyMerchantPayoutFailed({
+                    merchantUserId: merchant.user_id,
+                    amountRs: Number(payoutReq.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+                    reason: admin_note || 'Contact support for details'
+                });
+            } else {
+                const statusMap = { approved: 'Approved', rejected: 'Rejected', released: 'Paid' };
+                await notifyMerchantPayoutStatus({
+                    merchantUserId: merchant.user_id,
+                    amountRs:       Number(payoutReq.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+                    status:         statusMap[action],
+                    note:           admin_note || '',
+                });
+            }
         } catch (e) {
             console.error('[Payout PATCH] WhatsApp dispatch failed:', e);
         }

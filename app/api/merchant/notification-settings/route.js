@@ -38,6 +38,7 @@ export async function GET(request) {
                 sale_notifications: true,
                 marketing_updates: false,
                 whatsapp_notifications: true,
+                whatsapp_transaction_alerts: true,
             },
         });
 
@@ -81,6 +82,7 @@ export async function PATCH(request) {
             whatsapp_subscription_alerts,
             whatsapp_product_alerts,
             whatsapp_marketing,
+            whatsapp_transaction_alerts,
         } = body;
 
         const updates = {
@@ -105,6 +107,7 @@ export async function PATCH(request) {
                 updates.whatsapp_subscription_alerts = false;
                 updates.whatsapp_product_alerts = false;
                 updates.whatsapp_marketing = false;
+                updates.whatsapp_transaction_alerts = false;
             } else if (whatsapp_notifications === true) {
                 updates.whatsapp_order_alerts = true;
                 updates.whatsapp_payout_alerts = true;
@@ -112,6 +115,7 @@ export async function PATCH(request) {
                 updates.whatsapp_kyc_alerts = true;
                 updates.whatsapp_subscription_alerts = true;
                 updates.whatsapp_product_alerts = true;
+                updates.whatsapp_transaction_alerts = true;
                 // Leave whatsapp_marketing unchanged for opt-in
             }
         }
@@ -124,6 +128,7 @@ export async function PATCH(request) {
         if (whatsapp_subscription_alerts !== undefined) updates.whatsapp_subscription_alerts = whatsapp_subscription_alerts;
         if (whatsapp_product_alerts !== undefined) updates.whatsapp_product_alerts = whatsapp_product_alerts;
         if (whatsapp_marketing !== undefined) updates.whatsapp_marketing = whatsapp_marketing;
+        if (whatsapp_transaction_alerts !== undefined) updates.whatsapp_transaction_alerts = whatsapp_transaction_alerts;
 
         // Upsert
         const { data, error } = await supabaseAdmin

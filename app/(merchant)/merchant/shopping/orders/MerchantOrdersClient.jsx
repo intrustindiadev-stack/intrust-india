@@ -494,17 +494,19 @@ export default function MerchantOrdersClient({ orders: initialOrders, stats, mer
 
         setUpdatingId(orderId);
         try {
-            const { data, error } = await supabase.rpc("update_order_delivery_v3", {
-                p_order_id: orderId,
-                p_new_status: newStatus,
-                p_tracking_number: tracking,
-                p_estimated_at: estAt,
-                p_status_notes: notes,
-                p_is_merchant: true
+            const res = await fetch(`/api/orders/${orderId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    newStatus,
+                    trackingNumber: tracking,
+                    estimatedAt: estAt,
+                    statusNotes: notes,
+                    isMerchant: true
+                })
             });
-
-            if (error) throw error;
-            if (!data?.success) throw new Error(data?.message || "Status update failed");
+            const data = await res.json();
+            if (!res.ok || !data?.success) throw new Error(data?.message || data?.error || "Status update failed");
 
             setOrders(prev => prev.map(o => o.id === orderId ? {
                 ...o,

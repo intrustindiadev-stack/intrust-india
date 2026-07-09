@@ -46,6 +46,7 @@ export default function MerchantWhatsAppConnect({ notifSettings, setNotifSetting
         { id: 'whatsapp_kyc_alerts',           label: 'KYC Alerts',          desc: 'Bank verification and account approval',           group: 'transactional' },
         { id: 'whatsapp_subscription_alerts',  label: 'Subscription Alerts', desc: 'Subscription status changes',                     group: 'transactional' },
         { id: 'whatsapp_product_alerts',       label: 'Product Alerts',      desc: 'Product approval notifications',                  group: 'transactional' },
+        { id: 'whatsapp_transaction_alerts',   label: 'Transaction Alerts',  desc: 'Wallet credits and debits',                       group: 'transactional' },
         { id: 'whatsapp_marketing',            label: 'Marketing',           desc: 'Future marketing campaigns',                      group: 'marketing'     },
     ];
 

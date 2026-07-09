@@ -618,16 +618,19 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                                         if (!rescheduleDate) return;
                                         setIsUpdating(true);
                                         try {
-                                            const { data, error } = await supabase.rpc('update_order_delivery_v3', {
-                                                p_order_id: order.id,
-                                                p_new_status: order.delivery_status,
-                                                p_tracking_number: order.tracking_number || null,
-                                                p_estimated_at: rescheduleDate,
-                                                p_status_notes: 'Customer requested reschedule',
-                                                p_is_customer: true,
+                                            const res = await fetch(`/api/orders/${order.id}/status`, {
+                                                method: 'PATCH',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    newStatus: order.delivery_status,
+                                                    trackingNumber: order.tracking_number || null,
+                                                    estimatedAt: rescheduleDate,
+                                                    statusNotes: 'Customer requested reschedule',
+                                                    isCustomer: true
+                                                })
                                             });
-                                            if (error) throw error;
-                                            if (!data?.success) throw new Error(data?.message || 'Update failed');
+                                            const data = await res.json();
+                                            if (!res.ok || !data?.success) throw new Error(data?.message || data?.error || 'Update failed');
                                             
                                             toast.success('Your delivery has been rescheduled!');
                                             router.refresh();

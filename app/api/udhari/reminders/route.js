@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { notifyCustomerUdhariDue } from '@/lib/notifications/userWhatsapp';
 
 /**
  * GET /api/udhari/reminders
@@ -104,6 +105,14 @@ export async function GET(request) {
                     results.errors.push({ reqId: req.id, type: 'customer_notif', error: notifError.message });
                 } else {
                     results.sentNotifications++;
+                    // FIRE WHATSAPP NOTIFICATION
+                    notifyCustomerUdhariDue({
+                        userId: req.customer_id,
+                        merchantName: merchantName,
+                        amount: amount,
+                        dueDate: dueDate.toLocaleDateString(),
+                        status: reminderType === 'overdue' ? 'Overdue' : 'Due Soon'
+                    }).catch(e => console.error('[Udhari Reminder WhatsApp] Failed:', e));
                 }
             }
 

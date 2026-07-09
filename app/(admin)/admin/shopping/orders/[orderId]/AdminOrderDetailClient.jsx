@@ -77,15 +77,19 @@ export default function AdminOrderDetailClient({ order: initialOrder, sellerDeta
         setUpdating(true);
         setError(null);
         try {
-            const { data, error: rpcError } = await supabase.rpc("update_order_delivery_v3", {
-                p_order_id: order.id,
-                p_new_status: newStatus,
-                p_tracking_number: trackingNumber,
-                p_estimated_at: estimatedDeliveryAt || null,
-                p_status_notes: statusNotes || null,
-                p_is_admin: true
+            const res = await fetch(`/api/orders/${order.id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    newStatus,
+                    trackingNumber,
+                    estimatedAt: estimatedDeliveryAt || null,
+                    statusNotes: statusNotes || null,
+                    isAdmin: true
+                })
             });
-            if (rpcError || !data?.success) throw new Error(rpcError?.message || data?.message || "Update failed");
+            const data = await res.json();
+            if (!res.ok || !data?.success) throw new Error(data?.message || data?.error || "Update failed");
             setOrder(prev => ({ ...prev, delivery_status: newStatus, tracking_number: trackingNumber, estimated_delivery_at: estimatedDeliveryAt || prev.estimated_delivery_at, status_notes: statusNotes || prev.status_notes }));
             toast.success(`Status updated to ${newStatus}`);
             setStatusNotes("");

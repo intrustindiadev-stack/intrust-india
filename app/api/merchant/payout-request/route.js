@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabaseServer';
 import { getAuthUser } from '@/lib/apiAuth';
 import { requireMerchantSubscription } from '@/lib/merchant/requireSubscription';
 import { NextResponse } from 'next/server';
-import { notifyMerchantPayoutRequested } from '@/lib/notifications/merchantWhatsapp';
+import { notifyMerchantPayoutRequested, notifyMerchantTransaction } from '@/lib/notifications/merchantWhatsapp';
 
 // GET  /api/merchant/payout-request  — merchant's own payout request history
 // POST /api/merchant/payout-request  — submit a new payout request
@@ -164,6 +164,15 @@ export async function POST(request) {
             amountRs:       amountNum.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
             source,
         }).catch(e => console.error('[Payout POST] WhatsApp notify failed:', e));
+
+        notifyMerchantTransaction({
+            merchantUserId: user.id,
+            amountRs:       amountNum.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+            direction:      'debited from',
+            newBalanceRs:   (rpcResult.balance_after_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+            source:         'Payout Request',
+            dedupeId:       requestId
+        }).catch(e => console.error('[Payout POST] WhatsApp transaction alert failed:', e));
 
         return NextResponse.json({
             success: true,

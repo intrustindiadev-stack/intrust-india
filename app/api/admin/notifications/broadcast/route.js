@@ -1,5 +1,11 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { 
+    notifyCustomerReferralInvite, 
+    notifyCustomerGiftcardPromo, 
+    notifyCustomerFeatureAnnounce, 
+    notifyCustomerFestivalGreeting 
+} from '@/lib/notifications/marketingWhatsapp';
 
 /**
  * POST /api/admin/notifications/broadcast
@@ -89,8 +95,69 @@ export async function POST(request) {
             const { error: insertError } = await admin.from('notifications').insert(batch);
             if (insertError) throw insertError;
         }
+        
+        let whatsappStats = null;
+        
+        if (body.whatsapp && targetUserIds.length > 0) {
+            const { templateKey, args = {} } = body.whatsapp;
+            let sent = 0, skipped = 0, failed = 0;
+            
+            // For referral invite, we need to batch fetch referral codes
+            let referralCodeMap = {};
+            let nameMap = {}; // Used by festival greeting
+            
+            if (templateKey === 'referral_invite') {
+                const { data: profiles } = await admin
+                    .from('user_profiles')
+                    .select('id, referral_code')
+                    .in('id', targetUserIds);
+                if (profiles) {
+                    profiles.forEach(p => referralCodeMap[p.id] = p.referral_code);
+                }
+            } else if (templateKey === 'festival_greeting') {
+                 const { data: profiles } = await admin
+                    .from('user_profiles')
+                    .select('id, full_name')
+                    .in('id', targetUserIds);
+                if (profiles) {
+                    profiles.forEach(p => {
+                        nameMap[p.id] = (p.full_name || '').split(' ')[0]?.trim() || 'there';
+                    });
+                }
+            }
+            
+            for (const userId of targetUserIds) {
+                try {
+                    let result;
+                    if (templateKey === 'referral_invite') {
+                        const referralCode = referralCodeMap[userId];
+                        if (referralCode) {
+                            result = await notifyCustomerReferralInvite({ userId, referralCode, bonusPoints: args.bonusPoints || '50' });
+                        } else {
+                            result = { skipped: true };
+                        }
+                    } else if (templateKey === 'giftcard_promo') {
+                        result = await notifyCustomerGiftcardPromo({ userId, discountPct: args.discountPct, promoDetails: args.promoDetails });
+                    } else if (templateKey === 'feature_announce') {
+                        result = await notifyCustomerFeatureAnnounce({ userId, featureName: args.featureName, description: args.description });
+                    } else if (templateKey === 'festival_greeting') {
+                        const firstName = nameMap[userId] || 'there';
+                        result = await notifyCustomerFestivalGreeting({ userId, firstName, festivalName: args.festivalName });
+                    }
+                    
+                    if (result?.sent) sent++;
+                    else if (result?.skipped) skipped++;
+                    else sent++; // fallback if we don't return structured result
+                    
+                } catch (e) {
+                    failed++;
+                }
+                await new Promise(r => setTimeout(r, 120));
+            }
+            whatsappStats = { sent, skipped, failed, total: targetUserIds.length };
+        }
 
-        return NextResponse.json({ success: true, count: targetUserIds.length });
+        return NextResponse.json({ success: true, count: targetUserIds.length, whatsapp: whatsappStats });
     } catch (error) {
         console.error('[API] Admin Broadcast Error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

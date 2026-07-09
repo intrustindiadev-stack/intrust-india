@@ -54,7 +54,41 @@ These templates are designed for a premium merchant experience. Create them in t
 
 > All template bodies, variables, and submission instructions are now maintained in `docs/runbooks/whatsapp-template-catalogue.md`.
 
-> **Tracked templates (17 total):** `intrust_welcome_linked`, `intrust_kyc_update`, `intrust_transaction_alert`, `intrust_login_alert`, `intrust_merchant_welcome_linked`, `intrust_merchant_new_order`, `intrust_merchant_order_cancelled`, `intrust_merchant_payout_status`, **`intrust_merchant_payout_requested`**, `intrust_merchant_store_credit_request`, `intrust_merchant_store_credit_paid`, `intrust_merchant_gift_card_sold`, `intrust_merchant_bank_verified`, `intrust_merchant_approved`, `intrust_merchant_subscription_status`, `intrust_merchant_product_approved`, **`intrust_merchant_procurement_sale`**.
+> **Tracked templates (35 total):** `intrust_welcome_linked`, `intrust_kyc_update`, `intrust_transaction_alert`, `intrust_login_alert`, `intrust_merchant_welcome_linked`, `intrust_merchant_new_order`, `intrust_merchant_order_cancelled`, `intrust_merchant_payout_status`, `intrust_merchant_payout_requested`, `intrust_merchant_store_credit_request`, `intrust_merchant_store_credit_paid`, `intrust_merchant_gift_card_sold`, `intrust_merchant_bank_verified`, `intrust_merchant_approved`, `intrust_merchant_subscription_status`, `intrust_merchant_product_approved`, `intrust_merchant_procurement_sale`, `intrust_otp_verification`, `intrust_gm_greet_v1`, `intrust_gm_tip_v1`, `intrust_ge_greet_v1`, `intrust_reward_milestone_v1`, `intrust_referral_invite_v1`, `intrust_giftcard_promo_v1`, `intrust_winback_v1`, `intrust_feature_announce_v1`, `intrust_festival_greeting_v1`, `intrust_order_status_v1`, `intrust_wallet_low_balance_v1`, `intrust_kyc_reminder_v1`, `intrust_udhari_due_reminder_v1`, `intrust_merchant_subscription_expiring_v1`, `intrust_merchant_payout_failed_v1`, `intrust_investment_maturity_v1`, `intrust_merchant_transaction_alert_v1`.
+---
+
+## Cron Schedule
+
+Both broadcast crons run daily on the VPS via `crontab -e`. The `CRON_SECRET` env var must be set in `/etc/environment` or the crontab environment block.
+
+```cron
+# Morning greeting — 08:00 IST (02:30 UTC)
+30 2 * * * curl -s -X GET https://intrustindia.com/api/cron/morning-greeting \
+  -H "Authorization: Bearer $CRON_SECRET" >> /var/log/intrust-cron.log 2>&1
+
+# Evening greeting — 20:00 IST (14:30 UTC)
+30 14 * * * curl -s -X GET https://intrustindia.com/api/cron/evening-greeting \
+  -H "Authorization: Bearer $CRON_SECRET" >> /var/log/intrust-cron.log 2>&1
+
+# Win-back campaign — Weekly on Mondays at 10:00 IST (04:30 UTC)
+30 4 * * 1 curl -s -X GET https://intrustindia.com/api/cron/winback \
+  -H "Authorization: Bearer $CRON_SECRET" >> /var/log/intrust-cron.log 2>&1
+
+# KYC reminders — Daily at 11:00 IST (05:30 UTC)
+30 5 * * * curl -s -X GET https://intrustindia.com/api/cron/kyc-reminders \
+  -H "Authorization: Bearer $CRON_SECRET" >> /var/log/intrust-cron.log 2>&1
+
+# Merchant Subscription Expiry — Daily at 11:30 IST (06:00 UTC)
+0 6 * * * curl -s -X GET https://intrustindia.com/api/cron/subscription-expiry \
+  -H "Authorization: Bearer $CRON_SECRET" >> /var/log/intrust-cron.log 2>&1
+
+# Merchant Investment Maturity — Daily at 12:00 IST (06:30 UTC)
+30 6 * * * curl -s -X GET https://intrustindia.com/api/cron/investment-maturity \
+  -H "Authorization: Bearer $CRON_SECRET" >> /var/log/intrust-cron.log 2>&1
+```
+
+All crons write audit rows to `whatsapp_message_logs` with `content_preview` matching `[gm-broadcast-run:*]`, `[ge-broadcast-run:*]`, and `[winback-run:*]` respectively, so every run is visible even on zero recipients.
+
 ---
 
 ## Diagnostics
