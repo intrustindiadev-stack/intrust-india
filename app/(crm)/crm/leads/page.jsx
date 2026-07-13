@@ -47,10 +47,52 @@ function ImportLeadsDrawer({ onClose, onSave }) {
         reader.onload = async (e) => {
             try {
                 const text = e.target.result;
-                const rows = text.split('\n').map(row => row.trim()).filter(row => row);
+                
+                // Robust CSV Parser (handles quotes & newlines inside quotes)
+                const rows = [];
+                let curRow = [];
+                let curField = '';
+                let inQuotes = false;
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    if (inQuotes) {
+                        if (char === '"') {
+                            if (i + 1 < text.length && text[i + 1] === '"') {
+                                curField += '"';
+                                i++;
+                            } else {
+                                inQuotes = false;
+                            }
+                        } else {
+                            curField += char;
+                        }
+                    } else {
+                        if (char === '"') {
+                            inQuotes = true;
+                        } else if (char === ',') {
+                            curRow.push(curField.trim());
+                            curField = '';
+                        } else if (char === '\n' || char === '\r') {
+                            if (char === '\r' && i + 1 < text.length && text[i + 1] === '\n') {
+                                i++; // skip \n
+                            }
+                            curRow.push(curField.trim());
+                            if (curRow.some(f => f)) rows.push(curRow);
+                            curRow = [];
+                            curField = '';
+                        } else {
+                            curField += char;
+                        }
+                    }
+                }
+                if (curField || curRow.length > 0) {
+                    curRow.push(curField.trim());
+                    if (curRow.some(f => f)) rows.push(curRow);
+                }
+
                 if (rows.length < 2) throw new Error("File seems empty or only has headers.");
 
-                const headers = rows[0].toLowerCase().split(',').map(h => h.trim());
+                const headers = rows[0].map(h => (h || '').toLowerCase());
                 const nameIdx = headers.indexOf('contact_name');
                 const titleIdx = headers.indexOf('title');
                 const phoneIdx = headers.indexOf('phone');
@@ -63,9 +105,16 @@ function ImportLeadsDrawer({ onClose, onSave }) {
                 }
 
                 const leadsToInsert = [];
+                const rowNumbers = [];
+                let skipped = 0;
+                let imported = 0;
+                const skipReasons = [];
+
+                const phoneRegex = /^\+?[\d\s-]{10,}$/;
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
                 for (let i = 1; i < rows.length; i++) {
-                    const columns = rows[i].split(',').map(c => c.trim());
-                    // Basic parsing (does not handle commas inside quotes)
+                    const columns = rows[i];
                     const contact_name = nameIdx !== -1 ? columns[nameIdx] : '';
                     const title = titleIdx !== -1 ? columns[titleIdx] : '';
                     const phone = phoneIdx !== -1 ? columns[phoneIdx] : '';
@@ -73,7 +122,23 @@ function ImportLeadsDrawer({ onClose, onSave }) {
                     const source = sourceIdx !== -1 ? columns[sourceIdx] : 'CSV Import';
                     const notes = notesIdx !== -1 ? columns[notesIdx] : '';
 
-                    if (!contact_name && !phone && !email) continue;
+                    if (!contact_name && !phone && !email) {
+                        skipped++;
+                        skipReasons.push(`Row ${i+1}: Missing contact_name, phone, and email`);
+                        continue;
+                    }
+
+                    if (phone && !phoneRegex.test(phone)) {
+                        skipped++;
+                        skipReasons.push(`Row ${i+1}: Invalid phone format`);
+                        continue;
+                    }
+
+                    if (email && !emailRegex.test(email)) {
+                        skipped++;
+                        skipReasons.push(`Row ${i+1}: Invalid email format`);
+                        continue;
+                    }
 
                     leadsToInsert.push({
                         title: title || contact_name || 'Imported Lead',
@@ -87,19 +152,52 @@ function ImportLeadsDrawer({ onClose, onSave }) {
                         created_by: user.id,
                         assigned_to: user.id,
                     });
+                    rowNumbers.push(i + 1);
                 }
 
-                if (leadsToInsert.length === 0) {
+                if (leadsToInsert.length === 0 && skipped > 0) {
+                    toast.error(`Import failed. All ${skipped} rows were skipped due to invalid data.`);
+                    console.warn("Skip Reasons:", skipReasons);
+                    return;
+                } else if (leadsToInsert.length === 0) {
                     toast.error("No valid rows found to import.");
                     return;
                 }
 
-                const { data, error } = await supabase.from('crm_leads').insert(leadsToInsert).select();
-                if (error) throw error;
+                const successfullyImported = [];
+                const BATCH_SIZE = 50;
+                for (let i = 0; i < leadsToInsert.length; i += BATCH_SIZE) {
+                    const batch = leadsToInsert.slice(i, i + BATCH_SIZE);
+                    const batchRows = rowNumbers.slice(i, i + BATCH_SIZE);
+                    
+                    const promises = batch.map((lead, idx) => 
+                        supabase.from('crm_leads').insert([lead]).select()
+                            .then(res => ({ res, row: batchRows[idx] }))
+                    );
+                    const results = await Promise.all(promises);
+                    
+                    for (const { res, row } of results) {
+                        if (res.error) {
+                            skipped++;
+                            skipReasons.push(`Row ${row}: DB Error - ${res.error.message}`);
+                        } else if (res.data && res.data.length) {
+                            imported++;
+                            successfullyImported.push(res.data[0]);
+                        }
+                    }
+                }
 
-                toast.success(`Successfully imported ${data.length} leads!`);
-                onSave(data);
-                onClose();
+                if (skipped > 0) {
+                    toast.success(`Imported ${imported} leads. Skipped ${skipped} rows. Check console for details.`);
+                    console.warn("Import Skip Reasons:", skipReasons);
+                } else {
+                    toast.success(`Successfully imported all ${imported} leads!`);
+                }
+
+                if (imported > 0) {
+                    onSave(successfullyImported);
+                    onClose();
+                }
             } catch (err) {
                 toast.error(err.message);
             } finally {

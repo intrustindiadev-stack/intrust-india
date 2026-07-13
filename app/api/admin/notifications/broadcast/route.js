@@ -55,22 +55,22 @@ export async function POST(request) {
             targetUserIds = [userId];
         } else if (target === 'all') {
             const { data } = await admin.from('user_profiles').select('id');
-            targetUserIds = data.map(p => p.id);
+            targetUserIds = (data || []).map(p => p.id);
         } else if (target === 'merchants') {
             const { data } = await admin.from('user_profiles').select('id').eq('role', 'merchant');
-            targetUserIds = data.map(p => p.id);
+            targetUserIds = (data || []).map(p => p.id);
         } else if (target === 'customers') {
             const { data } = await admin.from('user_profiles').select('id').eq('role', 'customer');
-            targetUserIds = data.map(p => p.id);
+            targetUserIds = (data || []).map(p => p.id);
         } else if (target === 'hrm') {
-            const { data } = await admin.from('user_profiles').select('id').eq('role', 'hrm');
-            targetUserIds = data.map(p => p.id);
+            const { data } = await admin.from('user_profiles').select('id').eq('role', 'hr_manager');
+            targetUserIds = (data || []).map(p => p.id);
         } else if (target === 'crm') {
-            const { data } = await admin.from('user_profiles').select('id').eq('role', 'crm');
-            targetUserIds = data.map(p => p.id);
+            const { data } = await admin.from('user_profiles').select('id').in('role', ['sales_exec', 'sales_manager']);
+            targetUserIds = (data || []).map(p => p.id);
         } else if (target === 'employee') {
             const { data } = await admin.from('user_profiles').select('id').eq('role', 'employee');
-            targetUserIds = data.map(p => p.id);
+            targetUserIds = (data || []).map(p => p.id);
         }
 
         if (targetUserIds.length === 0) {

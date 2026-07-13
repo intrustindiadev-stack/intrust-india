@@ -63,6 +63,20 @@ export async function POST(request) {
                     return NextResponse.json({ error: 'Failed to assign role.' }, { status: 500 });
                 }
 
+                // Sync user_metadata.role so the JWT carries the correct role on next token refresh.
+                // Without this, the middleware reads a stale role from the JWT and blocks routes.
+                try {
+                    const { data: existingAuthUser } = await adminSupabase.auth.admin.getUserById(app.user_id);
+                    await adminSupabase.auth.admin.updateUserById(app.user_id, {
+                        user_metadata: {
+                            ...existingAuthUser?.user?.user_metadata,
+                            role: newRole,
+                        },
+                    });
+                } catch (metaErr) {
+                    console.error('[grant-hire-role] Failed to sync user_metadata.role:', metaErr.message);
+                }
+
                 // Notify the hired user
                 await adminSupabase.from('notifications').insert({
                     user_id: app.user_id,

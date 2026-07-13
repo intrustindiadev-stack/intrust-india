@@ -47,6 +47,17 @@ Metadata and bucket configurations for Supabase Storage.
 
 ---
 
+## CRM Migrations Canonical Order
+
+Due to naming inconsistencies and schema drift, apply the CRM schema migrations in the following canonical order:
+1. `20260425_crm_schema_and_rls.sql` - Creates base tables (`crm_leads`, `crm_lead_notes`, `crm_lead_activities`), types, and RLS policies.
+2. `20260425000000_crm_schema.sql` - Adds advanced columns (`deal_value`, `temperature`, `next_followup_date`) and dependent tables (`crm_tasks`, `crm_lead_services`).
+3. `20260612000000_reconcile_crm_leads_columns.sql` - Re-runs the `crm_leads` column additions to ensure consistency across environments.
+
+Note: All CRM migrations have been updated with `IF NOT EXISTS` and `DROP POLICY IF EXISTS` guards to ensure safe re-run idempotency.
+
+---
+
 ## Global References
 
 - [Enum Reference Sheet](./enums.md) - All custom database types.

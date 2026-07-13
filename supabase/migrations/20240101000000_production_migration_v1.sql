@@ -19,7 +19,7 @@
 ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'sales_exec';
 ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'sales_manager';
 ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'employee';
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'crm_user';
+
 
 
 -- ════════════════════════════════════════════

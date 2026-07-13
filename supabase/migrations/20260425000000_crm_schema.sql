@@ -24,9 +24,13 @@ ALTER TABLE public.crm_tasks ENABLE ROW LEVEL SECURITY;
 
 -- Policies for crm_tasks (Assuming authenticated users can read/write their own or all tasks depending on role)
 -- For simplicity, giving access to authenticated users based on standard CRM access
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.crm_tasks;
 CREATE POLICY "Enable read access for authenticated users" ON public.crm_tasks FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Enable insert access for authenticated users" ON public.crm_tasks;
 CREATE POLICY "Enable insert access for authenticated users" ON public.crm_tasks FOR INSERT TO authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "Enable update access for authenticated users" ON public.crm_tasks;
 CREATE POLICY "Enable update access for authenticated users" ON public.crm_tasks FOR UPDATE TO authenticated USING (true);
+DROP POLICY IF EXISTS "Enable delete access for authenticated users" ON public.crm_tasks;
 CREATE POLICY "Enable delete access for authenticated users" ON public.crm_tasks FOR DELETE TO authenticated USING (true);
 
 -- 3. Create crm_lead_services table for Sales Intent
@@ -44,9 +48,13 @@ CREATE TABLE IF NOT EXISTS public.crm_lead_services (
 ALTER TABLE public.crm_lead_services ENABLE ROW LEVEL SECURITY;
 
 -- Policies for crm_lead_services
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.crm_lead_services;
 CREATE POLICY "Enable read access for authenticated users" ON public.crm_lead_services FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Enable insert access for authenticated users" ON public.crm_lead_services;
 CREATE POLICY "Enable insert access for authenticated users" ON public.crm_lead_services FOR INSERT TO authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "Enable update access for authenticated users" ON public.crm_lead_services;
 CREATE POLICY "Enable update access for authenticated users" ON public.crm_lead_services FOR UPDATE TO authenticated USING (true);
+DROP POLICY IF EXISTS "Enable delete access for authenticated users" ON public.crm_lead_services;
 CREATE POLICY "Enable delete access for authenticated users" ON public.crm_lead_services FOR DELETE TO authenticated USING (true);
 
 -- 4. Triggers for updated_at

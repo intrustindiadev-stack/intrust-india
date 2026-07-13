@@ -33,6 +33,10 @@ export async function POST(request) {
         }
 
         // 4. Build updates
+        // Note: The "hired" stage sets career_applications.status and panel_access_granted,
+        // but it does NOT directly assign roles (no metadata sync or user_profiles update here).
+        // Role assignment happens in a separate step via admin/grant-hire-role/route.js
+        // so the split responsibility (HR marks hired → Admin grants role) is clear.
         const updates = {
             status: stage,
             panel_access_granted: panelAccessGranted || null,
