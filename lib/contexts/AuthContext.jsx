@@ -177,58 +177,14 @@ export function AuthProvider({ children }) {
         triggerDailyReward();
     }, [user?.id]);
 
-    // 4. Proactive session management: prevent logouts from inactivity or network drops
+    // 4. Proactive session management: rely on Supabase SDK
     useEffect(() => {
         if (!user) return;
-
-        // Auto-refresh the session every 10 minutes to guarantee it never expires
-        // while the app is open in the background.
-        const intervalId = setInterval(() => {
-            console.log('[AUTH-CONTEXT] Proactively refreshing session to prevent auto-logout');
-            supabase.auth.getSession();
-        }, 1000 * 60 * 10);
-
-        // Instantly refresh when the user switches back to the tab
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                console.log('[AUTH-CONTEXT] Tab became visible, refreshing session');
-                supabase.auth.getSession();
-            }
-        };
-
-        // ── Network reconnect recovery ────────────────────────────────────────
-        // When the browser detects the network coming back (e.g. WiFi reconnected),
-        // immediately call refreshSession(). Supabase uses the refresh token stored
-        // in the HTTP-only cookie to issue a new access token — zero re-login needed.
-        const handleOnline = async () => {
-            console.log('[AUTH-CONTEXT] Network restored, refreshing session...');
-            try {
-                const { data, error } = await supabase.auth.refreshSession();
-                if (data?.session?.user && !error) {
-                    setUser(data.session.user);
-                    console.log('[AUTH-CONTEXT] Session refreshed successfully after reconnect');
-                }
-            } catch (err) {
-                console.warn('[AUTH-CONTEXT] Session refresh after reconnect failed:', err?.message);
-            }
-        };
-
-        if (typeof document !== 'undefined') {
-            document.addEventListener('visibilitychange', handleVisibilityChange);
-        }
-        if (typeof window !== 'undefined') {
-            window.addEventListener('online', handleOnline);
-        }
-
-        return () => {
-            clearInterval(intervalId);
-            if (typeof document !== 'undefined') {
-                document.removeEventListener('visibilitychange', handleVisibilityChange);
-            }
-            if (typeof window !== 'undefined') {
-                window.removeEventListener('online', handleOnline);
-            }
-        };
+        
+        // Removed manual 10-min interval, visibilitychange, and online reconnect hooks.
+        // @supabase/ssr and supabase-js automatically run background timers 
+        // to refresh access tokens prior to expiry and handle network reconnects safely
+        // using internal locking mechanisms to prevent multi-tab race conditions.
     }, [user?.id]);
 
 

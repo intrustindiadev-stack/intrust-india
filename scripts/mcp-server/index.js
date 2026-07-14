@@ -115,6 +115,12 @@ const transports = new Map();
 
 // SSE Endpoint for clients to connect
 app.get('/mcp/sse', authMiddleware, async (req, res) => {
+    // Clear old transports to prevent zombie connections stealing messages
+    for (const [id, t] of transports) {
+        try { t.close(); } catch (e) {}
+    }
+    transports.clear();
+
     const transport = new SSEServerTransport('/mcp/messages', res);
     const sessionId = Math.random().toString(36).substring(7);
     transports.set(sessionId, transport);
@@ -129,11 +135,10 @@ app.get('/mcp/sse', authMiddleware, async (req, res) => {
 
 // Message routing endpoint
 app.post('/mcp/messages', authMiddleware, async (req, res) => {
-    // Determine the session this message belongs to.
-    // In a real multi-client SSE server, you extract session ID from the URL or headers.
-    // The @modelcontextprotocol/sdk handles routing internally if properly instantiated.
-    // Here we just broadcast it to the first active transport for simplicity in a single-agent scenario.
-    const transport = Array.from(transports.values())[0];
+    // We broadcast it to the latest active transport
+    const transportArray = Array.from(transports.values());
+    const transport = transportArray[transportArray.length - 1];
+    
     if (!transport) {
         return res.status(400).json({ error: 'No active SSE connection found' });
     }
