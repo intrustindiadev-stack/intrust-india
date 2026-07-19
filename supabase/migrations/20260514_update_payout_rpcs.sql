@@ -508,7 +508,7 @@ BEGIN
         'payout',
         v_payout.amount_paise,
         v_balance,
-        'Payout released: ₹' || (v_payout.amount_paise::numeric / 100)::text
+        'Payout released: ₹' || to_char(v_payout.amount_paise::numeric / 100, 'FM99,99,99,990.00')
     );
 
     -- 7. Audit event
