@@ -281,7 +281,7 @@ export default function RewardsPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <motion.button 
-                            onClick={() => router.push('/rewards/leaderboard')}
+                            onClick={() => router.push('/leaderboard')}
                             whileHover={{ rotate: -5, scale: 1.05 }}
                             className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 hover:bg-white/10 transition-colors"
                         >
@@ -290,7 +290,7 @@ export default function RewardsPage() {
                         <motion.button 
                             onClick={() => setShowInfoModal(true)}
                             whileHover={{ rotate: 15, scale: 1.1 }}
-                            className="w-14 h-14 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-white/20"
+                            className="w-14 h-14 rounded-3xl bg-gradient-to-br from-[#D4AF37] to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 border border-white/20"
                         >
                             <Gift className="text-white" size={28} />
                         </motion.button>
@@ -306,11 +306,11 @@ export default function RewardsPage() {
                         className="w-full flex items-center justify-between px-6 py-4 bg-[#020617] dark:bg-black border border-white/10 rounded-3xl group transition-all hover:border-emerald-500/30"
                     >
                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-[#D4AF37] border border-[#D4AF37]/20 group-hover:scale-110 transition-transform">
                                 <Network size={16} />
                             </div>
                             <div className="text-left">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400/60">Empire Builder</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]/60">Empire Builder</p>
                                 <p className="text-sm font-bold text-white">Referral Empire</p>
                             </div>
                         </div>
@@ -321,7 +321,7 @@ export default function RewardsPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        onClick={() => router.push('/rewards/leaderboard')}
+                        onClick={() => router.push('/leaderboard')}
                         className="w-full flex items-center justify-between px-6 py-4 bg-[#020617] dark:bg-black border border-white/10 rounded-3xl group transition-all hover:border-amber-500/30"
                     >
                         <div className="flex items-center gap-4">
@@ -343,17 +343,17 @@ export default function RewardsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="relative bg-[#020617] dark:bg-black rounded-[3rem] p-8 text-white shadow-2xl mb-10 overflow-hidden group border border-white/5"
                 >
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-teal-500/10 opacity-50" />
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 blur-[100px] rounded-full -mr-32 -mt-32 animate-pulse" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/10 via-transparent to-amber-500/10 opacity-50" />
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-[#D4AF37]/20 blur-[100px] rounded-full -mr-32 -mt-32 animate-pulse" />
                     
                     <div className="relative z-10">
                         <div className="flex items-center justify-between mb-10">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-2xl bg-white/5 backdrop-blur-md flex items-center justify-center border border-white/10">
-                                    <Coins size={22} className="text-emerald-400" />
+                                    <Coins size={22} className="text-[#D4AF37]" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400/60">Portfolio</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#D4AF37]/60">Portfolio</p>
                                     <p className="font-bold text-sm text-white/80">Growth Points</p>
                                 </div>
                             </div>
@@ -373,7 +373,7 @@ export default function RewardsPage() {
                                 {points.toLocaleString()}
                             </motion.h2>
                             <div className="flex items-center gap-2 px-6 py-2.5 bg-white/5 backdrop-blur-2xl rounded-full border border-white/10 shadow-2xl">
-                                <p className="text-emerald-400 font-black text-2xl tracking-tight">{pointsInRupees}</p>
+                                <p className="text-[#D4AF37] font-black text-2xl tracking-tight">{pointsInRupees}</p>
                                 <div className="w-[1px] h-4 bg-white/10 mx-1" />
                                 <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Liquid Cash</p>
                             </div>
@@ -383,7 +383,7 @@ export default function RewardsPage() {
                             <button
                                 onClick={() => { setRedeemPoints(Math.max(100, Math.floor(points / 100) * 100 > points ? points : Math.floor(points / 100) * 100)); setShowRedeemModal(true); }}
                                 disabled={points < 100}
-                                className="flex items-center justify-center gap-2 bg-emerald-500 text-white py-4 rounded-[2rem] font-black text-sm shadow-xl shadow-emerald-500/20 hover:bg-emerald-400 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="flex items-center justify-center gap-2 bg-[#D4AF37] text-slate-900 py-4 rounded-[2rem] font-black text-sm shadow-xl shadow-[#D4AF37]/20 hover:bg-amber-400 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 <Wallet size={18} />
                                 Redeem to Wallet
@@ -403,7 +403,7 @@ export default function RewardsPage() {
                 <section className="mb-14">
                     <div className="flex items-center justify-between mb-8 px-1">
                         <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-ping shadow-[0_0_12px_rgba(16,185,129,0.8)]" />
+                            <div className="w-3 h-3 rounded-full bg-[#D4AF37] animate-ping shadow-[0_0_12px_rgba(212,175,55,0.8)]" />
                             <h3 className="font-black text-2xl text-slate-900 dark:text-white tracking-tight leading-none">Daily Loot</h3>
                         </div>
                         <div className="flex items-center gap-3">
@@ -411,7 +411,7 @@ export default function RewardsPage() {
                                 <button
                                     onClick={handleRevealAll}
                                     disabled={isProcessingReveal}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/20 transition-all disabled:opacity-40"
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-amber-600 hover:bg-[#D4AF37]/20 transition-all disabled:opacity-40"
                                 >
                                     <Layers size={14} />
                                     <span className="text-[10px] font-black uppercase tracking-widest">Reveal All</span>

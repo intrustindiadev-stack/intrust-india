@@ -72,6 +72,7 @@ const navigationGroups = [
         title: 'Premium Services',
         items: [
             { name: 'Shopping Service', href: '/admin/shopping', icon: ShoppingBag },
+            { name: 'Order History', href: '/admin/shopping/orders', icon: Receipt },
             { name: 'Priority Takeovers', href: '/admin/shopping/orders/takeover', icon: AlertCircle },
             { name: 'Auto Mode', href: '/admin/auto-mode', icon: Sparkles },
             { name: 'NFC Service', href: '/admin/nfc', icon: Smartphone },
@@ -167,15 +168,15 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
 
     // Static color maps — Tailwind v4 purges dynamic class names, so use full class strings
     const logoGradient = isSuperAdmin
-        ? 'bg-gradient-to-br from-blue-900 to-indigo-950 shadow-blue-900/20 group-hover:shadow-blue-900/40'
-        : 'bg-gradient-to-br from-blue-600 to-indigo-700 shadow-blue-500/20 group-hover:shadow-blue-500/40';
-    const logoLabel = isSuperAdmin ? 'text-blue-900' : 'text-blue-600';
-    const activeItemBg = isSuperAdmin ? 'bg-blue-900/10 text-blue-900' : 'bg-blue-600/10 text-blue-600';
+        ? 'bg-gradient-to-br from-slate-900 to-[#1e3a5f] shadow-slate-900/20 group-hover:shadow-slate-900/40'
+        : 'bg-gradient-to-br from-[#D4AF37] to-amber-600 shadow-amber-500/20 group-hover:shadow-amber-500/40';
+    const logoLabel = isSuperAdmin ? 'text-slate-900' : 'text-amber-600';
+    const activeItemBg = isSuperAdmin ? 'bg-slate-900/10 text-slate-900' : 'bg-[#D4AF37]/10 text-amber-600';
     const activeBar = isSuperAdmin
-        ? 'absolute left-0 top-0 bottom-0 w-1 bg-blue-950 rounded-r-full shadow-[0_0_12px_rgba(23,37,84,0.3)]'
-        : 'absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.3)]';
-    const activeIcon = isSuperAdmin ? 'text-blue-950' : 'text-blue-600';
-    const profileEmailColor = isSuperAdmin ? 'text-blue-900' : 'text-blue-600';
+        ? 'absolute left-0 top-0 bottom-0 w-1 bg-slate-900 rounded-r-full shadow-[0_0_12px_rgba(15,23,42,0.3)]'
+        : 'absolute left-0 top-0 bottom-0 w-1 bg-[#D4AF37] rounded-r-full shadow-[0_0_12px_rgba(212,175,55,0.3)]';
+    const activeIcon = isSuperAdmin ? 'text-slate-900' : 'text-amber-600';
+    const profileEmailColor = isSuperAdmin ? 'text-slate-900' : 'text-amber-600';
 
     const handleLogout = () => {
         setShowLogoutModal(true);

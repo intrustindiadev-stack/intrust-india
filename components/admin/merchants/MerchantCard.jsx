@@ -74,11 +74,26 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
 
                 {/* Contact Details */}
                 <div className="space-y-3 mb-4 flex-1 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50 group-hover:bg-white group-hover:border-slate-200 transition-all">
-                    <div className="flex items-center gap-3 text-xs font-bold text-slate-600">
-                        <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:shadow-md group-hover:shadow-blue-500/10 transition-all border border-slate-100">
-                            <Phone size={14} strokeWidth={2.5} />
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 text-xs font-bold text-slate-600">
+                            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:shadow-md group-hover:shadow-blue-500/10 transition-all border border-slate-100">
+                                <Phone size={14} strokeWidth={2.5} />
+                            </div>
+                            <span className={!merchant.phone ? 'text-slate-300' : ''}>{merchant.phone || 'Phone N/A'}</span>
                         </div>
-                        <span className={!merchant.phone ? 'text-slate-300' : ''}>{merchant.phone || 'Phone N/A'}</span>
+                        {merchant.phone && (
+                            <button 
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    window.open(`https://wa.me/${merchant.phone.replace(/\D/g, '')}`, '_blank');
+                                }}
+                                className="p-1.5 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-colors border border-emerald-100"
+                                title="Chat on WhatsApp"
+                            >
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                            </button>
+                        )}
                     </div>
                     <div className="flex items-center gap-3 text-xs font-bold text-slate-600">
                         <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-slate-400 group-hover:text-emerald-500 group-hover:shadow-md group-hover:shadow-emerald-500/10 transition-all border border-slate-100">

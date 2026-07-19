@@ -71,31 +71,36 @@ export default function ScratchCard({
         // §4.13 reset composite before fill on repaint
         targetCtx.globalCompositeOperation = 'source-over';
 
+        // ── Premium light background ──────────────────────────────────────────
         const gradient = targetCtx.createLinearGradient(0, 0, w, h);
-        gradient.addColorStop(0,   '#1e293b');
-        gradient.addColorStop(0.5, '#0f172a');
-        gradient.addColorStop(1,   '#020617');
+        gradient.addColorStop(0,   '#FFFDF5');
+        gradient.addColorStop(0.5, '#FFF8E7');
+        gradient.addColorStop(1,   '#FFFBF0');
         targetCtx.fillStyle = gradient;
         targetCtx.fillRect(0, 0, w, h);
 
-        targetCtx.strokeStyle = 'rgba(16, 185, 129, 0.2)';
-        targetCtx.lineWidth   = 0.5;
-        for (let i = 0; i < 15; i++) {
+        // ── Subtle shimmer lines ──────────────────────────────────────────────
+        targetCtx.strokeStyle = 'rgba(212,175,55,0.12)';
+        targetCtx.lineWidth   = 0.8;
+        for (let i = 0; i < 10; i++) {
             targetCtx.beginPath();
             targetCtx.moveTo(Math.random() * w, 0);
             targetCtx.lineTo(Math.random() * w, h);
             targetCtx.stroke();
         }
 
+        // ── Gold sparkle dots ─────────────────────────────────────────────────
         for (let i = 0; i < 60; i++) {
-            targetCtx.fillStyle = i % 2 === 0
-                ? 'rgba(251, 191, 36, 0.3)'
-                : 'rgba(16, 185, 129, 0.15)';
+            targetCtx.fillStyle = i % 3 === 0
+                ? 'rgba(212, 175, 55, 0.25)'
+                : i % 3 === 1
+                ? 'rgba(251, 191, 36, 0.18)'
+                : 'rgba(217, 119, 6, 0.12)';
             targetCtx.beginPath();
             targetCtx.arc(
                 Math.random() * w,
                 Math.random() * h,
-                0.8, 0, Math.PI * 2
+                Math.random() * 1.2 + 0.3, 0, Math.PI * 2
             );
             targetCtx.fill();
         }
@@ -104,35 +109,65 @@ export default function ScratchCard({
         if (document.fonts) {
             await Promise.all([
                 document.fonts.load('900 18px Outfit'),
-                document.fonts.load('800 10px Outfit'),
+                document.fonts.load('700 10px Outfit'),
             ]);
         }
 
-        // Logo
-        targetCtx.shadowBlur  = 15;
-        targetCtx.shadowColor = 'rgba(0,0,0,0.6)';
-        targetCtx.fillStyle   = '#10b981';
-        const centerX = w / 2;
-        const centerY = h / 2 - 20;
-        targetCtx.beginPath();
-        targetCtx.moveTo(centerX, centerY - 15);
-        targetCtx.lineTo(centerX + 15, centerY - 5);
-        targetCtx.lineTo(centerX + 15, centerY + 10);
-        targetCtx.lineTo(centerX, centerY + 20);
-        targetCtx.lineTo(centerX - 15, centerY + 10);
-        targetCtx.lineTo(centerX - 15, centerY - 5);
-        targetCtx.closePath();
-        targetCtx.fill();
-        targetCtx.fillStyle      = 'white';
-        targetCtx.font           = '900 18px Outfit, sans-serif';
+        // ── Load actual InTrust logo ──────────────────────────────────────────
+        await new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = '/logo.png';
+            img.onload = () => {
+                const logoSize = Math.min(w, h) * 0.28;
+                const logoX = w / 2 - logoSize / 2;
+                const logoY = h / 2 - logoSize / 2 - 18;
+                // Gold glow behind logo
+                targetCtx.shadowBlur  = 20;
+                targetCtx.shadowColor = 'rgba(212,175,55,0.5)';
+                targetCtx.drawImage(img, logoX, logoY, logoSize, logoSize);
+                targetCtx.shadowBlur  = 0;
+                resolve();
+            };
+            img.onerror = () => {
+                // Fallback: draw a gold hexagon if logo fails
+                const cx = w / 2, cy = h / 2 - 18;
+                const r = Math.min(w, h) * 0.14;
+                targetCtx.fillStyle = '#D4AF37';
+                targetCtx.shadowBlur = 12;
+                targetCtx.shadowColor = 'rgba(212,175,55,0.6)';
+                targetCtx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * 60 - 30) * (Math.PI / 180);
+                    i === 0
+                        ? targetCtx.moveTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle))
+                        : targetCtx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+                }
+                targetCtx.closePath();
+                targetCtx.fill();
+                targetCtx.shadowBlur = 0;
+                resolve();
+            };
+        });
+
+        // ── INTRUST text in amber/gold ────────────────────────────────────────
+        targetCtx.shadowBlur     = 0;
+        targetCtx.fillStyle      = '#92610A';
+        targetCtx.font           = '900 16px Outfit, sans-serif';
         targetCtx.textAlign      = 'center';
         targetCtx.textBaseline   = 'middle';
-        targetCtx.fillText('INTRUST', w / 2, h / 2 + 15);
-        targetCtx.fillStyle      = 'rgba(255, 255, 255, 0.5)';
-        targetCtx.font           = '800 10px Outfit, sans-serif';
-        targetCtx.fillText('INDIA PREMIUM', w / 2, h / 2 + 32);
-        targetCtx.shadowBlur     = 0;
+        targetCtx.fillText('INTRUST', w / 2, h / 2 + 22);
+
+        targetCtx.fillStyle = 'rgba(146, 97, 10, 0.55)';
+        targetCtx.font      = '700 9px Outfit, sans-serif';
+        targetCtx.fillText('INDIA PREMIUM', w / 2, h / 2 + 36);
+
+        // ── "Scratch to reveal" hint ──────────────────────────────────────────
+        targetCtx.fillStyle = 'rgba(180,130,40,0.45)';
+        targetCtx.font      = '700 8px Outfit, sans-serif';
+        targetCtx.fillText('✦ Scratch to reveal ✦', w / 2, h - 12);
     }, []);
+
 
     /**
      * ensureCoverCache(w, h)

@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, CheckCircle2, Power, Loader2, Sparkles } from "lucide-react";
+import { Zap, CheckCircle2, Power, Loader2, Sparkles, Clock } from "lucide-react";
 
-
-export default function AutoModePromo({ autoMode }) {
+export default function AutoModePromo({ autoMode, merchant }) {
     const router = require('next/navigation').useRouter();
     const [isAnimating, setIsAnimating] = require('react').useState(false);
 
@@ -16,12 +15,20 @@ export default function AutoModePromo({ autoMode }) {
         }, 800);
     };
 
+    // Calculate countdown if valid until timestamp exists
+    const validUntilDate = merchant?.auto_mode_valid_until || merchant?.subscription_expires_at;
+    const daysLeft = validUntilDate ? Math.ceil((new Date(validUntilDate) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+
     if (autoMode) {
         return (
             <div className="w-full h-full min-h-[320px] bg-gradient-to-b from-[#1a1814] to-[#0a0908] p-6 flex flex-col justify-between relative overflow-hidden rounded-[2rem] border border-amber-500/20 shadow-[0_0_40px_rgba(217,160,91,0.05)]">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[80px] rounded-full" />
                 
                 <div className="relative z-10">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full mb-3 backdrop-blur-sm">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        <span className="text-[10px] uppercase font-black tracking-widest text-amber-400">System Active</span>
+                    </div>
                     <h2 className="text-3xl md:text-4xl font-medium text-white/90 leading-[1.15] tracking-tight mb-2">
                         Welcome to <br/>
                         <span className="text-amber-500/80">Intrust Auto</span> <br/>
@@ -30,9 +37,17 @@ export default function AutoModePromo({ autoMode }) {
                 </div>
 
                 <div className="relative z-10 w-full flex flex-col items-center gap-3">
-                    <div className="w-[90%] max-w-[300px] h-14 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full font-bold text-lg flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(217,160,91,0.1)]">
-                        <CheckCircle2 className="w-5 h-5" />
-                        Active
+                    <div className="w-[90%] max-w-[300px] py-3 px-4 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full font-bold text-base flex items-center justify-between shadow-[0_0_15px_rgba(217,160,91,0.1)]">
+                        <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                            <span>Active</span>
+                        </div>
+                        {daysLeft !== null && (
+                            <div className="flex items-center gap-1 text-xs text-amber-300 bg-amber-500/20 px-2.5 py-1 rounded-full border border-amber-500/30">
+                                <Clock className="w-3.5 h-3.5 animate-pulse" />
+                                <span>{daysLeft > 0 ? `Ends in ${daysLeft}d` : 'Expired'}</span>
+                            </div>
+                        )}
                     </div>
                     <Link href="/merchant/shopping/auto-mode" className="text-sm text-white/50 hover:text-amber-400 transition-colors">
                         Manage Settings

@@ -374,11 +374,11 @@ export default function ReferAndEarnPage() {
                     className="w-full flex items-center justify-between px-6 py-4 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] mb-6 group transition-all hover:border-emerald-500/30"
                 >
                     <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                        <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center text-[#D4AF37] border border-[#D4AF37]/20 group-hover:scale-110 transition-transform">
                             <Gift size={16} />
                         </div>
                         <div className="text-left">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400/60">Portfolio</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]/60">Portfolio</p>
                             <p className="text-sm font-bold text-slate-900 dark:text-white">My Rewards</p>
                         </div>
                     </div>
@@ -389,20 +389,20 @@ export default function ReferAndEarnPage() {
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="relative bg-gradient-to-br from-[#0F172A] to-black rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-white shadow-2xl mb-10 overflow-hidden group border border-white/5"
+                    className="relative bg-gradient-to-br from-[#1A1208] to-[#0A0906] rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-white shadow-2xl mb-10 overflow-hidden group border border-amber-900/30"
                 >
-                    <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 blur-[100px] rounded-full pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-80 h-80 bg-[#D4AF37]/10 blur-[100px] rounded-full pointer-events-none" />
                     
                     <div className="relative z-10 text-center sm:text-left flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
                         <motion.div
                             whileHover={{ rotate: 12, scale: 1.1 }}
-                            className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-600 to-blue-400 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-2xl border border-white/20 shrink-0"
+                            className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-[#D4AF37] to-amber-600 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-2xl shadow-amber-500/20 border border-white/20 shrink-0"
                         >
                             <Network className="w-10 h-10 sm:w-11 sm:h-11 text-white" />
                         </motion.div>
                         
                         <div>
-                            <h1 className="text-3xl sm:text-5xl font-black mb-3 tracking-tighter leading-none">Empire <span className="text-blue-500">Builder</span></h1>
+                            <h1 className="text-3xl sm:text-5xl font-black mb-3 tracking-tighter leading-none">Empire <span className="text-[#D4AF37]">Builder</span></h1>
                             <p className="text-slate-400 text-xs sm:text-base font-medium max-w-sm">Grow a 7-level deep network and unlock unlimited liquid rewards.</p>
                         </div>
                     </div>
@@ -427,7 +427,7 @@ export default function ReferAndEarnPage() {
                             <TrendingUp size={20} className="sm:w-6 sm:h-6" />
                         </div>
                         <h4 className="font-black text-xs sm:text-base text-slate-900 dark:text-white mb-1">Cash Value</h4>
-                        <p className="text-lg sm:text-2xl font-black text-blue-600 dark:text-blue-400 tracking-tighter leading-none">₹{totalRupees}</p>
+                        <p className="text-lg sm:text-2xl font-black text-amber-600 dark:text-amber-400 tracking-tighter leading-none">₹{totalRupees}</p>
                     </div>
                 </div>
 
@@ -435,7 +435,7 @@ export default function ReferAndEarnPage() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-br from-blue-600 to-blue-400 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-white shadow-2xl shadow-blue-600/20 mb-10 relative overflow-hidden group"
+                    className="bg-gradient-to-br from-[#D4AF37] to-amber-600 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-slate-900 shadow-2xl shadow-amber-500/20 mb-10 relative overflow-hidden group"
                 >
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
                     <div className="absolute -top-32 -right-32 w-80 h-80 bg-white/10 blur-[100px] rounded-full group-hover:bg-white/20 transition-all duration-700" />

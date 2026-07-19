@@ -54,13 +54,6 @@ export default function QuickAccessGrid({ pendingUdhariCount, pendingOrdersCount
             bg: 'bg-slate-100 dark:bg-[#D4AF37]/10',
         },
         {
-            icon: 'star_rate',
-            label: 'Ratings',
-            href: '/merchant/ratings',
-            color: 'text-slate-800 dark:text-[#D4AF37]',
-            bg: 'bg-slate-100 dark:bg-[#D4AF37]/10',
-        },
-        {
             icon: 'smart_toy',
             label: 'Auto Mode',
             href: '/merchant/shopping/auto-mode',

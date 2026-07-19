@@ -168,7 +168,7 @@ export default async function MerchantDashboardPage() {
                             <MerchantAdBannerCarousel />
                         </div>
                         <div className="rounded-3xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800">
-                            <AutoModePromo autoMode={merchant.auto_mode} />
+                        <AutoModePromo autoMode={merchant.auto_mode} merchant={merchant} />
                         </div>
                     </div>
 

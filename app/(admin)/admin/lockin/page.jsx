@@ -40,7 +40,7 @@ export default function AdminLockinPage() {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedItem, setSelectedItem] = useState(null);
+    const [viewMode, setViewMode] = useState('individual'); // 'individual' or 'grouped'
 
     const fetchBalances = async () => {
         setLoading(true);
@@ -66,6 +66,12 @@ export default function AdminLockinPage() {
     useEffect(() => {
         fetchBalances();
     }, []);
+
+    // Filter individual lockins
+    const filteredIndividual = balances.filter(b =>
+        b.merchant?.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.merchant?.user_profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     // Group balances by merchant
     const merchantGroups = balances.reduce((acc, b) => {
@@ -174,80 +180,61 @@ export default function AdminLockinPage() {
                                                 </linearGradient>
                                             </defs>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis 
-                                                dataKey="month" 
-                                                axisLine={false} 
-                                                tickLine={false} 
-                                                tick={{fontSize: 10, fill: '#64748b'}} 
-                                                dy={10}
-                                            />
-                                            <YAxis hide />
+                                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} tickFormatter={(val) => `₹${val/1000}k`} />
                                             <Tooltip 
-                                                contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px'}}
-                                                formatter={(value) => [`₹${value.toLocaleString()}`, 'Maturity Amount']}
+                                                contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '12px' }}
+                                                formatter={(val) => [`₹${Number(val).toLocaleString('en-IN')}`, 'Maturity Amount']}
                                             />
-                                            <Area 
-                                                type="monotone" 
-                                                dataKey="amount" 
-                                                stroke="#2563eb" 
-                                                strokeWidth={2}
-                                                fillOpacity={1} 
-                                                fill="url(#colorAmount)" 
-                                            />
+                                            <Area type="monotone" dataKey="amount" stroke="#2563eb" strokeWidth={2} fillOpacity={1} fill="url(#colorAmount)" />
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 ) : (
-                                    <div className="flex items-center justify-center h-full text-slate-300 text-xs italic">
-                                        Insufficient active data for projection
+                                    <div className="h-full flex items-center justify-center text-slate-400 text-xs font-medium">
+                                        No active maturity schedules found
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        <div className="w-full md:w-[240px] border-t md:border-t-0 md:border-l border-slate-100 md:pl-8 pt-6 md:pt-0 space-y-6">
+                        <div className="w-full md:w-64 bg-slate-900 rounded-xl p-5 text-white space-y-4 shrink-0 shadow-xl shadow-slate-900/10">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Active Lockin</p>
                             <div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">AUM Total</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">₹{(totalLockedPaise / 100).toLocaleString('en-IN')}</p>
+                                <h3 className="text-2xl font-bold font-mono tracking-tight text-white">₹{(totalLockedPaise / 100).toLocaleString('en-IN')}</h3>
+                                <p className="text-[11px] text-emerald-400 font-medium mt-1 flex items-center gap-1">
+                                    <TrendingUp size={12} />
+                                    {activeCount} active merchant contracts
+                                </p>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Terms</p>
-                                    <p className="text-lg font-bold text-slate-900">{activeCount}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bonus Avg</p>
-                                    <p className="text-lg font-bold text-blue-600">
-                                        {balances.length > 0 ? (balances.reduce((a, b) => a + Number(b.interest_rate), 0) / balances.length).toFixed(1) : 0}%
-                                    </p>
-                                </div>
+                            <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                                <span>Yield Target</span>
+                                <span className="font-bold text-white">Guaranteed</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="hidden lg:flex lg:col-span-4 bg-slate-900 rounded-2xl p-6 shadow-lg shadow-slate-200/50 flex-col justify-between relative overflow-hidden group">
-                        <div className="absolute right-0 top-0 p-8 transform translate-x-4 -translate-y-4 opacity-10 transition-transform group-hover:scale-110">
-                            <Clock size={120} className="text-white" />
-                        </div>
-                        <div className="relative z-10 space-y-1">
-                            <h3 className="text-white font-bold">Priority Actions</h3>
-                            <p className="text-slate-400 text-xs">Maturity alerts & system health</p>
-                        </div>
-                        <div className="relative z-10 space-y-3 mt-4">
-                            {balances.filter(b => b.status === 'active').slice(0, 2).map(b => (
-                                <div key={b.id} className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between hover:bg-white/10 transition-colors cursor-pointer">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                                            <Calendar size={14} className="text-blue-400" />
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-white truncate w-32">{b.merchant?.business_name}</p>
-                                            <p className="text-[10px] text-slate-400">{new Date(b.end_date).toLocaleDateString('en-IN')}</p>
-                                        </div>
-                                    </div>
-                                    <ArrowRight size={14} className="text-slate-600" />
+                    <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                        <div className="space-y-4">
+                            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Lockin Health Metrics</h2>
+                            
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <span className="text-xs font-medium text-slate-600">Avg Lock Duration</span>
+                                    <span className="text-xs font-bold text-slate-900">12 Months</span>
                                 </div>
-                            ))}
-                            <button className="w-full py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-white transition-colors border border-white/5 rounded-xl mt-2">
+                                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <span className="text-xs font-medium text-slate-600">Default Risk</span>
+                                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">0.0% (Zero)</span>
+                                </div>
+                                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <span className="text-xs font-medium text-slate-600">Early Release Fee</span>
+                                    <span className="text-xs font-bold text-slate-900">Standard 2.5%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-4">
+                            <button className="w-full py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-700 transition-colors border border-slate-200 rounded-xl">
                                 View Full Schedule
                             </button>
                         </div>
@@ -256,13 +243,23 @@ export default function AdminLockinPage() {
 
                 {/* Sleek Data Table */}
                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white">
-                        <div className="flex items-center gap-4">
+                    <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white">
+                        <div className="flex items-center gap-4 flex-wrap">
                             <h3 className="font-bold text-slate-900">Portfolio Ledger</h3>
-                            <div className="h-4 w-px bg-slate-200" />
-                            <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live Updates</span>
+                            <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+                            <div className="flex p-1 bg-slate-100 rounded-lg">
+                                <button
+                                    onClick={() => setViewMode('individual')}
+                                    className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${viewMode === 'individual' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                                >
+                                    Each Lockin ({filteredIndividual.length})
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('grouped')}
+                                    className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${viewMode === 'grouped' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                                >
+                                    By Merchant ({filteredBalances.length})
+                                </button>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -273,9 +270,6 @@ export default function AdminLockinPage() {
                             >
                                 <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
                             </button>
-                            <button className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg transition-all">
-                                <Filter size={16} />
-                            </button>
                         </div>
                     </div>
 
@@ -284,171 +278,159 @@ export default function AdminLockinPage() {
                             <div className="w-12 h-12 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin" />
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Accessing Ledger...</p>
                         </div>
-                    ) : filteredBalances.length > 0 ? (
+                    ) : (viewMode === 'individual' ? filteredIndividual.length > 0 : filteredBalances.length > 0) ? (
                         <>
-                            <div className="hidden md:block overflow-x-auto">
-                                <table className="w-full border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-50/50 text-left border-b border-slate-100">
-                                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Merchant Details</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Total Active Value</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Avg Bonus %</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Active Terms</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status Summary</th>
-                                            <th className="px-6 py-4 w-10"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {filteredBalances.map(group => {
-                                            const avgBonus = group.interestRates.length > 0 
-                                                ? (group.interestRates.reduce((a, b) => a + b, 0) / group.interestRates.length).toFixed(1) 
-                                                : '-';
-                                                
-                                            return (
-                                            <tr 
-                                                key={group.merchant.id} 
-                                                onClick={() => router.push(`/admin/portfolio/${group.merchant.id}`)}
-                                                className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
-                                            >
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-900 flex items-center justify-center font-bold text-xs shadow-sm shadow-slate-100">
-                                                            {group.merchant?.business_name?.[0] || 'M'}
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-semibold text-slate-900 text-sm">{group.merchant?.business_name}</p>
-                                                            <p className="text-[10px] text-slate-500 font-medium">{group.merchant?.user_profiles?.full_name}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <p className="font-bold text-slate-900 text-sm tracking-tight">₹{(group.totalAmount / 100).toLocaleString('en-IN')}</p>
-                                                    {group.activeCount > 0 && <p className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-1 inline-block rounded mt-1">SECURED</p>}
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        <span className="text-sm font-bold text-blue-600">{avgBonus}%</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className="text-xs font-semibold text-slate-600">{group.activeCount}</span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        {group.activeCount > 0 && <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">Active</span>}
-                                                        {group.maturedCount > 0 && <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100">Matured/Released</span>}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <Link 
-                                                        href={`/admin/portfolio/${group.merchant.id}`}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition-all flex items-center justify-center w-fit ml-auto"
-                                                    >
-                                                        <Eye size={16} />
-                                                    </Link>
-                                                </td>
+                            {viewMode === 'individual' ? (
+                                /* Individual Lockin Items View */
+                                <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-50/50 text-left border-b border-slate-100">
+                                                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Merchant</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Locked Amount</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Bonus %</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Term</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Maturity Date</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
+                                                <th className="px-6 py-4 text-right">Actions</th>
                                             </tr>
-                                        )})}
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {filteredIndividual.map(b => (
+                                                <tr 
+                                                    key={b.id} 
+                                                    onClick={() => router.push(`/admin/portfolio/${b.merchant_id}`)}
+                                                    className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                                                >
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-900 flex items-center justify-center font-bold text-xs shadow-sm">
+                                                                {b.merchant?.business_name?.[0] || 'L'}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-semibold text-slate-900 text-sm">{b.merchant?.business_name}</p>
+                                                                <p className="text-[10px] text-slate-500 font-mono">ID: {b.id.slice(0, 10)}...</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <p className="font-bold text-slate-900 text-sm tracking-tight">₹{(b.amount_paise / 100).toLocaleString('en-IN')}</p>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center font-bold text-blue-600 text-sm">
+                                                        {b.interest_rate}%
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center text-xs font-medium text-slate-600">
+                                                        {b.term_months || 12} Months
+                                                    </td>
+                                                    <td className="px-6 py-4 text-xs font-medium text-slate-600">
+                                                        {new Date(b.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider ${b.status === 'active' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                                                            {b.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <Link 
+                                                            href={`/admin/portfolio/${b.merchant_id}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition-all flex items-center justify-center w-fit ml-auto"
+                                                        >
+                                                            <Eye size={16} />
+                                                        </Link>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                /* Grouped View */
+                                <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-50/50 text-left border-b border-slate-100">
+                                                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Merchant Details</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Total Active Value</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Avg Bonus %</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Active Terms</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status Summary</th>
+                                                <th className="px-6 py-4 w-10"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {filteredBalances.map(group => {
+                                                const avgBonus = group.interestRates.length > 0 
+                                                    ? (group.interestRates.reduce((a, b) => a + b, 0) / group.interestRates.length).toFixed(1) 
+                                                    : '-';
+                                                    
+                                                return (
+                                                <tr 
+                                                    key={group.merchant.id} 
+                                                    onClick={() => router.push(`/admin/portfolio/${group.merchant.id}`)}
+                                                    className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                                                >
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-900 flex items-center justify-center font-bold text-xs shadow-sm shadow-slate-100">
+                                                                {group.merchant?.business_name?.[0] || 'M'}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-semibold text-slate-900 text-sm">{group.merchant?.business_name}</p>
+                                                                <p className="text-[10px] text-slate-500 font-medium">{group.merchant?.user_profiles?.full_name}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <p className="font-bold text-slate-900 text-sm tracking-tight">₹{(group.totalAmount / 100).toLocaleString('en-IN')}</p>
+                                                        {group.activeCount > 0 && <p className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-1 inline-block rounded mt-1">SECURED</p>}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <span className="text-sm font-bold text-blue-600">{avgBonus}%</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className="text-xs font-semibold text-slate-600">{group.activeCount}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            {group.activeCount > 0 && <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">Active</span>}
+                                                            {group.maturedCount > 0 && <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100">Matured/Released</span>}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <Link 
+                                                            href={`/admin/portfolio/${group.merchant.id}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition-all flex items-center justify-center w-fit ml-auto"
+                                                        >
+                                                            <Eye size={16} />
+                                                        </Link>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
-
-                            {/* Mobile Card List */}
-                            <div className="block md:hidden divide-y divide-slate-100">
-                                {filteredBalances.map(group => {
-                                    const avgBonus = group.interestRates.length > 0 
-                                        ? (group.interestRates.reduce((a, b) => a + b, 0) / group.interestRates.length).toFixed(1) 
-                                        : '-';
-                                        
-                                    return (
-                                        <div 
-                                            key={group.merchant.id}
-                                            onClick={() => router.push(`/admin/portfolio/${group.merchant.id}`)}
-                                            className="flex items-center gap-3 px-4 py-4 cursor-pointer active:bg-slate-50"
-                                        >
-                                            {/* Avatar */}
-                                            <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-900 flex items-center justify-center font-bold text-xs shadow-sm shadow-slate-100 flex-shrink-0">
-                                                {group.merchant?.business_name?.[0] || 'M'}
-                                            </div>
-                                            
-                                            {/* Text block & metrics */}
-                                            <div className="flex-1 min-w-0 space-y-1">
-                                                <div className="flex items-baseline justify-between">
-                                                    <p className="font-semibold text-sm text-slate-900 truncate">{group.merchant?.business_name}</p>
-                                                    <span className="font-bold text-sm text-slate-900 ml-2">
-                                                        ₹{(group.totalAmount/100).toLocaleString('en-IN')}
-                                                    </span>
-                                                </div>
-                                                
-                                                <div className="flex items-center justify-between">
-                                                    <p className="text-[10px] text-slate-500 truncate">{group.merchant?.user_profiles?.full_name}</p>
-                                                    {group.activeCount > 0 && (
-                                                        <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-1 rounded">
-                                                            SECURED
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                
-                                                <div className="flex items-center justify-between pt-1">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-bold">
-                                                            {avgBonus}% Bonus
-                                                        </span>
-                                                        <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-semibold">
-                                                            {group.activeCount} {group.activeCount === 1 ? 'Term' : 'Terms'}
-                                                        </span>
-                                                    </div>
-                                                    
-                                                    <div className="flex items-center gap-1">
-                                                        {group.activeCount > 0 && (
-                                                            <span className="px-1.5 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">
-                                                                Active
-                                                            </span>
-                                                        )}
-                                                        {group.maturedCount > 0 && (
-                                                            <span className="px-1.5 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                                                Matured/Released
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Right Chevron */}
-                                            <ChevronRight size={16} className="text-slate-400 ml-auto flex-shrink-0" />
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                        )}
                         </>
                     ) : (
-                        <div className="h-96 flex flex-col items-center justify-center p-12 text-center bg-slate-50/20">
-                            <div className="w-16 h-16 bg-white border border-slate-100 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
-                                <AlertCircle size={32} className="text-slate-300" />
-                            </div>
-                            <h4 className="font-bold text-slate-900 text-sm">Portfolio Empty</h4>
-                            <p className="text-slate-500 text-xs mt-1 max-w-xs font-medium">
-                                No capital has been deployed to merchant lockin accounts yet.
-                            </p>
-                            <button 
-                                onClick={() => setShowModal(true)}
-                                className="mt-6 bg-white border border-slate-200 px-6 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
-                            >
-                                Initiate First Transfer
-                            </button>
+                        <div className="h-64 flex flex-col items-center justify-center text-center p-6">
+                            <Clock className="text-slate-300 mb-2" size={32} />
+                            <p className="text-sm font-bold text-slate-700">No lockin records found</p>
+                            <p className="text-xs text-slate-400 mt-1">Deploy capital or adjust search query to populate ledger.</p>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Modal */}
             {showModal && (
                 <LockinTransferModal 
-                    onClose={(refresh) => {
-                        setShowModal(false);
-                        if (refresh) fetchBalances();
-                    }} 
+                    isOpen={showModal} 
+                    onClose={() => setShowModal(false)} 
+                    onSuccess={fetchBalances}
                 />
             )}
         </div>
