@@ -180,7 +180,8 @@ export default function InventoryTable({ initialCoupons }) {
 
             {/* Desktop View (Premium Table) */}
             <div className="hidden md:block bg-white/70 dark:bg-gray-800/40 backdrop-blur-xl rounded-3xl border border-white dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-                <table className="w-full text-left">
+                <div className="overflow-x-auto w-full">
+                    <table className="w-full text-left">
                     <thead>
                         <tr className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-black border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
                             <th className="px-8 py-6">Asset / Brand</th>
@@ -301,6 +302,7 @@ export default function InventoryTable({ initialCoupons }) {
                         })}
                     </tbody>
                 </table>
+                </div>
             </div>
 
             {showListModal && selectedCoupon && (

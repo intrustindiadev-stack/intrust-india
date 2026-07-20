@@ -257,6 +257,15 @@ export default function AutoModeAdminDashboard() {
 
                     {/* 4. Orders Feed */}
                     <div className="lg:col-span-8 space-y-4">
+                        <div className="flex items-center justify-between px-2">
+                            <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                                <Package size={18} className="text-indigo-600" />
+                                <span>Recent Fed Orders</span>
+                            </h3>
+                            <Link href="/admin/shopping/orders" className="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1">
+                                View Full Order History →
+                            </Link>
+                        </div>
 
                         {/* Order Grid/List */}
                         <div className="grid grid-cols-1 gap-4">

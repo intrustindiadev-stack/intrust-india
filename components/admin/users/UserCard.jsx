@@ -3,6 +3,7 @@
 import { Mail, Phone, Calendar, MoreVertical, Shield, User, Star } from 'lucide-react';
 import Link from 'next/link';
 import { displayEmail } from '@/lib/auth';
+import ContactActions from '@/components/shared/ContactActions';
 
 export default function UserCard({ user }) {
 
@@ -111,11 +112,14 @@ export default function UserCard({ user }) {
                         )}
                     </span>
                 </div>
-                <div className="flex items-center gap-3 text-sm text-slate-500 group-hover:text-slate-700 transition-colors">
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 group-hover:bg-emerald-50 transition-colors">
-                        <Phone size={16} strokeWidth={2.5} />
+                <div className="flex items-center justify-between group-hover:text-slate-700 transition-colors">
+                    <div className="flex items-center gap-3 text-sm text-slate-500">
+                        <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 group-hover:bg-emerald-50 transition-colors">
+                            <Phone size={16} strokeWidth={2.5} />
+                        </div>
+                        <span className="font-medium">{user.phone || 'N/A'}</span>
                     </div>
-                    <span className="font-medium">{user.phone || 'N/A'}</span>
+                    <ContactActions phone={user.phone} email={user.email} name={user.full_name} compact />
                 </div>
                 <div className="flex items-center gap-3 text-sm text-slate-500 group-hover:text-slate-700 transition-colors">
                     <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-amber-500 group-hover:bg-amber-50 transition-colors">

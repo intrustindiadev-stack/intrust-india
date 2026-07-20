@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { displayEmail } from '@/lib/auth';
-import Link from 'next/link';
-import { Users, CalendarCheck, DollarSign, Clock, CheckCircle, XCircle, ArrowRight, UserPlus } from 'lucide-react';
+import { Users, UserPlus, DollarSign, Clock } from 'lucide-react';
+import ContactActions from '@/components/shared/ContactActions';
 
 function StatCard({ title, value, sub, gradient, icon: Icon }) {
     return (
@@ -29,7 +29,7 @@ export default async function AdminHRMPage() {
     // Fetch HRM data in parallel — gracefully fallback if tables don't exist yet
     const [empRes, leaveRes, pendingLeaveRes] = await Promise.all([
         supabase.from('user_profiles')
-            .select('id, full_name, email, role, created_at')
+            .select('id, full_name, email, phone, role, created_at')
             .in('role', ['employee', 'hr_manager', 'sales_exec', 'sales_manager'])
             .order('created_at', { ascending: false }),
         // leave_requests may not exist yet — gracefully fall back
@@ -69,17 +69,11 @@ export default async function AdminHRMPage() {
         <div className="min-h-screen bg-[#F8FAFC] font-[family-name:var(--font-outfit)]">
             <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-5">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">HRM Overview</h1>
-                        <p className="text-gray-500 mt-1">Manage employees, leave approvals, and HR operations.</p>
+                        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">HRM Command Overview</h1>
+                        <p className="text-gray-500 text-sm mt-0.5">Manage employee profiles, team contacts, and leave approvals.</p>
                     </div>
-                    <Link
-                        href="/hrm"
-                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl hover:opacity-90 transition-all text-sm shadow-lg shadow-emerald-500/25"
-                    >
-                        Open HRM Panel <ArrowRight size={15} />
-                    </Link>
                 </div>
 
                 {/* KPI Cards */}
@@ -97,9 +91,6 @@ export default async function AdminHRMPage() {
                             <h2 className="text-xl font-bold text-gray-900">Workforce Directory</h2>
                             <p className="text-sm text-gray-500">{totalEmp} active team members</p>
                         </div>
-                        <Link href="/hrm" className="px-4 py-2 bg-emerald-50 text-emerald-700 font-semibold rounded-xl text-sm hover:bg-emerald-100 transition-colors">
-                            Full HRM
-                        </Link>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
@@ -108,6 +99,7 @@ export default async function AdminHRMPage() {
                                     <th className="p-4 pl-6">Employee</th>
                                     <th className="p-4">Email</th>
                                     <th className="p-4">Role</th>
+                                    <th className="p-4">Contact</th>
                                     <th className="p-4 pr-6">Joined</th>
                                 </tr>
                             </thead>
@@ -132,12 +124,15 @@ export default async function AdminHRMPage() {
                                                 {roleLabel[emp.role] || emp.role}
                                             </span>
                                         </td>
+                                        <td className="p-4">
+                                            <ContactActions phone={emp.phone} email={emp.email} name={emp.full_name} compact />
+                                        </td>
                                         <td className="p-4 pr-6 text-xs text-gray-500">
                                             {new Date(emp.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                         </td>
                                     </tr>
                                 )) : (
-                                    <tr><td colSpan="4" className="p-12 text-center text-gray-400 text-sm">No employees found. Grant panel access via Career Applications.</td></tr>
+                                    <tr><td colSpan="5" className="p-12 text-center text-gray-400 text-sm">No employees found. Grant panel access via Career Applications.</td></tr>
                                 )}
                             </tbody>
                         </table>

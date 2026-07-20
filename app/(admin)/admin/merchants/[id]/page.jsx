@@ -285,9 +285,23 @@ export default async function AdminMerchantDetailPage({ params }) {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 sm:gap-y-6">
                             <div className="group space-y-1">
                                 <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Business Phone</label>
-                                <div className="flex items-center gap-3 p-3 sm:p-4 bg-slate-50 rounded-2xl border border-slate-100 group-hover:border-blue-100 group-hover:bg-white transition-all">
-                                    <Phone size={14} className="text-slate-400" />
-                                    <p className="font-bold text-slate-900 text-sm sm:text-base">{merchant.user_profiles?.phone || merchant.phone || 'N/A'}</p>
+                                <div className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 rounded-2xl border border-slate-100 group-hover:border-blue-100 group-hover:bg-white transition-all">
+                                    <div className="flex items-center gap-3">
+                                        <Phone size={14} className="text-slate-400" />
+                                        <p className="font-bold text-slate-900 text-sm sm:text-base">{merchant.user_profiles?.phone || merchant.phone || 'N/A'}</p>
+                                    </div>
+                                    {(merchant.user_profiles?.phone || merchant.phone) && (
+                                        <a
+                                            href={`https://wa.me/91${(merchant.user_profiles?.phone || merchant.phone).replace(/\D/g, '')}?text=Hello%20${encodeURIComponent(merchant.business_name || 'Merchant')}%2C%20this%20is%20InTrust%20Admin%20Team`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all border border-emerald-200 shadow-sm"
+                                            title="Chat on WhatsApp"
+                                        >
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                                            <span>WhatsApp</span>
+                                        </a>
+                                    )}
                                 </div>
                             </div>
                             <div className="group space-y-1">

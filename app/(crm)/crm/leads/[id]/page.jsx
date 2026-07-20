@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import ContactActions from '@/components/shared/ContactActions';
 
 const TABS = [
     { id: 'activity', label: 'Activity', icon: Activity },
@@ -270,15 +271,7 @@ export default function LeadDetailPage({ params }) {
                         </div>
                         
                         <div className="flex flex-wrap items-center justify-center gap-3 w-full md:w-auto">
-                            <a href={`tel:${lead.phone}`} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-black transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
-                                <Phone size={18} /> Call
-                            </a>
-                            <a href={`https://wa.me/${lead.phone?.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
-                                <MessageCircle size={18} /> WhatsApp
-                            </a>
-                            <a href={`mailto:${lead.email}`} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-white px-6 py-3 rounded-2xl font-black transition-all shadow-sm hover:border-indigo-500 active:scale-95">
-                                <Mail size={18} /> Email
-                            </a>
+                            <ContactActions phone={lead.phone} email={lead.email} name={lead.contact_name || lead.title} />
                         </div>
                     </div>
                 </div>
@@ -290,6 +283,38 @@ export default function LeadDetailPage({ params }) {
                     <div className="bg-white dark:bg-gray-800 rounded-[2rem] border border-gray-100 dark:border-gray-700 p-6 shadow-sm">
                         <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest mb-6 opacity-40">Intelligence</h3>
                         <div className="space-y-6">
+                            <div className="flex items-start gap-4">
+                                <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-400"><User size={18} /></div>
+                                <div className="flex-1">
+                                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Assigned Executive</p>
+                                    {profile && ['sales_manager', 'admin', 'super_admin'].includes(profile.role) ? (
+                                        <select
+                                            value={lead.assigned_to || ''}
+                                            onChange={async (e) => {
+                                                const newOwner = e.target.value;
+                                                const { error } = await supabase.from('crm_leads').update({ assigned_to: newOwner || null }).eq('id', id);
+                                                if (!error) {
+                                                    toast.success('Assigned executive updated');
+                                                    fetchData();
+                                                } else {
+                                                    toast.error(error.message);
+                                                }
+                                            }}
+                                            className="w-full text-xs font-bold bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                        >
+                                            <option value="">Unassigned</option>
+                                            {salesTeam.map(u => (
+                                                <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                            {salesTeam.find(u => u.id === lead.assigned_to)?.full_name || 'Unassigned'}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
                             <div className="flex items-start gap-4">
                                 <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-400"><DollarSign size={18} /></div>
                                 <div>

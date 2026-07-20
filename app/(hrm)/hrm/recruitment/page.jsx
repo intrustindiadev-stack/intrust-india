@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import ContactActions from '@/components/shared/ContactActions';
 
 const PIPELINE_STAGES = [
     { key: 'pending', label: 'New', color: 'bg-blue-500', light: 'bg-blue-50 text-blue-700 border-blue-100' },
@@ -118,6 +119,10 @@ function CandidateDrawer({ app, onClose, onUpdate }) {
                         {app?.phone && <a href={`tel:${app.phone}`} className="flex items-center gap-3 text-sm text-gray-700 hover:text-violet-600"><Phone size={15} className="text-gray-400" /> {app.phone}</a>}
                         {app?.linkedin_url && <a href={app.linkedin_url} target="_blank" rel="noreferrer" className="flex items-center gap-3 text-sm text-violet-600 hover:underline"><ExternalLink size={15} /> LinkedIn Profile</a>}
                         
+                        <div className="pt-2 border-t border-gray-100">
+                            <ContactActions phone={app?.phone} email={app?.email} name={app?.full_name} />
+                        </div>
+
                         {app?.resume_url && (
                             <a href={app.resume_url} target="_blank" rel="noreferrer" className="flex items-center gap-3 text-sm text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 rounded-xl font-bold transition-colors w-max mt-2 shadow-md shadow-indigo-500/20">
                                 <FileText size={16} /> View Resume (PDF)

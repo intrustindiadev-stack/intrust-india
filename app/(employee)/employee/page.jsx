@@ -11,6 +11,9 @@ import Skeleton from '@/components/ui/Skeleton';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import EmptyState from '@/components/ui/EmptyState';
 
+import WelcomeRoleCelebrationModal from '@/components/shared/WelcomeRoleCelebrationModal';
+import Image from 'next/image';
+
 export default function EmployeeDashboard() {
     const { user, profile } = useAuth();
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -60,7 +63,6 @@ export default function EmployeeDashboard() {
             }
 
             const totalAnnualLeaves = 41; // 12 CL + 8 SL + 21 EL
-            
             const tasksCount = tasksRes.status === 'fulfilled' ? (tasksRes.value.count || 0) : 0;
 
             setStats(prev => ({
@@ -144,9 +146,21 @@ export default function EmployeeDashboard() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-gray-50/30 dark:bg-gray-900/30">
+            {/* First Time Welcome Celebration Modal */}
+            <WelcomeRoleCelebrationModal />
+
             {/* Top Bar / Breadcrumbs */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <Breadcrumbs />
+                <div className="flex items-center gap-3">
+                    <Image
+                        src="/logo.png"
+                        alt="InTrust Logo"
+                        width={36}
+                        height={36}
+                        className="object-contain"
+                    />
+                    <Breadcrumbs />
+                </div>
                 <div className="flex items-center gap-3">
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{new Date().toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
                 </div>
@@ -157,11 +171,11 @@ export default function EmployeeDashboard() {
                 <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
                     <div className="flex items-center gap-3 mb-2">
                         <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                            <Zap size={12} fill="currentColor" /> Live Portal
+                            <Zap size={12} fill="currentColor" /> Employee Workspace
                         </span>
                     </div>
                     <h1 className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-none">
-                        {greeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">{profile?.full_name?.split(' ')[0] || 'Member'}</span>
+                        {greeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">{profile?.full_name?.split(' ')[0] || 'Team Member'}</span>
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-3 font-bold flex items-center gap-2">
                         <Calendar size={18} className="text-amber-500" />

@@ -255,23 +255,43 @@ export default function AIGrowPage() {
                         </div>
                     </div>
 
-                    {/* Secure fund */}
-                    <div className="bg-slate-950 border border-white/5 rounded-[2.5rem] p-6 text-white flex items-start gap-4 relative overflow-hidden shadow-xl">
-                        <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-600/15 blur-xl rounded-full -mr-8 -mt-8" />
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-indigo-400 shrink-0 relative z-10">
-                            <ShieldCheck size={22} />
-                        </div>
-                        <div className="relative z-10">
-                            <p className="font-extrabold text-sm tracking-tight uppercase">Secure Fund</p>
-                            <div className="flex items-center gap-1.5 mt-0.5 mb-3">
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-                                <p className="text-emerald-400 text-[10px] font-bold uppercase tracking-widest">InTrust Protected</p>
+                    {/* Your Profit — fills the marked area */}
+                    <div className="bg-slate-950 border border-emerald-500/15 rounded-[2.5rem] p-6 text-white flex flex-col relative overflow-hidden shadow-xl">
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 blur-[60px] rounded-full -mr-8 -mt-8 pointer-events-none" />
+                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-600/10 blur-[40px] rounded-full pointer-events-none" />
+
+                        <div className="relative z-10 flex items-center justify-between mb-4">
+                            <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" />
+                                </svg>
                             </div>
-                            <p className="text-slate-400 text-[11px] font-medium leading-relaxed opacity-80">
-                                Capital deployed into verified supply chain orders.
-                            </p>
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.7)]" />
+                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Live</span>
+                            </div>
+                        </div>
+
+                        <div className="relative z-10">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Your Profit</p>
+                            <div className="text-3xl font-extrabold tracking-tighter text-emerald-400 flex items-baseline gap-1 h-10">
+                                {isRevealed ? (
+                                    <span className="flex items-baseline">
+                                        <span className="text-lg mr-0.5 text-emerald-500/80">₹</span>
+                                        <AnimatedValue value={stats.totalProfit} isRevealed={isRevealed} showTotal={false} />
+                                    </span>
+                                ) : (
+                                    <span className="text-slate-600 text-2xl tracking-widest">• • • •</span>
+                                )}
+                            </div>
+                            {isRevealed && stats.totalDeployed > 0 && (
+                                <p className="text-[10px] text-emerald-500/70 font-semibold mt-1">
+                                    {((stats.totalProfit / stats.totalDeployed) * 100).toFixed(2)}% return on deployed
+                                </p>
+                            )}
                         </div>
                     </div>
+
                 </div>
             </div>
 

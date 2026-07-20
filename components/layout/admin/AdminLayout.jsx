@@ -20,9 +20,9 @@ export default function AdminLayout({ children, adminProfile }) {
     const isSuperAdmin = adminProfile?.role === 'super_admin';
 
     // Static color maps to avoid Tailwind purging dynamic class names
-    const accentText = isSuperAdmin ? 'text-blue-900' : 'text-blue-600';
-    const accentBg = isSuperAdmin ? 'bg-blue-900' : 'bg-blue-600';
-    const accentShadow = isSuperAdmin ? 'shadow-blue-900/20' : 'shadow-blue-500/20';
+    const accentText = isSuperAdmin ? 'text-slate-900' : 'text-amber-600';
+    const accentBg = isSuperAdmin ? 'bg-slate-900' : 'bg-amber-500';
+    const accentShadow = isSuperAdmin ? 'shadow-slate-900/20' : 'shadow-amber-500/20';
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] transition-colors duration-300" data-admin-role={adminProfile?.role}>

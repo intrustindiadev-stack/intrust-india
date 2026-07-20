@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { createClient } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { verifyGSTIN } from '@/app/actions/sprintVerifyActions';
+import MerchantApplyShowcase from '@/components/merchant/MerchantApplyShowcase';
 
 // Confetti Component
 const Confetti = () => {
@@ -62,6 +63,7 @@ function MerchantApplyPageInner() {
     const searchParams = useSearchParams();
     const { user, profile, loading: authLoading, refreshProfile } = useAuth();
     const supabase = createClient();
+    const [showIntro, setShowIntro] = useState(true);
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [checkingStatus, setCheckingStatus] = useState(true);
@@ -377,7 +379,21 @@ function MerchantApplyPageInner() {
     }
 
     return (
-        <div className="h-screen w-full bg-white dark:bg-[#020617] font-[family-name:var(--font-outfit)] overflow-hidden relative flex flex-col md:flex-row transition-colors">
+        <>
+            {/* Cinematic intro — shown before form */}
+            <AnimatePresence>
+                {showIntro && (
+                    <MerchantApplyShowcase onStart={() => setShowIntro(false)} />
+                )}
+            </AnimatePresence>
+
+            {/* Main form — slides in after intro */}
+            <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                animate={showIntro ? { opacity: 0, y: 40 } : { opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                className="h-screen w-full bg-white dark:bg-[#020617] font-[family-name:var(--font-outfit)] overflow-hidden relative flex flex-col md:flex-row transition-colors"
+            >
 
             {/* Desktop: Left Side Brand Panel (Hidden on Mobile) */}
             <div className="hidden md:flex w-1/2 lg:w-[45%] bg-slate-900 dark:bg-[#0F1419] h-full relative overflow-hidden flex-col justify-between p-12 text-white transition-colors">
@@ -666,7 +682,8 @@ function MerchantApplyPageInner() {
                 )}
             </div>
 
-        </div>
+        </motion.div>
+        </>
     );
 }
 

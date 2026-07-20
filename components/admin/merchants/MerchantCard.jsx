@@ -3,6 +3,7 @@
 import { CheckCircle, XCircle, Clock, Building2, Phone, Mail, FileText, AlertCircle, Eye, ShieldOff, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { displayEmail } from '@/lib/auth';
+import ContactActions from '@/components/shared/ContactActions';
 
 export default function MerchantCard({ merchant, udhariEnabled, onApprove, onReject, onVerifyBank, onToggleSuspend, isApproving, isVerifyingBank, isRejecting, isTogglingSuspend, href }) {
     const isPending = merchant.status === 'pending';
@@ -74,11 +75,14 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
 
                 {/* Contact Details */}
                 <div className="space-y-3 mb-4 flex-1 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50 group-hover:bg-white group-hover:border-slate-200 transition-all">
-                    <div className="flex items-center gap-3 text-xs font-bold text-slate-600">
-                        <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:shadow-md group-hover:shadow-blue-500/10 transition-all border border-slate-100">
-                            <Phone size={14} strokeWidth={2.5} />
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 text-xs font-bold text-slate-600">
+                            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:shadow-md group-hover:shadow-blue-500/10 transition-all border border-slate-100">
+                                <Phone size={14} strokeWidth={2.5} />
+                            </div>
+                            <span className={!merchant.phone ? 'text-slate-300' : ''}>{merchant.phone || 'Phone N/A'}</span>
                         </div>
-                        <span className={!merchant.phone ? 'text-slate-300' : ''}>{merchant.phone || 'Phone N/A'}</span>
+                        <ContactActions phone={merchant.phone} email={merchant.email} name={merchant.businessName || merchant.ownerName} compact />
                     </div>
                     <div className="flex items-center gap-3 text-xs font-bold text-slate-600">
                         <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-slate-400 group-hover:text-emerald-500 group-hover:shadow-md group-hover:shadow-emerald-500/10 transition-all border border-slate-100">
