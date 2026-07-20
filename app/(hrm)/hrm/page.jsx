@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import { toast } from 'react-hot-toast';
+import WelcomeRoleCelebrationModal from '@/components/shared/WelcomeRoleCelebrationModal';
 
 function StatCard({ label, value, icon: Icon, color, subValue, trend, delay = 0 }) {
     const COLOR_VARIANTS = {
@@ -121,19 +122,30 @@ export default function HRMDashboard() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-gray-50/30 dark:bg-gray-900/30">
+            {/* First Time Welcome Celebration Modal */}
+            <WelcomeRoleCelebrationModal />
             
             {/* Header Area */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                <div>
-                    <div className="flex items-center gap-3 mb-2">
-                        <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-emerald-200/50">
-                            <Zap size={12} fill="currentColor" /> HR Hub
-                        </span>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</span>
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 border-b border-gray-200/60 dark:border-gray-800 pb-5">
+                <div className="flex items-center gap-4">
+                    <Image
+                        src="/logo.png"
+                        alt="InTrust Logo"
+                        width={44}
+                        height={44}
+                        className="object-contain"
+                    />
+                    <div>
+                        <div className="flex items-center gap-3 mb-1">
+                            <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-emerald-200/50">
+                                <Zap size={12} fill="currentColor" /> HR Hub
+                            </span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</span>
+                        </div>
+                        <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight leading-none">
+                            Personnel <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600">Command</span>
+                        </h1>
                     </div>
-                    <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight leading-none">
-                        Personnel <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600">Command</span>
-                    </h1>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">

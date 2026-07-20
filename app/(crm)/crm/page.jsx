@@ -9,6 +9,9 @@ import EmptyState from '@/components/ui/EmptyState';
 import Link from 'next/link';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 
+import WelcomeRoleCelebrationModal from '@/components/shared/WelcomeRoleCelebrationModal';
+import Image from 'next/image';
+
 const STATUS_COLOR = {
     new: 'bg-blue-500',
     contacted: 'bg-amber-500',
@@ -154,19 +157,31 @@ export default function CRMDashboard() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-gray-50/50 dark:bg-gray-900/50 transition-colors">
+            {/* First Time Welcome Celebration Modal */}
+            <WelcomeRoleCelebrationModal />
+
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-                        {isManager ? 'Sales Command Center' : 'My Sales Dashboard'}
-                    </h1>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">
-                        {isManager ? 'Real-time team pipeline visibility and revenue forecasting.' : 'Track your active leads and upcoming follow-ups.'}
-                    </p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200/60 dark:border-gray-800 pb-5">
+                <div className="flex items-center gap-3.5">
+                    <Image
+                        src="/logo.png"
+                        alt="InTrust Logo"
+                        width={42}
+                        height={42}
+                        className="object-contain"
+                    />
+                    <div>
+                        <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                            {isManager ? 'Sales Command Center' : 'My Sales Dashboard'}
+                        </h1>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-0.5">
+                            {isManager ? 'Real-time team pipeline visibility and revenue forecasting.' : 'Track your active leads and upcoming follow-ups.'}
+                        </p>
+                    </div>
                 </div>
                 <Link
                     href="/crm/leads"
-                    className="inline-flex items-center gap-2 bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg text-sm"
+                    className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20 text-sm"
                 >
                     <Plus size={16} /> New Lead
                 </Link>

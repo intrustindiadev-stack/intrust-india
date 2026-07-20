@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import ContactActions from '@/components/shared/ContactActions';
 
 const STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
 
@@ -347,18 +348,23 @@ function AddLeadDrawer({ onClose, onSave }) {
     );
 }
 
-function UpdateStatusDrawer({ lead, onClose, onUpdate }) {
+function UpdateStatusDrawer({ lead, salesTeam = [], isManager = false, onClose, onUpdate }) {
     const [status, setStatus] = useState(lead?.status || 'new');
+    const [assignedTo, setAssignedTo] = useState(lead?.assigned_to || '');
     const [notes, setNotes] = useState(lead?.notes || '');
     const [saving, setSaving] = useState(false);
 
     const handleSave = async () => {
         setSaving(true);
         try {
-            const { error } = await supabase.from('crm_leads').update({ status, notes, updated_at: new Date().toISOString() }).eq('id', lead.id);
+            const updates = { status, notes, updated_at: new Date().toISOString() };
+            if (isManager && assignedTo) {
+                updates.assigned_to = assignedTo;
+            }
+            const { error } = await supabase.from('crm_leads').update(updates).eq('id', lead.id);
             if (error) throw error;
             toast.success('Lead updated!');
-            onUpdate({ ...lead, status, notes });
+            onUpdate({ ...lead, ...updates });
             onClose();
         } catch (err) { toast.error(err.message); }
         finally { setSaving(false); }
@@ -371,16 +377,37 @@ function UpdateStatusDrawer({ lead, onClose, onUpdate }) {
                 <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                     <div>
                         <h2 className="text-lg font-bold text-gray-900">{lead?.contact_name || lead?.title}</h2>
-                        <p className="text-xs text-gray-400 mt-0.5">Update lead status & notes</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Update lead status, owner & notes</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors"><X size={18} className="text-gray-500" /></button>
                 </div>
                 <div className="flex-1 p-5 space-y-4 overflow-y-auto">
-                    <div className="bg-gray-50 rounded-2xl p-4 space-y-2 text-sm">
+                    <div className="bg-gray-50 rounded-2xl p-4 space-y-3 text-sm">
                         {lead?.phone && <p className="flex items-center gap-2 text-gray-600"><Phone size={13} className="text-gray-400" />{lead.phone}</p>}
                         {lead?.email && <p className="flex items-center gap-2 text-gray-600"><Mail size={13} className="text-gray-400" />{lead.email}</p>}
                         {lead?.source && <p className="flex items-center gap-2 text-gray-600"><MapPin size={13} className="text-gray-400" />Source: {lead.source}</p>}
+                        
+                        <div className="pt-2 border-t border-gray-200/60">
+                            <ContactActions phone={lead?.phone} email={lead?.email} name={lead?.contact_name || lead?.title} />
+                        </div>
                     </div>
+
+                    {isManager && salesTeam.length > 0 && (
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">Assigned Sales Executive</label>
+                            <select
+                                value={assignedTo}
+                                onChange={e => setAssignedTo(e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-gray-800"
+                            >
+                                <option value="">Unassigned</option>
+                                {salesTeam.map(user => (
+                                    <option key={user.id} value={user.id}>{user.full_name || user.email} ({user.role})</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     <div>
                         <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">Pipeline Status</label>
                         <div className="grid grid-cols-3 gap-2">
@@ -391,6 +418,7 @@ function UpdateStatusDrawer({ lead, onClose, onUpdate }) {
                             ))}
                         </div>
                     </div>
+
                     <div>
                         <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">Notes</label>
                         <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={4} placeholder="Add call notes, follow-up reminders..." className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
@@ -412,6 +440,7 @@ export default function LeadsPage() {
     const { profile } = useAuth();
     
     const [leads, setLeads] = useState([]);
+    const [salesTeam, setSalesTeam] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
@@ -419,9 +448,28 @@ export default function LeadsPage() {
     const [showImport, setShowImport] = useState(false);
     const [selectedLead, setSelectedLead] = useState(null);
 
+    const isManager = profile && ['sales_manager', 'admin', 'super_admin'].includes(profile.role);
+
+    const fetchSalesTeam = useCallback(async () => {
+        try {
+            const { data } = await supabase
+                .from('user_profiles')
+                .select('id, full_name, role, email')
+                .in('role', ['sales_exec', 'sales_manager', 'admin', 'super_admin'])
+                .order('full_name', { ascending: true });
+            if (data) setSalesTeam(data);
+        } catch (err) {
+            console.error('Failed to fetch sales team:', err);
+        }
+    }, []);
+
     const fetchLeads = useCallback(async () => {
         try {
-            let q = supabase.from('crm_leads').select('*').order('created_at', { ascending: false });
+            let q = supabase
+                .from('crm_leads')
+                .select('*')
+                .order('created_at', { ascending: false });
+
             if (statusFilter !== 'all') q = q.eq('status', statusFilter);
             
             // RBAC: Executives only see assigned leads
@@ -431,22 +479,29 @@ export default function LeadsPage() {
             
             const { data, error } = await q;
             if (error) throw error;
-            setLeads(data || []);
+
+            const leadsMapped = (data || []).map(l => ({
+                ...l,
+                user_profiles: l.assigned_to ? { full_name: salesTeam.find(s => s.id === l.assigned_to)?.full_name } : null
+            }));
+
+            setLeads(leadsMapped);
         } catch (err) {
             console.error(err);
             toast.error('Failed to load leads');
         } finally {
             setIsLoading(false);
         }
-    }, [statusFilter, profile]);
+    }, [statusFilter, profile, salesTeam]);
 
     useEffect(() => {
         fetchLeads();
+        fetchSalesTeam();
         const ch = supabase.channel('crm_leads_list')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_leads' }, fetchLeads)
             .subscribe();
         return () => supabase.removeChannel(ch);
-    }, [fetchLeads]);
+    }, [fetchLeads, fetchSalesTeam]);
 
     const filtered = leads.filter(l =>
         !search ||
@@ -465,14 +520,14 @@ export default function LeadsPage() {
             <AnimatePresence>
                 {showAdd && <AddLeadDrawer onClose={() => setShowAdd(false)} onSave={handleLeadAdded} />}
                 {showImport && <ImportLeadsDrawer onClose={() => setShowImport(false)} onSave={handleLeadsImported} />}
-                {selectedLead && <UpdateStatusDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdate={handleLeadUpdated} />}
+                {selectedLead && <UpdateStatusDrawer lead={selectedLead} salesTeam={salesTeam} isManager={isManager} onClose={() => setSelectedLead(null)} onUpdate={handleLeadUpdated} />}
             </AnimatePresence>
 
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Leads</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">{filtered.length} lead{filtered.length !== 1 ? 's' : ''} · tap a row to update status</p>
+                    <p className="text-sm text-gray-500 mt-0.5">{filtered.length} lead{filtered.length !== 1 ? 's' : ''} · tap a row to update status or assign owner</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <button onClick={fetchLeads} className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors shadow-sm">
@@ -567,7 +622,7 @@ export default function LeadsPage() {
                     <div className="space-y-3 lg:hidden">
                         {filtered.map(lead => (
                             <motion.div key={lead.id} layout onClick={() => router.push('/crm/leads/' + lead.id)}
-                                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 cursor-pointer hover:border-indigo-200 hover:shadow-md transition-all">
+                                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 cursor-pointer hover:border-indigo-200 hover:shadow-md transition-all space-y-3">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-center gap-3 min-w-0">
                                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-indigo-700 font-bold flex-shrink-0">
@@ -575,7 +630,7 @@ export default function LeadsPage() {
                                         </div>
                                         <div className="min-w-0">
                                             <p className="font-bold text-gray-900 text-sm truncate">{lead.contact_name || lead.title}</p>
-                                            {lead.phone && <p className="text-xs text-gray-400 flex items-center gap-1"><Phone size={10} />{lead.phone}</p>}
+                                            {lead.title && lead.contact_name && <p className="text-xs text-gray-400 truncate">{lead.title}</p>}
                                         </div>
                                     </div>
                                     <button 
@@ -586,7 +641,11 @@ export default function LeadsPage() {
                                         {lead.status}
                                     </button>
                                 </div>
-                                {lead.source && <p className="text-xs text-gray-400 mt-2 ml-13">Source: {lead.source}</p>}
+
+                                <div className="flex items-center justify-between border-t border-gray-50 pt-2 text-xs text-gray-500">
+                                    <span>Assigned: {lead.user_profiles?.full_name || 'Unassigned'}</span>
+                                    <ContactActions phone={lead.phone} email={lead.email} name={lead.contact_name || lead.title} compact />
+                                </div>
                             </motion.div>
                         ))}
                     </div>
@@ -596,12 +655,12 @@ export default function LeadsPage() {
                         <table className="w-full text-left">
                             <thead className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-semibold">
                                 <tr>
-                                    <th className="p-4 pl-6">Lead</th>
-                                    <th className="p-4">Contact</th>
-                                    <th className="p-4">Source</th>
+                                    <th className="p-4 pl-6">Lead Contact</th>
+                                    <th className="p-4">Contact Info</th>
+                                    <th className="p-4">Assigned Rep</th>
                                     <th className="p-4">Status</th>
-                                    <th className="p-4">Date</th>
-                                    <th className="p-4 pr-6">Action</th>
+                                    <th className="p-4">Actions</th>
+                                    <th className="p-4 pr-6">Date</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
@@ -622,28 +681,27 @@ export default function LeadsPage() {
                                             {lead.phone && <p className="text-xs text-gray-600 flex items-center gap-1"><Phone size={11} />{lead.phone}</p>}
                                             {lead.email && <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Mail size={11} />{lead.email}</p>}
                                         </td>
-                                        <td className="p-4 text-sm text-gray-500">{lead.source || '—'}</td>
+                                        <td className="p-4 text-xs font-semibold text-gray-700">
+                                            {lead.user_profiles?.full_name || 'Unassigned'}
+                                        </td>
                                         <td className="p-4">
                                             <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border capitalize ${STATUS_STYLE[lead.status] || 'bg-gray-50 border-gray-200 text-gray-600'}`}>
                                                 {lead.status}
                                             </span>
                                         </td>
-                                        <td className="p-4 text-xs text-gray-400">
-                                            {new Date(lead.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                        <td className="p-4">
+                                            <ContactActions phone={lead.phone} email={lead.email} name={lead.contact_name || lead.title} compact />
                                         </td>
-                                        <td className="p-4 pr-6 flex gap-2 justify-end">
+                                        <td className="p-4 pr-6 flex gap-2 justify-end items-center">
+                                            <span className="text-xs text-gray-400">
+                                                {new Date(lead.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                            </span>
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); }} 
                                                 className="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors opacity-0 group-hover:opacity-100"
                                                 title="Quick Edit"
                                             >
                                                 <Edit2 size={14} />
-                                            </button>
-                                            <button 
-                                                className="p-2 rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors opacity-0 group-hover:opacity-100"
-                                                title="View Details"
-                                            >
-                                                <ArrowUpRight size={14} />
                                             </button>
                                         </td>
                                     </tr>

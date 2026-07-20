@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import Link from 'next/link';
+import ContactActions from '@/components/shared/ContactActions';
 import { 
     TrendingUp, Users, CheckCircle, Clock, XCircle, 
     Phone, Mail, Plus, ArrowRight, Target, BarChart3
@@ -33,14 +34,32 @@ export default async function AdminCRMPage() {
 
     const [leadsRes, statsRes] = await Promise.all([
         supabase.from('crm_leads')
-            .select('id, title, contact_name, phone, email, status, pipeline_stage, created_at, source, assigned_to')
+            .select('*')
             .order('created_at', { ascending: false })
             .limit(20),
         supabase.from('crm_leads').select('status')
     ]);
 
-    const leads = leadsRes.data || [];
+    const leadsRaw = leadsRes.data || [];
     const allLeads = statsRes.data || [];
+
+    // Map assigned user profiles safely
+    const assignedIds = Array.from(new Set(leadsRaw.map(l => l.assigned_to).filter(Boolean)));
+    let profileMap = {};
+    if (assignedIds.length > 0) {
+        const { data: profiles } = await supabase
+            .from('user_profiles')
+            .select('id, full_name')
+            .in('id', assignedIds);
+        (profiles || []).forEach(p => {
+            profileMap[p.id] = p.full_name;
+        });
+    }
+
+    const leads = leadsRaw.map(l => ({
+        ...l,
+        user_profiles: l.assigned_to && profileMap[l.assigned_to] ? { full_name: profileMap[l.assigned_to] } : null
+    }));
     
     const statusCounts = allLeads.reduce((acc, l) => {
         acc[l.status] = (acc[l.status] || 0) + 1;
@@ -57,17 +76,11 @@ export default async function AdminCRMPage() {
         <div className="min-h-screen bg-[#F8FAFC] font-[family-name:var(--font-outfit)]">
             <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-5">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">CRM Overview</h1>
-                        <p className="text-gray-500 mt-1">Monitor the sales pipeline, leads, and team performance.</p>
+                        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">CRM Command Overview</h1>
+                        <p className="text-gray-500 text-sm mt-0.5">Comprehensive lead pipeline analytics, assigned executives, and lead management.</p>
                     </div>
-                    <Link
-                        href="/crm"
-                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-violet-600 text-white font-bold rounded-xl hover:opacity-90 transition-all text-sm shadow-lg shadow-blue-500/25"
-                    >
-                        Open CRM Panel <ArrowRight size={15} />
-                    </Link>
                 </div>
 
                 {/* KPI Cards */}
@@ -95,22 +108,22 @@ export default async function AdminCRMPage() {
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                     <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                         <div>
-                            <h2 className="text-xl font-bold text-gray-900">Recent Leads</h2>
-                            <p className="text-sm text-gray-500">Latest 20 leads across all sales reps</p>
+                            <h2 className="text-xl font-bold text-gray-900">Active Leads Pipeline</h2>
+                            <p className="text-sm text-gray-500">Overview of recent leads across all sales reps</p>
                         </div>
                         <Link href="/crm/leads" className="px-4 py-2 bg-blue-50 text-blue-700 font-semibold rounded-xl text-sm hover:bg-blue-100 transition-colors flex items-center gap-1.5">
-                            Full CRM <ArrowRight size={14} />
+                            Leads Directory <ArrowRight size={14} />
                         </Link>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-100">
                                 <tr>
-                                    <th className="p-4 pl-6">Lead</th>
+                                    <th className="p-4 pl-6">Lead Name</th>
                                     <th className="p-4">Contact</th>
-                                    <th className="p-4">Source</th>
-                                    <th className="p-4">Assigned To</th>
+                                    <th className="p-4">Assigned Rep</th>
                                     <th className="p-4">Status</th>
+                                    <th className="p-4">Actions</th>
                                     <th className="p-4 pr-6">Date</th>
                                 </tr>
                             </thead>
@@ -118,21 +131,27 @@ export default async function AdminCRMPage() {
                                 {leads.length > 0 ? leads.map(lead => (
                                     <tr key={lead.id} className="hover:bg-blue-50/20 transition-colors">
                                         <td className="p-4 pl-6">
-                                            <p className="font-semibold text-gray-900 text-sm">{lead.title || lead.contact_name}</p>
-                                            <p className="text-xs text-gray-400 mt-0.5">{lead.contact_name}</p>
+                                            <Link href={`/crm/leads/${lead.id}`} className="font-semibold text-gray-900 hover:text-indigo-600 transition-colors text-sm block">
+                                                {lead.contact_name || lead.title}
+                                            </Link>
+                                            {lead.title && lead.contact_name && <p className="text-xs text-gray-400 mt-0.5">{lead.title}</p>}
                                         </td>
                                         <td className="p-4">
                                             {lead.phone && <p className="text-xs text-gray-600 flex items-center gap-1"><Phone size={11} /> {lead.phone}</p>}
                                             {lead.email && <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Mail size={11} /> {lead.email}</p>}
                                         </td>
-                                        <td className="p-4 text-xs text-gray-500">{lead.source || '—'}</td>
                                         <td className="p-4">
-                                            <p className="text-xs font-medium text-gray-700">{lead.assigned_to ? `ID: ${lead.assigned_to.slice(0, 8)}…` : 'Unassigned'}</p>
+                                            <p className="text-xs font-semibold text-gray-800">
+                                                {lead.user_profiles?.full_name || (lead.assigned_to ? `ID: ${lead.assigned_to.slice(0, 8)}` : 'Unassigned')}
+                                            </p>
                                         </td>
                                         <td className="p-4">
                                             <span className={`inline-flex text-xs font-bold px-2.5 py-1 rounded-lg border capitalize ${STATUS_STYLE[lead.status] || 'bg-gray-50 border-gray-200'}`}>
                                                 {lead.status}
                                             </span>
+                                        </td>
+                                        <td className="p-4">
+                                            <ContactActions phone={lead.phone} email={lead.email} name={lead.contact_name || lead.title} compact />
                                         </td>
                                         <td className="p-4 pr-6 text-xs text-gray-500">
                                             {new Date(lead.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}

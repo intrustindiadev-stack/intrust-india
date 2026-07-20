@@ -9,6 +9,8 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
+import ContactActions from '@/components/shared/ContactActions';
 
 const STATUS_CONFIG = {
     pending:             { label: 'Pending',              color: 'text-amber-600 bg-amber-50 border-amber-200',     dot: 'bg-amber-500' },
@@ -152,6 +154,10 @@ function ApplicationDrawer({ app, onClose, onUpdate }) {
                         <div className="flex items-center gap-2 text-sm text-gray-700"><Phone size={14} className="text-gray-400" /> {app.phone}</div>
                         <div className="flex items-center gap-2 text-sm text-gray-700"><Mail size={14} className="text-gray-400" /> {app.email}</div>
                         {app.city && <div className="flex items-center gap-2 text-sm text-gray-700"><MapPin size={14} className="text-gray-400" /> {app.city}{app.state ? `, ${app.state}` : ''}</div>}
+                        
+                        <div className="pt-2 border-t border-gray-200/60">
+                            <ContactActions phone={app.phone} email={app.email} name={app.full_name} />
+                        </div>
                     </div>
 
                     {/* Professional Background */}
@@ -372,12 +378,21 @@ export default function AdminCareersPage() {
 
             <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Career Applications</h1>
-                        <p className="text-gray-500 mt-1">Review, approve, and grant panel access to applicants.</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200/60 pb-5">
+                    <div className="flex items-center gap-3.5">
+                        <Image
+                            src="/logo.png"
+                            alt="InTrust Logo"
+                            width={42}
+                            height={42}
+                            className="object-contain"
+                        />
+                        <div>
+                            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Career & Hire Approvals</h1>
+                            <p className="text-gray-500 text-sm mt-0.5">Review candidate pipeline, schedule interviews, and grant panel roles.</p>
+                        </div>
                     </div>
-                    <button onClick={fetchApplications} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-600 transition-all">
+                    <button onClick={fetchApplications} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-600 transition-all shadow-sm">
                         <RefreshCw size={15} /> Refresh
                     </button>
                 </div>
