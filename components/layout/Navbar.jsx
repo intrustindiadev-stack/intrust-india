@@ -17,6 +17,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [avatarError, setAvatarError] = useState(false);
     const { isAuthenticated, user, profile } = useAuth();
     const isGold = !!profile?.is_gold_verified;
 
@@ -81,7 +82,8 @@ export default function Navbar() {
 
     // Get user display info — delegates to shared helper that filters pseudo-emails
 
-    const hasImage = profile?.avatar_url; // Assuming avatar_url might exist in future or logic update
+    // Get user display info — delegates to shared helper that filters pseudo-emails
+    const hasImage = profile?.avatar_url && !avatarError;
 
     return (
         <>
@@ -177,14 +179,15 @@ export default function Navbar() {
                                                     : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
                                                     }`}
                                             >
-                                                <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                                <div className="relative w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                                                     {hasImage ? (
                                                         <Image
                                                             src={profile.avatar_url}
                                                             alt="Profile"
                                                             fill
                                                             sizes="40px"
-                                                            className="object-cover"
+                                                            className="object-cover rounded-full"
+                                                            onError={() => setAvatarError(true)}
                                                         />
                                                     ) : (
                                                         <span className="font-bold text-[#7A93AC] text-lg">
@@ -217,12 +220,13 @@ export default function Navbar() {
                                         <div
                                             className="w-8 h-8 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] cursor-pointer active:scale-95 transition-transform"
                                         >
-                                            <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                            <div className="relative w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                                                 {hasImage ? (
                                                     <img
                                                         src={profile.avatar_url}
                                                         alt="Profile"
-                                                        className="w-full h-full object-cover"
+                                                        className="w-full h-full object-cover rounded-full"
+                                                        onError={() => setAvatarError(true)}
                                                     />
                                                 ) : (
                                                     <span className="font-bold text-[#7A93AC] text-sm">
@@ -271,12 +275,13 @@ export default function Navbar() {
                                                 : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
                                                 }`}
                                         >
-                                            <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                            <div className="relative w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                                                 {hasImage ? (
                                                     <img
                                                         src={profile.avatar_url}
                                                         alt="Profile"
-                                                        className="w-full h-full object-cover"
+                                                        className="w-full h-full object-cover rounded-full"
+                                                        onError={() => setAvatarError(true)}
                                                     />
                                                 ) : (
                                                     <span className="font-bold text-[#7A93AC] text-sm">

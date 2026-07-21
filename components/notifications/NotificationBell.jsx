@@ -195,6 +195,7 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
             case 'product_approved':
             case 'product_rejected': return 'inventory_2';
             case 'admin_task': return 'assignment';
+            case 'hire_approval': return 'how_to_reg';
             default: break;
         }
 
@@ -350,6 +351,10 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                 } else {
                     router.push('/admin/tasks');
                 }
+                break;
+
+            case 'hire_approval':
+                if (isAdmin) router.push('/admin/careers');
                 break;
 
             // Chatbot

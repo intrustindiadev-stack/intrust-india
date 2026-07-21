@@ -12,6 +12,7 @@ import { displayInitial, displayEmail } from '@/lib/auth';
 export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, user, theme, toggleTheme, handleSignOut, menuItems, apiPath }) {
     const router = useRouter();
     const [orderHistoryOpen, setOrderHistoryOpen] = useState(false);
+    const [avatarError, setAvatarError] = useState(false);
 
     // Menu Item Variants for Staggered Animation
     const itemVariants = {
@@ -224,8 +225,15 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                             >
                                                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] flex-shrink-0">
                                                     <div className="relative w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                                                        {profile?.avatar_url ? (
-                                                            <Image src={profile.avatar_url} alt="Avatar" fill sizes="40px" className="object-cover" />
+                                                        {profile?.avatar_url && !avatarError ? (
+                                                            <Image 
+                                                                src={profile.avatar_url} 
+                                                                alt="Avatar" 
+                                                                fill 
+                                                                sizes="40px" 
+                                                                className="object-cover rounded-full" 
+                                                                onError={() => setAvatarError(true)}
+                                                            />
                                                         ) : (
                                                             <span className="font-bold text-[#7A93AC] text-sm">
                                                                 {displayInitial(profile, user)}

@@ -103,7 +103,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // Auth Middleware
 function authMiddleware(req, res, next) {
-    const key = req.headers['x-api-key'] || req.query.key;
+    let key = req.headers['x-api-key'] || req.query.key;
+    
+    // Support Authorization Bearer token header
+    const authHeader = req.headers['authorization'];
+    if (!key && authHeader && authHeader.startsWith('Bearer ')) {
+        key = authHeader.substring(7).trim();
+    }
+    
     if (!key || key !== API_KEY) {
         return res.status(401).json({ error: 'Unauthorized: Invalid API Key' });
     }
@@ -121,7 +128,7 @@ app.get('/mcp/sse', authMiddleware, async (req, res) => {
     }
     transports.clear();
 
-    const transport = new SSEServerTransport('/mcp/messages', res);
+    const transport = new SSEServerTransport('/api/mcp/messages', res);
     const sessionId = Math.random().toString(36).substring(7);
     transports.set(sessionId, transport);
     

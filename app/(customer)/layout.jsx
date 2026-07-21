@@ -14,26 +14,33 @@ export default function CustomerLayout({ children }) {
     useEffect(() => {
         if (loading || !user || !profile) return;
 
-        // If admin tries to access customer routes, redirect to admin panel
-        if (profile.role === 'admin' || profile.role === 'super_admin') {
-            router.replace('/admin');
-        }
+        // Redirect non-customer roles to their respective portals
+        const nonCustomerRoles = ['admin', 'super_admin', 'merchant', 'hr_manager', 'employee'];
+        const isSalesRole = profile.role?.startsWith('sales_');
+        
+        if (nonCustomerRoles.includes(profile.role) || isSalesRole) {
+            // Exceptions: merchant applying
+            if (profile.role === 'merchant' && pathname?.startsWith('/merchant-apply')) {
+                return;
+            }
 
-        // If merchant tries to access customer routes, redirect them to their dashboard
-        // Avoid redirect loops on merchant application pages
-        if (profile.role === 'merchant') {
-            if (pathname && !pathname.startsWith('/merchant-apply')) {
-                // Refresh the session once to pick up the corrected user_metadata.role,
-                // so middleware allows /merchant/* on the next navigation.
-                // Without this, the stale JWT role causes an infinite redirect loop.
-                if (!refreshAttemptedRef.current) {
-                    refreshAttemptedRef.current = true;
-                    supabase.auth.refreshSession().then(() => {
-                        router.replace('/merchant/dashboard');
-                    });
-                } else {
-                    router.replace('/merchant/dashboard');
-                }
+            // Determine target path
+            let targetPath = '/admin';
+            if (profile.role === 'merchant') targetPath = '/merchant/dashboard';
+            else if (profile.role === 'hr_manager') targetPath = '/hrm';
+            else if (profile.role === 'employee') targetPath = '/employee';
+            else if (isSalesRole) targetPath = '/crm';
+
+            // Refresh the session once to pick up the corrected user_metadata.role,
+            // so middleware allows the portal route on the next navigation.
+            // Without this, the stale JWT role causes an infinite redirect loop.
+            if (!refreshAttemptedRef.current) {
+                refreshAttemptedRef.current = true;
+                supabase.auth.refreshSession().then(() => {
+                    router.replace(targetPath);
+                });
+            } else {
+                router.replace(targetPath);
             }
         }
     }, [user, profile, loading, router, pathname]);
@@ -47,7 +54,8 @@ export default function CustomerLayout({ children }) {
     }
 
     // If a non-customer role is loaded but redirect hasn't fired yet, suppress render
-    if (profile && ['admin', 'super_admin', 'merchant'].includes(profile.role) && !pathname?.startsWith('/merchant-apply')) {
+    const nonCustomerRolesList = ['admin', 'super_admin', 'merchant', 'hr_manager', 'employee', 'sales_exec', 'sales_manager', 'sales_agent'];
+    if (profile && nonCustomerRolesList.includes(profile.role) && !pathname?.startsWith('/merchant-apply')) {
         return <div className="min-h-screen bg-[var(--bg-primary)]" />;
     }
 

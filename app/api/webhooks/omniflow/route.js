@@ -32,14 +32,17 @@ import { buildMerchantContext, formatMerchantContextForPrompt } from '@/lib/chat
  *
  * Receives all inbound WhatsApp events from Omniflow.
  * Handles two distinct flows:
- *  A) OTP reply -> complete phone linking (WhatsApp verified)
- *  B) Regular chat message -> fetch context -> AI reply (Omniflow Agent) -> PII filter -> send
+ *  1) Outbound message status updates — updates whatsapp_message_logs based on wamid.
+ *  2) Inbound chat messages — resolves audience (merchant/customer) from
+ *     user_channel_bindings, attempts a quick-reply match, then falls back
+ *     to the Omniflow AI Agent for a context-aware response.
  *
  * Security:
  *  - HMAC-SHA256 signature validation on every request
  *  - Idempotency via wamid dedup in whatsapp_message_logs
  *  - PII sanitisation on all outbound AI text
  *  - Audience resolution: Prefer merchant if role matches; fallback to customer.
+ *  - Per-user 10-second inbound cooldown to prevent AI inference flooding.
  */
 
 // Supabase admin client (bypasses RLS — service role only)
@@ -48,6 +51,23 @@ function getAdmin() {
   if (process.env.NODE_ENV === 'test') return createAdminClient();
   if (!_admin) _admin = createAdminClient();
   return _admin;
+}
+
+// -------------------------------------------------------------------
+// Per-user inbound rate limiter (10-second cooldown)
+// Prevents AI inference flooding from a single WhatsApp number.
+// -------------------------------------------------------------------
+const _lastMsgTs = new Map(); // userId → timestamp (ms)
+const INBOUND_COOLDOWN_MS = 10_000;
+
+function checkRateLimit(userId) {
+  const now = Date.now();
+  const last = _lastMsgTs.get(userId);
+  if (last && now - last < INBOUND_COOLDOWN_MS) {
+    return { limited: true, remaining: Math.ceil((INBOUND_COOLDOWN_MS - (now - last)) / 1000) };
+  }
+  _lastMsgTs.set(userId, now);
+  return { limited: false };
 }
 
 // -------------------------------------------------------------------
@@ -611,6 +631,25 @@ export async function POST(req) {
       contentPreview: userMessage,
       audience,
     });
+
+    // Per-user rate limit: skip AI if same user sends within 10s cooldown
+    const rl = checkRateLimit(userId);
+    if (rl.limited) {
+      const throttleMsg = `I'm still processing your previous message. Please wait ${rl.remaining} second${rl.remaining === 1 ? '' : 's'} before sending another.`;
+      try {
+        await safeSendAndLog({
+          userId,
+          phoneHash,
+          wamid: null,
+          normalisedPhone: normalised,
+          messageText: throttleMsg,
+          audience,
+        });
+      } catch (e) {
+        // non-blocking
+      }
+      return new NextResponse('OK', { status: 200 });
+    }
 
     if (audience === 'merchant') {
       await handleMerchantInbound({ userId, normalised, phoneHash, trimmedMessage: userMsg });

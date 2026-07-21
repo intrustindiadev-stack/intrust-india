@@ -55,6 +55,15 @@ export default async function Home() {
     if (profile?.role === 'merchant') {
       redirect('/merchant/dashboard');
     }
+    if (profile?.role === 'hr_manager') {
+      redirect('/hrm');
+    }
+    if (profile?.role?.startsWith('sales_') || profile?.role === 'sales_agent') {
+      redirect('/crm');
+    }
+    if (profile?.role === 'employee') {
+      redirect('/employee');
+    }
   }
 
   return (

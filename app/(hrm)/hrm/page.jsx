@@ -83,32 +83,32 @@ export default function HRMDashboard() {
         setStats(prev => ({ ...prev, pendingLeaves: Math.max(0, prev.pendingLeaves - 1) }));
 
         try {
+            const { data: { user } } = await supabase.auth.getUser();
             const { error } = await supabase.from('leave_requests').update({
                 status: action,
                 reviewed_at: new Date().toISOString(),
+                reviewed_by: user?.id
             }).eq('id', leaveId);
             
             if (error) throw error;
             toast.success(`Leave ${action} successfully`);
 
             // Audit log
-            supabase.auth.getUser().then(({ data: { user } }) => {
-                if (user) {
-                    supabase.from('audit_logs_hrm').insert({
-                        actor_id: user.id,
-                        actor_name: user.user_metadata?.full_name || 'System',
-                        action: `Leave ${action}`,
-                        table_name: 'leave_requests',
-                        record_id: leaveId,
-                        old_data: { status: 'pending' },
-                        new_data: { status: action },
-                        module: 'Leaves',
-                        severity: 'low'
-                    }).then(({ error: auditError }) => {
-                        if (auditError) console.warn('Audit log failed:', auditError);
-                    });
-                }
-            });
+            if (user) {
+                supabase.from('audit_logs_hrm').insert({
+                    actor_id: user.id,
+                    actor_name: user.user_metadata?.full_name || 'System',
+                    action: `Leave ${action}`,
+                    table_name: 'leave_requests',
+                    record_id: leaveId,
+                    old_data: { status: 'pending' },
+                    new_data: { status: action },
+                    module: 'Leaves',
+                    severity: 'low'
+                }).then(({ error: auditError }) => {
+                    if (auditError) console.warn('Audit log failed:', auditError);
+                });
+            }
 
         } catch (err) {
             console.error(err);

@@ -44,7 +44,7 @@ function JobCard({ job, index }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05, duration: 0.4 }}
             whileHover={{ y: -2 }}
-            className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-indigo-200 transition-all duration-300 p-5 sm:p-6 group cursor-pointer"
+            className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:border-indigo-200 dark:hover:border-indigo-500/50 transition-all duration-300 p-5 sm:p-6 group cursor-pointer"
         >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-start gap-4">
@@ -55,13 +55,13 @@ function JobCard({ job, index }) {
                         <Building2 size={22} className="text-indigo-600" />
                     </motion.div>
                     <div>
-                        <h2 className="text-base sm:text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{job.title}</h2>
+                        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{job.title}</h2>
                         <div className="flex flex-wrap gap-2 mt-2">
                             {job.category && <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${deptColor} capitalize`}>{job.category}</span>}
-                            {job.location && <span className="flex items-center gap-1 text-xs text-gray-500"><MapPin size={11} />{job.location}</span>}
-                            {job.commission_structure && <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 line-clamp-1 max-w-[180px]">{job.commission_structure.split('\n')[0]}</span>}
+                            {job.location && <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400"><MapPin size={11} />{job.location}</span>}
+                            {job.commission_structure && <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-100 dark:border-emerald-500/20 line-clamp-1 max-w-[180px]">{job.commission_structure.split('\n')[0]}</span>}
                         </div>
-                        {job.description && <p className="text-sm text-gray-500 mt-2 line-clamp-2">{job.description}</p>}
+                        {job.description && <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 line-clamp-2">{job.description}</p>}
                     </div>
                 </div>
                 <Link
@@ -106,7 +106,7 @@ export default function CareerPage() {
     });
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
             <Navbar />
             
             {/* ── HERO ── */}
@@ -195,7 +195,7 @@ export default function CareerPage() {
             </section>
 
             {/* ── BENEFITS ── */}
-            <section className="py-14 px-4 bg-white border-b border-gray-100">
+            <section className="py-14 px-4 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
                 <div className="max-w-5xl mx-auto">
                     <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
                         className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center mb-10">
@@ -207,13 +207,13 @@ export default function CareerPage() {
                                 initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }} transition={{ delay: i * 0.06 }}
                                 whileHover={{ y: -8, scale: 1.05 }}
-                                className="flex flex-col items-center gap-3 text-center p-6 rounded-[2rem] bg-white border border-gray-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all cursor-default group"
+                                className="flex flex-col items-center gap-3 text-center p-6 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl hover:border-indigo-100 dark:hover:border-indigo-500/50 transition-all cursor-default group"
                             >
                                 <div className={`w-14 h-14 rounded-2xl ${b.bg} flex items-center justify-center transition-transform duration-300 group-hover:rotate-6`}>
                                     <b.icon size={28} className={b.color} />
                                 </div>
-                                <p className="text-sm font-black text-gray-900">{b.label}</p>
-                                <p className="text-xs text-gray-500 font-medium leading-tight">{b.desc}</p>
+                                <p className="text-sm font-black text-gray-900 dark:text-white">{b.label}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium leading-tight">{b.desc}</p>
                             </motion.div>
                         ))}
                     </div>
@@ -221,7 +221,7 @@ export default function CareerPage() {
             </section>
 
             {/* ── TESTIMONIALS ── */}
-            <section className="py-14 px-4 bg-gray-50 border-b border-gray-100">
+            <section className="py-14 px-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-800">
                 <div className="max-w-5xl mx-auto">
                     <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
                         className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center mb-10">
@@ -233,17 +233,17 @@ export default function CareerPage() {
                                 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }} transition={{ delay: i * 0.08 }}
                                 whileHover={{ y: -4 }}
-                                className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                                className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all">
                                 <div className="flex gap-1 mb-4">
                                     {[...Array(5)].map((_, si) => <Star key={si} size={14} className="text-amber-400 fill-amber-400" />)}
                                 </div>
-                                <p className="text-sm text-gray-600 italic leading-relaxed mb-5">&quot;{t.quote}&quot;</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-300 italic leading-relaxed mb-5">&quot;{t.quote}&quot;</p>
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white font-bold">
                                         {t.avatar}
                                     </div>
                                     <div>
-                                        <p className="text-sm font-bold text-gray-900">{t.name}</p>
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{t.name}</p>
                                         <p className="text-xs text-gray-400">{t.role}</p>
                                     </div>
                                 </div>
@@ -260,7 +260,7 @@ export default function CareerPage() {
                     {departments.map(d => (
                         <motion.button key={d} onClick={() => setDeptFilter(d)}
                             whileTap={{ scale: 0.95 }}
-                            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all border ${deptFilter === d ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/30' : 'bg-white border-gray-200 text-gray-600 hover:border-indigo-200 hover:bg-indigo-50'}`}>
+                            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all border ${deptFilter === d ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/30' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-indigo-200 hover:bg-indigo-50 dark:hover:border-indigo-500/50 dark:hover:bg-gray-700'}`}>
                             {d === 'all' ? 'All Departments' : d}
                         </motion.button>
                     ))}
@@ -269,38 +269,38 @@ export default function CareerPage() {
                 {isLoading ? (
                     <div className="space-y-4">
                         {[...Array(4)].map((_, i) => (
-                            <div key={i} className="bg-white rounded-3xl border border-gray-100 p-5 sm:p-6 shadow-sm overflow-hidden relative">
-                                <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent z-10" />
+                            <div key={i} className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-5 sm:p-6 shadow-sm overflow-hidden relative">
+                                <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 dark:via-white/5 to-transparent z-10" />
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div className="flex items-start gap-4 flex-1">
-                                        <div className="w-12 h-12 rounded-2xl bg-gray-100 animate-pulse flex-shrink-0" />
+                                        <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-700 animate-pulse flex-shrink-0" />
                                         <div className="flex-1 w-full space-y-3 pt-1">
-                                            <div className="h-5 bg-gray-100 rounded-lg w-1/3 animate-pulse" />
+                                            <div className="h-5 bg-gray-100 dark:bg-gray-700 rounded-lg w-1/3 animate-pulse" />
                                             <div className="flex gap-2">
-                                                <div className="h-6 bg-gray-100 rounded-lg w-20 animate-pulse" />
-                                                <div className="h-6 bg-gray-100 rounded-lg w-24 animate-pulse" />
-                                                <div className="h-6 bg-gray-100 rounded-lg w-28 animate-pulse" />
+                                                <div className="h-6 bg-gray-100 dark:bg-gray-700 rounded-lg w-20 animate-pulse" />
+                                                <div className="h-6 bg-gray-100 dark:bg-gray-700 rounded-lg w-24 animate-pulse" />
+                                                <div className="h-6 bg-gray-100 dark:bg-gray-700 rounded-lg w-28 animate-pulse" />
                                             </div>
                                             <div className="space-y-2 mt-2">
-                                                <div className="h-3 bg-gray-100 rounded-full w-full max-w-lg animate-pulse" />
-                                                <div className="h-3 bg-gray-100 rounded-full w-3/4 max-w-md animate-pulse" />
+                                                <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full w-full max-w-lg animate-pulse" />
+                                                <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full w-3/4 max-w-md animate-pulse" />
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="w-32 h-11 bg-gray-100 rounded-2xl animate-pulse flex-shrink-0" />
+                                    <div className="w-32 h-11 bg-gray-100 dark:bg-gray-700 rounded-2xl animate-pulse flex-shrink-0" />
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : filtered.length === 0 ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        className="bg-white rounded-[3rem] border border-gray-100 p-20 text-center shadow-inner"
+                        className="bg-white dark:bg-gray-800 rounded-[3rem] border border-gray-100 dark:border-gray-700 p-20 text-center shadow-inner"
                     >
-                        <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                            <Search size={40} className="text-gray-300" />
+                        <div className="w-20 h-20 bg-gray-50 dark:bg-gray-900/50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                            <Search size={40} className="text-gray-300 dark:text-gray-600" />
                         </div>
-                        <p className="text-2xl font-black text-gray-900 tracking-tight">No open positions right now</p>
-                        <p className="text-gray-500 mt-2 font-medium">We&apos;re always growing. Check back soon!</p>
+                        <p className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">No open positions right now</p>
+                        <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">We&apos;re always growing. Check back soon!</p>
                     </motion.div>
                 ) : (
                     <AnimatePresence mode="popLayout">

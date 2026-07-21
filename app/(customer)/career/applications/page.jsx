@@ -32,13 +32,13 @@ function StatusTimeline({ currentStatus }) {
                 return (
                     <div key={s.key} className="flex items-center min-w-max">
                         <div className={`flex flex-col items-center`}>
-                            <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isCurrent ? s.bg + ' ring-2 ring-offset-2 ring-current ' + s.color : isActive ? 'bg-gray-200 text-gray-600' : 'bg-gray-100 text-gray-300'}`}>
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isCurrent ? s.bg + ' ring-2 ring-offset-2 ring-current ' + s.color : isActive ? 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600'}`}>
                                 <Icon size={16} />
                             </div>
-                            <p className={`text-xs font-semibold mt-1.5 whitespace-nowrap ${isCurrent ? s.color : isActive ? 'text-gray-600' : 'text-gray-300'}`}>{s.label}</p>
+                            <p className={`text-xs font-semibold mt-1.5 whitespace-nowrap ${isCurrent ? s.color : isActive ? 'text-gray-600 dark:text-gray-300' : 'text-gray-300 dark:text-gray-600'}`}>{s.label}</p>
                         </div>
                         {i < activeStages.length - 1 && (
-                            <div className={`h-0.5 w-8 sm:w-12 mx-1 -mt-4 ${i < currentIdx ? 'bg-gray-400' : 'bg-gray-200'}`} />
+                            <div className={`h-0.5 w-8 sm:w-12 mx-1 -mt-4 ${i < currentIdx ? 'bg-gray-400 dark:bg-gray-500' : 'bg-gray-200 dark:bg-gray-800'}`} />
                         )}
                     </div>
                 );
@@ -61,7 +61,7 @@ function ApplicationCard({ app, delay }) {
 
     return (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
-            className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all p-5 sm:p-6">
+            className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all p-5 sm:p-6">
 
             <div className="flex items-start justify-between gap-3 mb-5">
                 <div className="flex items-start gap-4">
@@ -69,8 +69,8 @@ function ApplicationCard({ app, delay }) {
                         <Icon size={22} className={stageConfig.color} />
                     </div>
                     <div>
-                        <h3 className="font-bold text-gray-900 text-lg">{app.role_category || 'General Application'}</h3>
-                        <p className="text-sm text-gray-500 mt-0.5">Applied {new Date(app.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                        <h3 className="font-bold text-gray-900 dark:text-white text-lg">{app.role_category || 'General Application'}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Applied {new Date(app.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                     </div>
                 </div>
                 <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border flex-shrink-0 ${
@@ -96,7 +96,7 @@ function ApplicationCard({ app, delay }) {
                 app.status === 'rejected' ? 'bg-rose-50 border border-rose-100' :
                 app.status === 'offer_sent' ? 'bg-indigo-50 border border-indigo-100' :
                 app.status === 'interview_scheduled' ? 'bg-violet-50 border border-violet-100' :
-                'bg-gray-50 border border-gray-100'
+                'bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700'
             }`}>
                 {app.status === 'pending' && <p className="text-sm text-gray-600">Your application is in the queue. Our HR team will review it shortly.</p>}
                 {app.status === 'under_review' && <p className="text-sm text-amber-700">Great news! Our HR team is actively reviewing your profile.</p>}
@@ -161,13 +161,13 @@ export default function ApplicationsHistoryPage() {
 
     if (!user) {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col">
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
                 <Navbar />
                 <div className="flex-1 flex items-center justify-center p-4">
                     <div className="text-center">
                         <div className="w-16 h-16 bg-indigo-100 rounded-3xl flex items-center justify-center mx-auto mb-4"><AlertCircle size={28} className="text-indigo-500" /></div>
-                        <h2 className="text-xl font-bold text-gray-900 mb-2">Sign In Required</h2>
-                        <p className="text-gray-500 mb-6">Please sign in to view your application history.</p>
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Sign In Required</h2>
+                        <p className="text-gray-500 dark:text-gray-400 mb-6">Please sign in to view your application history.</p>
                         <Link href="/auth/login" className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-colors">Sign In</Link>
                     </div>
                 </div>
@@ -177,21 +177,21 @@ export default function ApplicationsHistoryPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
             <Navbar />
             
             {/* Header */}
-            <div className="bg-white border-b border-gray-100 px-4 py-5">
+            <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 px-4 py-5">
                 <div className="max-w-3xl mx-auto">
                     <Link href="/career" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors">
                         <ArrowLeft size={16} /> Back to Jobs
                     </Link>
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-2xl font-extrabold text-gray-900">My Applications</h1>
-                            <p className="text-sm text-gray-500 mt-1">{applications.length} application{applications.length !== 1 ? 's' : ''} submitted</p>
+                            <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">My Applications</h1>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{applications.length} application{applications.length !== 1 ? 's' : ''} submitted</p>
                         </div>
-                        <button onClick={fetchApplications} className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50">
+                        <button onClick={fetchApplications} className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <RefreshCw size={16} className="text-gray-500" />
                         </button>
                     </div>
@@ -200,12 +200,12 @@ export default function ApplicationsHistoryPage() {
 
             <div className="max-w-3xl mx-auto px-4 py-8 space-y-5">
                 {isLoading ? (
-                    [...Array(2)].map((_, i) => <div key={i} className="h-64 bg-white rounded-3xl border border-gray-100 animate-pulse" />)
+                    [...Array(2)].map((_, i) => <div key={i} className="h-64 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 animate-pulse" />)
                 ) : applications.length === 0 ? (
-                    <div className="bg-white rounded-3xl border border-gray-100 p-16 text-center">
+                    <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-16 text-center">
                         <div className="text-5xl mb-4">📋</div>
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">No applications yet</h3>
-                        <p className="text-gray-500 mb-6">Browse open positions and apply to get started!</p>
+                        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">No applications yet</h3>
+                        <p className="text-gray-500 dark:text-gray-400 mb-6">Browse open positions and apply to get started!</p>
                         <Link href="/career" className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-colors">
                             Browse Jobs <ChevronRight size={16} />
                         </Link>

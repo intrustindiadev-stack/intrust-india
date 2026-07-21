@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { z } from 'zod';
 import {
     Briefcase, User, Phone, Mail, MapPin, Building2, GraduationCap,
     MessageSquare, ChevronRight, ChevronLeft, CheckCircle2, ArrowLeft,
@@ -38,6 +39,21 @@ const LANGUAGES = ['Hindi','English','Marathi','Bengali','Tamil','Telugu','Gujar
 
 const STEPS = ['Role', 'Personal', 'Experience', 'Submit'];
 
+const step2Schema = z.object({
+    full_name: z.string().trim().min(2, "Full name must be at least 2 characters"),
+    phone: z.string().trim().regex(/^[0-9]{10}$/, "Must be a valid 10-digit phone number"),
+    email: z.string().trim().email("Must be a valid email address"),
+    city: z.string().trim().optional(),
+    state: z.string().trim().optional(),
+});
+
+const step3Schema = z.object({
+    experience_years: z.coerce.number(),
+    current_occupation: z.string().trim().optional(),
+    education: z.string().trim().optional(),
+});
+
+
 function ProgressBar({ step }) {
     return (
         <div className="flex items-center gap-0 mb-8">
@@ -47,13 +63,13 @@ function ProgressBar({ step }) {
                 return (
                     <div key={label} className="flex items-center flex-1 last:flex-none">
                         <div className="flex flex-col items-center">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${done ? 'bg-emerald-500 text-white' : active ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-gray-200 text-gray-400'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${done ? 'bg-emerald-500 text-white' : active ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500'}`}>
                                 {done ? <Check size={14} /> : i + 1}
                             </div>
-                            <span className={`text-[10px] mt-1 font-semibold whitespace-nowrap ${active ? 'text-indigo-600' : done ? 'text-emerald-600' : 'text-gray-400'}`}>{label}</span>
+                            <span className={`text-[10px] mt-1 font-semibold whitespace-nowrap ${active ? 'text-indigo-600 dark:text-indigo-400' : done ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>{label}</span>
                         </div>
                         {i < STEPS.length - 1 && (
-                            <div className={`flex-1 h-0.5 mx-1 -mt-4 rounded-full transition-all duration-500 ${done ? 'bg-emerald-400' : 'bg-gray-200'}`} />
+                            <div className={`flex-1 h-0.5 mx-1 -mt-4 rounded-full transition-all duration-500 ${done ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-gray-700'}`} />
                         )}
                     </div>
                 );
@@ -62,39 +78,42 @@ function ProgressBar({ step }) {
     );
 }
 
-function InputField({ label, id, type = 'text', value, onChange, required, placeholder, icon: Icon }) {
+function InputField({ label, id, type = 'text', value, onChange, required, placeholder, icon: Icon, error }) {
     return (
         <div>
-            <label htmlFor={id} className="block text-sm font-semibold text-gray-700 mb-1.5">
+            <label htmlFor={id} className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                 {label} {required && <span className="text-rose-500">*</span>}
             </label>
             <div className="relative">
-                {Icon && <Icon size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />}
+                {Icon && <Icon size={15} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${error ? 'text-rose-400' : 'text-gray-400'}`} />}
                 <input
                     id={id} type={type} value={value}
                     onChange={e => onChange(e.target.value)} placeholder={placeholder}
-                    className={`w-full ${Icon ? 'pl-10' : 'pl-4'} pr-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm`}
+                    className={`w-full ${Icon ? 'pl-10' : 'pl-4'} pr-4 py-3 rounded-xl border ${error ? 'border-rose-300 bg-rose-50' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'} text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm`}
                 />
             </div>
+            {error && <p className="text-rose-500 text-xs font-semibold mt-1">{error}</p>}
         </div>
     );
 }
 
-function SelectField({ label, value, onChange, children }) {
+function SelectField({ label, value, onChange, children, error }) {
     return (
         <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{label}</label>
             <select value={value} onChange={e => onChange(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                className={`w-full px-4 py-3 rounded-xl border ${error ? 'border-rose-300 bg-rose-50' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'} text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm`}>
                 {children}
             </select>
+            {error && <p className="text-rose-500 text-xs font-semibold mt-1">{error}</p>}
         </div>
     );
 }
 
 function CareerApplyForm() {
     const searchParams = useSearchParams();
-    const { user, profile } = useAuth();
+    const router = useRouter();
+    const { user, profile, loading: authLoading } = useAuth();
 
     const [step, setStep] = useState(1);
     const [submitting, setSubmitting] = useState(false);
@@ -102,6 +121,54 @@ function CareerApplyForm() {
     const [roles, setRoles] = useState([]);
     const [loadingRoles, setLoadingRoles] = useState(true);
     const [resumeFile, setResumeFile] = useState(null);
+    const [errors, setErrors] = useState({});
+
+    // ── AUTH GATE ──────────────────────────────────────────────────
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.push(`/auth/login?callbackUrl=${encodeURIComponent('/career/apply')}`);
+        }
+    }, [user, authLoading, router]);
+
+    // Handle next step with zod validation
+    const handleNext = (e) => {
+        if (e) e.preventDefault();
+        setErrors({}); // clear previous errors
+        
+        if (step === 2) {
+            const result = step2Schema.safeParse(form);
+            if (!result.success) {
+                const newErrors = {};
+                result.error.issues.forEach(i => { newErrors[i.path[0]] = i.message; });
+                setErrors(newErrors);
+                toast.error('Please fix the errors to continue');
+                return;
+            }
+        }
+        
+        if (step === 3) {
+            const result = step3Schema.safeParse(form);
+            const newErrors = {};
+            let hasErrors = false;
+            
+            if (!result.success) {
+                result.error.issues.forEach(i => { newErrors[i.path[0]] = i.message; });
+                hasErrors = true;
+            }
+            if (!resumeFile) {
+                newErrors.resumeFile = "Resume is required";
+                hasErrors = true;
+            }
+            
+            if (hasErrors) {
+                setErrors(newErrors);
+                toast.error('Please fix the errors to continue');
+                return;
+            }
+        }
+        
+        setStep(s => s + 1);
+    };
 
     const [form, setForm] = useState({
         job_role_id: '',
@@ -161,7 +228,6 @@ function CareerApplyForm() {
     }, [profile, user]);
 
     const handleSubmit = async () => {
-        if (!user) { toast.error('Please login first'); return; }
         if (!form.job_role_id) { toast.error('Please select a role'); return; }
         if (!form.full_name || !form.phone || !form.email) { toast.error('Please fill all required fields'); return; }
         if (!resumeFile) { toast.error('Please upload your resume in Step 3'); return; }
@@ -170,16 +236,21 @@ function CareerApplyForm() {
         try {
             let resume_url = null;
             if (resumeFile) {
-                const fileExt = resumeFile.name.split('.').pop();
-                const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('resumes')
-                    .upload(fileName, resumeFile, { cacheControl: '3600', upsert: false });
-                
-                if (uploadError) throw uploadError;
-                
-                const { data: { publicUrl } } = supabase.storage.from('resumes').getPublicUrl(fileName);
-                resume_url = publicUrl;
+                const formData = new FormData();
+                formData.append('resume', resumeFile);
+
+                const uploadRes = await fetch('/api/hrm/upload-resume', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const uploadData = await uploadRes.json();
+
+                if (!uploadRes.ok) {
+                    throw new Error(uploadData.error || 'Failed to upload resume. Please try again.');
+                }
+
+                resume_url = uploadData.url;
             }
 
             const { error } = await supabase.from('career_applications').insert([{
@@ -208,26 +279,34 @@ function CareerApplyForm() {
         }
     };
 
+    if (authLoading || !user) {
+        return (
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
     // ── KYC CHECK ──────────────────────────────────────────────────
     if (user && profile && profile.kyc_status !== 'verified') {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col">
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
                 <Navbar />
                 <div className="flex-1 flex items-center justify-center px-4 py-32">
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                        className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8 max-w-md w-full text-center relative overflow-hidden">
+                        className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-xl p-8 max-w-md w-full text-center relative overflow-hidden">
                         <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-500 to-orange-600" />
-                        <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-amber-500 border border-amber-100 animate-pulse">
+                        <div className="w-16 h-16 bg-amber-50 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6 text-amber-500 border border-amber-100 dark:border-amber-700/50 animate-pulse">
                             <Shield size={32} />
                         </div>
-                        <h2 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">KYC Verification Required</h2>
-                        <p className="text-gray-500 text-sm leading-relaxed mb-6">
+                        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">KYC Verification Required</h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-6">
                             To ensure authenticity and secure our internal networks, all job applicants are required to complete their **KYC Verification** before applying for job roles at InTrust.
                         </p>
                         
-                        <div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 text-left space-y-2">
+                        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-2xl p-4 mb-6 border border-gray-100 dark:border-gray-700 text-left space-y-2">
                             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Why is this required?</p>
-                            <p className="text-xs text-gray-600 leading-relaxed">
+                            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                                 KYC verification connects your authenticated profile details (Aadhaar, PAN, and address proof) to your professional application, eliminating identity mismatch risks and preparing you for immediate onboarding once hired.
                             </p>
                         </div>
@@ -250,14 +329,14 @@ function CareerApplyForm() {
     // ── SUCCESS STATE ──────────────────────────────────────────────
     if (submitted) {
         return (
-            <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-emerald-50 to-teal-50">
+            <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800">
                 <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-md">
                     <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', damping: 15, delay: 0.1 }}
                         className="w-28 h-28 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-emerald-400/40">
                         <CheckCircle2 size={52} className="text-white" />
                     </motion.div>
-                    <h2 className="text-3xl font-extrabold text-gray-900 mb-3">Application Sent! 🎉</h2>
-                    <p className="text-gray-500 mb-2">We&apos;ve received your application for <strong className="text-gray-800">{selectedRole?.title || 'the role'}</strong>.</p>
+                    <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-3">Application Sent! 🎉</h2>
+                    <p className="text-gray-500 dark:text-gray-400 mb-2">We&apos;ve received your application for <strong className="text-gray-800 dark:text-gray-200">{selectedRole?.title || 'the role'}</strong>.</p>
                     <p className="text-sm text-gray-400 mb-8">Our HR team will review it and reach out within 2–3 business days.</p>
                     <div className="flex flex-col gap-3">
                         <Link href="/career/applications" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/25 hover:from-emerald-500 transition-all">
@@ -274,7 +353,7 @@ function CareerApplyForm() {
 
     // ── MAIN FORM ──────────────────────────────────────────────────
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
             <Navbar />
             <div className="pt-20 pb-32">
 
@@ -303,16 +382,17 @@ function CareerApplyForm() {
                 <div className="max-w-2xl mx-auto px-4 pt-8">
                     <ProgressBar step={step} />
 
-                    <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
+                    <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-xl overflow-hidden">
+                        <form onSubmit={(e) => { e.preventDefault(); step === 4 ? handleSubmit() : handleNext(e); }}>
                         <AnimatePresence mode="wait">
 
                             {/* ── STEP 1: Choose Role ── */}
                             {step === 1 && (
                                 <motion.div key="s1" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} className="p-6 sm:p-8">
-                                    <h2 className="text-xl font-bold text-gray-900 mb-1">Choose a Role</h2>
+                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Choose a Role</h2>
                                     <p className="text-sm text-gray-400 mb-6">Select the opportunity you&apos;d like to apply for. Tap to select & continue.</p>
                                     {loadingRoles ? (
-                                        <div className="space-y-3">{[...Array(4)].map((_, i) => <div key={i} className="h-20 rounded-2xl bg-gray-100 animate-pulse" />)}</div>
+                                        <div className="space-y-3">{[...Array(4)].map((_, i) => <div key={i} className="h-20 rounded-2xl bg-gray-100 dark:bg-gray-700 animate-pulse" />)}</div>
                                     ) : roles.length === 0 ? (
                                         <div className="text-center py-12 text-gray-400">
                                             <Briefcase size={40} className="mx-auto mb-3 opacity-30" />
@@ -331,13 +411,13 @@ function CareerApplyForm() {
                                                             setForm(prev => ({ ...prev, job_role_id: role.id, role_category: role.category }));
                                                             setTimeout(() => setStep(2), 200);
                                                         }}
-                                                        className={`w-full text-left flex items-start gap-4 p-4 rounded-2xl border-2 transition-all ${isSelected ? `border-indigo-500 bg-gradient-to-br ${cfg.light}` : 'border-gray-200 hover:border-indigo-200 hover:bg-gray-50'}`}>
+                                                        className={`w-full text-left flex items-start gap-4 p-4 rounded-2xl border-2 transition-all ${isSelected ? `border-indigo-500 bg-gradient-to-br ${cfg.light} dark:from-indigo-900/30 dark:to-violet-900/30` : 'border-gray-200 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-500/50 hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}>
                                                         <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center flex-shrink-0 shadow-md`}>
                                                             <Icon size={20} className="text-white" />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-start justify-between gap-2">
-                                                                <p className="font-bold text-gray-900 text-sm">{role.title}</p>
+                                                                <p className="font-bold text-gray-900 dark:text-white text-sm">{role.title}</p>
                                                                 {role.location && <span className="text-xs text-gray-400 flex items-center gap-1 flex-shrink-0"><MapPin size={10} />{role.location}</span>}
                                                             </div>
                                                             {role.commission_structure && (
@@ -357,15 +437,15 @@ function CareerApplyForm() {
                             {/* ── STEP 2: Personal Info ── */}
                             {step === 2 && (
                                 <motion.div key="s2" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} className="p-6 sm:p-8">
-                                    <h2 className="text-xl font-bold text-gray-900 mb-1">Personal Information</h2>
+                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Personal Information</h2>
                                     <p className="text-sm text-gray-400 mb-6">Your contact details so our team can reach you.</p>
                                     <div className="space-y-4">
-                                        <InputField label="Full Name" id="full_name" value={form.full_name} onChange={v => updateForm('full_name', v)} required placeholder="Your full name" icon={User} />
-                                        <InputField label="Phone Number" id="phone" type="tel" value={form.phone} onChange={v => updateForm('phone', v)} required placeholder="10-digit mobile number" icon={Phone} />
-                                        <InputField label="Email Address" id="email" type="email" value={form.email} onChange={v => updateForm('email', v)} required placeholder="your@email.com" icon={Mail} />
+                                        <InputField label="Full Name" id="full_name" value={form.full_name} onChange={v => updateForm('full_name', v)} required placeholder="Your full name" icon={User} error={errors.full_name} />
+                                        <InputField label="Phone Number" id="phone" type="tel" value={form.phone} onChange={v => updateForm('phone', v)} required placeholder="10-digit mobile number" icon={Phone} error={errors.phone} />
+                                        <InputField label="Email Address" id="email" type="email" value={form.email} onChange={v => updateForm('email', v)} required placeholder="your@email.com" icon={Mail} error={errors.email} />
                                         <div className="grid grid-cols-2 gap-3">
-                                            <InputField label="City" id="city" value={form.city} onChange={v => updateForm('city', v)} placeholder="Your city" icon={MapPin} />
-                                            <SelectField label="State" value={form.state} onChange={v => updateForm('state', v)}>
+                                            <InputField label="City" id="city" value={form.city} onChange={v => updateForm('city', v)} placeholder="Your city" icon={MapPin} error={errors.city} />
+                                            <SelectField label="State" error={errors.state} value={form.state} onChange={v => updateForm('state', v)}>
                                                 <option value="">Select state</option>
                                                 {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                                             </SelectField>
@@ -377,10 +457,10 @@ function CareerApplyForm() {
                             {/* ── STEP 3: Professional ── */}
                             {step === 3 && (
                                 <motion.div key="s3" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} className="p-6 sm:p-8">
-                                    <h2 className="text-xl font-bold text-gray-900 mb-1">Professional Background</h2>
+                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Professional Background</h2>
                                     <p className="text-sm text-gray-400 mb-6">Tell us about your experience and skills.</p>
                                     <div className="space-y-4">
-                                        <SelectField label="Years of Experience" value={form.experience_years} onChange={v => updateForm('experience_years', v)}>
+                                        <SelectField label="Years of Experience" error={errors.experience_years} value={form.experience_years} onChange={v => updateForm('experience_years', v)}>
                                             <option value="0">Fresher (0 years)</option>
                                             <option value="1">1 year</option>
                                             <option value="2">2 years</option>
@@ -388,14 +468,14 @@ function CareerApplyForm() {
                                             <option value="5">5+ years</option>
                                             <option value="10">10+ years</option>
                                         </SelectField>
-                                        <InputField label="Current Occupation" id="occupation" value={form.current_occupation} onChange={v => updateForm('current_occupation', v)} placeholder="e.g. Sales Executive, Student" icon={Building2} />
-                                        <InputField label="Highest Education" id="education" value={form.education} onChange={v => updateForm('education', v)} placeholder="e.g. B.Com, MBA, 12th Pass" icon={GraduationCap} />
+                                        <InputField label="Current Occupation" id="occupation" value={form.current_occupation} onChange={v => updateForm('current_occupation', v)} placeholder="e.g. Sales Executive, Student" icon={Building2} error={errors.current_occupation} />
+                                        <InputField label="Highest Education" id="education" value={form.education} onChange={v => updateForm('education', v)} placeholder="e.g. B.Com, MBA, 12th Pass" icon={GraduationCap} error={errors.education} />
                                         
                                         <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                                                 Resume / CV <span className="text-rose-500">*</span>
                                             </label>
-                                            <label className={`w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl border-2 border-dashed cursor-pointer transition-all ${resumeFile ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-500 hover:border-gray-300'}`}>
+                                            <label className={`w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl border-2 border-dashed cursor-pointer transition-all ${errors.resumeFile ? 'border-rose-300 bg-rose-50 text-rose-700' : resumeFile ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-500 hover:border-gray-300 dark:hover:border-gray-600'}`}>
                                                 <input 
                                                     type="file" 
                                                     accept=".pdf,.doc,.docx" 
@@ -413,11 +493,11 @@ function CareerApplyForm() {
                                                 />
                                                 {resumeFile ? (
                                                     <>
-                                                        <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                                                            <File size={20} className="text-indigo-600" />
+                                                        <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center flex-shrink-0">
+                                                            <File size={20} className="text-indigo-600 dark:text-indigo-400" />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="text-sm font-bold truncate">{resumeFile.name}</p>
+                                                            <p className="text-sm font-bold truncate dark:text-white">{resumeFile.name}</p>
                                                             <p className="text-xs opacity-70">{(resumeFile.size / 1024 / 1024).toFixed(2)} MB</p>
                                                         </div>
                                                         <button type="button" onClick={(e) => { e.preventDefault(); setResumeFile(null); }} className="p-2 hover:bg-indigo-200 rounded-lg text-indigo-600 transition-colors">
@@ -426,24 +506,25 @@ function CareerApplyForm() {
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                                                        <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center group-hover:bg-gray-200 dark:group-hover:bg-gray-600 transition-colors">
                                                             <UploadCloud size={20} />
                                                         </div>
                                                         <div className="flex-1">
-                                                            <p className="text-sm font-semibold text-gray-700">Upload your Resume</p>
+                                                            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Upload your Resume</p>
                                                             <p className="text-xs text-gray-400">PDF, DOC, DOCX up to 5MB</p>
                                                         </div>
                                                     </>
                                                 )}
                                             </label>
+                                            {errors.resumeFile && <p className="text-rose-500 text-xs font-semibold mt-1">{errors.resumeFile}</p>}
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><Globe size={14} /> Languages Known</label>
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><Globe size={14} /> Languages Known</label>
                                             <div className="flex flex-wrap gap-2">
                                                 {LANGUAGES.map(lang => (
                                                     <button key={lang} type="button" onClick={() => toggleLanguage(lang)}
-                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${form.languages_known.includes(lang) ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50'}`}>
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${form.languages_known.includes(lang) ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-gray-700/50'}`}>
                                                         {lang}
                                                     </button>
                                                 ))}
@@ -457,19 +538,19 @@ function CareerApplyForm() {
                             {/* ── STEP 4: Cover Message ── */}
                             {step === 4 && (
                                 <motion.div key="s4" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} className="p-6 sm:p-8">
-                                    <h2 className="text-xl font-bold text-gray-900 mb-1">Final Step</h2>
+                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Final Step</h2>
                                     <p className="text-sm text-gray-400 mb-6">Add a personal note and review your application.</p>
 
                                     {/* Role summary card */}
                                     {selectedRole && (
-                                        <div className={`p-4 rounded-2xl border-2 ${config.border} bg-gradient-to-br ${config.light} mb-5`}>
+                                        <div className={`p-4 rounded-2xl border-2 ${config.border} dark:border-gray-700 bg-gradient-to-br ${config.light} dark:from-gray-800 dark:to-gray-900 mb-5`}>
                                             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Applying for</p>
                                             <div className="flex items-center gap-3">
                                                 <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center flex-shrink-0`}>
                                                     <RoleIcon size={17} className="text-white" />
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-gray-900">{selectedRole.title}</p>
+                                                    <p className="font-bold text-gray-900 dark:text-white">{selectedRole.title}</p>
                                                     {selectedRole.commission_structure && (
                                                         <p className={`text-xs font-semibold ${config.accent}`}>{selectedRole.commission_structure.split('\n')[0]}</p>
                                                     )}
@@ -479,16 +560,16 @@ function CareerApplyForm() {
                                     )}
 
                                     <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-2">
                                             <MessageSquare size={14} /> Cover Message <span className="text-gray-400 font-normal text-xs">(optional but recommended)</span>
                                         </label>
                                         <textarea value={form.cover_message} onChange={e => updateForm('cover_message', e.target.value)} rows={5}
                                             placeholder="Tell us about your motivation, relevant experience, and why you're a great fit..."
-                                            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none text-sm" />
+                                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none text-sm" />
                                     </div>
 
-                                    <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
-                                        <p className="text-xs text-amber-700 font-medium flex items-start gap-2">
+                                    <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50">
+                                        <p className="text-xs text-amber-700 dark:text-amber-500 font-medium flex items-start gap-2">
                                             <Shield size={14} className="flex-shrink-0 mt-0.5" />
                                             Your information is secure and will only be used for the application review process. We&apos;ll contact you via phone/email if selected.
                                         </p>
@@ -496,19 +577,17 @@ function CareerApplyForm() {
                                 </motion.div>
                             )}
                         </AnimatePresence>
+                        </form>
 
                         {/* Navigation */}
                         {step > 1 && (
                             <div className="flex gap-3 px-6 sm:px-8 pb-6 sm:pb-8">
                                 <button onClick={() => setStep(s => s - 1)}
-                                    className="flex items-center gap-2 px-5 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-all text-sm">
+                                    className="flex items-center gap-2 px-5 py-3 rounded-2xl border-2 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-sm">
                                     <ChevronLeft size={16} /> Back
                                 </button>
                                 {step < 4 ? (
-                                    <button onClick={() => {
-                                        if (step === 2 && (!form.full_name || !form.phone || !form.email)) { toast.error('Please fill all required fields'); return; }
-                                        setStep(s => s + 1);
-                                    }} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold rounded-2xl transition-all text-sm shadow-lg shadow-indigo-500/20">
+                                    <button type="button" onClick={handleNext} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold rounded-2xl transition-all text-sm shadow-lg shadow-indigo-500/20">
                                         Continue <ChevronRight size={16} />
                                     </button>
                                 ) : (
