@@ -373,6 +373,7 @@ export default function CRMDashboard() {
                                     <span className="font-bold text-sm tracking-wide">Lead Directory</span>
                                 </div>
                                 <ArrowRight size={16} className="opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                            </Link>
                         </div>
                     </motion.div>
                 </div>
