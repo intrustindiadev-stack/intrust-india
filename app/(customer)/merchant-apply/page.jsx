@@ -62,7 +62,7 @@ function MerchantApplyPageInner() {
     const searchParams = useSearchParams();
     const { user, profile, loading: authLoading, refreshProfile } = useAuth();
     const supabase = createClient();
-    const [step, setStep] = useState(1);
+    const [step, setStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [checkingStatus, setCheckingStatus] = useState(true);
 
@@ -426,28 +426,112 @@ function MerchantApplyPageInner() {
                 {step < 3 && (
                     <div className="px-6 py-5 border-b border-black/5 dark:border-white/10 flex items-center justify-between bg-white/80 dark:bg-[#020617]/80 backdrop-blur-md z-20 sticky top-0 transition-colors">
                         <div className="flex items-center gap-3">
-                            <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+                            <button onClick={() => step > 0 ? setStep(step - 1) : router.back()} className="w-9 h-9 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
                                 <X size={18} />
                             </button>
                             <span className="font-bold text-slate-800 dark:text-slate-100 text-lg">Become a Partner</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Step {step} of 2</span>
-                            <div className="w-24 h-2.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${progress}%` }}
-                                    transition={{ duration: 0.5 }}
-                                    className="h-full bg-[#D4AF37] rounded-full"
-                                />
+                        {step > 0 ? (
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Step {step} of 2</span>
+                                <div className="w-24 h-2.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${progress}%` }}
+                                        transition={{ duration: 0.5 }}
+                                        className="h-full bg-[#D4AF37] rounded-full"
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="px-3 py-1 bg-amber-500/10 text-[#D4AF37] border border-[#D4AF37]/30 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                <Sparkles size={12} /> Partner Portal
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* Scrollable Content Area */}
                 <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-12 md:max-w-2xl md:mx-auto w-full custom-scrollbar relative">
                     <AnimatePresence mode="wait">
+                        {step === 0 && (
+                            <motion.div
+                                key="step0"
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 1.05 }}
+                                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                                className="py-4 space-y-10"
+                            >
+                                <div className="text-center space-y-4">
+                                    <div className="w-16 h-16 bg-gradient-to-br from-[#D4AF37] to-amber-600 rounded-3xl mx-auto flex items-center justify-center text-slate-900 shadow-xl shadow-[#D4AF37]/20 border border-amber-300/30">
+                                        <Store size={32} className="text-slate-950" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                                            Turn Your Business Into A <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-500 via-[#D4AF37] to-yellow-500">Gift Card Hub</span>
+                                        </h2>
+                                        <p className="text-slate-500 dark:text-slate-400 text-lg font-medium max-w-lg mx-auto mt-3">
+                                            Start reselling gift cards to millions of customers with instant bank settlements and zero fraud risk.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Key Highlights Metric Grid */}
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 text-center">
+                                        <p className="text-2xl font-black text-slate-900 dark:text-white">₹50K+</p>
+                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Monthly Potential</p>
+                                    </div>
+                                    <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 text-center">
+                                        <p className="text-2xl font-black text-amber-500">2,400+</p>
+                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Active Merchants</p>
+                                    </div>
+                                    <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 text-center">
+                                        <p className="text-2xl font-black text-emerald-500">0%</p>
+                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Fraud Liability</p>
+                                    </div>
+                                </div>
+
+                                {/* Perks List */}
+                                <div className="space-y-4">
+                                    <div className="p-5 bg-gradient-to-r from-slate-50 to-amber-500/5 dark:from-white/5 dark:to-amber-500/10 rounded-2xl border border-black/5 dark:border-white/10 flex items-start gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                                            <TrendingUp size={22} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 dark:text-white text-base">High Profit Margins</h3>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">Earn generous commissions on 2,800+ top brand gift cards.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-5 bg-gradient-to-r from-slate-50 to-emerald-500/5 dark:from-white/5 dark:to-emerald-500/10 rounded-2xl border border-black/5 dark:border-white/10 flex items-start gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                                            <Banknote size={22} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 dark:text-white text-base">Instant Auto-Settlements</h3>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">Direct payouts to your bank account with complete transparency.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Main "Let's Go!" Hero Action Button */}
+                                <div className="pt-4">
+                                    <button
+                                        onClick={() => setStep(1)}
+                                        className="w-full py-5 bg-[#D4AF37] hover:bg-opacity-90 text-[#020617] font-black rounded-2xl shadow-xl shadow-[#D4AF37]/25 transition-all flex items-center justify-center gap-3 text-2xl gold-glow hover:scale-[1.02] active:scale-[0.98]"
+                                    >
+                                        <span>Let's Go!</span>
+                                        <ArrowRight size={28} />
+                                    </button>
+                                    <p className="text-center text-xs font-bold text-slate-400 mt-3 uppercase tracking-wider">
+                                        Fast 2-Minute Partner Application 🚀
+                                    </p>
+                                </div>
+                            </motion.div>
+                        )}
+
                         {step === 1 && (
                             <motion.div
                                 key="step1"
@@ -643,8 +727,8 @@ function MerchantApplyPageInner() {
                     </AnimatePresence>
                 </div>
 
-                {/* Fixed Bottom Action Bar (App Style - Hide on Success) */}
-                {step < 3 && (
+                {/* Fixed Bottom Action Bar (App Style - Form steps only) */}
+                {step > 0 && step < 3 && (
                     <div className="p-8 pb-10 bg-white dark:bg-[#020617] border-t border-black/5 dark:border-white/10 flex items-center justify-between gap-6 z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] dark:shadow-none transition-colors">
                         <button
                             onClick={prevStep}

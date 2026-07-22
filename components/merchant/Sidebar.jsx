@@ -118,8 +118,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
                 <div className="p-6 flex items-center justify-between space-x-3 relative z-10 shrink-0">
                     <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-tr from-[#b5952f] to-[#f3e5ab] rounded-xl flex items-center justify-center shadow-[0_4px_15px_rgba(212,175,55,0.3)] relative overflow-hidden">
-                            <span className="material-icons-round text-[#020617] text-xl font-bold">diamond</span>
+                        <div className="w-10 h-10 bg-white dark:bg-[#020617] rounded-xl flex items-center justify-center p-1 shadow-md border border-slate-100 dark:border-white/10 relative overflow-hidden">
+                            <Image src="/icon.png" alt="InTrust" width={36} height={36} className="w-full h-full object-contain" />
                         </div>
                         <div>
                             <h1 className="font-display text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-[#D4AF37] dark:to-[#f3e5ab]">InTrust</h1>

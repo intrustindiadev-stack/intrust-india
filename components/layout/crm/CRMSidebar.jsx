@@ -75,14 +75,15 @@ export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
                 flex flex-col
             `}>
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white font-bold text-xl">
-                            C
+                    <Link href="/crm" className="flex items-center gap-3 group">
+                        <div className="relative w-10 h-10 flex-shrink-0 overflow-hidden rounded-xl shadow-md border border-gray-100 bg-white p-0.5">
+                            <Image src="/icon.png" alt="INTRUST" width={40} height={40} className="w-full h-full object-contain rounded-lg" />
                         </div>
-                        <span className="font-extrabold text-xl bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
-                            CRM
-                        </span>
-                    </div>
+                        <div>
+                            <div className="font-extrabold text-lg bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-indigo-600 to-indigo-500 tracking-tight">INTRUST</div>
+                            <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">CRM Sales Suite</div>
+                        </div>
+                    </Link>
                     <button onClick={() => setIsOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
                         <X size={20} className="text-gray-500" />
                     </button>

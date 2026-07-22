@@ -7,6 +7,8 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
+import SelfieCameraModal from '@/components/employee/SelfieCameraModal';
+
 const STATUS_META = {
     present:  { label: 'Present',  cls: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: CheckCircle },
     absent:   { label: 'Absent',   cls: 'bg-rose-50 text-rose-700 border-rose-100', icon: XCircle },
@@ -23,6 +25,8 @@ export default function EmployeeAttendancePage() {
     const [clockedIn, setClockedIn] = useState(false);
     const [todayRecord, setTodayRecord] = useState(null);
     const [clocking, setClocking] = useState(false);
+    const [showSelfieModal, setShowSelfieModal] = useState(false);
+    const [selfieAction, setSelfieAction] = useState('clock_in');
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -86,7 +90,17 @@ export default function EmployeeAttendancePage() {
         return R * c; // in metres
     };
 
-    const handleClockIn = async () => {
+    const triggerClockInModal = () => {
+        setSelfieAction('clock_in');
+        setShowSelfieModal(true);
+    };
+
+    const triggerClockOutModal = () => {
+        setSelfieAction('clock_out');
+        setShowSelfieModal(true);
+    };
+
+    const handleClockIn = async (selfieUrl) => {
         setClocking(true);
         try {
             const coords = await getCoordinates();
@@ -117,13 +131,14 @@ export default function EmployeeAttendancePage() {
             if (error) throw error;
             setTodayRecord(data);
             setClockedIn(true);
-            toast.success(isOnsite ? 'Clocked in successfully (On-Site)!' : 'Clocked in successfully (WFH/Off-Site)!');
+            setShowSelfieModal(false);
+            toast.success(isOnsite ? 'Clocked in successfully with selfie (On-Site)!' : 'Clocked in successfully with selfie (WFH/Off-Site)!');
             fetchAttendance();
         } catch (err) { toast.error(err.message); }
         finally { setClocking(false); }
     };
 
-    const handleClockOut = async () => {
+    const handleClockOut = async (selfieUrl) => {
         if (!todayRecord) return;
         setClocking(true);
         try {
@@ -150,7 +165,8 @@ export default function EmployeeAttendancePage() {
             }).eq('id', todayRecord.id);
             if (error) throw error;
             setClockedIn(false);
-            toast.success('Clocked out successfully!');
+            setShowSelfieModal(false);
+            toast.success('Clocked out successfully with selfie verification!');
             fetchAttendance();
         } catch (err) { toast.error(err.message); }
         finally { setClocking(false); }
@@ -197,9 +213,9 @@ export default function EmployeeAttendancePage() {
                             </>
                         )}
                     </div>
-                    <button onClick={clockedIn ? handleClockOut : handleClockIn} disabled={clocking || (todayRecord?.check_out)}
+                    <button onClick={clockedIn ? triggerClockOutModal : triggerClockInModal} disabled={clocking || (todayRecord?.check_out)}
                         className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg disabled:opacity-60 flex items-center gap-2 ${clockedIn ? 'bg-rose-500 hover:bg-rose-400 text-white shadow-rose-500/30' : 'bg-white text-gray-900 hover:bg-gray-100 shadow-black/10'}`}>
-                        {clocking ? <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> : clockedIn ? 'Clock Out' : 'Clock In'}
+                        {clocking ? <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> : clockedIn ? 'Clock Out (Live Selfie)' : 'Clock In (Live Selfie)'}
                     </button>
                 </div>
                 {todayRecord && (
@@ -288,6 +304,14 @@ export default function EmployeeAttendancePage() {
                     </div>
                 )}
             </div>
+
+            <SelfieCameraModal
+                isOpen={showSelfieModal}
+                onClose={() => setShowSelfieModal(false)}
+                onConfirm={selfieAction === 'clock_in' ? handleClockIn : handleClockOut}
+                actionType={selfieAction}
+                loading={clocking}
+            />
         </div>
     );
 }

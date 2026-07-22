@@ -5,7 +5,7 @@ import { Search, Filter, Plus, Phone, Mail, ArrowUpRight, X, ChevronDown, Refres
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
+import LeadDetailModal from '@/components/crm/LeadDetailModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
@@ -653,6 +653,13 @@ export default function LeadsPage() {
                     </div>
                 </>
             )}
+
+            <LeadDetailModal
+                lead={selectedLead}
+                isOpen={!!selectedLead}
+                onClose={() => setSelectedLead(null)}
+                onUpdate={fetchLeads}
+            />
         </div>
     );
 }

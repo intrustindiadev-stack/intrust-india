@@ -79,14 +79,15 @@ export default function EmployeeSidebar({ isOpen, setIsOpen, userProfile }) {
                 flex flex-col
             `}>
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20 text-white font-bold text-xl">
-                            E
+                    <Link href="/employee" className="flex items-center gap-3 group">
+                        <div className="relative w-10 h-10 flex-shrink-0 overflow-hidden rounded-xl shadow-md border border-gray-100 bg-white p-0.5">
+                            <Image src="/icon.png" alt="INTRUST" width={40} height={40} className="w-full h-full object-contain rounded-lg" />
                         </div>
-                        <span className="font-extrabold text-xl bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
-                            Workspace
-                        </span>
-                    </div>
+                        <div>
+                            <div className="font-extrabold text-lg bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-amber-600 to-amber-500 tracking-tight">INTRUST</div>
+                            <div className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Employee Portal</div>
+                        </div>
+                    </Link>
                     <button onClick={() => setIsOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
                         <X size={20} className="text-gray-500" />
                     </button>

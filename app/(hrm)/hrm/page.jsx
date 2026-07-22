@@ -10,7 +10,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
-import Skeleton from '@/components/ui/Skeleton';
+import AddEmployeeModal from '@/components/hrm/AddEmployeeModal';
+import LeaveActionModal from '@/components/hrm/LeaveActionModal';
 import EmptyState from '@/components/ui/EmptyState';
 import { toast } from 'react-hot-toast';
 
@@ -52,7 +53,9 @@ export default function HRMDashboard() {
     const [stats, setStats] = useState({ employees: 0, presentToday: 0, pendingLeaves: 0, newApplications: 0 });
     const [pendingLeaves, setPendingLeaves] = useState([]);
     const [recentApps, setRecentApps] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [showAddEmpModal, setShowAddEmpModal] = useState(false);
+    const [selectedLeave, setSelectedLeave] = useState(null);
+    const [showLeaveModal, setShowLeaveModal] = useState(false);
 
     const fetchStats = useCallback(async () => {
         try {
@@ -140,9 +143,12 @@ export default function HRMDashboard() {
                     <button className="p-3 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-500 hover:text-emerald-500 transition-all shadow-sm">
                         <Download size={20} />
                     </button>
-                    <Link href="/hrm/recruitment" className="inline-flex items-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3 rounded-2xl font-black text-sm shadow-xl shadow-gray-200 dark:shadow-none hover:bg-gray-800 dark:hover:bg-gray-100 transition-all active:scale-95">
+                    <button
+                        onClick={() => setShowAddEmpModal(true)}
+                        className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-black text-sm shadow-xl shadow-emerald-600/20 transition-all active:scale-95"
+                    >
                         <UserPlus size={18} /> New Hire
-                    </Link>
+                    </button>
                 </div>
             </div>
 
@@ -270,6 +276,19 @@ export default function HRMDashboard() {
                     </Link>
                 </div>
             </div>
+
+            <AddEmployeeModal
+                isOpen={showAddEmpModal}
+                onClose={() => setShowAddEmpModal(false)}
+                onSuccess={fetchStats}
+            />
+
+            <LeaveActionModal
+                leave={selectedLeave}
+                isOpen={showLeaveModal}
+                onClose={() => setShowLeaveModal(false)}
+                onActionSuccess={fetchStats}
+            />
         </div>
     );
 }

@@ -6,7 +6,8 @@ import { motion } from 'framer-motion';
 import { Users, Briefcase, TrendingUp, Clock, ArrowRight, Plus, Phone, Mail, Zap, Target, CheckCircle, Calendar, DollarSign, Activity, FileText, AlertTriangle } from 'lucide-react';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
-import Link from 'next/link';
+import NewLeadModal from '@/components/crm/NewLeadModal';
+import LeadDetailModal from '@/components/crm/LeadDetailModal';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 
 const STATUS_COLOR = {
@@ -152,6 +153,16 @@ export default function CRMDashboard() {
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
+    // Modal States
+    const [showNewLeadModal, setShowNewLeadModal] = useState(false);
+    const [selectedLead, setSelectedLead] = useState(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+
+    const handleOpenLead = (lead) => {
+        setSelectedLead(lead);
+        setShowDetailModal(true);
+    };
+
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-gray-50/50 dark:bg-gray-900/50 transition-colors">
             {/* Header */}
@@ -164,12 +175,12 @@ export default function CRMDashboard() {
                         {isManager ? 'Real-time team pipeline visibility and revenue forecasting.' : 'Track your active leads and upcoming follow-ups.'}
                     </p>
                 </div>
-                <Link
-                    href="/crm/leads"
-                    className="inline-flex items-center gap-2 bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg text-sm"
+                <button
+                    onClick={() => setShowNewLeadModal(true)}
+                    className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20 text-sm"
                 >
                     <Plus size={16} /> New Lead
-                </Link>
+                </button>
             </div>
 
             {/* KPI Cards */}
@@ -236,10 +247,10 @@ export default function CRMDashboard() {
                             ) : leads.length === 0 ? (
                                 <EmptyState icon={Briefcase} title="No leads yet" description="Your pipeline is currently empty. Start by adding your first lead." className="m-4 border-none bg-transparent" />
                             ) : leads.map(lead => (
-                                <Link
+                                <div
                                     key={lead.id}
-                                    href={`/crm/leads/${lead.id}`}
-                                    className="flex items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group"
+                                    onClick={() => handleOpenLead(lead)}
+                                    className="flex items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer"
                                 >
                                     <div className="flex items-center gap-4 min-w-0">
                                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center text-gray-700 dark:text-gray-300 font-bold text-sm flex-shrink-0 shadow-inner">
@@ -259,7 +270,7 @@ export default function CRMDashboard() {
                                         <span className={`w-1.5 h-1.5 rounded-full ${STATUS_COLOR[lead.status] || 'bg-gray-400'}`} />
                                         {lead.status}
                                     </span>
-                                </Link>
+                                </div>
                             ))}
                         </div>
                     </motion.div>
@@ -362,12 +373,23 @@ export default function CRMDashboard() {
                                     <span className="font-bold text-sm tracking-wide">Lead Directory</span>
                                 </div>
                                 <ArrowRight size={16} className="opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                            </Link>
                         </div>
                     </motion.div>
-
                 </div>
             </div>
+
+            <NewLeadModal
+                isOpen={showNewLeadModal}
+                onClose={() => setShowNewLeadModal(false)}
+                onSuccess={fetchData}
+            />
+
+            <LeadDetailModal
+                lead={selectedLead}
+                isOpen={showDetailModal}
+                onClose={() => setShowDetailModal(false)}
+                onUpdate={fetchData}
+            />
         </div>
     );
 }
