@@ -334,24 +334,24 @@ export default function EmployeesPage() {
             <div className="relative">
                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, dept, employee ID..."
-                    className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm" />
+                    className="w-full pl-11 pr-4 py-3 bg-white border-none rounded-[1.5rem] shadow-xl shadow-gray-200/40 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all" />
             </div>
 
             {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {[...Array(6)].map((_, i) => <div key={i} className="h-52 bg-white border border-gray-100 rounded-3xl animate-pulse" />)}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[...Array(6)].map((_, i) => <div key={i} className="h-52 bg-white border-none shadow-xl shadow-gray-200/40 rounded-[2rem] animate-pulse" />)}
                 </div>
             ) : filtered.length === 0 ? (
-                <div className="bg-white rounded-3xl border border-gray-100 p-16 text-center">
-                    <div className="w-16 h-16 bg-gray-100 rounded-3xl flex items-center justify-center mx-auto mb-4"><Users size={28} className="text-gray-400" /></div>
-                    <p className="font-semibold text-gray-700">No employees found</p>
-                    <p className="text-sm text-gray-400 mt-1">Hire someone from the Recruitment panel to see them here</p>
+                <div className="bg-white rounded-[2.5rem] border-none shadow-xl shadow-gray-200/40 p-16 text-center">
+                    <div className="w-16 h-16 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-4"><Users size={28} className="text-gray-400" /></div>
+                    <p className="font-bold text-gray-900 text-lg">No employees found</p>
+                    <p className="text-sm font-bold text-gray-400 mt-1 uppercase tracking-widest">Hire someone from the Recruitment panel to see them here</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filtered.map((emp, i) => (
                         <motion.div key={emp.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                            className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all p-5 group">
+                            className="bg-white rounded-[2rem] border-none shadow-xl shadow-gray-200/40 hover:shadow-2xl hover:shadow-emerald-200/40 hover:-translate-y-1 transition-all duration-300 p-6 group flex flex-col justify-between">
                             <div className="flex items-start justify-between mb-4">
                                 <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">

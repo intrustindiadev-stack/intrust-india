@@ -47,13 +47,14 @@ export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
         { name: 'Dashboard', icon: Home, path: '/crm' },
         { name: 'Leads', icon: Users, path: '/crm/leads' },
         { name: 'Pipeline', icon: Briefcase, path: '/crm/pipeline' },
+        { name: 'Tasks', icon: Briefcase, path: '/crm/tasks' },
     ];
 
     if (isManager) {
+        menuItems.push({ name: 'Performance', icon: BarChart2, path: '/crm/analytics' });
         menuItems.push({ name: 'Reports', icon: BarChart2, path: '/crm/reports' });
     }
 
-    menuItems.push({ name: 'My Profile', icon: UserCircle, path: '/crm/profile' });
     menuItems.push({ name: 'Settings', icon: Settings, path: '/crm/settings' });
     menuItems.push({ name: 'My Portal', icon: User, path: '/employee' });
 
@@ -69,26 +70,26 @@ export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
 
             {/* Sidebar */}
             <aside className={`
-                fixed top-0 left-0 h-full w-72 bg-white border-r border-gray-200 z-50 
+                fixed top-0 left-0 h-full w-72 bg-white/80 backdrop-blur-3xl border-none shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 
                 transform transition-transform duration-300 ease-in-out
                 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-                flex flex-col
+                flex flex-col font-[family-name:var(--font-outfit)]
             `}>
-                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                <div className="p-8 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white font-bold text-xl">
-                            C
+                        <div className="w-12 h-12 rounded-[1rem] bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/30 overflow-hidden">
+                            <Image src="/logo.png" width={24} height={24} alt="InTrust Logo" className="object-contain brightness-0 invert" />
                         </div>
-                        <span className="font-extrabold text-xl bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
+                        <span className="font-black text-2xl tracking-tight text-gray-900">
                             CRM
                         </span>
                     </div>
-                    <button onClick={() => setIsOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
+                    <button onClick={() => setIsOpen(false)} className="lg:hidden p-2 rounded-xl hover:bg-gray-100">
                         <X size={20} className="text-gray-500" />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
+                <div className="flex-1 overflow-y-auto px-6 py-2 space-y-1.5 scrollbar-hide">
                     {menuItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
@@ -99,41 +100,45 @@ export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
                                 href={item.path}
                                 onClick={() => setIsOpen(false)}
                                 className={`
-                                    flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-200 group
+                                    flex items-center gap-4 px-5 py-4 rounded-[1.25rem] font-bold transition-all duration-300 group relative overflow-hidden
                                     ${isActive 
-                                        ? 'bg-indigo-50 text-indigo-700' 
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                        ? 'text-white shadow-md shadow-indigo-500/20' 
+                                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                                     }
                                 `}
                             >
+                                {isActive && (
+                                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-[1.25rem] -z-10" />
+                                )}
                                 <Icon 
                                     size={20} 
                                     className={`
-                                        transition-colors duration-200
-                                        ${isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}
+                                        transition-colors duration-200 z-10
+                                        ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-indigo-500'}
                                     `} 
                                 />
-                                {item.name}
+                                <span className="z-10 tracking-wide">{item.name}</span>
                             </Link>
                         );
                     })}
                 </div>
 
                 {/* User Profile Footer */}
-                <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+                <div className="p-6 mt-auto">
                     <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-200/60 shadow-sm">
-                            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold border-2 border-white overflow-hidden shadow-sm relative">
+                        <div className="flex items-center gap-4 p-4 rounded-[1.5rem] bg-gray-50/50 hover:bg-gray-100/50 transition-colors cursor-pointer border border-transparent hover:border-gray-200/50">
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-700 font-black border-2 border-white shadow-sm relative overflow-hidden shrink-0">
                                 {userProfile?.avatar_url ? (
-                                    <Image src={userProfile.avatar_url || '/placeholder.png'} alt={userName} fill sizes="40px" className="object-cover" />
+                                    <Image src={userProfile.avatar_url || '/placeholder.png'} alt={userName} fill sizes="48px" className="object-cover" />
                                 ) : (
                                     getInitials(userName)
                                 )}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="text-gray-900 font-bold text-sm truncate">{userName}</div>
-                                <div className="text-gray-500 text-xs font-medium truncate flex items-center gap-1">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {displayEmail(userProfile?.email) || 'Online'}
+                                <div className="text-gray-900 font-black text-sm truncate">{userName}</div>
+                                <div className="text-indigo-500 text-xs font-bold truncate flex items-center gap-1.5 mt-0.5 uppercase tracking-wider">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" /> 
+                                    {userProfile?.role ? userProfile.role.replace('_', ' ') : 'Employee'}
                                 </div>
                             </div>
                         </div>
@@ -141,10 +146,10 @@ export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
                         <button
                             onClick={handleLogout}
                             disabled={isLoggingOut}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-gray-500 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-all font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-[1.25rem] text-gray-400 hover:text-white hover:bg-rose-500 hover:shadow-lg hover:shadow-rose-500/30 transition-all font-bold text-sm disabled:opacity-60 mt-2"
                         >
-                            {isLoggingOut ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}
-                            {isLoggingOut ? 'Logging out...' : 'Logout'}
+                            {isLoggingOut ? <Loader2 size={18} className="animate-spin" /> : <LogOut size={18} />}
+                            {isLoggingOut ? 'Logging out...' : 'Log out'}
                         </button>
                     </div>
                 </div>

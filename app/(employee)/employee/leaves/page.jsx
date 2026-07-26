@@ -10,14 +10,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 const LEAVE_TYPES = ['Casual Leave', 'Sick Leave', 'Earned Leave', 'Maternity/Paternity', 'Other'];
 
 const STATUS_STYLE = {
-    pending: { label: 'Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200', icon: Clock },
+    pending: { label: 'Pending', cls: 'bg-blue-50 text-blue-700 border-blue-200', icon: Clock },
     approved: { label: 'Approved', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle },
     rejected: { label: 'Rejected', cls: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircle },
 };
 
 const LEAVE_BALANCES = [
     { type: 'Casual Leave (CL)', key: 'Casual Leave', total: 12, color: 'from-blue-500 to-indigo-500' },
-    { type: 'Sick Leave (SL)', key: 'Sick Leave', total: 8, color: 'from-amber-500 to-orange-500' },
+    { type: 'Sick Leave (SL)', key: 'Sick Leave', total: 8, color: 'from-blue-500 to-indigo-500' },
     { type: 'Earned Leave (EL)', key: 'Earned Leave', total: 21, color: 'from-emerald-500 to-teal-500' },
 ];
 
@@ -109,7 +109,7 @@ export default function EmployeeLeavesPage() {
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Leave Type</label>
                                     <select value={form.leave_type} onChange={e => setForm(p => ({ ...p, leave_type: e.target.value }))}
-                                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all">
+                                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
                                         {LEAVE_TYPES.map(t => <option key={t}>{t}</option>)}
                                     </select>
                                 </div>
@@ -118,17 +118,17 @@ export default function EmployeeLeavesPage() {
                                         <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">From</label>
                                         <input type="date" value={form.from_date} onChange={e => setForm(p => ({ ...p, from_date: e.target.value }))}
                                             min={new Date().toISOString().split('T')[0]}
-                                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-gray-50 focus:ring-2 focus:ring-amber-500 outline-none transition-all" />
+                                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">To</label>
                                         <input type="date" value={form.to_date} onChange={e => setForm(p => ({ ...p, to_date: e.target.value }))}
                                             min={form.from_date || new Date().toISOString().split('T')[0]}
-                                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-gray-50 focus:ring-2 focus:ring-amber-500 outline-none transition-all" />
+                                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
                                     </div>
                                 </div>
                                 {form.from_date && form.to_date && (
-                                    <p className="text-sm text-amber-700 bg-amber-50 rounded-xl px-4 py-2 font-medium">
+                                    <p className="text-sm text-blue-700 bg-blue-50 rounded-xl px-4 py-2 font-medium">
                                         {diffDays(form.from_date, form.to_date)} day(s) requested
                                     </p>
                                 )}
@@ -136,12 +136,12 @@ export default function EmployeeLeavesPage() {
                                     <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Reason <span className="text-gray-400 font-normal normal-case">(optional)</span></label>
                                     <textarea rows={3} value={form.reason} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))}
                                         placeholder="Briefly explain the reason..."
-                                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:ring-2 focus:ring-amber-500 outline-none resize-none transition-all" />
+                                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all" />
                                 </div>
                                 <div className="flex gap-3 pt-2">
                                     <button onClick={() => setShowModal(false)} className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition-all">Cancel</button>
                                     <button onClick={handleSubmit} disabled={submitting}
-                                        className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-sm shadow-lg shadow-amber-500/30 disabled:opacity-60 flex items-center justify-center gap-2">
+                                        className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-sm shadow-lg shadow-blue-500/30 disabled:opacity-60 flex items-center justify-center gap-2">
                                         {submitting ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Submitting…</> : 'Submit Request'}
                                     </button>
                                 </div>
@@ -158,7 +158,7 @@ export default function EmployeeLeavesPage() {
                     <p className="text-sm text-gray-500 mt-0.5">Manage your time-off requests and view balance.</p>
                 </div>
                 <button onClick={() => setShowModal(true)}
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-amber-500/25 text-sm">
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/25 text-sm">
                     <Plus size={16} /> Request Leave
                 </button>
             </div>
@@ -195,7 +195,7 @@ export default function EmployeeLeavesPage() {
                         {[...Array(4)].map((_, i) => (
                             <div key={i} className="flex items-center justify-between px-5 py-4">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-amber-50" />
+                                    <div className="w-10 h-10 rounded-xl bg-blue-50" />
                                     <div className="space-y-1.5">
                                         <div className="h-3.5 bg-gray-200 rounded w-28" />
                                         <div className="h-2.5 bg-gray-100 rounded w-36" />
@@ -218,10 +218,10 @@ export default function EmployeeLeavesPage() {
                             const Icon = st.icon;
                             const days = diffDays(leave.from_date, leave.to_date);
                             return (
-                                <div key={leave.id} className="flex items-center justify-between px-5 py-4 hover:bg-amber-50/20 transition-colors">
+                                <div key={leave.id} className="flex items-center justify-between px-5 py-4 hover:bg-blue-50/20 transition-colors">
                                     <div className="flex items-center gap-3 min-w-0">
-                                        <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-                                            <Calendar size={18} className="text-amber-600" />
+                                        <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                            <Calendar size={18} className="text-blue-600" />
                                         </div>
                                         <div className="min-w-0">
                                             <p className="font-semibold text-gray-900 text-sm">{leave.leave_type}</p>

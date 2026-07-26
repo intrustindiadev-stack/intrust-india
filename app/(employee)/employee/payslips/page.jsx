@@ -48,7 +48,7 @@ export default function EmployeePayslipsPage() {
             {/* Stats */}
             {latestPaid && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-3xl p-5 text-white shadow-lg">
+                    <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl p-5 text-white shadow-lg">
                         <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center mb-3"><TrendingUp size={20} /></div>
                         <p className="text-white/70 text-xs font-bold uppercase tracking-widest">Last Salary</p>
                         <p className="text-3xl font-black mt-1">₹{latestPaid.net_salary?.toLocaleString('en-IN')}</p>
@@ -70,7 +70,7 @@ export default function EmployeePayslipsPage() {
                         [...Array(3)].map((_, i) => <div key={i} className="h-24 bg-white border border-gray-100 rounded-3xl animate-pulse" />)
                     ) : payslips.length === 0 ? (
                         <div className="bg-white rounded-3xl border border-gray-100 p-16 text-center">
-                            <div className="w-14 h-14 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-4"><FileText size={24} className="text-amber-500" /></div>
+                            <div className="w-14 h-14 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4"><FileText size={24} className="text-blue-500" /></div>
                             <p className="font-semibold text-gray-700">No payslips yet</p>
                             <p className="text-sm text-gray-400 mt-1">Your salary records will appear here once processed by HR</p>
                         </div>
@@ -78,7 +78,7 @@ export default function EmployeePayslipsPage() {
                         <motion.div key={slip.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
                             className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row justify-between sm:items-center gap-4 group">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform flex-shrink-0">
+                                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform flex-shrink-0">
                                     <FileText size={22} />
                                 </div>
                                 <div>
@@ -93,13 +93,13 @@ export default function EmployeePayslipsPage() {
                             <div className="flex items-center justify-between sm:justify-end gap-5 border-t sm:border-0 border-gray-100 pt-3 sm:pt-0">
                                 <div className="text-right">
                                     <p className="text-lg font-bold text-gray-900">₹{slip.net_salary?.toLocaleString('en-IN')}</p>
-                                    <span className={`text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-md ${slip.status === 'paid' ? 'bg-emerald-50 text-emerald-600' : slip.status === 'processed' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
+                                    <span className={`text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-md ${slip.status === 'paid' ? 'bg-emerald-50 text-emerald-600' : slip.status === 'processed' ? 'bg-sky-50 text-sky-600' : 'bg-blue-50 text-blue-600'}`}>
                                         {slip.status}
                                     </span>
                                 </div>
                                 {slip.payslip_url ? (
                                     <a href={slip.payslip_url} download target="_blank" rel="noreferrer"
-                                        className="p-2.5 text-amber-600 hover:bg-amber-50 rounded-xl transition-colors border border-amber-100">
+                                        className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors border border-blue-100">
                                         <Download size={18} />
                                     </a>
                                 ) : (
@@ -114,8 +114,8 @@ export default function EmployeePayslipsPage() {
 
                 {/* Info Card */}
                 <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden h-max">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl -mr-10 -mt-10" />
-                    <AlertCircle size={28} className="text-amber-400 mb-3" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl -mr-10 -mt-10" />
+                    <AlertCircle size={28} className="text-blue-400 mb-3" />
                     <h3 className="font-bold mb-2">Tax & Deductions</h3>
                     <p className="text-sm text-gray-300 leading-relaxed mb-4">
                         For queries on TDS, PF deductions, or Form 16, contact the HR department directly.

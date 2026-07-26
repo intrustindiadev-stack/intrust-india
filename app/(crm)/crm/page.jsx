@@ -36,21 +36,21 @@ function StatCard({ label, value, icon: Icon, gradient, delay = 0, trend }) {
         <motion.div
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay }}
-            className={`relative overflow-hidden rounded-3xl p-6 text-white bg-gradient-to-br ${gradient} shadow-lg shadow-${gradient.split('-')[1]}-500/20`}
+            className={`relative overflow-hidden rounded-[2rem] p-6 text-white bg-gradient-to-br ${gradient} shadow-2xl shadow-${gradient.split('-')[1]}-500/20 hover:-translate-y-1 transition-all duration-300`}
         >
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
             <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-black/10 rounded-full blur-2xl" />
             <div className="relative z-10 flex justify-between items-start">
                 <div>
-                    <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-4 border border-white/20">
-                        <Icon size={20} className="text-white drop-shadow-md" />
+                    <div className="w-12 h-12 rounded-[1rem] bg-white/20 backdrop-blur-md flex items-center justify-center mb-4 border border-white/20 shadow-inner">
+                        <Icon size={24} className="text-white drop-shadow-md" />
                     </div>
                     <p className="text-white/80 text-xs font-bold uppercase tracking-widest">{label}</p>
-                    <p className="text-3xl font-black mt-1 tracking-tight drop-shadow-md">{value}</p>
+                    <p className="text-4xl font-black mt-1 tracking-tight drop-shadow-md">{value}</p>
                 </div>
                 {trend && (
                     <div className="flex flex-col items-end">
-                        <span className="flex items-center gap-1 text-sm font-bold bg-white/20 backdrop-blur-md px-2 py-1 rounded-lg border border-white/20">
+                        <span className="flex items-center gap-1 text-sm font-bold bg-white/20 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/20 shadow-sm">
                             <TrendingUp size={14} /> {trend}
                         </span>
                     </div>
@@ -164,36 +164,49 @@ export default function CRMDashboard() {
     const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-gray-50/50 dark:bg-gray-900/50 transition-colors">
-            {/* First Time Welcome Celebration Modal */}
-            <WelcomeRoleCelebrationModal />
+        <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-[#F8FAFC] dark:bg-gray-900 relative">
+            {/* Background elements */}
+            <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-indigo-50/80 dark:from-indigo-900/20 to-transparent pointer-events-none" />
+            <div className="absolute top-20 right-0 w-96 h-96 bg-purple-200/40 dark:bg-purple-900/20 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute top-40 left-0 w-96 h-96 bg-blue-200/40 dark:bg-blue-900/20 rounded-full blur-[100px] pointer-events-none" />
 
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200/60 dark:border-gray-800 pb-5">
-                <div className="flex items-center gap-3.5">
-                    <Image
-                        src="/logo.png"
-                        alt="InTrust Logo"
-                        width={42}
-                        height={42}
-                        className="object-contain"
-                    />
-                    <div>
-                        <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-                            {isManager ? 'Sales Command Center' : 'My Sales Dashboard'}
-                        </h1>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-0.5">
-                            {isManager ? 'Real-time team pipeline visibility and revenue forecasting.' : 'Track your active leads and upcoming follow-ups.'}
-                        </p>
-                    </div>
-                </div>
-                <Link
-                    href="/crm/leads"
-                    className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20 text-sm"
+            <div className="relative z-10 space-y-8 max-w-7xl mx-auto">
+                {/* First Time Welcome Celebration Modal */}
+                <WelcomeRoleCelebrationModal />
+
+                {/* Header Graphic Banner */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} 
+                    className="relative w-full rounded-[2.5rem] bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 p-8 sm:p-12 overflow-hidden shadow-2xl shadow-indigo-600/30 text-white flex flex-col md:flex-row justify-between items-center gap-8"
                 >
-                    <Plus size={16} /> New Lead
-                </Link>
-            </div>
+                    {/* Abstract Graphic Elements */}
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+                    <div className="absolute bottom-0 left-1/2 w-64 h-64 bg-indigo-400/30 rounded-full blur-3xl transform -translate-x-1/2 pointer-events-none" />
+                    <Image src="/images/hero-bg-glass.png" alt="Overlay" fill className="object-cover opacity-30 mix-blend-overlay pointer-events-none" />
+
+                    <div className="relative z-10 flex flex-col gap-4 max-w-2xl">
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-white text-xs font-black uppercase tracking-widest w-fit border border-white/20 shadow-lg">
+                            <Target size={14} /> CRM Workspace
+                        </div>
+                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight drop-shadow-md">
+                            Good Morning, <br className="hidden sm:block"/>
+                            <span className="text-indigo-200">{isManager ? 'Sales Leader' : 'Champion'}!</span>
+                        </h1>
+                        <p className="text-sm font-medium text-indigo-100 mt-2 max-w-xl opacity-90 leading-relaxed">
+                            {isManager 
+                                ? 'Here is your real-time command center. Track team pipeline visibility, analytics, and revenue forecasting.' 
+                                : "You have active leads waiting. Let's close some deals today and crush your targets."}
+                        </p>
+                        <div className="mt-4">
+                            <Link
+                                href="/crm/leads"
+                                className="inline-flex items-center gap-2 bg-white text-indigo-600 hover:bg-gray-50 px-8 py-4 rounded-2xl font-black transition-all shadow-xl shadow-black/10 text-sm hover:-translate-y-1 hover:shadow-2xl"
+                            >
+                                <Plus size={18} strokeWidth={3} /> Add New Lead
+                            </Link>
+                        </div>
+                    </div>
+                </motion.div>
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -214,11 +227,11 @@ export default function CRMDashboard() {
                 <div className="lg:col-span-2 space-y-6 sm:space-y-8">
                     
                     {/* Revenue Funnel Chart */}
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 sm:p-6">
-                        <div className="flex items-center justify-between mb-6">
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-xl shadow-gray-200/40 dark:shadow-black/20 p-6 sm:p-8 border-none">
+                        <div className="flex items-center justify-between mb-8">
                             <div>
-                                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><Activity size={18} className="text-indigo-500" /> Pipeline Funnel</h2>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Lead progression across stages</p>
+                                <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2"><Activity size={20} className="text-indigo-500" /> Pipeline Funnel</h2>
+                                <p className="text-xs text-gray-400 font-bold tracking-wide mt-1 uppercase">Lead progression across stages</p>
                             </div>
                         </div>
                         <div className="h-64 w-full">
@@ -243,17 +256,17 @@ export default function CRMDashboard() {
                     </motion.div>
 
                     {/* Recent Leads */}
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                        <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-gray-700">
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-xl shadow-gray-200/40 dark:shadow-black/20 overflow-hidden border-none">
+                        <div className="flex justify-between items-center p-8 pb-4">
                             <div>
-                                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent Leads</h2>
-                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Latest additions to your pipeline</p>
+                                <h2 className="text-xl font-black text-gray-900 dark:text-white">Recent Leads</h2>
+                                <p className="text-xs font-bold text-gray-400 tracking-wide mt-1 uppercase">Latest additions to your pipeline</p>
                             </div>
-                            <Link href="/crm/leads" className="text-sm font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-lg transition-colors">
+                            <Link href="/crm/leads" className="text-sm font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2 rounded-xl transition-colors hover:bg-indigo-100">
                                 View All
                             </Link>
                         </div>
-                        <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                        <div className="divide-y divide-gray-50/50 dark:divide-gray-700/30 px-4 pb-4">
                             {isLoading ? (
                                 [...Array(4)].map((_, i) => <div key={i} className="p-5 flex items-center gap-4"><Skeleton className="w-10 h-10 rounded-xl" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-3 w-1/4" /></div></div>)
                             ) : leads.length === 0 ? (
@@ -293,15 +306,17 @@ export default function CRMDashboard() {
                     
                     {/* Manager Exclusive: Team Overview */}
                     {isManager && (
-                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }} className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden relative">
-                            <div className="p-6">
-                                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                                    <Users size={18} className="text-blue-500" /> Team Overview
+                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }} className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-xl shadow-gray-200/40 dark:shadow-black/20 overflow-hidden relative border-none">
+                            <div className="p-8">
+                                <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2 mb-6">
+                                    <Users size={20} className="text-blue-500" /> Team Overview
                                 </h2>
                                 
                                 {unassignedCount > 0 ? (
-                                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 flex items-start gap-3 mb-4">
-                                        <AlertTriangle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+                                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-none rounded-[1.5rem] p-5 flex items-start gap-4 mb-6 shadow-inner">
+                                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm">
+                                            <AlertTriangle size={20} className="text-amber-500" />
+                                        </div>
                                         <div>
                                             <h3 className="text-sm font-bold text-amber-800 dark:text-amber-400">Action Required</h3>
                                             <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">There are {unassignedCount} leads in the pool waiting to be assigned to executives.</p>
@@ -335,11 +350,11 @@ export default function CRMDashboard() {
                     )}
 
                     {/* Actionable Tasks Widget */}
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl -mr-10 -mt-10" />
-                        <div className="flex items-center justify-between mb-5 relative z-10">
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-xl shadow-gray-200/40 dark:shadow-black/20 p-8 relative overflow-hidden border-none">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
+                        <div className="flex items-center justify-between mb-6 relative z-10">
                             <div>
-                                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><Calendar size={18} className="text-amber-500" /> {isManager ? 'Team Tasks' : 'Upcoming Tasks'}</h2>
+                                <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2"><Calendar size={20} className="text-amber-500" /> {isManager ? 'Team Tasks' : 'Upcoming Tasks'}</h2>
                             </div>
                         </div>
                         
@@ -390,6 +405,7 @@ export default function CRMDashboard() {
                     </motion.div>
 
                 </div>
+            </div>
             </div>
         </div>
     );

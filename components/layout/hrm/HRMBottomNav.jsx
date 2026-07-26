@@ -11,7 +11,6 @@ export default function HRMBottomNav({ isSidebarOpen }) {
         { label: 'Home', icon: Home, href: '/hrm' },
         { label: 'Users', icon: Users, href: '/hrm/employees' },
         { label: 'Clock', icon: Clock, href: '/hrm/attendance' },
-        { label: 'Profile', icon: UserCircle, href: '/hrm/profile' },
         { label: 'Settings', icon: Settings, href: '/hrm/settings' },
     ];
 

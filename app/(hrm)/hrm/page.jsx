@@ -26,11 +26,11 @@ function StatCard({ label, value, icon: Icon, color, subValue, trend, delay = 0 
     return (
         <motion.div
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
-            className="bg-white dark:bg-gray-800 rounded-[2rem] p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-none transition-all group"
+            className="bg-white dark:bg-gray-800 rounded-[2rem] p-6 border-none shadow-xl shadow-gray-200/40 dark:shadow-black/20 hover:-translate-y-1 transition-all duration-300 group"
         >
             <div className="flex items-start justify-between mb-4">
-                <div className={`p-3 rounded-2xl ${COLOR_VARIANTS[color]} shadow-inner group-hover:scale-110 transition-transform`}>
-                    <Icon size={20} />
+                <div className={`p-4 rounded-[1rem] ${COLOR_VARIANTS[color]} shadow-inner group-hover:scale-110 transition-transform`}>
+                    <Icon size={24} />
                 </div>
                 {trend && (
                     <span className="flex items-center gap-1 text-[10px] font-black text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full uppercase tracking-tighter">
@@ -41,7 +41,7 @@ function StatCard({ label, value, icon: Icon, color, subValue, trend, delay = 0 
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{label}</p>
             <div className="flex items-end justify-between">
                 <div>
-                    <p className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">{value}</p>
+                    <p className="text-4xl font-black text-gray-900 dark:text-white tracking-tight drop-shadow-sm">{value}</p>
                     <p className="text-[10px] font-bold text-gray-400 mt-1">{subValue}</p>
                 </div>
             </div>
@@ -121,42 +121,48 @@ export default function HRMDashboard() {
     useEffect(() => { fetchStats(); }, [fetchStats]);
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-gray-50/30 dark:bg-gray-900/30">
-            {/* First Time Welcome Celebration Modal */}
-            <WelcomeRoleCelebrationModal />
-            
-            {/* Header Area */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 border-b border-gray-200/60 dark:border-gray-800 pb-5">
-                <div className="flex items-center gap-4">
-                    <Image
-                        src="/logo.png"
-                        alt="InTrust Logo"
-                        width={44}
-                        height={44}
-                        className="object-contain"
-                    />
-                    <div>
-                        <div className="flex items-center gap-3 mb-1">
-                            <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-emerald-200/50">
-                                <Zap size={12} fill="currentColor" /> HR Hub
-                            </span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</span>
-                        </div>
-                        <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight leading-none">
-                            Personnel <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600">Command</span>
-                        </h1>
-                    </div>
-                </div>
+        <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-[#F8FAFC] dark:bg-gray-900 relative">
+            {/* Background elements */}
+            <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-emerald-50/80 dark:from-emerald-900/20 to-transparent pointer-events-none" />
+            <div className="absolute top-20 right-0 w-96 h-96 bg-teal-200/40 dark:bg-teal-900/20 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute top-40 left-0 w-96 h-96 bg-emerald-200/40 dark:bg-emerald-900/20 rounded-full blur-[100px] pointer-events-none" />
 
-                <div className="flex flex-wrap items-center gap-3">
-                    <button className="p-3 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-500 hover:text-emerald-500 transition-all shadow-sm">
-                        <Download size={20} />
-                    </button>
-                    <Link href="/hrm/recruitment" className="inline-flex items-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3 rounded-2xl font-black text-sm shadow-xl shadow-gray-200 dark:shadow-none hover:bg-gray-800 dark:hover:bg-gray-100 transition-all active:scale-95">
-                        <UserPlus size={18} /> New Hire
-                    </Link>
-                </div>
-            </div>
+            <div className="relative z-10 space-y-8 max-w-7xl mx-auto">
+                {/* First Time Welcome Celebration Modal */}
+                <WelcomeRoleCelebrationModal />
+                
+                {/* Header Graphic Banner */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} 
+                    className="relative w-full rounded-[2.5rem] bg-gradient-to-r from-emerald-500 via-teal-600 to-emerald-800 p-8 sm:p-12 overflow-hidden shadow-2xl shadow-emerald-600/30 text-white flex flex-col md:flex-row justify-between items-center gap-8"
+                >
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+                    <div className="absolute bottom-0 left-1/2 w-64 h-64 bg-teal-400/30 rounded-full blur-3xl transform -translate-x-1/2 pointer-events-none" />
+                    <Image src="/images/hero-bg-glass.png" alt="Overlay" fill className="object-cover opacity-20 mix-blend-overlay pointer-events-none" />
+
+                    <div className="relative z-10 flex flex-col gap-4 max-w-2xl">
+                        <div className="flex items-center gap-3 mb-1">
+                            <span className="bg-white/10 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-white/20 backdrop-blur-md shadow-lg">
+                                <Zap size={14} fill="currentColor" /> HR Hub
+                            </span>
+                            <span className="text-[10px] font-bold text-emerald-50 uppercase tracking-widest bg-black/20 px-3 py-1.5 rounded-full backdrop-blur-sm hidden sm:block">
+                                {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                            </span>
+                        </div>
+                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight drop-shadow-md">
+                            Personnel Command
+                        </h1>
+                        <p className="text-sm font-medium text-emerald-50 mt-2 max-w-xl opacity-90 leading-relaxed">
+                            Manage your workforce, track attendance, and oversee recruitment pipelines all from one powerful interface.
+                        </p>
+                        
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
+                            <Link href="/hrm/recruitment" className="inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-emerald-600 px-8 py-4 rounded-[1.25rem] font-black text-sm shadow-xl shadow-black/10 transition-all hover:-translate-y-1 hover:shadow-2xl">
+                                <UserPlus size={18} strokeWidth={3} /> New Hire
+                            </Link>
+                        </div>
+                    </div>
+                </motion.div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -175,13 +181,13 @@ export default function HRMDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Pending Actions */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                        <div className="p-8 border-b border-gray-50 dark:border-gray-700/50 flex items-center justify-between">
+                    <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border-none shadow-xl shadow-gray-200/40 dark:shadow-black/20 overflow-hidden">
+                        <div className="p-8 pb-4 flex items-center justify-between">
                             <div>
                                 <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Leave Approvals</h3>
                                 <p className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest">Pending Requests</p>
                             </div>
-                            <Link href="/hrm/leaves" className="text-xs font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1 group">
+                            <Link href="/hrm/leaves" className="text-xs font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1 group bg-emerald-50 px-4 py-2 rounded-xl">
                                 View Full Queue <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                             </Link>
                         </div>
@@ -245,7 +251,7 @@ export default function HRMDashboard() {
                 </div>
 
                 {/* Live Operations Feed */}
-                <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm p-8 space-y-8">
+                <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border-none shadow-xl shadow-gray-200/40 dark:shadow-black/20 p-8 space-y-8">
                     <div>
                         <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Live Ops</h3>
                         <p className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest">Real-time Activity</p>
@@ -281,6 +287,7 @@ export default function HRMDashboard() {
                         Full Audit Logs
                     </Link>
                 </div>
+            </div>
             </div>
         </div>
     );

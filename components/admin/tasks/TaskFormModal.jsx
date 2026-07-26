@@ -152,10 +152,10 @@ export default function TaskFormModal({ isOpen, onClose, onSave, editTask = null
                                 required
                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:border-red-400 focus:ring-2 focus:ring-red-100 outline-none text-sm text-slate-900 transition-all"
                             >
-                                <option value="">Select an admin…</option>
+                                <option value="">Select a team member…</option>
                                 {admins.map(a => (
                                     <option key={a.id} value={a.id}>
-                                        {a.full_name || a.email} ({a.role === 'super_admin' ? 'Super Admin' : 'Admin'})
+                                        {a.full_name || a.email} ({a.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())})
                                     </option>
                                 ))}
                             </select>

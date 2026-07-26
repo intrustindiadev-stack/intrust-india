@@ -229,71 +229,87 @@ export default async function AdminUserDetailPage({ params }) {
     activities.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     return (
-        <div className="p-6 pb-32 max-w-7xl mx-auto font-[family-name:var(--font-outfit)]">
-            {/* Header */}
-            <div className="bg-white rounded-3xl p-8 mb-8 border border-gray-200 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-cyan-500" />
+        <div className="min-h-screen bg-[#F8FAFC] pb-32 font-[family-name:var(--font-outfit)] relative">
+            {/* Background elements */}
+            <div className="absolute top-0 inset-x-0 h-[30vh] bg-gradient-to-b from-blue-50/80 to-transparent pointer-events-none" />
+            <div className="absolute top-0 right-10 w-96 h-96 bg-blue-200/30 rounded-full blur-[100px] pointer-events-none" />
 
-                <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
-                    <div className="w-32 h-32 rounded-full border-4 border-white shadow-xl bg-gray-100 flex items-center justify-center overflow-hidden">
-                        {user.avatar_url ? (
-                            <img src={user.avatar_url} alt={user.full_name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        ) : (
-                            <User size={64} className="text-gray-300" />
-                        )}
-                    </div>
+            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 relative z-10">
+                {/* Header */}
+                <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] p-8 md:p-10 mb-10 border border-white/60 shadow-xl shadow-slate-200/40 relative overflow-hidden transition-all hover:shadow-2xl">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-500" />
+                    
+                    {/* Inner glowing corner */}
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-blue-100/50 to-transparent rounded-bl-full pointer-events-none" />
 
-                    <div className="flex-1 text-center md:text-left">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">{user.full_name || 'Unknown User'}</h1>
-                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-gray-600 mb-4 font-medium">
-                            <div className="flex items-center gap-2">
-                                <Mail size={18} className="text-gray-400" />
-                                {displayEmail(user.email) ? (
-                                    <span>{displayEmail(user.email)}</span>
-                                ) : (
-                                    <>
-                                        <span style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '13px' }}>No email linked</span>
-                                        <a href={`/admin/users/${user.id}`} style={{ fontSize: '12px', color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>Add Email →</a>
-                                    </>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Phone size={18} className="text-gray-400" />
-                                <span>{user.phone || 'No phone'}</span>
-                                {user.phone && (
-                                    <a
-                                        href={`https://wa.me/91${user.phone.replace(/\D/g, '')}?text=Hello%20${encodeURIComponent(user.full_name || '')}%2C%20this%20is%20InTrust%20Admin%20Team`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all border border-emerald-200 shadow-sm ml-1"
-                                        title="Chat on WhatsApp"
-                                    >
-                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-                                        <span>WhatsApp</span>
-                                    </a>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Calendar size={18} className="text-gray-400" />
-                                <span>Joined {formatDate(user.created_at)}</span>
-                            </div>
+                    <div className="flex flex-col md:flex-row items-center md:items-start gap-8 relative z-10">
+                        <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2rem] border-4 border-white shadow-2xl shadow-blue-500/10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0 group relative">
+                            {user.avatar_url ? (
+                                <img src={user.avatar_url} alt={user.full_name} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500" referrerPolicy="no-referrer" />
+                            ) : (
+                                <User size={72} className="text-gray-300 drop-shadow-sm" />
+                            )}
+                            <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-[2rem]" />
                         </div>
 
-                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-                            <span className={`px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wide border ${['admin', 'super_admin'].includes(user.role) ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
-                                {user.role || 'customer'}
-                            </span>
-                            {user.kyc_status && getStatusBadge(user.kyc_status)}
-                            {user.is_gold_verified && user.subscription_expiry && new Date(user.subscription_expiry) > new Date() && (
-                                <span className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-black uppercase tracking-wide bg-gradient-to-r from-amber-400 to-yellow-500 text-black shadow-md shadow-amber-200">
-                                    <Star size={13} className="fill-black" />
-                                    Gold Member
+                        <div className="flex-1 text-center md:text-left mt-2">
+                            <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 tracking-tight drop-shadow-sm">{user.full_name || 'Unknown User'}</h1>
+                            
+                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-5 text-slate-600 mb-6 font-medium bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50 backdrop-blur-sm">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-400">
+                                        <Mail size={16} strokeWidth={2.5} />
+                                    </div>
+                                    {displayEmail(user.email) ? (
+                                        <span className="font-bold text-slate-700">{displayEmail(user.email)}</span>
+                                    ) : (
+                                        <>
+                                            <span style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '13px' }}>No email linked</span>
+                                            <a href={`/admin/users/${user.id}`} className="text-blue-600 font-bold hover:underline text-xs">Add Email →</a>
+                                        </>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-400">
+                                        <Phone size={16} strokeWidth={2.5} />
+                                    </div>
+                                    <span className="font-bold text-slate-700">{user.phone || 'No phone'}</span>
+                                    {user.phone && (
+                                        <a
+                                            href={`https://wa.me/91${user.phone.replace(/\D/g, '')}?text=Hello%20${encodeURIComponent(user.full_name || '')}%2C%20this%20is%20InTrust%20Admin%20Team`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-500 hover:text-white transition-all border border-emerald-200 shadow-sm ml-2"
+                                            title="Chat on WhatsApp"
+                                        >
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                                            WhatsApp
+                                        </a>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-400">
+                                        <Calendar size={16} strokeWidth={2.5} />
+                                    </div>
+                                    <span className="font-bold text-slate-700">Joined {formatDate(user.created_at)}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                                <span className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border shadow-sm ${['admin', 'super_admin'].includes(user.role) ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-700 border-slate-200'}`}>
+                                    {user.role || 'customer'}
                                 </span>
-                            )}
+                                {user.kyc_status && getStatusBadge(user.kyc_status)}
+                                {user.is_gold_verified && user.subscription_expiry && new Date(user.subscription_expiry) > new Date() && (
+                                    <span className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-500 text-black shadow-lg shadow-amber-500/20 transform hover:scale-105 transition-transform">
+                                        <Star size={14} className="fill-black" />
+                                        Gold Member
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column: KYC & Personal Info */}
@@ -598,6 +614,7 @@ export default async function AdminUserDetailPage({ params }) {
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     );

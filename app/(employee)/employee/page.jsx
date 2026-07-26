@@ -145,54 +145,78 @@ export default function EmployeeDashboard() {
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-gray-50/30 dark:bg-gray-900/30">
-            {/* First Time Welcome Celebration Modal */}
-            <WelcomeRoleCelebrationModal />
+        <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-[#F8FAFC] dark:bg-gray-900 relative">
+            {/* Background elements */}
+            <div className="absolute top-0 inset-x-0 h-[40vh] bg-gradient-to-b from-sky-50/80 dark:from-sky-900/20 to-transparent pointer-events-none" />
+            <div className="absolute top-20 right-0 w-96 h-96 bg-blue-200/40 dark:bg-blue-900/20 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute top-40 left-0 w-96 h-96 bg-sky-200/40 dark:bg-sky-900/20 rounded-full blur-[100px] pointer-events-none" />
 
-            {/* Top Bar / Breadcrumbs */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="flex items-center gap-3">
-                    <Image
-                        src="/logo.png"
-                        alt="InTrust Logo"
-                        width={36}
-                        height={36}
-                        className="object-contain"
-                    />
-                    <Breadcrumbs />
+            <div className="relative z-10 space-y-8 max-w-7xl mx-auto">
+                {/* First Time Welcome Celebration Modal */}
+                <WelcomeRoleCelebrationModal />
+
+                {/* Top Bar / Breadcrumbs */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl p-4 rounded-3xl border border-white/60 dark:border-gray-700 shadow-sm shadow-sky-500/5">
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-center p-1.5">
+                            <Image
+                                src="/logo.png"
+                                alt="InTrust Logo"
+                                width={28}
+                                height={28}
+                                className="object-contain"
+                            />
+                        </div>
+                        <Breadcrumbs />
+                    </div>
+                    <div className="flex items-center gap-3 bg-sky-50/50 dark:bg-sky-900/20 px-4 py-2 rounded-xl border border-sky-100/50 dark:border-sky-800/30">
+                        <span className="text-[10px] font-black text-sky-700 dark:text-sky-400 uppercase tracking-widest">{new Date().toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{new Date().toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                </div>
-            </div>
             
-            {/* Dynamic Welcome Hub */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-                    <div className="flex items-center gap-3 mb-2">
-                        <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                            <Zap size={12} fill="currentColor" /> Employee Workspace
+            {/* Dynamic Welcome Hub Graphic Banner */}
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} 
+                className="relative w-full rounded-[2.5rem] bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 p-8 sm:p-12 overflow-hidden shadow-2xl shadow-blue-600/30 text-white flex flex-col md:flex-row justify-between items-center gap-8"
+            >
+                <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+                <div className="absolute bottom-0 left-1/2 w-64 h-64 bg-cyan-400/30 rounded-full blur-3xl transform -translate-x-1/2 pointer-events-none" />
+                
+                {/* Employee Dashboard Illustration */}
+                <div className="hidden lg:block absolute top-1/2 -translate-y-1/2 right-12 w-[320px] h-[320px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/20 transform hover:scale-[1.02] transition-transform duration-500">
+                    <Image src="/images/employee_banner_illustration.png" alt="Employee Illustration" fill className="object-cover" priority />
+                </div>
+
+                <div className="relative z-10 flex flex-col gap-4 max-w-2xl">
+                    <div className="flex items-center gap-3 mb-1">
+                        <span className="bg-white/10 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-white/20 backdrop-blur-md shadow-lg">
+                            <Zap size={14} fill="currentColor" /> Employee Workspace
+                        </span>
+                        <span className="text-[10px] font-bold text-sky-50 uppercase tracking-widest bg-black/20 px-3 py-1.5 rounded-full backdrop-blur-sm hidden sm:block">
+                            {currentTime.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
                         </span>
                     </div>
-                    <h1 className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-none">
-                        {greeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">{profile?.full_name?.split(' ')[0] || 'Team Member'}</span>
+                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight drop-shadow-md">
+                        {greeting}, <br className="hidden sm:block"/>
+                        <span className="text-sky-100">{profile?.full_name?.split(' ')[0] || 'Team Member'}</span>!
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-3 font-bold flex items-center gap-2">
-                        <Calendar size={18} className="text-amber-500" />
-                        {currentTime.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    <p className="text-sm font-medium text-sky-50 mt-2 max-w-xl opacity-90 leading-relaxed">
+                        Ready to make an impact today? Track your shifts, tasks, and achievements in your personal workspace.
                     </p>
-                </motion.div>
-
-                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="hidden sm:flex items-center gap-4 bg-white dark:bg-gray-800 p-2 rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-sm">
-                    <div className="pl-4 pr-2">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Office Location</p>
-                        <p className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-1.5"><MapPin size={14} className="text-rose-500" /> {profile?.department ? `${profile.department} Dept` : 'Gurugram HQ'}</p>
+                    
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-6 py-4 rounded-[1.25rem] border border-white/20 shadow-lg">
+                            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-600 shadow-inner">
+                                <Building size={18} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-sky-100 uppercase tracking-widest">Location</p>
+                                <p className="text-sm font-black text-white flex items-center gap-1.5">{profile?.department ? `${profile.department} Dept` : 'Gurugram HQ'}</p>
+                            </div>
+                        </div>
                     </div>
-                    <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-400">
-                        <Building size={20} />
-                    </div>
-                </motion.div>
-            </div>
+                </div>
+            </motion.div>
 
             {/* Attendance & Shift Card */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -233,18 +257,18 @@ export default function EmployeeDashboard() {
                         </div>
 
                         <div className="relative">
-                            <div className={`absolute inset-0 blur-3xl opacity-40 rounded-full animate-pulse ${clockedIn ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                            <div className={`absolute inset-0 blur-3xl opacity-40 rounded-full animate-pulse ${clockedIn ? 'bg-emerald-400' : 'bg-blue-400'}`} />
                             <button
                                 onClick={clockedIn ? handleClockOut : handleClockIn}
                                 disabled={clocking || !!todayRecord?.check_out}
-                                className={`w-44 h-44 sm:w-56 sm:h-56 rounded-full flex flex-col items-center justify-center gap-3 shadow-2xl relative z-10 transition-all hover:scale-105 active:scale-95 font-black text-xl tracking-tighter disabled:opacity-60 disabled:cursor-not-allowed ${clockedIn ? 'bg-white text-emerald-600 shadow-emerald-500/40' : 'bg-white text-gray-900 shadow-black/40'}`}
+                                className={`w-44 h-44 sm:w-56 sm:h-56 rounded-full flex flex-col items-center justify-center gap-3 shadow-2xl relative z-10 transition-all hover:scale-105 active:scale-95 font-black text-xl tracking-tighter disabled:opacity-60 disabled:cursor-not-allowed ${clockedIn ? 'bg-white text-emerald-600 shadow-emerald-500/40' : 'bg-white text-blue-900 shadow-blue-900/40'}`}
                             >
                                 {clocking ? (
                                     <div className="w-10 h-10 border-4 border-current/30 border-t-current rounded-full animate-spin" />
                                 ) : (
                                     <>
-                                        <div className={`p-4 rounded-3xl ${clockedIn ? 'bg-emerald-50' : 'bg-amber-50'}`}>
-                                            <Clock size={40} className={clockedIn ? 'text-emerald-500' : 'text-amber-500'} />
+                                        <div className={`p-4 rounded-3xl ${clockedIn ? 'bg-emerald-50' : 'bg-blue-50'}`}>
+                                            <Clock size={40} className={clockedIn ? 'text-emerald-500' : 'text-blue-500'} />
                                         </div>
                                         <span className="mt-2">{todayRecord?.check_out ? 'DONE' : clockedIn ? 'SHIFTOUT' : 'SHIFT IN'}</span>
                                     </>
@@ -263,7 +287,7 @@ export default function EmployeeDashboard() {
                         </>
                     ) : (
                         <>
-                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group">
+                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 border-none shadow-xl shadow-gray-200/40 dark:shadow-black/20 relative overflow-hidden group">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
                                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Leave Balance</h3>
                                 <div className="flex items-end justify-between gap-4">
@@ -277,7 +301,7 @@ export default function EmployeeDashboard() {
                                 </div>
                             </motion.div>
 
-                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group">
+                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 border-none shadow-xl shadow-gray-200/40 dark:shadow-black/20 relative overflow-hidden group">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
                                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Team Tasks</h3>
                                 <div className="flex items-end justify-between gap-4">
@@ -300,7 +324,7 @@ export default function EmployeeDashboard() {
                 {quickLinks.map((item, i) => (
                     <motion.div key={item.href} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + i * 0.05 }}>
                         <Link href={item.href} className="group block h-full">
-                            <div className="bg-white dark:bg-gray-800 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-none hover:-translate-y-2 transition-all h-full flex flex-col items-center text-center">
+                            <div className="bg-white dark:bg-gray-800 p-6 rounded-[2.5rem] border-none shadow-xl shadow-gray-200/40 dark:shadow-black/20 hover:-translate-y-2 transition-all h-full flex flex-col items-center text-center">
                                 <div className={`w-16 h-16 rounded-[1.5rem] ${COLOR_MAP[item.color]} flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform shadow-inner`}>
                                     <item.icon size={28} />
                                 </div>
@@ -323,23 +347,24 @@ export default function EmployeeDashboard() {
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.95 }} 
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200 dark:border-amber-900/30 rounded-[2rem] p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm shadow-amber-500/10"
+                        className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border border-blue-200 dark:border-blue-900/30 rounded-[2rem] p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm shadow-blue-500/10"
                     >
-                        <div className="w-14 h-14 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/30 shrink-0">
+                        <div className="w-14 h-14 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/30 shrink-0">
                             <DollarSign size={24} />
                         </div>
                         <div className="flex-1 text-center sm:text-left">
-                            <h4 className="text-lg font-black text-amber-900 dark:text-amber-200">New Payslip Released</h4>
-                            <p className="text-sm font-bold text-amber-700 dark:text-amber-400 opacity-80 mt-1">
+                            <h4 className="text-lg font-black text-blue-900 dark:text-blue-200">New Payslip Released</h4>
+                            <p className="text-sm font-bold text-blue-700 dark:text-blue-400 opacity-80 mt-1">
                                 Your salary record for {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][latestPayslip.month - 1]} {latestPayslip.year} is now available in the vault.
                             </p>
                         </div>
-                        <Link href="/employee/payslips" className="px-8 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-amber-600/20 active:scale-95 whitespace-nowrap">
+                        <Link href="/employee/payslips" className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-blue-600/20 active:scale-95 whitespace-nowrap">
                             Review Vault
                         </Link>
                     </motion.div>
                 )}
             </AnimatePresence>
+            </div>
         </div>
     );
 }

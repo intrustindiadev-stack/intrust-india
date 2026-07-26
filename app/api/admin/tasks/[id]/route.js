@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 
-const ADMIN_ROLES = ['admin', 'super_admin'];
+const ALLOWED_ROLES = ['admin', 'super_admin', 'sales_manager', 'sales_exec'];
 
 // GET /api/admin/tasks/[id]
 export async function GET(request, { params }) {
@@ -10,7 +10,7 @@ export async function GET(request, { params }) {
         const { id } = await params;
 
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        if (!ADMIN_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        if (!ALLOWED_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
         const { data: task, error } = await admin
             .from('admin_tasks')
@@ -24,8 +24,10 @@ export async function GET(request, { params }) {
 
         if (error) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
 
-        // Admins can only view their own tasks
-        if (profile.role === 'admin' && task.assigned_to !== user.id) {
+        const isSuperAdminOrManager = ['super_admin', 'admin', 'sales_manager'].includes(profile.role);
+
+        // Regular users can only view their own tasks
+        if (!isSuperAdminOrManager && task.assigned_to !== user.id) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
@@ -37,18 +39,18 @@ export async function GET(request, { params }) {
 }
 
 // PATCH /api/admin/tasks/[id]
-// Super admin: can update all fields
-// Admin: can only update status on their own tasks
+// Managers: can update all fields
+// Execs: can only update status on their own tasks
 export async function PATCH(request, { params }) {
     try {
         const { user, profile, admin } = await getAuthUser(request);
         const { id } = await params;
 
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        if (!ADMIN_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        if (!ALLOWED_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
         const body = await request.json();
-        const isSuperAdmin = profile.role === 'super_admin';
+        const isSuperAdminOrManager = ['super_admin', 'admin', 'sales_manager'].includes(profile.role);
 
         // Fetch the existing task
         const { data: existingTask, error: fetchError } = await admin
@@ -59,12 +61,12 @@ export async function PATCH(request, { params }) {
 
         if (fetchError || !existingTask) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
 
-        // Admins can only update status on their own tasks
-        if (!isSuperAdmin) {
+        // Regular users can only update status on their own tasks
+        if (!isSuperAdminOrManager) {
             if (existingTask.assigned_to !== user.id) {
                 return NextResponse.json({ error: 'Forbidden. You can only update your own tasks.' }, { status: 403 });
             }
-            // Only allow status updates for non-super-admins
+            // Only allow status updates
             const allowedFields = ['status'];
             const updateData = {};
             for (const key of allowedFields) {
@@ -85,7 +87,7 @@ export async function PATCH(request, { params }) {
             return NextResponse.json({ task });
         }
 
-        // Super admin: can update all fields
+        // Managers: can update all fields
         const { title, description, assigned_to, priority, status, due_date } = body;
         const updateData = {};
         if (title !== undefined) updateData.title = title;
@@ -110,14 +112,14 @@ export async function PATCH(request, { params }) {
     }
 }
 
-// DELETE /api/admin/tasks/[id] — super_admin only
+// DELETE /api/admin/tasks/[id] — managers only
 export async function DELETE(request, { params }) {
     try {
         const { user, profile, admin } = await getAuthUser(request);
         const { id } = await params;
 
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        if (profile?.role !== 'super_admin') return NextResponse.json({ error: 'Forbidden. Super Admin access required.' }, { status: 403 });
+        if (!['super_admin', 'admin', 'sales_manager'].includes(profile?.role)) return NextResponse.json({ error: 'Forbidden. Manager access required.' }, { status: 403 });
 
         const { error } = await admin.from('admin_tasks').delete().eq('id', id);
         if (error) throw error;

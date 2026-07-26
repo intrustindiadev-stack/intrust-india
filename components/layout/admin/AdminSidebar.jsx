@@ -61,6 +61,7 @@ const navigationGroups = [
         title: 'Network Operations',
         items: [
             { name: 'Users', href: '/admin/users', icon: Users },
+            { name: 'Role Management', href: '/admin/roles', icon: ShieldCheck },
             { name: 'Merchants', href: '/admin/merchants', icon: Store },
             { name: 'Store Status', href: '/admin/store-status', icon: Activity },
             { name: 'Store Credit', href: '/admin/merchants/udhari', icon: CreditCard },
@@ -225,11 +226,7 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                         <div className="flex items-center gap-3">
                             <Link href="/admin" className="flex items-center gap-3 group">
                                 <div className="relative w-10 h-10 flex-shrink-0 overflow-hidden rounded-xl shadow-lg transition-shadow hover:shadow-xl bg-white p-0.5 border border-slate-100">
-                                    <img
-                                        src="/icon.png"
-                                        alt="INTRUST"
-                                        className="w-full h-full object-contain rounded-lg"
-                                    />
+                                    <Image src="/logo.png" width={40} height={40} alt="InTrust Logo" className="object-contain" />
                                 </div>
                                 <div>
                                     <div className="text-slate-900 font-bold text-lg tracking-wide">InTrust</div>

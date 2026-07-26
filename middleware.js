@@ -38,7 +38,7 @@ const PORTAL_ROLE_MAP = {
     '/merchant': (r) => r === 'merchant',
     '/hrm':      (r) => r === 'hr_manager',
     '/crm':      (r) => r?.startsWith('sales_') || r === 'sales_exec' || r === 'sales_agent',
-    '/employee': (r) => r === 'employee',
+    '/employee': (r) => ['employee', 'sales_exec', 'sales_manager', 'hr_manager', 'admin', 'super_admin'].includes(r),
 }
 
 export async function middleware(request) {

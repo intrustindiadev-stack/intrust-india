@@ -1,19 +1,19 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 
-const ADMIN_ROLES = ['admin', 'super_admin'];
+const ALLOWED_ROLES = ['admin', 'super_admin', 'sales_manager', 'sales_exec'];
 
 // GET /api/admin/tasks
-// Super admins: returns all tasks
-// Admins: returns their assigned tasks
+// Super admins/Managers: returns all tasks or team tasks
+// Admins/Execs: returns their assigned tasks
 export async function GET(request) {
     try {
         const { user, profile, admin } = await getAuthUser(request);
 
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        if (!ADMIN_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        if (!ALLOWED_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-        const isSuperAdmin = profile.role === 'super_admin';
+        const isSuperAdminOrManager = ['super_admin', 'admin', 'sales_manager'].includes(profile.role);
 
         let query = admin
             .from('admin_tasks')
@@ -24,8 +24,8 @@ export async function GET(request) {
             `)
             .order('created_at', { ascending: false });
 
-        // Regular admins only see their own tasks
-        if (!isSuperAdmin) {
+        // Regular users only see their own tasks
+        if (!isSuperAdminOrManager) {
             query = query.eq('assigned_to', user.id);
         }
 
@@ -39,13 +39,13 @@ export async function GET(request) {
     }
 }
 
-// POST /api/admin/tasks — super_admin only
+// POST /api/admin/tasks — managers/admins only
 export async function POST(request) {
     try {
         const { user, profile, admin } = await getAuthUser(request);
 
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        if (profile?.role !== 'super_admin') return NextResponse.json({ error: 'Forbidden. Super Admin access required.' }, { status: 403 });
+        if (!['super_admin', 'admin', 'sales_manager'].includes(profile?.role)) return NextResponse.json({ error: 'Forbidden. Manager/Admin access required.' }, { status: 403 });
 
         const body = await request.json();
         const { title, description, assigned_to, priority, due_date } = body;
@@ -54,15 +54,15 @@ export async function POST(request) {
             return NextResponse.json({ error: 'title and assigned_to are required' }, { status: 400 });
         }
 
-        // Verify the assigned user is an admin
+        // Verify the assigned user is allowed
         const { data: assignedProfile } = await admin
             .from('user_profiles')
             .select('role, full_name, email')
             .eq('id', assigned_to)
             .single();
 
-        if (!assignedProfile || !['admin', 'super_admin'].includes(assignedProfile.role)) {
-            return NextResponse.json({ error: 'assigned_to must be an admin or super_admin user' }, { status: 400 });
+        if (!assignedProfile || !ALLOWED_ROLES.includes(assignedProfile.role)) {
+            return NextResponse.json({ error: 'assigned_to must be a valid user' }, { status: 400 });
         }
 
         // Insert the task (service role bypasses RLS)

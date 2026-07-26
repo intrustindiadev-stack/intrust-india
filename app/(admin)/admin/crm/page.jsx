@@ -1,33 +1,35 @@
 import { createAdminClient } from '@/lib/supabaseServer';
-import Link from 'next/link';
-import ContactActions from '@/components/shared/ContactActions';
-import LeadAssignmentPanel from '@/components/admin/crm/LeadAssignmentPanel';
 import { 
-    TrendingUp, Users, CheckCircle, Clock, XCircle, 
-    Phone, Mail, Plus, ArrowRight, Target, BarChart3
+    TrendingUp, Users, Target, Plus
 } from 'lucide-react';
+import ActiveLeadsPipelineClient from '@/components/admin/crm/ActiveLeadsPipelineClient';
 
 function StatCard({ title, value, sub, gradient, icon: Icon }) {
     return (
-        <div className={`relative overflow-hidden rounded-3xl p-6 text-white bg-gradient-to-br ${gradient} shadow-lg`}>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-bl-full" />
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center mb-4">
-                <Icon size={20} />
+        <div className={`relative overflow-hidden rounded-[2rem] p-6 sm:p-8 text-white bg-gradient-to-br ${gradient} shadow-xl shadow-indigo-500/10 transition-transform hover:-translate-y-1 hover:shadow-2xl`}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full backdrop-blur-3xl" />
+            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-black/10 rounded-full blur-2xl" />
+            <div className="relative z-10 flex flex-col h-full justify-between gap-6">
+                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner">
+                    <Icon size={24} className="drop-shadow-sm" />
+                </div>
+                <div>
+                    <p className="text-white/80 text-[11px] font-black uppercase tracking-widest mb-1.5 drop-shadow-sm">{title}</p>
+                    <p className="text-4xl sm:text-5xl font-black drop-shadow-md tracking-tight">{value}</p>
+                    {sub && <p className="text-white/80 text-xs mt-2 font-medium bg-black/10 w-fit px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">{sub}</p>}
+                </div>
             </div>
-            <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
-            <p className="text-3xl font-black">{value}</p>
-            {sub && <p className="text-white/70 text-xs mt-1">{sub}</p>}
         </div>
     );
 }
 
 const STATUS_STYLE = {
-    new: 'bg-blue-50 text-blue-700 border-blue-200',
-    contacted: 'bg-violet-50 text-violet-700 border-violet-200',
-    qualified: 'bg-amber-50 text-amber-700 border-amber-200',
-    proposal: 'bg-orange-50 text-orange-700 border-orange-200',
-    won: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    lost: 'bg-red-50 text-red-700 border-red-200',
+    new: 'bg-blue-50/50 text-blue-700 border-blue-200 shadow-blue-500/10',
+    contacted: 'bg-violet-50/50 text-violet-700 border-violet-200 shadow-violet-500/10',
+    qualified: 'bg-amber-50/50 text-amber-700 border-amber-200 shadow-amber-500/10',
+    proposal: 'bg-orange-50/50 text-orange-700 border-orange-200 shadow-orange-500/10',
+    won: 'bg-emerald-50/50 text-emerald-700 border-emerald-200 shadow-emerald-500/10',
+    lost: 'bg-red-50/50 text-red-700 border-red-200 shadow-red-500/10',
 };
 
 export default async function AdminCRMPage() {
@@ -58,7 +60,7 @@ export default async function AdminCRMPage() {
         });
     }
 
-    const leads = leadsRaw.map(l => ({
+    const initialLeads = leadsRaw.map(l => ({
         ...l,
         user_profiles: l.assigned_to && profileMap[l.assigned_to] ? { full_name: profileMap[l.assigned_to] } : null
     }));
@@ -75,103 +77,51 @@ export default async function AdminCRMPage() {
     const activeLeads = (statusCounts.contacted || 0) + (statusCounts.qualified || 0) + (statusCounts.proposal || 0);
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] font-[family-name:var(--font-outfit)]">
-            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+        <div className="min-h-screen bg-[#F8FAFC] font-[family-name:var(--font-outfit)] relative">
+            {/* Background elements */}
+            <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-indigo-50 to-transparent pointer-events-none" />
+            <div className="absolute top-20 right-0 w-96 h-96 bg-purple-200/40 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute top-40 left-0 w-96 h-96 bg-blue-200/40 rounded-full blur-[100px] pointer-events-none" />
+
+            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-10 relative z-10">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-5">
-                    <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">CRM Command Overview</h1>
-                        <p className="text-gray-500 text-sm mt-0.5">Comprehensive lead pipeline analytics, assigned executives, and lead management.</p>
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4">
+                    <div className="flex flex-col gap-2">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100/50 text-indigo-700 text-xs font-bold w-fit border border-indigo-200/50 backdrop-blur-sm">
+                            <Target size={14} /> CRM Command Center
+                        </div>
+                        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">Overview</h1>
+                        <p className="text-slate-500 font-medium text-lg">Comprehensive lead pipeline analytics and executive assignments.</p>
                     </div>
                 </div>
 
                 {/* KPI Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <StatCard title="Total Leads" value={total} gradient="from-blue-600 to-violet-600" icon={Users} />
-                    <StatCard title="New This Week" value={newLeads} sub="Uncontacted" gradient="from-amber-500 to-orange-500" icon={Plus} />
-                    <StatCard title="Active Pipeline" value={activeLeads} sub="Contacted/Qualified/Proposal" gradient="from-violet-600 to-purple-600" icon={Target} />
-                    <StatCard title="Conversion Rate" value={`${convRate}%`} sub={`${wonCount} won out of ${total}`} gradient="from-emerald-500 to-teal-500" icon={TrendingUp} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <StatCard title="Total Leads" value={total} gradient="from-blue-600 via-indigo-600 to-violet-700" icon={Users} />
+                    <StatCard title="New This Week" value={newLeads} sub="Uncontacted" gradient="from-amber-400 via-orange-500 to-rose-500" icon={Plus} />
+                    <StatCard title="Active Pipeline" value={activeLeads} sub="Contacted / Proposal" gradient="from-violet-500 via-purple-600 to-fuchsia-700" icon={Target} />
+                    <StatCard title="Conversion Rate" value={`${convRate}%`} sub={`${wonCount} Won`} gradient="from-emerald-400 via-teal-500 to-cyan-600" icon={TrendingUp} />
                 </div>
 
                 {/* Pipeline Status Breakdown */}
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-                    <h2 className="text-lg font-bold text-gray-900 mb-5">Pipeline Breakdown</h2>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white/50 shadow-xl shadow-slate-200/40 p-6 sm:p-8 transition-all hover:shadow-2xl">
+                    <h2 className="text-xl font-extrabold text-slate-900 mb-6 tracking-tight flex items-center gap-2">
+                        Pipeline Breakdown
+                    </h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                         {['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'].map(s => (
-                            <div key={s} className={`rounded-2xl border p-4 text-center ${STATUS_STYLE[s] || 'bg-gray-50 border-gray-200'}`}>
-                                <p className="text-2xl font-black">{statusCounts[s] || 0}</p>
-                                <p className="text-xs font-bold uppercase mt-1 capitalize">{s}</p>
+                            <div key={s} className={`rounded-2xl border p-5 text-center flex flex-col justify-center shadow-sm backdrop-blur-md transition-transform hover:scale-[1.02] ${STATUS_STYLE[s] || 'bg-gray-50 border-gray-200'}`}>
+                                <p className="text-3xl font-black mb-1 drop-shadow-sm">{statusCounts[s] || 0}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest opacity-80">{s}</p>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Recent Leads */}
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-900">Active Leads Pipeline</h2>
-                            <p className="text-sm text-gray-500">Overview of recent leads across all sales reps</p>
-                        </div>
-                        <Link href="/crm/leads" className="px-4 py-2 bg-blue-50 text-blue-700 font-semibold rounded-xl text-sm hover:bg-blue-100 transition-colors flex items-center gap-1.5">
-                            Leads Directory <ArrowRight size={14} />
-                        </Link>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-100">
-                                <tr>
-                                    <th className="p-4 pl-6">Lead Name</th>
-                                    <th className="p-4">Contact</th>
-                                    <th className="p-4">Assigned Rep</th>
-                                    <th className="p-4">Status</th>
-                                    <th className="p-4">Actions</th>
-                                    <th className="p-4 pr-6">Date</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {leads.length > 0 ? leads.map(lead => (
-                                    <tr key={lead.id} className="hover:bg-blue-50/20 transition-colors">
-                                        <td className="p-4 pl-6">
-                                            <Link href={`/crm/leads/${lead.id}`} className="font-semibold text-gray-900 hover:text-indigo-600 transition-colors text-sm block">
-                                                {lead.contact_name || lead.title}
-                                            </Link>
-                                            {lead.title && lead.contact_name && <p className="text-xs text-gray-400 mt-0.5">{lead.title}</p>}
-                                        </td>
-                                        <td className="p-4">
-                                            {lead.phone && <p className="text-xs text-gray-600 flex items-center gap-1"><Phone size={11} /> {lead.phone}</p>}
-                                            {lead.email && <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Mail size={11} /> {lead.email}</p>}
-                                        </td>
-                                        <td className="p-4">
-                                            <p className="text-xs font-semibold text-gray-800">
-                                                {lead.user_profiles?.full_name || (lead.assigned_to ? `ID: ${lead.assigned_to.slice(0, 8)}` : 'Unassigned')}
-                                            </p>
-                                        </td>
-                                        <td className="p-4">
-                                            <span className={`inline-flex text-xs font-bold px-2.5 py-1 rounded-lg border capitalize ${STATUS_STYLE[lead.status] || 'bg-gray-50 border-gray-200'}`}>
-                                                {lead.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-4">
-                                            <ContactActions phone={lead.phone} email={lead.email} name={lead.contact_name || lead.title} compact />
-                                        </td>
-                                        <td className="p-4 pr-6 text-xs text-gray-500">
-                                            {new Date(lead.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                                        </td>
-                                    </tr>
-                                )) : (
-                                    <tr>
-                                        <td colSpan="6" className="p-12 text-center text-gray-400 text-sm">No leads found. The CRM is empty.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* Lead Assignment Section */}
-                <LeadAssignmentPanel />
+                {/* Active Leads Pipeline with Inline Assignment */}
+                <ActiveLeadsPipelineClient initialLeads={initialLeads} />
             </div>
         </div>
     );
 }
+

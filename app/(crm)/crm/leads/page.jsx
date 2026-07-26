@@ -560,7 +560,7 @@ export default function LeadsPage() {
             </div>
 
             {/* Filter Bar */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 flex flex-col sm:flex-row gap-3">
+            <div className="bg-white rounded-[2rem] border-none shadow-xl shadow-gray-200/40 p-4 flex flex-col sm:flex-row gap-4 mb-2">
                 <div className="relative flex-1">
                     <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
@@ -579,9 +579,9 @@ export default function LeadsPage() {
             {isLoading ? (
                 <>
                     {/* Mobile skeleton cards */}
-                    <div className="space-y-3 lg:hidden">
+                    <div className="space-y-4 lg:hidden">
                         {[...Array(5)].map((_, i) => (
-                            <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 animate-pulse">
+                            <div key={i} className="bg-white rounded-[2rem] border-none shadow-xl shadow-gray-200/40 p-5 animate-pulse">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-gray-100 flex-shrink-0" />
@@ -597,7 +597,7 @@ export default function LeadsPage() {
                     </div>
 
                     {/* Desktop skeleton table */}
-                    <div className="hidden lg:block bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden animate-pulse">
+                    <div className="hidden lg:block bg-white rounded-[2.5rem] border-none shadow-xl shadow-gray-200/40 overflow-hidden animate-pulse">
                         <div className="bg-gray-50 border-b border-gray-100 px-6 py-4 flex gap-6">
                             {['w-48', 'w-36', 'w-28', 'w-20', 'w-20', 'w-16'].map((w, i) => (
                                 <div key={i} className={`h-3 ${w} bg-gray-200 rounded`} />
@@ -625,7 +625,7 @@ export default function LeadsPage() {
                     </div>
                 </>
             ) : filtered.length === 0 ? (
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-16 text-center">
+                <div className="bg-white rounded-[2.5rem] border-none shadow-xl shadow-gray-200/40 p-16 text-center">
                     <Briefcase size={40} className="mx-auto text-gray-200 mb-3" />
                     <p className="text-gray-500 font-medium">No leads found</p>
                     <p className="text-sm text-gray-400 mt-1">{search ? 'Try a different search' : 'Add your first lead to get started'}</p>
@@ -636,10 +636,10 @@ export default function LeadsPage() {
             ) : (
                 <>
                     {/* Mobile: cards */}
-                    <div className="space-y-3 lg:hidden">
+                    <div className="space-y-4 lg:hidden">
                         {filtered.map(lead => (
                             <motion.div key={lead.id} layout onClick={() => router.push('/crm/leads/' + lead.id)}
-                                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 cursor-pointer hover:border-indigo-200 hover:shadow-md transition-all space-y-3">
+                                className="bg-white rounded-[2rem] border-none shadow-xl shadow-gray-200/40 p-5 cursor-pointer hover:shadow-2xl hover:shadow-indigo-200/40 hover:-translate-y-1 transition-all duration-300 space-y-4">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-center gap-3 min-w-0">
                                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-indigo-700 font-bold flex-shrink-0">
@@ -668,7 +668,7 @@ export default function LeadsPage() {
                     </div>
 
                     {/* Desktop: table */}
-                    <div className="hidden lg:block bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="hidden lg:block bg-white rounded-[2.5rem] border-none shadow-xl shadow-gray-200/40 overflow-hidden">
                         <table className="w-full text-left">
                             <thead className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-semibold">
                                 <tr>

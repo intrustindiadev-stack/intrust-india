@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 const STATUS_META = {
     present:  { label: 'Present',  cls: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: CheckCircle },
     absent:   { label: 'Absent',   cls: 'bg-rose-50 text-rose-700 border-rose-100', icon: XCircle },
-    late:     { label: 'Late',     cls: 'bg-amber-50 text-amber-700 border-amber-100', icon: Clock },
+    late:     { label: 'Late',     cls: 'bg-blue-50 text-blue-700 border-blue-100', icon: Clock },
     half_day: { label: 'Half Day', cls: 'bg-blue-50 text-blue-700 border-blue-100', icon: MinusCircle },
     holiday:  { label: 'Holiday',  cls: 'bg-violet-50 text-violet-700 border-violet-100', icon: CheckCircle },
     wfh:      { label: 'WFH',      cls: 'bg-teal-50 text-teal-700 border-teal-100', icon: MapPin },
@@ -263,7 +263,7 @@ export default function EmployeeAttendancePage() {
                                             {r.check_in && <p className="text-xs text-gray-400 mt-0.5">{fmt(r.check_in)} → {fmt(r.check_out)} {r.check_out ? `· ${duration(r.check_in, r.check_out)}` : '(ongoing)'}</p>}
                                             {r.check_in_lat && (
                                                 <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] font-bold">
-                                                    <span className={`px-1.5 py-0.5 rounded-md border ${r.is_onsite ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/50' : 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/50'}`}>
+                                                    <span className={`px-1.5 py-0.5 rounded-md border ${r.is_onsite ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/50' : 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-900/50'}`}>
                                                         {r.is_onsite ? 'On-Site' : 'WFH/Off-Site'}
                                                     </span>
                                                     <a 
@@ -276,7 +276,7 @@ export default function EmployeeAttendancePage() {
                                                     </a>
                                                 </div>
                                             )}
-                                            {r.override_reason && <p className="text-xs text-amber-500 mt-0.5">Override: {r.override_reason}</p>}
+                                            {r.override_reason && <p className="text-xs text-blue-500 mt-0.5">Override: {r.override_reason}</p>}
                                         </div>
                                     </div>
                                     <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg border ${meta.cls}`}>
