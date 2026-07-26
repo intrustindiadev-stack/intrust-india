@@ -204,8 +204,11 @@ export default function HRMAttendancePage() {
                              </thead>
                              <tbody className="divide-y divide-gray-50">
                                  {filtered.map(r => {
-                                     const duration = r.check_in && r.check_out
-                                         ? `${Math.round((new Date(r.check_out) - new Date(r.check_in)) / 3600000)}h ${Math.round(((new Date(r.check_out) - new Date(r.check_in)) % 3600000) / 60000)}m`
+                                     const inTime = r.check_in ? new Date(r.check_in).getTime() : NaN;
+                                     const outTime = r.check_out ? new Date(r.check_out).getTime() : NaN;
+                                     const diffMs = !isNaN(inTime) && !isNaN(outTime) && outTime >= inTime ? outTime - inTime : 0;
+                                     const duration = diffMs > 0
+                                         ? `${Math.floor(diffMs / 3600000)}h ${Math.floor((diffMs % 3600000) / 60000)}m`
                                          : '—';
                                      return (
                                          <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">

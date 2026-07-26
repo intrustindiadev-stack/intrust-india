@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import Link from 'next/link';
 import ContactActions from '@/components/shared/ContactActions';
+import LeadAssignmentPanel from '@/components/admin/crm/LeadAssignmentPanel';
 import { 
     TrendingUp, Users, CheckCircle, Clock, XCircle, 
     Phone, Mail, Plus, ArrowRight, Target, BarChart3
@@ -35,9 +36,10 @@ export default async function AdminCRMPage() {
     const [leadsRes, statsRes] = await Promise.all([
         supabase.from('crm_leads')
             .select('*')
+            .is('archived_at', null)
             .order('created_at', { ascending: false })
             .limit(20),
-        supabase.from('crm_leads').select('status')
+        supabase.from('crm_leads').select('status').is('archived_at', null)
     ]);
 
     const leadsRaw = leadsRes.data || [];
@@ -166,6 +168,9 @@ export default async function AdminCRMPage() {
                         </table>
                     </div>
                 </div>
+
+                {/* Lead Assignment Section */}
+                <LeadAssignmentPanel />
             </div>
         </div>
     );

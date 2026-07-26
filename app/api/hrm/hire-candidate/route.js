@@ -1,5 +1,7 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { CandidateHireSchema } from '@/lib/hrm/validation';
+import { checkRateLimit } from '@/lib/hrm/rateLimiter';
 
 export async function POST(request) {
     try {
@@ -13,30 +15,43 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Unauthorized. Please log in.' }, { status: 401 });
         }
 
-        // 2. Verify HR Manager or Admin Role
+        // 2. Rate Limiting Check (30 requests per minute per user)
+        const rateLimit = checkRateLimit(user.id, 30, 60000);
+        if (!rateLimit.success) {
+            return NextResponse.json(
+                { error: 'Too many requests. Please try again later.' },
+                { status: 429, headers: { 'Retry-After': Math.ceil(rateLimit.resetMs / 1000).toString() } }
+            );
+        }
+
+        // 3. Verify HR Manager or Admin Role
         const { data: userProfile, error: profileError } = await supabase
             .from('user_profiles')
             .select('role')
             .eq('id', user.id)
             .single();
 
-        if (profileError || !['hr_manager', 'admin', 'super_admin'].includes(userProfile?.role)) {
-            return NextResponse.json({ error: 'Forbidden. HR Manager or Admin access required.' }, { status: 403 });
+        if (profileError || !['hr', 'hr_manager', 'admin', 'super_admin'].includes(userProfile?.role)) {
+            return NextResponse.json({ error: 'Forbidden. HR Access required.' }, { status: 403 });
         }
 
-        // 3. Get Request Data
-        const body = await request.json();
-        const { applicationId, stage, panelAccessGranted, offeredSalary, commissionPercent, joiningBonus, offerLetterNotes, interviewDate, interviewNotes } = body;
+        // 4. Zod Schema Validation
+        const rawBody = await request.json();
+        const parsed = CandidateHireSchema.safeParse(rawBody);
 
-        if (!applicationId) {
-            return NextResponse.json({ error: 'Missing applicationId.' }, { status: 400 });
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: parsed.error.format() },
+                { status: 400 }
+            );
         }
 
-        // 4. Build updates
-        // Note: The "hired" stage sets career_applications.status and panel_access_granted,
-        // but it does NOT directly assign roles (no metadata sync or user_profiles update here).
-        // Role assignment happens in a separate step via admin/grant-hire-role/route.js
-        // so the split responsibility (HR marks hired → Admin grants role) is clear.
+        const {
+            applicationId, stage, panelAccessGranted, offeredSalary,
+            commissionPercent, joiningBonus, offerLetterNotes, interviewDate, interviewNotes
+        } = parsed.data;
+
+        // 5. Build updates
         const updates = {
             status: stage,
             panel_access_granted: panelAccessGranted || null,
@@ -61,7 +76,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Failed to update application.' }, { status: 500 });
         }
 
-        // 5. Notify Admins if hired
+        // 6. Notify Admins if hired
         if (stage === 'hired') {
             const { data: admins, error: adminsError } = await adminSupabase
                 .from('user_profiles')

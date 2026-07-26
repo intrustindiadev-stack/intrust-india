@@ -14,6 +14,10 @@ import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import ContactActions from '@/components/shared/ContactActions';
+import { 
+    CrmLeadUpdateSchema, CrmTaskCreateSchema, 
+    CrmActivityLogSchema, CrmIntentLogSchema 
+} from '@/lib/crm/validation';
 
 const TABS = [
     { id: 'activity', label: 'Activity', icon: Activity },
@@ -81,76 +85,45 @@ export default function LeadDetailPage({ params }) {
             return;
         }
         try {
-            // 1. Fetch Lead Details
-            const { data: leadData, error: leadError } = await supabase
-                .from('crm_leads')
-                .select('*')
-                .eq('id', id)
-                .single();
+            // Parallel batch 1: Fetch lead details and all related records concurrently
+            const [leadRes, tasksRes, intentRes, notesRes, activitiesRes] = await Promise.all([
+                supabase.from('crm_leads').select('*').eq('id', id).single(),
+                supabase.from('crm_tasks').select('*, user_profiles(full_name)').eq('lead_id', id).order('due_date', { ascending: true }),
+                supabase.from('crm_lead_services').select('*').eq('lead_id', id).order('created_at', { ascending: false }),
+                supabase.from('crm_lead_notes').select('*, user_profiles:author_id(full_name)').eq('lead_id', id).order('created_at', { ascending: false }),
+                supabase.from('crm_lead_activities').select('*, user_profiles:actor_id(full_name)').eq('lead_id', id).order('created_at', { ascending: false }),
+            ]);
 
-            if (leadError) throw leadError;
+            if (leadRes.error) throw leadRes.error;
+            const leadData = leadRes.data;
             setLead(leadData);
+            setTasks(tasksRes.data || []);
+            setIntentServices(intentRes.data || []);
+            setNotes(notesRes.data || []);
+            setActivities(activitiesRes.data || []);
 
-            // 2. Fetch Tasks
-            const { data: taskData } = await supabase
-                .from('crm_tasks')
-                .select('*, user_profiles(full_name)')
-                .eq('lead_id', id)
-                .order('due_date', { ascending: true });
-            setTasks(taskData || []);
+            // Parallel batch 2: Fetch paid services if email/phone exists
+            if (leadData?.email || leadData?.phone) {
+                const { data: profiles } = await supabase
+                    .from('user_profiles')
+                    .select('id')
+                    .or(`email.eq.${leadData.email},phone.eq.${leadData.phone}`);
 
-            // 3. Fetch Intent Services
-            const { data: intentData } = await supabase
-                .from('crm_lead_services')
-                .select('*')
-                .eq('lead_id', id)
-                .order('created_at', { ascending: false });
-            setIntentServices(intentData || []);
+                if (profiles && profiles.length > 0) {
+                    const userIds = profiles.map(p => p.id);
+                    const [txnsRes, ordersRes] = await Promise.all([
+                        supabase.from('transactions').select('id, amount, created_at, status').in('user_id', userIds).eq('status', 'SUCCESS'),
+                        supabase.from('shopping_order_groups').select('id, total_amount_paise, created_at, status').in('user_id', userIds).eq('status', 'completed')
+                    ]);
 
-            // 4. Fetch Paid Services
-            const { data: profiles } = await supabase
-                .from('user_profiles')
-                .select('id')
-                .or(`email.eq.${leadData.email},phone.eq.${leadData.phone}`);
+                    const merged = [
+                        ...(txnsRes.data || []).map(t => ({ id: t.id, type: 'Financial Service', amount: t.amount, date: t.created_at, icon: CreditCard })),
+                        ...(ordersRes.data || []).map(o => ({ id: o.id, type: 'Shop Order', amount: Number(o.total_amount_paise)/100, date: o.created_at, icon: ShoppingBag }))
+                    ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            if (profiles && profiles.length > 0) {
-                const userIds = profiles.map(p => p.id);
-                
-                const { data: txns } = await supabase
-                    .from('transactions')
-                    .select('id, amount, created_at, status')
-                    .in('user_id', userIds)
-                    .eq('status', 'SUCCESS');
-                
-                const { data: orders } = await supabase
-                    .from('shopping_order_groups')
-                    .select('id, total_amount_paise, created_at, status')
-                    .in('user_id', userIds)
-                    .eq('status', 'completed');
-
-                const merged = [
-                    ...(txns || []).map(t => ({ id: t.id, type: 'Financial Service', amount: t.amount, date: t.created_at, icon: CreditCard })),
-                    ...(orders || []).map(o => ({ id: o.id, type: 'Shop Order', amount: Number(o.total_amount_paise)/100, date: o.created_at, icon: ShoppingBag }))
-                ].sort((a, b) => new Date(b.date) - new Date(a.date));
-                
-                setPaidServices(merged);
+                    setPaidServices(merged);
+                }
             }
-
-            // 5. Fetch Notes
-            const { data: notesData } = await supabase
-                .from('crm_lead_notes')
-                .select('*, user_profiles:author_id(full_name)')
-                .eq('lead_id', id)
-                .order('created_at', { ascending: false });
-            setNotes(notesData || []);
-
-            // 6. Fetch Activities
-            const { data: activitiesData } = await supabase
-                .from('crm_lead_activities')
-                .select('*, user_profiles:actor_id(full_name)')
-                .eq('lead_id', id)
-                .order('created_at', { ascending: false });
-            setActivities(activitiesData || []);
 
         } catch (err) {
             console.error('Error fetching lead hub data:', err);
@@ -204,11 +177,11 @@ export default function LeadDetailPage({ params }) {
     };
 
     const handleDeleteLead = async () => {
-        if (!window.confirm("Are you sure you want to delete this lead? This cannot be undone.")) return;
+        if (!window.confirm("Are you sure you want to archive this lead?")) return;
         try {
-            const { error } = await supabase.from('crm_leads').delete().eq('id', id);
+            const { error } = await supabase.from('crm_leads').update({ archived_at: new Date().toISOString() }).eq('id', id);
             if (error) throw error;
-            toast.success('Lead deleted');
+            toast.success('Lead archived');
             router.push('/crm/leads');
         } catch (err) {
             toast.error(err.message);
@@ -634,20 +607,23 @@ function CreateTaskModal({ leadId, salesTeam, currentUserProfile, onClose, onSav
 
     const handleSave = async (e) => {
         e.preventDefault();
-        if (!title.trim() || !dueDate) {
-            toast.error('Title and Due Date are required');
+        const payload = {
+            lead_id: leadId,
+            title: title.trim(),
+            description: description?.trim() || '',
+            due_date: dueDate ? new Date(dueDate).toISOString() : '',
+            assigned_to: assignedTo || currentUserProfile?.id,
+            status: 'pending'
+        };
+        const validation = CrmTaskCreateSchema.safeParse(payload);
+        if (!validation.success) {
+            toast.error(validation.error.issues[0]?.message || 'Title and Due Date are required');
             return;
         }
         setSaving(true);
         try {
-            const { error } = await supabase.from('crm_tasks').insert([{
-                lead_id: leadId,
-                title,
-                description,
-                due_date: new Date(dueDate).toISOString(),
-                assigned_to: assignedTo || currentUserProfile?.id,
-                status: 'pending'
-            }]);
+            const valid = validation.data;
+            const { error } = await supabase.from('crm_tasks').insert([valid]);
             if (error) throw error;
             toast.success('Task scheduled successfully!');
             onSave();
@@ -722,13 +698,24 @@ function LogActivityModal({ leadId, userId, onClose, onSave }) {
 
     const handleSave = async (e) => {
         e.preventDefault();
+        const payload = {
+            lead_id: leadId,
+            actor_id: userId,
+            action_type: actionType,
+            details: details.trim()
+        };
+        const validation = CrmActivityLogSchema.safeParse(payload);
+        if (!validation.success) {
+            toast.error(validation.error.issues[0]?.message || 'Invalid activity input');
+            return;
+        }
         setSaving(true);
         try {
             const { error } = await supabase.from('crm_lead_activities').insert([{
                 lead_id: leadId,
                 actor_id: userId,
                 action_type: actionType,
-                metadata: { details }
+                metadata: { details: details.trim() }
             }]);
             if (error) throw error;
             toast.success('Activity logged');
@@ -783,13 +770,25 @@ function LogIntentModal({ leadId, userId, onClose, onSave }) {
 
     const handleSave = async (e) => {
         e.preventDefault();
+        const payload = {
+            lead_id: leadId,
+            service_name: serviceName.trim(),
+            deal_value: Number(dealValue) || 0,
+            status
+        };
+        const validation = CrmIntentLogSchema.safeParse(payload);
+        if (!validation.success) {
+            toast.error(validation.error.issues[0]?.message || 'Invalid sales intent details');
+            return;
+        }
         setSaving(true);
         try {
+            const valid = validation.data;
             const { error } = await supabase.from('crm_lead_services').insert([{
-                lead_id: leadId,
-                service_name: serviceName,
-                deal_value: Number(dealValue) || 0,
-                status
+                lead_id: valid.lead_id,
+                service_name: valid.service_name,
+                deal_value: valid.deal_value,
+                status: valid.status
             }]);
             if (error) throw error;
             toast.success('Intent logged');
@@ -856,10 +855,16 @@ function EditLeadModal({ lead, salesTeam, currentUserProfile, onClose, onSave })
 
     const handleSave = async (e) => {
         e.preventDefault();
+        const validation = CrmLeadUpdateSchema.safeParse(form);
+        if (!validation.success) {
+            toast.error(validation.error.issues[0]?.message || 'Invalid form input');
+            return;
+        }
         setSaving(true);
         try {
+            const valid = validation.data;
             const { error } = await supabase.from('crm_leads').update({
-                ...form,
+                ...valid,
                 updated_at: new Date().toISOString()
             }).eq('id', lead.id);
             if (error) throw error;

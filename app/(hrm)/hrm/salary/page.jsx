@@ -17,7 +17,7 @@ function ProcessModal({ record, onClose, onSave }) {
     });
     const [saving, setSaving] = useState(false);
     const up = (k, v) => setForm(p => ({ ...p, [k]: v }));
-    const net = Number(form.base_salary) + Number(form.hra) + Number(form.allowances) - Number(form.deductions);
+    const net = Math.max(0, Number(form.base_salary || 0) + Number(form.hra || 0) + Number(form.allowances || 0) - Number(form.deductions || 0));
 
     const handleProcess = async () => {
         setSaving(true);

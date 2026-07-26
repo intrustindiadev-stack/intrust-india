@@ -203,14 +203,18 @@ export default function ProfilePage() {
             if (merchantUpdateError) throw merchantUpdateError;
 
             // Update user_profiles Table
+            const profileUpdatePayload = {
+                full_name: formData.owner_name,
+                email: formData.business_email,
+                phone: formData.business_phone
+            };
+            if (formData.avatar_url && formData.avatar_url.trim() !== '') {
+                profileUpdatePayload.avatar_url = formData.avatar_url;
+            }
+
             const { error: profileUpdateError } = await supabase
                 .from('user_profiles')
-                .update({
-                    full_name: formData.owner_name,
-                    avatar_url: formData.avatar_url,
-                    email: formData.business_email,
-                    phone: formData.business_phone
-                })
+                .update(profileUpdatePayload)
                 .eq('id', merchant.user_id);
 
             if (profileUpdateError) throw profileUpdateError;

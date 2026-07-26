@@ -82,8 +82,8 @@ export default function CRMDashboard() {
             const manager = ['sales_manager', 'admin', 'super_admin'].includes(role);
             setIsManager(manager);
 
-            let recentQuery = supabase.from('crm_leads').select('id, title, contact_name, phone, email, status, source, created_at, deal_value, temperature').order('created_at', { ascending: false }).limit(5);
-            let allQuery = supabase.from('crm_leads').select('status, created_at, deal_value, assigned_to');
+            let recentQuery = supabase.from('crm_leads').select('id, title, contact_name, phone, email, status, source, created_at, deal_value, temperature').is('archived_at', null).order('created_at', { ascending: false }).limit(5);
+            let allQuery = supabase.from('crm_leads').select('status, created_at, deal_value, assigned_to').is('archived_at', null);
             let tasksQuery = supabase.from('crm_tasks').select('*').eq('status', 'pending').order('due_date', { ascending: true }).limit(4);
 
             if (!manager) {
@@ -141,13 +141,21 @@ export default function CRMDashboard() {
 
     useEffect(() => {
         fetchData();
+        let timer;
+        const debouncedFetch = () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                fetchData();
+            }, 300);
+        };
         const ch1 = supabase.channel('crm_dash_leads')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_leads' }, fetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_leads' }, debouncedFetch)
             .subscribe();
         const ch2 = supabase.channel('crm_dash_tasks')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_tasks' }, fetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_tasks' }, debouncedFetch)
             .subscribe();
         return () => {
+            clearTimeout(timer);
             supabase.removeChannel(ch1);
             supabase.removeChannel(ch2);
         };

@@ -1,13 +1,19 @@
-import { createAdminClient } from '@/lib/supabaseServer';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabaseServer';
 import Link from 'next/link';
 import { Users } from 'lucide-react';
 import UserCard from '@/components/admin/users/UserCard';
 import UserSearch from '@/components/admin/users/UserSearch';
+import UserRoleManager from '@/components/admin/users/UserRoleManager';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminUsersPage({ searchParams }) {
     const supabase = createAdminClient();
+
+    // Get current admin user ID for self-lockout protection in role manager
+    const authSupabase = await createServerSupabaseClient();
+    const { data: { user: currentUser } } = await authSupabase.auth.getUser();
+    const currentAdminId = currentUser?.id || null;
 
     // Await searchParams for Next.js 16 compatibility
     const params = await searchParams;
@@ -123,6 +129,11 @@ export default async function AdminUsersPage({ searchParams }) {
                     </div>
                 </div>
             )}
+
+            {/* Role Management Section */}
+            <div className="mt-10">
+                <UserRoleManager currentAdminId={currentAdminId} />
+            </div>
         </div>
     );
 }

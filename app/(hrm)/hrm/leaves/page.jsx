@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useOptimistic } from 'react';
 import { Search, Check, X, Clock, Calendar, RefreshCw, MessageSquare } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -96,6 +96,12 @@ export default function LeaveQueuePage() {
     const [statusFilter, setStatusFilter] = useState('pending');
     const [reviewing, setReviewing] = useState(null);
 
+    const [optimisticRequests, setOptimisticRequests] = useOptimistic(
+        requests,
+        (current, update) =>
+            current.map(r => r.id === update.id ? { ...r, status: update.status } : r)
+    );
+
     const fetchLeaves = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -115,14 +121,15 @@ export default function LeaveQueuePage() {
     useEffect(() => { fetchLeaves(); }, [fetchLeaves]);
 
     const handleSave = (id, newStatus) => {
+        setOptimisticRequests({ id, status: newStatus });
         setRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
     };
 
-    const filtered = requests.filter(r =>
+    const filtered = optimisticRequests.filter(r =>
         !search || r.user_profiles?.full_name?.toLowerCase().includes(search.toLowerCase())
     );
 
-    const counts = { all: requests.length, pending: requests.filter(r => r.status === 'pending').length };
+    const counts = { all: optimisticRequests.length, pending: optimisticRequests.filter(r => r.status === 'pending').length };
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 min-h-screen">
@@ -173,7 +180,11 @@ export default function LeaveQueuePage() {
                         <p className="text-sm text-gray-400 mt-1">{search ? 'No results for your search' : `No ${statusFilter === 'all' ? '' : statusFilter} requests found`}</p>
                     </div>
                 ) : filtered.map((req, i) => {
-                    const days = req.to_date && req.from_date ? Math.ceil((new Date(req.to_date) - new Date(req.from_date)) / 86400000) + 1 : '?';
+                    const fromTime = req.from_date ? new Date(req.from_date).getTime() : NaN;
+                    const toTime = req.to_date ? new Date(req.to_date).getTime() : NaN;
+                    const days = !isNaN(fromTime) && !isNaN(toTime) && toTime >= fromTime
+                        ? Math.ceil((toTime - fromTime) / 86400000) + 1
+                        : '?';
                     return (
                         <motion.div key={req.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
                             className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all p-5">

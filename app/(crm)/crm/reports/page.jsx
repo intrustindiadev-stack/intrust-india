@@ -19,7 +19,7 @@ export default function CRMReportsPage() {
     useEffect(() => {
         async function fetchAnalytics() {
             try {
-                const { data, error } = await supabase.from('crm_leads').select('status, source');
+                const { data, error } = await supabase.from('crm_leads').select('status, source').is('archived_at', null);
                 if (error) throw error;
 
                 const leads = data || [];

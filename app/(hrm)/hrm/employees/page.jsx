@@ -163,15 +163,36 @@ function AddEmployeeDrawer({ onClose, onSave }) {
     const up = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
     const handleSave = async () => {
-        if (!form.full_name || !form.email) {
-            toast.error('Name and Email are required');
+        if (!form.full_name?.trim() || !form.email?.trim()) {
+            toast.error('Full Name and Email are required');
             return;
         }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(form.email.trim())) {
+            toast.error('Please enter a valid email address');
+            return;
+        }
+
+        if (Number(form.base_salary) < 0) {
+            toast.error('Base salary cannot be negative');
+            return;
+        }
+
         setSaving(true);
         try {
-            // Usually we create Auth user first, but let's insert into profiles for this demo
-            const { data, error } = await supabase.from('user_profiles').insert([form]).select().single();
-            if (error) throw error;
+            const payload = {
+                ...form,
+                email: form.email.toLowerCase().trim(),
+                base_salary: Math.max(0, Number(form.base_salary) || 0)
+            };
+            const { data, error } = await supabase.from('user_profiles').insert([payload]).select().single();
+            if (error) {
+                if (error.code === '23505') {
+                    throw new Error('An account with this email already exists.');
+                }
+                throw error;
+            }
             toast.success('New employee added!');
             onSave(data);
             onClose();

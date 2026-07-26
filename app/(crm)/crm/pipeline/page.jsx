@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 
 const COLUMNS = [
     { id: 'new', title: 'New', color: 'border-t-blue-500', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', iconColor: 'text-blue-500' },
@@ -53,6 +54,7 @@ export default function PipelinePage() {
         let q = supabase
             .from('crm_leads')
             .select('id, title, contact_name, phone, status, source, created_at, deal_value, temperature')
+            .is('archived_at', null)
             .not('status', 'eq', 'lost')
             .order('created_at', { ascending: false });
             
@@ -68,10 +70,20 @@ export default function PipelinePage() {
 
     useEffect(() => {
         fetchLeads();
+        let timer;
+        const debouncedFetch = () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                fetchLeads();
+            }, 300);
+        };
         const ch = supabase.channel('crm_pipeline')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_leads' }, fetchLeads)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_leads' }, debouncedFetch)
             .subscribe();
-        return () => supabase.removeChannel(ch);
+        return () => {
+            clearTimeout(timer);
+            supabase.removeChannel(ch);
+        };
     }, [fetchLeads]);
 
     const filteredLeads = leads.filter(l => {
@@ -105,10 +117,22 @@ export default function PipelinePage() {
     const handleDrop = async (e, colId) => {
         e.preventDefault();
         if (!dragging || dragging.status === colId) { setDragging(null); return; }
-        // Optimistically update UI
-        setLeads(prev => prev.map(l => l.id === dragging.id ? { ...l, status: colId } : l));
-        await supabase.from('crm_leads').update({ status: colId }).eq('id', dragging.id);
+        const prevStatus = dragging.status;
+        const leadId = dragging.id;
         setDragging(null);
+
+        // Optimistically update UI
+        setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: colId } : l));
+        
+        try {
+            const { error } = await supabase.from('crm_leads').update({ status: colId }).eq('id', leadId);
+            if (error) throw error;
+            toast.success(`Stage updated to ${colId}`);
+        } catch (err) {
+            // Revert state if DB update fails
+            setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: prevStatus } : l));
+            toast.error(`Failed to update stage: ${err.message}`);
+        }
     };
 
     const handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };

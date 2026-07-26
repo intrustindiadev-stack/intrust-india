@@ -262,7 +262,7 @@ export async function GET(request) {
         // 1. Fetch the signed-in user's own profile + establishment signal
         const { data: selfProfile } = await supabaseAdmin
             .from('user_profiles')
-            .select('id, role, auth_provider')
+            .select('id, role, auth_provider, avatar_url')
             .eq('id', user.id)
             .maybeSingle();
 
@@ -276,12 +276,20 @@ export async function GET(request) {
             selfProfile.auth_provider === 'multiple'
         );
 
+        // Helper to prevent overwriting custom uploaded avatar images with default Google pictures
+        const resolveAvatarUrl = (currentAvatar, incomingGooglePic) => {
+            if (!currentAvatar || currentAvatar.trim() === '' || currentAvatar.includes('googleusercontent.com') || currentAvatar.includes('google.com')) {
+                return incomingGooglePic || undefined;
+            }
+            return currentAvatar; // Preserve user-uploaded avatar
+        };
+
         // 2. Gate the merge on establishment
         let existingProfile = null;
         if (!signedInEstablished) {
             const { data } = await supabaseAdmin
                 .from('user_profiles')
-                .select('id, auth_provider, full_name')
+                .select('id, auth_provider, full_name, avatar_url')
                 .eq('email', googleEmail)
                 .neq('id', user.id)
                 .in('auth_provider', ['email', 'phone_otp', 'multiple'])
@@ -308,12 +316,13 @@ export async function GET(request) {
                     email_verified: true,
                 });
 
-                // 2. Update user_profiles for the surviving user
+                // 2. Update user_profiles for the surviving user (protecting custom avatars)
+                const preservedSurvivingAvatar = resolveAvatarUrl(existingProfile.avatar_url, googlePicture);
                 await supabaseAdmin
                     .from('user_profiles')
                     .update({
                         auth_provider:      'multiple',
-                        avatar_url:         googlePicture || undefined,
+                        avatar_url:         preservedSurvivingAvatar,
                         email_verified:     true,
                         email_verified_at:  new Date().toISOString(),
                     })
@@ -353,11 +362,12 @@ export async function GET(request) {
                 console.log('[Google OAuth][Flow B] Aborted merge: deletion target is not a simple user role');
                 // Fall through to normal sign in reusing selfProfile
                 if (selfProfile) {
+                    const preservedAvatar = resolveAvatarUrl(selfProfile.avatar_url, googlePicture);
                     await supabaseAdmin
                         .from('user_profiles')
                         .update({
                             full_name:        googleName || 'Google User',
-                            avatar_url:       googlePicture,
+                            avatar_url:       preservedAvatar,
                             email_verified:   true,
                             email_verified_at: new Date().toISOString(),
                         })
@@ -367,12 +377,13 @@ export async function GET(request) {
         } else {
             // No duplicate or established user — normal Google sign-in. Reuse selfProfile.
             if (selfProfile) {
-                // Only update non-critical fields
+                // Only update non-critical fields, protecting custom avatar
+                const preservedAvatar = resolveAvatarUrl(selfProfile.avatar_url, googlePicture);
                 await supabaseAdmin
                     .from('user_profiles')
                     .update({
                         full_name:        googleName || 'Google User',
-                        avatar_url:       googlePicture,
+                        avatar_url:       preservedAvatar,
                         email_verified:   true,
                         email_verified_at: new Date().toISOString(),
                     })

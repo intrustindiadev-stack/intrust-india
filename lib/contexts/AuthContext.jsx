@@ -82,8 +82,13 @@ export function AuthProvider({ children }) {
                     }
                 } else if (session?.user && mounted) {
                     setUser(session.user);
-                    profileCache = await fetchProfile(session.user.id);
-                    if (mounted) setProfile(profileCache);
+                    // Release UI loading lock instantly before async network DB profile fetch
+                    setLoading(false);
+                    fetchProfile(session.user.id).then((profileData) => {
+                        profileCache = profileData;
+                        if (mounted) setProfile(profileData);
+                    });
+                    return;
                 }
             } catch (err) {
                 if (!err.message?.includes('Refresh Token Not Found')) {
@@ -116,6 +121,7 @@ export function AuthProvider({ children }) {
 
                 if (session?.user) {
                     setUser(session.user);
+                    setLoading(false); // Unblock render instantly without waiting for profile
 
                     if (!profileCache || profileCache.id !== session.user.id) {
                         fetchProfile(session.user.id).then((profile) => {
@@ -132,9 +138,8 @@ export function AuthProvider({ children }) {
                     setProfile(null);
                     profileCache = null;
                     setShowAuthLoader(false);
+                    setLoading(false);
                 }
-
-                setLoading(false);
             }
         );
 

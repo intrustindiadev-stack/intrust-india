@@ -26,21 +26,38 @@ import DashboardStats from '@/components/customer/dashboard/DashboardStats';
 import QuickServices from '@/components/customer/dashboard/QuickServices';
 import RecentActivity from '@/components/customer/dashboard/RecentActivity';
 import QuickActions from '@/components/customer/dashboard/QuickActions';
-import RecentShoppingOrders from '@/components/customer/RecentShoppingOrders';
 import GoldSubscription from '@/components/customer/dashboard/GoldSubscription';
-import ReferralGenzSection from '@/components/customer/dashboard/ReferralGenzSection';
-import AdBannerCarousel from '@/components/customer/dashboard/AdBannerCarousel';
-import DisclaimerNote from '@/components/customer/dashboard/DisclaimerNote';
-import SolarPromoCard from '@/components/customer/dashboard/SolarPromoCard';
-import CareerOpportunityCard from '@/components/customer/dashboard/CareerOpportunityCard';
-import AdvertisementModal from '@/components/home/AdvertisementModal';
 import KYCPopup from '@/components/kyc/KYCPopup';
-import FeatureAdvertiser from '@/components/ui/FeatureAdvertiser';
 import { useKYCPopup } from '@/hooks/useKYCPopup';
-
 import MerchantApplyPopup from '@/components/merchant/MerchantApplyPopup';
 import { useMerchantApplyPopup } from '@/hooks/useMerchantApplyPopup';
 
+const AdBannerCarousel = dynamic(() => import('@/components/customer/dashboard/AdBannerCarousel'), {
+    ssr: false,
+    loading: () => <div className="h-32 sm:h-40 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-2xl mb-6" />
+});
+const ReferralGenzSection = dynamic(() => import('@/components/customer/dashboard/ReferralGenzSection'), {
+    ssr: false,
+    loading: () => <div className="h-44 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-3xl" />
+});
+const RecentShoppingOrders = dynamic(() => import('@/components/customer/RecentShoppingOrders'), {
+    ssr: false,
+    loading: () => <div className="h-52 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-3xl" />
+});
+const SolarPromoCard = dynamic(() => import('@/components/customer/dashboard/SolarPromoCard'), {
+    ssr: false,
+    loading: () => <div className="h-36 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-3xl" />
+});
+const FeatureAdvertiser = dynamic(() => import('@/components/ui/FeatureAdvertiser'), {
+    ssr: false,
+    loading: () => <div className="h-28 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-2xl" />
+});
+const CareerOpportunityCard = dynamic(() => import('@/components/customer/dashboard/CareerOpportunityCard'), {
+    ssr: false,
+    loading: () => <div className="h-36 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-3xl" />
+});
+const AdvertisementModal = dynamic(() => import('@/components/home/AdvertisementModal'), { ssr: false });
+const DisclaimerNote = dynamic(() => import('@/components/customer/dashboard/DisclaimerNote'), { ssr: false });
 const OpportunitiesSection = dynamic(() => import('@/components/customer/OpportunitiesSection'), { ssr: false });
 const MerchantOpportunityBanner = dynamic(() => import('@/components/customer/MerchantOpportunityBanner'), { ssr: false });
 const PackageSelectionModal = dynamic(() => import('@/components/customer/dashboard/PackageSelectionModal'), { ssr: false });

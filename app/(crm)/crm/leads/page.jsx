@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import ContactActions from '@/components/shared/ContactActions';
+import { CrmLeadCreateSchema, CrmLeadCsvRowSchema } from '@/lib/crm/validation';
 
 const STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
 
@@ -269,12 +270,17 @@ function AddLeadDrawer({ onClose, onSave }) {
     const up = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
     const handleSave = async () => {
-        if (!form.contact_name) { toast.error('Contact name is required'); return; }
+        const validation = CrmLeadCreateSchema.safeParse(form);
+        if (!validation.success) {
+            toast.error(validation.error.issues[0]?.message || 'Invalid lead details');
+            return;
+        }
         setSaving(true);
         try {
+            const valid = validation.data;
             const { data, error } = await supabase.from('crm_leads').insert([{
-                ...form,
-                title: form.title || form.contact_name,
+                ...valid,
+                title: valid.title || valid.contact_name,
                 created_by: user?.id,
                 assigned_to: user?.id,
             }]).select().single();
@@ -468,6 +474,7 @@ export default function LeadsPage() {
             let q = supabase
                 .from('crm_leads')
                 .select('*')
+                .is('archived_at', null)
                 .order('created_at', { ascending: false });
 
             if (statusFilter !== 'all') q = q.eq('status', statusFilter);
@@ -497,10 +504,20 @@ export default function LeadsPage() {
     useEffect(() => {
         fetchLeads();
         fetchSalesTeam();
+        let timer;
+        const debouncedFetch = () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                fetchLeads();
+            }, 300);
+        };
         const ch = supabase.channel('crm_leads_list')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_leads' }, fetchLeads)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_leads' }, debouncedFetch)
             .subscribe();
-        return () => supabase.removeChannel(ch);
+        return () => {
+            clearTimeout(timer);
+            supabase.removeChannel(ch);
+        };
     }, [fetchLeads, fetchSalesTeam]);
 
     const filtered = leads.filter(l =>

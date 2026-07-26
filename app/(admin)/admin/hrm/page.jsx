@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabaseServer';
+import Link from 'next/link';
 import { displayEmail } from '@/lib/auth';
 import { Users, UserPlus, DollarSign, Clock } from 'lucide-react';
 import ContactActions from '@/components/shared/ContactActions';
