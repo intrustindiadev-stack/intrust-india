@@ -22,7 +22,7 @@ export default function AuditLogsPage() {
         try {
             let q = supabase
                 .from('audit_logs_hrm')
-                .select('*, user_profiles!actor_id(full_name, role)', { count: 'exact' })
+                .select('*', { count: 'exact' })
                 .order('created_at', { ascending: false })
                 .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
 

@@ -140,7 +140,7 @@ function LoginContent() {
     const confirmed = searchParams?.get('confirmed') === 'true';
 
     // Safe post-login redirect (only internal paths, no open-redirect)
-    const rawRedirect = searchParams?.get('redirect') || searchParams?.get('returnUrl') || '';
+    const rawRedirect = searchParams?.get('callbackUrl') || searchParams?.get('redirect') || searchParams?.get('returnUrl') || '';
     const postLoginRedirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : null;
 
     useEffect(() => {
@@ -159,7 +159,8 @@ function LoginContent() {
     // ─── Google ──────────────────────────────────────────────────────────────────
     const handleGoogleSignIn = () => {
         setGoogleLoading(true);
-        window.location.href = '/api/auth/google';
+        const url = postLoginRedirect ? `/api/auth/google?callbackUrl=${encodeURIComponent(postLoginRedirect)}` : '/api/auth/google';
+        window.location.href = url;
     };
 
     const handleGoogleLink = () => {
@@ -379,6 +380,22 @@ function LoginContent() {
                         <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Login</h1>
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">Enter your details to login.</p>
 
+                        {/* ── CALLBACK / LOGIN REQUIRED NOTE ── */}
+                        {postLoginRedirect && (
+                            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 border border-indigo-500/25 dark:border-indigo-400/30 text-center relative overflow-hidden shadow-sm animate-fadeIn">
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
+                                <div className="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400 font-extrabold text-sm mb-1">
+                                    <ShieldCheck size={18} className="text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                                    <span>Sign in Required</span>
+                                </div>
+                                <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
+                                    {postLoginRedirect.includes('/career') 
+                                        ? "Please log in to your account to continue with your job application and save your progress."
+                                        : "Please log in to your account to securely access your requested page."}
+                                </p>
+                            </div>
+                        )}
+
                         <form onSubmit={handleEmailSignIn} className="space-y-5">
                             <div>
                                 <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Email</label>
@@ -497,7 +514,7 @@ function LoginContent() {
                         </div>
 
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-6">
-                            Don&apos;t have an account? <Link href="/signup" className="text-[#92BCEA] font-semibold hover:underline">Sign up</Link>
+                            Don&apos;t have an account? <Link href={postLoginRedirect ? `/signup?callbackUrl=${encodeURIComponent(postLoginRedirect)}` : "/signup"} className="text-[#92BCEA] font-semibold hover:underline">Sign up</Link>
                         </p>
                     </div>
                 )}
@@ -613,6 +630,22 @@ function LoginContent() {
                             </button>
                             <h2 className="text-2xl font-bold text-[var(--text-primary)] w-full text-center">Phone Login</h2>
                         </div>
+
+                        {/* ── CALLBACK / LOGIN REQUIRED NOTE ── */}
+                        {postLoginRedirect && (
+                            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 border border-indigo-500/25 dark:border-indigo-400/30 text-center relative overflow-hidden shadow-sm animate-fadeIn">
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
+                                <div className="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400 font-extrabold text-sm mb-1">
+                                    <ShieldCheck size={18} className="text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                                    <span>Sign in Required</span>
+                                </div>
+                                <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
+                                    {postLoginRedirect.includes('/career') 
+                                        ? "Please log in to your account to continue with your job application and save your progress."
+                                        : "Please log in to your account to securely access your requested page."}
+                                </p>
+                            </div>
+                        )}
 
                         <form onSubmit={(e) => handleSendOTP(e, 'sms')} className="space-y-5">
                             <div>
@@ -735,7 +768,7 @@ function LoginContent() {
                         
                         <div className="space-y-4">
                             <button
-                                onClick={() => router.push(`/signup?phone=${phone}`)}
+                                onClick={() => router.push(`/signup?phone=${phone}${postLoginRedirect ? `&callbackUrl=${encodeURIComponent(postLoginRedirect)}` : ''}`)}
                                 className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all"
                             >
                                 Create my account

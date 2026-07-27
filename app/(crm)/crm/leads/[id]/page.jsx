@@ -5,7 +5,7 @@ import {
     Phone, Mail, MapPin, Building, Calendar, Clock, Edit, FileText, 
     Activity, MessageSquare, CheckCircle2, ChevronRight, Zap, Target, 
     DollarSign, Thermometer, Plus, Trash2, ExternalLink, CreditCard, 
-    ShoppingBag, Sun, Package, ArrowLeft, MessageCircle, X, Send
+    ShoppingBag, Sun, Package, ArrowLeft, MessageCircle, X, Send, User
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';

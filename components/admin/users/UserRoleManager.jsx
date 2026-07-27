@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 const ROLE_OPTIONS = [
-    { value: 'customer', label: 'Customer', color: 'bg-gray-100 text-gray-700 border-gray-200' },
+    { value: 'user', label: 'User / Customer', color: 'bg-gray-100 text-gray-700 border-gray-200' },
     { value: 'merchant', label: 'Merchant', color: 'bg-teal-50 text-teal-700 border-teal-200' },
     { value: 'employee', label: 'Employee', color: 'bg-sky-50 text-sky-700 border-sky-200' },
     { value: 'sales_exec', label: 'Sales Exec', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },

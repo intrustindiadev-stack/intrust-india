@@ -80,13 +80,14 @@ export default function ApplicationDetailPage({ params }) {
 
     if (!user) {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col">
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
                 <Navbar />
                 <div className="flex-1 flex items-center justify-center p-4">
                     <div className="text-center">
-                        <div className="w-16 h-16 bg-indigo-100 rounded-3xl flex items-center justify-center mx-auto mb-4"><AlertCircle size={28} className="text-indigo-500" /></div>
-                        <h2 className="text-xl font-bold text-gray-900 mb-2">Sign In Required</h2>
-                        <Link href="/auth/login" className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-colors">Sign In</Link>
+                        <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-indigo-200 dark:border-indigo-700/50"><AlertCircle size={28} className="text-indigo-500 dark:text-indigo-400" /></div>
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Sign In Required</h2>
+                        <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">Please sign in to view the detailed progress of your job application.</p>
+                        <Link href={`/login?callbackUrl=${encodeURIComponent(`/career/applications/${appId || ''}`)}`} className="inline-flex items-center justify-center bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-8 py-3.5 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/25">Sign In to Continue</Link>
                     </div>
                 </div>
                 <Footer />

@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 function ProcessModal({ record, onClose, onSave }) {
     const [form, setForm] = useState({
@@ -157,7 +157,7 @@ export default function SalaryPage() {
                 ["Deductions", fmt(sal.deductions)],
             ];
 
-            doc.autoTable({
+            autoTable(doc, {
                 startY: 70,
                 head: [['Component', 'Amount']],
                 body: tableData,
@@ -165,7 +165,7 @@ export default function SalaryPage() {
                 headStyles: { fillColor: [16, 185, 129] },
             });
 
-            const finalY = doc.lastAutoTable.finalY || 150;
+            const finalY = doc.lastAutoTable?.finalY || 150;
             doc.setFontSize(12);
             doc.setFont("helvetica", "bold");
             doc.text(`Net Pay: ${fmt(sal.net_salary)}`, 14, finalY + 15);

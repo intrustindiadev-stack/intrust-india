@@ -126,7 +126,8 @@ function CareerApplyForm() {
     // ── AUTH GATE ──────────────────────────────────────────────────
     useEffect(() => {
         if (!authLoading && !user) {
-            router.push(`/auth/login?callbackUrl=${encodeURIComponent('/career/apply')}`);
+            const currentPath = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/career/apply';
+            router.push(`/login?callbackUrl=${encodeURIComponent(currentPath)}`);
         }
     }, [user, authLoading, router]);
 

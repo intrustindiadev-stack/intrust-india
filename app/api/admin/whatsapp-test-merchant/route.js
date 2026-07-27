@@ -56,7 +56,8 @@ const TEMPLATE_MAP = {
   intrust_merchant_welcome_linked: MERCHANT_WELCOME_LINKED_TEMPLATE,
   intrust_merchant_new_order: MERCHANT_NEW_ORDER_TEMPLATE,
   intrust_merchant_order_cancelled: MERCHANT_ORDER_CANCELLED_TEMPLATE,
-  intrust_merchant_payout_status: MERCHANT_PAYOUT_STATUS_TEMPLATE,
+  intrust_merchant_payout_status_v2: MERCHANT_PAYOUT_STATUS_TEMPLATE,
+  intrust_merchant_payout_status: MERCHANT_PAYOUT_STATUS_TEMPLATE, // backwards compatibility alias
   intrust_merchant_store_credit_request: MERCHANT_STORE_CREDIT_REQUEST_TEMPLATE,
   intrust_merchant_store_credit_paid: MERCHANT_STORE_CREDIT_PAID_TEMPLATE,
   intrust_merchant_gift_card_sold: MERCHANT_GIFT_CARD_SOLD_TEMPLATE,

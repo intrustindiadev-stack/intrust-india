@@ -23,7 +23,7 @@
 | 5 | `intrust_merchant_welcome_linked` | Utility | en_US | 0 | `MERCHANT_WELCOME_LINKED_TEMPLATE` | Merchant Linking |
 | 6 | `intrust_merchant_new_order` | Utility | en_US | 3 | `MERCHANT_NEW_ORDER_TEMPLATE` | Order Complete |
 | 7 | `intrust_merchant_order_cancelled` | Utility | en_US | 2 | `MERCHANT_ORDER_CANCELLED_TEMPLATE` | Order Cancelled |
-| 8 | `intrust_merchant_payout_status` | Utility | en_US | 3 | `MERCHANT_PAYOUT_STATUS_TEMPLATE` | Settlement Job |
+| 8 | `intrust_merchant_payout_status_v2` | Utility | en_US | 3 | `MERCHANT_PAYOUT_STATUS_TEMPLATE` | Settlement Job |
 | 9 | `intrust_merchant_payout_requested` | Utility | en_US | 2 | `MERCHANT_PAYOUT_REQUESTED_TEMPLATE` | Payout Request |
 | 10 | `intrust_merchant_store_credit_request` | Utility | en_US | 3 | `MERCHANT_STORE_CREDIT_REQUEST_TEMPLATE` | Store Credit |
 | 11 | `intrust_merchant_store_credit_paid` | Utility | en_US | 2 | `MERCHANT_STORE_CREDIT_PAID_TEMPLATE` | Settlement Job |
@@ -230,7 +230,7 @@
   - [Quick Reply] `View Order`
   - [Quick Reply] `Contact Support`
 
-### 8. `intrust_merchant_payout_status`
+### 8. `intrust_merchant_payout_status_v2`
 - **Body**:
   ```text
   💸 *Payout Processed Successfully*
@@ -241,7 +241,7 @@
   *Status*: *{{2}}*
   *Reference*: {{3}}
 
-  Funds usually reflect in your registered bank account within 24-48 hours.
+  Please check your merchant dashboard for full transaction details.
   ```
 - **Variables**: {{1}} = Amount, {{2}} = Payout Status, {{3}} = Ref/Note
 - **Footer**: InTrust India | Secure Settlements

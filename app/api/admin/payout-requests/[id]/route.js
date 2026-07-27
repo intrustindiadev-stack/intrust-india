@@ -156,11 +156,14 @@ export async function PATCH(request, { params }) {
                 });
             } else {
                 const statusMap = { approved: 'Approved', rejected: 'Rejected', released: 'Paid' };
+                const defaultNote = action === 'released' && utr_reference 
+                    ? `UTR / Ref: ${utr_reference}` 
+                    : 'Automated Bank Settlement (NEFT / IMPS)';
                 await notifyMerchantPayoutStatus({
                     merchantUserId: merchant.user_id,
                     amountRs:       Number(payoutReq.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
                     status:         statusMap[action],
-                    note:           admin_note || '',
+                    note:           admin_note || defaultNote,
                 });
             }
         } catch (e) {

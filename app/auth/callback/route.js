@@ -36,7 +36,7 @@ export async function GET(request) {
     }
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    const next = requestUrl.searchParams.get('next')
+    const next = requestUrl.searchParams.get('next') || requestUrl.searchParams.get('callbackUrl') || requestUrl.searchParams.get('redirect') || requestUrl.searchParams.get('returnUrl')
 
     if (error) {
         console.error('Exchange error:', error.message)

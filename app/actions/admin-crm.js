@@ -21,7 +21,7 @@ import { z } from 'zod';
 const uuidSchema = z.string().uuid('Invalid UUID format');
 
 const VALID_ROLES = [
-    'customer', 'merchant', 'admin', 'super_admin',
+    'user', 'merchant', 'admin', 'super_admin',
     'hr_manager', 'sales_exec', 'sales_manager', 'employee'
 ];
 
@@ -65,7 +65,7 @@ async function verifyAdminCaller() {
         return { error: 'Unauthorized: Admin access required', user, role: null };
     }
 
-    return { error: null, user, role: profile.role, adminClient };
+    return { error: null, user, role: profile.role, adminClient, supabase };
 }
 
 
@@ -119,11 +119,11 @@ export async function updateLeadAssignment(leadId, newRepId) {
             return { success: false, error: parsed.error.issues[0]?.message || 'Invalid input' };
         }
 
-        const { error: authError, adminClient } = await verifyAdminCaller();
+        const { error: authError, supabase } = await verifyAdminCaller();
         if (authError) return { success: false, error: authError };
 
-        // Call the SECURITY DEFINER RPC
-        const { data, error: rpcError } = await adminClient
+        // Call the SECURITY DEFINER RPC using the authenticated user client so auth.uid() is populated
+        const { data, error: rpcError } = await supabase
             .rpc('admin_reassign_lead', {
                 p_lead_id: parsed.data.leadId,
                 p_new_rep_id: parsed.data.newRepId,
@@ -167,7 +167,7 @@ export async function updateUserRole(userId, newRole) {
             return { success: false, error: parsed.error.issues[0]?.message || 'Invalid input' };
         }
 
-        const { error: authError, user, adminClient } = await verifyAdminCaller();
+        const { error: authError, user, supabase } = await verifyAdminCaller();
         if (authError) return { success: false, error: authError };
 
         // Extra client-side self-lockout guard (RPC also enforces this)
@@ -175,8 +175,8 @@ export async function updateUserRole(userId, newRole) {
             return { success: false, error: 'Cannot remove your own admin privileges' };
         }
 
-        // Call the SECURITY DEFINER RPC
-        const { data, error: rpcError } = await adminClient
+        // Call the SECURITY DEFINER RPC using the authenticated user client so auth.uid() is populated
+        const { data, error: rpcError } = await supabase
             .rpc('admin_update_user_role', {
                 p_target_user_id: parsed.data.userId,
                 p_new_role: parsed.data.newRole,

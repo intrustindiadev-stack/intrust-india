@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithOTP } from '@/lib/supabase';
 import { redirectByRole } from '@/lib/auth';
-import { Phone, ArrowRight, Loader2, User, CheckCircle, Eye, EyeOff, MessageCircle } from 'lucide-react';
+import { Phone, ArrowRight, Loader2, User, CheckCircle, Eye, EyeOff, MessageCircle, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
@@ -111,6 +111,8 @@ function SignupPageInner() {
     const canResend = timer === 0;
     const [otpChannel, setOtpChannel] = useState('sms'); // 'sms' | 'whatsapp'
     const [whatsappLoading, setWhatsappLoading] = useState(false);
+    const rawRedirect = searchParams?.get('callbackUrl') || searchParams?.get('redirect') || searchParams?.get('returnUrl') || '';
+    const postLoginRedirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : null;
 
     useEffect(() => {
         if (timer > 0) {
@@ -153,7 +155,8 @@ function SignupPageInner() {
     // ─── Google ─────────────────────────────────────────────────────────────────
     const handleGoogleSignIn = () => {
         setGoogleLoading(true);
-        window.location.href = '/api/auth/google';
+        const url = postLoginRedirect ? `/api/auth/google?callbackUrl=${encodeURIComponent(postLoginRedirect)}` : '/api/auth/google';
+        window.location.href = url;
     };
 
     // ─── Phone OTP flow ─────────────────────────────────────────────────────────
@@ -226,7 +229,7 @@ function SignupPageInner() {
                 return;
             }
             
-            await redirectByRole(data?.user, data?.role, data?.is_suspended);
+            await redirectByRole(data?.user, data?.role, data?.is_suspended, postLoginRedirect);
             if (data?.is_suspended) {
                 setLoading(false);
             }
@@ -386,6 +389,22 @@ function SignupPageInner() {
                         <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Create an account</h1>
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">Please enter your details to create an account.</p>
 
+                        {/* ── CALLBACK / SIGN UP REQUIRED NOTE ── */}
+                        {postLoginRedirect && (
+                            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 border border-indigo-500/25 dark:border-indigo-400/30 text-center relative overflow-hidden shadow-sm animate-fadeIn">
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
+                                <div className="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400 font-extrabold text-sm mb-1">
+                                    <ShieldCheck size={18} className="text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                                    <span>Account Required to Continue</span>
+                                </div>
+                                <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
+                                    {postLoginRedirect.includes('/career')
+                                        ? "Please sign up to submit your career application and track your progress."
+                                        : "Please create an account to proceed to your requested destination."}
+                                </p>
+                            </div>
+                        )}
+
                         <form onSubmit={handleEmailSignup} className="space-y-5">
                             <div>
                                 <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Full Name</label>
@@ -517,7 +536,7 @@ function SignupPageInner() {
                         </div>
 
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-6">
-                            Already have an account? <Link href="/login" className="text-[#92BCEA] font-semibold hover:underline">Sign in</Link>
+                            Already have an account? <Link href={postLoginRedirect ? `/login?callbackUrl=${encodeURIComponent(postLoginRedirect)}` : "/login"} className="text-[#92BCEA] font-semibold hover:underline">Sign in</Link>
                         </p>
                     </div>
                 )}
@@ -578,6 +597,22 @@ function SignupPageInner() {
                         <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
                             Welcome, <span className="font-bold text-[var(--text-primary)]">{name.split(' ')[0]}</span>
                         </p>
+
+                        {/* ── CALLBACK / SIGN UP REQUIRED NOTE ── */}
+                        {postLoginRedirect && (
+                            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 border border-indigo-500/25 dark:border-indigo-400/30 text-center relative overflow-hidden shadow-sm animate-fadeIn">
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
+                                <div className="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400 font-extrabold text-sm mb-1">
+                                    <ShieldCheck size={18} className="text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                                    <span>Account Required to Continue</span>
+                                </div>
+                                <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
+                                    {postLoginRedirect.includes('/career')
+                                        ? "Please sign up to submit your career application and track your progress."
+                                        : "Please create an account to proceed to your requested destination."}
+                                </p>
+                            </div>
+                        )}
 
                         <form onSubmit={(e) => handleSendOTP(e, 'sms')} className="space-y-5">
                             <div>

@@ -21,7 +21,7 @@ export async function GET(request) {
     url.searchParams.set('prompt', 'select_account');
 
     const reqUrl = new URL(request.url);
-    const next       = reqUrl.searchParams.get('next');
+    const next       = reqUrl.searchParams.get('next') || reqUrl.searchParams.get('callbackUrl') || reqUrl.searchParams.get('redirect') || reqUrl.searchParams.get('returnUrl');
     const linkMode   = reqUrl.searchParams.get('link_mode');    // 'email' when doing account merge
     const pendingEmail = reqUrl.searchParams.get('pending_email');
 
