@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import { Clock, ShieldCheck, CreditCard, ChevronRight, AlertCircle, Loader2, Copy, CheckCircle2, Eye, EyeOff, Info, Calendar, Lock, Smartphone, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -247,7 +247,7 @@ export default function StoreCreditsPage() {
                 </div>
             </div>
             
-            <CustomerBottomNav />
+            
         </div>
     );
 }

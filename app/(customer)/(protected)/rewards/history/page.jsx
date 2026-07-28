@@ -10,7 +10,7 @@ import {
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import Navbar from '@/components/layout/Navbar';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 
 export default function RewardsHistoryPage() {
@@ -182,7 +182,7 @@ export default function RewardsHistoryPage() {
                 </button>
             </div>
 
-            <CustomerBottomNav />
+            
         </div>
     );
 }

@@ -17,7 +17,6 @@ import { Gift } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import StatsBar from './components/StatsBar';
 import Footer from '../../../components/layout/Footer';
-import CustomerBottomNav from '../../../components/layout/customer/CustomerBottomNav';
 
 // Transform Supabase data to match UI expectations
 const transformCouponData = (coupon) => {
@@ -353,7 +352,7 @@ export default function GiftCardsClient({ initialCoupons }) {
                 </div>
             </div>
             <Footer />
-            <CustomerBottomNav />
+            
         </div>
     );
 }

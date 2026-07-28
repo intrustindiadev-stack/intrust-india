@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import FeatureAdvertiser from '@/components/ui/FeatureAdvertiser';
@@ -87,7 +87,7 @@ export default function ServicesPage() {
                 </div>
             </div>
 
-            <CustomerBottomNav />
+            
         </div>
     );
 }

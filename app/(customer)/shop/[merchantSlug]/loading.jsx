@@ -1,6 +1,5 @@
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 
 export default function StorefrontLoading() {
     return (
@@ -36,7 +35,7 @@ export default function StorefrontLoading() {
                 </div>
             </main>
             <Footer />
-            <CustomerBottomNav />
+            
         </div>
     );
 }

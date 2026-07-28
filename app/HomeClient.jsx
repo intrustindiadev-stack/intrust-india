@@ -14,7 +14,6 @@ import TestimonialsSection from '@/components/home/TestimonialsSection';
 import CareerOpportunitiesSection from '@/components/home/CareerOpportunitiesSection';
 import { SlowProgressLoader } from '@/components/ui/InTrustProgressLoader';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 
 export default function HomeClient() {
@@ -51,7 +50,6 @@ export default function HomeClient() {
                     <TestimonialsSection />
                     <CareerOpportunitiesSection />
                     <Footer />
-                    {isAuthenticated && <CustomerBottomNav />}
                 </div>
             )}
         </>

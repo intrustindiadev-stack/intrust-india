@@ -4,6 +4,30 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
+// Lightweight branded loading skeleton — avoids importing heavy components
+// that would inflate the customer layout bundle for every page.
+export function CustomerLoadingSkeleton() {
+    return (
+        <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4 animate-fadeIn">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA]/20 to-[#AFB3F7]/20 flex items-center justify-center">
+                    <div className="w-8 h-8 border-3 border-[#92BCEA]/30 border-t-[#92BCEA] rounded-full animate-spin" />
+                </div>
+                <p className="text-sm text-[var(--text-secondary)] font-medium animate-pulse">
+                    Loading...
+                </p>
+            </div>
+        </div>
+    );
+}
+
+// Non-customer roles that should be redirected away from the customer portal
+const NON_CUSTOMER_ROLES = [
+    'admin', 'super_admin', 'merchant', 'hr_manager', 'employee',
+    'sales_exec', 'sales_manager', 'sales_agent',
+];
 
 export default function CustomerLayout({ children }) {
     const { user, profile, loading } = useAuth();
@@ -11,24 +35,31 @@ export default function CustomerLayout({ children }) {
     const pathname = usePathname();
     const refreshAttemptedRef = useRef(false);
 
-    useEffect(() => {
-        if (loading || !user || !profile) return;
+    // Derive the effective role from both JWT metadata (instant) and DB profile (async).
+    // JWT role is available immediately from the decoded session token, while
+    // profile.role requires a network fetch. Using both provides belt-and-suspenders
+    // protection against the role flash.
+    const jwtRole = user?.user_metadata?.role;
+    const effectiveRole = profile?.role || jwtRole;
+    const isSalesRole = effectiveRole?.startsWith('sales_');
+    const isNonCustomer = effectiveRole && (NON_CUSTOMER_ROLES.includes(effectiveRole) || isSalesRole);
 
-        // Redirect non-customer roles to their respective portals
-        const nonCustomerRoles = ['admin', 'super_admin', 'merchant', 'hr_manager', 'employee'];
-        const isSalesRole = profile.role?.startsWith('sales_');
-        
-        if (nonCustomerRoles.includes(profile.role) || isSalesRole) {
+    useEffect(() => {
+        if (loading || !user) return;
+        // Wait for either profile or JWT role to be available
+        if (!effectiveRole) return;
+
+        if (isNonCustomer) {
             // Exceptions: merchant applying
-            if (profile.role === 'merchant' && pathname?.startsWith('/merchant-apply')) {
+            if (effectiveRole === 'merchant' && pathname?.startsWith('/merchant-apply')) {
                 return;
             }
 
             // Determine target path
             let targetPath = '/admin';
-            if (profile.role === 'merchant') targetPath = '/merchant/dashboard';
-            else if (profile.role === 'hr_manager') targetPath = '/hrm';
-            else if (profile.role === 'employee') targetPath = '/employee';
+            if (effectiveRole === 'merchant') targetPath = '/merchant/dashboard';
+            else if (effectiveRole === 'hr_manager') targetPath = '/hrm';
+            else if (effectiveRole === 'employee') targetPath = '/employee';
             else if (isSalesRole) targetPath = '/crm';
 
             // Refresh the session once to pick up the corrected user_metadata.role,
@@ -43,21 +74,26 @@ export default function CustomerLayout({ children }) {
                 router.replace(targetPath);
             }
         }
-    }, [user, profile, loading, router, pathname]);
+    }, [user, effectiveRole, isNonCustomer, loading, router, pathname, isSalesRole]);
 
-    // While auth is resolving, render a blank screen instead of the customer UI.
-    // This prevents admins/merchants from seeing a flash of the customer layout
-    // before the redirect fires — eliminating the race condition that caused
-    // the login-loop bug.
+    // While auth is resolving, show a branded loading skeleton instead of a
+    // blank white screen. This eliminates the "white screen" on mobile where
+    // slower networks cause a multi-second blank page.
     if (loading) {
-        return <div className="min-h-screen bg-[var(--bg-primary)]" />;
+        return <CustomerLoadingSkeleton />;
     }
 
-    // If a non-customer role is loaded but redirect hasn't fired yet, suppress render
-    const nonCustomerRolesList = ['admin', 'super_admin', 'merchant', 'hr_manager', 'employee', 'sales_exec', 'sales_manager', 'sales_agent'];
-    if (profile && nonCustomerRolesList.includes(profile.role) && !pathname?.startsWith('/merchant-apply')) {
-        return <div className="min-h-screen bg-[var(--bg-primary)]" />;
+    // If a non-customer role is detected (from JWT or profile), suppress rendering
+    // children while the redirect fires. This check uses the JWT role too, so it
+    // triggers instantly — no waiting for the async profile fetch.
+    if (isNonCustomer && !pathname?.startsWith('/merchant-apply')) {
+        return <CustomerLoadingSkeleton />;
     }
 
-    return children;
+    return (
+        <>
+            {children}
+            <CustomerBottomNav />
+        </>
+    );
 }

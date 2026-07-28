@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { isValidUUID } from "@/lib/utils";
 import OrderDetailsClient from "./OrderDetailsClient";
 import Navbar from "@/components/layout/Navbar";
-import CustomerBottomNav from "@/components/layout/customer/CustomerBottomNav";
 
 export default async function OrderDetailsPage({ params }) {
     const { orderId } = await params;
@@ -46,7 +45,7 @@ export default async function OrderDetailsPage({ params }) {
             <main>
                 <OrderDetailsClient order={order} userId={user.id} customerProfile={customerProfile} />
             </main>
-            <CustomerBottomNav />
+            
         </div>
     );
 }

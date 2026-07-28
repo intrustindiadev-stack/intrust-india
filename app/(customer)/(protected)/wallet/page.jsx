@@ -17,7 +17,7 @@ import {
     Clock
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import BalanceReveal from '@/components/ui/BalanceReveal';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { PayerContactError, usePayment } from '@/hooks/usePayment';
@@ -406,7 +406,7 @@ export default function CustomerWalletPage() {
                 )}
             </AnimatePresence>
 
-            <CustomerBottomNav activeTab="profile" />
+            
         </div>
     );
 }

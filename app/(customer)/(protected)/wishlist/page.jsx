@@ -2,7 +2,6 @@ import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import WishlistClient from './WishlistClient';
 import { redirect } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 
 export const metadata = { title: 'My Wishlist — InTrust' };
 
@@ -28,7 +27,7 @@ export default async function WishlistPage() {
     <main className="min-h-screen pb-20 md:pb-0 bg-[#f7f8fa]">
       <Navbar />
       <WishlistClient userId={user.id} userEmail={user.email} initialItems={wishlistItems || []} />
-      <CustomerBottomNav />
+      
     </main>
   );
 }

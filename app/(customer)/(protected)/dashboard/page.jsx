@@ -12,7 +12,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import dynamic from 'next/dynamic';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { PayerContactError, usePayment } from '@/hooks/usePayment';
@@ -92,7 +92,7 @@ function DashboardSkeleton() {
                     </div>
                 </div>
             </div>
-            <CustomerBottomNav />
+            
         </div>
     );
 }
@@ -592,7 +592,7 @@ export default function CustomerDashboardPage() {
                 </div>
             </div>
             </PullToRefresh>
-            {userData.completedOnboarding && <CustomerBottomNav />}
+            
             <DisclaimerNote />
 
             <PackageSelectionModal

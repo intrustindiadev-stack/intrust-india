@@ -111,5 +111,17 @@ export async function GET(request) {
         return applyCookies(NextResponse.redirect(new URL('/merchant/dashboard', origin)))
     }
 
+    if (profile?.role === 'hr_manager') {
+        return applyCookies(NextResponse.redirect(new URL('/hrm', origin)))
+    }
+
+    if (profile?.role === 'employee') {
+        return applyCookies(NextResponse.redirect(new URL('/employee', origin)))
+    }
+
+    if (profile?.role?.startsWith('sales_') || profile?.role === 'sales_exec' || profile?.role === 'sales_agent') {
+        return applyCookies(NextResponse.redirect(new URL('/crm', origin)))
+    }
+
     return applyCookies(NextResponse.redirect(new URL('/dashboard', origin)))
 }

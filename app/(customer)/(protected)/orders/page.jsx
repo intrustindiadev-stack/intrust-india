@@ -2,7 +2,7 @@ import { createServerSupabaseClient } from "@/lib/supabaseServer";
 import { redirect } from "next/navigation";
 import OrdersClient from "./OrdersClient";
 import Navbar from "@/components/layout/Navbar";
-import CustomerBottomNav from "@/components/layout/customer/CustomerBottomNav";
+
 import Breadcrumbs from "@/components/giftcards/Breadcrumbs";
 
 export default async function CustomerOrdersPage() {
@@ -29,7 +29,7 @@ export default async function CustomerOrdersPage() {
         <OrdersClient userId={user.id} />
       </main>
       
-      <CustomerBottomNav />
+      
     </div>
   );
 }

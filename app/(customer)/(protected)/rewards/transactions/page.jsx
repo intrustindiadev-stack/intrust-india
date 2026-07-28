@@ -6,7 +6,6 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, History, TrendingUp, Wallet, Filter, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Navbar from '@/components/layout/Navbar';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 
 const eventTypeLabels = {
     signup: 'Signup Bonus',
@@ -214,7 +213,7 @@ export default function TransactionsPage() {
                 )}
             </div>
 
-            <CustomerBottomNav />
+            
         </div>
     );
 }

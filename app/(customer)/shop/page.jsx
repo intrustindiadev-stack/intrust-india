@@ -2,7 +2,7 @@ import { createStaticSupabaseClient, createAdminClient } from '@/lib/supabaseSer
 import { ShoppingBag } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import ShopHubClient from './ShopHubClient';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import UserShopHeaderActions from './UserShopHeaderActions';
@@ -154,7 +154,7 @@ export default async function MerchantHubPage() {
             </main>
 
             <Footer />
-            <CustomerBottomNav />
+            
         </div>
     );
 }

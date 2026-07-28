@@ -31,14 +31,16 @@ const PROTECTED_PREFIXES = [
 ]
 
 // Maps portal prefix → role checker function
-// Only these portals enforce strict role checking at middleware level.
-// /dashboard is intentionally excluded — customer layout handles admin redirects client-side.
+// These portals enforce strict role checking at middleware level.
+// /dashboard now included: non-customer roles are redirected at the Edge
+// before any HTML is served, eliminating the "role flash" race condition.
 const PORTAL_ROLE_MAP = {
     '/admin':    (r) => r === 'admin' || r === 'super_admin',
     '/merchant': (r) => r === 'merchant',
     '/hrm':      (r) => r === 'hr_manager',
     '/crm':      (r) => r?.startsWith('sales_') || r === 'sales_exec' || r === 'sales_agent',
     '/employee': (r) => ['employee', 'sales_exec', 'sales_manager', 'hr_manager', 'admin', 'super_admin'].includes(r),
+    '/dashboard': (r) => !r || r === 'user' || r === 'customer',
 }
 
 export async function middleware(request) {

@@ -14,7 +14,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import ScratchCard from '@/components/ui/ScratchCard';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import RewardsInfoModal from '@/components/rewards/RewardsInfoModal';
@@ -817,7 +817,7 @@ export default function RewardsPage() {
             </AnimatePresence>
 
             <RewardsInfoModal isOpen={showInfoModal} onClose={() => setShowInfoModal(false)} userTier={currentTier.name.toLowerCase()} />
-            <CustomerBottomNav />
+            
         </div>
     );
 }

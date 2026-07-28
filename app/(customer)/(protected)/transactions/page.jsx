@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import { Clock, CheckCircle, Search, Filter, TrendingUp, TrendingDown, Wallet, Gift, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
@@ -34,7 +34,7 @@ function TransactionsSkeleton() {
                     </div>
                 </div>
             </div>
-            <CustomerBottomNav />
+            
         </div>
     );
 }
@@ -395,7 +395,7 @@ export default function TransactionsPage() {
 
                 </div>
             </div>
-            <CustomerBottomNav />
+            
         </div>
     );
 }

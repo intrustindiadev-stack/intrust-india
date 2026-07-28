@@ -10,7 +10,7 @@ import Image from 'next/image';
 import { Star, ShieldCheck, Clock, CheckCircle, Share2, Loader2, AlertCircle, Sparkles, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
 import UdhariRequestModal from '../components/UdhariRequestModal';
 import PaymentMethodSelector from '@/components/giftcards/PaymentMethodSelector';
@@ -469,7 +469,7 @@ export default function GiftCardDetailPage({ params }) {
                 </div>
             </div>
 
-            <CustomerBottomNav />
+            
 
             {/* Sabpaisa Payment Modal */}
             {card && user && (

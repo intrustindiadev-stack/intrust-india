@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 // ── Layout & UI ──
 import Navbar from '@/components/layout/Navbar';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import KYCStatus from '@/components/kyc/KYCStatus';
 import KYCPopup from '@/components/kyc/KYCPopup';
 import { useKYCPopup } from '@/hooks/useKYCPopup';
@@ -480,7 +480,7 @@ function CustomerProfileContent() {
                 </div>
             </main>
 
-            <CustomerBottomNav />
+            
         </div>
     );
 }

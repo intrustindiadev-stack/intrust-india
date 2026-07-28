@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { redirect } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import MyGiftCardsClient from './MyGiftCardsClient';
 
@@ -223,7 +223,7 @@ export default async function MyCouponsPage() {
                 udhariCount={udhariCount || 0}
                 userProfile={userProfile || { full_name: user.email, email: user.email }}
             />
-            <CustomerBottomNav />
+            
         </>
     );
 }

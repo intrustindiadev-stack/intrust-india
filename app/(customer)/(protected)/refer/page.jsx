@@ -14,7 +14,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -680,7 +680,7 @@ export default function ReferAndEarnPage() {
                 )}
             </AnimatePresence>
 
-            <CustomerBottomNav />
+            
         </div>
     );
 }

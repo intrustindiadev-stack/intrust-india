@@ -4,7 +4,6 @@ import Link from 'next/link';
 import StorefrontV2Client from './StorefrontV2Client';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
 
 export const revalidate = 60;
 
@@ -128,7 +127,7 @@ export default async function MerchantStorefrontPage({ params }) {
                         </div>
                     </main>
                     <Footer />
-                    <CustomerBottomNav />
+                    
                 </div>
             );
         }
@@ -188,7 +187,7 @@ export default async function MerchantStorefrontPage({ params }) {
                     />
                 </main>
                 <Footer />
-                <CustomerBottomNav />
+                
             </div>
         );
     }
@@ -207,7 +206,7 @@ export default async function MerchantStorefrontPage({ params }) {
             </main>
 
             <Footer />
-            <CustomerBottomNav />
+            
         </div>
     );
 }

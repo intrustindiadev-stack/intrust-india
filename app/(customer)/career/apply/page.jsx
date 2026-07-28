@@ -15,7 +15,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import { toast } from 'react-hot-toast';
 
 const ROLE_CONFIG = {
@@ -322,7 +322,7 @@ function CareerApplyForm() {
                         </div>
                     </motion.div>
                 </div>
-                <CustomerBottomNav />
+                
             </div>
         );
     }
@@ -603,7 +603,7 @@ function CareerApplyForm() {
                 </div>
             </div>
             <Footer />
-            <CustomerBottomNav />
+            
         </div>
     );
 }

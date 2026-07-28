@@ -82,11 +82,23 @@ export function AuthProvider({ children }) {
                     }
                 } else if (session?.user && mounted) {
                     setUser(session.user);
-                    // Release UI loading lock instantly before async network DB profile fetch
-                    setLoading(false);
+                    // If the JWT already carries a role in user_metadata, we can
+                    // release the loading lock immediately — the role is known and
+                    // layouts can gate correctly without waiting for the DB profile.
+                    // If no role in JWT (legacy accounts), keep loading=true until
+                    // fetchProfile completes to prevent the "role flash" where the
+                    // customer dashboard briefly mounts for non-customer roles.
+                    const jwtRole = session.user.user_metadata?.role;
+                    if (jwtRole) {
+                        setLoading(false);
+                    }
                     fetchProfile(session.user.id).then((profileData) => {
                         profileCache = profileData;
-                        if (mounted) setProfile(profileData);
+                        if (mounted) {
+                            setProfile(profileData);
+                            // Release loading if it wasn't already (no JWT role case)
+                            if (!jwtRole) setLoading(false);
+                        }
                     });
                     return;
                 }
@@ -121,13 +133,24 @@ export function AuthProvider({ children }) {
 
                 if (session?.user) {
                     setUser(session.user);
-                    setLoading(false); // Unblock render instantly without waiting for profile
+                    // Same JWT-role-aware logic as initializeAuth:
+                    // only unblock rendering if the role is already in the JWT.
+                    const jwtRole = session.user.user_metadata?.role;
+                    if (jwtRole) {
+                        setLoading(false);
+                    }
 
                     if (!profileCache || profileCache.id !== session.user.id) {
                         fetchProfile(session.user.id).then((profile) => {
                             profileCache = profile;
-                            if (mounted) setProfile(profile);
+                            if (mounted) {
+                                setProfile(profile);
+                                if (!jwtRole) setLoading(false);
+                            }
                         });
+                    } else if (!jwtRole) {
+                        // Profile already cached and no JWT role — safe to unblock
+                        setLoading(false);
                     }
 
                     if (event === 'SIGNED_IN') {

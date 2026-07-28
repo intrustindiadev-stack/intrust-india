@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import { createClient } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -523,7 +523,7 @@ export default function SolarServicePage() {
             </AnimatePresence>
 
             <div className="fixed bottom-0 left-0 right-0 z-[120]">
-                <CustomerBottomNav />
+                
             </div>
         </div>
     );

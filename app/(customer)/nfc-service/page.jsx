@@ -10,7 +10,7 @@ import CradleSection from '@/components/nfc/CradleSection';
 import OrderSection from '@/components/nfc/OrderSection';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+
 import { useTheme } from '@/lib/contexts/ThemeContext';
 
 export default function NFCServicePage() {
@@ -127,7 +127,7 @@ export default function NFCServicePage() {
 
             {isMobile && (
                 <div className="fixed bottom-0 left-0 right-0 z-[120]">
-                    <CustomerBottomNav />
+                    
                 </div>
             )}
 
