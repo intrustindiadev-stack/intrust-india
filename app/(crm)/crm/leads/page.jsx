@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, Plus, Phone, Mail, ArrowUpRight, X, ChevronDown, RefreshCw, User, Building2, MapPin, Briefcase, Download, UploadCloud, Edit2 } from 'lucide-react';
+import { Search, Plus, Phone, Mail, X, RefreshCw, User, MapPin, Briefcase, Download, UploadCloud, Edit2, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import ContactActions from '@/components/shared/ContactActions';
 import { CrmLeadCreateSchema, CrmLeadCsvRowSchema } from '@/lib/crm/validation';
+import { parseCSV, normalizeHeader } from '@/lib/csvParser';
 
 const STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
 
@@ -21,242 +22,403 @@ const STATUS_STYLE = {
     lost: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+const MAX_FILE_MB = 5;
+const MAX_ROWS    = 1000;
+const BATCH_SIZE  = 50;
+
+// ─── ImportLeadsDrawer ────────────────────────────────────────────────────────
+/**
+ * Production-grade CSV bulk-import drawer.
+ *
+ * Fixes applied vs. the previous inline implementation:
+ *   1. Uses shared parseCSV() + normalizeHeader() from lib/csvParser.js
+ *      (which now strips BOM produced by Excel exports)
+ *   2. Wires CrmLeadCsvRowSchema.safeParse() – Zod is no longer bypassed
+ *   3. File-size guard: rejects files > MAX_FILE_MB MB before reading
+ *   4. Row-limit gate: truncates to MAX_ROWS data rows, shows warning
+ *   5. Structured per-row error panel in the UI (row number + field + reason)
+ *   6. Detects within-CSV duplicate phone/email values; warns user
+ *   7. Batch insert: one supabase.insert(batch) call per 50 rows (was N×1)
+ *   8. Template includes a comment-row guideline for the user
+ */
 function ImportLeadsDrawer({ onClose, onSave }) {
     const { user } = useAuth();
-    const [file, setFile] = useState(null);
+    const [file, setFile]           = useState(null);
     const [uploading, setUploading] = useState(false);
+    // null  = initial state
+    // object = { imported, skipped, truncated, duplicateCount, rowErrors[] }
+    const [importResult, setImportResult] = useState(null);
 
+    // ── Template Download ─────────────────────────────────────────────────────
     const handleDownloadTemplate = () => {
-        const headers = "title,contact_name,phone,email,source,notes\n";
-        const sampleRow = "Sample Lead,John Doe,9876543210,john@example.com,CSV Import,Interested in services\n";
-        const blob = new Blob([headers + sampleRow], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = "crm_leads_template.csv";
+        const commentRow  = '# Required: contact_name | Phone: 10-digit Indian mobile starting with 6-9 (e.g. 9876543210) | Status auto-set to "new"\n';
+        const headerRow   = 'title,contact_name,phone,email,source,notes\n';
+        const sampleRow   = 'Insurance Inquiry,Ravi Kumar,9876543210,ravi@example.com,Referral,Interested in Gold Plan\n';
+
+        const blob = new Blob([commentRow + headerRow + sampleRow], { type: 'text/csv;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = 'crm_leads_template.csv';
         a.click();
         URL.revokeObjectURL(url);
     };
 
+    // ── Upload & Parse ────────────────────────────────────────────────────────
     const handleUpload = async () => {
-        if (!file) {
-            toast.error('Please select a file first.');
+        if (!file) { toast.error('Please select a CSV file first.'); return; }
+
+        // Guard 1 — File size
+        if (file.size > MAX_FILE_MB * 1024 * 1024) {
+            toast.error(`File too large. Maximum allowed size is ${MAX_FILE_MB} MB.`);
             return;
         }
 
         setUploading(true);
+        setImportResult(null);
+
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
                 const text = e.target.result;
-                
-                // Robust CSV Parser (handles quotes & newlines inside quotes)
-                const rows = [];
-                let curRow = [];
-                let curField = '';
-                let inQuotes = false;
-                for (let i = 0; i < text.length; i++) {
-                    const char = text[i];
-                    if (inQuotes) {
-                        if (char === '"') {
-                            if (i + 1 < text.length && text[i + 1] === '"') {
-                                curField += '"';
-                                i++;
-                            } else {
-                                inQuotes = false;
-                            }
-                        } else {
-                            curField += char;
-                        }
-                    } else {
-                        if (char === '"') {
-                            inQuotes = true;
-                        } else if (char === ',') {
-                            curRow.push(curField.trim());
-                            curField = '';
-                        } else if (char === '\n' || char === '\r') {
-                            if (char === '\r' && i + 1 < text.length && text[i + 1] === '\n') {
-                                i++; // skip \n
-                            }
-                            curRow.push(curField.trim());
-                            if (curRow.some(f => f)) rows.push(curRow);
-                            curRow = [];
-                            curField = '';
-                        } else {
-                            curField += char;
-                        }
-                    }
-                }
-                if (curField || curRow.length > 0) {
-                    curRow.push(curField.trim());
-                    if (curRow.some(f => f)) rows.push(curRow);
+
+                // ── Step 1: Parse CSV (shared, BOM-safe parser) ───────────────
+                const allRows = parseCSV(text);
+
+                if (allRows.length < 2) {
+                    throw new Error('File appears empty or only contains a header row.');
                 }
 
-                if (rows.length < 2) throw new Error("File seems empty or only has headers.");
+                // Normalise headers — strips symbols, spaces, case-insensitive
+                const headerRow    = allRows[0];
+                const normHeaders  = headerRow.map(normalizeHeader);
 
-                const headers = rows[0].map(h => (h || '').toLowerCase());
-                const nameIdx = headers.indexOf('contact_name');
-                const titleIdx = headers.indexOf('title');
-                const phoneIdx = headers.indexOf('phone');
-                const emailIdx = headers.indexOf('email');
-                const sourceIdx = headers.indexOf('source');
-                const notesIdx = headers.indexOf('notes');
+                // Build column-index map
+                const col = (key) => normHeaders.indexOf(normalizeHeader(key));
+                const nameIdx   = col('contact_name');
+                const titleIdx  = col('title');
+                const phoneIdx  = col('phone');
+                const emailIdx  = col('email');
+                const sourceIdx = col('source');
+                const notesIdx  = col('notes');
 
                 if (nameIdx === -1 && phoneIdx === -1 && emailIdx === -1) {
-                    throw new Error("CSV must have at least contact_name, phone, or email column.");
+                    throw new Error(
+                        'CSV must contain at least one of: contact_name, phone, email. ' +
+                        'Please download the template and check your column headers.'
+                    );
                 }
 
-                const leadsToInsert = [];
-                const rowNumbers = [];
-                let skipped = 0;
-                let imported = 0;
-                const skipReasons = [];
+                // ── Step 2: Row-count guard (truncate, don't reject) ──────────
+                let dataRows  = allRows.slice(1);
+                let truncated = 0;
+                if (dataRows.length > MAX_ROWS) {
+                    truncated = dataRows.length - MAX_ROWS;
+                    dataRows  = dataRows.slice(0, MAX_ROWS);
+                }
 
-                const phoneRegex = /^\+?[\d\s-]{10,}$/;
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                // ── Step 3: Validate each row via Zod + collect errors ────────
+                const leadsToInsert  = [];
+                const rowMeta        = [];    // parallel array: which CSV row each lead came from
+                const rowErrors      = [];    // { row, field, reason }
+                const seenPhones     = new Map(); // for intra-CSV duplicate detection
+                const seenEmails     = new Map();
+                const duplicateRows  = new Set();
 
-                for (let i = 1; i < rows.length; i++) {
-                    const columns = rows[i];
-                    const contact_name = nameIdx !== -1 ? columns[nameIdx] : '';
-                    const title = titleIdx !== -1 ? columns[titleIdx] : '';
-                    const phone = phoneIdx !== -1 ? columns[phoneIdx] : '';
-                    const email = emailIdx !== -1 ? columns[emailIdx] : null;
-                    const source = sourceIdx !== -1 ? columns[sourceIdx] : 'CSV Import';
-                    const notes = notesIdx !== -1 ? columns[notesIdx] : '';
+                for (let i = 0; i < dataRows.length; i++) {
+                    const csvRowNumber = i + 2; // +1 header, +1 for 1-indexed display
+                    const cols         = dataRows[i];
+                    const get          = (idx) => (idx !== -1 ? (cols[idx] ?? '') : '');
 
-                    if (!contact_name && !phone && !email) {
-                        skipped++;
-                        skipReasons.push(`Row ${i+1}: Missing contact_name, phone, and email`);
+                    const rawContact = get(nameIdx).trim();
+                    const rawTitle   = get(titleIdx).trim();
+                    const rawPhone   = get(phoneIdx).trim();
+                    const rawEmail   = get(emailIdx).trim().toLowerCase();
+                    const rawSource  = get(sourceIdx).trim();
+                    const rawNotes   = get(notesIdx).trim();
+
+                    // Validate via CrmLeadCsvRowSchema (the authoritative Zod schema)
+                    const parsed = CrmLeadCsvRowSchema.safeParse({
+                        contact_name: rawContact || undefined,
+                        title:        rawTitle   || undefined,
+                        phone:        rawPhone   || undefined,
+                        email:        rawEmail   || undefined,
+                        source:       rawSource  || undefined,
+                        notes:        rawNotes   || undefined,
+                    });
+
+                    if (!parsed.success) {
+                        // Surface each Zod issue as a distinct row error
+                        parsed.error.issues.forEach((issue) => {
+                            rowErrors.push({
+                                row:    csvRowNumber,
+                                field:  issue.path[0] ?? 'unknown',
+                                reason: issue.message,
+                            });
+                        });
+                        continue; // skip this row
+                    }
+
+                    // Minimum identity check: at least one of name/phone/email required
+                    if (!rawContact && !rawPhone && !rawEmail) {
+                        rowErrors.push({
+                            row:    csvRowNumber,
+                            field:  'contact_name / phone / email',
+                            reason: 'Row is empty — at least one identifier is required',
+                        });
                         continue;
                     }
 
-                    if (phone && !phoneRegex.test(phone)) {
-                        skipped++;
-                        skipReasons.push(`Row ${i+1}: Invalid phone format`);
-                        continue;
+                    // Intra-CSV duplicate detection
+                    if (rawPhone) {
+                        if (seenPhones.has(rawPhone)) {
+                            duplicateRows.add(csvRowNumber);
+                            duplicateRows.add(seenPhones.get(rawPhone));
+                        } else {
+                            seenPhones.set(rawPhone, csvRowNumber);
+                        }
                     }
-
-                    if (email && !emailRegex.test(email)) {
-                        skipped++;
-                        skipReasons.push(`Row ${i+1}: Invalid email format`);
-                        continue;
+                    if (rawEmail) {
+                        if (seenEmails.has(rawEmail)) {
+                            duplicateRows.add(csvRowNumber);
+                            duplicateRows.add(seenEmails.get(rawEmail));
+                        } else {
+                            seenEmails.set(rawEmail, csvRowNumber);
+                        }
                     }
 
                     leadsToInsert.push({
-                        title: title || contact_name || 'Imported Lead',
-                        contact_name: contact_name || 'Unknown',
-                        phone: phone || null,
-                        email: email || null,
-                        source: source || 'CSV Import',
-                        status: 'new',
+                        title:        rawTitle || rawContact || 'Imported Lead',
+                        contact_name: rawContact || 'Unknown',
+                        phone:        rawPhone  || null,
+                        email:        rawEmail  || null,
+                        source:       rawSource || 'CSV Import',
+                        status:       'new',
                         pipeline_stage: 'new',
-                        notes: notes,
-                        created_by: user.id,
-                        assigned_to: user.id,
+                        notes:        rawNotes,
+                        created_by:   user.id,
+                        assigned_to:  user.id,
                     });
-                    rowNumbers.push(i + 1);
+                    rowMeta.push(csvRowNumber);
                 }
 
-                if (leadsToInsert.length === 0 && skipped > 0) {
-                    toast.error(`Import failed. All ${skipped} rows were skipped due to invalid data.`);
-                    console.warn("Skip Reasons:", skipReasons);
-                    return;
-                } else if (leadsToInsert.length === 0) {
-                    toast.error("No valid rows found to import.");
+                if (leadsToInsert.length === 0) {
+                    setImportResult({ imported: 0, skipped: rowErrors.length, truncated, duplicateCount: duplicateRows.size, rowErrors });
+                    toast.error('No valid rows to import. See the error panel below.');
                     return;
                 }
 
+                // ── Step 4: Batch insert (one call per BATCH_SIZE rows) ────────
                 const successfullyImported = [];
-                const BATCH_SIZE = 50;
+                let dbSkipped              = 0;
+                const dbErrors             = [];
+
                 for (let i = 0; i < leadsToInsert.length; i += BATCH_SIZE) {
-                    const batch = leadsToInsert.slice(i, i + BATCH_SIZE);
-                    const batchRows = rowNumbers.slice(i, i + BATCH_SIZE);
-                    
-                    const promises = batch.map((lead, idx) => 
-                        supabase.from('crm_leads').insert([lead]).select()
-                            .then(res => ({ res, row: batchRows[idx] }))
-                    );
-                    const results = await Promise.all(promises);
-                    
-                    for (const { res, row } of results) {
-                        if (res.error) {
-                            skipped++;
-                            skipReasons.push(`Row ${row}: DB Error - ${res.error.message}`);
-                        } else if (res.data && res.data.length) {
-                            imported++;
-                            successfullyImported.push(res.data[0]);
-                        }
+                    const batch     = leadsToInsert.slice(i, i + BATCH_SIZE);
+                    const batchMeta = rowMeta.slice(i, i + BATCH_SIZE);
+
+                    const { data, error } = await supabase
+                        .from('crm_leads')
+                        .insert(batch)
+                        .select();
+
+                    if (error) {
+                        // Entire batch failed — attribute error to all rows in batch
+                        dbSkipped += batch.length;
+                        batchMeta.forEach((rowNum) => {
+                            dbErrors.push({ row: rowNum, field: 'DB', reason: error.message });
+                        });
+                    } else {
+                        successfullyImported.push(...(data || []));
                     }
                 }
 
-                if (skipped > 0) {
-                    toast.success(`Imported ${imported} leads. Skipped ${skipped} rows. Check console for details.`);
-                    console.warn("Import Skip Reasons:", skipReasons);
-                } else {
-                    toast.success(`Successfully imported all ${imported} leads!`);
-                }
+                const totalImported = successfullyImported.length;
+                const allErrors     = [...rowErrors, ...dbErrors];
+                const result = {
+                    imported:       totalImported,
+                    skipped:        allErrors.length,
+                    truncated,
+                    duplicateCount: duplicateRows.size,
+                    rowErrors:      allErrors,
+                };
+                setImportResult(result);
 
-                if (imported > 0) {
+                if (totalImported > 0) {
                     onSave(successfullyImported);
-                    onClose();
+                    toast.success(`Imported ${totalImported} lead${totalImported !== 1 ? 's' : ''}!`);
+                    if (allErrors.length === 0) {
+                        onClose();
+                    }
+                } else {
+                    toast.error('Import failed — no leads were saved. Review the errors below.');
                 }
             } catch (err) {
-                toast.error(err.message);
+                toast.error(err.message || 'Unexpected error during import.');
             } finally {
                 setUploading(false);
             }
         };
-        reader.readAsText(file);
+        reader.readAsText(file, 'UTF-8');
     };
 
+    const handleReset = () => { setFile(null); setImportResult(null); };
+
+    // ── Render ────────────────────────────────────────────────────────────────
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex">
             <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
             <motion.div
                 initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                className="w-full max-w-md bg-white flex flex-col h-full shadow-2xl"
+                className="w-full max-w-lg bg-white flex flex-col h-full shadow-2xl"
             >
-                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                {/* Header */}
+                <div className="p-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
                     <div>
                         <h2 className="text-lg font-bold text-gray-900">Import Leads</h2>
-                        <p className="text-xs text-gray-400 mt-0.5">Bulk upload via CSV</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Bulk upload via CSV · max {MAX_ROWS} rows · {MAX_FILE_MB} MB</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors"><X size={18} className="text-gray-500" /></button>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto p-5 space-y-6">
-                    <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
-                        <h3 className="font-bold text-indigo-900 mb-1 text-sm">1. Download Template</h3>
-                        <p className="text-xs text-indigo-700 mb-3">Use our CSV template to ensure your columns are formatted correctly.</p>
-                        <button onClick={handleDownloadTemplate} className="inline-flex items-center gap-2 bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition-colors">
-                            <Download size={14} /> Download CSV Template
-                        </button>
-                    </div>
-
-                    <div className="space-y-3">
-                        <h3 className="font-bold text-gray-900 text-sm">2. Upload File</h3>
-                        <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer relative">
-                            <input 
-                                type="file" 
-                                accept=".csv" 
-                                onChange={(e) => setFile(e.target.files[0])}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            />
-                            <UploadCloud size={32} className="text-gray-400 mb-2" />
-                            <p className="text-sm font-semibold text-gray-700">
-                                {file ? file.name : "Click or drag CSV here"}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">Maximum 500 rows recommended</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-5 border-t border-gray-100 flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition-all">Cancel</button>
-                    <button onClick={handleUpload} disabled={!file || uploading} className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2">
-                        {uploading ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Uploading…</> : 'Import Leads'}
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                        <X size={18} className="text-gray-500" />
                     </button>
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto p-5 space-y-5">
+
+                    {/* ── Result Panel ── */}
+                    {importResult && (
+                        <div className="space-y-3">
+                            {/* Summary row */}
+                            <div className={`rounded-2xl p-4 border ${importResult.imported > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+                                <div className="flex items-center gap-2 mb-1">
+                                    {importResult.imported > 0
+                                        ? <CheckCircle2 size={16} className="text-emerald-600" />
+                                        : <AlertTriangle size={16} className="text-rose-500" />
+                                    }
+                                    <span className="font-bold text-sm text-gray-900">
+                                        {importResult.imported > 0
+                                            ? `${importResult.imported} lead${importResult.imported !== 1 ? 's' : ''} imported successfully`
+                                            : 'Import failed — no leads saved'}
+                                    </span>
+                                </div>
+                                <div className="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                                    {importResult.skipped > 0 && <span>⚠ {importResult.skipped} row{importResult.skipped !== 1 ? 's' : ''} skipped</span>}
+                                    {importResult.truncated > 0 && <span>✂ {importResult.truncated} row{importResult.truncated !== 1 ? 's' : ''} truncated (limit: {MAX_ROWS})</span>}
+                                    {importResult.duplicateCount > 0 && (
+                                        <span className="text-amber-600 font-semibold">
+                                            ⚠ {importResult.duplicateCount} row{importResult.duplicateCount !== 1 ? 's' : ''} may contain duplicate contacts — please review
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Per-row error table */}
+                            {importResult.rowErrors.length > 0 && (
+                                <div>
+                                    <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                        <AlertTriangle size={12} className="text-amber-500" /> Validation Errors ({importResult.rowErrors.length})
+                                    </p>
+                                    <div className="border border-rose-100 rounded-2xl overflow-hidden max-h-56 overflow-y-auto">
+                                        <table className="w-full text-xs">
+                                            <thead className="bg-rose-50 border-b border-rose-100">
+                                                <tr>
+                                                    <th className="px-3 py-2 text-left font-bold text-rose-700 w-14">Row</th>
+                                                    <th className="px-3 py-2 text-left font-bold text-rose-700 w-28">Field</th>
+                                                    <th className="px-3 py-2 text-left font-bold text-rose-700">Reason</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-rose-50">
+                                                {importResult.rowErrors.map((e, idx) => (
+                                                    <tr key={idx} className="hover:bg-rose-50/50">
+                                                        <td className="px-3 py-1.5 font-mono font-bold text-rose-600">{e.row}</td>
+                                                        <td className="px-3 py-1.5 text-gray-600 font-medium">{e.field}</td>
+                                                        <td className="px-3 py-1.5 text-gray-500">{e.reason}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Try again button */}
+                            <button
+                                onClick={handleReset}
+                                className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 underline underline-offset-2"
+                            >
+                                Upload a different file
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ── Upload Flow (hidden after result) ── */}
+                    {!importResult && (
+                        <>
+                            {/* Step 1 */}
+                            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
+                                <h3 className="font-bold text-indigo-900 mb-1 text-sm">1. Download Template</h3>
+                                <p className="text-xs text-indigo-700 mb-3">
+                                    Columns: <code className="font-mono bg-indigo-100 px-1 rounded">title, contact_name, phone, email, source, notes</code>
+                                </p>
+                                <div className="flex items-start gap-2 mb-3 bg-white/70 border border-indigo-100 rounded-xl p-3 text-xs text-indigo-800">
+                                    <Info size={13} className="mt-0.5 flex-shrink-0 text-indigo-400" />
+                                    <span>Phone must be a 10-digit Indian mobile number starting with 6–9 (e.g. <code className="font-mono">9876543210</code>). Rows with invalid data are skipped and shown in an error report.</span>
+                                </div>
+                                <button
+                                    onClick={handleDownloadTemplate}
+                                    className="inline-flex items-center gap-2 bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition-colors"
+                                >
+                                    <Download size={14} /> Download CSV Template
+                                </button>
+                            </div>
+
+                            {/* Step 2 */}
+                            <div className="space-y-2">
+                                <h3 className="font-bold text-gray-900 text-sm">2. Upload Your File</h3>
+                                <label className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${file ? 'border-indigo-300 bg-indigo-50/50' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300'}`}>
+                                    <input
+                                        type="file"
+                                        accept=".csv"
+                                        className="sr-only"
+                                        onChange={(e) => { setFile(e.target.files[0]); setImportResult(null); }}
+                                    />
+                                    <UploadCloud size={28} className={`mb-2 ${file ? 'text-indigo-500' : 'text-gray-300'}`} />
+                                    <p className={`text-sm font-semibold ${file ? 'text-indigo-700' : 'text-gray-500'}`}>
+                                        {file ? file.name : 'Click or drag a .csv file here'}
+                                    </p>
+                                    {file
+                                        ? <p className="text-xs text-gray-400 mt-1">{(file.size / 1024).toFixed(1)} KB</p>
+                                        : <p className="text-xs text-gray-400 mt-1">Max {MAX_FILE_MB} MB · {MAX_ROWS} rows · UTF-8 or Excel CSV</p>
+                                    }
+                                </label>
+                            </div>
+                        </>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-5 border-t border-gray-100 flex gap-3 flex-shrink-0">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition-all"
+                    >
+                        {importResult?.imported > 0 ? 'Done' : 'Cancel'}
+                    </button>
+                    {!importResult && (
+                        <button
+                            onClick={handleUpload}
+                            disabled={!file || uploading}
+                            className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                        >
+                            {uploading
+                                ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing…</>
+                                : <><UploadCloud size={15} /> Import Leads</>
+                            }
+                        </button>
+                    )}
                 </div>
             </motion.div>
         </motion.div>
@@ -475,6 +637,7 @@ export default function LeadsPage() {
                 .from('crm_leads')
                 .select('*')
                 .is('archived_at', null)
+                .neq('source', 'App User')
                 .order('created_at', { ascending: false });
 
             if (statusFilter !== 'all') q = q.eq('status', statusFilter);

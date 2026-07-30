@@ -186,15 +186,21 @@ function AddEmployeeDrawer({ onClose, onSave }) {
                 email: form.email.toLowerCase().trim(),
                 base_salary: Math.max(0, Number(form.base_salary) || 0)
             };
-            const { data, error } = await supabase.from('user_profiles').insert([payload]).select().single();
-            if (error) {
-                if (error.code === '23505') {
-                    throw new Error('An account with this email already exists.');
-                }
-                throw error;
+            
+            const res = await fetch('/api/hrm/employees', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const data = await res.json();
+            
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to add employee');
             }
+            
             toast.success('New employee added!');
-            onSave(data);
+            onSave(data.user);
             onClose();
         } catch (err) { toast.error(err.message); }
         finally { setSaving(false); }

@@ -43,6 +43,7 @@ import {
     ShieldCheck,
     BookOpen,
     ChevronDown,
+    Network,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { displayEmail } from '@/lib/auth';
@@ -92,6 +93,7 @@ const navigationGroups = [
     {
         title: 'Enterprise Portals',
         items: [
+            { name: 'Team Hierarchy', href: '/admin/teams', icon: Network },
             { name: 'Career Applications', href: '/admin/careers', icon: Briefcase },
             { name: 'CRM Overview', href: '/admin/crm', icon: BarChart3 },
             { name: 'HRM Overview', href: '/admin/hrm', icon: UserCheck },

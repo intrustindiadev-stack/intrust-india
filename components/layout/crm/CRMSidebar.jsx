@@ -48,6 +48,7 @@ export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
         { name: 'Leads', icon: Users, path: '/crm/leads' },
         { name: 'Pipeline', icon: Briefcase, path: '/crm/pipeline' },
         { name: 'Tasks', icon: Briefcase, path: '/crm/tasks' },
+        { name: 'Teams', icon: Users, path: '/crm/teams' },
     ];
 
     if (isManager) {

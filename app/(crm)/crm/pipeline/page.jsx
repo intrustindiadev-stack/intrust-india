@@ -16,7 +16,7 @@ const COLUMNS = [
     { id: 'won', title: 'Won ✓', color: 'border-t-emerald-500', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', iconColor: 'text-emerald-500' },
 ];
 
-const SOURCES = ['All', 'Solar', 'Merchants', 'Users', 'Imported'];
+const SOURCES = ['All', 'Solar', 'Merchants', 'Imported'];
 
 const getSourceCategory = (source) => {
     if (!source) return 'Other';
@@ -56,6 +56,7 @@ export default function PipelinePage() {
             .select('id, title, contact_name, phone, status, source, created_at, deal_value, temperature')
             .is('archived_at', null)
             .not('status', 'eq', 'lost')
+            .neq('source', 'App User')
             .order('created_at', { ascending: false });
             
         // RBAC: Executives only see assigned leads

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-export const phoneRegex = /^\+?[\d\s-]{10,15}$/;
+// Indian mobile: 10 digits, starting with 6-9 (e.g. 9876543210)
+export const phoneRegex = /^[6-9]\d{9}$/;
 export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const LEAD_STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'] as const;
@@ -34,7 +35,7 @@ export const CrmLeadUpdateSchema = CrmLeadCreateSchema.partial().extend({
 export const CrmLeadCsvRowSchema = z.object({
     contact_name: z.string().min(1, 'Missing contact name'),
     title: z.string().optional(),
-    phone: z.string().refine(val => !val || phoneRegex.test(val), 'Invalid phone format').nullable().optional(),
+    phone: z.string().refine(val => !val || phoneRegex.test(val), 'Invalid phone — must be a 10-digit Indian mobile starting with 6-9').nullable().optional(),
     email: z.string().refine(val => !val || emailRegex.test(val), 'Invalid email format').nullable().optional(),
     source: z.string().optional(),
     notes: z.string().optional(),
