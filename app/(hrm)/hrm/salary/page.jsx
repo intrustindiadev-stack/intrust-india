@@ -113,7 +113,11 @@ export default function SalaryPage() {
         setIsLoading(true);
         try {
             const [empRes, salRes] = await Promise.all([
-                supabase.from('user_profiles').select('id, full_name, role, department, base_salary').in('role', ['employee', 'sales_exec', 'sales_manager', 'hr_manager']),
+                supabase.from('user_profiles').select('id, full_name, role, department, base_salary').in('role', [
+                    'employee', 'relationship_exec', 'relationship_manager', 'hr_manager',
+                    'freelancer', 'video_editor', 'social_media_manager',
+                    'seo_specialist', 'advertiser', 'support_agent'
+                ]),
                 supabase.from('salary_records').select('*').eq('month', month).eq('year', year),
             ]);
             const emps = empRes.data || [];

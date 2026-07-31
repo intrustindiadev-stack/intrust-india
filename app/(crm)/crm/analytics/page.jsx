@@ -19,7 +19,7 @@ export default async function AnalyticsPage() {
         .eq('id', user.id)
         .single();
 
-    if (!['sales_exec', 'sales_manager', 'admin', 'super_admin'].includes(profile?.role)) {
+    if (!['relationship_exec', 'relationship_manager', 'admin', 'super_admin'].includes(profile?.role)) {
         redirect('/crm');
     }
 

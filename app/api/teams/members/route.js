@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 
-const MEMBER_WRITE_ROLES = ['admin', 'super_admin', 'sales_manager'];
+const MEMBER_WRITE_ROLES = ['admin', 'super_admin', 'relationship_manager'];
 
 export async function POST(request) {
     try {
@@ -9,7 +9,7 @@ export async function POST(request) {
 
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         if (!MEMBER_WRITE_ROLES.includes(profile?.role)) {
-            return NextResponse.json({ error: 'Forbidden: Admin or Sales Manager access required' }, { status: 403 });
+            return NextResponse.json({ error: 'Forbidden: Admin or Relationship Manager access required' }, { status: 403 });
         }
 
         const body = await request.json();
@@ -54,7 +54,7 @@ export async function DELETE(request) {
 
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         if (!MEMBER_WRITE_ROLES.includes(profile?.role)) {
-            return NextResponse.json({ error: 'Forbidden: Admin or Sales Manager access required' }, { status: 403 });
+            return NextResponse.json({ error: 'Forbidden: Admin or Relationship Manager access required' }, { status: 403 });
         }
 
         const { searchParams } = new URL(request.url);

@@ -10,7 +10,7 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const isManager = ['sales_manager', 'admin', 'super_admin'].includes(currentUserRole);
+    const isManager = ['relationship_manager', 'admin', 'super_admin'].includes(currentUserRole);
 
     const fetchAnalytics = useCallback(async () => {
         setLoading(true);
@@ -20,7 +20,8 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
             
             let query = supabase
                 .from('crm_leads')
-                .select('id, status, deal_value, created_at, assigned_to');
+                .select('id, status, deal_value, created_at, assigned_to')
+                .neq('source', 'App User');
 
             if (!isManager) {
                 query = query.eq('assigned_to', currentUserId);

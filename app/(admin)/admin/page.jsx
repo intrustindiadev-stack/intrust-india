@@ -192,7 +192,11 @@ export default async function AdminDashboard() {
         // 9. Total Employees (Including HR, support, etc. basically anyone not admin, user, merchant)
         supabase.from('user_profiles')
             .select('*', { count: 'exact', head: true })
-            .in('role', ['employee', 'hr_manager', 'sales_exec', 'sales_manager'])
+            .in('role', [
+                'employee', 'hr_manager', 'relationship_exec', 'relationship_manager',
+                'freelancer', 'video_editor', 'social_media_manager',
+                'seo_specialist', 'advertiser', 'support_agent'
+            ])
             .then(({ count, error }) => {
                 if (error) console.error('Error fetching employees count:', error.message || error);
                 return count || 0;

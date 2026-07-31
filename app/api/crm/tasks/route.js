@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 
-const CRM_ROLES = ['sales_exec', 'sales_manager', 'admin', 'super_admin'];
+const CRM_ROLES = ['relationship_exec', 'relationship_manager', 'admin', 'super_admin'];
 
 export async function GET(request) {
     try {
@@ -10,7 +10,7 @@ export async function GET(request) {
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         if (!CRM_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-        const isManager = ['sales_manager', 'admin', 'super_admin'].includes(profile.role);
+        const isManager = ['relationship_manager', 'admin', 'super_admin'].includes(profile.role);
 
         let query = admin
             .from('crm_tasks')
@@ -43,7 +43,7 @@ export async function POST(request) {
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         if (!CRM_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-        const isManager = ['sales_manager', 'admin', 'super_admin'].includes(profile.role);
+        const isManager = ['relationship_manager', 'admin', 'super_admin'].includes(profile.role);
 
         const body = await request.json();
         let { title, description, assigned_to, due_date, lead_id, status } = body;

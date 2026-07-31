@@ -115,11 +115,13 @@ export async function GET(request) {
         return applyCookies(NextResponse.redirect(new URL('/hrm', origin)))
     }
 
-    if (profile?.role === 'employee') {
+    const EMPLOYEE_ROLES = ['employee', 'freelancer', 'video_editor', 'social_media_manager', 'seo_specialist', 'advertiser', 'support_agent'];
+    if (EMPLOYEE_ROLES.includes(profile?.role)) {
         return applyCookies(NextResponse.redirect(new URL('/employee', origin)))
     }
 
-    if (profile?.role?.startsWith('sales_') || profile?.role === 'sales_exec' || profile?.role === 'sales_agent') {
+    const CRM_ROLES = ['relationship_exec', 'relationship_manager'];
+    if (CRM_ROLES.includes(profile?.role)) {
         return applyCookies(NextResponse.redirect(new URL('/crm', origin)))
     }
 

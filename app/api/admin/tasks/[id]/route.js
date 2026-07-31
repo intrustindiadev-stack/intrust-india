@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 
-const ALLOWED_ROLES = ['admin', 'super_admin', 'sales_manager', 'sales_exec'];
+const ALLOWED_ROLES = ['admin', 'super_admin', 'relationship_manager', 'relationship_exec'];
 
 // GET /api/admin/tasks/[id]
 export async function GET(request, { params }) {
@@ -24,7 +24,7 @@ export async function GET(request, { params }) {
 
         if (error) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
 
-        const isSuperAdminOrManager = ['super_admin', 'admin', 'sales_manager'].includes(profile.role);
+        const isSuperAdminOrManager = ['super_admin', 'admin', 'relationship_manager'].includes(profile.role);
 
         // Regular users can only view their own tasks
         if (!isSuperAdminOrManager && task.assigned_to !== user.id) {
@@ -50,7 +50,7 @@ export async function PATCH(request, { params }) {
         if (!ALLOWED_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
         const body = await request.json();
-        const isSuperAdminOrManager = ['super_admin', 'admin', 'sales_manager'].includes(profile.role);
+        const isSuperAdminOrManager = ['super_admin', 'admin', 'relationship_manager'].includes(profile.role);
 
         // Fetch the existing task
         const { data: existingTask, error: fetchError } = await admin
@@ -119,7 +119,7 @@ export async function DELETE(request, { params }) {
         const { id } = await params;
 
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        if (!['super_admin', 'admin', 'sales_manager'].includes(profile?.role)) return NextResponse.json({ error: 'Forbidden. Manager access required.' }, { status: 403 });
+        if (!['super_admin', 'admin', 'relationship_manager'].includes(profile?.role)) return NextResponse.json({ error: 'Forbidden. Manager access required.' }, { status: 403 });
 
         const { error } = await admin.from('admin_tasks').delete().eq('id', id);
         if (error) throw error;

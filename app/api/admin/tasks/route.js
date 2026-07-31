@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 
-const ALLOWED_ROLES = ['admin', 'super_admin', 'sales_manager', 'sales_exec'];
+const ALLOWED_ROLES = ['admin', 'super_admin', 'relationship_manager', 'relationship_exec'];
 
 // GET /api/admin/tasks
 // Super admins/Managers: returns all tasks or team tasks
@@ -13,7 +13,7 @@ export async function GET(request) {
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         if (!ALLOWED_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-        const isSuperAdminOrManager = ['super_admin', 'admin', 'sales_manager'].includes(profile.role);
+        const isSuperAdminOrManager = ['super_admin', 'admin', 'relationship_manager'].includes(profile.role);
 
         let query = admin
             .from('admin_tasks')
@@ -45,7 +45,7 @@ export async function POST(request) {
         const { user, profile, admin } = await getAuthUser(request);
 
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        if (!['super_admin', 'admin', 'sales_manager'].includes(profile?.role)) return NextResponse.json({ error: 'Forbidden. Manager/Admin access required.' }, { status: 403 });
+        if (!['super_admin', 'admin', 'relationship_manager'].includes(profile?.role)) return NextResponse.json({ error: 'Forbidden. Manager/Admin access required.' }, { status: 403 });
 
         const body = await request.json();
         const { title, description, assigned_to, priority, due_date } = body;

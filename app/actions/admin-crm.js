@@ -22,7 +22,7 @@ const uuidSchema = z.string().uuid('Invalid UUID format');
 
 const VALID_ROLES = [
     'user', 'merchant', 'admin', 'super_admin',
-    'hr_manager', 'sales_exec', 'sales_manager', 'employee'
+    'hr_manager', 'relationship_exec', 'relationship_manager', 'employee'
 ];
 
 const updateLeadAssignmentSchema = z.object({
@@ -85,7 +85,7 @@ export async function fetchSalesReps() {
         const { data, error: queryError } = await adminClient
             .from('user_profiles')
             .select('id, full_name, role, email')
-            .in('role', ['sales_exec', 'sales_manager', 'admin', 'super_admin'])
+            .in('role', ['relationship_exec', 'relationship_manager', 'admin', 'super_admin'])
             .order('full_name', { ascending: true });
 
         if (queryError) {

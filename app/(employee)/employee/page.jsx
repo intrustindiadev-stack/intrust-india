@@ -22,6 +22,7 @@ export default function EmployeeDashboard() {
     const [todayRecord, setTodayRecord] = useState(null);
     const [clockedIn, setClockedIn] = useState(false);
     const [clocking, setClocking] = useState(false);
+    const [pendingCheckoutRecord, setPendingCheckoutRecord] = useState(null);
     const [latestPayslip, setLatestPayslip] = useState(null);
     const [stats, setStats] = useState({ leavesRemaining: 41, pendingTasks: 0, workingDays: 22 });
     const [isLoading, setIsLoading] = useState(true);
@@ -38,17 +39,32 @@ export default function EmployeeDashboard() {
     const fetchDashboardData = useCallback(async () => {
         if (!user) return;
         try {
-            const [attRes, payRes, leaveRes, tasksRes] = await Promise.allSettled([
-                supabase.from('attendance').select('*').eq('employee_id', user.id).eq('date', today).maybeSingle(),
+            const [attRes, payRes, leaveRes, tasksRes, balancesRes, holidaysRes] = await Promise.allSettled([
+                supabase.from('attendance').select('*').eq('employee_id', user.id).order('date', { ascending: false }).limit(1).maybeSingle(),
                 supabase.from('salary_records').select('*').eq('employee_id', user.id).order('year', { ascending: false }).order('month', { ascending: false }).limit(1).maybeSingle(),
                 supabase.from('leave_requests').select('from_date, to_date').eq('employee_id', user.id).eq('status', 'approved').gte('from_date', `${new Date().getFullYear()}-01-01`),
-                supabase.from('crm_tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).eq('status', 'pending')
+                supabase.from('crm_tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).eq('status', 'pending'),
+                supabase.from('leave_balances').select('*').eq('employee_id', user.id).maybeSingle(),
+                supabase.from('holidays').select('*').gte('date', `${new Date().getFullYear()}-01-01`)
             ]);
 
             if (attRes.status === 'fulfilled' && !attRes.value.error) {
                 const rec = attRes.value.data;
-                setTodayRecord(rec || null);
-                setClockedIn(!!(rec?.check_in && !rec?.check_out));
+                const todayRec = rec?.date === today ? rec : null;
+                setTodayRecord(todayRec);
+                
+                if (rec) {
+                    if (rec.check_in && !rec.check_out && rec.date !== today) {
+                        setPendingCheckoutRecord(rec);
+                        setClockedIn(false);
+                    } else {
+                        setPendingCheckoutRecord(null);
+                        setClockedIn(!!(todayRec?.check_in && !todayRec?.check_out));
+                    }
+                } else {
+                    setPendingCheckoutRecord(null);
+                    setClockedIn(false);
+                }
             }
 
             if (payRes.status === 'fulfilled' && !payRes.value.error) {
@@ -62,12 +78,22 @@ export default function EmployeeDashboard() {
                 });
             }
 
-            const totalAnnualLeaves = 41; // 12 CL + 8 SL + 21 EL
+            let totalAnnualLeaves = 41; // fallback
+            if (balancesRes.status === 'fulfilled' && balancesRes.value.data) {
+                const db = balancesRes.value.data;
+                totalAnnualLeaves = (db.casual_leaves || 12) + (db.sick_leaves || 8) + (db.earned_leaves || 21);
+            }
+            
+            const upcomingHolidays = holidaysRes.status === 'fulfilled' && holidaysRes.value.data 
+                ? holidaysRes.value.data.filter(h => new Date(h.date) >= new Date()).length 
+                : 0;
+
             const tasksCount = tasksRes.status === 'fulfilled' ? (tasksRes.value.count || 0) : 0;
 
             setStats(prev => ({
                 ...prev,
                 leavesRemaining: Math.max(0, totalAnnualLeaves - usedLeaves),
+                upcomingHolidays,
                 pendingTasks: tasksCount
             }));
 
@@ -76,7 +102,7 @@ export default function EmployeeDashboard() {
         } finally {
             setIsLoading(false);
         }
-    }, [user, today]);
+    }, [user]);
 
     useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
 
@@ -84,14 +110,15 @@ export default function EmployeeDashboard() {
         if (!user) return;
         setClocking(true);
         try {
-            const { data, error } = await supabase.from('attendance').insert([{
-                employee_id: user.id,
-                date: today,
-                check_in: new Date().toISOString(),
-                status: 'present',
-            }]).select().single();
-            if (error) throw error;
-            setTodayRecord(data);
+            const res = await fetch('/api/employee/attendance/clock-in', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_onsite: true }) // Defaulting to true for dashboard
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to clock in');
+            
+            setTodayRecord(data.record);
             setClockedIn(true);
             toast.success('Shift started! Have a great day 🌟');
         } catch (err) {
@@ -105,13 +132,16 @@ export default function EmployeeDashboard() {
         if (!todayRecord) return;
         setClocking(true);
         try {
-            const checkOutTime = new Date().toISOString();
-            const { error } = await supabase.from('attendance')
-                .update({ check_out: checkOutTime })
-                .eq('id', todayRecord.id);
-            if (error) throw error;
+            const res = await fetch('/api/employee/attendance/clock-out', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ record_id: todayRecord.id, is_onsite: true })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to clock out');
+            
             setClockedIn(false);
-            setTodayRecord(prev => prev ? { ...prev, check_out: checkOutTime } : prev);
+            setTodayRecord(prev => prev ? { ...prev, check_out: data.check_out } : prev);
             toast.success('Shift completed. Enjoy your evening! 👋');
             fetchDashboardData();
         } catch (err) {
@@ -120,6 +150,28 @@ export default function EmployeeDashboard() {
             setClocking(false);
         }
     };
+
+    const handleForceCheckoutPrevious = async () => {
+        if (!pendingCheckoutRecord) return;
+        setClocking(true);
+        try {
+            const res = await fetch('/api/employee/attendance/force-close', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ record_id: pendingCheckoutRecord.id })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to force checkout');
+            
+            toast.success('Previous shift closed automatically.');
+            fetchDashboardData();
+        } catch(err) {
+            toast.error(err.message || 'Failed to force checkout');
+        } finally {
+            setClocking(false);
+        }
+    };
+
 
     const getElapsedTime = () => {
         if (!todayRecord?.check_in) return '';
@@ -222,59 +274,61 @@ export default function EmployeeDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                    className={`lg:col-span-2 relative overflow-hidden rounded-[3rem] p-8 sm:p-12 text-white shadow-2xl transition-all duration-700 group ${clockedIn ? 'bg-gradient-to-br from-emerald-600 via-teal-600 to-teal-700 shadow-emerald-500/30' : 'bg-gradient-to-br from-slate-900 via-gray-900 to-black shadow-gray-900/30'}`}
+                    className="lg:col-span-2 relative bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col justify-between"
                 >
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
-                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
-                        <div className="text-center md:text-left space-y-6">
-                            <div>
-                                <p className="text-white/60 text-xs font-black uppercase tracking-[0.2em] mb-3">Operational Clock</p>
-                                <div className="text-6xl sm:text-7xl font-black tracking-tighter font-mono drop-shadow-2xl">
-                                    {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-                                </div>
-                            </div>
-                            
-                            <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                                {clockedIn ? (
-                                    <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/20 flex flex-col">
-                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Active Shift</span>
-                                        <span className="text-xl font-black">{getElapsedTime()}</span>
+                    <div className="flex justify-between items-start mb-6">
+                        <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Time Clock</p>
+                            {pendingCheckoutRecord ? (
+                                <>
+                                    <p className="text-2xl font-mono text-amber-600 font-medium tracking-tight">Pending Checkout</p>
+                                    <p className="text-sm text-gray-500 mt-1">Please close your shift from {new Date(pendingCheckoutRecord.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} before clocking in today.</p>
+                                </>
+                            ) : todayRecord?.check_in ? (
+                                <>
+                                    <div className="text-4xl sm:text-5xl font-medium tracking-tight font-mono text-gray-900 mb-2">
+                                        {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                                     </div>
-                                ) : (
-                                    <div className="bg-white/5 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/10 flex flex-col opacity-60">
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Shift Status</span>
-                                        <span className="text-xl font-black italic">Idle</span>
+                                    <p className="text-sm text-gray-500 mt-1">{clockedIn ? `Clocked in at ${new Date(todayRecord.check_in).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : `Shift completed`}</p>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="text-4xl sm:text-5xl font-medium tracking-tight font-mono text-gray-900 mb-2">
+                                        {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                                     </div>
-                                )}
-                                
-                                {todayRecord?.check_in && (
-                                    <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/20 flex flex-col">
-                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Started At</span>
-                                        <span className="text-xl font-black">{new Date(todayRecord.check_in).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
-                                    </div>
-                                )}
-                            </div>
+                                    <p className="text-sm text-gray-500 mt-1">Not clocked in yet</p>
+                                </>
+                            )}
                         </div>
-
-                        <div className="relative">
-                            <div className={`absolute inset-0 blur-3xl opacity-40 rounded-full animate-pulse ${clockedIn ? 'bg-emerald-400' : 'bg-blue-400'}`} />
-                            <button
-                                onClick={clockedIn ? handleClockOut : handleClockIn}
-                                disabled={clocking || !!todayRecord?.check_out}
-                                className={`w-44 h-44 sm:w-56 sm:h-56 rounded-full flex flex-col items-center justify-center gap-3 shadow-2xl relative z-10 transition-all hover:scale-105 active:scale-95 font-black text-xl tracking-tighter disabled:opacity-60 disabled:cursor-not-allowed ${clockedIn ? 'bg-white text-emerald-600 shadow-emerald-500/40' : 'bg-white text-blue-900 shadow-blue-900/40'}`}
-                            >
-                                {clocking ? (
-                                    <div className="w-10 h-10 border-4 border-current/30 border-t-current rounded-full animate-spin" />
-                                ) : (
-                                    <>
-                                        <div className={`p-4 rounded-3xl ${clockedIn ? 'bg-emerald-50' : 'bg-blue-50'}`}>
-                                            <Clock size={40} className={clockedIn ? 'text-emerald-500' : 'text-blue-500'} />
-                                        </div>
-                                        <span className="mt-2">{todayRecord?.check_out ? 'DONE' : clockedIn ? 'SHIFTOUT' : 'SHIFT IN'}</span>
-                                    </>
-                                )}
+                        {pendingCheckoutRecord ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-50 text-amber-700 border border-amber-100">
+                                Action Required
+                            </span>
+                        ) : (
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${clockedIn ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
+                                {clockedIn ? '● Active Shift' : 'Idle'}
+                            </span>
+                        )}
+                    </div>
+                    
+                    <div className="pt-6 mt-4 border-t border-gray-100 flex flex-wrap items-center gap-4">
+                        {pendingCheckoutRecord ? (
+                            <button onClick={handleForceCheckoutPrevious} disabled={clocking}
+                                className="px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors bg-amber-100 text-amber-800 hover:bg-amber-200 shadow-sm flex items-center justify-center">
+                                {clocking ? <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> : 'Force Close Previous Shift'}
                             </button>
-                        </div>
+                        ) : (
+                            <button onClick={clockedIn ? handleClockOut : handleClockIn} disabled={clocking || (todayRecord?.check_out)}
+                                className={`px-8 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${clockedIn ? 'bg-white border border-red-200 text-red-600 hover:bg-red-50' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'} disabled:opacity-50 disabled:cursor-not-allowed`}>
+                                {clocking ? <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> : clockedIn ? 'Clock Out' : 'Clock In'}
+                            </button>
+                        )}
+                        {clockedIn && (
+                            <div className="bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
+                                <span className="text-xs text-gray-500 mr-2">Elapsed:</span>
+                                <span className="text-sm font-mono font-medium text-gray-900">{getElapsedTime()}</span>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
 
@@ -287,30 +341,28 @@ export default function EmployeeDashboard() {
                         </>
                     ) : (
                         <>
-                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 border-none shadow-xl shadow-gray-200/40 dark:shadow-black/20 relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Leave Balance</h3>
-                                <div className="flex items-end justify-between gap-4">
+                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 shadow-sm relative overflow-hidden group">
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Leave Balance</h3>
+                                <div className="flex items-center justify-between gap-4">
                                     <div>
-                                        <p className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">{stats.leavesRemaining}</p>
-                                        <p className="text-sm font-bold text-gray-500 mt-1">Days left this year</p>
+                                        <p className="text-3xl font-medium text-gray-900 dark:text-white tracking-tight">{stats.leavesRemaining}</p>
+                                        <p className="text-xs text-gray-500 mt-1">Days left this year</p>
                                     </div>
-                                    <Link href="/employee/leaves" className="p-3 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
-                                        <Plus size={20} />
+                                    <Link href="/employee/leaves" className="p-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all shadow-sm">
+                                        <Plus size={16} />
                                     </Link>
                                 </div>
                             </motion.div>
 
-                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 border-none shadow-xl shadow-gray-200/40 dark:shadow-black/20 relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Team Tasks</h3>
-                                <div className="flex items-end justify-between gap-4">
+                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 shadow-sm relative overflow-hidden group">
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Holidays</h3>
+                                <div className="flex items-center justify-between gap-4">
                                     <div>
-                                        <p className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">{stats.pendingTasks}</p>
-                                        <p className="text-sm font-bold text-gray-500 mt-1">Pending actions</p>
+                                        <p className="text-3xl font-medium text-gray-900 dark:text-white tracking-tight">{stats.upcomingHolidays}</p>
+                                        <p className="text-xs text-gray-500 mt-1">Upcoming this year</p>
                                     </div>
-                                    <div className="p-3 rounded-2xl bg-violet-50 text-violet-600">
-                                        <CheckCircle2 size={20} />
+                                    <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100">
+                                        <CheckCircle2 size={16} />
                                     </div>
                                 </div>
                             </motion.div>

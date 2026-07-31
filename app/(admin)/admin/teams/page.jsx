@@ -87,7 +87,7 @@ export default function AdminTeamsPage() {
                 {showCreate && (
                     <TeamCreateDrawer
                         teams={teams}
-                        availableLeads={unassignedUsers.filter(u => ['sales_manager', 'admin', 'super_admin'].includes(u.role))}
+                        availableLeads={unassignedUsers.filter(u => ['relationship_manager', 'admin', 'super_admin'].includes(u.role))}
                         onClose={() => setShowCreate(false)}
                         onCreated={() => fetchTeamsData()}
                     />
@@ -96,7 +96,7 @@ export default function AdminTeamsPage() {
                     <TeamEditDrawer
                         team={selectedTeamForEdit}
                         teams={teams}
-                        availableLeads={unassignedUsers.filter(u => ['sales_manager', 'admin', 'super_admin'].includes(u.role))}
+                        availableLeads={unassignedUsers.filter(u => ['relationship_manager', 'admin', 'super_admin'].includes(u.role))}
                         onClose={() => setSelectedTeamForEdit(null)}
                         onUpdated={() => fetchTeamsData()}
                         onDeleted={() => fetchTeamsData()}

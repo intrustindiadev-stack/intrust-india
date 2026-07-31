@@ -9,8 +9,8 @@ function portalForRole(role) {
     if (!role) return '/login';
     if (role === 'merchant') return '/merchant/dashboard';
     if (role === 'hr_manager') return '/hrm';
-    if (role === 'employee') return '/employee';
-    if (role?.startsWith('sales_') || role === 'sales_exec' || role === 'sales_agent') return '/crm';
+    if (['employee', 'freelancer', 'video_editor', 'social_media_manager', 'seo_specialist', 'advertiser', 'support_agent'].includes(role)) return '/employee';
+    if (role === 'relationship_exec' || role === 'relationship_manager') return '/crm';
     return '/dashboard'; // customer or unknown
 }
 

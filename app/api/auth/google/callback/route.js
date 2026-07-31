@@ -443,8 +443,8 @@ export async function GET(request) {
             if (r === 'admin' || r === 'super_admin') redirectPath = '/admin';
             else if (r === 'merchant') redirectPath = '/merchant/dashboard';
             else if (r === 'hr_manager') redirectPath = '/hrm';
-            else if (r?.startsWith('sales_') || r === 'sales_exec' || r === 'sales_agent') redirectPath = '/crm';
-            else if (r === 'employee') redirectPath = '/employee';
+            else if (r === 'relationship_exec' || r === 'relationship_manager') redirectPath = '/crm';
+            else if (['employee', 'freelancer', 'video_editor', 'social_media_manager', 'seo_specialist', 'advertiser', 'support_agent'].includes(r)) redirectPath = '/employee';
         }
 
         // ── Step 4: Build redirect response and set session cookies ──────────────

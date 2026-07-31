@@ -58,10 +58,10 @@ export default async function Home() {
     if (profile?.role === 'hr_manager') {
       redirect('/hrm');
     }
-    if (profile?.role?.startsWith('sales_') || profile?.role === 'sales_agent') {
+    if (profile?.role === 'relationship_exec' || profile?.role === 'relationship_manager') {
       redirect('/crm');
     }
-    if (profile?.role === 'employee') {
+    if (['employee', 'freelancer', 'video_editor', 'social_media_manager', 'seo_specialist', 'advertiser', 'support_agent'].includes(profile?.role)) {
       redirect('/employee');
     }
   }

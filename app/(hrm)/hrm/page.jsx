@@ -59,7 +59,11 @@ export default function HRMDashboard() {
         try {
             const today = new Date().toISOString().split('T')[0];
             const [empRes, leaveRes, appRes, attRes] = await Promise.allSettled([
-                supabase.from('user_profiles').select('id', { count: 'exact' }).in('role', ['employee', 'sales_exec', 'sales_manager', 'hr_manager']),
+                supabase.from('user_profiles').select('id', { count: 'exact' }).in('role', [
+                    'employee', 'relationship_exec', 'relationship_manager', 'hr_manager',
+                    'freelancer', 'video_editor', 'social_media_manager',
+                    'seo_specialist', 'advertiser', 'support_agent'
+                ]),
                 supabase.from('leave_requests').select('id, leave_type, from_date, to_date, status, created_at, user_profiles(full_name, avatar_url)').eq('status', 'pending').order('created_at', { ascending: false }).limit(5),
                 supabase.from('career_applications').select('id, full_name, role_category, status, created_at').in('status', ['pending', 'under_review']).order('created_at', { ascending: false }).limit(4),
                 supabase.from('attendance').select('id', { count: 'exact' }).eq('date', today).eq('status', 'present'),

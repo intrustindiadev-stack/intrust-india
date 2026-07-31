@@ -31,7 +31,11 @@ export default async function AdminHRMPage() {
     const [empRes, leaveRes, pendingLeaveRes] = await Promise.all([
         supabase.from('user_profiles')
             .select('id, full_name, email, phone, role, created_at')
-            .in('role', ['employee', 'hr_manager', 'sales_exec', 'sales_manager'])
+            .in('role', [
+                'employee', 'hr_manager', 'relationship_exec', 'relationship_manager',
+                'freelancer', 'video_editor', 'social_media_manager',
+                'seo_specialist', 'advertiser', 'support_agent'
+            ])
             .order('created_at', { ascending: false }),
         // leave_requests may not exist yet — gracefully fall back
         supabase.from('leave_requests')
@@ -51,19 +55,31 @@ export default async function AdminHRMPage() {
 
     const totalEmp = employees.length;
     const hrManagers = employees.filter(e => e.role === 'hr_manager').length;
-    const salesTeam = employees.filter(e => ['sales_exec', 'sales_manager'].includes(e.role)).length;
+    const crmTeam = employees.filter(e => ['relationship_exec', 'relationship_manager'].includes(e.role)).length;
 
     const roleLabel = {
         employee: 'Employee',
         hr_manager: 'HR Manager',
-        sales_exec: 'Sales Executive',
-        sales_manager: 'Sales Manager',
+        relationship_exec: 'Relationship Executive',
+        relationship_manager: 'Relationship Manager',
+        freelancer: 'Freelancer',
+        video_editor: 'Video Editor',
+        social_media_manager: 'Social Media Manager',
+        seo_specialist: 'SEO Specialist',
+        advertiser: 'Advertiser',
+        support_agent: 'Support Agent',
     };
     const roleColor = {
         employee: 'bg-blue-50 text-blue-700 border-blue-200',
         hr_manager: 'bg-violet-50 text-violet-700 border-violet-200',
-        sales_exec: 'bg-amber-50 text-amber-700 border-amber-200',
-        sales_manager: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        relationship_exec: 'bg-amber-50 text-amber-700 border-amber-200',
+        relationship_manager: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        freelancer: 'bg-orange-50 text-orange-700 border-orange-200',
+        video_editor: 'bg-pink-50 text-pink-700 border-pink-200',
+        social_media_manager: 'bg-rose-50 text-rose-700 border-rose-200',
+        seo_specialist: 'bg-amber-50 text-amber-700 border-amber-200',
+        advertiser: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+        support_agent: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     };
 
     return (
@@ -81,7 +97,7 @@ export default async function AdminHRMPage() {
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <StatCard title="Total Workforce" value={totalEmp} gradient="from-emerald-600 to-teal-600" icon={Users} />
                     <StatCard title="HR Managers" value={hrManagers} gradient="from-violet-600 to-purple-600" icon={UserPlus} />
-                    <StatCard title="Sales Team" value={salesTeam} gradient="from-amber-500 to-orange-500" icon={DollarSign} />
+                    <StatCard title="CRM Team" value={crmTeam} gradient="from-amber-500 to-orange-500" icon={DollarSign} />
                     <StatCard title="Pending Leaves" value={pendingLeaveCount} sub="Awaiting approval" gradient="from-red-500 to-rose-500" icon={Clock} />
                 </div>
 

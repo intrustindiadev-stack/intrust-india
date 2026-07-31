@@ -10,7 +10,7 @@ export default function CampaignsClient({ currentUserId, currentUserRole }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const isManager = ['sales_manager', 'admin', 'super_admin'].includes(currentUserRole);
+    const isManager = ['relationship_manager', 'admin', 'super_admin'].includes(currentUserRole);
 
     const fetchLeads = useCallback(async () => {
         setLoading(true);
@@ -20,7 +20,9 @@ export default function CampaignsClient({ currentUserId, currentUserRole }) {
             
             let query = supabase
                 .from('crm_leads')
-                .select('id, source, status, deal_value, assigned_to');
+                .select('id, contact_name, phone, email, source, status, created_at, assigned_to')
+                .is('archived_at', null)
+                .neq('source', 'App User');
 
             // Executives only see their assigned leads' sources
             if (!isManager) {

@@ -78,12 +78,12 @@ export default function CRMDashboard() {
             const currentUserId = session.user.id;
             
             const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', currentUserId).single();
-            const role = profile?.role || 'sales_exec';
-            const manager = ['sales_manager', 'admin', 'super_admin'].includes(role);
+            const role = profile?.role || 'relationship_exec';
+            const manager = ['relationship_manager', 'admin', 'super_admin'].includes(role);
             setIsManager(manager);
 
-            let recentQuery = supabase.from('crm_leads').select('id, title, contact_name, phone, email, status, source, created_at, deal_value, temperature').is('archived_at', null).order('created_at', { ascending: false }).limit(5);
-            let allQuery = supabase.from('crm_leads').select('status, created_at, deal_value, assigned_to').is('archived_at', null);
+            let recentQuery = supabase.from('crm_leads').select('id, title, contact_name, phone, email, status, source, created_at, deal_value, temperature').is('archived_at', null).neq('source', 'App User').order('created_at', { ascending: false }).limit(5);
+            let allQuery = supabase.from('crm_leads').select('status, created_at, deal_value, assigned_to').is('archived_at', null).neq('source', 'App User');
             let tasksQuery = supabase.from('crm_tasks').select('*').eq('status', 'pending').order('due_date', { ascending: true }).limit(4);
 
             if (!manager) {

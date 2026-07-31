@@ -7,15 +7,31 @@ import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ROLE_LABELS = {
-    employee: 'Employee', sales_exec: 'Sales Executive', sales_manager: 'Sales Manager',
-    hr_manager: 'HR Manager', admin: 'Admin', super_admin: 'Super Admin',
+    employee: 'Employee',
+    relationship_exec: 'Relationship Executive',
+    relationship_manager: 'Relationship Manager',
+    hr_manager: 'HR Manager',
+    admin: 'Admin',
+    super_admin: 'Super Admin',
+    freelancer: 'Freelancer',
+    video_editor: 'Video Editor',
+    social_media_manager: 'Social Media Manager',
+    seo_specialist: 'SEO Specialist',
+    advertiser: 'Advertiser',
+    support_agent: 'Support Agent',
 };
 
 const ROLE_COLOR = {
     employee: 'bg-blue-50 text-blue-700 border-blue-100',
-    sales_exec: 'bg-violet-50 text-violet-700 border-violet-100',
-    sales_manager: 'bg-purple-50 text-purple-700 border-purple-100',
+    relationship_exec: 'bg-violet-50 text-violet-700 border-violet-100',
+    relationship_manager: 'bg-purple-50 text-purple-700 border-purple-100',
     hr_manager: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    freelancer: 'bg-orange-50 text-orange-700 border-orange-100',
+    video_editor: 'bg-pink-50 text-pink-700 border-pink-100',
+    social_media_manager: 'bg-rose-50 text-rose-700 border-rose-100',
+    seo_specialist: 'bg-amber-50 text-amber-700 border-amber-100',
+    advertiser: 'bg-cyan-50 text-cyan-700 border-cyan-100',
+    support_agent: 'bg-indigo-50 text-indigo-700 border-indigo-100',
 };
 
 function EmployeeDrawer({ employee, onClose, onSave }) {
@@ -292,7 +308,11 @@ export default function EmployeesPage() {
         try {
             const { data, error } = await supabase.from('user_profiles')
                 .select('id, full_name, email, phone, role, department, employee_id, joining_date, employment_type, city, base_salary, avatar_url, created_at')
-                .in('role', ['employee', 'sales_exec', 'sales_manager', 'hr_manager'])
+               .in('role', [
+                   'employee', 'relationship_exec', 'relationship_manager', 'hr_manager',
+                   'freelancer', 'video_editor', 'social_media_manager',
+                   'seo_specialist', 'advertiser', 'support_agent'
+               ])
                 .order('created_at', { ascending: false });
             if (error) throw error;
             setEmployees(data || []);

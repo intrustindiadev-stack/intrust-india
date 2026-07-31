@@ -25,8 +25,10 @@ export function CustomerLoadingSkeleton() {
 
 // Non-customer roles that should be redirected away from the customer portal
 const NON_CUSTOMER_ROLES = [
-    'admin', 'super_admin', 'merchant', 'hr_manager', 'employee',
-    'sales_exec', 'sales_manager', 'sales_agent',
+    'admin', 'super_admin', 'merchant', 'hr_manager',
+    'employee', 'freelancer', 'video_editor', 'social_media_manager',
+    'seo_specialist', 'advertiser', 'support_agent',
+    'relationship_exec', 'relationship_manager',
 ];
 
 export default function CustomerLayout({ children }) {
@@ -41,8 +43,8 @@ export default function CustomerLayout({ children }) {
     // protection against the role flash.
     const jwtRole = user?.user_metadata?.role;
     const effectiveRole = profile?.role || jwtRole;
-    const isSalesRole = effectiveRole?.startsWith('sales_');
-    const isNonCustomer = effectiveRole && (NON_CUSTOMER_ROLES.includes(effectiveRole) || isSalesRole);
+    const isCRMRole = effectiveRole === 'relationship_exec' || effectiveRole === 'relationship_manager';
+    const isNonCustomer = effectiveRole && (NON_CUSTOMER_ROLES.includes(effectiveRole) || isCRMRole);
 
     useEffect(() => {
         if (loading || !user) return;
@@ -59,8 +61,8 @@ export default function CustomerLayout({ children }) {
             let targetPath = '/admin';
             if (effectiveRole === 'merchant') targetPath = '/merchant/dashboard';
             else if (effectiveRole === 'hr_manager') targetPath = '/hrm';
-            else if (effectiveRole === 'employee') targetPath = '/employee';
-            else if (isSalesRole) targetPath = '/crm';
+            else if (['employee', 'freelancer', 'video_editor', 'social_media_manager', 'seo_specialist', 'advertiser', 'support_agent'].includes(effectiveRole)) targetPath = '/employee';
+            else if (isCRMRole) targetPath = '/crm';
 
             // Refresh the session once to pick up the corrected user_metadata.role,
             // so middleware allows the portal route on the next navigation.
@@ -74,7 +76,7 @@ export default function CustomerLayout({ children }) {
                 router.replace(targetPath);
             }
         }
-    }, [user, effectiveRole, isNonCustomer, loading, router, pathname, isSalesRole]);
+    }, [user, effectiveRole, isNonCustomer, loading, router, pathname, isCRMRole]);
 
     // While auth is resolving, show a branded loading skeleton instead of a
     // blank white screen. This eliminates the "white screen" on mobile where

@@ -57,7 +57,7 @@ export default function EmployeeSidebar({ isOpen, setIsOpen, userProfile }) {
     if (['hr_manager', 'admin', 'super_admin'].includes(role)) {
         menuItems.push({ name: 'HRM Panel', icon: Users, path: '/hrm' });
     }
-    if (['sales_exec', 'sales_manager', 'admin', 'super_admin'].includes(role)) {
+    if (['relationship_exec', 'relationship_manager', 'admin', 'super_admin'].includes(role)) {
         menuItems.push({ name: 'CRM Panel', icon: LayoutDashboard, path: '/crm' });
     }
 

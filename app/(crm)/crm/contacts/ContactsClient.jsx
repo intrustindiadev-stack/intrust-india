@@ -10,7 +10,7 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const isManager = ['sales_manager', 'admin', 'super_admin'].includes(currentUserRole);
+    const isManager = ['relationship_manager', 'admin', 'super_admin'].includes(currentUserRole);
 
     const fetchContacts = useCallback(async () => {
         setLoading(true);
@@ -21,6 +21,7 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
             let query = supabase
                 .from('crm_leads')
                 .select('id, full_name, email, phone, company, status, assigned_to')
+                .neq('source', 'App User')
                 .order('full_name', { ascending: true });
 
             if (!isManager) {

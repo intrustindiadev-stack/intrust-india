@@ -25,16 +25,16 @@ const ROLE_DETAILS = {
             { title: 'Explore Employee Perks', desc: 'Health insurance, learning budget & leaves', link: '/employee/leaves', icon: Star },
         ]
     },
-    sales_exec: {
-        title: 'Sales & CRM Portal Unlocked',
-        badge: 'Sales Executive / Partner',
+    relationship_exec: {
+        title: 'CRM Portal Unlocked',
+        badge: 'Relationship Executive',
         color: 'from-amber-500 to-orange-600',
         badgeBg: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
         icon: Zap,
         steps: [
-            { title: 'Set Up Sales Profile', desc: 'Add contact details and target preferences', link: '/crm/profile', icon: User },
+            { title: 'Set Up CRM Profile', desc: 'Add contact details and target preferences', link: '/crm/profile', icon: User },
             { title: 'Access Lead Pipeline', desc: 'View assigned leads and schedule follow-ups', link: '/crm/leads', icon: Rocket },
-            { title: 'Check Commission Structure', desc: 'Track your deal conversions & payouts', link: '/crm', icon: Award },
+            { title: 'Check Your Targets', desc: 'Track your deal conversions & performance', link: '/crm', icon: Award },
         ]
     },
     hr_manager: {
@@ -86,7 +86,11 @@ export default function WelcomeRoleCelebrationModal({ forceShow = false, onClose
         if (!user || !profile?.role) return;
 
         // Only trigger for internal elevated roles
-        const targetRoles = ['employee', 'sales_exec', 'hr_manager', 'merchant'];
+        const targetRoles = [
+            'employee', 'freelancer', 'video_editor', 'social_media_manager',
+            'seo_specialist', 'advertiser', 'support_agent',
+            'relationship_exec', 'hr_manager', 'merchant'
+        ];
         if (!targetRoles.includes(profile.role)) return;
 
         // Check if celebration was already shown in localStorage or profile

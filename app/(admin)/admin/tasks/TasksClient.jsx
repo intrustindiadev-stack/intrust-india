@@ -35,7 +35,7 @@ export default function TasksClient({ currentUserId, currentUserRole }) {
     const [editTask, setEditTask] = useState(null);
     const [viewTask, setViewTask] = useState(null);
 
-    const isManager = ['super_admin', 'admin', 'sales_manager'].includes(currentUserRole);
+    const isManager = ['super_admin', 'admin', 'relationship_manager'].includes(currentUserRole);
 
     const fetchTasks = useCallback(async () => {
         setLoading(true);

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 
-const CRM_ROLES = ['sales_exec', 'sales_manager', 'admin', 'super_admin'];
+const CRM_ROLES = ['relationship_exec', 'relationship_manager', 'admin', 'super_admin'];
 
 export async function PATCH(request, { params }) {
     try {
@@ -10,7 +10,7 @@ export async function PATCH(request, { params }) {
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         if (!CRM_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-        const isManager = ['sales_manager', 'admin', 'super_admin'].includes(profile.role);
+        const isManager = ['relationship_manager', 'admin', 'super_admin'].includes(profile.role);
         const { id } = params;
 
         // Verify task ownership/access
@@ -64,7 +64,7 @@ export async function DELETE(request, { params }) {
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         if (!CRM_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-        const isManager = ['sales_manager', 'admin', 'super_admin'].includes(profile.role);
+        const isManager = ['relationship_manager', 'admin', 'super_admin'].includes(profile.role);
         const { id } = params;
 
         // Verify task ownership/access

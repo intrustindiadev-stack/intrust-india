@@ -66,10 +66,13 @@ export async function POST(request) {
             const { data } = await admin.from('user_profiles').select('id').eq('role', 'hr_manager');
             targetUserIds = (data || []).map(p => p.id);
         } else if (target === 'crm') {
-            const { data } = await admin.from('user_profiles').select('id').in('role', ['sales_exec', 'sales_manager']);
+            const { data } = await admin.from('user_profiles').select('id').in('role', ['relationship_exec', 'relationship_manager']);
             targetUserIds = (data || []).map(p => p.id);
         } else if (target === 'employee') {
-            const { data } = await admin.from('user_profiles').select('id').eq('role', 'employee');
+            const { data } = await admin.from('user_profiles').select('id').in('role', [
+                'employee', 'freelancer', 'video_editor', 'social_media_manager',
+                'seo_specialist', 'advertiser', 'support_agent'
+            ]);
             targetUserIds = (data || []).map(p => p.id);
         }
 

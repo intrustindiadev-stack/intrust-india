@@ -25,7 +25,7 @@ export default function CRMTasksClient({ currentUserId, currentUserRole }) {
     const [error, setError] = useState(null);
     const [statusFilter, setStatusFilter] = useState('all');
 
-    const isManager = ['sales_manager', 'admin', 'super_admin'].includes(currentUserRole);
+    const isManager = ['relationship_manager', 'admin', 'super_admin'].includes(currentUserRole);
 
     const fetchTasks = useCallback(async () => {
         setLoading(true);

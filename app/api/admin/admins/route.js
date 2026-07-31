@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 
-const ALLOWED_ROLES = ['admin', 'super_admin', 'sales_manager', 'sales_exec'];
+const ALLOWED_ROLES = ['admin', 'super_admin', 'relationship_manager', 'relationship_exec'];
 
 export async function GET(request) {
     try {

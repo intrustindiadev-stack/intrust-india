@@ -31,9 +31,15 @@ const ROLE_CONFIG = {
 
 const PANEL_OPTIONS = [
     { value: '', label: 'No panel access' },
-    { value: 'crm', label: 'CRM Panel (Sales)' },
-    { value: 'employee', label: 'Employee Portal' },
-    { value: 'merchant', label: 'Merchant Panel' },
+    { value: 'relationship_manager', label: 'CRM Panel (RM Manager)' },
+    { value: 'relationship_exec', label: 'CRM Panel (RM Exec)' },
+    { value: 'employee', label: 'Employee Portal (General)' },
+    { value: 'freelancer', label: 'Employee Portal (Freelancer)' },
+    { value: 'video_editor', label: 'Employee Portal (Video Editor)' },
+    { value: 'social_media_manager', label: 'Employee Portal (Social Media Manager)' },
+    { value: 'seo_specialist', label: 'Employee Portal (SEO Specialist)' },
+    { value: 'advertiser', label: 'Employee Portal (Advertiser)' },
+    { value: 'support_agent', label: 'Employee Portal (Support Agent)' },
 ];
 
 function ApplicationDrawer({ app, onClose, onUpdate }) {

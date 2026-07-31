@@ -9,11 +9,16 @@ import {
 
 const ROLE_OPTIONS = [
     { value: 'user', label: 'User / Customer', color: 'bg-gray-100 text-gray-700 border-gray-200' },
-    { value: 'merchant', label: 'Merchant', color: 'bg-teal-50 text-teal-700 border-teal-200' },
     { value: 'employee', label: 'Employee', color: 'bg-sky-50 text-sky-700 border-sky-200' },
-    { value: 'sales_exec', label: 'Sales Exec', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-    { value: 'sales_manager', label: 'Sales Manager', color: 'bg-violet-50 text-violet-700 border-violet-200' },
-    { value: 'hr_manager', label: 'HR Manager', color: 'bg-pink-50 text-pink-700 border-pink-200' },
+    { value: 'freelancer', label: 'Freelancer', color: 'bg-orange-50 text-orange-700 border-orange-200' },
+    { value: 'video_editor', label: 'Video Editor', color: 'bg-pink-50 text-pink-700 border-pink-200' },
+    { value: 'social_media_manager', label: 'Social Media Manager', color: 'bg-rose-50 text-rose-700 border-rose-200' },
+    { value: 'seo_specialist', label: 'SEO Specialist', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+    { value: 'advertiser', label: 'Advertiser', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+    { value: 'support_agent', label: 'Support Agent', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+    { value: 'relationship_exec', label: 'Relationship Executive', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+    { value: 'relationship_manager', label: 'Relationship Manager', color: 'bg-violet-50 text-violet-700 border-violet-200' },
+    { value: 'hr_manager', label: 'HR Manager', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
     { value: 'admin', label: 'Admin', color: 'bg-purple-50 text-purple-700 border-purple-200' },
     { value: 'super_admin', label: 'Super Admin', color: 'bg-rose-50 text-rose-700 border-rose-200' },
 ];

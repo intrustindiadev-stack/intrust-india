@@ -69,7 +69,7 @@ export default function LeadDetailPage({ params }) {
             const { data, error } = await supabase
                 .from('user_profiles')
                 .select('id, full_name, role')
-                .in('role', ['sales_exec', 'sales_manager', 'admin', 'super_admin'])
+                .in('role', ['relationship_exec', 'relationship_manager', 'admin', 'super_admin'])
                 .order('full_name', { ascending: true });
             if (!error && data) {
                 setSalesTeam(data);
@@ -260,7 +260,7 @@ export default function LeadDetailPage({ params }) {
                                 <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-400"><User size={18} /></div>
                                 <div className="flex-1">
                                     <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Assigned Executive</p>
-                                    {profile && ['sales_manager', 'admin', 'super_admin'].includes(profile.role) ? (
+                                    {profile && ['relationship_manager', 'admin', 'super_admin'].includes(profile.role) ? (
                                         <select
                                             value={lead.assigned_to || ''}
                                             onChange={async (e) => {
@@ -603,7 +603,7 @@ function CreateTaskModal({ leadId, salesTeam, currentUserProfile, onClose, onSav
     const [assignedTo, setAssignedTo] = useState(currentUserProfile?.id || '');
     const [saving, setSaving] = useState(false);
 
-    const isManagerOrAdmin = ['sales_manager', 'admin', 'super_admin'].includes(currentUserProfile?.role);
+    const isManagerOrAdmin = ['relationship_manager', 'admin', 'super_admin'].includes(currentUserProfile?.role);
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -669,7 +669,7 @@ function CreateTaskModal({ leadId, salesTeam, currentUserProfile, onClose, onSav
                                 <option value={currentUserProfile?.id}>Assign to Me ({currentUserProfile?.full_name})</option>
                                 {salesTeam.filter(t => t.id !== currentUserProfile?.id).map(teamMember => (
                                     <option key={teamMember.id} value={teamMember.id}>
-                                        {teamMember.full_name} ({teamMember.role === 'sales_exec' ? 'Exec' : 'Manager'})
+                                        {teamMember.full_name} ({teamMember.role === 'relationship_exec' ? 'RM Exec' : 'RM Manager'})
                                     </option>
                                 ))}
                             </select>
@@ -851,7 +851,7 @@ function EditLeadModal({ lead, salesTeam, currentUserProfile, onClose, onSave })
         assigned_to: lead.assigned_to || '',
     });
     const [saving, setSaving] = useState(false);
-    const isManagerOrAdmin = ['sales_manager', 'admin', 'super_admin'].includes(currentUserProfile?.role);
+    const isManagerOrAdmin = ['relationship_manager', 'admin', 'super_admin'].includes(currentUserProfile?.role);
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -932,7 +932,7 @@ function EditLeadModal({ lead, salesTeam, currentUserProfile, onClose, onSave })
                                     <option value="">Unassigned</option>
                                     {salesTeam.map(teamMember => (
                                         <option key={teamMember.id} value={teamMember.id}>
-                                            {teamMember.full_name} ({teamMember.role === 'sales_exec' ? 'Exec' : 'Manager'})
+                                            {teamMember.full_name} ({teamMember.role === 'relationship_exec' ? 'RM Exec' : 'RM Manager'})
                                         </option>
                                     ))}
                                 </select>

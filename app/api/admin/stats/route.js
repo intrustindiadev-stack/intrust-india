@@ -81,7 +81,7 @@ export async function GET(request) {
 
         if (group === 'all' || group === 'employees') {
             const { count } = await supabase.from('user_profiles').select('*', { count: 'exact', head: true })
-                .in('role', ['employee', 'hr_manager', 'sales_exec', 'sales_manager']);
+                .in('role', ['employee', 'hr_manager', 'relationship_exec', 'relationship_manager']);
             result.totalEmployeesCount = count || 0;
         }
 

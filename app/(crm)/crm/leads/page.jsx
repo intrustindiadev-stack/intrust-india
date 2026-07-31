@@ -616,14 +616,14 @@ export default function LeadsPage() {
     const [showImport, setShowImport] = useState(false);
     const [selectedLead, setSelectedLead] = useState(null);
 
-    const isManager = profile && ['sales_manager', 'admin', 'super_admin'].includes(profile.role);
+    const isManager = profile && ['relationship_manager', 'admin', 'super_admin'].includes(profile.role);
 
     const fetchSalesTeam = useCallback(async () => {
         try {
             const { data } = await supabase
                 .from('user_profiles')
                 .select('id, full_name, role, email')
-                .in('role', ['sales_exec', 'sales_manager', 'admin', 'super_admin'])
+                .in('role', ['relationship_exec', 'relationship_manager', 'admin', 'super_admin'])
                 .order('full_name', { ascending: true });
             if (data) setSalesTeam(data);
         } catch (err) {
@@ -643,7 +643,7 @@ export default function LeadsPage() {
             if (statusFilter !== 'all') q = q.eq('status', statusFilter);
             
             // RBAC: Executives only see assigned leads
-            if (profile && !['sales_manager', 'admin', 'super_admin'].includes(profile.role)) {
+            if (profile && !['relationship_manager', 'admin', 'super_admin'].includes(profile.role)) {
                 q = q.eq('assigned_to', profile.id);
             }
             

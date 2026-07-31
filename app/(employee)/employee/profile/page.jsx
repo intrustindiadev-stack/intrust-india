@@ -8,17 +8,33 @@ import { motion } from 'framer-motion';
 import { EditProfileModal, AvatarUploadModal } from '@/components/employee/ProfileModals';
 
 const ROLE_LABELS = {
-    employee: 'Employee', sales_exec: 'Sales Executive', sales_manager: 'Sales Manager',
-    hr_manager: 'HR Manager', admin: 'Admin', super_admin: 'Super Admin',
+    employee: 'Employee',
+    relationship_exec: 'Relationship Executive',
+    relationship_manager: 'Relationship Manager',
+    hr_manager: 'HR Manager',
+    admin: 'Admin',
+    super_admin: 'Super Admin',
+    freelancer: 'Freelancer',
+    video_editor: 'Video Editor',
+    social_media_manager: 'Social Media Manager',
+    seo_specialist: 'SEO Specialist',
+    advertiser: 'Advertiser',
+    support_agent: 'Support Agent',
 };
 
 const COLOR_MAP = {
     employee: 'from-sky-500 to-blue-600 shadow-blue-500/20',
-    sales_exec: 'from-blue-500 to-indigo-600 shadow-indigo-500/20',
-    sales_manager: 'from-cyan-500 to-blue-600 shadow-cyan-500/20',
+    relationship_exec: 'from-blue-500 to-indigo-600 shadow-indigo-500/20',
+    relationship_manager: 'from-cyan-500 to-blue-600 shadow-cyan-500/20',
     hr_manager: 'from-emerald-500 to-teal-600 shadow-emerald-500/20',
     admin: 'from-violet-500 to-purple-600 shadow-violet-500/20',
     super_admin: 'from-slate-700 to-slate-900 shadow-slate-900/20',
+    freelancer: 'from-orange-400 to-amber-500 shadow-amber-500/20',
+    video_editor: 'from-pink-500 to-rose-600 shadow-rose-500/20',
+    social_media_manager: 'from-rose-500 to-pink-600 shadow-pink-500/20',
+    seo_specialist: 'from-amber-500 to-yellow-600 shadow-amber-500/20',
+    advertiser: 'from-cyan-500 to-sky-600 shadow-sky-500/20',
+    support_agent: 'from-indigo-500 to-violet-600 shadow-violet-500/20',
 };
 
 export default function EmployeeProfilePage() {

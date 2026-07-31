@@ -46,9 +46,16 @@ export async function POST(request) {
         // 5. If panelAccess is provided, map it to a role
         if (panelAccess && app.user_id) {
             const roleMap = {
-                'crm': 'sales_exec',
+                'relationship_manager': 'relationship_manager',
+                'relationship_exec': 'relationship_exec',
+                'crm': 'relationship_exec', // legacy fallback
                 'employee': 'employee',
-                'merchant': 'merchant'
+                'freelancer': 'freelancer',
+                'video_editor': 'video_editor',
+                'social_media_manager': 'social_media_manager',
+                'seo_specialist': 'seo_specialist',
+                'advertiser': 'advertiser',
+                'support_agent': 'support_agent'
             };
             const newRole = roleMap[panelAccess];
             

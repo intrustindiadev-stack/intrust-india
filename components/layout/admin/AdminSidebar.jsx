@@ -97,6 +97,7 @@ const navigationGroups = [
             { name: 'Career Applications', href: '/admin/careers', icon: Briefcase },
             { name: 'CRM Overview', href: '/admin/crm', icon: BarChart3 },
             { name: 'HRM Overview', href: '/admin/hrm', icon: UserCheck },
+            { name: 'HRM Incentives', href: '/admin/hrm/incentives', icon: Gift },
         ]
     },
     {

@@ -7,8 +7,8 @@ function portalForRole(role) {
     if (role === 'admin' || role === 'super_admin') return '/admin';
     if (role === 'merchant') return '/merchant/dashboard';
     if (role === 'hr_manager') return '/hrm';
-    if (role === 'employee') return '/employee';
-    if (role?.startsWith('sales_') || role === 'sales_exec' || role === 'sales_agent') return '/crm';
+    if (['employee', 'freelancer', 'video_editor', 'social_media_manager', 'seo_specialist', 'advertiser', 'support_agent'].includes(role)) return '/employee';
+    if (role === 'relationship_exec' || role === 'relationship_manager') return '/crm';
     return '/dashboard'; // customer or unknown
 }
 
@@ -38,8 +38,13 @@ const PORTAL_ROLE_MAP = {
     '/admin':    (r) => r === 'admin' || r === 'super_admin',
     '/merchant': (r) => r === 'merchant',
     '/hrm':      (r) => r === 'hr_manager',
-    '/crm':      (r) => r?.startsWith('sales_') || r === 'sales_exec' || r === 'sales_agent',
-    '/employee': (r) => ['employee', 'sales_exec', 'sales_manager', 'hr_manager', 'admin', 'super_admin'].includes(r),
+    '/crm':      (r) => r === 'relationship_exec' || r === 'relationship_manager',
+    '/employee': (r) => [
+        'employee', 'freelancer', 'video_editor', 'social_media_manager',
+        'seo_specialist', 'advertiser', 'support_agent',
+        'relationship_exec', 'relationship_manager', 
+        'hr_manager', 'admin', 'super_admin'
+    ].includes(r),
     '/dashboard': (r) => !r || r === 'user' || r === 'customer',
 }
 

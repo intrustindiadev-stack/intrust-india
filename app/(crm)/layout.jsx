@@ -18,7 +18,7 @@ export default async function CRMRootLayout({ children }) {
         .eq('id', user.id)
         .single();
 
-    const validRoles = ['sales_exec', 'sales_manager', 'admin', 'super_admin'];
+    const validRoles = ['relationship_exec', 'relationship_manager', 'admin', 'super_admin'];
 
     if (!validRoles.includes(profile?.role)) {
         return <UnauthorizedRedirect to="/" message="CRM Access Required. Redirecting..." />;

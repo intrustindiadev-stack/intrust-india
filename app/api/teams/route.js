@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 
-const TEAM_READ_ROLES = ['sales_exec', 'sales_manager', 'admin', 'super_admin', 'hr_manager', 'employee'];
+const TEAM_READ_ROLES = [
+    'relationship_exec', 'relationship_manager',
+    'admin', 'super_admin', 'hr_manager',
+    'employee', 'freelancer', 'video_editor', 'social_media_manager',
+    'seo_specialist', 'advertiser', 'support_agent'
+];
 const TEAM_WRITE_ROLES = ['admin', 'super_admin'];
 
 export async function GET(request) {
@@ -36,7 +41,7 @@ export async function GET(request) {
         const { data: unassignedUsers, error: userError } = await admin
             .from('user_profiles')
             .select('id, full_name, email, role, avatar_url, phone, team_id')
-            .in('role', ['sales_exec', 'sales_manager', 'admin', 'super_admin'])
+            .in('role', ['relationship_exec', 'relationship_manager', 'admin', 'super_admin'])
             .is('team_id', null)
             .order('full_name', { ascending: true });
 

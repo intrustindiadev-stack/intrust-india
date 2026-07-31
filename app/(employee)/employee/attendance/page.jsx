@@ -23,6 +23,7 @@ export default function EmployeeAttendancePage() {
     const [clockedIn, setClockedIn] = useState(false);
     const [todayRecord, setTodayRecord] = useState(null);
     const [clocking, setClocking] = useState(false);
+    const [pendingCheckoutRecord, setPendingCheckoutRecord] = useState(null);
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -42,7 +43,20 @@ export default function EmployeeAttendancePage() {
             setRecords(data || []);
             const todayRec = (data || []).find(r => r.date === today);
             setTodayRecord(todayRec || null);
-            setClockedIn(!!(todayRec?.check_in && !todayRec?.check_out));
+            
+            if (data && data.length > 0) {
+                const latest = data[0];
+                if (latest.check_in && !latest.check_out && latest.date !== today) {
+                    setPendingCheckoutRecord(latest);
+                    setClockedIn(false);
+                } else {
+                    setPendingCheckoutRecord(null);
+                    setClockedIn(!!(todayRec?.check_in && !todayRec?.check_out));
+                }
+            } else {
+                setPendingCheckoutRecord(null);
+                setClockedIn(false);
+            }
         } catch (err) {
             console.error(err);
         } finally { setIsLoading(false); }
@@ -104,18 +118,15 @@ export default function EmployeeAttendancePage() {
                 }
             }
 
-            const now = new Date().toISOString();
-            const { data, error } = await supabase.from('attendance').insert([{
-                employee_id: user.id,
-                date: today,
-                check_in: now,
-                status: 'present',
-                check_in_lat: checkInLat,
-                check_in_lng: checkInLng,
-                is_onsite: isOnsite
-            }]).select().single();
-            if (error) throw error;
-            setTodayRecord(data);
+            const res = await fetch('/api/employee/attendance/clock-in', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_onsite: isOnsite, lat: checkInLat, lng: checkInLng })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to clock in');
+            
+            setTodayRecord(data.record);
             setClockedIn(true);
             toast.success(isOnsite ? 'Clocked in successfully (On-Site)!' : 'Clocked in successfully (WFH/Off-Site)!');
             fetchAttendance();
@@ -141,19 +152,40 @@ export default function EmployeeAttendancePage() {
                 }
             }
 
-            const now = new Date().toISOString();
-            const { error } = await supabase.from('attendance').update({ 
-                check_out: now,
-                check_out_lat: checkOutLat,
-                check_out_lng: checkOutLng,
-                is_onsite: isOnsite
-            }).eq('id', todayRecord.id);
-            if (error) throw error;
+            const res = await fetch('/api/employee/attendance/clock-out', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ record_id: todayRecord.id, is_onsite: isOnsite, lat: checkOutLat, lng: checkOutLng })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to clock out');
+            
             setClockedIn(false);
             toast.success('Clocked out successfully!');
             fetchAttendance();
         } catch (err) { toast.error(err.message); }
         finally { setClocking(false); }
+    };
+
+    const handleForceCheckoutPrevious = async () => {
+        if (!pendingCheckoutRecord) return;
+        setClocking(true);
+        try {
+            const res = await fetch('/api/employee/attendance/force-close', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ record_id: pendingCheckoutRecord.id })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to close past shift');
+            
+            toast.success('Previous shift closed automatically.');
+            fetchAttendance();
+        } catch(err) {
+            toast.error(err.message);
+        } finally {
+            setClocking(false);
+        }
     };
 
     const fmt = (dt) => dt ? new Date(dt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—';
@@ -180,41 +212,57 @@ export default function EmployeeAttendancePage() {
 
             {/* Today's Clock In/Out Card */}
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                className={`rounded-3xl p-6 text-white relative overflow-hidden shadow-xl ${clockedIn ? 'bg-gradient-to-br from-emerald-600 to-teal-700' : 'bg-gradient-to-br from-gray-800 to-gray-900'}`}>
-                <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-                <p className="text-white/60 text-xs font-bold uppercase tracking-widest mb-2">Today — {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-                <div className="flex items-center justify-between gap-4 flex-wrap">
+                className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                <div className="flex justify-between items-start mb-6">
                     <div>
-                        {todayRecord?.check_in ? (
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Current Status</p>
+                        {pendingCheckoutRecord ? (
                             <>
-                                <p className="text-3xl font-black">{fmt(todayRecord.check_in)}</p>
-                                <p className="text-white/60 text-sm mt-1">{clockedIn ? 'Clocked in · currently working' : `Worked ${duration(todayRecord.check_in, todayRecord.check_out)}`}</p>
+                                <p className="text-2xl font-mono text-amber-600 font-medium tracking-tight">Pending Checkout</p>
+                                <p className="text-sm text-gray-500 mt-1">Please close your shift from {new Date(pendingCheckoutRecord.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} before clocking in today.</p>
+                            </>
+                        ) : todayRecord?.check_in ? (
+                            <>
+                                <p className="text-3xl font-mono text-gray-900 font-medium tracking-tight">{fmt(todayRecord.check_in)}</p>
+                                <p className="text-sm text-gray-500 mt-1">{clockedIn ? 'Clocked in · currently working' : `Worked ${duration(todayRecord.check_in, todayRecord.check_out)}`}</p>
                             </>
                         ) : (
                             <>
-                                <p className="text-3xl font-black">{new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
-                                <p className="text-white/60 text-sm mt-1">Not clocked in yet</p>
+                                <p className="text-3xl font-mono text-gray-900 font-medium tracking-tight">{new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+                                <p className="text-sm text-gray-500 mt-1">Not clocked in yet</p>
                             </>
                         )}
                     </div>
-                    <button onClick={clockedIn ? handleClockOut : handleClockIn} disabled={clocking || (todayRecord?.check_out)}
-                        className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg disabled:opacity-60 flex items-center gap-2 ${clockedIn ? 'bg-rose-500 hover:bg-rose-400 text-white shadow-rose-500/30' : 'bg-white text-gray-900 hover:bg-gray-100 shadow-black/10'}`}>
-                        {clocking ? <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> : clockedIn ? 'Clock Out' : 'Clock In'}
-                    </button>
+                    {pendingCheckoutRecord ? (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-50 text-amber-700 border border-amber-100">
+                            Action Required
+                        </span>
+                    ) : (
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${clockedIn ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
+                            {clockedIn ? '● Active Shift' : 'Idle'}
+                        </span>
+                    )}
                 </div>
-                {todayRecord && (
-                    <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap gap-4 text-xs font-semibold">
-                        <span>In: <strong>{fmt(todayRecord.check_in)}</strong></span>
-                        {todayRecord.check_out && <span>Out: <strong>{fmt(todayRecord.check_out)}</strong></span>}
-                        {todayRecord.check_out && <span>Duration: <strong>{duration(todayRecord.check_in, todayRecord.check_out)}</strong></span>}
-                        {todayRecord.check_in_lat && (
-                            <span className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/10">
-                                <MapPin size={12} className="text-emerald-300 animate-pulse" />
-                                <a href={`https://www.google.com/maps/search/?api=1&query=${todayRecord.check_in_lat},${todayRecord.check_in_lng}`} target="_blank" rel="noopener noreferrer" className="hover:underline font-black text-white">
-                                    {todayRecord.is_onsite ? "On-Site" : "WFH/Off-Site"} Location
-                                </a>
-                            </span>
-                        )}
+                
+                <div className="pt-5 border-t border-gray-100">
+                    {pendingCheckoutRecord ? (
+                        <button onClick={handleForceCheckoutPrevious} disabled={clocking}
+                            className="w-full py-2.5 rounded-xl text-sm font-semibold transition-colors bg-amber-100 text-amber-800 hover:bg-amber-200 shadow-sm flex items-center justify-center">
+                            {clocking ? <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> : 'Force Close Previous Shift'}
+                        </button>
+                    ) : (
+                        <button onClick={clockedIn ? handleClockOut : handleClockIn} disabled={clocking || (todayRecord?.check_out)}
+                            className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${clockedIn ? 'bg-white border border-red-200 text-red-600 hover:bg-red-50' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'} disabled:opacity-50 disabled:cursor-not-allowed`}>
+                            {clocking ? <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> : clockedIn ? 'Clock Out' : 'Clock In'}
+                        </button>
+                    )}
+                </div>
+                
+                {!pendingCheckoutRecord && todayRecord && (
+                    <div className="mt-4 flex flex-wrap gap-4 text-xs font-medium text-gray-500">
+                        <span>In: <strong className="text-gray-700">{fmt(todayRecord.check_in)}</strong></span>
+                        {todayRecord.check_out && <span>Out: <strong className="text-gray-700">{fmt(todayRecord.check_out)}</strong></span>}
+                        {todayRecord.check_out && <span>Duration: <strong className="text-gray-700">{duration(todayRecord.check_in, todayRecord.check_out)}</strong></span>}
                     </div>
                 )}
             </motion.div>
@@ -222,69 +270,89 @@ export default function EmployeeAttendancePage() {
             {/* Monthly Summary */}
             <div className="grid grid-cols-3 gap-4">
                 {[
-                    { label: 'Present', value: presentDays, color: 'from-emerald-500 to-teal-500' },
-                    { label: 'Absent', value: absentDays, color: 'from-rose-500 to-pink-500' },
-                    { label: 'Recorded', value: records.length, color: 'from-indigo-500 to-violet-500' },
+                    { label: 'Present', value: presentDays, text: 'text-emerald-600' },
+                    { label: 'Absent', value: absentDays, text: 'text-rose-600' },
+                    { label: 'Recorded', value: records.length, text: 'text-indigo-600' },
                 ].map((s, i) => (
                     <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                        className={`rounded-2xl p-4 text-white bg-gradient-to-br ${s.color} shadow-lg text-center`}>
-                        <p className="text-3xl font-black">{s.value}</p>
-                        <p className="text-white/70 text-xs font-bold uppercase tracking-wider mt-1">{s.label}</p>
+                        className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm text-center">
+                        <p className={`text-3xl font-medium tracking-tight ${s.text}`}>{s.value}</p>
+                        <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mt-1">{s.label}</p>
                     </motion.div>
                 ))}
             </div>
 
-            {/* Log */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-gray-100">
-                    <h2 className="font-bold text-gray-900 text-base">Attendance Log (Last 30 days)</h2>
+            {/* Attendance Log Table */}
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                    <h2 className="text-base font-semibold text-gray-900">Attendance Log (Last 30 days)</h2>
                 </div>
                 {isLoading ? (
-                    <div className="p-10 flex justify-center"><div className="w-6 h-6 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" /></div>
+                    <div className="p-12 flex justify-center"><div className="w-8 h-8 border-4 border-gray-200 border-t-indigo-600 rounded-full animate-spin" /></div>
                 ) : records.length === 0 ? (
-                    <div className="p-12 text-center">
-                        <Clock size={36} className="mx-auto text-gray-200 mb-3" />
-                        <p className="text-gray-500 font-medium">No attendance records yet</p>
-                        <p className="text-xs text-gray-400 mt-1">Use the Clock In button above to start tracking</p>
+                    <div className="p-16 text-center">
+                        <Clock size={32} className="mx-auto text-gray-300 mb-3" />
+                        <p className="text-gray-500 font-medium text-sm">No attendance records found.</p>
+                        <p className="text-xs text-gray-400 mt-1">Clock in to start generating your attendance log.</p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-gray-50">
-                        {records.map(r => {
-                            const meta = STATUS_META[r.status] || STATUS_META.present;
-                            const Icon = meta.icon;
-                            return (
-                                <div key={r.id} className="flex items-center justify-between px-5 py-4 hover:bg-gray-50/50 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0">
-                                            <Clock size={16} className="text-gray-400" />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-900 text-sm">{new Date(r.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
-                                            {r.check_in && <p className="text-xs text-gray-400 mt-0.5">{fmt(r.check_in)} → {fmt(r.check_out)} {r.check_out ? `· ${duration(r.check_in, r.check_out)}` : '(ongoing)'}</p>}
-                                            {r.check_in_lat && (
-                                                <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] font-bold">
-                                                    <span className={`px-1.5 py-0.5 rounded-md border ${r.is_onsite ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/50' : 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-900/50'}`}>
-                                                        {r.is_onsite ? 'On-Site' : 'WFH/Off-Site'}
-                                                    </span>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm whitespace-nowrap">
+                            <thead className="bg-gray-50/50 text-gray-500 text-xs uppercase tracking-wider font-semibold border-b border-gray-100">
+                                <tr>
+                                    <th className="px-6 py-4">Date</th>
+                                    <th className="px-6 py-4">First In</th>
+                                    <th className="px-6 py-4">Last Out</th>
+                                    <th className="px-6 py-4">Total Hours</th>
+                                    <th className="px-6 py-4">Location</th>
+                                    <th className="px-6 py-4 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50 text-gray-700">
+                                {records.map(r => {
+                                    const meta = STATUS_META[r.status] || STATUS_META.present;
+                                    const Icon = meta.icon;
+                                    return (
+                                        <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <span className="font-medium text-gray-900">{new Date(r.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                                            </td>
+                                            <td className="px-6 py-4 font-mono text-gray-600">
+                                                {r.check_in ? fmt(r.check_in) : '—'}
+                                            </td>
+                                            <td className="px-6 py-4 font-mono text-gray-600">
+                                                {r.check_out ? fmt(r.check_out) : r.check_in ? <span className="text-amber-500 text-xs font-semibold">Ongoing</span> : '—'}
+                                            </td>
+                                            <td className="px-6 py-4 font-mono text-gray-600">
+                                                {r.check_in && r.check_out ? duration(r.check_in, r.check_out) : '—'}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {r.check_in_lat ? (
                                                     <a 
                                                         href={`https://www.google.com/maps/search/?api=1&query=${r.check_in_lat},${r.check_in_lng}`} 
                                                         target="_blank" 
                                                         rel="noopener noreferrer" 
-                                                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 flex items-center gap-0.5 hover:underline"
+                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${r.is_onsite ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100'}`}
                                                     >
-                                                        <MapPin size={10} /> View Map
+                                                        <MapPin size={10} /> {r.is_onsite ? 'On-Site' : 'Remote'}
                                                     </a>
-                                                </div>
-                                            )}
-                                            {r.override_reason && <p className="text-xs text-blue-500 mt-0.5">Override: {r.override_reason}</p>}
-                                        </div>
-                                    </div>
-                                    <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg border ${meta.cls}`}>
-                                        <Icon size={11} /> {meta.label}
-                                    </span>
-                                </div>
-                            );
-                        })}
+                                                ) : (
+                                                    <span className="text-gray-400 text-xs">—</span>
+                                                )}
+                                                {r.override_reason && (
+                                                    <div className="text-[10px] text-gray-400 mt-1">Note: {r.override_reason}</div>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border ${meta.cls}`}>
+                                                    <Icon size={12} /> {meta.label}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
                 )}
             </div>

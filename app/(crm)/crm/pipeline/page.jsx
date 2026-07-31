@@ -60,7 +60,7 @@ export default function PipelinePage() {
             .order('created_at', { ascending: false });
             
         // RBAC: Executives only see assigned leads
-        if (profile && !['sales_manager', 'admin', 'super_admin'].includes(profile.role)) {
+        if (profile && !['relationship_manager', 'admin', 'super_admin'].includes(profile.role)) {
             q = q.eq('assigned_to', profile.id);
         }
         

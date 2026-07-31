@@ -15,7 +15,7 @@ export default function CrmTeamsPage() {
     const [selectedTeamForAssign, setSelectedTeamForAssign] = useState(null);
 
     const isAdmin = profile && ['admin', 'super_admin'].includes(profile.role);
-    const isManager = profile && ['sales_manager', 'admin', 'super_admin'].includes(profile.role);
+    const isManager = profile && ['relationship_manager', 'admin', 'super_admin'].includes(profile.role);
     const hasTeam = !!profile?.team_id;
 
     const fetchTeamsData = useCallback(async () => {

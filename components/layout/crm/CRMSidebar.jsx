@@ -41,7 +41,7 @@ export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
 
     const userName = userProfile?.full_name || 'CRM Manager';
     
-    const isManager = userProfile?.role === 'sales_manager' || userProfile?.role === 'admin' || userProfile?.role === 'super_admin';
+    const isManager = userProfile?.role === 'relationship_manager' || userProfile?.role === 'admin' || userProfile?.role === 'super_admin';
 
     const menuItems = [
         { name: 'Dashboard', icon: Home, path: '/crm' },
