@@ -4,13 +4,23 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
     Users, Clock, Calendar, Briefcase, ArrowRight, TrendingUp, 
     UserCheck, Bell, Zap, MoreHorizontal, UserPlus, Filter, 
-    Download, Building, Plus, DollarSign, CheckCircle2, Star 
+    Download, Building, Plus, DollarSign, CheckCircle2, Star, HelpCircle, BookOpen, FileText
 } from 'lucide-react';
 import Link from 'next/link';
+
+const QUICK_ACTIONS = [
+    { label: 'New Employee', icon: UserPlus, href: '/hrm/employees', color: 'bg-blue-600', shadow: 'shadow-blue-600/30', desc: 'Add to team' },
+    { label: 'Attendance', icon: Clock, href: '/hrm/attendance', color: 'bg-amber-500', shadow: 'shadow-amber-500/30', desc: 'Mark today' },
+    { label: 'Leaves', icon: Calendar, href: '/hrm/leaves', color: 'bg-violet-600', shadow: 'shadow-violet-600/30', desc: 'Approve requests' },
+    { label: 'Salary', icon: DollarSign, href: '/hrm/salary', color: 'bg-emerald-600', shadow: 'shadow-emerald-600/30', desc: 'Process payroll' },
+    { label: 'Training', icon: BookOpen, href: '/hrm/training', color: 'bg-rose-500', shadow: 'shadow-rose-500/30', desc: 'Manage sessions' },
+    { label: 'Help', icon: HelpCircle, href: '/hrm/help', color: 'bg-gray-700', shadow: 'shadow-gray-700/30', desc: 'Guides & FAQ' },
+];
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import Skeleton from '@/components/ui/Skeleton';
+import SkeletonCard from '@/components/shared/SkeletonCard';
 import EmptyState from '@/components/ui/EmptyState';
 import { toast } from 'react-hot-toast';
 import WelcomeRoleCelebrationModal from '@/components/shared/WelcomeRoleCelebrationModal';
@@ -164,10 +174,33 @@ export default function HRMDashboard() {
                     </div>
                 </motion.div>
 
+                {/* ⚡ Quick Actions */}
+                <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-sm font-black text-gray-500 uppercase tracking-widest">Quick Actions</h2>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                        {QUICK_ACTIONS.map((action) => {
+                            const Icon = action.icon;
+                            return (
+                                <Link key={action.href} href={action.href} className="group flex flex-col items-center gap-2.5 p-4 bg-white rounded-2xl border border-gray-100 hover:border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 text-center">
+                                    <div className={`w-11 h-11 rounded-xl ${action.color} flex items-center justify-center shadow-lg ${action.shadow} group-hover:scale-110 transition-transform duration-200`}>
+                                        <Icon size={20} className="text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black text-gray-800">{action.label}</p>
+                                        <p className="text-[10px] text-gray-400 font-medium mt-0.5">{action.desc}</p>
+                                    </div>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </motion.div>
+
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {isLoading ? (
-                    [...Array(4)].map((_, i) => <Skeleton key={i} className="h-44" />)
+                    [...Array(4)].map((_, i) => <SkeletonCard key={i} type="stat" />)
                 ) : (
                     <>
                         <StatCard label="Total Force" value={stats.employees} color="blue" subValue="Active Personnel" trend="+2.4%" delay={0} icon={Users} />
@@ -193,7 +226,7 @@ export default function HRMDashboard() {
                         </div>
                         <div className="p-2">
                             {isLoading ? (
-                                [...Array(3)].map((_, i) => <div key={i} className="p-4 flex items-center gap-4"><Skeleton className="w-12 h-12 rounded-xl" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-3 w-1/4" /></div></div>)
+                                <SkeletonCard type="list-item" count={3} />
                             ) : pendingLeaves.length > 0 ? (
                                 <div className="space-y-1">
                                     {pendingLeaves.map((leave) => (

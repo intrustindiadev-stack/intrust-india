@@ -505,6 +505,7 @@ export default function ReferAndEarnPage() {
                     </motion.div>
                 )}
 
+
                 {/* Upline Section */}
                 {networkData?.upline?.length > 0 && (
                     <section className="mb-8">

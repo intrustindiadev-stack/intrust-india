@@ -1,11 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { User, Mail, Phone, MapPin, Building2, Shield, Edit3, Camera, Clock, CheckCircle2, ChevronRight, Activity, Award, QrCode, X, UploadCloud, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Building2, Shield, Edit3, Camera, Clock, CheckCircle2, ChevronRight, Activity, Award, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { displayEmail } from '@/lib/auth';
 import { motion } from 'framer-motion';
-import { EditProfileModal, AvatarUploadModal } from '@/components/employee/ProfileModals';
+import { EditProfileModal } from '@/components/employee/ProfileModals';
+import AvatarCropUploadModal from '@/components/shared/AvatarCropUploadModal';
+import IDCard from '@/components/shared/IDCard';
+import { createClient } from '@/lib/supabaseClient';
+import { toast } from 'react-hot-toast';
 
 const ROLE_LABELS = {
     employee: 'Employee', sales_exec: 'Sales Executive', sales_manager: 'Sales Manager',
@@ -29,6 +33,28 @@ export default function EmployeeProfilePage() {
 
     const userRole = profile?.role || 'employee';
     const bgGradient = COLOR_MAP[userRole] || COLOR_MAP.employee;
+
+    const handleAvatarUpload = async (blob) => {
+        const supabase = createClient();
+        const fileName = `avatars/${profile.id}-${Date.now()}.jpg`;
+        try {
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+            if (uploadError) throw uploadError;
+            const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+            const { error: updateError } = await supabase
+                .from('user_profiles')
+                .update({ avatar_url: publicUrl })
+                .eq('id', profile.id);
+            if (updateError) throw updateError;
+            if (fetchProfile) await fetchProfile();
+            toast.success('Profile photo updated!');
+        } catch (err) {
+            toast.error('Upload failed: ' + err.message);
+            throw err;
+        }
+    };
 
     const details = [
         { icon: Mail, label: 'Email Address', value: displayEmail(profile?.email) || displayEmail(user?.email) || 'Not Provided', color: 'text-blue-500', bg: 'bg-blue-50' },
@@ -67,93 +93,10 @@ export default function EmployeeProfilePage() {
 
                 <div className="flex flex-col lg:flex-row gap-10 items-start justify-center">
                     {/* Left: Office ID Card Simulation */}
-                    <motion.div 
-                        initial={{ opacity: 0, y: 40 }} 
-                        animate={{ opacity: 1, y: 0 }} 
-                        transition={{ delay: 0.1, type: "spring", stiffness: 100 }}
-                        className="flex-shrink-0 mx-auto lg:mx-0 relative w-[320px] sm:w-[340px]"
-                    >
-                        {/* Animated Mesh Background Behind Card */}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-sky-400 via-blue-500 to-indigo-600 rounded-[2.5rem] blur-2xl opacity-40 animate-pulse pointer-events-none" />
-
-                        {/* ID Card Container */}
-                        <div className={`relative z-10 bg-gradient-to-br ${bgGradient} rounded-[2rem] p-8 text-white shadow-2xl shadow-blue-900/20 dark:shadow-black/50 border border-white/20 backdrop-blur-xl flex flex-col items-center pb-12 overflow-hidden hover:-translate-y-2 transition-transform duration-500 cursor-default`}>
-                            {/* Card Decorative Mesh */}
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
-                            <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none" />
-
-                            {/* Card Header Branding */}
-                            <div className="w-full flex justify-between items-start mt-4 mb-8">
-                                <div className="flex items-center gap-2">
-                                    <img src="/logo.png" alt="InTrust Logo" className="h-5 object-contain brightness-0 invert" />
-                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80 mt-0.5">INTRUST</span>
-                                </div>
-                                <Activity size={18} className="opacity-80" />
-                            </div>
-
-                            {/* Avatar */}
-                            <div 
-                                className="relative mb-6"
-                                onMouseEnter={() => setIsHoveringAvatar(true)}
-                                onMouseLeave={() => setIsHoveringAvatar(false)}
-                            >
-                                <div className="w-36 h-36 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-6xl font-black border-[6px] border-white/40 shadow-2xl relative overflow-hidden transition-all duration-300">
-                                    {profile?.avatar_url ? (
-                                        <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-                                    ) : (
-                                        profile?.full_name?.charAt(0)?.toUpperCase() || '?'
-                                    )}
-                                    
-                                    {/* Hover Edit Overlay */}
-                                    {isHoveringAvatar && (
-                                        <div 
-                                            onClick={() => setIsAvatarModalOpen(true)}
-                                            className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center cursor-pointer transition-all"
-                                        >
-                                            <Camera size={32} className="text-white opacity-90" />
-                                        </div>
-                                    )}
-                                </div>
-                                {/* Verification Badge */}
-                                <div className="absolute bottom-0 right-0 w-10 h-10 bg-white rounded-full shadow-xl border-4 border-transparent flex items-center justify-center text-blue-600 -mr-2">
-                                    <CheckCircle2 size={24} fill="currentColor" className="text-white" />
-                                </div>
-                            </div>
-
-                            {/* Details */}
-                            <div className="text-center w-full">
-                                <h2 className="text-2xl font-black tracking-tight leading-tight">{profile?.full_name || 'Your Name'}</h2>
-                                <p className="text-sm font-bold text-white/80 mt-1 uppercase tracking-widest">{ROLE_LABELS[userRole] || 'Team Member'}</p>
-                                
-                                <div className="mt-6 w-full h-[1px] bg-white/20 rounded-full" />
-                                
-                                <div className="mt-4 flex flex-col gap-2">
-                                    <div className="flex justify-between items-center text-xs font-bold font-mono text-white/90">
-                                        <span className="opacity-60 uppercase">Emp ID</span>
-                                        <span>INT-{profile?.id?.substring(0, 6).toUpperCase() || '000000'}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-xs font-bold font-mono text-white/90">
-                                        <span className="opacity-60 uppercase">Blood Grp</span>
-                                        <span>{profile?.blood_group || 'O+'}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-xs font-bold font-mono text-white/90">
-                                        <span className="opacity-60 uppercase">Issued</span>
-                                        <span>{new Date().getFullYear()}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Barcode Footer */}
-                            <div className="absolute bottom-0 inset-x-0 h-16 bg-white flex items-center justify-center gap-2 rounded-b-[2rem]">
-                                {[...Array(24)].map((_, i) => (
-                                    <div key={i} className={`h-8 bg-black rounded-sm ${i % 3 === 0 ? 'w-2' : i % 2 === 0 ? 'w-1' : 'w-0.5'}`} />
-                                ))}
-                            </div>
-
-                            {/* Glossy Overlay */}
-                            <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-tr from-transparent via-white/5 to-white/20 pointer-events-none rounded-[2rem]" />
-                        </div>
-                    </motion.div>
+                    <IDCard 
+                        profile={profile} 
+                        onOpenAvatarModal={() => setIsAvatarModalOpen(true)} 
+                    />
 
                     {/* Right: Floating Information Widgets */}
                     <div className="flex-1 space-y-6 w-full">
@@ -223,11 +166,12 @@ export default function EmployeeProfilePage() {
                 profile={profile} 
                 fetchProfile={fetchProfile} 
             />
-            <AvatarUploadModal 
-                isOpen={isAvatarModalOpen} 
-                onClose={() => setIsAvatarModalOpen(false)} 
-                profile={profile} 
-                fetchProfile={fetchProfile} 
+            <AvatarCropUploadModal
+                isOpen={isAvatarModalOpen}
+                onClose={() => setIsAvatarModalOpen(false)}
+                onUpload={handleAvatarUpload}
+                title="Update Profile Photo"
+                shape="circle"
             />
         </div>
     );

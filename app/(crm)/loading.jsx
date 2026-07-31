@@ -1,8 +1,10 @@
+import SkeletonCard from '@/components/shared/SkeletonCard';
+
 export default function CRMLoadingSkeleton() {
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-950 font-[family-name:var(--font-outfit)] flex flex-col p-4 sm:p-6 lg:p-8 animate-pulse">
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-950 font-[family-name:var(--font-outfit)] flex flex-col p-4 sm:p-6 lg:p-8">
             {/* Top Bar Skeleton */}
-            <div className="h-16 bg-white dark:bg-gray-900 rounded-2xl border border-slate-200 dark:border-gray-800 mb-8 w-full shadow-sm flex items-center justify-between px-6">
+            <div className="h-16 bg-white dark:bg-gray-900 rounded-2xl border border-slate-200 dark:border-gray-800 mb-8 w-full shadow-sm flex items-center justify-between px-6 animate-pulse">
                 <div className="h-6 w-48 bg-slate-200 dark:bg-gray-800 rounded-lg" />
                 <div className="flex items-center gap-4">
                     <div className="h-10 w-10 bg-slate-200 dark:bg-gray-800 rounded-full" />
@@ -12,7 +14,7 @@ export default function CRMLoadingSkeleton() {
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 flex-grow">
                 {/* Sidebar Navigation Skeleton */}
-                <div className="hidden lg:flex flex-col gap-3 col-span-1 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-slate-200 dark:border-gray-800 h-[calc(100vh-140px)]">
+                <div className="hidden lg:flex flex-col gap-3 col-span-1 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-slate-200 dark:border-gray-800 h-[calc(100vh-140px)] animate-pulse">
                     <div className="h-5 w-32 bg-blue-500/20 rounded-md mb-4" />
                     {[1, 2, 3, 4, 5, 6].map((idx) => (
                         <div key={idx} className="h-12 bg-slate-100 dark:bg-gray-800/50 rounded-xl w-full" />
@@ -23,26 +25,13 @@ export default function CRMLoadingSkeleton() {
                 <div className="col-span-1 lg:col-span-3 space-y-6">
                     {/* Metrics Banner */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
-                        <div className="h-28 bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl p-5 flex flex-col justify-between shadow-sm">
-                            <div className="h-4 w-20 bg-slate-200 dark:bg-gray-800 rounded" />
-                            <div className="h-6 w-16 bg-blue-500/20 rounded-md" />
-                        </div>
-                        <div className="h-28 bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl p-5 flex flex-col justify-between shadow-sm">
-                            <div className="h-4 w-20 bg-slate-200 dark:bg-gray-800 rounded" />
-                            <div className="h-6 w-16 bg-emerald-500/20 rounded-md" />
-                        </div>
-                        <div className="h-28 bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl p-5 flex flex-col justify-between shadow-sm">
-                            <div className="h-4 w-20 bg-slate-200 dark:bg-gray-800 rounded" />
-                            <div className="h-6 w-16 bg-amber-500/20 rounded-md" />
-                        </div>
-                        <div className="h-28 bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl p-5 flex flex-col justify-between shadow-sm">
-                            <div className="h-4 w-20 bg-slate-200 dark:bg-gray-800 rounded" />
-                            <div className="h-6 w-16 bg-purple-500/20 rounded-md" />
-                        </div>
+                        {[1, 2, 3, 4].map((i) => (
+                            <SkeletonCard key={i} type="stat" />
+                        ))}
                     </div>
 
                     {/* Pipeline & Table Skeleton */}
-                    <div className="h-96 bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm flex flex-col gap-4">
+                    <div className="h-96 bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-[2rem] p-6 shadow-sm flex flex-col gap-4 animate-pulse">
                         <div className="flex items-center justify-between">
                             <div className="h-6 w-48 bg-slate-200 dark:bg-gray-800 rounded-md" />
                             <div className="h-8 w-32 bg-slate-200 dark:bg-gray-800 rounded-lg" />

@@ -1,16 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabaseClient';
-import { motion } from 'framer-motion';
-import { Settings, Shield, Bell, Lock, Key } from 'lucide-react';
+import { Settings, Shield, Bell, Lock, Key, User, Camera, CheckCircle2, Mail, Phone, Activity } from 'lucide-react';
 import toast from 'react-hot-toast';
+import AvatarCropUploadModal from '@/components/shared/AvatarCropUploadModal';
+import IDCard from '@/components/shared/IDCard';
 
 export default function HRMSettingsPage() {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState(null);
-    const [activeTab, setActiveTab] = useState('security');
+    const [profile, setProfile] = useState(null);
+    const [activeTab, setActiveTab] = useState('profile');
+    const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
     const [notifications, setNotifications] = useState({ email: true, push: true, sms: false });
     const router = useRouter();
 
@@ -19,6 +20,10 @@ export default function HRMSettingsPage() {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
             setUser(user);
+            if (user) {
+                const { data } = await supabase.from('user_profiles').select('*').eq('id', user.id).maybeSingle();
+                setProfile(data);
+            }
             setLoading(false);
         };
         fetchUser();
@@ -60,7 +65,21 @@ export default function HRMSettingsPage() {
         }
     };
 
+    const handleAvatarUpload = async (blob) => {
+        const supabase = createClient();
+        const { data: { user: u } } = await supabase.auth.getUser();
+        const fileName = `avatars/${u.id}-${Date.now()}.jpg`;
+        const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+        const { error: updateError } = await supabase.from('user_profiles').update({ avatar_url: publicUrl }).eq('id', u.id);
+        if (updateError) throw updateError;
+        setProfile(p => ({ ...p, avatar_url: publicUrl }));
+        toast.success('Profile photo updated!');
+    };
+
     const tabs = [
+        { id: 'profile', label: 'Profile', icon: User },
         { id: 'security', label: 'Security', icon: Shield },
         { id: 'notifications', label: 'Notifications', icon: Bell },
     ];
@@ -74,8 +93,9 @@ export default function HRMSettingsPage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-            {/* Header */}
+        <>
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+                {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 className="mb-8"
@@ -112,6 +132,61 @@ export default function HRMSettingsPage() {
 
             {/* Tab Content */}
             <div className="bg-white dark:bg-white/[0.03] backdrop-blur-3xl rounded-[2.5rem] border border-slate-100 dark:border-white/10 p-6 sm:p-8 shadow-2xl">
+
+                {/* Profile Tab */}
+                {activeTab === 'profile' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                        <h2 className="text-xl font-black text-slate-900 dark:text-white mb-6 flex items-center gap-3">
+                            <User className="text-emerald-500" size={24} /> My Profile
+                        </h2>
+                        <div className="flex flex-col md:flex-row items-center sm:items-start gap-10 p-6 bg-slate-50/50 rounded-[2rem] border border-slate-100">
+                            <IDCard 
+                                profile={profile || { ...user?.user_metadata, role: 'hr_manager' }}
+                                onOpenAvatarModal={() => setIsAvatarModalOpen(true)}
+                            />
+                            <div className="flex-1 w-full space-y-4">
+                                <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                                    <User className="text-emerald-600" size={20} /> Identity Details
+                                </h3>
+                                <p className="text-sm font-medium text-slate-500">Your professional identity within the HRM platform.</p>
+                                <div className="grid grid-cols-1 gap-4 pt-4">
+                                    {[
+                                        { label: 'Platform Role', value: profile?.role?.replace(/_/g, ' ').toUpperCase() || 'HR MANAGER', icon: Shield, color: 'text-emerald-500 bg-emerald-50' },
+                                        { label: 'System Access', value: 'Authorized', icon: CheckCircle2, color: 'text-emerald-500 bg-emerald-50' },
+                                        { label: 'Last Login', value: new Date(user?.last_sign_in_at || Date.now()).toLocaleDateString(), icon: Activity, color: 'text-blue-500 bg-blue-50' },
+                                    ].map(item => (
+                                        <div key={item.label} className="p-4 bg-white rounded-2xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.color} shrink-0`}>
+                                                <item.icon size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</p>
+                                                <p className="text-sm font-bold text-slate-800 mt-0.5">{item.value}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {[
+                                { label: 'Email', value: profile?.email || user?.email || '—', icon: Mail, color: 'text-blue-500 bg-blue-50' },
+                                { label: 'Phone', value: profile?.phone || '—', icon: Phone, color: 'text-emerald-500 bg-emerald-50' },
+                            ].map(item => (
+                                <div key={item.label} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${item.color} shrink-0`}>
+                                        <item.icon size={16} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{item.label}</p>
+                                        <p className="text-sm font-bold text-gray-800 mt-0.5">{item.value}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+
                 {activeTab === 'security' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                         <h2 className="text-xl font-black text-slate-900 dark:text-white mb-6 flex items-center gap-3">
@@ -207,5 +282,14 @@ export default function HRMSettingsPage() {
                 )}
             </div>
         </div>
+
+            <AvatarCropUploadModal
+                isOpen={isAvatarModalOpen}
+                onClose={() => setIsAvatarModalOpen(false)}
+                onUpload={handleAvatarUpload}
+                title="Update Profile Photo"
+                shape="circle"
+            />
+        </>
     );
 }

@@ -205,6 +205,33 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                         </motion.button>
                                     </Link>
                                 )}
+                                
+                                {/* Merchant Apply CTA */}
+                                {isAuthenticated && (
+                                    <Link href="/merchant-apply" passHref legacyBehavior>
+                                        <motion.button
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ delay: 0.4 }}
+                                            onClick={onClose}
+                                            className="w-full p-4 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 text-white relative overflow-hidden group shadow-lg shadow-orange-500/20 block"
+                                        >
+                                            <div className="absolute top-0 right-0 -mr-4 -mt-4 w-16 h-16 bg-white/20 blur-xl rounded-full" />
+                                            <div className="relative flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-white">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l1.5-6h15L21 9M3 9h18M3 9l1 12h16L21 9M8 9V3m8 6V3" />
+                                                    </svg>
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-sm font-black uppercase tracking-tighter">Become a Merchant</p>
+                                                    <p className="text-[10px] font-medium opacity-80">Sell products, earn more with InTrust</p>
+                                                </div>
+                                                <ChevronRight size={16} className="ml-auto opacity-60" />
+                                            </div>
+                                        </motion.button>
+                                    </Link>
+                                )}
                             </div>
 
                             {/* Divider */}
