@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, UserPlus, Search, UserCheck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { friendlyTeamError } from '@/components/admin/teams/teamErrorMessages';
 
 export default function MemberAssignDrawer({
     team,
@@ -40,13 +41,13 @@ export default function MemberAssignDrawer({
             });
 
             const result = await res.json();
-            if (!res.ok) throw new Error(result.error || 'Failed to assign member');
+            if (!res.ok) throw new Error(friendlyTeamError(result.error, result.code));
 
             toast.success('Member assigned successfully!');
             onMemberAssigned?.(team.id, result.user);
             onClose();
         } catch (err) {
-            toast.error(err.message);
+            toast.error(friendlyTeamError(err.message));
         } finally {
             setSaving(false);
         }

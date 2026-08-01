@@ -1,92 +1,239 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
-import { format } from 'date-fns';
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { RefreshCw, Search, Clock, CheckCircle2, DollarSign, Gift } from 'lucide-react';
 import AwardIncentiveModal from './AwardIncentiveModal';
+import IncentiveMetricCard from '@/components/hrm/incentives/IncentiveMetricCard';
+import IncentiveHistoryTable from '@/components/hrm/incentives/IncentiveHistoryTable';
+import IncentiveDetailsDrawer from '@/components/hrm/incentives/IncentiveDetailsDrawer';
+import { CANONICAL_INCENTIVE_TYPES, INCENTIVE_TYPE_LABELS, formatPaiseToINR } from '@/lib/hrm/incentives';
 
-export const dynamic = 'force-dynamic';
+export default function IncentivesPage() {
+  const [batches, setBatches] = useState([]);
+  const [meta, setMeta] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedBatchId, setSelectedBatchId] = useState(null);
 
-export default async function IncentivesPage() {
-  const supabase = await createServerSupabaseClient();
-  
-  // Fetch incentives
-  const { data: incentives } = await supabase
-    .from('incentives')
-    .select(`
-      *,
-      user_profiles:employee_id ( full_name, email )
-    `)
-    .order('date_awarded', { ascending: false });
+  // Filters State
+  const [filters, setFilters] = useState({
+    search: '',
+    status: '',
+    incentive_type: '',
+    recipient_mode: '',
+    page: 1,
+    limit: 15,
+  });
 
-  // Fetch employees for the dropdown
-  const { data: employees } = await supabase
-    .from('user_profiles')
-    .select('id, full_name')
-    .in('role', [
-        'employee', 'relationship_exec', 'relationship_manager', 'hr_manager',
-        'freelancer', 'video_editor', 'social_media_manager',
-        'seo_specialist', 'advertiser', 'support_agent'
-    ])
-    .order('full_name');
+  // Metrics State
+  const [metrics, setMetrics] = useState({
+    pendingCount: 0,
+    pendingTotalPaise: 0,
+    approvedCount: 0,
+    approvedTotalPaise: 0,
+    paidMonthCount: 0,
+    paidMonthTotalPaise: 0,
+    totalAwardedPaise: 0,
+  });
+
+  const fetchIncentives = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('page', filters.page.toString());
+      params.set('limit', filters.limit.toString());
+      if (filters.search) params.set('search', filters.search);
+      if (filters.status) params.set('status', filters.status);
+      if (filters.incentive_type) params.set('incentive_type', filters.incentive_type);
+      if (filters.recipient_mode) params.set('recipient_mode', filters.recipient_mode);
+
+      const res = await fetch(`/api/hrm/incentives?${params.toString()}`);
+      const data = await res.json();
+
+      if (data.success) {
+        setBatches(data.data || []);
+        setMeta(data.meta);
+
+        // Compute metrics from current data
+        const list = data.data || [];
+        let pendingCnt = 0, pendingSum = 0;
+        let appCnt = 0, appSum = 0;
+        let paidCnt = 0, paidSum = 0;
+        let totalSum = 0;
+
+        list.forEach((b) => {
+          const paise = b.total_amount_paise || 0;
+          totalSum += paise;
+          if (b.status === 'pending') {
+            pendingCnt++;
+            pendingSum += paise;
+          } else if (b.status === 'approved') {
+            appCnt++;
+            appSum += paise;
+          } else if (b.status === 'paid') {
+            paidCnt++;
+            paidSum += paise;
+          }
+        });
+
+        setMetrics({
+          pendingCount: pendingCnt,
+          pendingTotalPaise: pendingSum,
+          approvedCount: appCnt,
+          approvedTotalPaise: appSum,
+          paidMonthCount: paidCnt,
+          paidMonthTotalPaise: paidSum,
+          totalAwardedPaise: totalSum,
+        });
+      }
+    } catch (err) {
+      console.error('Fetch incentives error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    fetchIncentives();
+  }, [fetchIncentives]);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Header & Actions */}
-        <div className="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8 font-[family-name:var(--font-outfit)]">
+      <div className="max-w-7xl mx-auto space-y-6">
+
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-xs">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Incentives & Bonuses</h1>
-            <p className="text-sm text-gray-500 mt-1">Manage and award financial incentives to employees.</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <Gift className="text-slate-700" size={24} /> Incentives & Bonuses
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Enterprise HRMS management of individual and team performance awards.
+            </p>
           </div>
-          <AwardIncentiveModal employees={employees || []} />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchIncentives}
+              className="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors"
+              title="Refresh Incentives"
+            >
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            </button>
+            <AwardIncentiveModal onSuccess={fetchIncentives} />
+          </div>
         </div>
 
-        {/* Data Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full text-left text-sm text-gray-600">
-            <thead className="bg-gray-50 text-gray-700 font-medium border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-4">Employee</th>
-                <th className="px-6 py-4">Type</th>
-                <th className="px-6 py-4">Description</th>
-                <th className="px-6 py-4">Amount</th>
-                <th className="px-6 py-4">Date Awarded</th>
-                <th className="px-6 py-4 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {(!incentives || incentives.length === 0) && (
-                  <tr>
-                      <td colSpan="6" className="text-center py-8 text-gray-400">No incentives awarded yet.</td>
-                  </tr>
-              )}
-              {incentives?.map((incentive) => (
-                <tr key={incentive.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    {incentive.user_profiles?.full_name || 'Unknown'}
-                  </td>
-                  <td className="px-6 py-4">{incentive.type}</td>
-                  <td className="px-6 py-4 truncate max-w-xs">{incentive.description || '-'}</td>
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    ₹{incentive.amount}
-                  </td>
-                  <td className="px-6 py-4">
-                    {format(new Date(incentive.date_awarded), 'MMM d, yyyy')}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-                      ${incentive.status === 'Paid' ? 'bg-green-50 text-green-700 border-green-200' : ''}
-                      ${incentive.status === 'Approved' ? 'bg-blue-50 text-blue-700 border-blue-200' : ''}
-                      ${incentive.status === 'Pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : ''}
-                    `}>
-                      {incentive.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Metric Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <IncentiveMetricCard
+            label="Pending Approval"
+            value={formatPaiseToINR(metrics.pendingTotalPaise)}
+            subtext={`${metrics.pendingCount} awards awaiting review`}
+            icon={Clock}
+            iconBg="bg-amber-50 text-amber-600"
+          />
+          <IncentiveMetricCard
+            label="Approved (Payroll)"
+            value={formatPaiseToINR(metrics.approvedTotalPaise)}
+            subtext={`${metrics.approvedCount} awards ready for payout`}
+            icon={CheckCircle2}
+            iconBg="bg-indigo-50 text-indigo-600"
+          />
+          <IncentiveMetricCard
+            label="Paid"
+            value={formatPaiseToINR(metrics.paidMonthTotalPaise)}
+            subtext={`${metrics.paidMonthCount} awards paid`}
+            icon={DollarSign}
+            iconBg="bg-emerald-50 text-emerald-600"
+          />
+          <IncentiveMetricCard
+            label="Total Awarded"
+            value={formatPaiseToINR(metrics.totalAwardedPaise)}
+            subtext="Period summary"
+            icon={Gift}
+            iconBg="bg-slate-100 text-slate-700"
+          />
         </div>
-        
+
+        {/* Filters Toolbar */}
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-3 flex-1">
+            {/* Search Input */}
+            <div className="relative min-w-[200px] flex-1 sm:flex-initial">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
+                placeholder="Search award reason, team..."
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-slate-900 text-xs"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-slate-900 text-xs text-slate-700"
+            >
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="paid">Paid</option>
+              <option value="rejected">Rejected</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="reversed">Reversed</option>
+            </select>
+
+            {/* Type Filter */}
+            <select
+              value={filters.incentive_type}
+              onChange={(e) => setFilters({ ...filters, incentive_type: e.target.value, page: 1 })}
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-slate-900 text-xs text-slate-700"
+            >
+              <option value="">All Types</option>
+              {CANONICAL_INCENTIVE_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {INCENTIVE_TYPE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+
+            {/* Mode Filter */}
+            <select
+              value={filters.recipient_mode}
+              onChange={(e) => setFilters({ ...filters, recipient_mode: e.target.value, page: 1 })}
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-slate-900 text-xs text-slate-700"
+            >
+              <option value="">All Recipient Modes</option>
+              <option value="individual">Individual</option>
+              <option value="team">Team</option>
+            </select>
+          </div>
+        </div>
+
+        {/* History Data Table & Stacked Mobile Cards */}
+        {loading ? (
+          <div className="bg-white p-12 rounded-xl border border-slate-200 text-center text-xs text-slate-400">
+            Loading incentive records...
+          </div>
+        ) : (
+          <IncentiveHistoryTable
+            data={batches}
+            meta={meta}
+            onPageChange={(p) => setFilters({ ...filters, page: p })}
+            onSelectRow={(id) => setSelectedBatchId(id)}
+          />
+        )}
+
+        {/* Details Drawer */}
+        {selectedBatchId && (
+          <IncentiveDetailsDrawer
+            batchId={selectedBatchId}
+            onClose={() => setSelectedBatchId(null)}
+            onRefresh={fetchIncentives}
+          />
+        )}
+
       </div>
     </div>
   );

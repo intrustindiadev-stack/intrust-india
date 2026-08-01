@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Crown, Users, Plus, Edit3, ChevronDown, ChevronUp, MapPin, UserPlus, GripVertical, Shield } from 'lucide-react';
+import { Crown, Users, Edit3, ChevronDown, ChevronUp, MapPin, UserPlus, GripVertical, MoveRight } from 'lucide-react';
 
 const REGION_BADGES = {
     state: 'bg-purple-100 text-purple-800 border-purple-200',
@@ -22,6 +22,7 @@ export default function OrgChartNode({
     nodeRef
 }) {
     const [isDragOver, setIsDragOver] = useState(false);
+    const [movingMemberId, setMovingMemberId] = useState(null);
 
     const level = team.region_level || 'area';
     const badgeStyle = REGION_BADGES[level] || REGION_BADGES.area;
@@ -107,6 +108,7 @@ export default function OrgChartNode({
                             onClick={() => onEditTeam?.(team)}
                             className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
                             title="Edit Team"
+                            aria-label={`Edit ${team.name}`}
                         >
                             <Edit3 size={13} />
                         </button>
@@ -153,6 +155,7 @@ export default function OrgChartNode({
                             <button
                                 onClick={() => onAssignMember?.(team)}
                                 className="text-xs text-indigo-600 hover:text-indigo-700 font-bold flex items-center gap-0.5 hover:underline"
+                                aria-label={`Add member to ${team.name}`}
                             >
                                 <UserPlus size={12} /> Add
                             </button>
@@ -196,19 +199,22 @@ export default function OrgChartNode({
                                                     {u.full_name || u.email}
                                                 </p>
                                                 <p className="text-[9px] text-slate-400 uppercase font-medium">
-                                                    {u.role}
+                                                    {u.role?.replace(/_/g, ' ')}
                                                 </p>
                                             </div>
                                         </div>
 
                                         {!isReadOnly && !isLead && (
-                                            <button
-                                                onClick={() => onRemoveMember?.(u.id, team.id)}
-                                                className="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded hover:bg-rose-50 transition-opacity"
-                                                title="Remove member"
-                                            >
-                                                Remove
-                                            </button>
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    onClick={() => onRemoveMember?.(u.id, team.id)}
+                                                    className="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded hover:bg-rose-50 transition-opacity"
+                                                    title="Remove member"
+                                                    aria-label={`Remove ${u.full_name || u.email} from ${team.name}`}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 );
@@ -224,6 +230,7 @@ export default function OrgChartNode({
                     <button
                         onClick={onToggleExpand}
                         className="w-full py-1 text-xs font-bold text-slate-500 hover:text-indigo-600 flex items-center justify-center gap-1 transition-colors"
+                        aria-label={isExpanded ? "Collapse sub-teams" : "Expand sub-teams"}
                     >
                         {isExpanded ? (
                             <>

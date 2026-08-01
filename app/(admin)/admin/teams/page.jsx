@@ -1,41 +1,67 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Network, Plus, RefreshCw, Users, Shield, MapPin, Layers, LayoutGrid, List } from 'lucide-react';
+import { Network, Plus, RefreshCw, Users, Shield, MapPin, Layers, LayoutGrid, List, Search, Filter, ArrowRightLeft, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import OrgChart from '@/components/admin/teams/OrgChart';
 import TeamCreateDrawer from '@/components/admin/teams/TeamCreateDrawer';
 import TeamEditDrawer from '@/components/admin/teams/TeamEditDrawer';
 import MemberAssignDrawer from '@/components/admin/teams/MemberAssignDrawer';
+import BulkTransferDrawer from '@/components/admin/teams/BulkTransferDrawer';
+import ConfirmModal from '@/components/admin/teams/ConfirmModal';
 
 export default function AdminTeamsPage() {
     const [teams, setTeams] = useState([]);
     const [unassignedUsers, setUnassignedUsers] = useState([]);
+    const [capabilities, setCapabilities] = useState({});
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState('chart'); // 'chart' | 'list'
 
-    // Drawer state
+    // Filters
+    const [search, setSearch] = useState('');
+    const [regionFilter, setRegionFilter] = useState('');
+    const [cityFilter, setCityFilter] = useState('');
+    const [activeFilter, setActiveFilter] = useState('true');
+
+    // Drawers & Modals state
     const [showCreate, setShowCreate] = useState(false);
+    const [showBulkTransfer, setShowBulkTransfer] = useState(false);
     const [selectedTeamForEdit, setSelectedTeamForEdit] = useState(null);
     const [selectedTeamForAssign, setSelectedTeamForAssign] = useState(null);
+
+    // Confirm Modal State
+    const [removeModalState, setRemoveModalState] = useState({
+        isOpen: false,
+        userId: null,
+        teamId: null,
+        memberName: '',
+        loading: false
+    });
 
     const fetchTeamsData = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/teams');
+            const params = new URLSearchParams();
+            if (search) params.set('search', search);
+            if (regionFilter) params.set('region_level', regionFilter);
+            if (cityFilter) params.set('city', cityFilter);
+            if (activeFilter) params.set('is_active', activeFilter);
+
+            const res = await fetch(`/api/teams?${params.toString()}`);
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to load teams');
 
             setTeams(data.teams || []);
             setUnassignedUsers(data.unassigned_users || []);
+            setCapabilities(data.capabilities || {});
         } catch (err) {
             console.error('[TEAMS] Fetch error:', err);
             toast.error(err.message || 'Failed to fetch team hierarchy');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [search, regionFilter, cityFilter, activeFilter]);
 
     useEffect(() => {
         fetchTeamsData();
@@ -59,12 +85,32 @@ export default function AdminTeamsPage() {
         }
     };
 
-    // Member remove from team
-    const handleRemoveMember = async (userId, teamId) => {
-        if (!confirm('Remove member from this team?')) return;
+    // Open confirmation modal for member removal
+    const handlePromptRemoveMember = (userId, teamId) => {
+        const team = teams.find(t => t.id === teamId);
+        const memberObj = team?.members?.find(m => m.user?.id === userId);
+        const memberName = memberObj?.user?.full_name || memberObj?.user?.email || 'this member';
+
+        setRemoveModalState({
+            isOpen: true,
+            userId,
+            teamId,
+            memberName,
+            loading: false
+        });
+    };
+
+    const handleConfirmRemoveMember = async (reason) => {
+        setRemoveModalState(prev => ({ ...prev, loading: true }));
         try {
-            const res = await fetch(`/api/teams/members?user_id=${userId}`, {
-                method: 'DELETE'
+            const res = await fetch('/api/teams/members', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: removeModalState.userId,
+                    team_id: removeModalState.teamId,
+                    reason
+                })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to remove member');
@@ -73,16 +119,21 @@ export default function AdminTeamsPage() {
             fetchTeamsData();
         } catch (err) {
             toast.error(err.message);
+        } finally {
+            setRemoveModalState({ isOpen: false, userId: null, teamId: null, memberName: '', loading: false });
         }
     };
 
-    // Stats
+    // Derived Statistics & Hierarchy Warnings
     const totalMembers = teams.reduce((acc, t) => acc + (t.members?.length || 0), 0);
     const totalCities = new Set(teams.map(t => t.city).filter(Boolean)).size;
 
+    // Detect orphaned or lead-less teams
+    const warningTeams = teams.filter(t => !t.team_lead_id || (t.region_level === 'area' && !t.parent_team_id));
+
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 min-h-screen">
-            {/* Drawers */}
+            {/* Drawers and Modals */}
             <AnimatePresence>
                 {showCreate && (
                     <TeamCreateDrawer
@@ -90,6 +141,13 @@ export default function AdminTeamsPage() {
                         availableLeads={unassignedUsers.filter(u => ['relationship_manager', 'admin', 'super_admin'].includes(u.role))}
                         onClose={() => setShowCreate(false)}
                         onCreated={() => fetchTeamsData()}
+                    />
+                )}
+                {showBulkTransfer && (
+                    <BulkTransferDrawer
+                        teams={teams}
+                        onClose={() => setShowBulkTransfer(false)}
+                        onSuccess={() => fetchTeamsData()}
                     />
                 )}
                 {selectedTeamForEdit && (
@@ -112,15 +170,28 @@ export default function AdminTeamsPage() {
                 )}
             </AnimatePresence>
 
+            <ConfirmModal
+                isOpen={removeModalState.isOpen}
+                title="Remove Team Member"
+                message={`Are you sure you want to remove ${removeModalState.memberName} from this team?`}
+                confirmText="Remove Member"
+                confirmVariant="danger"
+                requireReason={true}
+                reasonPlaceholder="Reason for removal..."
+                loading={removeModalState.loading}
+                onClose={() => setRemoveModalState({ isOpen: false, userId: null, teamId: null, memberName: '', loading: false })}
+                onConfirm={handleConfirmRemoveMember}
+            />
+
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
                         <Network className="text-indigo-600" size={28} />
                         Team Hierarchy & Org Chart
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
-                        State & City dynamic regional grouping, lead ownership & member drag-and-drop reassignment
+                        Multi-region team management, atomic assignments & optimistic concurrency control
                     </p>
                 </div>
 
@@ -153,18 +224,78 @@ export default function AdminTeamsPage() {
                         onClick={fetchTeamsData}
                         className="p-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-sm"
                         title="Refresh"
+                        aria-label="Refresh team data"
                     >
                         <RefreshCw size={16} className={`text-slate-600 ${loading ? 'animate-spin' : ''}`} />
                     </button>
 
-                    <button
-                        onClick={() => setShowCreate(true)}
-                        className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 py-2.5 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-500/25 text-sm"
-                    >
-                        <Plus size={16} /> Create Team
-                    </button>
+                    {capabilities.canAssignMembers && (
+                        <button
+                            onClick={() => setShowBulkTransfer(true)}
+                            className="inline-flex items-center gap-2 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3.5 py-2.5 rounded-2xl font-bold transition-all text-xs"
+                        >
+                            <ArrowRightLeft size={14} /> Bulk Transfer
+                        </button>
+                    )}
+
+                    {capabilities.canCreateTeam && (
+                        <button
+                            onClick={() => setShowCreate(true)}
+                            className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 py-2.5 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-500/25 text-sm"
+                        >
+                            <Plus size={16} /> Create Team
+                        </button>
+                    )}
                 </div>
             </div>
+
+            {/* Filter Toolbar */}
+            <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row items-center gap-3">
+                <div className="relative flex-1 w-full">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search team name..."
+                        className="w-full pl-10 pr-4 py-2 rounded-2xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <select
+                        value={regionFilter}
+                        onChange={(e) => setRegionFilter(e.target.value)}
+                        className="px-3 py-2 rounded-2xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white focus:outline-none"
+                    >
+                        <option value="">All Levels</option>
+                        <option value="state">State</option>
+                        <option value="city">City</option>
+                        <option value="area">Area</option>
+                    </select>
+
+                    <select
+                        value={activeFilter}
+                        onChange={(e) => setActiveFilter(e.target.value)}
+                        className="px-3 py-2 rounded-2xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white focus:outline-none"
+                    >
+                        <option value="true">Active Teams</option>
+                        <option value="false">Inactive Teams</option>
+                    </select>
+                </div>
+            </div>
+
+            {/* Hierarchy Warning Banner */}
+            {warningTeams.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-3xl p-4 flex items-center justify-between gap-3 text-xs text-amber-900 font-semibold">
+                    <div className="flex items-center gap-2.5">
+                        <AlertTriangle size={18} className="text-amber-600 shrink-0" />
+                        <span>
+                            Hierarchy Warning: {warningTeams.length} team(s) have unassigned team leads or missing parent configurations.
+                        </span>
+                    </div>
+                </div>
+            )}
 
             {/* KPI Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -174,7 +305,7 @@ export default function AdminTeamsPage() {
                     </div>
                     <div>
                         <div className="text-2xl font-black text-slate-900">{teams.length}</div>
-                        <div className="text-xs text-slate-500 font-medium">Active Teams</div>
+                        <div className="text-xs text-slate-500 font-medium">Teams Displayed</div>
                     </div>
                 </div>
 
@@ -194,7 +325,7 @@ export default function AdminTeamsPage() {
                     </div>
                     <div>
                         <div className="text-2xl font-black text-slate-900">{totalCities || 1}</div>
-                        <div className="text-xs text-slate-500 font-medium">Cities (Bhopal MP)</div>
+                        <div className="text-xs text-slate-500 font-medium">Active Cities</div>
                     </div>
                 </div>
 
@@ -204,7 +335,7 @@ export default function AdminTeamsPage() {
                     </div>
                     <div>
                         <div className="text-2xl font-black text-slate-900">{unassignedUsers.length}</div>
-                        <div className="text-xs text-slate-500 font-medium">Unassigned Sales Reps</div>
+                        <div className="text-xs text-slate-500 font-medium">Available Reps</div>
                     </div>
                 </div>
             </div>
@@ -218,10 +349,11 @@ export default function AdminTeamsPage() {
             ) : viewMode === 'chart' ? (
                 <OrgChart
                     teams={teams}
-                    onEditTeam={setSelectedTeamForEdit}
-                    onAssignMember={setSelectedTeamForAssign}
-                    onRemoveMember={handleRemoveMember}
-                    onReassignMember={handleReassignMember}
+                    onEditTeam={capabilities.canEditTeam ? setSelectedTeamForEdit : undefined}
+                    onAssignMember={capabilities.canAssignMembers ? setSelectedTeamForAssign : undefined}
+                    onRemoveMember={capabilities.canAssignMembers ? handlePromptRemoveMember : undefined}
+                    onReassignMember={capabilities.canAssignMembers ? handleReassignMember : undefined}
+                    isReadOnly={!capabilities.canAssignMembers}
                 />
             ) : (
                 /* Table View fallback */
@@ -234,6 +366,7 @@ export default function AdminTeamsPage() {
                                 <th className="p-4">Location</th>
                                 <th className="p-4">Team Lead</th>
                                 <th className="p-4">Members</th>
+                                <th className="p-4">Version</th>
                                 <th className="p-4 pr-6 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -260,19 +393,26 @@ export default function AdminTeamsPage() {
                                     <td className="p-4 text-xs font-semibold text-slate-600">
                                         {t.members?.length || 0} members
                                     </td>
+                                    <td className="p-4 text-xs font-mono font-bold text-slate-500">
+                                        v{t.version || 1}
+                                    </td>
                                     <td className="p-4 pr-6 text-right space-x-2">
-                                        <button
-                                            onClick={() => setSelectedTeamForAssign(t)}
-                                            className="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 font-bold text-xs hover:bg-indigo-100 transition-colors"
-                                        >
-                                            + Member
-                                        </button>
-                                        <button
-                                            onClick={() => setSelectedTeamForEdit(t)}
-                                            className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-colors"
-                                        >
-                                            Edit
-                                        </button>
+                                        {capabilities.canAssignMembers && (
+                                            <button
+                                                onClick={() => setSelectedTeamForAssign(t)}
+                                                className="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 font-bold text-xs hover:bg-indigo-100 transition-colors"
+                                            >
+                                                + Member
+                                            </button>
+                                        )}
+                                        {capabilities.canEditTeam && (
+                                            <button
+                                                onClick={() => setSelectedTeamForEdit(t)}
+                                                className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-colors"
+                                            >
+                                                Edit
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))}

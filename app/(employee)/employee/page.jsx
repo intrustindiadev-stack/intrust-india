@@ -39,61 +39,42 @@ export default function EmployeeDashboard() {
     const fetchDashboardData = useCallback(async () => {
         if (!user) return;
         try {
-            const [attRes, payRes, leaveRes, tasksRes, balancesRes, holidaysRes] = await Promise.allSettled([
-                supabase.from('attendance').select('*').eq('employee_id', user.id).order('date', { ascending: false }).limit(1).maybeSingle(),
+            const [attRes, leaveRes, payRes, tasksRes] = await Promise.allSettled([
+                fetch('/api/employee/attendance/summary', { headers: { 'Cache-Control': 'no-cache' } }).then(r => r.json()),
+                fetch('/api/employee/leaves/summary', { headers: { 'Cache-Control': 'no-cache' } }).then(r => r.json()),
                 supabase.from('salary_records').select('*').eq('employee_id', user.id).order('year', { ascending: false }).order('month', { ascending: false }).limit(1).maybeSingle(),
-                supabase.from('leave_requests').select('from_date, to_date').eq('employee_id', user.id).eq('status', 'approved').gte('from_date', `${new Date().getFullYear()}-01-01`),
-                supabase.from('crm_tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).eq('status', 'pending'),
-                supabase.from('leave_balances').select('*').eq('employee_id', user.id).maybeSingle(),
-                supabase.from('holidays').select('*').gte('date', `${new Date().getFullYear()}-01-01`)
+                supabase.from('crm_tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).eq('status', 'pending')
             ]);
 
-            if (attRes.status === 'fulfilled' && !attRes.value.error) {
-                const rec = attRes.value.data;
-                const todayRec = rec?.date === today ? rec : null;
-                setTodayRecord(todayRec);
-                
-                if (rec) {
-                    if (rec.check_in && !rec.check_out && rec.date !== today) {
-                        setPendingCheckoutRecord(rec);
-                        setClockedIn(false);
-                    } else {
-                        setPendingCheckoutRecord(null);
-                        setClockedIn(!!(todayRec?.check_in && !todayRec?.check_out));
-                    }
-                } else {
-                    setPendingCheckoutRecord(null);
-                    setClockedIn(false);
-                }
+            if (attRes.status === 'fulfilled' && attRes.value?.success) {
+                const openRec = attRes.value.open_shift;
+                setTodayRecord(openRec || null);
+                setClockedIn(!!openRec);
             }
 
             if (payRes.status === 'fulfilled' && !payRes.value.error) {
                 setLatestPayslip(payRes.value.data || null);
             }
 
-            let usedLeaves = 0;
-            if (leaveRes.status === 'fulfilled' && leaveRes.value.data) {
-                leaveRes.value.data.forEach(r => {
-                    usedLeaves += Math.max(1, Math.ceil((new Date(r.to_date) - new Date(r.from_date)) / 86400000) + 1);
-                });
-            }
+            let remainingTotal = 0;
+            let upcomingHols = 0;
 
-            let totalAnnualLeaves = 41; // fallback
-            if (balancesRes.status === 'fulfilled' && balancesRes.value.data) {
-                const db = balancesRes.value.data;
-                totalAnnualLeaves = (db.casual_leaves || 12) + (db.sick_leaves || 8) + (db.earned_leaves || 21);
+            if (leaveRes.status === 'fulfilled' && leaveRes.value?.success) {
+                const balances = leaveRes.value.balances || {};
+                Object.values(balances).forEach((b) => {
+                    if (b?.available_days) {
+                        remainingTotal += Number(b.available_days);
+                    }
+                });
+                upcomingHols = leaveRes.value.holidays?.length || 0;
             }
-            
-            const upcomingHolidays = holidaysRes.status === 'fulfilled' && holidaysRes.value.data 
-                ? holidaysRes.value.data.filter(h => new Date(h.date) >= new Date()).length 
-                : 0;
 
             const tasksCount = tasksRes.status === 'fulfilled' ? (tasksRes.value.count || 0) : 0;
 
             setStats(prev => ({
                 ...prev,
-                leavesRemaining: Math.max(0, totalAnnualLeaves - usedLeaves),
-                upcomingHolidays,
+                leavesRemaining: remainingTotal,
+                upcomingHolidays: upcomingHols,
                 pendingTasks: tasksCount
             }));
 

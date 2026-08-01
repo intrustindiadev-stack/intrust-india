@@ -1,64 +1,60 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Network, RefreshCw, Users, MapPin, Shield } from 'lucide-react';
+import { Network, RefreshCw, Users, Shield, MapPin, Search } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import OrgChart from '@/components/admin/teams/OrgChart';
 import MemberAssignDrawer from '@/components/admin/teams/MemberAssignDrawer';
+import ConfirmModal from '@/components/admin/teams/ConfirmModal';
 
 export default function CrmTeamsPage() {
     const { profile } = useAuth();
     const [teams, setTeams] = useState([]);
     const [unassignedUsers, setUnassignedUsers] = useState([]);
+    const [capabilities, setCapabilities] = useState({});
     const [loading, setLoading] = useState(true);
     const [selectedTeamForAssign, setSelectedTeamForAssign] = useState(null);
+    const [search, setSearch] = useState('');
 
-    const isAdmin = profile && ['admin', 'super_admin'].includes(profile.role);
-    const isManager = profile && ['relationship_manager', 'admin', 'super_admin'].includes(profile.role);
-    const hasTeam = !!profile?.team_id;
+    // Remove Confirmation Modal
+    const [removeModalState, setRemoveModalState] = useState({
+        isOpen: false,
+        userId: null,
+        teamId: null,
+        memberName: '',
+        loading: false
+    });
 
     const fetchTeamsData = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/teams');
+            const params = new URLSearchParams();
+            if (search) params.set('search', search);
+
+            // Fetch server-scoped teams (server handles authorized subtree filtering!)
+            const res = await fetch(`/api/teams?${params.toString()}`);
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to load teams');
 
-            let userTeams = data.teams || [];
-
-            if (!isAdmin) {
-                // Non-admins only see teams they are a member of or lead
-                if (!hasTeam) {
-                    // User not assigned to any team — show nothing
-                    userTeams = [];
-                } else {
-                    // Show only their team + direct sub-teams under it
-                    userTeams = userTeams.filter(t =>
-                        t.id === profile.team_id ||
-                        t.parent_team_id === profile.team_id ||
-                        t.team_lead_id === profile.id
-                    );
-                }
-            }
-
-            setTeams(userTeams);
+            setTeams(data.teams || []);
             setUnassignedUsers(data.unassigned_users || []);
+            setCapabilities(data.capabilities || {});
         } catch (err) {
             console.error('[CRM TEAMS] Fetch error:', err);
-            toast.error(err.message || 'Failed to load teams');
+            toast.error(err.message || 'Failed to load team hierarchy');
         } finally {
             setLoading(false);
         }
-    }, [profile, isAdmin, hasTeam]);
+    }, [search]);
 
     useEffect(() => {
         fetchTeamsData();
     }, [fetchTeamsData]);
 
     const handleReassignMember = async (userId, targetTeamId) => {
-        if (!isManager) {
-            toast.error('Only Sales Managers can reassign team members');
+        if (!capabilities.canAssignMembers) {
+            toast.error('You do not have permission to reassign team members');
             return;
         }
 
@@ -78,25 +74,46 @@ export default function CrmTeamsPage() {
         }
     };
 
-    const handleRemoveMember = async (userId, teamId) => {
-        if (!isManager) {
-            toast.error('Only Sales Managers can remove team members');
+    const handlePromptRemoveMember = (userId, teamId) => {
+        if (!capabilities.canAssignMembers) {
+            toast.error('You do not have permission to remove team members');
             return;
         }
 
-        if (!confirm('Remove member from team?')) return;
+        const team = teams.find(t => t.id === teamId);
+        const memberObj = team?.members?.find(m => m.user?.id === userId);
+        const memberName = memberObj?.user?.full_name || memberObj?.user?.email || 'this member';
 
+        setRemoveModalState({
+            isOpen: true,
+            userId,
+            teamId,
+            memberName,
+            loading: false
+        });
+    };
+
+    const handleConfirmRemoveMember = async (reason) => {
+        setRemoveModalState(prev => ({ ...prev, loading: true }));
         try {
-            const res = await fetch(`/api/teams/members?user_id=${userId}`, {
-                method: 'DELETE'
+            const res = await fetch('/api/teams/members', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: removeModalState.userId,
+                    team_id: removeModalState.teamId,
+                    reason
+                })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to remove member');
 
-            toast.success('Member removed');
+            toast.success('Member removed from team');
             fetchTeamsData();
         } catch (err) {
             toast.error(err.message);
+        } finally {
+            setRemoveModalState({ isOpen: false, userId: null, teamId: null, memberName: '', loading: false });
         }
     };
 
@@ -106,9 +123,9 @@ export default function CrmTeamsPage() {
             <div className="w-20 h-20 rounded-3xl bg-indigo-50 flex items-center justify-center mb-5 shadow-sm">
                 <Users size={36} className="text-indigo-300" />
             </div>
-            <h2 className="text-lg font-extrabold text-slate-800 mb-2">You&apos;re not in a team yet</h2>
+            <h2 className="text-lg font-extrabold text-slate-800 mb-2">No Authorized Subtree Found</h2>
             <p className="text-sm text-slate-500 max-w-xs leading-relaxed">
-                Your manager or admin hasn&apos;t assigned you to a team. Once you&apos;re added, your team structure will appear here.
+                You are not currently assigned to an active team. Contact your relationship manager or administrator to be added.
             </p>
         </div>
     );
@@ -124,6 +141,19 @@ export default function CrmTeamsPage() {
                 />
             )}
 
+            <ConfirmModal
+                isOpen={removeModalState.isOpen}
+                title="Remove Member from Team"
+                message={`Are you sure you want to remove ${removeModalState.memberName}?`}
+                confirmText="Remove Member"
+                confirmVariant="danger"
+                requireReason={true}
+                reasonPlaceholder="Reason for removal..."
+                loading={removeModalState.loading}
+                onClose={() => setRemoveModalState({ isOpen: false, userId: null, teamId: null, memberName: '', loading: false })}
+                onConfirm={handleConfirmRemoveMember}
+            />
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -132,15 +162,26 @@ export default function CrmTeamsPage() {
                         My Team Hierarchy
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
-                        View team structure, team lead assignments, and member allocation
+                        {capabilities.canAssignMembers ? 'Managed subtree structure & team member allocation' : 'Read-only view of your assigned team structure'}
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Filter teams..."
+                            className="pl-9 pr-3 py-2 rounded-2xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                    </div>
                     <button
                         onClick={fetchTeamsData}
                         className="p-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-sm"
                         title="Refresh"
+                        aria-label="Refresh team view"
                     >
                         <RefreshCw size={16} className={`text-slate-600 ${loading ? 'animate-spin' : ''}`} />
                     </button>
@@ -153,15 +194,15 @@ export default function CrmTeamsPage() {
                     <RefreshCw size={36} className="animate-spin text-indigo-400" />
                     <p className="font-bold text-slate-200 text-base">Loading Team View...</p>
                 </div>
-            ) : !hasTeam && !isAdmin ? (
+            ) : teams.length === 0 ? (
                 renderNoTeamState()
             ) : (
                 <OrgChart
                     teams={teams}
-                    onAssignMember={isManager ? setSelectedTeamForAssign : undefined}
-                    onRemoveMember={isManager ? handleRemoveMember : undefined}
-                    onReassignMember={isManager ? handleReassignMember : undefined}
-                    isReadOnly={!isManager}
+                    onAssignMember={capabilities.canAssignMembers ? setSelectedTeamForAssign : undefined}
+                    onRemoveMember={capabilities.canAssignMembers ? handlePromptRemoveMember : undefined}
+                    onReassignMember={capabilities.canAssignMembers ? handleReassignMember : undefined}
+                    isReadOnly={!capabilities.canAssignMembers}
                 />
             )}
         </div>

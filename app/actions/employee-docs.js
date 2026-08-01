@@ -1,11 +1,11 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { createServerSupabaseClient } from '@/lib/supabaseServer'
 import { revalidatePath } from 'next/cache'
 
 // Get document requirements
 export async function getDocumentRequirements() {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { data, error } = await supabase
     .from('kyc_document_requirements')
     .select('*')
@@ -17,7 +17,7 @@ export async function getDocumentRequirements() {
 
 // Generate Signed Upload URL
 export async function generateUploadUrl(docType, submissionId, fileName) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return { success: false, error: 'Unauthorized' }
 
@@ -35,7 +35,7 @@ export async function generateUploadUrl(docType, submissionId, fileName) {
 
 // Create Draft Submission
 export async function createDraftSubmission(requirementId) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Unauthorized' }
 
@@ -68,7 +68,7 @@ export async function createDraftSubmission(requirementId) {
 
 // Register File (after successful upload to storage)
 export async function registerUploadedFile(submissionId, filePath, originalName, mimeType, sizeBytes) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { error } = await supabase
     .from('kyc_submission_files')
     .insert({
@@ -85,7 +85,7 @@ export async function registerUploadedFile(submissionId, filePath, originalName,
 
 // Finalize Submission
 export async function finalizeKycSubmission(submissionId, documentNumber) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   
   const { error } = await supabase
     .from('kyc_submissions')
@@ -106,7 +106,7 @@ export async function finalizeKycSubmission(submissionId, documentNumber) {
 
 // Re-open rejected submission (creates a new draft/pending flow using same submission_id)
 export async function retryKycSubmission(submissionId) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   
   const { error } = await supabase
     .from('kyc_submissions')
@@ -131,7 +131,7 @@ export async function retryKycSubmission(submissionId) {
 
 // Get Employee Submissions
 export async function getEmployeeSubmissions() {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, data: [] }
 
@@ -150,7 +150,7 @@ export async function getEmployeeSubmissions() {
 
 // HR: Get Submissions
 export async function getEmployeeSubmissionsForHR() {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   
   const { data, error } = await supabase
     .from('kyc_submissions')
@@ -168,7 +168,7 @@ export async function getEmployeeSubmissionsForHR() {
 
 // HR: Approve
 export async function approveKycSubmission(submissionId, version) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   
   // Optimistic lock check: update only if version matches
@@ -200,7 +200,7 @@ export async function approveKycSubmission(submissionId, version) {
 
 // HR: Reject
 export async function rejectKycSubmission(submissionId, version, reason) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   
   const { data, error } = await supabase
@@ -232,7 +232,7 @@ export async function rejectKycSubmission(submissionId, version, reason) {
 
 // Get Signed URL
 export async function getDocumentSignedUrl(filePath) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   
   const { data, error } = await supabase
     .storage

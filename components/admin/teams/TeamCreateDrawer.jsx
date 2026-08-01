@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Layers, MapPin, Crown, Palette, AlignLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { friendlyTeamError } from '@/components/admin/teams/teamErrorMessages';
 
 const REGION_LEVELS = [
     { id: 'state', label: 'State Level', desc: 'Highest node (e.g. Madhya Pradesh)' },
@@ -58,7 +59,7 @@ export default function TeamCreateDrawer({
             });
 
             const result = await res.json();
-            if (!res.ok) throw new Error(result.error || 'Failed to create team');
+            if (!res.ok) throw new Error(friendlyTeamError(result.error, result.code));
 
             toast.success('Team created successfully!');
             onCreated?.(result.team);
