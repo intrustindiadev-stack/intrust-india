@@ -1,13 +1,23 @@
 'use client';
 
-import { Clock, Calendar, FileText, CheckCircle2, ChevronRight, Star, Bell, ClipboardList, TrendingUp, Briefcase, User, MapPin, Zap, Building, Plus, DollarSign } from 'lucide-react';
+import { Clock, Calendar, FileText, CheckCircle2, ChevronRight, Star, Bell, ClipboardList, TrendingUp, Briefcase, User, MapPin, Zap, Building, Plus, DollarSign, BookOpen, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
+
+const QUICK_ACTIONS = [
+    { label: 'Attendance', icon: ClipboardList, href: '/employee/attendance', color: 'bg-emerald-500', shadow: 'shadow-emerald-500/30', desc: 'Today record' },
+    { label: 'My Leaves', icon: Calendar, href: '/employee/leaves', color: 'bg-violet-600', shadow: 'shadow-violet-600/30', desc: 'Apply leave' },
+    { label: 'Payslips', icon: FileText, href: '/employee/payslips', color: 'bg-amber-500', shadow: 'shadow-amber-500/30', desc: 'Download slip' },
+    { label: 'Training', icon: BookOpen, href: '/employee/training', color: 'bg-rose-500', shadow: 'shadow-rose-500/30', desc: 'My sessions' },
+    { label: 'My Profile', icon: User, href: '/employee/profile', color: 'bg-blue-600', shadow: 'shadow-blue-600/30', desc: 'View & edit' },
+    { label: 'Help', icon: HelpCircle, href: '/employee/help', color: 'bg-gray-700', shadow: 'shadow-gray-700/30', desc: 'Guides & FAQ' },
+];
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import Skeleton from '@/components/ui/Skeleton';
+import SkeletonCard from '@/components/shared/SkeletonCard';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import EmptyState from '@/components/ui/EmptyState';
 
@@ -251,6 +261,27 @@ export default function EmployeeDashboard() {
                 </div>
             </motion.div>
 
+            {/* ⚡ Quick Actions */}
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+                <h2 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-3">Quick Actions</h2>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                    {QUICK_ACTIONS.map((action) => {
+                        const Icon = action.icon;
+                        return (
+                            <Link key={action.href} href={action.href} className="group flex flex-col items-center gap-2.5 p-4 bg-white rounded-2xl border border-gray-100 hover:border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 text-center">
+                                <div className={`w-11 h-11 rounded-xl ${action.color} flex items-center justify-center shadow-lg ${action.shadow} group-hover:scale-110 transition-transform duration-200`}>
+                                    <Icon size={20} className="text-white" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-black text-gray-800">{action.label}</p>
+                                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">{action.desc}</p>
+                                </div>
+                            </Link>
+                        );
+                    })}
+                </div>
+            </motion.div>
+
             {/* Attendance & Shift Card */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <motion.div
@@ -317,8 +348,8 @@ export default function EmployeeDashboard() {
                 <div className="space-y-6">
                     {isLoading ? (
                         <>
-                            <Skeleton className="h-44 rounded-[2.5rem]" />
-                            <Skeleton className="h-44 rounded-[2.5rem]" />
+                            <SkeletonCard type="stat" />
+                            <SkeletonCard type="stat" />
                         </>
                     ) : (
                         <>

@@ -94,6 +94,12 @@ html {
   background: linear-gradient(180deg, var(--color-sky-blue), var(--color-lavender));
 }
 
+/* Shimmer — used by SkeletonCard */
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
 /* Premium Animations */
 @keyframes fadeIn {
   from {

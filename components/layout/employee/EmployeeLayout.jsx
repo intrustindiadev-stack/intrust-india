@@ -6,9 +6,12 @@ import EmployeeBottomNav from './EmployeeBottomNav';
 import { Menu, LogOut } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import { supabase } from '@/lib/supabaseClient';
+import LiveClock from '@/components/shared/LiveClock';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 export default function EmployeeLayout({ children, userProfile }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     const getInitials = (name) => {
         if (!name) return 'E';
@@ -17,7 +20,12 @@ export default function EmployeeLayout({ children, userProfile }) {
 
     const userName = userProfile?.full_name || 'Employee';
     
-    // Employee uses Amber/Orange colors
+    const confirmLogout = async () => {
+        setShowLogoutModal(false);
+        await supabase.auth.signOut();
+        window.location.href = '/login';
+    };
+
     const accentText = 'text-amber-600';
     const accentBg = 'bg-amber-500';
     const accentShadow = 'shadow-amber-500/20';
@@ -33,14 +41,15 @@ export default function EmployeeLayout({ children, userProfile }) {
                 {/* Top Bar */}
                 <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-200 shadow-sm transition-colors duration-300">
                     <div className="flex items-center justify-between px-4 sm:px-6 py-4">
-                        {/* Left: Menu */}
+                        {/* Left: Menu + LiveClock */}
                         <div className="flex items-center gap-4 flex-1">
                             <button
                                 onClick={() => setSidebarOpen(true)}
                                 className="lg:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors"
                             >
-                                <Menu size={24} className="text-gray-700" />
+                                <Menu size={22} className="text-gray-700" />
                             </button>
+                            <LiveClock />
                         </div>
 
                         {/* Right: Profile */}
@@ -48,16 +57,13 @@ export default function EmployeeLayout({ children, userProfile }) {
                             {/* Notifications */}
                             <NotificationBell apiPath="/api/employee/notifications" />
 
-                            {/* Logout */}
+                            {/* Logout with modal confirmation */}
                             <button
-                                onClick={async () => {
-                                    await supabase.auth.signOut();
-                                    window.location.href = '/login';
-                                }}
+                                onClick={() => setShowLogoutModal(true)}
                                 className="p-2 rounded-xl text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100"
                                 title="Logout"
                             >
-                                <LogOut size={20} />
+                                <LogOut size={18} />
                             </button>
 
                             {/* Profile Badge */}
@@ -85,6 +91,17 @@ export default function EmployeeLayout({ children, userProfile }) {
                     {children}
                 </main>
             </div>
+
+            {/* Logout Confirmation Modal */}
+            <ConfirmModal
+                isOpen={showLogoutModal}
+                onConfirm={confirmLogout}
+                onCancel={() => setShowLogoutModal(false)}
+                title="Confirm Logout"
+                message="Are you sure you want to log out of the Employee portal?"
+                confirmLabel="Logout"
+                cancelLabel="Cancel"
+            />
         </div>
     );
 }

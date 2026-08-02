@@ -5,6 +5,7 @@ import HRMSidebar from './HRMSidebar';
 import HRMBottomNav from './HRMBottomNav';
 import { Menu } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import LiveClock from '@/components/shared/LiveClock';
 
 export default function HRMLayout({ children, userProfile }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -32,14 +33,15 @@ export default function HRMLayout({ children, userProfile }) {
                 {/* Top Bar */}
                 <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-200 shadow-sm transition-colors duration-300">
                     <div className="flex items-center justify-between px-4 sm:px-6 py-4">
-                        {/* Left: Menu */}
+                        {/* Left: Menu + Live Clock */}
                         <div className="flex items-center gap-4 flex-1">
                             <button
                                 onClick={() => setSidebarOpen(true)}
                                 className="lg:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors"
                             >
-                                <Menu size={24} className="text-gray-700" />
+                                <Menu size={22} className="text-gray-700" />
                             </button>
+                            <LiveClock />
                         </div>
 
                         {/* Right: Profile */}
