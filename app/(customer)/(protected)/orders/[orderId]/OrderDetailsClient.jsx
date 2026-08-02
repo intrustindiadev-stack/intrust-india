@@ -189,55 +189,84 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                     )}
                 </motion.div>
 
-                {/* Status Tracker */}
-                <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    className={`rounded-2xl p-6 mb-6 ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white border border-slate-100 shadow-sm'}`}
-                >
-                    {isCancelled ? (
-                        <div className="flex items-center gap-3 text-red-500">
-                            <AlertCircle size={24} />
-                            <div>
-                                <h3 className="font-black text-lg">Order Cancelled</h3>
-                                <p className="text-xs opacity-80">This order was cancelled. Please contact support if you have any questions.</p>
+                {/* Vertical Timeline & Map UI */}
+                <div className="grid md:grid-cols-2 gap-6 mb-6">
+                    {/* Map & Courier Illustrations */}
+                    <div className={`rounded-3xl overflow-hidden relative border flex items-center justify-center p-6 ${isDark ? 'bg-gradient-to-b from-[#1a1438] to-[#110d26] border-white/10' : 'bg-gradient-to-b from-blue-50 to-indigo-50 border-blue-100 shadow-md'}`}>
+                        {/* Map Image Placeholder */}
+                        <div className="absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none">
+                            <img src="/images/orders/map_route.png" alt="Map Route" className="w-full h-full object-cover" />
+                        </div>
+                        {/* Courier Image */}
+                        <div className="relative z-10 w-48 h-48 drop-shadow-2xl">
+                            <img src="/images/orders/delivery_courier.png" alt="Delivery Courier" className="w-full h-full object-contain" />
+                        </div>
+                        {/* Status Overlay */}
+                        <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+                            <div className="bg-white/90 dark:bg-black/80 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border border-black/5 dark:border-white/10">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-gray-400">Status</p>
+                                <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">{status === 'pending' ? 'Order Received' : status}</p>
                             </div>
                         </div>
-                    ) : (
-                        <div className="relative">
-                            <div className="flex justify-between relative z-10">
+                    </div>
+
+                    {/* Vertical Tracker */}
+                    <motion.div
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className={`rounded-3xl p-6 md:p-8 ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white border border-slate-100 shadow-sm'}`}
+                    >
+                        <h3 className={`text-xl font-black mb-6 ${isDark ? 'text-white' : 'text-slate-900'}`}>Tracking Details</h3>
+                        
+                        {isCancelled ? (
+                            <div className="flex items-center gap-4 text-red-500 p-4 rounded-2xl bg-red-50 dark:bg-red-500/10">
+                                <AlertCircle size={32} />
+                                <div>
+                                    <h3 className="font-black text-lg">Order Cancelled</h3>
+                                    <p className="text-sm opacity-80">This order was cancelled. Contact support for help.</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="relative pl-4 space-y-8">
+                                {/* Vertical Progress Line Base */}
+                                <div className={`absolute top-2 bottom-6 left-[1.1rem] w-0.5 -z-0 ${isDark ? 'bg-white/[0.05]' : 'bg-slate-100'}`} />
+                                {/* Active Progress Line */}
+                                <motion.div
+                                    initial={{ height: 0 }}
+                                    animate={{ height: `${(currentStepIndex / (steps.length - 1)) * 100}%` }}
+                                    className="absolute top-2 left-[1.1rem] w-0.5 bg-emerald-500 -z-0"
+                                />
+
                                 {steps.map((step, idx) => {
                                     const isActive = idx <= currentStepIndex;
                                     const isCurrent = idx === currentStepIndex;
                                     const Icon = step.icon;
 
                                     return (
-                                        <div key={step.key} className="flex flex-col items-center gap-2 flex-1">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isActive
+                                        <div key={step.key} className={`flex items-start gap-6 relative z-10 ${isActive ? 'opacity-100' : 'opacity-40'}`}>
+                                            <div className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isActive
                                                 ? 'bg-emerald-500 border-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                                                : isDark ? 'bg-white/[0.02] border-white/10 text-white/20' : 'bg-slate-50 border-slate-200 text-slate-300'
+                                                : isDark ? 'bg-[#12151c] border-white/10 text-white/20' : 'bg-white border-slate-200 text-slate-300'
                                                 }`}>
-                                                <Icon size={18} />
+                                                <Icon size={16} />
                                             </div>
-                                            <span className={`text-[10px] font-black uppercase tracking-tighter text-center ${isActive ? 'text-emerald-500' : isDark ? 'text-white/20' : 'text-slate-400'
-                                                }`}>
-                                                {step.label}
-                                            </span>
+                                            <div className="flex-1 pt-1">
+                                                <h4 className={`text-base font-black tracking-tight ${isActive ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-white/50' : 'text-slate-400')}`}>
+                                                    {step.label}
+                                                </h4>
+                                                {isCurrent && (
+                                                    <p className={`text-xs font-semibold mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                                                        Current Status
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
                                     );
                                 })}
                             </div>
-
-                            {/* Progress Line */}
-                            <div className={`absolute top-5 left-0 w-full h-0.5 -z-0 ${isDark ? 'bg-white/[0.05]' : 'bg-slate-100'}`} />
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${(currentStepIndex / (steps.length - 1)) * 100}%` }}
-                                className="absolute top-5 left-0 h-0.5 bg-emerald-500 -z-0"
-                            />
-                        </div>
-                    )}
-                </motion.div>
+                        )}
+                    </motion.div>
+                </div>
 
                 {/* Delivery & Tracking Info */}
                 {(order.estimated_delivery_at || order.estimated_delivery_date || (order.tracking_number && (status === 'shipped' || status === 'delivered'))) && (
