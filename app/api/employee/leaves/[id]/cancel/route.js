@@ -11,7 +11,8 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
     }
 
-    const requestId = params?.id;
+    const resolvedParams = await params;
+    const requestId = resolvedParams?.id;
     if (!requestId) {
       return NextResponse.json({ error: 'Request ID is required', code: 'INVALID_INPUT' }, { status: 400 });
     }

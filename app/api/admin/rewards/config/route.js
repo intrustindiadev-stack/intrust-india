@@ -46,7 +46,10 @@ export async function GET(request) {
             return NextResponse.json({ error: 'Failed to fetch configuration' }, { status: 500 });
         }
 
-        return NextResponse.json({ configs: configs || [] });
+        // Add Cache-Control headers to ensure we don't serve stale data for configuration
+        const response = NextResponse.json({ configs: configs || [] });
+        response.headers.set('Cache-Control', 'no-store, max-age=0');
+        return response;
 
     } catch (error) {
         console.error('Admin Reward Config GET Error:', error);
@@ -61,50 +64,73 @@ export async function POST(request) {
 
         const supabaseAdmin = createAdminClient();
         const body = await request.json();
-        const { config_key, config_value, config_type, description, is_active } = body;
+        
+        // Support bulk update with 'configs' array, or single update
+        const configsToUpdate = body.configs ? body.configs : [body];
 
-        if (!config_key || !config_value || !config_type) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        if (!Array.isArray(configsToUpdate) || configsToUpdate.length === 0) {
+            return NextResponse.json({ error: 'Missing configurations to update' }, { status: 400 });
         }
 
-        // Get old value for history
-        const { data: oldConfig } = await supabaseAdmin
-            .from('reward_configuration')
-            .select('config_value')
-            .eq('config_key', config_key)
-            .single();
+        // Validate structure
+        for (const config of configsToUpdate) {
+            if (!config.config_key || config.config_value === undefined || !config.config_type) {
+                return NextResponse.json({ error: 'Missing required fields in configuration' }, { status: 400 });
+            }
+        }
 
-        // Upsert configuration — created_by comes from the verified session, not request body
-        const { data: config, error } = await supabaseAdmin
+        // Fetch old values for history logging
+        const keys = configsToUpdate.map(c => c.config_key);
+        const { data: oldConfigs } = await supabaseAdmin
             .from('reward_configuration')
-            .upsert({
-                config_key,
-                config_value,
-                config_type,
-                description,
-                is_active: is_active !== undefined ? is_active : true,
-                created_by: auth.user.id,
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'config_key' })
-            .select()
-            .single();
+            .select('config_key, config_value')
+            .in('config_key', keys);
+            
+        const oldConfigsMap = {};
+        if (oldConfigs) {
+            oldConfigs.forEach(c => {
+                oldConfigsMap[c.config_key] = c.config_value;
+            });
+        }
 
-        if (error) {
-            console.error('Error updating reward config:', error);
+        // Upsert all configurations atomically (Supabase RPC or batch upsert)
+        const upsertPayload = configsToUpdate.map(config => ({
+            config_key: config.config_key,
+            config_value: config.config_value,
+            config_type: config.config_type,
+            description: config.description || '',
+            is_active: config.is_active !== undefined ? config.is_active : true,
+            created_by: auth.user.id,
+            updated_at: new Date().toISOString()
+        }));
+
+        const { error: upsertError } = await supabaseAdmin
+            .from('reward_configuration')
+            .upsert(upsertPayload, { onConflict: 'config_key' });
+
+        if (upsertError) {
+            console.error('Error updating reward config:', upsertError);
             return NextResponse.json({ error: 'Failed to update configuration' }, { status: 500 });
         }
 
-        // Log to history — changed_by comes from the verified session
-        await supabaseAdmin
-            .from('reward_configuration_history')
-            .insert({
-                config_key,
-                old_value: oldConfig?.config_value || null,
-                new_value: config_value,
-                changed_by: auth.user.id
-            });
+        // Log to history
+        const historyPayload = configsToUpdate.map(config => ({
+            config_key: config.config_key,
+            old_value: oldConfigsMap[config.config_key] || null,
+            new_value: config.config_value,
+            changed_by: auth.user.id
+        }));
 
-        return NextResponse.json({ success: true, config });
+        const { error: historyError } = await supabaseAdmin
+            .from('reward_configuration_history')
+            .insert(historyPayload);
+
+        if (historyError) {
+            console.error('Error writing reward config history:', historyError);
+            // Non-fatal, configuration was saved
+        }
+
+        return NextResponse.json({ success: true, count: configsToUpdate.length });
 
     } catch (error) {
         console.error('Admin Reward Config POST Error:', error);

@@ -74,7 +74,7 @@ export default function HRMDashboard() {
                     'freelancer', 'video_editor', 'social_media_manager',
                     'seo_specialist', 'advertiser', 'support_agent'
                 ]),
-                supabase.from('leave_requests').select('id, leave_type, from_date, to_date, status, created_at, user_profiles(full_name, avatar_url)').eq('status', 'pending').order('created_at', { ascending: false }).limit(5),
+                supabase.from('leave_requests').select('id, leave_type, from_date, to_date, status, created_at, user_profiles!employee_id(full_name, avatar_url)').eq('status', 'pending').order('created_at', { ascending: false }).limit(5),
                 supabase.from('career_applications').select('id, full_name, role_category, status, created_at').in('status', ['pending', 'under_review']).order('created_at', { ascending: false }).limit(4),
                 supabase.from('attendance').select('id', { count: 'exact' }).eq('date', today).eq('status', 'present'),
             ]);

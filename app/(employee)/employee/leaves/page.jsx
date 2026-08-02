@@ -1,42 +1,37 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Calendar, XCircle, Clock } from 'lucide-react';
+import { Plus, RefreshCw, Calendar, AlertCircle, Info, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-import BalanceCard from '@/components/hrm/BalanceCard';
-import StatusBadge from '@/components/hrm/StatusBadge';
-import DataTable from '@/components/hrm/DataTable';
+import LeaveBalanceCard from '@/components/hrm/leaves/LeaveBalanceCard';
+import LeaveRequestForm from '@/components/hrm/leaves/LeaveRequestForm';
+import LeaveRequestTable from '@/components/hrm/leaves/LeaveRequestTable';
+import LeaveRequestDetailDrawer from '@/components/hrm/leaves/LeaveRequestDetailDrawer';
 import Dialog from '@/components/hrm/Dialog';
-import DateRangeBreakdown from '@/components/hrm/DateRangeBreakdown';
-import { CANONICAL_LEAVE_TYPES, LEAVE_TYPE_LABELS } from '@/lib/hrm/validation';
-import { formatDateIST } from '@/lib/hrm/date';
 
 export default function EmployeeLeavesPage() {
   const [summaryData, setSummaryData] = useState(null);
-  const [leavesData, setLeavesData] = useState([]);
+  const [requests, setRequests] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [cancellingId, setCancellingId] = useState(null);
 
-  // Form state
-  const [form, setForm] = useState({
-    leave_type: 'casual',
-    from_date: '',
-    to_date: '',
-    reason: ''
-  });
+  // Drawer state
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [showDrawer, setShowDrawer] = useState(false);
 
-  const [previewBreakdown, setPreviewBreakdown] = useState(null);
+  // Filter
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  const fetchSummaryAndLeaves = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [sumRes, levRes] = await Promise.all([
+      const [sumRes, reqRes] = await Promise.all([
         fetch('/api/employee/leaves/summary', { headers: { 'Cache-Control': 'no-cache' } }),
-        fetch('/api/employee/leaves', { headers: { 'Cache-Control': 'no-cache' } })
+        fetch(`/api/employee/leaves?status=${statusFilter}`, { headers: { 'Cache-Control': 'no-cache' } })
       ]);
 
       if (sumRes.ok) {
@@ -44,10 +39,10 @@ export default function EmployeeLeavesPage() {
         setSummaryData(sumJson);
       }
 
-      if (levRes.ok) {
-        const levJson = await levRes.json();
-        setLeavesData(levJson.data || []);
-        setPagination(levJson.pagination || null);
+      if (reqRes.ok) {
+        const reqJson = await reqRes.json();
+        setRequests(reqJson.data || []);
+        setPagination(reqJson.pagination || null);
       }
     } catch (err) {
       console.error(err);
@@ -55,81 +50,26 @@ export default function EmployeeLeavesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [statusFilter]);
 
   useEffect(() => {
-    fetchSummaryAndLeaves();
-  }, [fetchSummaryAndLeaves]);
+    fetchData();
+  }, [fetchData]);
 
-  // Compute breakdown preview on date selection
-  useEffect(() => {
-    if (form.from_date && form.to_date && form.to_date >= form.from_date) {
-      const start = new Date(form.from_date);
-      const end = new Date(form.to_date);
-
-      let calDays = 0;
-      let weekendDays = 0;
-      let holidayDays = 0;
-      let chargeableDays = 0;
-
-      const holidays = summaryData?.holidays || [];
-      const holidayNames = [];
-
-      const curr = new Date(start);
-      while (curr <= end) {
-        calDays++;
-        const dateStr = curr.toISOString().split('T')[0];
-        const dow = curr.getDay(); // 0=Sun, 6=Sat
-
-        const matchedHol = holidays.find((h) => h.holiday_date === dateStr);
-        if (matchedHol) {
-          holidayDays++;
-          holidayNames.push({ date: dateStr, name: matchedHol.name });
-        } else if (dow === 0 || dow === 6) {
-          weekendDays++;
-        } else {
-          chargeableDays++;
-        }
-        curr.setDate(curr.getDate() + 1);
-      }
-
-      setPreviewBreakdown({
-        calendar_days: calDays,
-        weekend_days: weekendDays,
-        holiday_days: holidayDays,
-        chargeable_days: chargeableDays,
-        holidays: holidayNames,
-        weekends: []
-      });
-    } else {
-      setPreviewBreakdown(null);
-    }
-  }, [form.from_date, form.to_date, summaryData]);
-
-  const handleSubmit = async () => {
-    if (!form.from_date || !form.to_date) {
-      toast.error('Please select valid start and end dates');
-      return;
-    }
-    if (form.to_date < form.from_date) {
-      toast.error('End date cannot be earlier than start date');
-      return;
-    }
-
+  const handleSubmitLeave = async (formData) => {
     setSubmitting(true);
     try {
       const res = await fetch('/api/employee/leaves', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify(formData)
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Leave submission failed');
 
       toast.success('Time off request submitted successfully');
       setShowModal(false);
-      setForm({ leave_type: 'casual', from_date: '', to_date: '', reason: '' });
-      fetchSummaryAndLeaves();
+      fetchData();
     } catch (err) {
       toast.error(err.message || 'Submission failed');
     } finally {
@@ -137,7 +77,7 @@ export default function EmployeeLeavesPage() {
     }
   };
 
-  const handleCancel = async (id) => {
+  const handleCancelRequest = async (id) => {
     setCancellingId(id);
     try {
       const res = await fetch(`/api/employee/leaves/${id}/cancel`, {
@@ -149,7 +89,8 @@ export default function EmployeeLeavesPage() {
       if (!res.ok) throw new Error(json.error || 'Cancellation failed');
 
       toast.success('Leave request cancelled');
-      fetchSummaryAndLeaves();
+      if (showDrawer) setShowDrawer(false);
+      fetchData();
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -157,222 +98,121 @@ export default function EmployeeLeavesPage() {
     }
   };
 
+  const isConfigured = summaryData?.is_policy_configured ?? true;
+  const activePolicies = summaryData?.active_policies || [];
   const balances = summaryData?.balances || {};
-  const todayStr = new Date().toISOString().split('T')[0];
-
-  const columns = [
-    {
-      header: 'Submitted',
-      key: 'created_at',
-      render: (row) => (
-        <span className="font-mono text-slate-500 text-xs">{formatDateIST(row.created_at)}</span>
-      )
-    },
-    {
-      header: 'Leave Type',
-      key: 'leave_type',
-      render: (row) => (
-        <span className="font-semibold text-slate-900 dark:text-slate-100">
-          {LEAVE_TYPE_LABELS[row.leave_type] || row.leave_type}
-        </span>
-      )
-    },
-    {
-      header: 'Date Range',
-      key: 'dates',
-      render: (row) => (
-        <span className="font-mono text-slate-700 dark:text-slate-300">
-          {row.from_date} → {row.to_date}
-        </span>
-      )
-    },
-    {
-      header: 'Chargeable Days',
-      key: 'chargeable_days',
-      render: (row) => (
-        <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
-          {row.chargeable_days ?? row.requested_days ?? '—'}
-        </span>
-      )
-    },
-    {
-      header: 'Status',
-      key: 'status',
-      render: (row) => <StatusBadge status={row.status} type="leave" />
-    },
-    {
-      header: 'Review Note',
-      key: 'review_note',
-      render: (row) => (
-        <span className="text-xs text-slate-500 truncate max-w-xs">{row.review_note || '—'}</span>
-      )
-    },
-    {
-      header: 'Action',
-      key: 'action',
-      render: (row) => row.status === 'pending' ? (
-        <button
-          onClick={() => handleCancel(row.id)}
-          disabled={cancellingId === row.id}
-          className="text-xs font-semibold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 px-2.5 py-1 rounded-md border border-rose-200 dark:border-rose-800 transition-colors"
-        >
-          {cancellingId === row.id ? 'Cancelling...' : 'Cancel'}
-        </button>
-      ) : <span className="text-xs text-slate-400">—</span>
-    }
-  ];
-
-  const mobileCardRender = (row) => (
-    <div className="space-y-2 text-xs">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-        <span className="font-bold text-slate-900">{LEAVE_TYPE_LABELS[row.leave_type] || row.leave_type}</span>
-        <StatusBadge status={row.status} type="leave" />
-      </div>
-      <div className="text-slate-600">Range: <strong className="font-mono text-slate-900">{row.from_date} → {row.to_date}</strong></div>
-      <div className="text-slate-600">Days: <strong className="font-mono text-slate-900">{row.chargeable_days ?? '—'}</strong></div>
-      {row.status === 'pending' && (
-        <div className="pt-2">
-          <button onClick={() => handleCancel(row.id)} className="w-full py-1 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-md">
-            Cancel Request
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  const holidays = summaryData?.holidays || [];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 min-h-screen bg-slate-50/50 dark:bg-slate-950">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 min-h-screen bg-slate-50/50 dark:bg-slate-950 font-[family-name:var(--font-outfit)]">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-            Time Off & Leave Management
+            My Time Off & Leaves
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Policy Year: <strong className="font-mono text-slate-700 dark:text-slate-300">{summaryData?.policy_year || new Date().getFullYear()}</strong>
+          <p className="text-xs text-slate-500 mt-1">
+            Request leave, check live entitlement balances, and track approval progress.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center gap-2">
           <button
-            onClick={fetchSummaryAndLeaves}
-            disabled={isLoading}
-            aria-label="Refresh leave summary"
-            className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 hover:bg-slate-50 transition-colors"
+            onClick={fetchData}
+            aria-label="Refresh leave data"
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 transition-colors"
           >
             <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
           </button>
-          <button
-            onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-semibold text-xs transition-all shadow-xs"
-          >
-            <Plus size={14} /> Request Time Off
-          </button>
+
+          {isConfigured && (
+            <button
+              onClick={() => setShowModal(true)}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-xs flex items-center gap-1.5 transition-colors"
+            >
+              <Plus size={16} /> Request Time Off
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Leave Balance Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <BalanceCard leaveType="casual" balance={balances['casual']} />
-        <BalanceCard leaveType="sick" balance={balances['sick']} />
-        <BalanceCard leaveType="earned" balance={balances['earned']} />
+      {/* Non-configured Alert */}
+      {!isConfigured && (
+        <div className="bg-amber-50 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 rounded-xl p-5 text-xs text-amber-900 dark:text-amber-300 flex items-start gap-3">
+          <AlertCircle size={20} className="shrink-0 text-amber-600 mt-0.5" />
+          <div>
+            <h3 className="font-bold text-sm">Leave Policy Not Configured</h3>
+            <p className="mt-1">
+              Leave policy has not yet been configured or published by the Admin for the current policy year. You will be able to request time off as soon as HR publishes the policy.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Balance Cards Grid */}
+      {isConfigured && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {activePolicies.map(pol => (
+            <LeaveBalanceCard
+              key={pol.id}
+              policy={pol}
+              balance={balances[pol.leave_type_key]}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Status Filter Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {['all', 'pending_hr_review', 'pending_admin_confirmation', 'approved', 'rejected_by_hr', 'rejected_by_admin', 'cancelled'].map(st => (
+          <button
+            key={st}
+            onClick={() => setStatusFilter(st)}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap capitalize transition-all ${
+              statusFilter === st
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {st.replace(/_/g, ' ')}
+          </button>
+        ))}
       </div>
 
-      {/* Leave Request Dialog */}
+      {/* Request History Table */}
+      <LeaveRequestTable
+        requests={requests}
+        isLoading={isLoading}
+        onSelectRequest={(req) => {
+          setSelectedRequest(req);
+          setShowDrawer(true);
+        }}
+        onCancelRequest={handleCancelRequest}
+      />
+
+      {/* Submit Leave Modal */}
       <Dialog
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         title="Request Time Off"
-        description="Select canonical leave type and dates for policy breakdown."
+        description="Select leave type and dates to submit for multi-stage approval."
       >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Leave Type
-            </label>
-            <select
-              value={form.leave_type}
-              onChange={(e) => setForm((p) => ({ ...p, leave_type: e.target.value }))}
-              className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-indigo-500 outline-none"
-            >
-              {CANONICAL_LEAVE_TYPES.map((lt) => (
-                <option key={lt} value={lt}>{LEAVE_TYPE_LABELS[lt]}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Start Date
-              </label>
-              <input
-                type="date"
-                min={todayStr}
-                value={form.from_date}
-                onChange={(e) => setForm((p) => ({ ...p, from_date: e.target.value }))}
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                End Date
-              </label>
-              <input
-                type="date"
-                min={form.from_date || todayStr}
-                value={form.to_date}
-                onChange={(e) => setForm((p) => ({ ...p, to_date: e.target.value }))}
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-          </div>
-
-          <DateRangeBreakdown breakdown={previewBreakdown} />
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Reason <span className="text-slate-400 font-normal">(optional)</span>
-            </label>
-            <textarea
-              rows={3}
-              value={form.reason}
-              onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
-              placeholder="Reason for time off request..."
-              className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
-            />
-          </div>
-
-          <div className="flex gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-            <button
-              onClick={() => setShowModal(false)}
-              className="flex-1 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs hover:bg-slate-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-            >
-              {submitting ? 'Submitting...' : 'Submit Request'}
-            </button>
-          </div>
-        </div>
+        <LeaveRequestForm
+          activePolicies={activePolicies}
+          balances={balances}
+          holidays={holidays}
+          onSubmit={handleSubmitLeave}
+          submitting={submitting}
+        />
       </Dialog>
 
-      {/* History Table */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Leave History</h2>
-        <DataTable
-          columns={columns}
-          data={leavesData}
-          isLoading={isLoading}
-          emptyMessage="No leave requests submitted yet."
-          mobileCardRender={mobileCardRender}
-          pagination={pagination}
-          onPageChange={() => fetchSummaryAndLeaves()}
-        />
-      </div>
+      {/* Detail Drawer */}
+      <LeaveRequestDetailDrawer
+        isOpen={showDrawer}
+        onClose={() => setShowDrawer(false)}
+        request={selectedRequest}
+        onCancel={handleCancelRequest}
+      />
     </div>
   );
 }

@@ -39,22 +39,17 @@ const nextConfig = {
   serverExternalPackages: ['jsonwebtoken'],
 
   async headers() {
-    const sabpaisaUrl = process.env.SABPAISA_INIT_URL || process.env.NEXT_PUBLIC_SABPAISA_INIT_URL || 'https://securepay.sabpaisa.in';
     const callbackUrl = process.env.SABPAISA_CALLBACK_URL || '';
 
-    const allowedOrigins = ["'self'"];
+    // form-action 'self' https: — allows form submissions to any HTTPS endpoint.
+    // Payment security is enforced server-side (encrypted payload, canonical amount
+    // derivation, callback signature verification). Chrome's CSP form-action matching
+    // with specific origin+path combinations has known quirks, so we use https: here.
+    const allowedOrigins = ["'self'", 'https:'];
 
-    try {
-      if (sabpaisaUrl) allowedOrigins.push(new URL(sabpaisaUrl).origin);
-      if (callbackUrl) allowedOrigins.push(new URL(callbackUrl).origin);
-    } catch (e) {
-      // Fallback if URLs are malformed
-    }
-
-    // In development or when using ngrok, add a broad https: fallback to prevent blocking
+    // In development or when using ngrok, also allow http: for local testing
     if (callbackUrl.includes('ngrok-free.dev') || process.env.NODE_ENV !== 'production') {
-      allowedOrigins.push("https:");
-      allowedOrigins.push("https://*");
+      allowedOrigins.push('http:');
     }
 
     return [

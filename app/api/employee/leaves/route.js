@@ -20,7 +20,7 @@ export async function GET(request) {
 
     let query = admin
       .from('leave_requests')
-      .select('*, user_profiles(full_name, department)', { count: 'exact' })
+      .select('*, leave_request_actions(*, user_profiles:actor_id(full_name, role)), user_profiles!employee_id(full_name, department)', { count: 'exact' })
       .eq('employee_id', user.id)
       .order('created_at', { ascending: false });
 
@@ -34,7 +34,7 @@ export async function GET(request) {
     const { data: requests, count, error } = await query.range(offset, offset + limit - 1);
 
     if (error) {
-      console.error('[API] GET Leaves Error:', error);
+      console.error('[API] GET Employee Leaves Error:', error);
       throw error;
     }
 

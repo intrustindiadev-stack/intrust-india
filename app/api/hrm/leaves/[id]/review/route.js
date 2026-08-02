@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
-import { LeaveReviewSchema } from '@/lib/hrm/validation';
+import { HRLeaveReviewSchema } from '@/lib/hrm/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,17 +12,18 @@ export async function POST(request, { params }) {
     }
 
     const role = profile?.role;
-    if (!['hr_manager', 'admin', 'super_admin'].includes(role)) {
-      return NextResponse.json({ error: 'Forbidden: HR or Admin privilege required', code: 'FORBIDDEN' }, { status: 403 });
+    if (role !== 'hr_manager') {
+      return NextResponse.json({ error: 'Forbidden: HR Manager privilege required', code: 'FORBIDDEN' }, { status: 403 });
     }
 
-    const requestId = params?.id;
+    const resolvedParams = await params;
+    const requestId = resolvedParams?.id;
     if (!requestId) {
       return NextResponse.json({ error: 'Request ID is required', code: 'INVALID_INPUT' }, { status: 400 });
     }
 
     const body = await request.json().catch(() => ({}));
-    const parseResult = LeaveReviewSchema.safeParse(body);
+    const parseResult = HRLeaveReviewSchema.safeParse(body);
 
     if (!parseResult.success) {
       return NextResponse.json({
@@ -34,8 +35,8 @@ export async function POST(request, { params }) {
 
     const { action, note } = parseResult.data;
 
-    // Execute atomic review RPC
-    const { data, error } = await admin.rpc('review_leave_request', {
+    // Execute atomic HR review RPC
+    const { data, error } = await admin.rpc('hr_review_leave_request', {
       p_request_id: requestId,
       p_action: action,
       p_note: note ?? null,
@@ -44,11 +45,13 @@ export async function POST(request, { params }) {
 
     if (error) {
       console.error('[API] HR Leave Review RPC Error:', error);
-      const isConflict = error.message && error.message.includes('Conflict');
+      const msg = error.message || '';
+      const isConflict = msg.includes('Conflict') || msg.includes('already been processed');
+      const isForbidden = msg.includes('Forbidden');
       return NextResponse.json({
-        error: error.message || 'Leave review failed',
-        code: isConflict ? 'CONCURRENCY_CONFLICT' : 'REVIEW_FAILED'
-      }, { status: isConflict ? 409 : 400 });
+        error: msg || 'HR leave review failed',
+        code: isConflict ? 'CONCURRENCY_CONFLICT' : isForbidden ? 'FORBIDDEN' : 'REVIEW_FAILED'
+      }, { status: isConflict ? 409 : isForbidden ? 403 : 400 });
     }
 
     const response = NextResponse.json({
@@ -61,7 +64,7 @@ export async function POST(request, { params }) {
   } catch (err) {
     console.error('[API] HR Leave Review Error:', err);
     return NextResponse.json({
-      error: 'An unexpected server error occurred',
+      error: 'An unexpected server error occurred during HR review',
       code: 'SERVER_ERROR'
     }, { status: 500 });
   }

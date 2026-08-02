@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Users, Calendar, Clock, DollarSign, BookOpen, Shield, X, Briefcase, UserCircle, Settings, LogOut, Loader2, User, Gift, HelpCircle, ChevronRight } from 'lucide-react';
+import { Home, Users, Calendar, Clock, DollarSign, BookOpen, Shield, X, Briefcase, UserCircle, Settings, LogOut, Loader2, User, Gift, HelpCircle, ChevronRight, Network } from 'lucide-react';
 import { useState } from 'react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { createClient } from '@/lib/supabaseClient';
@@ -43,6 +43,7 @@ export default function HRMSidebar({ isOpen, setIsOpen, userProfile }) {
     const menuItems = [
         { name: 'Dashboard', icon: Home, path: '/hrm' },
         { name: 'Employees', icon: Users, path: '/hrm/employees' },
+        { name: 'Teams', icon: Network, path: '/hrm/teams' },
         { name: 'Jobs', icon: Briefcase, path: '/hrm/jobs' },
         { name: 'Recruitment', icon: Users, path: '/hrm/recruitment' },
         { name: 'Attendance', icon: Clock, path: '/hrm/attendance' },

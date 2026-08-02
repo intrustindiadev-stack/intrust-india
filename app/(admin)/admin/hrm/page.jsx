@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import Link from 'next/link';
 import { displayEmail } from '@/lib/auth';
-import { Users, UserPlus, DollarSign, Clock } from 'lucide-react';
+import { Users, UserPlus, DollarSign, Clock, ShieldCheck, UserCheck } from 'lucide-react';
 import ContactActions from '@/components/shared/ContactActions';
 
 function StatCard({ title, value, sub, gradient, icon: Icon }) {
@@ -19,16 +19,22 @@ function StatCard({ title, value, sub, gradient, icon: Icon }) {
 }
 
 const LEAVE_STATUS_STYLE = {
-    pending: 'bg-amber-50 text-amber-700 border-amber-200',
+    pending_hr_review: 'bg-amber-50 text-amber-700 border-amber-200',
+    pending_admin_confirmation: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    rejected: 'bg-red-50 text-red-700 border-red-200',
+    rejected_by_hr: 'bg-rose-50 text-rose-700 border-rose-200',
+    rejected_by_admin: 'bg-rose-50 text-rose-700 border-rose-200',
+    cancelled: 'bg-slate-100 text-slate-600 border-slate-200',
+    // Fallbacks
+    pending: 'bg-amber-50 text-amber-700 border-amber-200',
+    rejected: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 
 export default async function AdminHRMPage() {
     const supabase = createAdminClient();
 
-    // Fetch HRM data in parallel — gracefully fallback if tables don't exist yet
-    const [empRes, leaveRes, pendingLeaveRes] = await Promise.all([
+    // Fetch HRM data in parallel
+    const [empRes, leaveRes, hrPendingRes, adminPendingRes] = await Promise.all([
         supabase.from('user_profiles')
             .select('id, full_name, email, phone, role, created_at')
             .in('role', [
@@ -37,21 +43,25 @@ export default async function AdminHRMPage() {
                 'seo_specialist', 'advertiser', 'support_agent'
             ])
             .order('created_at', { ascending: false }),
-        // leave_requests may not exist yet — gracefully fall back
         supabase.from('leave_requests')
             .select('id, employee_id, leave_type, from_date, to_date, status, reason, created_at, user_profiles:employee_id(full_name, email)')
             .order('created_at', { ascending: false })
-            .limit(20)
+            .limit(10)
             .then(r => r.error ? { data: [] } : r),
         supabase.from('leave_requests')
             .select('id', { count: 'exact', head: true })
-            .eq('status', 'pending')
+            .eq('status', 'pending_hr_review')
+            .then(r => r.error ? { count: 0 } : r),
+        supabase.from('leave_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'pending_admin_confirmation')
             .then(r => r.error ? { count: 0 } : r),
     ]);
 
     const employees = empRes.data || [];
     const leaveRequests = leaveRes.data || [];
-    const pendingLeaveCount = pendingLeaveRes.count || 0;
+    const pendingHRCount = hrPendingRes.count || 0;
+    const pendingAdminCount = adminPendingRes.count || 0;
 
     const totalEmp = employees.length;
     const hrManagers = employees.filter(e => e.role === 'hr_manager').length;
@@ -89,19 +99,23 @@ export default async function AdminHRMPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-5">
                     <div>
                         <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">HRM Command Overview</h1>
-                        <p className="text-gray-500 text-sm mt-0.5">Manage employee profiles, team contacts, and leave approvals.</p>
+                        <p className="text-gray-500 text-sm mt-0.5">Manage workforce profiles, team directory, and leave approval workflows.</p>
                     </div>
+
+                    <Link href="/admin/hrm/leaves" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors self-start sm:self-auto">
+                        Open Admin Leave Workspace →
+                    </Link>
                 </div>
 
                 {/* KPI Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <StatCard title="Total Workforce" value={totalEmp} gradient="from-emerald-600 to-teal-600" icon={Users} />
                     <StatCard title="HR Managers" value={hrManagers} gradient="from-violet-600 to-purple-600" icon={UserPlus} />
-                    <StatCard title="CRM Team" value={crmTeam} gradient="from-amber-500 to-orange-500" icon={DollarSign} />
-                    <StatCard title="Pending Leaves" value={pendingLeaveCount} sub="Awaiting approval" gradient="from-red-500 to-rose-500" icon={Clock} />
+                    <StatCard title="Awaiting HR Review" value={pendingHRCount} sub="Stage 1 Queue" gradient="from-amber-500 to-orange-500" icon={UserCheck} />
+                    <StatCard title="Awaiting Admin Confirmation" value={pendingAdminCount} sub="Stage 2 Action Required" gradient="from-indigo-600 to-purple-700" icon={ShieldCheck} />
                 </div>
 
-                {/* Employees Table */}
+                {/* Workforce Directory */}
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                     <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                         <div>
@@ -149,25 +163,25 @@ export default async function AdminHRMPage() {
                                         </td>
                                     </tr>
                                 )) : (
-                                    <tr><td colSpan="5" className="p-12 text-center text-gray-400 text-sm">No employees found. Grant panel access via Career Applications.</td></tr>
+                                    <tr><td colSpan="5" className="p-12 text-center text-gray-400 text-sm">No employees found.</td></tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                {/* Leave Requests */}
+                {/* Leave Requests Overview */}
                 {leaveRequests.length > 0 && (
                     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                         <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                             <div>
                                 <h2 className="text-xl font-bold text-gray-900">Recent Leave Requests</h2>
-                                {pendingLeaveCount > 0 && (
-                                    <p className="text-sm text-amber-600 font-semibold mt-0.5">{pendingLeaveCount} pending approval</p>
+                                {pendingAdminCount > 0 && (
+                                    <p className="text-sm text-indigo-600 font-semibold mt-0.5">{pendingAdminCount} awaiting admin confirmation</p>
                                 )}
                             </div>
-                            <Link href="/hrm/leaves" className="px-4 py-2 bg-amber-50 text-amber-700 font-semibold rounded-xl text-sm hover:bg-amber-100 transition-colors">
-                                View All Leaves
+                            <Link href="/admin/hrm/leaves" className="px-4 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-xl text-sm hover:bg-indigo-100 transition-colors">
+                                View All Leaves & Policy Workspace →
                             </Link>
                         </div>
                         <div className="overflow-x-auto">
@@ -183,7 +197,7 @@ export default async function AdminHRMPage() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
                                     {leaveRequests.map(lr => (
-                                        <tr key={lr.id} className="hover:bg-amber-50/20 transition-colors">
+                                        <tr key={lr.id} className="hover:bg-indigo-50/20 transition-colors">
                                             <td className="p-4 pl-6">
                                                 <p className="font-semibold text-gray-900 text-sm">{lr.user_profiles?.full_name || 'Unknown'}</p>
                                                 <p className="text-xs text-gray-400">
@@ -200,7 +214,7 @@ export default async function AdminHRMPage() {
                                             <td className="p-4 text-xs text-gray-500 max-w-[200px] truncate">{lr.reason || '—'}</td>
                                             <td className="p-4 pr-6">
                                                 <span className={`inline-flex text-xs font-bold px-2.5 py-1 rounded-lg border capitalize ${LEAVE_STATUS_STYLE[lr.status] || ''}`}>
-                                                    {lr.status}
+                                                    {lr.status?.replace(/_/g, ' ')}
                                                 </span>
                                             </td>
                                         </tr>

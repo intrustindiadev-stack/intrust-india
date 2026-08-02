@@ -30,14 +30,14 @@ export async function POST(request) {
 
         // ── approval_required mode: create a pending request ──────────────────
         if (redemptionMode === 'approval_required') {
-            // Fetch points_per_rupee to calculate rupee value
-            const { data: ppcConfig } = await admin
+            // Fetch point_value to calculate rupee value
+            const { data: pvConfig } = await admin
                 .from('reward_configuration')
                 .select('config_value')
-                .eq('config_key', 'points_per_rupee')
+                .eq('config_key', 'point_value')
                 .maybeSingle();
 
-            const parsedPointsPerRupee = parseFloat(String(ppcConfig?.config_value ?? '1').replace(/^"|"$/g, ''));
+            const parsedPointsPerRupee = parseFloat(pvConfig?.config_value?.points_per_rupee ?? 1);
             const pointsPerRupee = isNaN(parsedPointsPerRupee) ? 1 : parsedPointsPerRupee;
 
             const rupee_value_paise = Math.round((points / pointsPerRupee) * 100);

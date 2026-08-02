@@ -9,7 +9,7 @@ import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import ContactActions from '@/components/shared/ContactActions';
 import { CrmLeadCreateSchema, CrmLeadCsvRowSchema } from '@/lib/crm/validation';
-import { parseCSV, normalizeHeader } from '@/lib/csvParser';
+import { parseCSV, parseXLSX, normalizeHeader } from '@/lib/csvParser';
 
 const STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
 
@@ -83,8 +83,17 @@ function ImportLeadsDrawer({ onClose, onSave }) {
             try {
                 const text = e.target.result;
 
-                // ── Step 1: Parse CSV (shared, BOM-safe parser) ───────────────
-                const allRows = parseCSV(text);
+                // ── Step 1: Parse file (CSV or Excel) ────────────────────────
+                const isExcel = /\.(xlsx|xls)$/i.test(file.name);
+                let allRows;
+
+                if (isExcel) {
+                    // e.target.result is an ArrayBuffer when readAsArrayBuffer is used
+                    allRows = await parseXLSX(e.target.result);
+                } else {
+                    // e.target.result is a string when readAsText is used
+                    allRows = parseCSV(e.target.result);
+                }
 
                 if (allRows.length < 2) {
                     throw new Error('File appears empty or only contains a header row.');
@@ -260,7 +269,13 @@ function ImportLeadsDrawer({ onClose, onSave }) {
                 setUploading(false);
             }
         };
-        reader.readAsText(file, 'UTF-8');
+
+        const isExcel = /\.(xlsx|xls)$/i.test(file.name);
+        if (isExcel) {
+            reader.readAsArrayBuffer(file);
+        } else {
+            reader.readAsText(file, 'UTF-8');
+        }
     };
 
     const handleReset = () => { setFile(null); setImportResult(null); };
@@ -381,17 +396,17 @@ function ImportLeadsDrawer({ onClose, onSave }) {
                                 <label className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${file ? 'border-indigo-300 bg-indigo-50/50' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300'}`}>
                                     <input
                                         type="file"
-                                        accept=".csv"
+                                        accept=".csv,.xlsx,.xls"
                                         className="sr-only"
                                         onChange={(e) => { setFile(e.target.files[0]); setImportResult(null); }}
                                     />
                                     <UploadCloud size={28} className={`mb-2 ${file ? 'text-indigo-500' : 'text-gray-300'}`} />
                                     <p className={`text-sm font-semibold ${file ? 'text-indigo-700' : 'text-gray-500'}`}>
-                                        {file ? file.name : 'Click or drag a .csv file here'}
+                                        {file ? file.name : 'Click or drag a .csv or .xlsx file here'}
                                     </p>
                                     {file
                                         ? <p className="text-xs text-gray-400 mt-1">{(file.size / 1024).toFixed(1)} KB</p>
-                                        : <p className="text-xs text-gray-400 mt-1">Max {MAX_FILE_MB} MB · {MAX_ROWS} rows · UTF-8 or Excel CSV</p>
+                                        : <p className="text-xs text-gray-400 mt-1">Max {MAX_FILE_MB} MB · {MAX_ROWS} rows · CSV or Excel (.xlsx)</p>
                                     }
                                 </label>
                             </div>
