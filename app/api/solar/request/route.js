@@ -1,5 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 
 export async function POST(req) {
@@ -13,6 +12,7 @@ export async function POST(req) {
 
         const body = await req.json();
 
+        const supabaseAdmin = createAdminClient();
         const { error } = await supabaseAdmin.from('solar_leads').insert([{
             ...body,
             user_id: user.id,

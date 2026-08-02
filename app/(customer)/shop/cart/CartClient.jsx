@@ -31,8 +31,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { displayEmail } from "@/lib/auth";
-
-const SabpaisaPaymentModal = React.lazy(() => import("@/components/payment/SabpaisaPaymentModal"));
+import { usePayment } from '@/hooks/usePayment';
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
@@ -43,6 +42,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
   const [stockWarnings, setStockWarnings] = useState(new Map());
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
+  const { initiatePayment, loading: paymentLoading } = usePayment();
   const [walletBalance, setWalletBalance] = useState(0);
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(null);
@@ -50,7 +50,6 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
   const [merchantStatuses, setMerchantStatuses] = useState(new Map()); // Map<id, is_open>
   const [paymentMode, setPaymentMode] = useState('wallet');
   const [orderSuccess, setOrderSuccess] = useState(false);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [draftGroupId, setDraftGroupId] = useState(null);
   const [draftAmount, setDraftAmount] = useState(null);
   const [udhariEnabled, setUdhariEnabled] = useState(false);
@@ -158,7 +157,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
 
       const { data: userProfile } = await supabase
         .from("user_profiles")
-        .select("full_name, phone, address")
+        .select("full_name, phone, address, email")
         .eq("id", userId)
         .single();
       setProfile(userProfile);
@@ -387,12 +386,6 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
   };
 
   const handleCheckout = async () => {
-    // Guard: prevent double-submission if a draft order already exists
-    if (draftGroupId) {
-      setIsPaymentModalOpen(true);
-      return;
-    }
-
     try {
       setCheckingOut(true);
       setError(null);
@@ -404,9 +397,6 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
       }
 
       if (paymentMode === 'wallet') {
-        // Use the server-owned endpoint so purchase rewards are distributed
-        // with the service role immediately after the checkout commits —
-        // no client trust required, no reward skip.
         const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch('/api/shopping/wallet-checkout', {
           method: 'POST',
@@ -427,16 +417,24 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
         const { data, error: rpcError } = await supabase.rpc("draft_cart_orders", { p_customer_id: userId });
         if (rpcError) throw rpcError;
         if (data.success) {
-          setDraftGroupId(data.group_id);
-          setDraftAmount(data.total_paise);
-          setIsPaymentModalOpen(true);
-          // Keep checkingOut=true — button stays locked until modal is closed
+          await initiatePayment({
+            amount: (data.total_paise / 100).toFixed(2),
+            payerName: profile.full_name || 'User',
+            payerEmail: profile.email,
+            payerMobile: profile.phone,
+            udf1: "CART_CHECKOUT",
+            udf2: data.group_id,
+            onSuccess: () => {
+              setOrderSuccess(true);
+              setTimeout(() => router.push("/orders?success=true"), 3000);
+            },
+            onFailure: (msg) => setError(msg || "Payment failed")
+          });
           return;
         } else {
           setError(data.message || "Checkout initialization failed");
         }
       } else if (paymentMode === 'store_credit') {
-        // Step 1: Draft the cart orders to get a group_id
         const { data: draftData, error: draftError } = await supabase.rpc("draft_cart_orders", { p_customer_id: userId });
         if (draftError) throw draftError;
         if (!draftData.success) {
@@ -446,7 +444,6 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
 
         const groupId = draftData.group_id;
 
-        // Step 2: Resolve merchant ID from cart items
         const merchantItem = cartItems.find(i => !i.is_platform_item);
         let merchantId = null;
         if (merchantItem?.inventory_id) {
@@ -463,7 +460,6 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
           return;
         }
 
-        // Step 3: Call the store-credit request API
         const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch('/api/shopping/request-store-credit', {
           method: 'POST',
@@ -481,7 +477,6 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
         const resData = await res.json();
         if (!res.ok) throw new Error(resData.error);
 
-        // Step 4: Show a success overlay then redirect to store-credits
         setCreditRequestSent(true);
         setTimeout(() => router.push("/store-credits"), 3500);
       }
@@ -691,7 +686,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
   }
 
   return (
-    <div className={`min-h-screen pb-36 sm:pb-12 pt-24 md:pt-28 ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
+    <div className={`min-h-screen pb-52 sm:pb-12 pt-24 md:pt-28 ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
       <div className="max-w-5xl mx-auto px-3 sm:px-4 md:px-6">
 
         {/* Header */}
@@ -1159,14 +1154,14 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                 )}
 
                 <button
-                  disabled={checkingOut || !canCheckout}
+                  disabled={checkingOut || paymentLoading || !canCheckout}
                   onClick={handleCheckout}
                   className={`w-full py-3.5 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] ${!canCheckout
                       ? `cursor-not-allowed ${isDark ? 'bg-white/[0.04] text-white/20' : 'bg-slate-100 text-slate-400'}`
                       : "bg-blue-600 hover:bg-blue-700 text-white shadow-[0_6px_20px_rgba(37,99,235,0.25)]"
                     }`}
                 >
-                  {checkingOut ? (
+                  {checkingOut || paymentLoading ? (
                     <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>
                   ) : isAnyStoreClosed ? (
                     "Store is currently closed"
@@ -1196,7 +1191,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
       </div>
 
       {/* Mobile Sticky Bar */}
-      <div className={`fixed bottom-0 left-0 w-full p-3 pb-5 sm:hidden z-50 border-t backdrop-blur-xl ${isDark ? 'bg-[#080a10]/90 border-white/[0.06]' : 'bg-white/95 border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]'}`}>
+      <div className={`fixed bottom-[110px] left-0 w-full p-3 pb-5 sm:hidden z-40 border-t rounded-t-3xl backdrop-blur-xl ${isDark ? 'bg-[#080a10]/90 border-white/[0.06]' : 'bg-white/95 border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]'}`}>
         {error && (
           <div className={`flex items-center gap-2 p-2 rounded-lg mb-2 ${isDark ? 'bg-red-900/20 border border-red-800/20' : 'bg-red-50'}`}>
             <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
@@ -1224,7 +1219,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
           </div>
 
           <button
-            disabled={checkingOut}
+            disabled={checkingOut || paymentLoading}
             onClick={() => {
               // If no address — open the delivery info modal directly
               if (!hasValidAddress) {
@@ -1245,7 +1240,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
             {!hasValidAddress && (
               <span className="absolute inset-0 rounded-xl animate-pulse bg-amber-400/30 pointer-events-none" />
             )}
-            {checkingOut ? (
+            {checkingOut || paymentLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : isAnyStoreClosed ? (
               'Store Closed'
@@ -1266,41 +1261,6 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
         </div>
       </div>
 
-      {isPaymentModalOpen && (
-        <Suspense fallback={null}>
-          <SabpaisaPaymentModal
-            isOpen={isPaymentModalOpen}
-            onClose={() => {
-              // Capture the draft ID before clearing it
-              const cancelTarget = draftGroupId;
-              // Re-enable buttons when modal is dismissed without completing payment
-              setIsPaymentModalOpen(false);
-              setCheckingOut(false);
-              // Clear draft so a fresh one is created if they retry
-              setDraftGroupId(null);
-              // Fire-and-forget: tell the server to cancel the pending gateway draft
-              if (cancelTarget) {
-                supabase.auth.getSession().then(({ data: { session } }) => {
-                  fetch('/api/shopping/cancel-draft-order', {
-                    method: 'POST',
-                    keepalive: true,
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${session?.access_token}`,
-                    },
-                    body: JSON.stringify({ groupId: cancelTarget }),
-                  }).catch(console.error);
-                }).catch(console.error);
-              }
-            }}
-            amount={(draftAmount || finalPayable) / 100}
-            user={{ id: userId, email: displayEmail(profile?.email) || '', phone: profile?.phone || '' }}
-            productInfo={{ title: `${itemCount} Item${itemCount > 1 ? 's' : ''} in Cart` }}
-            metadata={{ type: 'cart_checkout', groupId: draftGroupId }}
-            initialMethod="gateway"
-          />
-        </Suspense>
-      )}
 
       {/* ADDRESS MODAL */}
       <AnimatePresence>

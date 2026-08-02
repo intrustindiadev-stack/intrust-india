@@ -21,7 +21,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import LockinAnalytics from '@/components/merchant/lockin/LockinAnalytics';
-import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
+import { usePayment } from '@/hooks/usePayment';
 
 export default function MerchantLockinPage() {
     const [balances, setBalances] = useState([]);
@@ -33,7 +33,7 @@ export default function MerchantLockinPage() {
 
     // Modal states
     const [showModal, setShowModal] = useState(false);
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const { initiatePayment, loading: paymentLoading } = usePayment();
     const [amount, setAmount] = useState('');
     const [desc, setDesc] = useState('');
 
@@ -468,11 +468,24 @@ export default function MerchantLockinPage() {
                                 <button onClick={() => setShowModal(false)} className="w-9 h-9 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all text-sm font-bold">✕</button>
                             </div>
 
-                            <form onSubmit={(e) => {
+                            <form onSubmit={async (e) => {
                                 e.preventDefault();
                                 if (Number(amount) < 10000) return toast.error('Minimum ₹10,000 required');
                                 setShowModal(false);
-                                setShowPaymentModal(true);
+                                
+                                toast.loading('Redirecting to payment gateway...', { id: 'pg-redirect' });
+                                try {
+                                    await initiatePayment({
+                                        amount: Number(amount).toFixed(2),
+                                        payerName: user?.user_metadata?.full_name || "Merchant",
+                                        payerEmail: user?.email || "merchant@intrustindia.com",
+                                        payerMobile: user?.phone || "9999999999",
+                                        udf1: "MERCHANT_LOCKIN",
+                                        udf2: desc || 'Lockin request'
+                                    });
+                                } catch (err) {
+                                    toast.error(err.message || 'Payment initiation failed', { id: 'pg-redirect' });
+                                }
                             }} className="space-y-5">
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount (₹)</label>
@@ -489,28 +502,15 @@ export default function MerchantLockinPage() {
                                         className="w-full bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all min-h-[90px] resize-none" />
                                 </div>
                                 <button type="submit"
+                                    disabled={paymentLoading}
                                     className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:opacity-90 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 text-[11px] uppercase tracking-widest flex items-center justify-center gap-2">
-                                    <Plus size={16} /> Pay Now
+                                    {paymentLoading ? 'Processing...' : <><Plus size={16} /> Pay Now</>}
                                 </button>
                             </form>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Payment Modal */}
-            <SabpaisaPaymentModal
-                isOpen={showPaymentModal}
-                onClose={() => {
-                    setShowPaymentModal(false);
-                    setAmount('');
-                    setDesc('');
-                }}
-                amount={amount}
-                user={user}
-                productInfo="Lockin Growth Portfolio"
-                metadata={{ type: "merchant_lockin", description: desc || 'Lockin request' }}
-            />
         </div>
     );
 }

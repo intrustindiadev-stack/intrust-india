@@ -11,7 +11,7 @@ import { Star, ShieldCheck, Clock, CheckCircle, Share2, Loader2, AlertCircle, Sp
 import { motion } from 'framer-motion';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 
-import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
+
 import UdhariRequestModal from '../components/UdhariRequestModal';
 import PaymentMethodSelector from '@/components/giftcards/PaymentMethodSelector';
 
@@ -35,7 +35,6 @@ export default function GiftCardDetailPage({ params }) {
     const [quantity, setQuantity] = useState(1); // Future proofing
     const [kycStatus, setKycStatus] = useState(null);
     const [kycLoading, setKycLoading] = useState(true);
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showUdhariModal, setShowUdhariModal] = useState(false);
     const [merchantUdhariEnabled, setMerchantUdhariEnabled] = useState(false);
 
@@ -140,6 +139,8 @@ export default function GiftCardDetailPage({ params }) {
         };
     }, [id, user]); // Include user in dependencies
 
+    const { initiatePayment, loading: paymentLoading } = usePayment();
+
     async function handlePurchase() {
         if (!user) {
             router.push('/login');
@@ -185,59 +186,20 @@ export default function GiftCardDetailPage({ params }) {
             } else {
                 // Online Payment (SabPaisa)
                 toast.loading('Redirecting to payment gateway...', { id: 'pg-redirect' });
-                const sabpaisaRes = await fetch('/api/sabpaisa/initiate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${session.access_token}`,
-                    },
-                    body: JSON.stringify({
-                        clientTxnId: `GC_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                try {
+                    await initiatePayment({
                         amount: Number(card.selling_price_paise / 100).toFixed(2),
                         payerName: user?.user_metadata?.full_name || "User",
                         payerEmail: user?.email || "customer@intrustindia.com",
                         payerMobile: user?.phone || "9999999999",
                         udf1: "GIFT_CARD",
                         udf2: id,
-                        udf3: String(card.face_value_paise / 100),
-                        udf4: "",
-                        udf5: "",
-                    }),
-                });
-
-                if (!sabpaisaRes.ok) {
-                    toast.error('Payment initiation failed', { id: 'pg-redirect' });
+                        udf3: String(card.face_value_paise / 100)
+                    });
+                } catch (err) {
+                    toast.error(err.message || 'Payment initiation failed', { id: 'pg-redirect' });
                     setPurchasing(false);
-                    return;
                 }
-
-                const pgData = await sabpaisaRes.json();
-                if (!pgData.encData || !pgData.paymentUrl || !pgData.clientCode) {
-                    toast.error('Invalid response from payment server', { id: 'pg-redirect' });
-                    setPurchasing(false);
-                    return;
-                }
-
-                toast.success('Redirecting...', { id: 'pg-redirect' });
-                
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = pgData.paymentUrl;
-                
-                const encDataInput = document.createElement('input');
-                encDataInput.type = 'hidden';
-                encDataInput.name = 'encData';
-                encDataInput.value = pgData.encData;
-                form.appendChild(encDataInput);
-
-                const clientCodeInput = document.createElement('input');
-                clientCodeInput.type = 'hidden';
-                clientCodeInput.name = 'clientCode';
-                clientCodeInput.value = pgData.clientCode;
-                form.appendChild(clientCodeInput);
-
-                document.body.appendChild(form);
-                form.submit();
             }
         } catch (err) {
             console.error(err);
@@ -511,13 +473,9 @@ export default function GiftCardDetailPage({ params }) {
                             <div className="flex flex-col gap-3 mt-2">
                                 <button
                                     onClick={() => {
-                                        if (!user) { router.push('/login'); return; }
-                                        if (kycStatus !== 'verified') { toast.error('Please complete KYC verification first.'); router.push('/profile?section=kyc'); return; }
-                                        
-                                        setShowPaymentModal(true);
-
+                                        handlePurchase();
                                     }}
-                                    disabled={!isAvailable || purchasing}
+                                    disabled={!isAvailable || purchasing || paymentLoading}
                                     className={`
                                         w-full py-4 rounded-xl text-white font-semibold text-lg shadow-lg shadow-blue-200
                                         bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 transition-all
@@ -525,7 +483,7 @@ export default function GiftCardDetailPage({ params }) {
                                         flex items-center justify-center gap-2
                                     `}
                                 >
-                                    {purchasing ? (
+                                    {purchasing || paymentLoading ? (
                                         <>
                                             <Loader2 size={24} className="animate-spin" />
                                             Processing...

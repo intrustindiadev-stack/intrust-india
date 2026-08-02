@@ -11,7 +11,7 @@ import { displayInitial, displayEmail } from '@/lib/auth';
 
 export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, user, theme, toggleTheme, handleSignOut, menuItems, apiPath }) {
     const router = useRouter();
-    const [orderHistoryOpen, setOrderHistoryOpen] = useState(false);
+
     const [avatarError, setAvatarError] = useState(false);
 
     // Menu Item Variants for Staggered Animation
@@ -115,67 +115,32 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                 ))}
                             </div>
 
-                            {/* Order History Dropdown */}
+                            {/* My Orders Link */}
                             {isAuthenticated && (
                                 <div className="mt-4">
-                                    <button
-                                        onClick={() => setOrderHistoryOpen(!orderHistoryOpen)}
-                                        className="
-                                            w-full group flex items-center justify-between 
-                                            px-4 py-4 text-[#171A21] dark:text-gray-100
-                                            active:bg-gray-50 dark:active:bg-gray-800
-                                            rounded-2xl font-medium text-[16px]
-                                            transition-colors duration-200
-                                        "
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <History size={20} className="text-[#92BCEA]" />
-                                            <span>Order History</span>
-                                        </div>
-                                        <motion.div
-                                            animate={{ rotate: orderHistoryOpen ? 180 : 0 }}
-                                            transition={{ duration: 0.3 }}
+                                    <Link href="/orders" passHref legacyBehavior>
+                                        <motion.a
+                                            onClick={onClose}
+                                            className="
+                                                group flex items-center justify-between 
+                                                px-4 py-4 text-[#171A21] dark:text-gray-100
+                                                active:bg-gray-50 dark:active:bg-gray-800
+                                                rounded-2xl font-medium text-[16px]
+                                                transition-colors duration-200
+                                                border border-transparent hover:border-gray-100 dark:hover:border-gray-800
+                                            "
                                         >
-                                            <ChevronDown size={18} className="text-gray-400" />
-                                        </motion.div>
-                                    </button>
-
-                                    <AnimatePresence>
-                                        {orderHistoryOpen && (
-                                            <motion.div
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: 'auto', opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                transition={{ duration: 0.3 }}
-                                                className="overflow-hidden pl-11 space-y-1"
-                                            >
-                                                <Link
-                                                    href="/nfc-service"
-                                                    onClick={onClose}
-                                                    className="w-full flex items-center gap-3 py-3 px-2 text-sm text-gray-600 dark:text-gray-400 hover:text-[#92BCEA] transition-colors"
-                                                >
-                                                    <ScanFace size={16} />
-                                                    <span>NFC Orders</span>
-                                                </Link>
-                                                <Link
-                                                    href="/my-giftcards"
-                                                    onClick={onClose}
-                                                    className="w-full flex items-center gap-3 py-3 px-2 text-sm text-gray-600 dark:text-gray-400 hover:text-[#92BCEA] transition-colors"
-                                                >
-                                                    <CreditCard size={16} />
-                                                    <span>Gift Cards</span>
-                                                </Link>
-                                                <Link
-                                                    href="/orders"
-                                                    onClick={onClose}
-                                                    className="w-full flex items-center gap-3 py-3 px-2 text-sm text-gray-600 dark:text-gray-400 hover:text-[#92BCEA] transition-colors"
-                                                >
-                                                    <ShoppingBag size={16} />
-                                                    <span>Shopping</span>
-                                                </Link>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
+                                            <div className="flex items-center gap-3">
+                                                <History size={20} className="text-[#92BCEA]" />
+                                                <span>My Orders</span>
+                                            </div>
+                                            <ChevronRight
+                                                size={18}
+                                                className="text-gray-300 group-active:text-[#92BCEA] transition-colors"
+                                                strokeWidth={2.5}
+                                            />
+                                        </motion.a>
+                                    </Link>
                                 </div>
                             )}
 

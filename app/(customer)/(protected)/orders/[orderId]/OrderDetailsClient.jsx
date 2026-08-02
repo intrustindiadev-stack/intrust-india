@@ -17,7 +17,9 @@ import {
     Calendar,
     X,
     RotateCcw,
-    Star
+    Star,
+    TrendingUp,
+    Zap
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -29,7 +31,7 @@ import { toast } from "react-hot-toast";
 import { createClient } from "@/lib/supabaseClient";
 import { generateOrderInvoice } from "@/lib/invoiceGenerator";
 
-const OrderDetailsClient = ({ order, userId, customerProfile }) => {
+const OrderDetailsClient = ({ order, orderType, userId, customerProfile }) => {
     const router = useRouter();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -45,11 +47,28 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
     const [hoverRating, setHoverRating] = useState(0);
     const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
-    const items = order.shopping_order_items || [];
-    const status = order.delivery_status || 'pending';
+    const isShopping = orderType === 'shopping' || !orderType;
+    const isNfc = orderType === 'nfc';
+    const isGiftCard = orderType === 'giftcard' || orderType === 'udhari_giftcard';
+    const isSolar = orderType === 'solar';
+
+    // Normalize NFC to look like shopping items
+    const items = isShopping ? (order.shopping_order_items || []) : isNfc ? [{
+        id: 'nfc-item',
+        shopping_products: { title: `${order.card_holder_name || 'NFC'} Business Card`, mrp_paise: order.regular_price_paise || order.sale_price_paise, gst_percentage: 18 },
+        unit_price_paise: order.sale_price_paise,
+        quantity: 1
+    }] : [];
+
+    const status = isNfc ? order.status : (isShopping ? order.delivery_status : order.payment_status) || 'pending';
 
     // Status check logic
-    const steps = [
+    const steps = isNfc ? [
+        { label: 'Ordered', icon: ShoppingBag, key: 'pending' },
+        { label: 'Processing', icon: Package, key: 'processing' },
+        { label: 'Shipped', icon: Truck, key: 'shipped' },
+        { label: 'Delivered', icon: CheckCircle2, key: 'delivered' }
+    ] : [
         { label: 'Ordered', icon: ShoppingBag, key: 'pending' },
         { label: 'Packed', icon: Package, key: 'packed' },
         { label: 'Shipped', icon: Truck, key: 'shipped' },
@@ -58,7 +77,6 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
 
     const currentStepIndex = steps.findIndex(s => s.key === status);
     const isCancelled = status === 'cancelled';
-
 
     // Bill summary
     const billDetails = items.reduce((acc, item) => {
@@ -73,8 +91,219 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
     }, { mrpTotal: 0, sellingTotal: 0, gstTotal: 0 });
 
     const totalDiscount = billDetails.mrpTotal > billDetails.sellingTotal ? billDetails.mrpTotal - billDetails.sellingTotal : 0;
-    const deliveryFee = order.delivery_fee_paise ?? 9900;
+    const deliveryFee = isNfc ? 0 : (order.delivery_fee_paise ?? 9900);
     const finalPayable = billDetails.sellingTotal + billDetails.gstTotal + deliveryFee;
+
+    if (isGiftCard) {
+        const coupon = order.coupons;
+        const uiStatus = orderType === 'udhari_giftcard' ? 'pending-payment' : coupon.status;
+        const isInactive = uiStatus !== 'active';
+        const savings = ((coupon.face_value_paise || 0) / 100 - (order.amount || order.amount_paise / 100)).toFixed(0);
+        const monogram = (coupon.brand || 'GC').slice(0, 2).toUpperCase();
+
+        return (
+            <div className={`min-h-screen pb-24 pt-[12vh] sm:pt-[15vh] ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
+                <div className="max-w-3xl mx-auto px-4">
+                    {/* Header */}
+                    <div className="flex items-center gap-3 mb-6">
+                        <button onClick={() => router.back()} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDark ? 'bg-white/[0.04] border border-white/[0.06] text-white/50' : 'bg-white border border-slate-200 text-slate-500'}`}>
+                            <ChevronLeft size={20} />
+                        </button>
+                        <div>
+                            <h1 className="text-xl font-black">Gift Card Details</h1>
+                            <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-white/30' : 'text-slate-400'}`}>Order ID: {order.id.slice(0, 12)}</p>
+                        </div>
+                    </div>
+
+                    {/* Gift Card Visual */}
+                    <div className={`relative overflow-hidden rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] transition-all ${isInactive ? 'grayscale-[30%] opacity-80' : ''} mb-6`}>
+                        <div className={`absolute inset-0 bg-gradient-to-br from-purple-500 to-indigo-600`} />
+                        {/* Shimmer Effect */}
+                        {!isInactive && (
+                            <motion.div 
+                                animate={{ x: ['-100%', '200%'] }} 
+                                transition={{ duration: 3, repeat: Infinity, ease: 'linear' }} 
+                                className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-20deg] pointer-events-none z-0"
+                            />
+                        )}
+                        <div className="relative z-10 flex items-start justify-between px-6 pt-6 pb-12">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-2xl bg-white/25 backdrop-blur-sm border border-white/30 flex items-center justify-center shadow-inner">
+                                    <span className="text-white font-black text-xl tracking-wide">{monogram}</span>
+                                </div>
+                                <div>
+                                    <div className="text-white font-black text-2xl leading-tight drop-shadow">{coupon.brand}</div>
+                                    <div className="text-white/60 text-sm font-medium mt-0.5">{coupon.merchant?.business_name || 'Gift Card'}</div>
+                                </div>
+                            </div>
+                            <span className={`px-4 py-2 rounded-full text-xs font-bold shadow-md ${uiStatus === 'active' ? 'bg-white/90 text-green-600' : uiStatus === 'pending-payment' ? 'bg-amber-100/90 text-amber-700' : 'bg-black/20 text-white border border-white/30'}`}>
+                                {uiStatus === 'active' ? '✓ Active' : uiStatus === 'pending-payment' ? '⏳ Pending Payment' : uiStatus.charAt(0).toUpperCase() + uiStatus.slice(1)}
+                            </span>
+                        </div>
+                        <div className={`relative z-10 mx-4 mb-4 rounded-2xl shadow-2xl ${isDark ? 'bg-[#0c0e16]' : 'bg-white'}`}>
+                            <div className="p-6">
+                                <div className={`flex items-start justify-between mb-5 pb-5 border-b ${isDark ? 'border-white/[0.04]' : 'border-slate-100'}`}>
+                                    <div>
+                                        <div className={`text-[10px] uppercase tracking-widest font-bold mb-1 ${isDark ? 'text-white/40' : 'text-slate-400'}`}>Face Value</div>
+                                        <div className="text-4xl font-black bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent leading-none">₹{(coupon.face_value_paise || 0) / 100}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className={`text-[10px] uppercase tracking-widest font-bold mb-1 ${isDark ? 'text-white/40' : 'text-slate-400'}`}>You Paid</div>
+                                        <div className={`text-3xl font-black leading-none ${isDark ? 'text-white' : 'text-slate-900'}`}>₹{order.amount || order.amount_paise / 100}</div>
+                                        {Number(savings) > 0 && uiStatus !== 'pending-payment' && (
+                                            <div className="text-sm font-bold text-emerald-500 mt-1 flex items-center justify-end gap-1"><TrendingUp size={14} /> Saved ₹{savings}</div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className={`flex flex-col sm:flex-row justify-between sm:items-center gap-4 py-4 rounded-xl ${isDark ? 'bg-white/[0.02]' : 'bg-slate-50'} px-5 mb-4 border ${isDark ? 'border-white/[0.04]' : 'border-slate-100'}`}>
+                                    <div>
+                                        <div className={`text-[10px] uppercase tracking-widest font-bold mb-1 ${isDark ? 'text-white/40' : 'text-slate-400'}`}>Purchase Date</div>
+                                        <div className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{format(new Date(order.created_at), 'dd MMM yyyy, h:mm a')}</div>
+                                    </div>
+                                    <div className="sm:text-right">
+                                        <div className={`text-[10px] uppercase tracking-widest font-bold mb-1 ${isDark ? 'text-white/40' : 'text-slate-400'}`}>Payment Method</div>
+                                        <div className={`text-sm font-bold uppercase ${isDark ? 'text-white' : 'text-slate-800'}`}>{order.payment_method || 'Udhari'}</div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        generateOrderInvoice({
+                                            order: { id: order.id, created_at: order.created_at, customer_name: customerProfile?.full_name || 'Customer', faceValue: (coupon.face_value_paise || 0) / 100, paidAmount: order.amount || order.amount_paise / 100, brand: coupon.brand, giftcard_name: `${coupon.brand} Gift Card` },
+                                            items: [],
+                                            seller: { name: 'Intrust Financial Services (India) Pvt. Ltd.', address: 'TF-312/MM09, Ashima Mall, Narmadapuram Rd, Danish Naga, Bhopal, MP 462026', phone: '18002030052', gstin: '23AAFC14866A1ZV' },
+                                            customer: { name: customerProfile?.full_name || 'Customer', phone: customerProfile?.phone || '', address: '' },
+                                            type: 'giftcard'
+                                        });
+                                    }}
+                                    className={`w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border transition-all active:scale-95 ${isDark ? 'bg-white/5 text-slate-300 border-white/10 hover:bg-blue-500/10 hover:text-blue-400' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'}`}
+                                >
+                                    <Download size={16} /> Download Invoice
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (isSolar) {
+        const steps = [
+            { label: 'Request Received', icon: Clock, key: 'new' },
+            { label: 'Contacted', icon: Phone, key: 'contacted' },
+            { label: 'Converted', icon: CheckCircle2, key: 'converted' }
+        ];
+        
+        let sIndex = steps.findIndex(s => s.key === (order.status || 'new'));
+        if (sIndex === -1 && order.status === 'lost') sIndex = 0; // if lost, it might be new or contacted
+        if (order.status === 'contacted') sIndex = 1;
+        if (order.status === 'converted') sIndex = 2;
+        
+        const isSolarCancelled = order.status === 'lost';
+        
+        return (
+            <div className={`min-h-screen pb-24 pt-[12vh] sm:pt-[15vh] ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
+                <div className="max-w-3xl mx-auto px-4">
+                    {/* Header */}
+                    <div className="flex items-center gap-3 mb-6">
+                        <button onClick={() => router.back()} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDark ? 'bg-white/[0.04] border border-white/[0.06] text-white/50' : 'bg-white border border-slate-200 text-slate-500'}`}>
+                            <ChevronLeft size={20} />
+                        </button>
+                        <div>
+                            <h1 className="text-xl font-black">Solar Inquiry Details</h1>
+                            <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-white/30' : 'text-slate-400'}`}>Inquiry ID: {order.id.slice(0, 12)}</p>
+                        </div>
+                    </div>
+
+                    {/* Solar Hero */}
+                    <div className="relative w-full h-56 sm:h-64 rounded-[2rem] overflow-hidden mb-6 shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] group">
+                        <Image src="/solar-home.png" alt="Solar Setup" fill className="object-cover transition-transform duration-1000 group-hover:scale-105" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
+                        <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8">
+                            <div className="flex items-center gap-4 mb-2">
+                                {isSolarCancelled ? (
+                                    <div className="w-12 h-12 rounded-2xl bg-red-500/20 backdrop-blur-md flex items-center justify-center text-red-400 border border-red-500/30">
+                                        <AlertCircle size={24} />
+                                    </div>
+                                ) : order.status === 'new' ? (
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-500/20 backdrop-blur-md flex items-center justify-center text-blue-400 border border-blue-500/30">
+                                        <Clock size={24} />
+                                    </div>
+                                ) : order.status === 'contacted' ? (
+                                    <div className="w-12 h-12 rounded-2xl bg-amber-500/20 backdrop-blur-md flex items-center justify-center text-amber-400 border border-amber-500/30">
+                                        <Phone size={24} />
+                                    </div>
+                                ) : (
+                                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 backdrop-blur-md flex items-center justify-center text-emerald-400 border border-emerald-500/30">
+                                        <CheckCircle2 size={24} />
+                                    </div>
+                                )}
+                                <div>
+                                    <h2 className="text-2xl md:text-3xl font-black text-white capitalize tracking-tight drop-shadow-md">
+                                        {order.status === 'new' ? 'Inquiry Received' : order.status}
+                                    </h2>
+                                </div>
+                            </div>
+                            <p className="text-white/70 text-sm font-medium mt-2">
+                                {order.status === 'new' ? "We're reviewing your requirements. Our experts will contact you soon." : "Your transition to solar is in progress."}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6 mb-6">
+                        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className={`rounded-3xl p-6 md:p-8 ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white border border-slate-100 shadow-sm'}`}>
+                            <h3 className={`text-xl font-black mb-6 ${isDark ? 'text-white' : 'text-slate-900'}`}>Status Timeline</h3>
+                            {isSolarCancelled ? (
+                                <div className="flex items-center gap-4 text-red-500 p-4 rounded-2xl bg-red-50 dark:bg-red-500/10">
+                                    <AlertCircle size={32} />
+                                    <div><h3 className="font-black text-lg">Inquiry Closed</h3><p className="text-sm opacity-80">This solar inquiry was marked as lost.</p></div>
+                                </div>
+                            ) : (
+                                <div className="relative pl-4 space-y-8">
+                                    <div className={`absolute top-2 bottom-6 left-[1.1rem] w-0.5 -z-0 ${isDark ? 'bg-white/[0.05]' : 'bg-slate-100'}`} />
+                                    <motion.div initial={{ height: 0 }} animate={{ height: `${(Math.max(0, sIndex) / (steps.length - 1)) * 100}%` }} className="absolute top-2 left-[1.1rem] w-0.5 bg-amber-500 -z-0" />
+                                    {steps.map((step, idx) => {
+                                        const isActive = idx <= sIndex;
+                                        const isCurrent = idx === sIndex;
+                                        const Icon = step.icon;
+                                        return (
+                                            <div key={step.key} className={`flex items-start gap-6 relative z-10 ${isActive ? 'opacity-100' : 'opacity-40'}`}>
+                                                <div className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isActive ? 'bg-amber-500 border-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : isDark ? 'bg-[#12151c] border-white/10 text-white/20' : 'bg-white border-slate-200 text-slate-300'}`}>
+                                                    <Icon size={16} />
+                                                </div>
+                                                <div className="flex-1 pt-1">
+                                                    <h4 className={`text-base font-black tracking-tight ${isActive ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-white/50' : 'text-slate-400')}`}>{step.label}</h4>
+                                                    {isCurrent && <p className={`text-xs font-semibold mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>Current Status</p>}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </motion.div>
+                        <div className="space-y-4">
+                            <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.1 }} className={`rounded-2xl p-5 relative overflow-hidden shadow-lg border ${isDark ? 'border-white/[0.06] bg-gradient-to-br from-amber-500/5 to-transparent' : 'border-amber-100 bg-gradient-to-br from-amber-50 to-transparent'}`}>
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-[40px] rounded-full" />
+                                <h3 className={`relative z-10 text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}><Zap size={14} /> Requirements</h3>
+                                <div className="space-y-3 relative z-10">
+                                    <div><p className={`text-[10px] uppercase tracking-widest font-bold mb-0.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Property Type</p><p className="text-sm font-bold capitalize">{order.property_type}</p></div>
+                                    <div><p className={`text-[10px] uppercase tracking-widest font-bold mb-0.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Monthly Bill Range</p><p className="text-sm font-bold">{order.monthly_bill_range}</p></div>
+                                </div>
+                            </motion.div>
+                            <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.15 }} className={`rounded-2xl p-5 relative overflow-hidden shadow-lg border ${isDark ? 'border-white/[0.06] bg-gradient-to-br from-emerald-500/5 to-transparent' : 'border-emerald-100 bg-gradient-to-br from-emerald-50 to-transparent'}`}>
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[40px] rounded-full" />
+                                <h3 className={`relative z-10 text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}><MapPin size={14} /> Location Details</h3>
+                                <div className="space-y-3 relative z-10">
+                                    <div><p className={`text-[10px] uppercase tracking-widest font-bold mb-0.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Address</p><p className="text-sm font-bold">{order.address}</p></div>
+                                    <div><p className={`text-[10px] uppercase tracking-widest font-bold mb-0.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>City</p><p className="text-sm font-bold">{order.city}</p></div>
+                                </div>
+                            </motion.div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={`min-h-screen pb-24 pt-[12vh] sm:pt-[15vh] ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
@@ -194,13 +423,21 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                     {/* Map & Courier Illustrations */}
                     <div className={`rounded-3xl overflow-hidden relative border flex items-center justify-center p-6 ${isDark ? 'bg-gradient-to-b from-[#1a1438] to-[#110d26] border-white/10' : 'bg-gradient-to-b from-blue-50 to-indigo-50 border-blue-100 shadow-md'}`}>
                         {/* Map Image Placeholder */}
-                        <div className="absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none">
-                            <img src="/images/orders/map_route.png" alt="Map Route" className="w-full h-full object-cover" />
-                        </div>
+                        <motion.div 
+                            animate={{ scale: [1, 1.05, 1], opacity: [0.3, 0.6, 0.3] }} 
+                            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                            className="absolute inset-0 mix-blend-overlay pointer-events-none"
+                        >
+                            <img src="/map_route_illustration.png" alt="Map Route" className="w-full h-full object-cover" />
+                        </motion.div>
                         {/* Courier Image */}
-                        <div className="relative z-10 w-48 h-48 drop-shadow-2xl">
-                            <img src="/images/orders/delivery_courier.png" alt="Delivery Courier" className="w-full h-full object-contain" />
-                        </div>
+                        <motion.div 
+                            animate={{ y: [0, -8, 0] }}
+                            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                            className="relative z-10 w-48 h-48 drop-shadow-2xl"
+                        >
+                            <img src="/intrust_delivery_graphic.png" alt="Delivery Courier" className="w-full h-full object-contain" />
+                        </motion.div>
                         {/* Status Overlay */}
                         <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
                             <div className="bg-white/90 dark:bg-black/80 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border border-black/5 dark:border-white/10">
@@ -358,9 +595,9 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                         </h3>
                         <div className="text-sm">
                             <p className="font-bold mb-1">
-                                {order.is_platform_order ? 'InTrust Official' : (items[0]?.merchants?.business_name || 'Merchant')}
+                                {(order.is_platform_order || isNfc) ? 'InTrust Official' : (items[0]?.merchants?.business_name || 'Merchant')}
                             </p>
-                            {!order.is_platform_order && items[0]?.merchants?.business_address && (
+                            {!(order.is_platform_order || isNfc) && items[0]?.merchants?.business_address && (
                                 <p className={`text-xs leading-relaxed mb-2 ${isDark ? 'text-white/50' : 'text-slate-500'}`}>
                                     {items[0].merchants.business_address}
                                 </p>
@@ -449,8 +686,8 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                             const savings = mrp > sellingPrice ? mrp - sellingPrice : 0;
 
                             return (
-                                <div key={item.id} className={`flex gap-3 pb-4 border-b last:border-b-0 last:pb-0 ${isDark ? 'border-white/[0.03]' : 'border-slate-50'}`}>
-                                    <div className={`w-14 h-14 rounded-xl overflow-hidden p-1 flex items-center justify-center ${isDark ? 'bg-black/20' : 'bg-slate-50 shadow-inner'} relative`}>
+                                <div key={item.id} className={`flex gap-3 pb-4 border-b last:border-b-0 last:pb-0 ${isDark ? 'border-white/[0.03]' : 'border-slate-50'} group transition-all duration-300 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] p-2 -mx-2 rounded-xl`}>
+                                    <div className={`w-14 h-14 rounded-xl overflow-hidden p-1 flex items-center justify-center ${isDark ? 'bg-black/20' : 'bg-slate-50 shadow-inner'} relative transition-transform duration-300 group-hover:scale-105`}>
                                         {item.shopping_products?.product_images?.[0] ? (
                                             <Image
                                                 src={item.shopping_products.product_images[0]}
@@ -483,10 +720,19 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                 {/* Bill Summary */}
                 <motion.div
                     initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}
-                    className={`rounded-2xl p-5 ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white border border-slate-100 shadow-sm'}`}
+                    className={`rounded-3xl p-6 sm:p-8 relative shadow-lg ${isDark ? 'bg-[#12151c]' : 'bg-white'} border-[3px] border-dashed ${isDark ? 'border-white/10' : 'border-slate-200'}`}
                 >
-                    <h3 className={`text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2 ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
-                        <Download size={14} /> Bill Summary
+                    {/* Paid Stamp */}
+                    {status !== 'cancelled' && (
+                        <div className="absolute top-8 right-8 rotate-12 opacity-10 pointer-events-none">
+                            <div className={`text-3xl sm:text-4xl font-black uppercase border-4 rounded-xl px-4 py-2 inline-block ${isDark ? 'text-emerald-500 border-emerald-500' : 'text-emerald-600 border-emerald-600'}`}>
+                                {order.payment_method === 'cod' && status === 'pending' ? 'UNPAID' : 'PAID'}
+                            </div>
+                        </div>
+                    )}
+
+                    <h3 className={`text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 ${isDark ? 'text-white/50' : 'text-slate-400'}`}>
+                        <Download size={14} /> Digital Receipt
                     </h3>
 
                     <div className="space-y-3 text-sm font-medium">
@@ -549,7 +795,7 @@ const OrderDetailsClient = ({ order, userId, customerProfile }) => {
                                 generateOrderInvoice({
                                     order: order,
                                     items: items,
-                                    seller: order.is_platform_order
+                                    seller: (order.is_platform_order || isNfc)
                                         ? {
                                             name: 'Intrust Financial Services (India) Pvt. Ltd.',
                                             address: 'TF-312/MM09, Ashima Mall, Narmadapuram Rd, Danish Naga, Bhopal, MP 462026',
