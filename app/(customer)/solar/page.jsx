@@ -131,12 +131,18 @@ export default function SolarServicePage() {
                 return;
             }
 
-            const { error } = await supabase.from('solar_leads').insert([{
-                ...form,
-                user_id: user.id,
-                source: 'website',
-            }]);
-            if (error) throw error;
+            const response = await fetch('/api/solar/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form)
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to submit');
+            }
+            
             setSubmitted(true);
         } catch (err) {
             console.error(err);

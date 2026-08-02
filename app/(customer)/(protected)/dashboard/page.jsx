@@ -19,7 +19,9 @@ import { PayerContactError, usePayment } from '@/hooks/usePayment';
 import { usePayerContact } from '@/hooks/usePayerContact';
 import { supabase } from '@/lib/supabaseClient';
 import GoldBadge from '@/components/ui/GoldBadge';
-import { toast } from 'react-hot-toast';
+import { TrackOrdersCard, KYCRedirectCard } from '@/components/dashboard/SidebarCards';
+
+import ReferralGenzSection from '@/components/customer/dashboard/ReferralGenzSection';
 import { displayName } from '@/lib/auth';
 
 import DashboardStats from '@/components/customer/dashboard/DashboardStats';
@@ -577,14 +579,8 @@ export default function CustomerDashboardPage() {
 
                         {/* Sidebar */}
                         <div className="lg:col-span-1 space-y-8">
-                            <GoldSubscription
-                                userData={userData}
-                                timeLeft={timeLeft}
-                                setShowPackages={setShowPackages}
-                                paymentLoading={paymentLoading}
-                            />
-                            <QuickActions />
-                            <CareerOpportunityCard />
+                            <TrackOrdersCard />
+                            <KYCRedirectCard status={userData.kycStatus} />
                         </div>
                     </div>
 

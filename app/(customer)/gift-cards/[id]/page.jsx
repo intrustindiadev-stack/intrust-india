@@ -40,6 +40,8 @@ export default function GiftCardDetailPage({ params }) {
     const [merchantUdhariEnabled, setMerchantUdhariEnabled] = useState(false);
 
 
+    const [selectedPayment, setSelectedPayment] = useState('upi');
+
     // ✅ COMBINED useEffect - fetch card and KYC in parallel
     useEffect(() => {
         if (!id) return;
@@ -138,7 +140,7 @@ export default function GiftCardDetailPage({ params }) {
         };
     }, [id, user]); // Include user in dependencies
 
-    function handlePurchase() {
+    async function handlePurchase() {
         if (!user) {
             router.push('/login');
             return;
@@ -150,7 +152,98 @@ export default function GiftCardDetailPage({ params }) {
             return;
         }
 
-        setShowPaymentModal(true);
+        if (!selectedPayment) {
+            toast.error('Please select a payment method.');
+            return;
+        }
+
+        if (selectedPayment === 'store_credit') {
+            setShowUdhariModal(true);
+            return;
+        }
+
+        setPurchasing(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (selectedPayment === 'intrust_wallet') {
+                const response = await fetch("/api/gift-cards/buy-wallet", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({ couponId: id }),
+                });
+
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || "Failed to purchase gift card");
+                
+                setPurchaseSuccess(true);
+                toast.success('Purchased successfully via Wallet!');
+                setTimeout(() => router.push('/my-giftcards'), 1500);
+            } else {
+                // Online Payment (SabPaisa)
+                toast.loading('Redirecting to payment gateway...', { id: 'pg-redirect' });
+                const sabpaisaRes = await fetch('/api/sabpaisa/initiate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({
+                        clientTxnId: `GC_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                        amount: Number(card.selling_price_paise / 100).toFixed(2),
+                        payerName: user?.user_metadata?.full_name || "User",
+                        payerEmail: user?.email || "customer@intrustindia.com",
+                        payerMobile: user?.phone || "9999999999",
+                        udf1: "GIFT_CARD",
+                        udf2: id,
+                        udf3: String(card.face_value_paise / 100),
+                        udf4: "",
+                        udf5: "",
+                    }),
+                });
+
+                if (!sabpaisaRes.ok) {
+                    toast.error('Payment initiation failed', { id: 'pg-redirect' });
+                    setPurchasing(false);
+                    return;
+                }
+
+                const pgData = await sabpaisaRes.json();
+                if (!pgData.encData || !pgData.paymentUrl || !pgData.clientCode) {
+                    toast.error('Invalid response from payment server', { id: 'pg-redirect' });
+                    setPurchasing(false);
+                    return;
+                }
+
+                toast.success('Redirecting...', { id: 'pg-redirect' });
+                
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = pgData.paymentUrl;
+                
+                const encDataInput = document.createElement('input');
+                encDataInput.type = 'hidden';
+                encDataInput.name = 'encData';
+                encDataInput.value = pgData.encData;
+                form.appendChild(encDataInput);
+
+                const clientCodeInput = document.createElement('input');
+                clientCodeInput.type = 'hidden';
+                clientCodeInput.name = 'clientCode';
+                clientCodeInput.value = pgData.clientCode;
+                form.appendChild(clientCodeInput);
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message || 'Something went wrong.');
+            setPurchasing(false);
+        }
     }
 
     const handleShare = async () => {
@@ -403,6 +496,17 @@ export default function GiftCardDetailPage({ params }) {
                                     </div>
                                 </div>
                             )}
+                            {/* Payment Method Selector */}
+                            {user && kycStatus === 'verified' && (
+                                <div className="mb-4">
+                                    <PaymentMethodSelector 
+                                        selectedPayment={selectedPayment} 
+                                        setSelectedPayment={setSelectedPayment} 
+                                        udhariEnabled={merchantUdhariEnabled} 
+                                    />
+                                </div>
+                            )}
+
                             {/* Action Buttons */}
                             <div className="flex flex-col gap-3 mt-2">
                                 <button
@@ -470,25 +574,6 @@ export default function GiftCardDetailPage({ params }) {
             </div>
 
             
-
-            {/* Sabpaisa Payment Modal */}
-            {card && user && (
-                <SabpaisaPaymentModal
-                    isOpen={showPaymentModal}
-                    onClose={() => setShowPaymentModal(false)}
-                    amount={card.selling_price_paise / 100}
-                    user={user}
-                    productInfo={{ id: card.id, title: card.title }}
-                    metadata={{
-                        type: 'gift_card_purchase',
-                        coupon_id: id,
-                        face_value: card.face_value_paise / 100
-                    }}
-                    initialMethod={null}
-                    udhariEnabled={merchantUdhariEnabled}
-                    onUdhariTrigger={() => setShowUdhariModal(true)}
-                />
-            )}
 
             {/* Udhari Request Modal */}
             {card && user && (
