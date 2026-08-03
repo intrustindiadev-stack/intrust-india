@@ -5,12 +5,14 @@ import { Download, FileText, RefreshCw, AlertCircle, Gift } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { motion } from 'framer-motion';
+import { toast } from 'react-hot-toast';
+import { downloadPayslip } from '@/lib/payslipGenerator';
 import { formatPaiseToINR } from '@/lib/hrm/incentives';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 export default function EmployeePayslipsPage() {
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const [payslips, setPayslips] = useState([]);
     const [lineItemMap, setLineItemMap] = useState({});
     const [isLoading, setIsLoading] = useState(true);
@@ -129,16 +131,28 @@ export default function EmployeePayslipsPage() {
                                             <p className="text-base font-bold text-slate-900 font-mono">₹{slip.net_salary?.toLocaleString('en-IN')}</p>
                                             <p className="text-[11px] text-slate-400">Net Pay</p>
                                         </div>
-                                        {slip.payslip_url ? (
-                                            <a href={slip.payslip_url} download target="_blank" rel="noreferrer"
-                                                className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-indigo-100">
-                                                <Download size={16} />
-                                            </a>
-                                        ) : (
-                                            <div className="p-2 text-slate-300 rounded-lg border border-slate-100 cursor-not-allowed" title="No payslip PDF yet">
-                                                <Download size={16} />
-                                            </div>
-                                        )}
+                                        <button 
+                                            onClick={async () => {
+                                                const toastId = toast.loading('Generating premium payslip...');
+                                                try {
+                                                    const { download } = await downloadPayslip({ employee: profile, salary: slip, lineItems: items });
+                                                    download();
+                                                    toast.success('Payslip generated successfully', { id: toastId });
+                                                } catch (err) {
+                                                    console.error(err);
+                                                    toast.error('Failed to generate payslip', { id: toastId });
+                                                }
+                                            }}
+                                            disabled={slip.status !== 'paid' && slip.status !== 'processed'}
+                                            className={`p-2 rounded-lg transition-colors border ${
+                                                (slip.status === 'paid' || slip.status === 'processed')
+                                                    ? 'text-indigo-600 hover:bg-indigo-50 border-indigo-100 cursor-pointer'
+                                                    : 'text-slate-300 border-slate-100 cursor-not-allowed'
+                                            }`}
+                                            title={(slip.status === 'paid' || slip.status === 'processed') ? "Download Payslip PDF" : "Payslip not available yet"}
+                                        >
+                                            <Download size={16} />
+                                        </button>
                                     </div>
                                 </div>
 

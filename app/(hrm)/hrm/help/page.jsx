@@ -271,19 +271,12 @@ export default function HRMHelpPage() {
                         <p className="text-gray-300 text-sm mb-8 leading-relaxed max-w-2xl">
                             If your question isn't answered here, or you're experiencing a technical issue, reach out to the InTrust support team directly.
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3">
                             <a href="mailto:intrustindiadev@gmail.com" className="flex items-center gap-3 p-4 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 group">
                                 <Mail size={18} className="text-emerald-300 shrink-0" />
                                 <div>
                                     <p className="text-xs font-black text-gray-300 uppercase tracking-widest">Email Support</p>
                                     <p className="text-sm font-bold text-white group-hover:text-emerald-200 transition-colors">intrustindiadev@gmail.com</p>
-                                </div>
-                            </a>
-                            <a href="https://wa.me/919953546539" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-white/10 hover:bg-green-500/20 rounded-xl transition-all border border-white/10 group">
-                                <Phone size={18} className="text-green-400 shrink-0" />
-                                <div>
-                                    <p className="text-xs font-black text-gray-300 uppercase tracking-widest">WhatsApp Support</p>
-                                    <p className="text-sm font-bold text-white group-hover:text-green-200 transition-colors">Chat with Support</p>
                                 </div>
                             </a>
                         </div>
