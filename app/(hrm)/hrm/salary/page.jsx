@@ -5,8 +5,7 @@ import { Download, Calculator, CheckCircle2, AlertCircle, RefreshCw, TrendingUp,
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { downloadPayslip } from '@/lib/payslipGenerator';
 import { formatPaiseToINR, INCENTIVE_TYPE_LABELS } from '@/lib/hrm/incentives';
 
 function ProcessModal({ record, approvedIncentives = [], onClose, onSave }) {
@@ -258,21 +257,7 @@ export default function SalaryPage() {
 
   const generatePayslip = async (emp, sal) => {
     try {
-      const toastId = toast.loading('Generating itemized payslip...');
-      const doc = new jsPDF();
-
-      doc.setFontSize(22);
-      doc.setTextColor(16, 185, 129); // Emerald
-      doc.text("Intrust India", 105, 20, { align: "center" });
-
-      doc.setFontSize(14);
-      doc.setTextColor(40, 40, 40);
-      doc.text("Payslip", 105, 30, { align: "center" });
-
-      doc.setFontSize(10);
-      doc.text(`Employee Name: ${emp.full_name}`, 14, 45);
-      doc.text(`Department: ${emp.department || emp.role}`, 14, 52);
-      doc.text(`Month/Year: ${new Date(sal.year, sal.month - 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' })}`, 14, 59);
+      const toastId = toast.loading('Generating premium payslip...');
 
       // Fetch Itemized Payroll Line Items if available
       const { data: lineItems } = await supabase
@@ -280,42 +265,12 @@ export default function SalaryPage() {
         .select('*')
         .eq('salary_record_id', sal.id);
 
-      const fmt = (v) => `Rs. ${Number(v || 0).toLocaleString('en-IN')}`;
-      const tableData = [
-        ["Basic Salary", fmt(sal.base_salary || emp.base_salary)],
-        ["HRA", fmt(sal.hra)],
-      ];
-
-      if (lineItems && lineItems.length > 0) {
-        lineItems.forEach(item => {
-          tableData.push([item.label, fmt(item.amount_paise / 100)]);
-        });
-      } else if (sal.allowances > 0) {
-        tableData.push(["Allowances & Bonuses", fmt(sal.allowances)]);
-      }
-
-      tableData.push(["Deductions", fmt(sal.deductions)]);
-
-      autoTable(doc, {
-        startY: 70,
-        head: [['Component', 'Amount']],
-        body: tableData,
-        theme: 'grid',
-        headStyles: { fillColor: [16, 185, 129] },
-      });
-
-      const finalY = doc.lastAutoTable?.finalY || 150;
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text(`Net Pay: ${fmt(sal.net_salary)}`, 14, finalY + 15);
-
-      const pdfBlob = doc.output('blob');
-      const fileName = `payslip_${emp.id}_${sal.month}_${sal.year}.pdf`;
+      const { blob, fileName, download } = await downloadPayslip({ employee: emp, salary: sal, lineItems });
 
       if (!sal.payslip_url) {
         const { error: uploadError } = await supabase.storage
           .from('payslips')
-          .upload(fileName, pdfBlob, {
+          .upload(fileName, blob, {
             contentType: 'application/pdf',
             upsert: true
           });
@@ -329,12 +284,7 @@ export default function SalaryPage() {
         }
       }
 
-      const url = URL.createObjectURL(pdfBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Payslip_${emp.full_name.replace(/\s+/g, '_')}_${sal.month}_${sal.year}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      download();
 
       toast.success('Payslip generated successfully', { id: toastId });
     } catch (err) {

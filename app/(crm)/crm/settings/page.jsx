@@ -1,7 +1,11 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Settings, Shield, Bell, Lock, Key, User, Camera, CheckCircle2, Mail, Phone, Activity } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '@/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import AvatarCropUploadModal from '@/components/shared/AvatarCropUploadModal';
 import IDCard from '@/components/shared/IDCard';
@@ -15,7 +19,6 @@ export default function CRMSettingsPage() {
 
     useEffect(() => {
         const fetchUser = async () => {
-            const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
             setUser(user);
             if (user) {
@@ -29,7 +32,6 @@ export default function CRMSettingsPage() {
 
     const handleResetPassword = async () => {
         try {
-            const supabase = createClient();
             const { error } = await supabase.auth.resetPasswordForEmail(user?.email, {
                 redirectTo: `${window.location.origin}/auth/callback?next=/crm/settings`,
             });

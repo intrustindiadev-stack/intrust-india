@@ -21,37 +21,55 @@ export default function AutoModePromo({ autoMode, merchant }) {
 
     if (autoMode) {
         return (
-            <div className="w-full h-full min-h-[320px] bg-gradient-to-b from-[#1a1814] to-[#0a0908] p-6 flex flex-col justify-between relative overflow-hidden rounded-[2rem] border border-amber-500/20 shadow-[0_0_40px_rgba(217,160,91,0.05)]">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[80px] rounded-full" />
-                
-                <div className="relative z-10">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full mb-3 backdrop-blur-sm">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                        <span className="text-[10px] uppercase font-black tracking-widest text-amber-400">System Active</span>
-                    </div>
-                    <h2 className="text-3xl md:text-4xl font-medium text-white/90 leading-[1.15] tracking-tight mb-2">
-                        Welcome to <br/>
-                        <span className="text-amber-500/80">Intrust Auto</span> <br/>
-                        System
-                    </h2>
-                </div>
-
-                <div className="relative z-10 w-full flex flex-col items-center gap-3">
-                    <div className="w-[90%] max-w-[300px] py-3 px-4 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full font-bold text-base flex items-center justify-between shadow-[0_0_15px_rgba(217,160,91,0.1)]">
-                        <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                            <span>Active</span>
+            <div className="w-full h-full min-h-[380px] bg-[#0a0a0a] dark:bg-[#050505] p-2 relative overflow-hidden flex flex-col group rounded-[2.5rem]">
+                <motion.div 
+                    className="flex-1 bg-gradient-to-br from-[#1a2e1c] to-[#0a140f] rounded-[2rem] p-6 sm:p-8 flex flex-col relative overflow-hidden z-10 border border-emerald-900/30"
+                    animate={isAnimating ? { opacity: 0, scale: 0.95 } : { opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                >
+                    <div className="absolute right-0 top-0 w-48 h-48 rounded-full bg-emerald-500/10 blur-[60px]" />
+                    <div className="absolute -left-10 bottom-0 w-40 h-40 rounded-full bg-teal-500/10 blur-[50px]" />
+                    
+                    <div className="flex items-center gap-2 mb-6">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full w-fit backdrop-blur-sm">
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-[10px] uppercase font-black tracking-widest text-emerald-400">System Active</span>
                         </div>
                         {daysLeft !== null && (
-                            <div className="flex items-center gap-1 text-xs text-amber-300 bg-amber-500/20 px-2.5 py-1 rounded-full border border-amber-500/30">
-                                <Clock className="w-3.5 h-3.5 animate-pulse" />
-                                <span>{daysLeft > 0 ? `Ends in ${daysLeft}d` : 'Expired'}</span>
+                            <div className="inline-flex items-center gap-1 text-[10px] uppercase font-black tracking-widest text-amber-300 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 backdrop-blur-sm">
+                                <Clock className="w-3 h-3 animate-pulse" />
+                                <span>{daysLeft > 0 ? `${daysLeft}d left` : 'Expired'}</span>
                             </div>
                         )}
                     </div>
-                    <Link href="/merchant/shopping/auto-mode" className="text-sm text-white/50 hover:text-amber-400 transition-colors">
-                        Manage Settings
-                    </Link>
+
+                    <div className="relative z-10 mt-auto mb-8">
+                        <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-medium text-white/90 leading-[1.15] tracking-tight mb-2">
+                            Welcome to <br/>
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-500 font-bold">Auto Mode</span> <br/>
+                            System
+                        </h2>
+                    </div>
+                    
+                    <div className="absolute right-8 bottom-8 w-24 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
+                    <div className="absolute right-20 bottom-4 w-[1px] h-24 bg-gradient-to-b from-transparent via-emerald-500/30 to-transparent" />
+                </motion.div>
+
+                <div className="h-[100px] shrink-0 w-full flex items-center justify-center relative z-20">
+                    <motion.button
+                        onClick={handleRedirect}
+                        whileHover={!isAnimating ? { scale: 1.05, boxShadow: "0px 0px 30px rgba(16, 185, 129, 0.4)" } : {}}
+                        whileTap={!isAnimating ? { scale: 0.95 } : {}}
+                        className="w-16 h-16 bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-300 text-slate-900 rounded-full font-bold shadow-[0_0_20px_rgba(16,185,129,0.2)] flex items-center justify-center relative z-30"
+                    >
+                        {isAnimating ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle2 className="w-7 h-7" strokeWidth={2.5} />}
+                    </motion.button>
+                    {!isAnimating && (
+                        <>
+                            <motion.div animate={{ scale: [1, 1.5], opacity: [0.3, 0] }} transition={{ duration: 2, repeat: Infinity }} className="absolute w-16 h-16 bg-emerald-500/30 rounded-full z-10" />
+                            <motion.div animate={{ scale: [1, 1.8], opacity: [0.2, 0] }} transition={{ duration: 2, delay: 0.5, repeat: Infinity }} className="absolute w-16 h-16 bg-emerald-500/20 rounded-full z-10" />
+                        </>
+                    )}
                 </div>
             </div>
         );

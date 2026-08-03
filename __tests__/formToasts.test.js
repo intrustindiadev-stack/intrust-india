@@ -56,7 +56,7 @@ jest.mock('@/hooks/useWallet', () => ({
     })
 }));
 
-jest.mock('@/components/payment/SabpaisaPaymentModal', () => () => 'SabpaisaPaymentModal');
+
 
 // Mock Lucide Icons
 jest.mock('lucide-react', () => ({

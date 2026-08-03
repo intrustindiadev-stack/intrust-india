@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabaseClient';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useWallet } from '@/hooks/useWallet';
-import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
+import { usePayment } from '@/hooks/usePayment';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import NFC3DCard from '@/components/nfc/NFC3DCard';
@@ -29,10 +29,10 @@ export default function MerchantNFCServicePage() {
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [user, setUser] = useState(null);
     const [kycStatus, setKycStatus] = useState(null);
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [pendingOrderId, setPendingOrderId] = useState(null);
     const [isSuccess, setIsSuccess] = useState(false);
     const [hasExistingOrder, setHasExistingOrder] = useState(false);
+    const { initiatePayment } = usePayment();
 
     useEffect(() => {
         const init = async () => {
@@ -118,7 +118,22 @@ export default function MerchantNFCServicePage() {
                 toast.success("NFC Card ordered successfully via Wallet!");
             } else {
                 setPendingOrderId(result.orderId);
-                setShowPaymentModal(true);
+                toast.loading('Redirecting to payment gateway...', { id: 'pg-redirect' });
+                
+                try {
+                    await initiatePayment({
+                        amount: totalAmount,
+                        payerName: formData.cardHolderName || user?.user_metadata?.full_name || "User",
+                        payerEmail: user?.email || "merchant@intrustindia.com",
+                        payerMobile: formData.phone,
+                        udf1: "NFC_ORDER",
+                        udf2: result.orderId,
+                        udf3: formData.deliveryAddress
+                    });
+                } catch (err) {
+                    toast.error(err.message || 'Payment initiation failed', { id: 'pg-redirect' });
+                    setIsSubmitting(false);
+                }
             }
         } catch (err) {
             console.error('Order Error:', err);
@@ -434,29 +449,8 @@ export default function MerchantNFCServicePage() {
                     <span className={`font-black ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>25 working days</span>{' '}
                     from the date of order confirmation. Delivery timelines may vary based on your location.
                 </p>
+                </p>
             </div>
-
-            {/* Payment Modal */}
-            {user && (
-                <SabpaisaPaymentModal
-                    isOpen={showPaymentModal}
-                    onClose={() => setShowPaymentModal(false)}
-                    amount={totalAmount}
-                    user={user}
-                    productInfo={{
-                        id: pendingOrderId || 'nfc_generic',
-                        title: `InTrust One (NFC) - for ${formData.cardHolderName}`,
-                    }}
-                    metadata={{
-                        type: 'nfc_order',
-                        orderId: pendingOrderId,
-                        phone: formData.phone,
-                        address: formData.deliveryAddress,
-                        card_holder: formData.cardHolderName
-                    }}
-                    initialMethod={paymentMethod === 'wallet' ? 'intrust_wallet' : 'gateway'}
-                />
-            )}
         </div>
     );
 }

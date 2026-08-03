@@ -17,7 +17,7 @@ import { useTheme } from "@/lib/contexts/ThemeContext";
 import CouponCodeReveal from "./CouponCodeReveal";
 import { generateOrderInvoice } from "@/lib/invoiceGenerator";
 
-const FILTER_OPTIONS = ['All', 'Shopping', 'NFC Cards', 'Gift Cards'];
+const FILTER_OPTIONS = ['All', 'Shopping', 'NFC Cards', 'Gift Cards', 'Solar'];
 
 const OrdersClient = ({ userId }) => {
   const searchParams = useSearchParams();
@@ -26,6 +26,7 @@ const OrdersClient = ({ userId }) => {
   const [groups, setGroups] = useState([]);
   const [nfcOrders, setNfcOrders] = useState([]);
   const [giftCards, setGiftCards] = useState([]);
+  const [solarLeads, setSolarLeads] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   
@@ -102,11 +103,13 @@ const OrdersClient = ({ userId }) => {
       const nfcPromise = fetch('/api/nfc/orders').then(r => r.json()).catch(() => ({ orders: [] }));
       const giftcardsPromise = supabase.from('orders').select(`id, amount, created_at, payment_method, coupons:coupons!orders_giftcard_id_fkey(id, brand, title, selling_price_paise, face_value_paise, status, purchased_at, valid_until, merchant_id, merchant:merchants(business_name))`).eq('user_id', userId).eq('payment_status', 'paid').order('created_at', { ascending: false });
       const udhariPromise = supabase.from('udhari_requests').select(`id, coupon_id, status, due_date, amount_paise, duration_days, coupons:coupons!udhari_requests_coupon_id_fkey(id, brand, title, selling_price_paise, face_value_paise, status, valid_until, merchant_id, merchant:merchants(business_name))`).eq('customer_id', userId).eq('status', 'approved').order('created_at', { ascending: false });
+      const solarPromise = supabase.from('solar_leads').select('*').eq('user_id', userId).order('created_at', { ascending: false });
 
-      const [shoppingRes, nfcRes, giftcardsRes, udhariRes] = await Promise.all([shoppingPromise, nfcPromise, giftcardsPromise, udhariPromise]);
+      const [shoppingRes, nfcRes, giftcardsRes, udhariRes, solarRes] = await Promise.all([shoppingPromise, nfcPromise, giftcardsPromise, udhariPromise, solarPromise]);
 
       setGroups(shoppingRes.data || []);
       setNfcOrders(nfcRes.orders || []);
+      setSolarLeads(solarRes.data || []);
       
       const formattedGc = [];
       (giftcardsRes.data || []).forEach(order => {
@@ -134,8 +137,9 @@ const OrdersClient = ({ userId }) => {
     if (activeFilter === 'All' || activeFilter === 'Shopping') combined = [...combined, ...groups.map(o => ({ ...o, _type: 'shopping' }))];
     if (activeFilter === 'All' || activeFilter === 'NFC Cards') combined = [...combined, ...nfcOrders.map(o => ({ ...o, _type: 'nfc' }))];
     if (activeFilter === 'All' || activeFilter === 'Gift Cards') combined = [...combined, ...giftCards.map(o => ({ ...o, _type: 'giftcard' }))];
+    if (activeFilter === 'All' || activeFilter === 'Solar') combined = [...combined, ...solarLeads.map(o => ({ ...o, _type: 'solar' }))];
     return combined.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  }, [activeFilter, groups, nfcOrders, giftCards]);
+  }, [activeFilter, groups, nfcOrders, giftCards, solarLeads]);
 
   const getNfcStatusConfig = (status, paymentStatus) => {
     if (paymentStatus === 'pending') return { icon: Clock, label: 'Payment Pending', color: 'text-amber-500', bg: isDark ? 'bg-amber-500/10' : 'bg-amber-50' };
@@ -147,9 +151,18 @@ const OrdersClient = ({ userId }) => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-        <div className="w-10 h-10 border-4 border-slate-200 dark:border-white/10 border-t-blue-600 dark:border-t-blue-500 rounded-full animate-spin"></div>
-        <p className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Loading your orders...</p>
+      <div className="max-w-4xl mx-auto space-y-6 pb-12 animate-pulse mt-4">
+        <div className={`h-40 rounded-[2rem] sm:rounded-[3rem] ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
+        <div className="flex gap-2 pb-2 pt-2">
+            {[1, 2, 3, 4].map(i => (
+                <div key={i} className={`h-10 w-24 rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
+            ))}
+        </div>
+        <div className="space-y-5">
+            {[1, 2, 3].map(i => (
+                <div key={i} className={`h-48 rounded-[2rem] ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
+            ))}
+        </div>
       </div>
     );
   }
@@ -197,9 +210,9 @@ const OrdersClient = ({ userId }) => {
       </div>
 
       {allOrders.length === 0 ? (
-        <div className={`text-center py-20 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] border mt-4 ${isDark ? 'bg-[#0c0e16] border-white/[0.04]' : 'bg-white border-slate-100'}`}>
-          <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 ${isDark ? 'bg-blue-600/10 text-blue-500' : 'bg-blue-50 text-blue-600'}`}>
-            <ShoppingBag size={40} />
+        <div className={`text-center py-20 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] border mt-4 ${isDark ? 'bg-[#0c0e16] border-white/[0.04]' : 'bg-white border-slate-100'} flex flex-col items-center`}>
+          <div className="relative w-48 h-48 sm:w-56 sm:h-56 mx-auto mb-6">
+              <Image src="/intrust_delivery_graphic.png" alt="No Orders Graphic" fill className="object-contain drop-shadow-xl" unoptimized />
           </div>
           <h3 className={`text-2xl font-black mb-2 tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>No orders found</h3>
           <p className={`text-sm mb-8 max-w-xs mx-auto ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Looks like you haven't made any purchases for this category yet.</p>
@@ -290,6 +303,9 @@ const OrdersClient = ({ userId }) => {
                           </div>
                           <p className={`text-xs font-mono shrink-0 ${isDark ? 'text-white/20' : 'text-slate-400'}`}>#{order.id?.slice(-6).toUpperCase()}</p>
                       </div>
+                      <div className={`p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-center gap-4 ${isDark ? 'bg-white/[0.01] border-t border-white/[0.04]' : 'bg-slate-50 border-t border-slate-100'}`}>
+                          <Link href={`/orders/${order.id}`} className="w-full sm:w-auto text-center px-6 py-2.5 bg-transparent border hover:bg-slate-50 dark:hover:bg-white/5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all" style={{ borderColor: primaryColor, color: primaryColor }}>View Details</Link>
+                      </div>
                   </div>
               );
             }
@@ -348,9 +364,64 @@ const OrdersClient = ({ userId }) => {
                               >
                                   <Download size={14} /> Download Invoice
                               </button>
+                              <Link href={`/orders/${order.id}`} className={`w-full mt-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center border transition-all ${isDark ? 'border-indigo-500/50 text-indigo-400 hover:bg-indigo-500/10' : 'border-indigo-200 text-indigo-600 hover:bg-indigo-50'}`}>
+                                  View Details
+                              </Link>
                           </div>
                       </div>
                   </div>
+                );
+            }
+            if (order._type === 'solar') {
+                const getStatusColor = (s) => {
+                    if (s === 'new') return isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-800';
+                    if (s === 'contacted') return isDark ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-800';
+                    if (s === 'converted') return isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-800';
+                    if (s === 'lost') return isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-800';
+                    return isDark ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-800';
+                };
+
+                return (
+                    <div key={`solar_${order.id}`} className={`relative overflow-hidden rounded-[2rem] border shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] transition-all ${isDark ? 'bg-[#0c0e16] border-white/[0.04]' : 'bg-white border-slate-100'}`}>
+                        <div className={`p-5 sm:p-6 border-b ${isDark ? 'border-white/[0.04] bg-white/[0.01]' : 'border-slate-100 bg-slate-50'}`}>
+                            <div className="flex flex-col sm:flex-row justify-between gap-4">
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-3 mb-2">
+                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${getStatusColor(order.status)}`}>
+                                            {order.status || 'New'}
+                                        </span>
+                                        <span className={`text-xs font-bold uppercase tracking-wider opacity-60 ${isDark ? 'text-white' : 'text-slate-500'}`}>
+                                            Inquiry #{order.id.slice(0, 8)}
+                                        </span>
+                                    </div>
+                                    <div className={`flex flex-wrap items-center gap-y-1.5 gap-x-4 text-xs font-semibold ${isDark ? 'text-white/40' : 'text-slate-500'}`}>
+                                        <span className="flex items-center gap-1.5"><Clock size={14} /> {format(new Date(order.created_at), "dd MMM yyyy, h:mm a")}</span>
+                                        <span className="flex items-center gap-1.5"><MapPin size={14} /> {order.address ? (order.address.slice(0, 30) + (order.address.length > 30 ? '...' : '')) : order.city}</span>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-start sm:items-end">
+                                    <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-white/30' : 'text-slate-400'}`}>Est. Bill</p>
+                                    <p className={`text-xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                        {order.monthly_bill_range}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className={`p-5 sm:p-6 flex items-center justify-between gap-4 ${isDark ? 'bg-white/5' : 'bg-slate-50'}`}>
+                            <div className="flex items-center gap-3">
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isDark ? 'bg-amber-500/20 text-amber-500' : 'bg-amber-100 text-amber-600'}`}>
+                                    <Zap size={24} />
+                                </div>
+                                <div>
+                                    <h4 className={`font-black text-sm sm:text-base leading-snug tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>Solar Panel Request</h4>
+                                    <div className={`text-[10px] sm:text-xs font-bold capitalize ${isDark ? 'text-white/40' : 'text-slate-500'}`}>{order.property_type} Property</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className={`p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-center gap-4 ${isDark ? 'bg-white/[0.01] border-t border-white/[0.04]' : 'bg-slate-50 border-t border-slate-100'}`}>
+                            <Link href={`/orders/${order.id}`} className="w-full sm:w-auto text-center px-6 py-2.5 bg-transparent border hover:bg-slate-50 dark:hover:bg-white/5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all" style={{ borderColor: primaryColor, color: primaryColor }}>View Details</Link>
+                        </div>
+                    </div>
                 );
             }
             return null;

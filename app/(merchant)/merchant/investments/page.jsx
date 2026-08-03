@@ -10,7 +10,7 @@ import {
 import InvestmentAnalytics from '@/components/merchant/investment/InvestmentAnalytics';
 import AIGrowHowItWorks from '@/components/merchant/investment/AIGrowHowItWorks';
 import FundROICard from '@/components/merchant/investment/FundROICard';
-import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
+import { usePayment } from '@/hooks/usePayment';
 
 function AnimatedNumber({ value, decimals = 0, prefix = '₹' }) {
     const [display, setDisplay] = useState(0);
@@ -39,7 +39,6 @@ export default function AIGrowPage() {
     const [loading, setLoading] = useState(true);
     const [isRevealed, setIsRevealed] = useState(false);
     const [showModal, setShowModal] = useState(false);
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [amount, setAmount] = useState('');
     const [desc, setDesc] = useState('');
     const [processing, setProcessing] = useState(false);
@@ -47,6 +46,7 @@ export default function AIGrowPage() {
     const [selectedInv, setSelectedInv] = useState(null);
     const [mobileTab, setMobileTab] = useState('overview');
     const [user, setUser] = useState(null);
+    const { initiatePayment, loading: paymentLoading } = usePayment();
 
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
@@ -448,11 +448,24 @@ export default function AIGrowPage() {
                                 <button onClick={() => setShowModal(false)} className="w-9 h-9 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all text-sm font-bold">✕</button>
                             </div>
 
-                            <form onSubmit={(e) => {
+                            <form onSubmit={async (e) => {
                                 e.preventDefault();
                                 if (Number(amount) < 10000) return showToast('Minimum ₹10,000 required', 'error');
                                 setShowModal(false);
-                                setShowPaymentModal(true);
+                                
+                                showToast('Redirecting to payment gateway...', 'loading');
+                                try {
+                                    await initiatePayment({
+                                        amount: Number(amount).toFixed(2),
+                                        payerName: user?.user_metadata?.full_name || "Merchant",
+                                        payerEmail: user?.email || "merchant@intrustindia.com",
+                                        payerMobile: user?.phone || "9999999999",
+                                        udf1: "MERCHANT_AIGROW",
+                                        udf2: desc || 'AI Grow Request'
+                                    });
+                                } catch (err) {
+                                    showToast(err.message || 'Payment initiation failed', 'error');
+                                }
                             }} className="space-y-5">
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount (₹)</label>
@@ -469,28 +482,15 @@ export default function AIGrowPage() {
                                         className="w-full bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all min-h-[90px] resize-none" />
                                 </div>
                                 <button type="submit"
+                                    disabled={paymentLoading}
                                     className="w-full bg-gradient-to-r from-[#1e3a5f] to-indigo-700 hover:opacity-90 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 text-[11px] uppercase tracking-widest flex items-center justify-center gap-2">
-                                    <Plus size={16} /> Pay Now
+                                    {paymentLoading ? 'Processing...' : <><Plus size={16} /> Pay Now</>}
                                 </button>
                             </form>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Payment Modal */}
-            <SabpaisaPaymentModal
-                isOpen={showPaymentModal}
-                onClose={() => {
-                    setShowPaymentModal(false);
-                    setAmount('');
-                    setDesc('');
-                }}
-                amount={amount}
-                user={user}
-                productInfo="AI Grow Request"
-                metadata={{ type: "merchant_aigrow", description: desc || 'AI Grow Request' }}
-            />
         </div>
     );
 }
