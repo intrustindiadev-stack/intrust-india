@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Clock, Calendar, FileText, BookOpen, User, X, LogOut, Loader2, Shield, Users, LayoutDashboard, Gift, HelpCircle, ChevronRight } from 'lucide-react';
+import { Home, Clock, Calendar, FileText, BookOpen, User, X, LogOut, Loader2, Shield, Users, LayoutDashboard, Gift, HelpCircle, ChevronRight, FolderOpen } from 'lucide-react';
 import { useState } from 'react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { createClient } from '@/lib/supabaseClient';
@@ -47,6 +47,7 @@ export default function EmployeeSidebar({ isOpen, setIsOpen, userProfile }) {
         { name: 'Payslips', icon: FileText, path: '/employee/payslips' },
         { name: 'Incentives', icon: Gift, path: '/employee/incentives' },
         { name: 'Training', icon: BookOpen, path: '/employee/training' },
+        { name: 'Documents & KYC', icon: FolderOpen, path: '/employee/documents' },
         { name: 'My Profile', icon: User, path: '/employee/profile' },
     ];
 

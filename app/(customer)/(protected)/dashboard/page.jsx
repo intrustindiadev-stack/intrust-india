@@ -21,7 +21,6 @@ import { supabase } from '@/lib/supabaseClient';
 import GoldBadge from '@/components/ui/GoldBadge';
 import { TrackOrdersCard, KYCRedirectCard } from '@/components/dashboard/SidebarCards';
 
-import ReferralGenzSection from '@/components/customer/dashboard/ReferralGenzSection';
 import { displayName } from '@/lib/auth';
 
 import DashboardStats from '@/components/customer/dashboard/DashboardStats';

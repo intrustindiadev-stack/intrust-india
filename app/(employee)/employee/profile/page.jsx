@@ -146,29 +146,16 @@ export default function EmployeeProfilePage() {
                             className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/40 dark:shadow-none overflow-hidden"
                         >
                             <div className="p-8 pb-4">
-                                <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Account Activity</h3>
+                                <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Security & Audit logs</h3>
                                 <p className="text-sm font-bold text-gray-400 mt-1 uppercase tracking-widest">Recent events</p>
                             </div>
                             <div className="p-8 pt-2">
-                                <div className="space-y-6">
-                                    {[
-                                        { title: 'Clocked In', time: 'Today at 09:02 AM', icon: Clock, color: 'text-blue-500', bg: 'bg-blue-50' },
-                                        { title: 'Profile Updated', time: 'Yesterday at 14:30 PM', icon: Edit3, color: 'text-sky-500', bg: 'bg-sky-50' },
-                                        { title: 'Security Check Passed', time: 'Last Week', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                                    ].map((item, i) => (
-                                        <div key={i} className="flex items-center gap-4 group">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${item.bg} ${item.color}`}>
-                                                <item.icon size={16} />
-                                            </div>
-                                            <div className="flex-1">
-                                                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">{item.title}</h4>
-                                                <p className="text-xs font-semibold text-gray-400 mt-0.5">{item.time}</p>
-                                            </div>
-                                            <button className="w-8 h-8 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center text-gray-300 dark:text-gray-600 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-all">
-                                                <ChevronRight size={16} />
-                                            </button>
-                                        </div>
-                                    ))}
+                                <div className="text-center py-6 px-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-800">
+                                    <div className="w-12 h-12 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm mx-auto mb-3">
+                                        <Shield size={20} className="text-emerald-500" />
+                                    </div>
+                                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Your account is secure</p>
+                                    <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">Detailed audit logs are maintained securely by the HR administration system.</p>
                                 </div>
                             </div>
                         </motion.div>

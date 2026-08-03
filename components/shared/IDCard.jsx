@@ -1,18 +1,28 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Camera, CheckCircle2, Activity } from 'lucide-react';
+import { Camera, Activity } from 'lucide-react';
 import { useState } from 'react';
 
 const ROLE_LABELS = {
-    employee: 'Employee', sales_exec: 'Sales Executive', sales_manager: 'Sales Manager',
-    hr_manager: 'HR Manager', admin: 'Admin', super_admin: 'Super Admin',
+    employee: 'Employee', 
+    relationship_exec: 'Relationship Executive', 
+    relationship_manager: 'Relationship Manager',
+    hr_manager: 'HR Manager', 
+    admin: 'Admin', 
+    super_admin: 'Super Admin',
+    freelancer: 'Freelancer',
+    video_editor: 'Video Editor',
+    social_media_manager: 'Social Media Manager',
+    seo_specialist: 'SEO Specialist',
+    advertiser: 'Advertiser',
+    support_agent: 'Support Agent',
 };
 
 const COLOR_MAP = {
     employee: 'from-sky-500 to-blue-600 shadow-blue-500/20',
-    sales_exec: 'from-blue-500 to-indigo-600 shadow-indigo-500/20',
-    sales_manager: 'from-cyan-500 to-blue-600 shadow-cyan-500/20',
+    relationship_exec: 'from-blue-500 to-indigo-600 shadow-indigo-500/20',
+    relationship_manager: 'from-cyan-500 to-blue-600 shadow-cyan-500/20',
     hr_manager: 'from-emerald-500 to-teal-600 shadow-emerald-500/20',
     admin: 'from-violet-500 to-purple-600 shadow-violet-500/20',
     super_admin: 'from-slate-700 to-slate-900 shadow-slate-900/20',
@@ -35,7 +45,7 @@ export default function IDCard({ profile, onOpenAvatarModal }) {
             <div className="absolute inset-0 bg-gradient-to-tr from-sky-400 via-blue-500 to-indigo-600 rounded-[2.5rem] blur-2xl opacity-40 animate-pulse pointer-events-none" />
 
             {/* ID Card Container */}
-            <div className={`relative z-10 bg-gradient-to-br ${bgGradient} rounded-[2rem] p-8 text-white shadow-2xl shadow-blue-900/20 dark:shadow-black/50 border border-white/20 backdrop-blur-xl flex flex-col items-center pb-12 overflow-hidden hover:-translate-y-2 transition-transform duration-500 cursor-default`}>
+            <div className={`relative z-10 bg-gradient-to-br ${bgGradient} rounded-[2rem] p-8 text-white shadow-2xl shadow-blue-900/20 dark:shadow-black/50 border border-white/20 backdrop-blur-xl flex flex-col items-center overflow-hidden hover:-translate-y-2 transition-transform duration-500 cursor-default`}>
                 {/* Card Decorative Mesh */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none" />
@@ -72,15 +82,11 @@ export default function IDCard({ profile, onOpenAvatarModal }) {
                             </div>
                         )}
                     </div>
-                    {/* Verification Badge */}
-                    <div className="absolute bottom-0 right-0 w-9 h-9 bg-blue-600 rounded-full shadow-xl border-[3px] border-white flex items-center justify-center">
-                        <CheckCircle2 size={18} className="text-white" fill="white" />
-                    </div>
                 </div>
 
                 {/* Details */}
-                <div className="text-center w-full">
-                    <h2 className="text-2xl font-black tracking-tight leading-tight">{profile?.full_name || 'Your Name'}</h2>
+                <div className="text-center w-full pb-2">
+                    <h2 className="text-2xl font-black tracking-tight leading-tight">{profile?.full_name || 'Not Provided'}</h2>
                     <p className="text-sm font-bold text-white/80 mt-1 uppercase tracking-widest">{ROLE_LABELS[userRole] || 'Team Member'}</p>
                     
                     <div className="mt-6 w-full h-[1px] bg-white/20 rounded-full" />
@@ -88,24 +94,19 @@ export default function IDCard({ profile, onOpenAvatarModal }) {
                     <div className="mt-4 flex flex-col gap-2">
                         <div className="flex justify-between items-center text-xs font-bold font-mono text-white/90">
                             <span className="opacity-60 uppercase">Emp ID</span>
-                            <span>INT-{profile?.id?.substring(0, 6).toUpperCase() || '000000'}</span>
+                            <span>{profile?.employee_id || (profile?.id ? `INT-${profile.id.substring(0, 6).toUpperCase()}` : 'NOT ASSIGNED')}</span>
                         </div>
-                        <div className="flex justify-between items-center text-xs font-bold font-mono text-white/90">
-                            <span className="opacity-60 uppercase">Blood Grp</span>
-                            <span>{profile?.blood_group || 'O+'}</span>
-                        </div>
+                        {profile?.blood_group && (
+                            <div className="flex justify-between items-center text-xs font-bold font-mono text-white/90">
+                                <span className="opacity-60 uppercase">Blood Grp</span>
+                                <span>{profile.blood_group}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between items-center text-xs font-bold font-mono text-white/90">
                             <span className="opacity-60 uppercase">Issued</span>
-                            <span>{new Date().getFullYear()}</span>
+                            <span>{profile?.identity_issued_at ? new Date(profile.identity_issued_at).getFullYear() : new Date().getFullYear()}</span>
                         </div>
                     </div>
-                </div>
-
-                {/* Barcode Footer */}
-                <div className="absolute bottom-0 inset-x-0 h-16 bg-white flex items-center justify-center gap-2 rounded-b-[2rem]">
-                    {[...Array(24)].map((_, i) => (
-                        <div key={i} className={`h-8 bg-black rounded-sm ${i % 3 === 0 ? 'w-2' : i % 2 === 0 ? 'w-1' : 'w-0.5'}`} />
-                    ))}
                 </div>
 
                 {/* Glossy Overlay */}

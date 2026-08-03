@@ -85,19 +85,20 @@ export async function GET(request) {
           policy: pol
         };
       } else {
-        // Balance not initialized yet for this employee (e.g. newly added policy)
+        // Balance not initialized yet for this employee by HR
         balancesByType[pol.leave_type_key] = {
           id: null,
+          is_unallocated: true,
           employee_id: user.id,
           policy_year: policyYear,
           leave_type: pol.leave_type_key,
-          entitled_days: pol.annual_entitlement,
+          entitled_days: 0,
           carried_forward_days: 0,
           accrued_days: 0,
           used_days: 0,
           reserved_days: 0,
           adjustment_days: 0,
-          available_days: pol.annual_entitlement,
+          available_days: 0,
           policy: pol
         };
       }

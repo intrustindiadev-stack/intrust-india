@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Clock, RefreshCw, MapPin, AlertTriangle, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useAttendanceActions } from '@/hooks/useAttendanceActions';
 
 import MetricCard from '@/components/hrm/MetricCard';
 import StatusBadge from '@/components/hrm/StatusBadge';
@@ -13,7 +14,7 @@ import { getLocationStatusBadge } from '@/lib/hrm/attendance';
 export default function EmployeeAttendancePage() {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [clocking, setClocking] = useState(false);
+
   const [now, setNow] = useState(new Date());
   const abortControllerRef = useRef(null);
 
@@ -56,76 +57,7 @@ export default function EmployeeAttendancePage() {
     };
   }, [fetchSummary]);
 
-  const getCoordinates = () => {
-    return new Promise((resolve) => {
-      if (typeof window === 'undefined' || !navigator.geolocation) {
-        resolve(null);
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => resolve(null),
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
-    });
-  };
-
-  const handleClockIn = async () => {
-    setClocking(true);
-    try {
-      const coords = await getCoordinates();
-      const res = await fetch('/api/employee/attendance/clock-in', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat: coords?.lat ?? null, lng: coords?.lng ?? null })
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Clock in failed');
-
-      toast.success(result.record?.is_onsite ? 'Clocked in (On-Site)' : 'Clocked in (Off-Site/WFH)');
-      fetchSummary();
-    } catch (err) {
-      toast.error(err.message || 'Clock in failed');
-    } finally {
-      setClocking(false);
-    }
-  };
-
-  const handleClockOut = async () => {
-    setClocking(true);
-    try {
-      const coords = await getCoordinates();
-      const res = await fetch('/api/employee/attendance/clock-out', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat: coords?.lat ?? null, lng: coords?.lng ?? null })
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Clock out failed');
-
-      toast.success('Shift completed. Clocked out successfully!');
-      fetchSummary();
-    } catch (err) {
-      toast.error(err.message || 'Clock out failed');
-    } finally {
-      setClocking(false);
-    }
-  };
-
-  const handleReconcileStale = async () => {
-    setClocking(true);
-    try {
-      const res = await fetch('/api/employee/attendance/force-close', { method: 'POST' });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Reconciliation failed');
-      toast.success('Stale shift auto-reconciled.');
-      fetchSummary();
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setClocking(false);
-    }
-  };
+  const { clocking, handleClockIn, handleClockOut, handleForceCheckoutPrevious } = useAttendanceActions(fetchSummary);
 
   const openShift = data?.open_shift;
   const metrics = data?.metrics;
@@ -281,7 +213,7 @@ export default function EmployeeAttendancePage() {
           <div className="flex items-center gap-3">
             {openShift ? (
               <button
-                onClick={handleClockOut}
+                onClick={() => handleClockOut(openShift.id)}
                 disabled={clocking}
                 className="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50 flex items-center gap-2 shadow-xs"
               >
