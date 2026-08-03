@@ -73,7 +73,7 @@ async function verifyAdminCaller() {
 
 /**
  * Fetches all users who can be assigned CRM leads
- * (sales_exec, sales_manager, admin, super_admin)
+ * (relationship_exec, relationship_manager, admin, super_admin)
  * 
  * @returns {Promise<{data?: Array<{id: string, full_name: string, role: string, email: string}>, error?: string}>}
  */

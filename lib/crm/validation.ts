@@ -63,3 +63,28 @@ export const CrmIntentLogSchema = z.object({
     deal_value: z.number().min(0, 'Deal value cannot be negative').default(0),
     status: z.enum(['pitched', 'negotiating', 'agreed', 'rejected']).default('pitched'),
 });
+
+export const LeadFilterSchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(200).default(20),
+    search: z.string().max(100).optional().default(''),
+    status: z.union([z.string(), z.array(z.string())]).optional(),
+    assignee: z.union([z.string(), z.array(z.string())]).optional(),
+    source: z.union([z.string(), z.array(z.string())]).optional(),
+    temperature: z.union([z.string(), z.array(z.string())]).optional(),
+    sort: z.enum(['newest', 'oldest', 'recently_updated', 'name_asc', 'value_desc', 'value_asc', 'next_followup']).default('newest'),
+    minDealValue: z.coerce.number().min(0).optional(),
+    maxDealValue: z.coerce.number().min(0).optional(),
+    fromDate: z.string().datetime().optional(),
+    toDate: z.string().datetime().optional(),
+    includeArchived: z.coerce.boolean().default(false),
+});
+
+export const BulkAssignSchema = z.object({
+    selectAllMatching: z.boolean().default(false),
+    explicitIds: z.array(z.string().uuid('Invalid UUID')).max(5000).default([]),
+    excludedIds: z.array(z.string().uuid('Invalid UUID')).max(5000).default([]),
+    newRepId: z.string().uuid('Invalid rep ID').nullable(),
+    filters: LeadFilterSchema.optional(),
+});
+

@@ -65,7 +65,7 @@ export async function POST(request) {
             .eq('id', agentId)
             .maybeSingle();
 
-        const allowedRoles = ['sales_exec', 'sales_manager', 'admin', 'super_admin', 'relationship_manager', 'employee'];
+        const allowedRoles = ['relationship_exec', 'relationship_manager', 'admin', 'super_admin', 'employee'];
         if (profile?.role && !allowedRoles.includes(profile.role)) {
             return NextResponse.json(
                 { error: { type: 'forbidden', message: 'You do not have permission to send WhatsApp templates.' } },

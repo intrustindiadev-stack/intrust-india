@@ -93,6 +93,7 @@ export default function NFCOrderForm({ setIsSuccess }) {
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
         if (!user) { toast.error('Please sign in to continue.'); return; }
         if (!paymentMethod) { toast.error('Select a payment method.'); return; }
         setIsSubmitting(true);
@@ -125,6 +126,7 @@ export default function NFCOrderForm({ setIsSuccess }) {
                 toast.success('Order placed! Paid via InTrust Wallet.');
                 fetchBalance();
                 if (setIsSuccess) setIsSuccess(true);
+                setIsSubmitting(false);
             } else {
                 toast.loading('Redirecting to payment gateway...', { id: 'pg-redirect' });
                 
@@ -138,6 +140,8 @@ export default function NFCOrderForm({ setIsSuccess }) {
                         udf2: data.orderId || 'nfc_order_payment',
                         udf3: formData.deliveryAddress
                     });
+                    // Intentionally NOT setting isSubmitting to false here,
+                    // so the button stays disabled while the page redirects.
                 } catch (err) {
                     toast.error(err.message || 'Payment initiation failed', { id: 'pg-redirect' });
                     setIsSubmitting(false);
@@ -145,7 +149,6 @@ export default function NFCOrderForm({ setIsSuccess }) {
             }
         } catch (error) {
             toast.error('Something went wrong.');
-        } finally {
             setIsSubmitting(false);
         }
     };

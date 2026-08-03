@@ -449,7 +449,6 @@ export default function MerchantNFCServicePage() {
                     <span className={`font-black ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>25 working days</span>{' '}
                     from the date of order confirmation. Delivery timelines may vary based on your location.
                 </p>
-                </p>
             </div>
         </div>
     );

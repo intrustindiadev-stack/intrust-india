@@ -120,7 +120,7 @@ export default function CRMSettingsPage() {
                         {/* Avatar Section */}
                         <div className="flex flex-col md:flex-row items-center sm:items-start gap-10 p-6 bg-slate-50/50 rounded-[2rem] border border-slate-100">
                             <IDCard 
-                                profile={profile || { ...user?.user_metadata, role: 'sales_exec' }}
+                                profile={profile || { ...user?.user_metadata, role: 'relationship_exec' }}
                                 onOpenAvatarModal={() => setIsAvatarModalOpen(true)}
                             />
                             <div className="flex-1 w-full space-y-4">
