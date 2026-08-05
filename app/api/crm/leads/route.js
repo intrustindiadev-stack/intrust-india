@@ -63,6 +63,9 @@ export async function GET(request) {
             query = query.is('archived_at', null);
         }
 
+        // Exclude App Users from the CRM leads page
+        query = query.neq('source', 'App User');
+
         // Apply filters
         if (filters.status && filters.status.length > 0) {
             query = query.in('status', filters.status);

@@ -26,6 +26,9 @@ export const CrmLeadCreateSchema = z.object({
     deal_value: z.number().min(0, 'Deal value cannot be negative').default(0),
     notes: z.string().max(2000, 'Notes are too long').optional().or(z.literal('')),
     assigned_to: z.string().uuid().nullable().optional().or(z.literal('')),
+    state: z.string().max(100, 'State name is too long').optional().or(z.literal('')),
+    city: z.string().max(100, 'City name is too long').optional().or(z.literal('')),
+    area: z.string().max(150, 'Area name is too long').optional().or(z.literal('')),
 });
 
 export const CrmLeadUpdateSchema = CrmLeadCreateSchema.partial().extend({
@@ -39,6 +42,9 @@ export const CrmLeadCsvRowSchema = z.object({
     email: z.string().refine(val => !val || emailRegex.test(val), 'Invalid email format').nullable().optional(),
     source: z.string().optional(),
     notes: z.string().optional(),
+    state: z.string().optional(),
+    city: z.string().optional(),
+    area: z.string().optional(),
 });
 
 export const CrmTaskCreateSchema = z.object({

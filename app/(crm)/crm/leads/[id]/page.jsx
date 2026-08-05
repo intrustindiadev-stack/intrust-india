@@ -486,6 +486,17 @@ export default function LeadDetailPage({ params }) {
                                                 <div className="p-3 rounded-2xl bg-gray-50 dark:bg-gray-900 text-gray-400"><Building size={18} /></div>
                                                 <p className="text-sm font-black text-gray-900 dark:text-white">{lead.title || 'N/A'}</p>
                                             </div>
+                                            {(lead.state || lead.city || lead.area) && (
+                                                <div className="flex items-start gap-4">
+                                                    <div className="p-3 rounded-2xl bg-gray-50 dark:bg-gray-900 text-gray-400"><MapPin size={18} /></div>
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Location</p>
+                                                        <p className="text-sm font-black text-gray-900 dark:text-white">
+                                                            {[lead.area, lead.city, lead.state].filter(Boolean).join(', ')}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="space-y-6">
@@ -849,6 +860,9 @@ function EditLeadModal({ lead, salesTeam, currentUserProfile, onClose, onSave })
         temperature: lead.temperature || 'warm',
         deal_value: lead.deal_value || 0,
         assigned_to: lead.assigned_to || '',
+        state: lead.state || '',
+        city: lead.city || '',
+        area: lead.area || '',
     });
     const [saving, setSaving] = useState(false);
     const isManagerOrAdmin = ['relationship_manager', 'admin', 'super_admin'].includes(currentUserProfile?.role);
@@ -910,6 +924,18 @@ function EditLeadModal({ lead, salesTeam, currentUserProfile, onClose, onSave })
                         <div>
                             <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Expected Deal Value (₹)</label>
                             <input type="number" value={form.deal_value} onChange={e => setForm({...form, deal_value: Number(e.target.value)})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">State</label>
+                            <input type="text" value={form.state} onChange={e => setForm({...form, state: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">City</label>
+                            <input type="text" value={form.city} onChange={e => setForm({...form, city: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Area</label>
+                            <input type="text" value={form.area} onChange={e => setForm({...form, area: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Status</label>

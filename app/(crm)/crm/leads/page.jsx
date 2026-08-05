@@ -13,9 +13,8 @@ import LeadMobileCard from '@/components/crm/leads/LeadMobileCard';
 import BulkActionBar from '@/components/crm/leads/BulkActionBar';
 import BulkAssignDialog from '@/components/crm/leads/BulkAssignDialog';
 import LeadsPagination from '@/components/crm/leads/LeadsPagination';
-// Add/Import modals placeholder
-// import ImportLeadsDrawer from '@/components/crm/leads/ImportLeadsDrawer';
-// import AddLeadDrawer from '@/components/crm/leads/AddLeadDrawer';
+import ImportLeadsDrawer from '@/components/crm/leads/ImportLeadsDrawer';
+import AddLeadDrawer from '@/components/crm/leads/AddLeadDrawer';
 
 const STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
 const TEMPERATURES = ['hot', 'warm', 'cold'];
@@ -52,6 +51,8 @@ export default function LeadsPage() {
     // State: UI Modals
     const [showBulkAssign, setShowBulkAssign] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
+    const [showAdd, setShowAdd] = useState(false);
+    const [showImport, setShowImport] = useState(false);
 
     // Filter values derived from URL
     const page = parseInt(searchParams.get('page') || '1', 10);
@@ -259,6 +260,11 @@ export default function LeadsPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 min-h-screen max-w-7xl mx-auto space-y-6 pb-24 lg:pb-8">
+            <AnimatePresence>
+                {showAdd && <AddLeadDrawer onClose={() => setShowAdd(false)} onSave={() => fetchLeads(true)} />}
+                {showImport && <ImportLeadsDrawer onClose={() => setShowImport(false)} onSave={() => fetchLeads(true)} />}
+            </AnimatePresence>
+
             <BulkAssignDialog 
                 isOpen={showBulkAssign}
                 onClose={() => setShowBulkAssign(false)}
@@ -286,11 +292,11 @@ export default function LeadsPage() {
                         <RefreshCw size={18} />
                     </button>
                     {isManager && (
-                        <button className="inline-flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm">
+                        <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm">
                             <UploadCloud size={16} /> Import
                         </button>
                     )}
-                    <button className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 text-sm">
+                    <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 text-sm">
                         <Plus size={16} /> New Lead
                     </button>
                 </div>

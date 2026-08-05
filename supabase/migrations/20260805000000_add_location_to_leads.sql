@@ -1,0 +1,4 @@
+ALTER TABLE public.crm_leads
+ADD COLUMN state TEXT,
+ADD COLUMN city TEXT,
+ADD COLUMN area TEXT;

@@ -86,6 +86,17 @@ export async function middleware(request) {
 
     const pathname = request.nextUrl.pathname
 
+    // ─── Skip auth logic for payment callback redirects ───────────────────────
+    // When a payment gateway (SabPaisa) POSTs to our callback URL, the browser
+    // does not send SameSite=Lax cookies. The callback route then redirects (303)
+    // to /payment/* pages. Browsers may still omit cookies on this GET request.
+    // If we call getSession() here with empty cookies, the Supabase client may
+    // write empty cookies to the response, effectively logging the user out.
+    // Bypassing middleware auth for these public routes preserves the session.
+    if (pathname.startsWith('/payment/')) {
+        return response;
+    }
+
     // ─── Read session from cookie (NO network call, instant) ─────────────────
     // getSession() reads the JWT stored in the HTTP-only cookie by Supabase SSR.
     // This is instant and never causes false-logouts due to Supabase/network timeouts.
