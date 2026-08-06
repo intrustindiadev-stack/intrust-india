@@ -50,15 +50,21 @@ export default function TeamEditDrawer({
             return;
         }
 
+        const payload = {
+            ...form,
+            parent_team_id: form.parent_team_id || null,
+            team_lead_id: form.team_lead_id || null,
+            city: form.city || null,
+            area: form.area || null,
+            expected_version: team.version || 1
+        };
+
         setSaving(true);
         try {
             const res = await fetch(`/api/teams/${team.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...form,
-                    expected_version: team.version || 1
-                })
+                body: JSON.stringify(payload)
             });
 
             const result = await res.json();
@@ -228,6 +234,11 @@ export default function TeamEditDrawer({
                             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         >
                             <option value="">Unassigned</option>
+                            {team?.team_lead && !availableLeads.some(u => u.id === team.team_lead.id) && (
+                                <option key={team.team_lead.id} value={team.team_lead.id}>
+                                    {team.team_lead.full_name || team.team_lead.email} ({team.team_lead.role}) - Current Lead
+                                </option>
+                            )}
                             {availableLeads.map(u => (
                                 <option key={u.id} value={u.id}>
                                     {u.full_name || u.email} ({u.role})
