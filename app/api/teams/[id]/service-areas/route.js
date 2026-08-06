@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/apiAuth';
 import { getAuthorizedTeamScope } from '@/lib/teamAuth';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { serviceAreaBulkSchema } from '@/lib/crm/validation';
@@ -6,8 +7,11 @@ import { serviceAreaBulkSchema } from '@/lib/crm/validation';
 export async function GET(request, { params }) {
     try {
         const teamId = params.id;
-        const auth = await getAuthorizedTeamScope(teamId);
-        if (!auth.authorized) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        const { user, profile, admin } = await getAuthUser(request);
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const auth = await getAuthorizedTeamScope(user, profile, admin);
+        if (!auth.isAuthorized) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
 
         const supabase = await createServerSupabaseClient();
         const { data, error } = await supabase
@@ -27,8 +31,11 @@ export async function GET(request, { params }) {
 export async function POST(request, { params }) {
     try {
         const teamId = params.id;
-        const auth = await getAuthorizedTeamScope(teamId);
-        if (!auth.authorized || !auth.capabilities.canAssignMembers) {
+        const { user, profile, admin } = await getAuthUser(request);
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const auth = await getAuthorizedTeamScope(user, profile, admin);
+        if (!auth.isAuthorized || !auth.capabilities.canAssignMembers) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
@@ -69,8 +76,11 @@ export async function POST(request, { params }) {
 export async function DELETE(request, { params }) {
     try {
         const teamId = params.id;
-        const auth = await getAuthorizedTeamScope(teamId);
-        if (!auth.authorized || !auth.capabilities.canAssignMembers) {
+        const { user, profile, admin } = await getAuthUser(request);
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const auth = await getAuthorizedTeamScope(user, profile, admin);
+        if (!auth.isAuthorized || !auth.capabilities.canAssignMembers) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
