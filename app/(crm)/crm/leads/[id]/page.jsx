@@ -90,7 +90,7 @@ export default function LeadDetailPage({ params }) {
                 supabase.from('crm_leads').select('*').eq('id', id).single(),
                 supabase.from('crm_tasks').select('*, user_profiles(full_name)').eq('lead_id', id).order('due_date', { ascending: true }),
                 supabase.from('crm_lead_services').select('*').eq('lead_id', id).order('created_at', { ascending: false }),
-                supabase.from('crm_lead_notes').select('*, user_profiles:author_id(full_name)').eq('lead_id', id).order('created_at', { ascending: false }),
+                supabase.from('crm_lead_remarks').select('*, author:user_profiles!author_id(full_name, role)').eq('lead_id', id).order('created_at', { ascending: false }),
                 supabase.from('crm_lead_activities').select('*, user_profiles:actor_id(full_name)').eq('lead_id', id).order('created_at', { ascending: false }),
             ]);
 
@@ -142,7 +142,7 @@ export default function LeadDetailPage({ params }) {
         const leadSub = supabase.channel(`lead_${id}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_leads', filter: `id=eq.${id}` }, fetchData)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_tasks', filter: `lead_id=eq.${id}` }, fetchData)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_lead_notes', filter: `lead_id=eq.${id}` }, fetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_lead_remarks', filter: `lead_id=eq.${id}` }, fetchData)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_lead_activities', filter: `lead_id=eq.${id}` }, fetchData)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_lead_services', filter: `lead_id=eq.${id}` }, fetchData)
             .subscribe();
@@ -160,15 +160,21 @@ export default function LeadDetailPage({ params }) {
         if (!newNote.trim()) return;
         setSavingNote(true);
         try {
-            const { error } = await supabase.from('crm_lead_notes').insert([{
-                lead_id: id,
-                author_id: user?.id,
-                note: newNote.trim()
-            }]);
-            if (error) throw error;
+            const res = await fetch(`/api/crm/leads/${id}/remarks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content: newNote.trim(),
+                    is_internal: false
+                })
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to add remark');
+            }
             setNewNote('');
             fetchData();
-            toast.success('Note added');
+            toast.success('Remark added');
         } catch (err) {
             toast.error(err.message);
         } finally {
@@ -533,10 +539,10 @@ export default function LeadDetailPage({ params }) {
                                             notes.map(note => (
                                                 <div key={note.id} className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
                                                     <div className="flex items-center justify-between mb-2">
-                                                        <span className="text-xs font-bold text-gray-900 dark:text-white">{note.user_profiles?.full_name || 'User'}</span>
+                                                        <span className="text-xs font-bold text-gray-900 dark:text-white">{note.author?.full_name || 'User'}</span>
                                                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{format(new Date(note.created_at), 'MMM dd, p')}</span>
                                                     </div>
-                                                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{note.note}</p>
+                                                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{note.content}</p>
                                                 </div>
                                             ))
                                         )}

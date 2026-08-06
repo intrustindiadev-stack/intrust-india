@@ -68,7 +68,7 @@ export async function POST(request) {
             .from('career_applications')
             .update(updates)
             .eq('id', applicationId)
-            .select('id, full_name, role_category, career_job_roles(title)')
+            .select('id, full_name, email, phone, city, role_category, career_job_roles(title)')
             .single();
 
         if (updateError || !updatedApp) {
@@ -76,8 +76,46 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Failed to update application.' }, { status: 500 });
         }
 
-        // 6. Notify Admins if hired
+        // 6. Notify Admins if hired and automate employee creation
         if (stage === 'hired') {
+            // A. Automate User Creation
+            try {
+                // Generate a strong random password
+                const tempPassword = Math.random().toString(36).slice(-10) + 'A1!a';
+                
+                // Create auth user (this triggers the user_profiles creation automatically)
+                const { data: authData, error: createUserError } = await adminSupabase.auth.admin.createUser({
+                    email: updatedApp.email,
+                    password: tempPassword,
+                    email_confirm: true,
+                    user_metadata: {
+                        full_name: updatedApp.full_name,
+                        phone: updatedApp.phone,
+                    }
+                });
+
+                if (createUserError) {
+                    // Ignore if user already exists
+                    console.error('Auth user creation error (may already exist):', createUserError);
+                } else if (authData?.user) {
+                    // Update the auto-generated user_profiles row with HRM data
+                    const empId = `EMP${Math.floor(10000 + Math.random() * 90000)}`; // EMP12345
+                    
+                    await adminSupabase.from('user_profiles').update({
+                        employee_id: empId,
+                        joining_date: new Date().toISOString().split('T')[0], // today
+                        base_salary: offeredSalary ? Number(offeredSalary) : 0,
+                        city: updatedApp.city || null,
+                        department: updatedApp.role_category || 'other',
+                        role: panelAccessGranted || 'employee',
+                        employment_type: 'full_time'
+                    }).eq('id', authData.user.id);
+                }
+            } catch (authErr) {
+                console.error('Failed to automate employee creation:', authErr);
+            }
+
+            // B. Notify Admins
             const { data: admins, error: adminsError } = await adminSupabase
                 .from('user_profiles')
                 .select('id')
@@ -86,8 +124,8 @@ export async function POST(request) {
             if (!adminsError && admins?.length > 0) {
                 const notifications = admins.map(admin => ({
                     user_id: admin.id,
-                    title: 'New Hire Pending Approval',
-                    body: `${updatedApp.full_name} has been marked as hired for ${updatedApp.career_job_roles?.title || updatedApp.role_category}. Panel access recommended: ${panelAccessGranted || 'None'}. Please review and grant the appropriate role.`,
+                    title: 'New Employee Hired & Created',
+                    body: `${updatedApp.full_name} has been hired for ${updatedApp.career_job_roles?.title || updatedApp.role_category}. Their employee account has been created with role: ${panelAccessGranted || 'employee'}.`,
                     type: 'info',
                     reference_type: 'hire_approval',
                     reference_id: updatedApp.id,

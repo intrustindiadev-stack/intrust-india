@@ -10,6 +10,7 @@ import TeamEditDrawer from '@/components/admin/teams/TeamEditDrawer';
 import MemberAssignDrawer from '@/components/admin/teams/MemberAssignDrawer';
 import BulkTransferDrawer from '@/components/admin/teams/BulkTransferDrawer';
 import ConfirmModal from '@/components/admin/teams/ConfirmModal';
+import ServiceAreaDrawer from '@/components/admin/teams/ServiceAreaDrawer';
 
 export default function AdminTeamsPage() {
     const [teams, setTeams] = useState([]);
@@ -29,6 +30,7 @@ export default function AdminTeamsPage() {
     const [showBulkTransfer, setShowBulkTransfer] = useState(false);
     const [selectedTeamForEdit, setSelectedTeamForEdit] = useState(null);
     const [selectedTeamForAssign, setSelectedTeamForAssign] = useState(null);
+    const [selectedTeamForServiceArea, setSelectedTeamForServiceArea] = useState(null);
 
     // Confirm Modal State
     const [removeModalState, setRemoveModalState] = useState({
@@ -166,6 +168,12 @@ export default function AdminTeamsPage() {
                         availableUsers={unassignedUsers}
                         onClose={() => setSelectedTeamForAssign(null)}
                         onMemberAssigned={() => fetchTeamsData()}
+                    />
+                )}
+                {selectedTeamForServiceArea && (
+                    <ServiceAreaDrawer
+                        team={selectedTeamForServiceArea}
+                        onClose={() => setSelectedTeamForServiceArea(null)}
                     />
                 )}
             </AnimatePresence>
@@ -353,6 +361,7 @@ export default function AdminTeamsPage() {
                     onAssignMember={capabilities.canAssignMembers ? setSelectedTeamForAssign : undefined}
                     onRemoveMember={capabilities.canAssignMembers ? handlePromptRemoveMember : undefined}
                     onReassignMember={capabilities.canAssignMembers ? handleReassignMember : undefined}
+                    onManageServiceAreas={capabilities.canEditTeam ? setSelectedTeamForServiceArea : undefined}
                     isReadOnly={!capabilities.canAssignMembers}
                 />
             ) : (
@@ -403,6 +412,14 @@ export default function AdminTeamsPage() {
                                                 className="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 font-bold text-xs hover:bg-indigo-100 transition-colors"
                                             >
                                                 + Member
+                                            </button>
+                                        )}
+                                        {capabilities.canEditTeam && (
+                                            <button
+                                                onClick={() => setSelectedTeamForServiceArea(t)}
+                                                className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs hover:bg-emerald-100 transition-colors"
+                                            >
+                                                Coverage
                                             </button>
                                         )}
                                         {capabilities.canEditTeam && (
