@@ -91,10 +91,16 @@ export async function GET(request) {
             const { data: userList, error: userError } = await admin
                 .from('user_profiles')
                 .select('id, full_name, email, role, avatar_url, phone, team_id')
-                .in('role', ['relationship_exec', 'relationship_manager', 'admin', 'super_admin'])
+                .in('role', [
+                    'relationship_exec', 'relationship_manager',
+                    'employee', 'hr_manager',
+                    'freelancer', 'video_editor', 'social_media_manager',
+                    'seo_specialist', 'advertiser', 'support_agent',
+                    'admin', 'super_admin'
+                ])
                 .is('team_id', null)
                 .order('full_name', { ascending: true })
-                .limit(100);
+                .limit(200);
 
             if (userError) {
                 console.warn('[API] Failed to fetch unassigned users:', userError.message);
