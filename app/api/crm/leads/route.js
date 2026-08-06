@@ -22,10 +22,11 @@ export async function GET(request) {
             return NextResponse.json({ error: 'User profile not found' }, { status: 403 });
         }
 
-        const isManager = ['relationship_manager', 'admin', 'super_admin'].includes(profile.role);
+        const isGlobalAdmin = ['admin', 'super_admin'].includes(profile.role);
+        const isManager = profile.role === 'relationship_manager';
         const isExec = profile.role === 'relationship_exec';
 
-        if (!isManager && !isExec) {
+        if (!isGlobalAdmin && !isManager && !isExec) {
             return NextResponse.json({ error: 'Unauthorized role' }, { status: 403 });
         }
 
@@ -57,19 +58,19 @@ export async function GET(request) {
         const offset = (page - 1) * limit;
 
         let teamIds = [];
-        if (!isManager) {
+        if (!isGlobalAdmin) {
             const { data: tids } = await supabase.rpc('crm_authorized_team_ids');
             teamIds = tids || [];
         }
 
         let query = adminClient.from('crm_leads').select('*', { count: 'exact' });
 
-        // RBAC Filter
-        if (!isManager) {
+        // RBAC Filter (Territory Scoped)
+        if (!isGlobalAdmin) {
             if (teamIds.length > 0) {
-                query = query.or(`assigned_to.eq.${user.id},assigned_team_id.in.(${teamIds.join(',')})`);
+                query = query.or(`assigned_to.eq.${user.id},created_by.eq.${user.id},assigned_team_id.in.(${teamIds.join(',')})`);
             } else {
-                query = query.eq('assigned_to', user.id);
+                query = query.or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`);
             }
         }
 
@@ -79,7 +80,7 @@ export async function GET(request) {
         }
 
         // Exclude App Users from the CRM leads page
-        query = query.neq('source', 'App User');
+        query = query.neq('source', 'Users').neq('source', 'App User');
 
         // Apply filters
         if (filters.status && filters.status.length > 0) {
