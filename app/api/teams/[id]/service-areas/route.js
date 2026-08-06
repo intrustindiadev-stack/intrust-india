@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 import { getAuthorizedTeamScope } from '@/lib/teamAuth';
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { serviceAreaBulkSchema } from '@/lib/crm/validation';
 
 export async function GET(request, { params }) {
@@ -45,7 +45,7 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Invalid payload', details: parsed.error.format() }, { status: 400 });
         }
 
-        const supabase = await createServerSupabaseClient();
+        const supabase = createAdminClient();
 
 
         // Check for duplicates globally
@@ -88,7 +88,7 @@ export async function DELETE(request, { params }) {
         const ids = url.searchParams.getAll('id');
         if (!ids.length) return NextResponse.json({ error: 'No IDs provided' }, { status: 400 });
 
-        const supabase = await createServerSupabaseClient();
+        const supabase = createAdminClient();
         const { error } = await supabase
             .from('team_service_areas')
             .delete()
