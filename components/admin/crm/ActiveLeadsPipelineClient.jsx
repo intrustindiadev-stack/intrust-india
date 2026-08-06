@@ -115,7 +115,7 @@ export default function ActiveLeadsPipelineClient({ initialLeads = [] }) {
                     >
                         <RefreshCw size={18} className={isLoading ? 'animate-spin text-indigo-500' : ''} />
                     </button>
-                    <Link href="/crm/leads" className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl text-sm hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/30 border border-blue-500 hover:-translate-y-0.5">
+                    <Link href="/admin/crm/leads" className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl text-sm hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/30 border border-blue-500 hover:-translate-y-0.5">
                         View All <ArrowRight size={14} />
                     </Link>
                 </div>
