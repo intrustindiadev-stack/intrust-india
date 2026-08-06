@@ -46,7 +46,7 @@ export async function POST(request, { params }) {
         }
 
         const supabase = await createServerSupabaseClient();
-        const { data: { user } } = await supabase.auth.getUser();
+
 
         // Check for duplicates globally
         const payloads = parsed.data.map(item => ({
