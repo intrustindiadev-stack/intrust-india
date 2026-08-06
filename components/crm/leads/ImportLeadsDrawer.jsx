@@ -19,8 +19,8 @@ export default function ImportLeadsDrawer({ onClose, onSave }) {
 
     const handleDownloadTemplate = () => {
         const commentRow  = '# Required: contact_name | Phone: 10-digit Indian mobile starting with 6-9 (e.g. 9876543210) | Status auto-set to "new"\n';
-        const headerRow   = 'title,contact_name,phone,email,source,notes,state,city,area\n';
-        const sampleRow   = 'Insurance Inquiry,Ravi Kumar,9876543210,ravi@example.com,Referral,Interested in Gold Plan,Maharashtra,Mumbai,Andheri West\n';
+        const headerRow   = 'title,contact_name,phone,email,source,notes,state,city,zone,area,pincode\n';
+        const sampleRow   = 'Insurance Inquiry,Ravi Kumar,9876543210,ravi@example.com,Referral,Interested in Gold Plan,Maharashtra,Mumbai,West,Andheri West,400053\n';
 
         const blob = new Blob([commentRow + headerRow + sampleRow], { type: 'text/csv;charset=utf-8;' });
         const url  = URL.createObjectURL(blob);
@@ -72,7 +72,9 @@ export default function ImportLeadsDrawer({ onClose, onSave }) {
                 const notesIdx  = col('notes');
                 const stateIdx  = col('state');
                 const cityIdx   = col('city');
+                const zoneIdx   = col('zone');
                 const areaIdx   = col('area');
+                const pincodeIdx = col('pincode');
 
                 if (nameIdx === -1 && phoneIdx === -1 && emailIdx === -1) {
                     throw new Error(
@@ -108,7 +110,9 @@ export default function ImportLeadsDrawer({ onClose, onSave }) {
                     const rawNotes   = get(notesIdx).trim();
                     const rawState   = get(stateIdx).trim();
                     const rawCity    = get(cityIdx).trim();
+                    const rawZone    = get(zoneIdx).trim();
                     const rawArea    = get(areaIdx).trim();
+                    const rawPincode = get(pincodeIdx).trim();
 
                     const parsed = CrmLeadCsvRowSchema.safeParse({
                         contact_name: rawContact || undefined,
@@ -119,7 +123,9 @@ export default function ImportLeadsDrawer({ onClose, onSave }) {
                         notes:        rawNotes   || undefined,
                         state:        rawState   || undefined,
                         city:         rawCity    || undefined,
+                        zone:         rawZone    || undefined,
                         area:         rawArea    || undefined,
+                        pincode:      rawPincode || undefined,
                     });
 
                     if (!parsed.success) {
@@ -170,7 +176,9 @@ export default function ImportLeadsDrawer({ onClose, onSave }) {
                         notes:        rawNotes,
                         state:        rawState  || null,
                         city:         rawCity   || null,
+                        zone:         rawZone   || null,
                         area:         rawArea   || null,
+                        pincode:      rawPincode || null,
                         created_by:   user?.id,
                         assigned_to:  user?.id,
                     });
@@ -329,7 +337,8 @@ export default function ImportLeadsDrawer({ onClose, onSave }) {
                             <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
                                 <h3 className="font-bold text-indigo-900 mb-1 text-sm">1. Download Template</h3>
                                 <p className="text-xs text-indigo-700 mb-3">
-                                    Columns: <code className="font-mono bg-indigo-100 px-1 rounded">title, contact_name, phone, email, source, notes, state, city, area</code>
+                                    Columns: <code className="font-mono bg-indigo-100 px-1 rounded">title, contact_name, phone, email, source, notes, state, city, zone, area, pincode</code>
+                                    <span className="block mt-1 text-indigo-500">Zone and pincode fields enable automatic team allocation.</span>
                                 </p>
                                 <div className="flex items-start gap-2 mb-3 bg-white/70 border border-indigo-100 rounded-xl p-3 text-xs text-indigo-800">
                                     <Info size={13} className="mt-0.5 flex-shrink-0 text-indigo-400" />

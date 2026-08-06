@@ -7,6 +7,8 @@ import { toast } from 'react-hot-toast';
 import OrgChart from '@/components/admin/teams/OrgChart';
 import MemberAssignDrawer from '@/components/admin/teams/MemberAssignDrawer';
 import ConfirmModal from '@/components/admin/teams/ConfirmModal';
+import ServiceAreaDrawer from '@/components/admin/teams/ServiceAreaDrawer';
+import LeadAllocationPanel from '@/components/admin/teams/LeadAllocationPanel';
 
 export default function CrmTeamsPage() {
     const { profile } = useAuth();
@@ -15,6 +17,7 @@ export default function CrmTeamsPage() {
     const [capabilities, setCapabilities] = useState({});
     const [loading, setLoading] = useState(true);
     const [selectedTeamForAssign, setSelectedTeamForAssign] = useState(null);
+    const [selectedTeamForAreas, setSelectedTeamForAreas] = useState(null);
     const [search, setSearch] = useState('');
 
     // Remove Confirmation Modal
@@ -141,6 +144,13 @@ export default function CrmTeamsPage() {
                 />
             )}
 
+            {selectedTeamForAreas && (
+                <ServiceAreaDrawer
+                    team={selectedTeamForAreas}
+                    onClose={() => setSelectedTeamForAreas(null)}
+                />
+            )}
+
             <ConfirmModal
                 isOpen={removeModalState.isOpen}
                 title="Remove Member from Team"
@@ -188,6 +198,11 @@ export default function CrmTeamsPage() {
                 </div>
             </div>
 
+            {/* Lead Allocation Overview — only visible to managers/admins */}
+            {capabilities.canAssignMembers && !loading && teams.length > 0 && (
+                <LeadAllocationPanel isManager={capabilities.canAssignMembers} />
+            )}
+
             {/* Org Chart View */}
             {loading ? (
                 <div className="bg-slate-900 rounded-[2.5rem] h-[550px] flex flex-col items-center justify-center text-slate-400 space-y-3 shadow-2xl">
@@ -202,6 +217,7 @@ export default function CrmTeamsPage() {
                     onAssignMember={capabilities.canAssignMembers ? setSelectedTeamForAssign : undefined}
                     onRemoveMember={capabilities.canAssignMembers ? handlePromptRemoveMember : undefined}
                     onReassignMember={capabilities.canAssignMembers ? handleReassignMember : undefined}
+                    onServiceAreas={capabilities.canAssignMembers ? setSelectedTeamForAreas : undefined}
                     isReadOnly={!capabilities.canAssignMembers}
                 />
             )}

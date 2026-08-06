@@ -39,6 +39,11 @@ export async function GET(request) {
         if (url.searchParams.has('assignee')) queryParams.assignee = parseArrayParam('assignee');
         if (url.searchParams.has('source')) queryParams.source = parseArrayParam('source');
         if (url.searchParams.has('temperature')) queryParams.temperature = parseArrayParam('temperature');
+        if (url.searchParams.has('team_id')) queryParams.team_id = url.searchParams.get('team_id');
+        if (url.searchParams.has('pincode')) queryParams.pincode = url.searchParams.get('pincode');
+        if (url.searchParams.has('zone')) queryParams.zone = url.searchParams.get('zone');
+        if (url.searchParams.has('area_type')) queryParams.area_type = url.searchParams.get('area_type');
+        if (url.searchParams.has('routing_status')) queryParams.routing_status = url.searchParams.get('routing_status');
 
         const parsed = LeadFilterSchema.safeParse(queryParams);
         
@@ -51,11 +56,21 @@ export async function GET(request) {
         const page = filters.page;
         const offset = (page - 1) * limit;
 
+        let teamIds = [];
+        if (!isManager) {
+            const { data: tids } = await supabase.rpc('crm_authorized_team_ids');
+            teamIds = tids || [];
+        }
+
         let query = adminClient.from('crm_leads').select('*', { count: 'exact' });
 
         // RBAC Filter
         if (!isManager) {
-            query = query.eq('assigned_to', user.id);
+            if (teamIds.length > 0) {
+                query = query.or(`assigned_to.eq.${user.id},assigned_team_id.in.(${teamIds.join(',')})`);
+            } else {
+                query = query.eq('assigned_to', user.id);
+            }
         }
 
         // Archiving
@@ -109,6 +124,22 @@ export async function GET(request) {
 
         if (filters.toDate) {
             query = query.lte('created_at', filters.toDate);
+        }
+
+        if (filters.team_id) {
+            query = query.eq('assigned_team_id', filters.team_id);
+        }
+        if (filters.pincode) {
+            query = query.eq('pincode', filters.pincode);
+        }
+        if (filters.zone) {
+            query = query.ilike('zone', `%${filters.zone}%`);
+        }
+        if (filters.area_type) {
+            query = query.eq('territory_match_type', filters.area_type);
+        }
+        if (filters.routing_status) {
+            query = query.eq('routing_status', filters.routing_status);
         }
 
         if (filters.search) {

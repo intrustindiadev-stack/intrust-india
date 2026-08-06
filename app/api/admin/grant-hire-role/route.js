@@ -35,7 +35,7 @@ export async function POST(request) {
         // 4. Fetch the application
         const { data: app, error: appError } = await adminSupabase
             .from('career_applications')
-            .select('user_id, status')
+            .select('user_id, status, full_name, email, phone')
             .eq('id', applicationId)
             .single();
 
@@ -60,10 +60,17 @@ export async function POST(request) {
             const newRole = roleMap[panelAccess];
             
             if (newRole) {
+                // Upsert the user profile to guarantee they can login even if the auth trigger failed
                 const { error: roleError } = await adminSupabase
                     .from('user_profiles')
-                    .update({ role: newRole })
-                    .eq('id', app.user_id);
+                    .upsert({
+                        id: app.user_id,
+                        full_name: app.full_name || 'New Hire',
+                        email: app.email,
+                        phone: app.phone,
+                        role: newRole,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'id' });
                 
                 if (roleError) {
                     console.error('Error assigning role:', roleError);

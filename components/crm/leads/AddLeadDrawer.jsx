@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Phone, Mail, MapPin, Briefcase, X } from 'lucide-react';
+import { User, Phone, Mail, MapPin, Briefcase, X, CheckCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -10,9 +10,28 @@ const STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
 
 export default function AddLeadDrawer({ onClose, onSave }) {
     const { user } = useAuth();
-    const [form, setForm] = useState({ title: '', contact_name: '', phone: '', email: '', source: '', status: 'new', notes: '', state: '', city: '', area: '' });
+    const [form, setForm] = useState({ title: '', contact_name: '', phone: '', email: '', source: '', status: 'new', notes: '', state: '', city: '', area: '', zone: '', pincode: '' });
     const [saving, setSaving] = useState(false);
+    const [routingHint, setRoutingHint] = useState(null);
     const up = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+    const handleLocationBlur = async () => {
+        if (!form.pincode && !form.zone && !form.area && !form.city && !form.state) return;
+        try {
+            const { data, error } = await supabase.rpc('crm_preview_team_for_location', {
+                p_pincode: form.pincode || null,
+                p_zone: form.zone || null,
+                p_area: form.area || null,
+                p_city: form.city || null,
+                p_state: form.state || null
+            });
+            if (data && !error) {
+                setRoutingHint(data);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
     const handleSave = async () => {
         const validation = CrmLeadCreateSchema.safeParse(form);
@@ -64,7 +83,9 @@ export default function AddLeadDrawer({ onClose, onSave }) {
                         { label: 'Source', key: 'source', icon: MapPin, placeholder: 'e.g. Referral, Website' },
                         { label: 'State', key: 'state', icon: MapPin, placeholder: 'e.g. Maharashtra' },
                         { label: 'City', key: 'city', icon: MapPin, placeholder: 'e.g. Mumbai' },
+                        { label: 'Zone', key: 'zone', icon: MapPin, placeholder: 'e.g. West' },
                         { label: 'Area', key: 'area', icon: MapPin, placeholder: 'e.g. Andheri West' },
+                        { label: 'Pincode', key: 'pincode', icon: MapPin, placeholder: 'e.g. 400053' },
                     ].map(f => (
                         <div key={f.key}>
                             <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">{f.label}</label>
@@ -74,12 +95,20 @@ export default function AddLeadDrawer({ onClose, onSave }) {
                                     type={f.type || 'text'}
                                     value={form[f.key]}
                                     onChange={e => up(f.key, e.target.value)}
+                                    onBlur={(f.key === 'pincode' || f.key === 'zone' || f.key === 'area' || f.key === 'city' || f.key === 'state') ? handleLocationBlur : undefined}
                                     placeholder={f.placeholder}
                                     className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
                                 />
                             </div>
                         </div>
                     ))}
+                    {routingHint && routingHint.matched && (
+                        <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-700 flex items-start gap-2">
+                            <CheckCircle size={14} className="text-indigo-500 mt-0.5 shrink-0" />
+                            <span><strong>Auto-allocation preview:</strong> This lead will be directed to <strong>{routingHint.team_name}</strong> based on {routingHint.match_type === 'pincode' ? 'PIN code' : routingHint.match_type} coverage.
+                            </span>
+                        </div>
+                    )}
                     <div>
                         <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Status</label>
                         <select value={form.status} onChange={e => up('status', e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">

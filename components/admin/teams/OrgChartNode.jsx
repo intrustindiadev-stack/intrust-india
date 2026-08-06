@@ -18,6 +18,7 @@ export default function OrgChartNode({
     onAssignMember,
     onRemoveMember,
     onReassignMember,
+    onServiceAreas,
     isReadOnly = false,
     nodeRef
 }) {
@@ -104,14 +105,24 @@ export default function OrgChartNode({
                         </span>
                     )}
                     {!isReadOnly && (
-                        <button
-                            onClick={() => onEditTeam?.(team)}
-                            className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
-                            title="Edit Team"
-                            aria-label={`Edit ${team.name}`}
-                        >
-                            <Edit3 size={13} />
-                        </button>
+                        <>
+                            <button
+                                onClick={() => onServiceAreas?.(team)}
+                                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-indigo-600 transition-colors"
+                                title="Coverage Zones"
+                                aria-label={`Manage Coverage Zones for ${team.name}`}
+                            >
+                                <MapPin size={13} />
+                            </button>
+                            <button
+                                onClick={() => onEditTeam?.(team)}
+                                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                                title="Edit Team"
+                                aria-label={`Edit ${team.name}`}
+                            >
+                                <Edit3 size={13} />
+                            </button>
+                        </>
                     )}
                 </div>
             </div>

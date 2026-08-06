@@ -16,6 +16,7 @@ export default function OrgChart({
     onAssignMember,
     onRemoveMember,
     onReassignMember,
+    onServiceAreas,
     isReadOnly = false
 }) {
     // Zoom and pan state
@@ -253,6 +254,7 @@ export default function OrgChart({
                                     onAssignMember={onAssignMember}
                                     onRemoveMember={onRemoveMember}
                                     onReassignMember={onReassignMember}
+                                    onServiceAreas={onServiceAreas}
                                     isReadOnly={isReadOnly}
                                 />
                             </div>

@@ -29,6 +29,8 @@ export const CrmLeadCreateSchema = z.object({
     state: z.string().max(100, 'State name is too long').optional().or(z.literal('')),
     city: z.string().max(100, 'City name is too long').optional().or(z.literal('')),
     area: z.string().max(150, 'Area name is too long').optional().or(z.literal('')),
+    zone: z.string().max(100, 'Zone name is too long').optional().or(z.literal('')),
+    pincode: z.string().refine(val => !val || /^[1-9][0-9]{5}$/.test(val), { message: 'Invalid 6-digit PIN code' }).optional().or(z.literal('')),
 });
 
 export const CrmLeadUpdateSchema = CrmLeadCreateSchema.partial().extend({
@@ -45,6 +47,8 @@ export const CrmLeadCsvRowSchema = z.object({
     state: z.string().optional(),
     city: z.string().optional(),
     area: z.string().optional(),
+    zone: z.string().optional(),
+    pincode: z.string().optional(),
 });
 
 export const CrmTaskCreateSchema = z.object({
@@ -84,6 +88,11 @@ export const LeadFilterSchema = z.object({
     fromDate: z.string().datetime().optional(),
     toDate: z.string().datetime().optional(),
     includeArchived: z.coerce.boolean().default(false),
+    team_id: z.string().uuid().optional(),
+    pincode: z.string().optional(),
+    zone: z.string().optional(),
+    area_type: z.enum(['pincode', 'zone', 'area', 'city', 'state']).optional(),
+    routing_status: z.enum(['unmatched', 'auto_matched', 'manual_override', 'reroute_pending']).optional(),
 });
 
 export const BulkAssignSchema = z.object({
@@ -94,3 +103,9 @@ export const BulkAssignSchema = z.object({
     filters: LeadFilterSchema.optional(),
 });
 
+export const serviceAreaBulkSchema = z.array(z.object({
+    area_type: z.enum(['pincode', 'zone', 'area', 'city', 'state']),
+    value: z.string().min(1, 'Value required'),
+    city: z.string().optional(),
+    state: z.string().optional(),
+}));
