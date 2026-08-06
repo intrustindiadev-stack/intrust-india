@@ -50,12 +50,20 @@ export default function TeamCreateDrawer({
             return;
         }
 
+        const payload = {
+            ...form,
+            parent_team_id: form.parent_team_id || null,
+            team_lead_id: form.team_lead_id || null,
+            city: form.city || null,
+            area: form.area || null,
+        };
+
         setSaving(true);
         try {
             const res = await fetch('/api/teams', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form)
+                body: JSON.stringify(payload)
             });
 
             const result = await res.json();
