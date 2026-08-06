@@ -6,7 +6,7 @@ import { serviceAreaBulkSchema } from '@/lib/crm/validation';
 
 export async function GET(request, { params }) {
     try {
-        const teamId = params.id;
+        const teamId = (await params).id;
         const { user, profile, admin } = await getAuthUser(request);
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -30,7 +30,7 @@ export async function GET(request, { params }) {
 
 export async function POST(request, { params }) {
     try {
-        const teamId = params.id;
+        const teamId = (await params).id;
         const { user, profile, admin } = await getAuthUser(request);
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -75,7 +75,7 @@ export async function POST(request, { params }) {
 
 export async function DELETE(request, { params }) {
     try {
-        const teamId = params.id;
+        const teamId = (await params).id;
         const { user, profile, admin } = await getAuthUser(request);
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
