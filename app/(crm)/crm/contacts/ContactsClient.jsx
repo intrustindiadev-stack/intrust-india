@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabaseClient';
 import { Search, Phone, Mail, User, Building2, Loader2, AlertCircle, MessageSquare, LayoutGrid, Layers } from 'lucide-react';
 import TemplateGallery from '@/components/crm/whatsapp/TemplateGallery';
-import SendWhatsAppModal from '@/components/crm/whatsapp/SendWhatsAppModal';
+import SendWhatsAppDrawer from '@/components/crm/whatsapp/SendWhatsAppDrawer';
 
 export default function ContactsClient({ currentUserId, currentUserRole }) {
     const [contacts, setContacts] = useState([]);
@@ -86,22 +86,14 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
 
     const handleOpenModalWithContact = (contact) => {
         setWaModalContact(contact);
-        // If templates are loaded, select the first approved template by default when launching from contact card
-        if (templates && templates.length > 0) {
-            setSelectedTemplate(templates[0]);
-            setIsWaModalOpen(true);
-        } else {
-            // Switch to templates tab so user can select a template
-            setActiveTab('templates');
-        }
+        setActiveTab('templates');
+        toast.success(`Select a template to send to ${contact.contact_name}`);
     };
 
     const handleCloseModal = () => {
         setIsWaModalOpen(false);
-        // Reset selected template after closing
-        setTimeout(() => {
-            setSelectedTemplate(null);
-        }, 150);
+        setWaModalContact(null);
+        setSelectedTemplate(null);
     };
 
     const filteredContacts = contacts.filter(c => 
@@ -270,8 +262,8 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
                 </div>
             )}
 
-            {/* Single Shared SendWhatsAppModal Instance (Section E) */}
-            <SendWhatsAppModal
+            {/* Single Shared SendWhatsAppDrawer Instance (Section E) */}
+            <SendWhatsAppDrawer
                 isOpen={isWaModalOpen}
                 selectedTemplate={selectedTemplate}
                 onClose={handleCloseModal}
@@ -283,6 +275,8 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
                         : undefined
                 }
                 onSuccess={() => fetchContacts()}
+                currentUserRole={currentUserRole}
+                currentUserId={currentUserId}
             />
         </div>
     );

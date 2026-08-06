@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { sendTemplateMessage, OmniflowError } from '@/lib/omniflow';
+import crypto from 'crypto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -55,6 +56,7 @@ export async function POST(request) {
             );
         }
 
+
         const agentId = user.id;
 
         // 2. Authorize user (check user profile / role)
@@ -105,7 +107,7 @@ export async function POST(request) {
                 resolvedContactId = contactId;
                 const { data: contact, error: contactError } = await adminClient
                     .from('crm_leads')
-                    .select('id, full_name, phone')
+                    .select('id, contact_name, phone')
                     .eq('id', contactId)
                     .maybeSingle();
 
@@ -181,11 +183,13 @@ export async function POST(request) {
         let failedAt = null;
 
         try {
+            console.log('[send-template] Sending to Omniflow:', { targetPhone, templateName, templateLanguage, components });
             sendResult = await sendTemplateMessage(targetPhone, templateName, templateLanguage, components);
             providerMessageId = sendResult?.messageId || null;
             logStatus = 'sent';
             sentAt = new Date().toISOString();
         } catch (err) {
+            console.error('[send-template] sendTemplateMessage failed!', err);
             logStatus = 'failed';
             failedAt = new Date().toISOString();
             errorMessage = err.message || 'Failed to send template message via Omniflow.';
@@ -196,10 +200,13 @@ export async function POST(request) {
             }
         }
 
+        const phoneHash = crypto.createHash('sha256').update(targetPhone).digest('hex');
+
         // 6. Insert log into whatsapp_message_logs
         const { data: logEntry, error: logError } = await adminClient
             .from('whatsapp_message_logs')
             .insert({
+                phone_hash: phoneHash,
                 agent_id: agentId,
                 contact_id: resolvedContactId,
                 recipient_type: recipientType,

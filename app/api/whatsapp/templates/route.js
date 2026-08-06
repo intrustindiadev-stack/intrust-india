@@ -12,8 +12,10 @@ const TOKEN = process.env.OMNIFLOW_API_TOKEN;
 function parseComponents(components = []) {
     let bodyText = '';
     let headerText = '';
+    let headerFormat = 'TEXT';
     let footerText = '';
     const variables = [];
+    let buttons = [];
 
     for (const comp of components) {
         const type = comp.type?.toLowerCase();
@@ -41,19 +43,28 @@ function parseComponents(components = []) {
             });
         } else if (type === 'header') {
             headerText = comp.text || '';
+            headerFormat = comp.format || 'TEXT';
         } else if (type === 'footer') {
             footerText = comp.text || '';
+        } else if (type === 'buttons') {
+            if (Array.isArray(comp.buttons)) {
+                buttons = comp.buttons;
+            }
         }
     }
 
-    return { bodyText, headerText, footerText, variables };
+    return { bodyText, headerText, headerFormat, footerText, variables, buttons };
 }
 
 /**
  * Normalizes a raw Omniflow template object into the CRM UI model.
  */
 function normalizeOmniflowTemplate(raw) {
-    const { bodyText, variables } = parseComponents(raw.components || []);
+    let comps = raw.components || [];
+    if (typeof comps === 'string') {
+        try { comps = JSON.parse(comps); } catch (e) { comps = []; }
+    }
+    const { bodyText, headerText, headerFormat, footerText, variables, buttons } = parseComponents(comps);
 
     // Build a human-readable title from the template name
     const title = (raw.name || '')
@@ -66,6 +77,12 @@ function normalizeOmniflowTemplate(raw) {
         title: title || raw.name,
         description: raw.description || '',
         text: bodyText,
+        header: {
+            text: headerText,
+            format: headerFormat
+        },
+        footer: footerText,
+        buttons: buttons,
         language: raw.language || 'en',
         category: (raw.category || 'UTILITY').toUpperCase(),
         status: (raw.status || '').toUpperCase(),
@@ -128,13 +145,12 @@ export async function GET() {
             );
         }
 
+
         // Try fetching live templates from Omniflow
         if (BASE_URL && TOKEN) {
             try {
-                const omniRes = await fetch(`${BASE_URL}/api/wpbox/gettemplates`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: TOKEN }),
+                const omniRes = await fetch(`${BASE_URL}/api/wpbox/getTemplates?token=${TOKEN}`, {
+                    method: 'GET',
                     // 8-second timeout
                     signal: AbortSignal.timeout(8000)
                 });
