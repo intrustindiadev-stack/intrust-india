@@ -53,7 +53,7 @@ export function useAttendanceActions(onSuccess) {
             const res = await fetch('/api/employee/attendance/clock-out', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ record_id: recordId, lat: coords?.lat ?? null, lng: coords?.lng ?? null })
+                body: JSON.stringify({ lat: coords?.lat ?? null, lng: coords?.lng ?? null })
             });
             const result = await res.json();
             if (!res.ok) throw new Error(result.error || 'Clock out failed');

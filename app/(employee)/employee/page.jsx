@@ -172,7 +172,7 @@ export default function EmployeeDashboard() {
                                     </button>
                                 ) : (
                                     <button 
-                                        onClick={clockedIn ? () => handleClockOut(openShift.id) : handleClockIn} 
+                                        onClick={clockedIn ? () => handleClockOut(openShift.id) : () => handleClockIn()} 
                                         disabled={clocking}
                                         className={`w-full sm:w-auto px-8 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${clockedIn ? 'bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
                                     >

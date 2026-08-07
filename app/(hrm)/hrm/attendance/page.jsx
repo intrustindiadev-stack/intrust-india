@@ -287,9 +287,17 @@ export default function HRMAttendancePage() {
                         <StatusBadge status={r.status} type="attendance" />
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-bold ${loc.cls}`}>
-                          <MapPin size={10} /> {loc.label}
-                        </span>
+                        {r.check_in_lat != null && r.check_in_lng != null ? (
+                          <a href={`https://maps.google.com/?q=${r.check_in_lat},${r.check_in_lng}`} target="_blank" rel="noreferrer" className="hover:opacity-80 transition-opacity" title="View Location">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-bold ${loc.cls}`}>
+                              <MapPin size={10} /> {loc.label}
+                            </span>
+                          </a>
+                        ) : (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-bold ${loc.cls}`}>
+                            <MapPin size={10} /> {loc.label}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 font-mono">{formatTimeIST(r.check_in)}</td>
                       <td className="px-4 py-3 font-mono">{formatTimeIST(r.check_out)}</td>

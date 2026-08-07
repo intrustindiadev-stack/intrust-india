@@ -148,9 +148,17 @@ export default function EmployeeAttendancePage() {
       render: (row) => {
         const badge = getLocationStatusBadge(row);
         return (
-          <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md border ${badge.cls}`}>
-            <MapPin size={10} /> {badge.label}
-          </span>
+          row.check_in_lat != null && row.check_in_lng != null ? (
+            <a href={`https://maps.google.com/?q=${row.check_in_lat},${row.check_in_lng}`} target="_blank" rel="noreferrer" className="hover:opacity-80 transition-opacity" title="View Location">
+              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md border ${badge.cls}`}>
+                <MapPin size={10} /> {badge.label}
+              </span>
+            </a>
+          ) : (
+            <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md border ${badge.cls}`}>
+              <MapPin size={10} /> {badge.label}
+            </span>
+          )
         );
       }
     },
@@ -185,7 +193,7 @@ export default function EmployeeAttendancePage() {
           <div>Check In: <strong className="font-mono text-slate-900">{formatTimeIST(row.check_in)}</strong></div>
           <div>Check Out: <strong className="font-mono text-slate-900">{row.check_out ? formatTimeIST(row.check_out) : 'Active'}</strong></div>
           <div>Duration: <strong className="font-mono text-slate-900">{calculateDuration(row.check_in, row.check_out)}</strong></div>
-          <div>Mode: <span className={`font-bold ${locBadge.cls}`}>{locBadge.label}</span></div>
+          <div>Mode: {row.check_in_lat != null && row.check_in_lng != null ? <a href={`https://maps.google.com/?q=${row.check_in_lat},${row.check_in_lng}`} target="_blank" rel="noreferrer" className="hover:opacity-80 transition-opacity"><span className={`font-bold ${locBadge.cls}`}>{locBadge.label}</span></a> : <span className={`font-bold ${locBadge.cls}`}>{locBadge.label}</span>}</div>
         </div>
       </div>
     );
