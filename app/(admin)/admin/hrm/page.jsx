@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { displayEmail } from '@/lib/auth';
 import { Users, UserPlus, DollarSign, Clock, ShieldCheck, UserCheck } from 'lucide-react';
 import ContactActions from '@/components/shared/ContactActions';
+import CalendarWidget from '@/components/shared/CalendarWidget';
 
 function StatCard({ title, value, sub, gradient, icon: Icon }) {
     return (
@@ -113,6 +114,11 @@ export default async function AdminHRMPage() {
                     <StatCard title="HR Managers" value={hrManagers} gradient="from-violet-600 to-purple-600" icon={UserPlus} />
                     <StatCard title="Awaiting HR Review" value={pendingHRCount} sub="Stage 1 Queue" gradient="from-amber-500 to-orange-500" icon={UserCheck} />
                     <StatCard title="Awaiting Admin Confirmation" value={pendingAdminCount} sub="Stage 2 Action Required" gradient="from-indigo-600 to-purple-700" icon={ShieldCheck} />
+                </div>
+
+                {/* Company Calendar & Events */}
+                <div className="h-[450px]">
+                    <CalendarWidget events={[]} />
                 </div>
 
                 {/* Workforce Directory */}

@@ -18,7 +18,7 @@ export function useAttendanceActions(onSuccess) {
         });
     };
 
-    const handleClockIn = async () => {
+    const handleClockIn = async (selfieBase64 = null) => {
         setClocking(true);
         try {
             const coords = await getCoordinates();
@@ -28,7 +28,11 @@ export function useAttendanceActions(onSuccess) {
             const res = await fetch('/api/employee/attendance/clock-in', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lat: coords?.lat ?? null, lng: coords?.lng ?? null })
+                body: JSON.stringify({ 
+                    lat: coords?.lat ?? null, 
+                    lng: coords?.lng ?? null,
+                    selfieBase64: selfieBase64
+                })
             });
             const result = await res.json();
             if (!res.ok) throw new Error(result.error || 'Clock in failed');

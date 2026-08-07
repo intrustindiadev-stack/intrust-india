@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Clock, RefreshCw, MapPin, AlertTriangle, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Clock, RefreshCw, MapPin, AlertTriangle, ShieldCheck, Camera, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAttendanceActions } from '@/hooks/useAttendanceActions';
 
@@ -58,6 +58,46 @@ export default function EmployeeAttendancePage() {
   }, [fetchSummary]);
 
   const { clocking, handleClockIn, handleClockOut, handleForceCheckoutPrevious } = useAttendanceActions(fetchSummary);
+
+  const [showSelfie, setShowSelfie] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+
+  const startCamera = async () => {
+    setShowSelfie(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      toast.error('Camera access denied or unavailable.');
+      setShowSelfie(false);
+    }
+  };
+
+  const captureSelfieAndClockIn = () => {
+    if (videoRef.current && canvasRef.current) {
+      const context = canvasRef.current.getContext('2d');
+      canvasRef.current.width = videoRef.current.videoWidth;
+      canvasRef.current.height = videoRef.current.videoHeight;
+      context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+      const base64Selfie = canvasRef.current.toDataURL('image/jpeg', 0.8);
+      
+      const stream = videoRef.current.srcObject;
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      
+      setShowSelfie(false);
+      handleClockIn(base64Selfie);
+    }
+  };
+
+  const cancelSelfie = () => {
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+    }
+    setShowSelfie(false);
+  };
 
   const openShift = data?.open_shift;
   const metrics = data?.metrics;
@@ -153,6 +193,26 @@ export default function EmployeeAttendancePage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 min-h-screen bg-slate-50/50 dark:bg-slate-950">
+      
+      {showSelfie && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-2xl max-w-sm w-full relative">
+            <button onClick={cancelSelfie} className="absolute top-3 right-3 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-800"><X size={16} /></button>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Verify Attendance</h3>
+            <p className="text-xs text-slate-500 mb-4">Please take a quick selfie to clock in.</p>
+            <div className="relative rounded-xl overflow-hidden bg-slate-800 mb-4 aspect-square flex items-center justify-center">
+              <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover transform scale-x-[-1]" />
+              <canvas ref={canvasRef} className="hidden" />
+            </div>
+            <button
+              onClick={captureSelfieAndClockIn}
+              className="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors"
+            >
+              <Camera size={16} /> Capture & Clock In
+            </button>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
@@ -221,7 +281,7 @@ export default function EmployeeAttendancePage() {
               </button>
             ) : (
               <button
-                onClick={handleClockIn}
+                onClick={startCamera}
                 disabled={clocking}
                 className="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2 shadow-xs"
               >

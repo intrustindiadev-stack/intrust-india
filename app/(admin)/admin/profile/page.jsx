@@ -59,7 +59,7 @@ function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
                 {avatarUrl ? (
                     <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-600/20 to-indigo-600/20 flex items-center justify-center text-blue-600 text-4xl font-black">
+                    <div className="w-full h-full bg-gradient-to-br from-indigo-600/20 to-violet-600/20 flex items-center justify-center text-indigo-600 text-4xl font-black">
                         {initial}
                     </div>
                 )}
@@ -67,7 +67,7 @@ function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
                     {uploading ? <Loader2 size={24} className="text-white animate-spin" /> : <Camera size={24} className="text-white" />}
                 </div>
             </div>
-            <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xl border-4 border-white dark:border-[#020617] pointer-events-none transition-transform group-hover:scale-110">
+            <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white flex items-center justify-center shadow-xl border-4 border-white dark:border-[#020617] pointer-events-none transition-transform group-hover:scale-110">
                 <Camera size={16} />
             </div>
             <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
@@ -96,8 +96,8 @@ function EditableRow({ label, value, icon: Icon, onSave, placeholder, readOnly =
     const cancel = () => { setDraft(value || ''); setEditing(false); };
 
     return (
-        <div className="group flex items-start gap-5 py-5 border-b border-slate-100 dark:border-white/5 last:border-0">
-            <div className={`mt-1 flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${readOnly ? 'bg-slate-100 dark:bg-white/5 text-slate-500' : 'bg-blue-500/10 text-blue-600'}`}>
+        <div className="group flex items-start gap-5 py-5 border-b border-slate-100 dark:border-white/5 last:border-0 hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors rounded-2xl px-4 -mx-4">
+            <div className={`mt-1 flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${readOnly ? 'bg-slate-100 dark:bg-white/5 text-slate-500' : 'bg-indigo-500/10 text-indigo-600 shadow-sm'}`}>
                 <Icon size={18} />
             </div>
             <div className="flex-1 min-w-0">
@@ -113,10 +113,10 @@ function EditableRow({ label, value, icon: Icon, onSave, placeholder, readOnly =
                             onChange={e => setDraft(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') cancel(); }}
                             placeholder={placeholder}
-                            className="flex-1 text-sm bg-slate-50 dark:bg-white/5 border border-blue-500 rounded-xl px-4 py-2 text-slate-900 dark:text-slate-100 outline-none ring-4 ring-blue-500/10 min-w-0"
+                            className="flex-1 text-sm bg-slate-50 dark:bg-white/5 border border-indigo-500 rounded-xl px-4 py-2 text-slate-900 dark:text-slate-100 outline-none ring-4 ring-indigo-500/10 min-w-0"
                         />
                         <button onClick={handleSave} disabled={saving}
-                            className="w-9 h-9 rounded-xl bg-green-500 flex items-center justify-center text-white flex-shrink-0 hover:bg-green-600 transition-all shadow-lg shadow-green-500/20 disabled:opacity-50">
+                            className="w-9 h-9 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center text-white flex-shrink-0 hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50">
                             {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                         </button>
                         <button onClick={cancel}
@@ -136,7 +136,7 @@ function EditableRow({ label, value, icon: Icon, onSave, placeholder, readOnly =
             {!readOnly && !editing && (
                 <button
                     onClick={(e) => { e.preventDefault(); setEditing(true); }}
-                    className="mt-1 w-10 h-10 rounded-xl bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center text-blue-600 transition-all flex-shrink-0 border border-transparent hover:border-slate-200 dark:hover:border-white/10 shadow-sm active:scale-95"
+                    className="mt-1 w-10 h-10 rounded-xl bg-slate-50 dark:bg-white/5 hover:bg-indigo-50 dark:hover:bg-white/10 flex items-center justify-center text-indigo-600 transition-all flex-shrink-0 border border-transparent hover:border-indigo-200 dark:hover:border-white/10 shadow-sm active:scale-95"
                     title={`Edit ${label}`}
                 >
                     <Edit2 size={14} />
@@ -236,13 +236,13 @@ export default function AdminProfilePage() {
             >
                 <div className="space-y-2">
                     <div className="flex items-center gap-3">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-900/5 text-blue-600 text-[10px] font-black uppercase tracking-widest">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-900/5 text-indigo-600 text-[10px] font-black uppercase tracking-widest">
                             <User size={12} />
                             Admin Account
                         </div>
                     </div>
                     <h1 className="text-4xl sm:text-5xl font-black text-slate-950 dark:text-slate-100 tracking-tight leading-none font-[family-name:var(--font-outfit)]">
-                        My <span className="text-blue-600">Profile</span>
+                        My <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">Profile</span>
                     </h1>
                     <p className="text-slate-400 dark:text-slate-500 font-medium text-sm max-w-sm">
                         Manage your personal details and account settings.
@@ -258,7 +258,7 @@ export default function AdminProfilePage() {
                 >
                     <div className="bg-white dark:bg-white/[0.03] backdrop-blur-3xl rounded-[2.5rem] border border-slate-100 dark:border-white/10 p-8 shadow-2xl relative overflow-hidden group">
                         {/* Decorative Background */}
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[60px] rounded-full -mr-10 -mt-10" />
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[60px] rounded-full -mr-10 -mt-10" />
                         
                         <div className="relative z-10 text-center">
                             <AvatarUpload
@@ -270,7 +270,7 @@ export default function AdminProfilePage() {
                             <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 truncate mb-1">
                                 {profile.full_name || 'Admin User'}
                             </h2>
-                            <p className="text-blue-600 font-black text-[10px] uppercase tracking-[0.2em] mb-6">
+                            <p className="text-indigo-600 font-black text-[10px] uppercase tracking-[0.2em] mb-6">
                                 {roleDisplay}
                             </p>
                         </div>
@@ -284,7 +284,7 @@ export default function AdminProfilePage() {
                 >
                     <div className="bg-white dark:bg-white/[0.03] backdrop-blur-3xl rounded-[2.5rem] border border-slate-100 dark:border-white/10 p-6 sm:p-8 shadow-2xl relative overflow-hidden">
                         <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-8 flex items-center gap-2">
-                            <User size={14} className="text-blue-500" />
+                            <User size={14} className="text-indigo-500" />
                             Personal Details
                         </h3>
 

@@ -61,7 +61,7 @@ export default function AddLeadDrawer({ onClose, onSave }) {
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex">
-            <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="flex-1 bg-black/40 backdrop-blur-md" onClick={onClose} />
             <motion.div
                 initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}

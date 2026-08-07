@@ -17,7 +17,7 @@ export default function LeadMobileCard({ lead, isSelected, onToggleSelect }) {
     const repName = lead.user_profiles?.full_name || 'Unassigned';
 
     return (
-        <div className={`p-4 rounded-[2rem] border transition-colors ${isSelected ? 'bg-indigo-50/50 border-indigo-200' : 'bg-white border-gray-100 shadow-xl shadow-gray-200/40'}`}>
+        <div className={`p-4 rounded-[2rem] border transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${isSelected ? 'bg-indigo-50/50 border-indigo-300 ring-2 ring-indigo-500/20' : 'bg-white border-slate-200/80 shadow-xl shadow-slate-200/40'}`}>
             <div className="flex items-start gap-3">
                 <input 
                     type="checkbox" 

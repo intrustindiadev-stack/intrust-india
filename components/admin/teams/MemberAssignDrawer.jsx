@@ -55,7 +55,7 @@ export default function MemberAssignDrawer({
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex">
-            <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="flex-1 bg-slate-900/40 backdrop-blur-md" onClick={onClose} />
             <motion.div
                 initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}
@@ -79,7 +79,7 @@ export default function MemberAssignDrawer({
                             placeholder="Search sales executives / managers..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all"
                         />
                     </div>
                 </div>

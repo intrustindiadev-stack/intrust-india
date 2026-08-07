@@ -174,46 +174,46 @@ export default function OrgChart({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={handleTouchEnd}
-            className="relative w-full h-[650px] bg-slate-900/90 rounded-[2.5rem] overflow-hidden border border-slate-800 shadow-2xl cursor-grab active:cursor-grabbing canvas-bg touch-none"
+            className="relative w-full h-[650px] bg-slate-50/50 rounded-[2.5rem] overflow-hidden border border-slate-200/60 shadow-inner cursor-grab active:cursor-grabbing canvas-bg touch-none"
             style={{
-                backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px)',
+                backgroundImage: 'radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
                 backgroundSize: '24px 24px'
             }}
         >
             {/* Control Bar Floating Overlay */}
-            <div className="absolute top-4 right-4 z-30 flex items-center gap-1.5 bg-slate-800/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-700/60 shadow-xl">
+            <div className="absolute top-4 right-4 z-30 flex items-center gap-1.5 bg-white/80 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/60 shadow-sm">
                 <button
                     onClick={handleZoomIn}
-                    className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
+                    className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100/80 transition-colors"
                     title="Zoom In"
                 >
                     <ZoomIn size={16} />
                 </button>
                 <button
                     onClick={handleZoomOut}
-                    className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
+                    className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100/80 transition-colors"
                     title="Zoom Out"
                 >
                     <ZoomOut size={16} />
                 </button>
-                <div className="w-px h-4 bg-slate-700 mx-0.5" />
+                <div className="w-px h-4 bg-slate-200 mx-0.5" />
                 <button
                     onClick={handleResetView}
-                    className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
+                    className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100/80 transition-colors"
                     title="Reset View"
                 >
                     <Maximize2 size={16} />
                 </button>
-                <span className="text-xs font-mono font-bold text-slate-400 px-2">
+                <span className="text-xs font-mono font-bold text-slate-600 px-2">
                     {Math.round(zoom * 100)}%
                 </span>
             </div>
 
             {/* Empty State */}
             {teams.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-3">
-                    <Layers size={48} className="text-slate-600 animate-pulse" />
-                    <p className="font-bold text-slate-300 text-lg">No teams created yet</p>
+                <div className="flex flex-col items-center justify-center h-full text-slate-500 space-y-3">
+                    <Layers size={48} className="text-slate-300 animate-pulse" />
+                    <p className="font-bold text-slate-800 text-lg">No teams created yet</p>
                     <p className="text-sm text-slate-500">Click &quot;+ Create Team&quot; to build your region hierarchy.</p>
                 </div>
             ) : (

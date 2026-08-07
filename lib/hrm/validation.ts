@@ -54,6 +54,7 @@ export const CandidateHireSchema = z.object({
 export const ClockInSchema = z.object({
   lat: z.number().min(-90).max(90).optional().nullable(),
   lng: z.number().min(-180).max(180).optional().nullable(),
+  selfieBase64: z.string().optional().nullable(),
 }).strict();
 
 export const ClockOutSchema = z.object({

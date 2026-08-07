@@ -43,9 +43,9 @@ export default function LeadAllocationPanel({ isManager }) {
 
     if (loading) {
         return (
-            <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-5 flex items-center gap-3 text-slate-400 text-sm animate-pulse">
-                <BarChart2 size={16} />
-                <span>Loading allocation summary…</span>
+            <div className="bg-gradient-to-br from-slate-950 via-indigo-950/80 to-slate-900 rounded-[2rem] p-6 flex items-center gap-3 text-indigo-200/50 text-sm animate-pulse border border-white/5">
+                <BarChart2 size={18} className="animate-pulse" />
+                <span className="font-medium tracking-wide">Initializing allocation command center...</span>
             </div>
         );
     }
@@ -85,25 +85,30 @@ export default function LeadAllocationPanel({ isManager }) {
     ];
 
     return (
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-slate-700/50 shadow-lg">
-            <div className="flex items-center gap-2 shrink-0">
-                <BarChart2 size={15} className="text-indigo-400" />
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Lead Allocation</span>
+        <div className="bg-gradient-to-br from-slate-950 via-indigo-950/90 to-slate-900 rounded-[2rem] px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border border-indigo-500/10 shadow-2xl shadow-indigo-900/20 relative overflow-hidden">
+            {/* Subtle background glow */}
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="flex items-center gap-2 shrink-0 relative z-10">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
+                    <BarChart2 size={16} className="text-indigo-400" />
+                </div>
+                <span className="text-xs font-black text-indigo-100 uppercase tracking-[0.2em]">Allocation Center</span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-5 flex-1">
+            <div className="flex flex-wrap items-center gap-8 flex-1 relative z-10">
                 {stats.map((s) => (
-                    <div key={s.label} className="flex items-center gap-2">
+                    <div key={s.label} className="flex items-center gap-3">
                         <div className="text-right">
-                            <div className={`text-xl font-black leading-none ${s.color}`}>{s.value}</div>
-                            <div className={`text-[10px] font-semibold uppercase tracking-wider mt-0.5 flex items-center gap-1 ${s.subtle}`}>
+                            <div className={`text-2xl font-black leading-none tracking-tight ${s.color} drop-shadow-sm`}>{s.value}</div>
+                            <div className={`text-[10px] font-bold uppercase tracking-widest mt-1 flex items-center gap-1 ${s.subtle}`}>
                                 {s.icon}
                                 {s.label}
                             </div>
                         </div>
                         {s.link && (
-                            <Link href={s.link} className="text-[10px] font-bold text-rose-400 hover:text-rose-300 border border-rose-500/30 rounded-lg px-2 py-1 hover:border-rose-400/50 transition-all">
-                                View →
+                            <Link href={s.link} className="text-[10px] font-bold text-rose-300 hover:text-rose-100 border border-rose-500/30 bg-rose-500/10 rounded-xl px-2.5 py-1 hover:border-rose-400 hover:bg-rose-500/20 transition-all">
+                                View &rarr;
                             </Link>
                         )}
                     </div>
@@ -111,22 +116,22 @@ export default function LeadAllocationPanel({ isManager }) {
             </div>
 
             {isManager && (
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 relative z-10">
                     <button
                         onClick={fetchMetrics}
-                        className="p-1.5 rounded-lg hover:bg-slate-700 transition-colors text-slate-500 hover:text-slate-300"
-                        title="Refresh"
+                        className="p-2 rounded-xl bg-slate-800/50 hover:bg-slate-700 transition-colors text-slate-400 hover:text-slate-200 border border-slate-700/50"
+                        title="Refresh Data"
                     >
-                        <RefreshCw size={14} />
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     {hasPending && (
                         <button
                             onClick={handleReallocate}
                             disabled={reallocating}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-all disabled:opacity-50 shadow-md shadow-indigo-900/40"
+                            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-400 hover:to-violet-400 text-white text-xs font-black tracking-wide uppercase rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-indigo-500/30"
                         >
-                            <ArrowRightLeft size={12} />
-                            {reallocating ? 'Reallocating…' : 'Reallocate Pending'}
+                            <ArrowRightLeft size={13} />
+                            {reallocating ? 'Processing...' : 'Reallocate Pending'}
                         </button>
                     )}
                 </div>

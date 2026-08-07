@@ -259,61 +259,59 @@ export default function LeadDetailPage({ params }) {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 
                 <div className="lg:col-span-1 space-y-6">
-                    <div className="bg-white dark:bg-gray-800 rounded-[2rem] border border-gray-100 dark:border-gray-700 p-6 shadow-sm">
-                        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest mb-6 opacity-40">Intelligence</h3>
-                        <div className="space-y-6">
-                            <div className="flex items-start gap-4">
-                                <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-400"><User size={18} /></div>
-                                <div className="flex-1">
-                                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Assigned Executive</p>
-                                    {profile && ['relationship_manager', 'admin', 'super_admin'].includes(profile.role) ? (
-                                        <select
-                                            value={lead.assigned_to || ''}
-                                            onChange={async (e) => {
-                                                const newOwner = e.target.value;
-                                                const { error } = await supabase.from('crm_leads').update({ assigned_to: newOwner || null }).eq('id', id);
-                                                if (!error) {
-                                                    toast.success('Assigned executive updated');
-                                                    fetchData();
-                                                } else {
-                                                    toast.error(error.message);
-                                                }
-                                            }}
-                                            className="w-full text-xs font-bold bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                                        >
-                                            <option value="">Unassigned</option>
-                                            {salesTeam.map(u => (
-                                                <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
-                                            ))}
-                                        </select>
-                                    ) : (
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                            {salesTeam.find(u => u.id === lead.assigned_to)?.full_name || 'Unassigned'}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
+                    <div className="grid grid-cols-1 gap-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-shadow">
+                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><User size={14}/> Assigned Executive</p>
+                            {profile && ['relationship_manager', 'admin', 'super_admin'].includes(profile.role) ? (
+                                <select
+                                    value={lead.assigned_to || ''}
+                                    onChange={async (e) => {
+                                        const newOwner = e.target.value;
+                                        const { error } = await supabase.from('crm_leads').update({ assigned_to: newOwner || null }).eq('id', id);
+                                        if (!error) {
+                                            toast.success('Assigned executive updated');
+                                            fetchData();
+                                        } else {
+                                            toast.error(error.message);
+                                        }
+                                    }}
+                                    className="w-full text-xs font-bold bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    <option value="">Unassigned</option>
+                                    {salesTeam.map(u => (
+                                        <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                    {salesTeam.find(u => u.id === lead.assigned_to)?.full_name || 'Unassigned'}
+                                </p>
+                            )}
+                        </div>
 
-                            <div className="flex items-start gap-4">
-                                <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-400"><DollarSign size={18} /></div>
-                                <div>
-                                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Expected Value</p>
-                                    <p className="text-lg font-black text-gray-900 dark:text-white">{formatCurrency(lead.deal_value || 0)}</p>
-                                </div>
+                        <div className="bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-gray-800 rounded-3xl border border-indigo-100 dark:border-indigo-800/50 p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-1/4 translate-y-1/4 group-hover:scale-110 transition-transform"><DollarSign size={80} /></div>
+                            <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-1 relative z-10 flex items-center gap-2"><Target size={14} /> Expected Value</p>
+                            <p className="text-2xl font-black text-gray-900 dark:text-white relative z-10">{formatCurrency(lead.deal_value || 0)}</p>
+                            
+                            {/* CSS Sparkline */}
+                            <div className="mt-4 flex items-end gap-1 h-10 opacity-70 relative z-10">
+                                {[30, 50, 40, 70, 60, 90, 80].map((h, i) => (
+                                    <div key={i} className="w-full bg-indigo-300 dark:bg-indigo-600 rounded-t-sm hover:bg-indigo-500 transition-colors cursor-pointer" style={{ height: `${h}%` }}></div>
+                                ))}
                             </div>
-                            <div className="flex items-start gap-4">
-                                <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-400"><MapPin size={18} /></div>
-                                <div>
-                                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Region</p>
-                                    <p className="text-sm font-bold text-gray-900 dark:text-white">{lead.source || 'Unknown'}</p>
-                                </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:-translate-y-0.5 transition-transform">
+                                <MapPin size={16} className="text-gray-400 mb-2"/>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Region</p>
+                                <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{lead.source || 'Unknown'}</p>
                             </div>
-                            <div className="flex items-start gap-4">
-                                <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-400"><Calendar size={18} /></div>
-                                <div>
-                                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Added On</p>
-                                    <p className="text-sm font-bold text-gray-900 dark:text-white">{format(new Date(lead.created_at), 'MMM dd, yyyy')}</p>
-                                </div>
+                            <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:-translate-y-0.5 transition-transform">
+                                <Calendar size={16} className="text-gray-400 mb-2"/>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Added On</p>
+                                <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{format(new Date(lead.created_at), 'MMM dd, yyyy')}</p>
                             </div>
                         </div>
                     </div>

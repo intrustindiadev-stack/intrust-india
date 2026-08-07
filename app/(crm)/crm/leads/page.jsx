@@ -61,6 +61,7 @@ export default function LeadsPage() {
     const statusFilter = searchParams.getAll('status') || [];
     const tempFilter = searchParams.getAll('temperature') || [];
     const assigneeFilter = searchParams.getAll('assignee') || [];
+    const datePreset = searchParams.get('date_preset') || '';
     const sortVal = searchParams.get('sort') || 'newest';
 
     const [localSearch, setLocalSearch] = useState(searchVal);
@@ -256,7 +257,41 @@ export default function LeadsPage() {
         ? totalCount - excludedIds.length 
         : selectedIds.length;
 
-    const activeFilterCount = (searchVal ? 1 : 0) + statusFilter.length + tempFilter.length + assigneeFilter.length;
+    const activeFilterCount = (searchVal ? 1 : 0) + statusFilter.length + tempFilter.length + assigneeFilter.length + (datePreset ? 1 : 0);
+
+    const handleDatePresetChange = (preset) => {
+        if (!preset) {
+            updateParams({ date_preset: '', fromDate: '', toDate: '' }, true);
+            return;
+        }
+
+        const today = new Date();
+        let fromDate = new Date();
+        let toDate = new Date();
+
+        switch (preset) {
+            case 'today':
+                fromDate.setHours(0, 0, 0, 0);
+                toDate.setHours(23, 59, 59, 999);
+                break;
+            case 'last_7_days':
+                fromDate.setDate(today.getDate() - 7);
+                break;
+            case 'last_30_days':
+                fromDate.setDate(today.getDate() - 30);
+                break;
+            case 'this_month':
+                fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                toDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+                break;
+        }
+
+        updateParams({ 
+            date_preset: preset, 
+            fromDate: fromDate.toISOString(), 
+            toDate: toDate.toISOString() 
+        }, true);
+    };
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 min-h-screen max-w-7xl mx-auto space-y-6 pb-24 lg:pb-8">
@@ -347,6 +382,23 @@ export default function LeadsPage() {
                             </div>
                         </div>
                     )}
+
+                    <div className="relative">
+                        <select 
+                            value={datePreset}
+                            onChange={(e) => handleDatePresetChange(e.target.value)}
+                            className="appearance-none pl-4 pr-9 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="last_7_days">Last 7 Days</option>
+                            <option value="last_30_days">Last 30 Days</option>
+                            <option value="this_month">This Month</option>
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                        </div>
+                    </div>
 
                     <button 
                         onClick={() => setShowFilters(true)}

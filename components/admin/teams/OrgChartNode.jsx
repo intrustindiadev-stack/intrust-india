@@ -81,14 +81,14 @@ export default function OrgChartNode({
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={`w-72 bg-white rounded-3xl border-2 transition-all duration-200 shadow-lg hover:shadow-2xl relative select-none ${
+            className={`w-72 bg-white rounded-[1.75rem] border transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 relative select-none overflow-hidden ${
                 isDragOver
-                    ? 'border-indigo-500 ring-4 ring-indigo-500/20 bg-indigo-50/50 scale-105'
-                    : 'border-slate-200/80 hover:border-slate-300'
+                    ? 'border-indigo-400 ring-4 ring-indigo-500/10 bg-indigo-50/30 scale-105'
+                    : 'border-slate-100 hover:border-slate-200'
             }`}
             style={{
                 borderTopColor: team.color || '#6366f1',
-                borderTopWidth: '5px'
+                borderTopWidth: '3px'
             }}
         >
             {/* Header / Region Tag */}
@@ -195,7 +195,7 @@ export default function OrgChartNode({
                                         className={`group flex items-center justify-between p-2 rounded-xl border text-xs transition-all ${
                                             isLead
                                                 ? 'bg-amber-50/40 border-amber-200/50 text-amber-900'
-                                                : 'bg-slate-50 hover:bg-indigo-50/40 border-slate-200/60 text-slate-700'
+                                                : 'bg-white hover:bg-indigo-50/30 border-slate-100 hover:border-indigo-100 text-slate-700 shadow-sm shadow-slate-100/50'
                                         } ${!isReadOnly ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                     >
                                         <div className="flex items-center gap-2 min-w-0">

@@ -81,7 +81,7 @@ export default function TeamCreateDrawer({
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex">
-            <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="flex-1 bg-slate-900/40 backdrop-blur-md" onClick={onClose} />
             <motion.div
                 initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}
@@ -108,7 +108,7 @@ export default function TeamCreateDrawer({
                             value={form.name}
                             onChange={e => update('name', e.target.value)}
                             placeholder="e.g. Bhopal MP Nagar Sales"
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold"
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 font-semibold transition-all"
                         />
                     </div>
 
@@ -143,7 +143,7 @@ export default function TeamCreateDrawer({
                         <select
                             value={form.parent_team_id}
                             onChange={e => update('parent_team_id', e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all"
                         >
                             <option value="">None (Root Node)</option>
                             {teams.map(t => (
@@ -186,7 +186,7 @@ export default function TeamCreateDrawer({
                         <select
                             value={form.team_lead_id}
                             onChange={e => update('team_lead_id', e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all"
                         >
                             <option value="">Unassigned</option>
                             {availableLeads.map(u => (
@@ -227,7 +227,7 @@ export default function TeamCreateDrawer({
                             onChange={e => update('description', e.target.value)}
                             rows={3}
                             placeholder="Brief operational description of this team..."
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all resize-none"
                         />
                     </div>
                 </div>

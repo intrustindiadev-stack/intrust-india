@@ -350,9 +350,9 @@ export default function AdminTeamsPage() {
 
             {/* Main Content Area */}
             {loading ? (
-                <div className="bg-slate-900 rounded-[2.5rem] h-[600px] flex flex-col items-center justify-center text-slate-400 space-y-3 shadow-2xl">
-                    <RefreshCw size={36} className="animate-spin text-indigo-400" />
-                    <p className="font-bold text-slate-200 text-base">Loading Team Hierarchy...</p>
+                <div className="bg-slate-50/50 border border-slate-200/60 rounded-[2.5rem] h-[600px] flex flex-col items-center justify-center text-slate-500 space-y-4 shadow-inner">
+                    <RefreshCw size={36} className="animate-spin text-indigo-500" />
+                    <p className="font-bold text-slate-700 text-base tracking-wide">Loading Team Hierarchy...</p>
                 </div>
             ) : viewMode === 'chart' ? (
                 <OrgChart

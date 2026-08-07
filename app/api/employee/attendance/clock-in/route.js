@@ -22,7 +22,7 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    const { lat, lng } = parseResult.data;
+    const { lat, lng, selfieBase64 } = parseResult.data;
 
     // Invoke atomic clock-in RPC with authenticated user context
     const { data, error } = await admin.rpc('clock_in_attendance', {
@@ -40,7 +40,43 @@ export async function POST(request) {
       }, { status: isDomainError ? 400 : 500 });
     }
 
-    const response = NextResponse.json({ success: true, record: data?.record }, { status: 200 });
+    const record = data?.record;
+    
+    // Process Selfie Upload if provided
+    if (selfieBase64 && record && record.id) {
+      try {
+        const matches = selfieBase64.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          const buffer = Buffer.from(matches[2], 'base64');
+          const fileName = `${user.id}/${record.date}_clockin.jpg`;
+          
+          const { error: uploadError } = await admin.storage
+            .from('attendance-selfies')
+            .upload(fileName, buffer, {
+              contentType: 'image/jpeg',
+              upsert: true
+            });
+            
+          if (!uploadError) {
+            const { data: publicUrlData } = admin.storage
+              .from('attendance-selfies')
+              .getPublicUrl(fileName);
+              
+            await admin.from('attendance')
+              .update({ selfie_url: publicUrlData.publicUrl })
+              .eq('id', record.id);
+              
+            record.selfie_url = publicUrlData.publicUrl;
+          } else {
+            console.warn('[API] Selfie upload failed:', uploadError);
+          }
+        }
+      } catch (uploadErr) {
+        console.error('[API] Error processing selfie:', uploadErr);
+      }
+    }
+
+    const response = NextResponse.json({ success: true, record }, { status: 200 });
     response.headers.set('Cache-Control', 'no-store, max-age=0');
     return response;
   } catch (err) {

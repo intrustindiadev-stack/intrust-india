@@ -11,6 +11,18 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedContactIds, setSelectedContactIds] = useState([]);
+
+    const toggleSelect = (id) => {
+        setSelectedContactIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+    const toggleSelectAll = () => {
+        if (selectedContactIds.length === filteredContacts.length) {
+            setSelectedContactIds([]);
+        } else {
+            setSelectedContactIds(filteredContacts.map(c => c.id));
+        }
+    };
 
     // View mode: 'contacts' | 'templates'
     const [activeTab, setActiveTab] = useState('contacts');
@@ -153,6 +165,26 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
                 </div>
             </div>
 
+            {/* Quick Select Actions (Header level) */}
+            {activeTab === 'contacts' && filteredContacts.length > 0 && (
+                <div className="flex items-center gap-3 py-2 px-1">
+                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer group">
+                        <input
+                            type="checkbox"
+                            checked={selectedContactIds.length === filteredContacts.length && filteredContacts.length > 0}
+                            onChange={toggleSelectAll}
+                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        />
+                        <span className="group-hover:text-indigo-600 transition-colors">Select All</span>
+                    </label>
+                    {selectedContactIds.length > 0 && (
+                        <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
+                            {selectedContactIds.length} selected
+                        </span>
+                    )}
+                </div>
+            )}
+
             {/* TAB 1: Contacts Grid */}
             {activeTab === 'contacts' && (
                 <>
@@ -176,9 +208,18 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {filteredContacts.map(contact => (
-                                <div key={contact.id} className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-all group relative overflow-hidden flex flex-col justify-between">
+                                <div key={contact.id} className={`bg-white rounded-3xl p-6 border shadow-sm hover:shadow-xl transition-all group relative overflow-hidden flex flex-col justify-between ${selectedContactIds.includes(contact.id) ? 'border-indigo-400 ring-4 ring-indigo-500/10' : 'border-gray-200'}`}>
+                                    {/* Selection Checkbox */}
+                                    <div className="absolute top-4 right-4 z-20">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedContactIds.includes(contact.id)}
+                                            onChange={() => toggleSelect(contact.id)}
+                                            className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shadow-sm"
+                                        />
+                                    </div>
                                     <div>
-                                        <div className="flex items-center gap-4 mb-5 relative z-10">
+                                        <div className="flex items-center gap-4 mb-5 relative z-10 pr-8">
                                             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white font-bold text-xl shadow-md">
                                                 {contact.contact_name?.charAt(0).toUpperCase() || 'C'}
                                             </div>
@@ -246,6 +287,28 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
                         </div>
                     )}
                 </>
+            )}
+
+            {/* Floating Action Bar */}
+            {selectedContactIds.length > 0 && activeTab === 'contacts' && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-10 fade-in border border-slate-700">
+                    <div className="flex flex-col">
+                        <span className="text-sm font-black">{selectedContactIds.length} Selected</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Contacts</span>
+                    </div>
+                    <div className="w-px h-8 bg-slate-700" />
+                    <div className="flex items-center gap-2">
+                        <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-slate-800 transition-colors text-sm font-bold text-slate-300 hover:text-white">
+                            <Mail size={16} /> Mail
+                        </button>
+                        <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-slate-800 transition-colors text-sm font-bold text-slate-300 hover:text-white">
+                            <MessageSquare size={16} /> WhatsApp
+                        </button>
+                        <button onClick={() => setSelectedContactIds([])} className="ml-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 transition-colors text-sm font-bold text-slate-400">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
             )}
 
             {/* TAB 2: WhatsApp Template Gallery */}

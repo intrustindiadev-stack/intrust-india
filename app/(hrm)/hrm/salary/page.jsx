@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Download, Calculator, CheckCircle2, AlertCircle, RefreshCw, TrendingUp, Users, X, Save, Gift } from 'lucide-react';
+import { Download, Calculator, CheckCircle2, AlertCircle, RefreshCw, TrendingUp, Users, X, Save, Gift, Calendar as CalendarIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { downloadPayslip } from '@/lib/payslipGenerator';
 import { formatPaiseToINR, INCENTIVE_TYPE_LABELS } from '@/lib/hrm/incentives';
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 function ProcessModal({ record, approvedIncentives = [], onClose, onSave }) {
   const totalApprovedIncentivesPaise = approvedIncentives.reduce((acc, i) => acc + (i.amount_paise || 0), 0);
@@ -34,13 +36,10 @@ function ProcessModal({ record, approvedIncentives = [], onClose, onSave }) {
   const handleProcess = async () => {
     setSaving(true);
     try {
-      const month = new Date().getMonth() + 1;
-      const year = new Date().getFullYear();
-
       const payload = {
         employee_id: record.id,
-        month,
-        year,
+        month: record.month,
+        year: record.year,
         base_salary: Number(form.base_salary || 0),
         hra: Number(form.hra || 0),
         allowances: Number(form.allowances || 0) + totalApprovedIncentivesRupees,
@@ -149,7 +148,7 @@ function ProcessModal({ record, approvedIncentives = [], onClose, onSave }) {
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="text-lg font-bold text-gray-900">Process Salary</h3>
-            <p className="text-sm text-gray-500">{record?.full_name} · {new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' })}</p>
+            <p className="text-sm text-gray-500">{record?.full_name} · {MONTHS[record?.month - 1]} {record?.year}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl"><X size={18} className="text-gray-500" /></button>
         </div>
@@ -208,8 +207,8 @@ export default function SalaryPage() {
   const [approvedIncentiveMap, setApprovedIncentiveMap] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [processing, setProcessing] = useState(null);
-  const month = new Date().getMonth() + 1;
-  const year = new Date().getFullYear();
+  const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -312,11 +311,23 @@ export default function SalaryPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Payroll Management</h1>
-          <p className="text-sm text-gray-500 mt-1">{new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' })} · {processed}/{employees.length} processed</p>
+          <p className="text-sm text-gray-500 mt-1">{MONTHS[month - 1]} {year} · {processed}/{employees.length} processed</p>
         </div>
-        <button onClick={fetchData} className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50">
-          <RefreshCw size={16} className="text-gray-500" />
-        </button>
+        <div className="flex gap-2 items-center">
+            <div className="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-emerald-500 transition-all shadow-sm">
+                <CalendarIcon size={16} className="text-gray-400 mr-2" />
+                <select value={month} onChange={e => setMonth(Number(e.target.value))} className="bg-transparent text-sm font-semibold text-gray-700 focus:outline-none outline-none appearance-none cursor-pointer">
+                    {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                </select>
+                <span className="text-gray-300 mx-2">/</span>
+                <select value={year} onChange={e => setYear(Number(e.target.value))} className="bg-transparent text-sm font-semibold text-gray-700 focus:outline-none outline-none appearance-none cursor-pointer">
+                    {[year - 2, year - 1, year, year + 1].map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+            </div>
+            <button onClick={fetchData} className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 shadow-sm transition-all text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                <RefreshCw size={16} />
+            </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -390,7 +401,7 @@ export default function SalaryPage() {
                             <Download size={12} /> Payslip
                           </button>
                         ) : (
-                          <button onClick={() => setProcessing({ ...emp, salary_id: sal?.id, ...sal })}
+                          <button onClick={() => setProcessing({ ...emp, salary_id: sal?.id, ...sal, month, year })}
                             className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100">
                             <Calculator size={12} /> Process
                           </button>

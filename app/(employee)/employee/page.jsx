@@ -11,6 +11,7 @@ import WelcomeRoleCelebrationModal from '@/components/shared/WelcomeRoleCelebrat
 import Image from 'next/image';
 import { useAttendanceActions } from '@/hooks/useAttendanceActions';
 import IDCard from '@/components/shared/IDCard';
+import CalendarWidget from '@/components/shared/CalendarWidget';
 
 const QUICK_ACTIONS = [
     { label: 'Attendance', icon: ClipboardList, href: '/employee/attendance', color: 'bg-emerald-500', shadow: 'shadow-emerald-500/30', desc: 'Log your shifts' },
@@ -226,6 +227,14 @@ export default function EmployeeDashboard() {
                                         </Link>
                                     );
                                 })}
+                            </div>
+                        </motion.div>
+
+                        {/* Calendar Widget */}
+                        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="pt-4">
+                            <h2 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-4">My Schedule & Calendar</h2>
+                            <div className="h-[420px]">
+                                <CalendarWidget events={data?.schedule_events || []} />
                             </div>
                         </motion.div>
 

@@ -57,9 +57,9 @@ export default function LeadsTable({
 
     return (
         <div className="hidden lg:block bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto hide-scrollbar">
                 <table className="w-full text-left border-collapse">
-                    <thead className="bg-gray-50/80 text-[11px] uppercase tracking-wider text-gray-500 font-bold border-b border-gray-100 sticky top-0 z-10">
+                    <thead className="bg-gradient-to-r from-slate-50 to-white text-[11px] uppercase tracking-wider text-slate-500 font-bold border-b border-slate-100 sticky top-0 z-10 shadow-sm shadow-slate-200/20">
                         <tr>
                             <th className="p-4 pl-6 w-12">
                                 <input 
@@ -88,7 +88,7 @@ export default function LeadsTable({
                             return (
                                 <tr 
                                     key={lead.id} 
-                                    className={`group transition-colors ${isSelected ? 'bg-indigo-50/50' : 'hover:bg-slate-50/60'}`}
+                                    className={`group transition-all hover:shadow-md relative hover:z-10 ${isSelected ? 'bg-indigo-50/40 border-l-2 border-l-indigo-500' : 'hover:bg-slate-50/60 border-l-2 border-l-transparent bg-white'}`}
                                 >
                                     <td className="p-4 pl-6">
                                         <input 

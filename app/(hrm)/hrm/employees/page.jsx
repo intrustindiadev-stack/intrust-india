@@ -13,6 +13,7 @@ const ROLE_LABELS = {
     hr_manager: 'HR Manager',
     admin: 'Admin',
     super_admin: 'Super Admin',
+    inactive: 'Inactive (Deactivated)',
     freelancer: 'Freelancer',
     video_editor: 'Video Editor',
     social_media_manager: 'Social Media Manager',
@@ -93,14 +94,33 @@ function EmployeeDrawer({ employee, onClose, onSave }) {
                 </div>
                 <div className="flex-1 overflow-y-auto p-5 space-y-4">
                     {/* Avatar */}
-                    <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-xl">
+                    <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100 shadow-sm">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-xl shadow-inner">
                             {(employee?.full_name || '?').charAt(0).toUpperCase()}
                         </div>
                         <div>
                             <p className="font-bold text-gray-900">{employee?.full_name}</p>
                             <p className="text-sm text-gray-500">{employee?.email}</p>
                             <p className="text-xs text-gray-400">{employee?.phone}</p>
+                        </div>
+                    </div>
+
+                    {/* Financial Summary */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 shadow-sm relative overflow-hidden group">
+                            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-1/4 translate-y-1/4 group-hover:scale-110 transition-transform">
+                                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            </div>
+                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1 relative z-10">Monthly Base</p>
+                            <p className="text-lg font-black text-indigo-900 font-mono relative z-10">₹{Number(form.base_salary || 0).toLocaleString('en-IN')}</p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 shadow-sm relative overflow-hidden group">
+                            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-1/4 translate-y-1/4 group-hover:scale-110 transition-transform">
+                                <TrendingUp size={60} />
+                            </div>
+                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1 relative z-10">YTD Earnings (Est)</p>
+                            <p className="text-lg font-black text-emerald-900 font-mono relative z-10">₹{Number((form.base_salary || 0) * (new Date().getMonth() || 1)).toLocaleString('en-IN')}</p>
+                            <p className="text-[10px] font-bold text-emerald-600 mt-1 relative z-10">Current Financial Year</p>
                         </div>
                     </div>
 
@@ -151,11 +171,25 @@ function EmployeeDrawer({ employee, onClose, onSave }) {
                         </select>
                     </div>
                 </div>
-                <div className="p-5 border-t border-gray-100 flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">Cancel</button>
-                    <button onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">
-                        {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={16} /> Save Changes</>}
-                    </button>
+                <div className="p-5 border-t border-gray-100 flex flex-col gap-3">
+                    <div className="flex gap-3">
+                        <button onClick={onClose} className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">Cancel</button>
+                        <button onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">
+                            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={16} /> Save Changes</>}
+                        </button>
+                    </div>
+                    {form.role !== 'inactive' && (
+                        <button 
+                            onClick={() => {
+                                if (confirm("Are you sure you want to deactivate this employee? They will lose access to the system.")) {
+                                    up('role', 'inactive');
+                                }
+                            }}
+                            className="w-full py-2.5 rounded-2xl border-2 border-rose-100 text-rose-600 font-semibold text-sm hover:bg-rose-50 hover:border-rose-200 transition-colors"
+                        >
+                            Deactivate Employee
+                        </button>
+                    )}
                 </div>
             </motion.div>
         </motion.div>
