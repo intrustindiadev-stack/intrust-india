@@ -272,6 +272,8 @@ export async function fetchLeadsForAssignment(page = 1, search = '', filter = 'a
             .from('crm_leads')
             .select('id, title, contact_name, phone, email, status, assigned_to, created_at, source', { count: 'exact' })
             .is('archived_at', null)
+            .neq('source', 'Users')
+            .neq('source', 'App User')
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
 

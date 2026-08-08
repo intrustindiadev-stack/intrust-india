@@ -42,6 +42,8 @@ export default function AdminTeamLeadsPage() {
             const { data: leadsData } = await supabase
                 .from('crm_leads')
                 .select('*')
+                .neq('source', 'Users')
+                .neq('source', 'App User')
                 .order('created_at', { ascending: false });
 
             setTeam(teamData || []);

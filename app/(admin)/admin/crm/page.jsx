@@ -39,9 +39,11 @@ export default async function AdminCRMPage() {
         supabase.from('crm_leads')
             .select('*')
             .is('archived_at', null)
+            .neq('source', 'Users')
+            .neq('source', 'App User')
             .order('created_at', { ascending: false })
             .limit(20),
-        supabase.from('crm_leads').select('status').is('archived_at', null)
+        supabase.from('crm_leads').select('status').is('archived_at', null).neq('source', 'Users').neq('source', 'App User')
     ]);
 
     const leadsRaw = leadsRes.data || [];

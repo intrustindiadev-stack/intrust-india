@@ -93,8 +93,8 @@ export default function CRMDashboard() {
             const manager = ['relationship_manager', 'admin', 'super_admin'].includes(role);
             setIsManager(manager);
 
-            let recentQuery = supabase.from('crm_leads').select('id, title, contact_name, phone, email, status, source, created_at, deal_value, temperature').is('archived_at', null).neq('source', 'App User').order('created_at', { ascending: false }).limit(5);
-            let allQuery = supabase.from('crm_leads').select('status, created_at, deal_value, assigned_to').is('archived_at', null).neq('source', 'App User');
+            let recentQuery = supabase.from('crm_leads').select('id, title, contact_name, phone, email, status, source, created_at, deal_value, temperature').is('archived_at', null).neq('source', 'Users').neq('source', 'App User').order('created_at', { ascending: false }).limit(5);
+            let allQuery = supabase.from('crm_leads').select('status, created_at, deal_value, assigned_to').is('archived_at', null).neq('source', 'Users').neq('source', 'App User');
             let tasksQuery = supabase.from('crm_tasks').select('*').eq('status', 'pending').order('due_date', { ascending: true }).limit(4);
 
             if (!manager) {

@@ -185,6 +185,8 @@ export default async function AdminDashboard() {
         // 8. CRM Leads Total
         supabase.from('crm_leads')
             .select('*', { count: 'exact', head: true })
+            .neq('source', 'Users')
+            .neq('source', 'App User')
             .then(({ count, error }) => {
                 if (error) console.error('Error fetching leads count:', error);
                 return count || 0;
