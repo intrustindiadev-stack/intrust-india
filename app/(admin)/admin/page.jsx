@@ -43,7 +43,8 @@ export default async function AdminDashboard() {
         pendingApprovals,
         shoppingStats,
         totalLeadsCount,
-        totalEmployeesCount
+        totalEmployeesCount,
+        pendingAccessRequests
     ] = await Promise.all([
         // 1. Total Revenue (from transactions table + shopping_order_groups)
         Promise.all([
@@ -200,7 +201,13 @@ export default async function AdminDashboard() {
             .then(({ count, error }) => {
                 if (error) console.error('Error fetching employees count:', error.message || error);
                 return count || 0;
-            })
+            }),
+
+        // 10. Pending Panel Access Requests — count only
+        supabase.from('panel_access_requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'pending')
+            .then(({ count }) => count || 0)
     ]);
 
     return (
@@ -247,6 +254,28 @@ export default async function AdminDashboard() {
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                     {/* Left Column: Transactions & Approvals */}
                     <div className="xl:col-span-2 space-y-8">
+                        {/* Pending Panel Access — summary card linking to Career Applications */}
+                        {pendingAccessRequests > 0 && (
+                            <Link
+                                href="/admin/careers?filter=pending_access"
+                                className="flex items-center justify-between p-5 bg-indigo-600 rounded-3xl shadow-lg hover:bg-indigo-700 transition-colors group"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-white/70 text-xs font-bold uppercase tracking-widest">Action Required</p>
+                                        <p className="text-white text-xl font-extrabold mt-0.5">{pendingAccessRequests} Pending Access Request{pendingAccessRequests !== 1 ? 's' : ''}</p>
+                                        <p className="text-white/60 text-xs mt-0.5">Review in Career Applications →</p>
+                                    </div>
+                                </div>
+                                <div className="w-10 h-10 rounded-xl bg-white/10 group-hover:bg-white/20 flex items-center justify-center transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                </div>
+                            </Link>
+                        )}
+
                         {/* Pending Approvals Section */}
                         {pendingApprovals.length > 0 ? (
                             <div className="bg-white backdrop-blur-xl rounded-3xl border border-gray-100 shadow-sm overflow-hidden">

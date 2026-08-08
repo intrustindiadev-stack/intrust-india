@@ -48,7 +48,7 @@ export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
         { name: 'Contacts', icon: User, path: '/crm/contacts' },
         { name: 'Pipeline', icon: Briefcase, path: '/crm/pipeline' },
         { name: 'Tasks', icon: Target, path: '/crm/tasks' },
-        { name: 'Teams', icon: Users, path: '/crm/teams' },
+        { name: 'Organization', icon: Users, path: '/crm/teams' },
         { name: 'Invoice', icon: FileText, path: '/crm/invoice' },
     ];
 

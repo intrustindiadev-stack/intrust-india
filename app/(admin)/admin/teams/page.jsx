@@ -196,10 +196,10 @@ export default function AdminTeamsPage() {
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
                         <Network className="text-indigo-600" size={28} />
-                        Team Hierarchy & Org Chart
+                        Organization Structure
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
-                        Multi-region team management, atomic assignments & optimistic concurrency control
+                        Multi-region organization management, atomic assignments & optimistic concurrency control
                     </p>
                 </div>
 
@@ -287,8 +287,8 @@ export default function AdminTeamsPage() {
                         onChange={(e) => setActiveFilter(e.target.value)}
                         className="px-3 py-2 rounded-2xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white focus:outline-none"
                     >
-                        <option value="true">Active Teams</option>
-                        <option value="false">Inactive Teams</option>
+                        <option value="true">Active Organizations</option>
+                        <option value="false">Inactive Organizations</option>
                     </select>
                 </div>
             </div>
@@ -313,7 +313,7 @@ export default function AdminTeamsPage() {
                     </div>
                     <div>
                         <div className="text-2xl font-black text-slate-900">{teams.length}</div>
-                        <div className="text-xs text-slate-500 font-medium">Teams Displayed</div>
+                        <div className="text-xs text-slate-500 font-medium">Units Displayed</div>
                     </div>
                 </div>
 
@@ -323,7 +323,7 @@ export default function AdminTeamsPage() {
                     </div>
                     <div>
                         <div className="text-2xl font-black text-slate-900">{totalMembers}</div>
-                        <div className="text-xs text-slate-500 font-medium">Team Members</div>
+                        <div className="text-xs text-slate-500 font-medium">Workforce</div>
                     </div>
                 </div>
 
@@ -370,10 +370,10 @@ export default function AdminTeamsPage() {
                     <table className="w-full text-left min-w-[800px]">
                         <thead className="bg-slate-50 border-b border-slate-100 text-xs uppercase tracking-wider text-slate-500 font-semibold">
                             <tr>
-                                <th className="p-4 pl-6">Team Name</th>
+                                <th className="p-4 pl-6">Organization Unit</th>
                                 <th className="p-4">Level</th>
                                 <th className="p-4">Location</th>
-                                <th className="p-4">Team Lead</th>
+                                <th className="p-4">Unit Lead</th>
                                 <th className="p-4">Members</th>
                                 <th className="p-4">Version</th>
                                 <th className="p-4 pr-6 text-right">Actions</th>

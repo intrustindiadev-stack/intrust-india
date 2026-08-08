@@ -117,7 +117,7 @@ export default function BulkTransferDrawer({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="text-xs font-extrabold uppercase tracking-wider text-slate-600 block mb-1.5">
-                                Source Team <span className="text-rose-500">*</span>
+                                Source Unit <span className="text-rose-500">*</span>
                             </label>
                             <select
                                 value={sourceTeamId}
@@ -139,7 +139,7 @@ export default function BulkTransferDrawer({
 
                         <div>
                             <label className="text-xs font-extrabold uppercase tracking-wider text-slate-600 block mb-1.5">
-                                Target Team <span className="text-rose-500">*</span>
+                                Target Unit <span className="text-rose-500">*</span>
                             </label>
                             <select
                                 value={targetTeamId}

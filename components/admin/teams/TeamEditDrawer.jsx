@@ -118,9 +118,9 @@ export default function TeamEditDrawer({
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex">
             <ConfirmModal
                 isOpen={showDeleteModal}
-                title="Deactivate Team"
+                title="Deactivate Organization Unit"
                 message={`Are you sure you want to deactivate "${team?.name}"? Members will be removed from team assignments.`}
-                confirmText="Deactivate Team"
+                confirmText="Deactivate Unit"
                 confirmVariant="danger"
                 requireReason={true}
                 reasonPlaceholder="Please state why this team is being deactivated..."
@@ -137,7 +137,7 @@ export default function TeamEditDrawer({
             >
                 <div className="p-5 border-b border-slate-100 flex items-center justify-between">
                     <div>
-                        <h2 className="text-lg font-bold text-slate-900">Edit Team</h2>
+                        <h2 className="text-lg font-bold text-slate-900">Edit Organization Unit</h2>
                         <p className="text-xs text-slate-400 mt-0.5">{team?.name} (v{team?.version || 1})</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
@@ -149,7 +149,7 @@ export default function TeamEditDrawer({
                     {/* Team Name */}
                     <div>
                         <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">
-                            Team Name *
+                            Organization Unit Name *
                         </label>
                         <input
                             type="text"
@@ -185,7 +185,7 @@ export default function TeamEditDrawer({
                     {/* Parent Team */}
                     <div>
                         <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">
-                            Parent Team in Org Chart
+                            Parent Organization Unit
                         </label>
                         <select
                             value={form.parent_team_id}
@@ -226,7 +226,7 @@ export default function TeamEditDrawer({
                     {/* Team Lead */}
                     <div>
                         <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider flex items-center gap-1">
-                            <Crown size={13} className="text-amber-500" /> Team Lead (Manager)
+                            <Crown size={13} className="text-amber-500" /> Unit Lead (Manager)
                         </label>
                         <select
                             value={form.team_lead_id}
@@ -302,7 +302,7 @@ export default function TeamEditDrawer({
                         onClick={() => setShowDeleteModal(true)}
                         disabled={deleting}
                         className="p-3 rounded-2xl border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center"
-                        title="Deactivate Team"
+                        title="Deactivate Organization Unit"
                     >
                         <Trash2 size={18} />
                     </button>

@@ -69,6 +69,16 @@ export async function GET(request) {
       .order('holiday_date', { ascending: true })
       .limit(1);
 
+    // 6. Fetch pending panel access request
+    const { data: pendingAccessRequest } = await admin
+      .from('panel_access_requests')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     const response = NextResponse.json({
       success: true,
       timezone,
@@ -78,6 +88,7 @@ export async function GET(request) {
       pending_tasks: tasksCount || 0,
       leave_balance: remainingLeaves,
       next_holiday: nextHolidays?.[0] || null,
+      pending_access_request: pendingAccessRequest || null,
     }, { status: 200 });
 
     response.headers.set('Cache-Control', 'no-store, max-age=0');

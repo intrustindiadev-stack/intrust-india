@@ -49,6 +49,9 @@ export const CandidateHireSchema = z.object({
   offerLetterNotes: z.string().optional().nullable(),
   interviewDate: z.string().optional().nullable(),
   interviewNotes: z.string().optional().nullable(),
+  teamId: z.string().uuid().optional().nullable(),
+  reportingManagerId: z.string().uuid().optional().nullable(),
+  department: z.string().optional().nullable(),
 });
 
 export const ClockInSchema = z.object({

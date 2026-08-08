@@ -56,10 +56,10 @@ export default function HrmTeamsPage() {
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
                         <Network className="text-indigo-600" size={28} />
-                        Team Hierarchy
+                        Organization Structure
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
-                        Read-only view of the organization's team structure
+                        Read-only view of the organization structure
                     </p>
                 </div>
 

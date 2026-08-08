@@ -89,7 +89,7 @@ export default function TeamCreateDrawer({
             >
                 <div className="p-5 border-b border-slate-100 flex items-center justify-between">
                     <div>
-                        <h2 className="text-lg font-bold text-slate-900">Create New Team</h2>
+                        <h2 className="text-lg font-bold text-slate-900">Create Organization Unit</h2>
                         <p className="text-xs text-slate-400 mt-0.5">Define region, hierarchy & team leadership</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
@@ -101,7 +101,7 @@ export default function TeamCreateDrawer({
                     {/* Team Name */}
                     <div>
                         <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">
-                            Team Name *
+                            Organization Unit Name *
                         </label>
                         <input
                             type="text"
@@ -138,7 +138,7 @@ export default function TeamCreateDrawer({
                     {/* Parent Team (Hierarchy) */}
                     <div>
                         <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">
-                            Parent Team in Org Chart
+                            Parent Organization Unit
                         </label>
                         <select
                             value={form.parent_team_id}
@@ -181,7 +181,7 @@ export default function TeamCreateDrawer({
                     {/* Team Lead */}
                     <div>
                         <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider flex items-center gap-1">
-                            <Crown size={13} className="text-amber-500" /> Team Lead (Sales Manager)
+                            <Crown size={13} className="text-amber-500" /> Unit Lead (Manager)
                         </label>
                         <select
                             value={form.team_lead_id}
@@ -245,7 +245,7 @@ export default function TeamCreateDrawer({
                         disabled={saving}
                         className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25"
                     >
-                        {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Create Team'}
+                        {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Create Unit'}
                     </button>
                 </div>
             </motion.div>

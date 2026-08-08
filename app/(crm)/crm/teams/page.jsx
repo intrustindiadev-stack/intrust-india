@@ -169,7 +169,7 @@ export default function CrmTeamsPage() {
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
                         <Network className="text-indigo-600" size={28} />
-                        My Team Hierarchy
+                        My Organization
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
                         {capabilities.canAssignMembers ? 'Managed subtree structure & team member allocation' : 'Read-only view of your assigned team structure'}

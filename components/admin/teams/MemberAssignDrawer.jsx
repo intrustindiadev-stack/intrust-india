@@ -63,7 +63,7 @@ export default function MemberAssignDrawer({
             >
                 <div className="p-5 border-b border-slate-100 flex items-center justify-between">
                     <div>
-                        <h2 className="text-lg font-bold text-slate-900">Add Member to Team</h2>
+                        <h2 className="text-lg font-bold text-slate-900">Assign to Workforce</h2>
                         <p className="text-xs text-indigo-600 font-semibold mt-0.5">{team?.name}</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">

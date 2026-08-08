@@ -48,7 +48,8 @@ export async function POST(request) {
 
         const {
             applicationId, stage, panelAccessGranted, offeredSalary,
-            commissionPercent, joiningBonus, offerLetterNotes, interviewDate, interviewNotes
+            commissionPercent, joiningBonus, offerLetterNotes, interviewDate, interviewNotes,
+            teamId, reportingManagerId, department
         } = parsed.data;
 
         // 5. Build updates
@@ -106,10 +107,31 @@ export async function POST(request) {
                         joining_date: new Date().toISOString().split('T')[0], // today
                         base_salary: offeredSalary ? Number(offeredSalary) : 0,
                         city: updatedApp.city || null,
-                        department: updatedApp.role_category || 'other',
-                        role: panelAccessGranted || 'employee',
-                        employment_type: 'full_time'
+                        department: department || updatedApp.role_category || 'other',
+                        role: 'employee',
+                        employment_type: 'full_time',
+                        reporting_manager_id: reportingManagerId || null
                     }).eq('id', authData.user.id);
+
+                    if (teamId) {
+                        await adminSupabase.from('team_members').insert({
+                            team_id: teamId,
+                            user_id: authData.user.id
+                        });
+                    }
+
+                    // C. Create Panel Access Request if needed
+                    if (panelAccessGranted && panelAccessGranted !== 'employee') {
+                        await adminSupabase.from('panel_access_requests').insert({
+                            user_id: authData.user.id,
+                            requested_role: panelAccessGranted,
+                            department: department || updatedApp.role_category || 'other',
+                            team_id: teamId || null,
+                            reporting_manager_id: reportingManagerId || null,
+                            requested_by: user.id,
+                            status: 'pending'
+                        });
+                    }
                 }
             } catch (authErr) {
                 console.error('Failed to automate employee creation:', authErr);
@@ -122,15 +144,28 @@ export async function POST(request) {
                 .in('role', ['admin', 'super_admin']);
 
             if (!adminsError && admins?.length > 0) {
-                const notifications = admins.map(admin => ({
-                    user_id: admin.id,
-                    title: 'New Employee Hired & Created',
-                    body: `${updatedApp.full_name} has been hired for ${updatedApp.career_job_roles?.title || updatedApp.role_category}. Their employee account has been created with role: ${panelAccessGranted || 'employee'}.`,
-                    type: 'info',
-                    reference_type: 'hire_approval',
-                    reference_id: updatedApp.id,
-                    read: false
-                }));
+                let notifications = [];
+                if (panelAccessGranted && panelAccessGranted !== 'employee') {
+                     notifications = admins.map(admin => ({
+                        user_id: admin.id,
+                        title: 'New Panel Access Request',
+                        body: `${updatedApp.full_name} has requested access to the ${panelAccessGranted} panel. Please review and approve.`,
+                        type: 'warning',
+                        reference_type: 'panel_access_request',
+                        reference_id: updatedApp.id,
+                        read: false
+                    }));
+                } else {
+                    notifications = admins.map(admin => ({
+                        user_id: admin.id,
+                        title: 'New Employee Hired & Created',
+                        body: `${updatedApp.full_name} has been hired for ${updatedApp.career_job_roles?.title || updatedApp.role_category}. Their employee account has been created.`,
+                        type: 'info',
+                        reference_type: 'hire_approval',
+                        reference_id: updatedApp.id,
+                        read: false
+                    }));
+                }
 
                 await adminSupabase.from('notifications').insert(notifications);
             }

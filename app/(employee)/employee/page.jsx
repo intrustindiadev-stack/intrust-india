@@ -23,7 +23,7 @@ const QUICK_ACTIONS = [
 ];
 
 // Extracted from lucide-react above to avoid missing imports in array mapping
-import { UserCircle } from 'lucide-react';
+import { UserCircle, ShieldCheck } from 'lucide-react';
 
 export default function EmployeeDashboard() {
     const { user, profile } = useAuth();
@@ -114,7 +114,18 @@ export default function EmployeeDashboard() {
                     
                     {/* Left Column (Main Ops) */}
                     <div className="lg:col-span-8 space-y-8">
-                        
+                        {data?.pending_access_request && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-3xl p-5 flex items-start gap-4 shadow-sm">
+                                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 text-amber-600">
+                                    <ShieldCheck size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-amber-900 font-bold text-lg tracking-tight">System Access Pending Approval</h3>
+                                    <p className="text-amber-700/80 text-sm mt-0.5">HR has requested <span className="font-bold">{data.pending_access_request.requested_role}</span> access for your account. You will have limited access to the portal until an Admin approves your request. Please check back later.</p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Compact Welcome Header */}
                         <div className="flex items-center justify-between">
                             <div>

@@ -43,7 +43,7 @@ export default function HRMSidebar({ isOpen, setIsOpen, userProfile }) {
     const menuItems = [
         { name: 'Dashboard', icon: Home, path: '/hrm' },
         { name: 'Employees', icon: Users, path: '/hrm/employees' },
-        { name: 'Teams', icon: Network, path: '/hrm/teams' },
+        { name: 'Organization', icon: Network, path: '/hrm/teams' },
         { name: 'Jobs', icon: Briefcase, path: '/hrm/jobs' },
         { name: 'Recruitment', icon: Users, path: '/hrm/recruitment' },
         { name: 'Attendance', icon: Clock, path: '/hrm/attendance' },
