@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import Link from 'next/link';
 
 const CATEGORY_OPTIONS = [
     { value: 'freelancer', label: 'Freelancer' },
@@ -157,10 +158,16 @@ export default function HRJobsPage() {
                 ) : (
                     <div className="divide-y divide-gray-100">
                         {filteredJobs.map(job => (
-                            <div key={job.id} className="p-5 hover:bg-gray-50 transition-colors flex flex-col sm:flex-row justify-between gap-4">
+                            <div 
+                                key={job.id} 
+                                onClick={() => handleOpenModal(job)}
+                                className="p-5 bg-white hover:bg-gray-50 border border-transparent hover:border-gray-200 hover:shadow-sm transition-all duration-200 cursor-pointer flex flex-col sm:flex-row justify-between gap-4 group active:scale-[0.99]"
+                            >
                                 <div>
                                     <div className="flex items-center gap-3">
-                                        <h3 className="font-bold text-gray-900">{job.title}</h3>
+                                        <h3 className="font-bold text-gray-900 group-hover:text-emerald-600 transition-colors text-left">
+                                            {job.title}
+                                        </h3>
                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${job.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
                                             {job.is_active ? 'Active' : 'Closed'}
                                         </span>
@@ -171,9 +178,9 @@ export default function HRJobsPage() {
                                         {job.commission_structure && <span className="flex items-center gap-1.5"><DollarSign size={14} className="text-emerald-500"/> {job.commission_structure.split('\n')[0]}</span>}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => handleOpenModal(job)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"><Edit2 size={16} /></button>
-                                    <button onClick={() => handleDelete(job.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors"><Trash2 size={16} /></button>
+                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                    <button onClick={(e) => { e.stopPropagation(); handleOpenModal(job); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"><Edit2 size={16} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleDelete(job.id); }} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors"><Trash2 size={16} /></button>
                                 </div>
                             </div>
                         ))}

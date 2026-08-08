@@ -58,7 +58,6 @@ export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
     }
 
     menuItems.push({ name: 'Settings', icon: Settings, path: '/crm/settings' });
-    menuItems.push({ name: 'My Portal', icon: User, path: '/employee' });
     menuItems.push({ name: 'Help & Support', icon: HelpCircle, path: '/crm/help' });
 
     return (
@@ -137,7 +136,20 @@ export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
                 </div>
 
                 {/* User Footer */}
-                <div className="p-4 border-t border-gray-100">
+                <div className="p-4 border-t border-gray-100 space-y-4">
+                    <div className="flex flex-col space-y-1">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-1">Switch Portal</div>
+                        <Link
+                            href="/employee"
+                            onClick={() => setIsOpen(false)}
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors group"
+                        >
+                            <User size={16} className="text-gray-400 group-hover:text-blue-600 transition-colors" />
+                            <span className="flex-1 text-sm tracking-wide">My Portal</span>
+                            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400" />
+                        </Link>
+                    </div>
+
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 mb-2">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1e3a5f] to-blue-600 flex items-center justify-center text-white font-black text-sm border-2 border-white shadow-sm relative overflow-hidden shrink-0">
                             {userProfile?.avatar_url ? (

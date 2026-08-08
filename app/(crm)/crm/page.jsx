@@ -194,6 +194,16 @@ export default function CRMDashboard() {
                     <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
                     <div className="absolute bottom-0 left-1/2 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl transform -translate-x-1/2 pointer-events-none" />
                     <div className="absolute inset-0 bg-[linear-gradient(60deg,transparent_30%,rgba(255,255,255,0.03)_50%,transparent_70%)] pointer-events-none" />
+                    
+                    <div className="absolute right-0 bottom-0 h-full w-1/2 pointer-events-none hidden lg:block">
+                        <Image 
+                            src="/images/crm_banner_illustration.png"
+                            alt="CRM Dashboard Illustration"
+                            fill
+                            className="object-contain object-right-bottom scale-110 origin-bottom-right drop-shadow-2xl translate-y-4 mix-blend-screen opacity-90"
+                            priority
+                        />
+                    </div>
 
                     <div className="relative z-10 flex flex-col gap-4 max-w-2xl">
                         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-white text-xs font-black uppercase tracking-widest w-fit border border-white/20 shadow-lg">

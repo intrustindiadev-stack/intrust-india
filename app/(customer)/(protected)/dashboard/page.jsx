@@ -33,10 +33,7 @@ import { useKYCPopup } from '@/hooks/useKYCPopup';
 import MerchantApplyPopup from '@/components/merchant/MerchantApplyPopup';
 import { useMerchantApplyPopup } from '@/hooks/useMerchantApplyPopup';
 
-const AdBannerCarousel = dynamic(() => import('@/components/customer/dashboard/AdBannerCarousel'), {
-    ssr: false,
-    loading: () => <div className="h-32 sm:h-40 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-2xl mb-6" />
-});
+const DisclaimerNote = dynamic(() => import('@/components/customer/dashboard/DisclaimerNote'), { ssr: false });
 const ReferralGenzSection = dynamic(() => import('@/components/customer/dashboard/ReferralGenzSection'), {
     ssr: false,
     loading: () => <div className="h-44 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-3xl" />
@@ -45,24 +42,9 @@ const RecentShoppingOrders = dynamic(() => import('@/components/customer/RecentS
     ssr: false,
     loading: () => <div className="h-52 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-3xl" />
 });
-const SolarPromoCard = dynamic(() => import('@/components/customer/dashboard/SolarPromoCard'), {
-    ssr: false,
-    loading: () => <div className="h-36 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-3xl" />
-});
-const FeatureAdvertiser = dynamic(() => import('@/components/ui/FeatureAdvertiser'), {
-    ssr: false,
-    loading: () => <div className="h-28 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-2xl" />
-});
-const CareerOpportunityCard = dynamic(() => import('@/components/customer/dashboard/CareerOpportunityCard'), {
-    ssr: false,
-    loading: () => <div className="h-36 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-3xl" />
-});
-const AdvertisementModal = dynamic(() => import('@/components/home/AdvertisementModal'), { ssr: false });
-const DisclaimerNote = dynamic(() => import('@/components/customer/dashboard/DisclaimerNote'), { ssr: false });
-const OpportunitiesSection = dynamic(() => import('@/components/customer/OpportunitiesSection'), { ssr: false });
-const MerchantOpportunityBanner = dynamic(() => import('@/components/customer/MerchantOpportunityBanner'), { ssr: false });
 const PackageSelectionModal = dynamic(() => import('@/components/customer/dashboard/PackageSelectionModal'), { ssr: false });
 const OnboardingModal = dynamic(() => import('@/components/customer/dashboard/OnboardingModal'), { ssr: false });
+const CustomerFeaturesCarousel = dynamic(() => import('@/components/customer/dashboard/CustomerFeaturesCarousel'), { ssr: false });
 
 
 function DashboardSkeleton() {
@@ -502,7 +484,6 @@ export default function CustomerDashboardPage() {
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)] flex flex-col">
-            <AdvertisementModal />
             <KYCPopup isOpen={kycPopupOpen} onClose={closeKYC} />
             <MerchantApplyPopup isOpen={merchantPopupOpen} onClose={closeMerchantPopup} />
             <Navbar />
@@ -540,13 +521,7 @@ export default function CustomerDashboardPage() {
                         </p>
                     </motion.div>
 
-                    <AdBannerCarousel />
-
                     <DashboardStats stats={stats} />
-
-                    <div className="mb-8">
-                        <FeatureAdvertiser />
-                    </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
                         {/* Main Content Area */}
@@ -558,22 +533,13 @@ export default function CustomerDashboardPage() {
 
                             <QuickServices services={quickServices} />
 
-                            <SolarPromoCard />
+                            <CustomerFeaturesCarousel />
 
                             {/* Insert shopping orders before generic activity */}
                             <RecentShoppingOrders userId={user?.id} />
 
                             <RecentActivity orders={recentActivity} />
 
-                            {/* KYC Banner */}
-                            {(userData.kycStatus === 'verified' || userData.merchantStatus) && (
-                                <MerchantOpportunityBanner
-                                    merchantStatus={userData.merchantStatus}
-                                    subscriptionStatus={userData.merchantSubscriptionStatus}
-                                    subscriptionExpiresAt={userData.merchantSubscriptionExpiresAt}
-                                    startingPriceRupees={userData.merchantSub1mPrice ?? undefined}
-                                />
-                            )}
                         </div>
 
                         {/* Sidebar */}
@@ -582,8 +548,6 @@ export default function CustomerDashboardPage() {
                             <KYCRedirectCard status={userData.kycStatus} />
                         </div>
                     </div>
-
-                    <OpportunitiesSection />
                 </div>
             </div>
             </PullToRefresh>

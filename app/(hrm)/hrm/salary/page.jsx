@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Download, Calculator, CheckCircle2, AlertCircle, RefreshCw, TrendingUp, Users, X, Save, Gift, Calendar as CalendarIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Download, Calculator, CheckCircle2, AlertCircle, RefreshCw, TrendingUp, Users, X, Save, Gift, Calendar as CalendarIcon, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -202,6 +203,7 @@ function ProcessModal({ record, approvedIncentives = [], onClose, onSave }) {
 }
 
 export default function SalaryPage() {
+  const router = useRouter();
   const [employees, setEmployees] = useState([]);
   const [salaryMap, setSalaryMap] = useState({});
   const [approvedIncentiveMap, setApprovedIncentiveMap] = useState({});
@@ -349,69 +351,85 @@ export default function SalaryPage() {
         {isLoading ? (
           <div className="p-12 text-center text-xs text-gray-400">Loading payroll entries...</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50/50 border-b border-gray-100">
-                  {['Employee', 'Basic', 'HRA', 'Allowances & Bonuses', 'Deductions', 'Net Pay', 'Status', 'Action'].map(h => (
-                    <th key={h} className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {employees.map(emp => {
+          <div className="divide-y divide-gray-100">
+            {employees.length === 0 ? (
+                <div className="p-12 text-center text-gray-500">No employees found.</div>
+            ) : (
+                employees.map(emp => {
                   const sal = salaryMap[emp.id];
                   const appIncs = approvedIncentiveMap[emp.id] || [];
                   const isProcessed = sal?.status === 'processed';
                   const fmt = (v) => v ? `₹${Number(v).toLocaleString('en-IN')}` : '—';
                   return (
-                    <tr key={emp.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">{(emp.full_name || '?').charAt(0).toUpperCase()}</div>
-                          <div>
-                            <p className="font-semibold text-gray-900 text-sm">{emp.full_name}</p>
-                            <p className="text-xs text-gray-400">{emp.department || emp.role}</p>
+                    <div 
+                      key={emp.id} 
+                      onClick={() => {
+                          const slug = emp.full_name ? emp.full_name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'employee';
+                          router.push(`/hrm/salary/${emp.id}-${slug}`);
+                      }}
+                      className="p-5 bg-white hover:bg-gray-50 border border-transparent hover:border-gray-200 hover:shadow-sm transition-all duration-200 cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group active:scale-[0.99]"
+                    >
+                      <div className="flex items-center gap-4 flex-1">
+                          <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-lg shadow-inner">
+                              {(emp.full_name || '?').charAt(0).toUpperCase()}
                           </div>
+                          <div>
+                            <p className="font-bold text-gray-900 text-base group-hover:text-emerald-600 transition-colors">{emp.full_name}</p>
+                            <p className="text-xs text-gray-400 font-medium tracking-wide mt-0.5">{emp.department || emp.role}</p>
+                          </div>
+                      </div>
+
+                      <div className="flex items-center gap-6 sm:gap-10 w-full sm:w-auto overflow-x-auto hide-scrollbar">
+                          <div className="shrink-0">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Basic</p>
+                              <p className="text-sm font-semibold text-gray-700 font-mono">{fmt(sal?.base_salary || emp.base_salary)}</p>
+                          </div>
+                          <div className="shrink-0">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Allowances</p>
+                              <div className="flex items-center gap-2">
+                                  <span className="text-sm font-semibold text-gray-700 font-mono">{fmt(sal?.allowances)}</span>
+                                  {appIncs.length > 0 && !isProcessed && (
+                                    <span className="text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-sans font-bold">
+                                      +{appIncs.length} bonus
+                                    </span>
+                                  )}
+                              </div>
+                          </div>
+                          <div className="shrink-0">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Deductions</p>
+                              <p className="text-sm font-semibold text-rose-600 font-mono">{fmt(sal?.deductions)}</p>
+                          </div>
+                          <div className="shrink-0 pr-4 sm:pr-0">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Net Pay</p>
+                              <p className="text-lg font-black text-gray-900 font-mono">{fmt(sal?.net_salary)}</p>
+                          </div>
+                      </div>
+
+                      <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 pt-4 sm:pt-0 border-t border-gray-100 sm:border-0 mt-2 sm:mt-0">
+                        {isProcessed ? (
+                          <span className="flex items-center gap-1.5 text-emerald-600 text-xs font-bold bg-emerald-50 px-2.5 py-1 rounded-full"><CheckCircle2 size={14} /> Processed</span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-amber-600 text-xs font-bold bg-amber-50 px-2.5 py-1 rounded-full"><AlertCircle size={14} /> Pending</span>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          {isProcessed ? (
+                            <button onClick={(e) => { e.stopPropagation(); generatePayslip(emp, sal); }}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100">
+                              <Download size={14} /> Payslip
+                            </button>
+                          ) : (
+                            <button onClick={(e) => { e.stopPropagation(); setProcessing({ ...emp, salary_id: sal?.id, ...sal, month, year }); }}
+                              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-colors text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-600/20">
+                              <Calculator size={14} /> Process
+                            </button>
+                          )}
                         </div>
-                      </td>
-                      <td className="px-5 py-4 text-sm text-gray-600 font-mono">{fmt(sal?.base_salary || emp.base_salary)}</td>
-                      <td className="px-5 py-4 text-sm text-gray-600 font-mono">{fmt(sal?.hra)}</td>
-                      <td className="px-5 py-4 text-sm text-gray-600 font-mono">
-                        <div>{fmt(sal?.allowances)}</div>
-                        {appIncs.length > 0 && !isProcessed && (
-                          <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-sans font-medium">
-                            +{appIncs.length} bonus pending
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 text-sm text-rose-600 font-mono">{fmt(sal?.deductions)}</td>
-                      <td className="px-5 py-4 text-sm font-bold text-gray-900 font-mono">{fmt(sal?.net_salary)}</td>
-                      <td className="px-5 py-4">
-                        {isProcessed ? (
-                          <span className="flex items-center gap-1 text-emerald-600 text-xs font-bold"><CheckCircle2 size={14} /> Processed</span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-amber-600 text-xs font-bold"><AlertCircle size={14} /> Pending</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4">
-                        {isProcessed ? (
-                          <button onClick={() => generatePayslip(emp, sal)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100">
-                            <Download size={12} /> Payslip
-                          </button>
-                        ) : (
-                          <button onClick={() => setProcessing({ ...emp, salary_id: sal?.id, ...sal, month, year })}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100">
-                            <Calculator size={12} /> Process
-                          </button>
-                        )}
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   );
-                })}
-              </tbody>
-            </table>
+                })
+            )}
           </div>
         )}
       </div>

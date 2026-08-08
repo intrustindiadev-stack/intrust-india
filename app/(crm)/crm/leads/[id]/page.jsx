@@ -224,41 +224,60 @@ export default function LeadDetailPage({ params }) {
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-none overflow-hidden">
-                <div className="h-24 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 opacity-90 relative">
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
-                </div>
-                <div className="px-6 pb-8 relative">
-                    <div className="flex flex-col md:flex-row items-end gap-6 -mt-12 relative z-10">
-                        <div className="w-28 h-28 rounded-3xl bg-white dark:bg-gray-900 p-1.5 shadow-2xl">
-                            <div className="w-full h-full rounded-[1.25rem] bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center text-indigo-700 dark:text-indigo-400 text-4xl font-black">
-                                {(lead.contact_name || lead.title || 'U').charAt(0).toUpperCase()}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-8">
+                    
+                    <div className="bg-white dark:bg-gray-800 rounded-[2rem] border border-gray-100 dark:border-gray-700 p-6 shadow-xl shadow-gray-200/40 dark:shadow-none overflow-hidden relative group">
+                        <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-indigo-500 to-violet-600 opacity-20 group-hover:opacity-30 transition-opacity" />
+                        
+                        <div className="relative flex flex-col items-center text-center mt-4">
+                            <div className="w-24 h-24 rounded-[1.5rem] bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-gray-800 dark:to-gray-700 p-1 shadow-lg mb-4 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
+                                <div className="w-full h-full rounded-[1.25rem] bg-white dark:bg-gray-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-3xl font-black">
+                                    {(lead.contact_name || lead.title || 'U').charAt(0).toUpperCase()}
+                                </div>
                             </div>
-                        </div>
-                        <div className="flex-1 space-y-1 text-center md:text-left">
-                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-                                <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">{lead.contact_name || lead.title}</h1>
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border ${statusStyle.bg}`}>
+                            <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{lead.contact_name || lead.title}</h1>
+                            <p className="text-sm font-bold text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1.5 mt-2">
+                                <Building size={14} /> {lead.title || 'Private Individual'}
+                            </p>
+                            
+                            <div className="flex flex-wrap justify-center gap-2 mt-4">
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${statusStyle.bg}`}>
                                     <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
                                     {lead.status}
                                 </span>
-                                {lead.temperature === 'hot' && <span className="bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400 px-2 py-1 rounded-lg text-[10px] font-black uppercase flex items-center gap-1"><Zap size={12} fill="currentColor" /> High Priority</span>}
+                                {lead.temperature === 'hot' && <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1"><Zap size={12} fill="currentColor" /> Hot Priority</span>}
                             </div>
-                            <p className="text-gray-500 dark:text-gray-400 font-bold flex items-center justify-center md:justify-start gap-2">
-                                <Building size={16} className="opacity-50" /> {lead.title || 'Private Individual'}
-                            </p>
                         </div>
-                        
-                        <div className="flex flex-wrap items-center justify-center gap-3 w-full md:w-auto">
-                            <ContactActions phone={lead.phone} email={lead.email} name={lead.contact_name || lead.title} />
+
+                        <div className="mt-8 flex justify-center w-full">
+                            <ContactActions phone={lead.phone} email={lead.email} name={lead.contact_name || lead.title} fullWidth />
+                        </div>
+
+                        <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700 space-y-4">
+                            {lead.phone && (
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-400"><Phone size={14} /></div>
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white">{lead.phone}</p>
+                                </div>
+                            )}
+                            {lead.email && (
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-400"><Mail size={14} /></div>
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{lead.email}</p>
+                                </div>
+                            )}
+                            {(lead.area || lead.city) && (
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-400"><MapPin size={14} /></div>
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{[lead.area, lead.city].filter(Boolean).join(', ')}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                
-                <div className="lg:col-span-1 space-y-6">
+
                     <div className="grid grid-cols-1 gap-4">
                         <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-shadow">
                             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><User size={14}/> Assigned Executive</p>
@@ -323,13 +342,13 @@ export default function LeadDetailPage({ params }) {
                     </div>
                 </div>
 
-                <div className="lg:col-span-3 space-y-6">
-                    <div className="flex items-center gap-1 bg-white dark:bg-gray-800 p-1.5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-x-auto no-scrollbar">
+                <div className="lg:col-span-8 space-y-6">
+                    <div className="flex items-center gap-2 bg-transparent overflow-x-auto no-scrollbar">
                         {TABS.map(tab => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-sm transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-105' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                                className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-black text-sm transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md transform -translate-y-0.5' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700'}`}
                             >
                                 <tab.icon size={16} /> {tab.label}
                             </button>

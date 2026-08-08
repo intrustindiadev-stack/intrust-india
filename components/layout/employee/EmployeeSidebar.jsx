@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Clock, Calendar, FileText, BookOpen, User, X, LogOut, Loader2, Shield, Users, LayoutDashboard, Gift, HelpCircle, ChevronRight, FolderOpen } from 'lucide-react';
+import { Home, Clock, Calendar, CalendarDays, FileText, BookOpen, User, X, LogOut, Loader2, Shield, Users, LayoutDashboard, Gift, HelpCircle, ChevronRight, FolderOpen } from 'lucide-react';
 import { useState } from 'react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { createClient } from '@/lib/supabaseClient';
@@ -43,6 +43,7 @@ export default function EmployeeSidebar({ isOpen, setIsOpen, userProfile }) {
     const menuItems = [
         { name: 'Dashboard', icon: Home, path: '/employee' },
         { name: 'Attendance', icon: Clock, path: '/employee/attendance' },
+        { name: 'Calendar', icon: CalendarDays, path: '/employee/calendar' },
         { name: 'Leaves', icon: Calendar, path: '/employee/leaves' },
         { name: 'Payslips', icon: FileText, path: '/employee/payslips' },
         { name: 'Incentives', icon: Gift, path: '/employee/incentives' },
@@ -52,15 +53,6 @@ export default function EmployeeSidebar({ isOpen, setIsOpen, userProfile }) {
     ];
 
     const role = userProfile?.role;
-    if (['admin', 'super_admin'].includes(role)) {
-        menuItems.push({ name: 'Admin Panel', icon: Shield, path: '/admin' });
-    }
-    if (['hr_manager', 'admin', 'super_admin'].includes(role)) {
-        menuItems.push({ name: 'HRM Panel', icon: Users, path: '/hrm' });
-    }
-    if (['relationship_exec', 'relationship_manager', 'admin', 'super_admin'].includes(role)) {
-        menuItems.push({ name: 'CRM Panel', icon: LayoutDashboard, path: '/crm' });
-    }
     menuItems.push({ name: 'Help & Support', icon: HelpCircle, path: '/employee/help' });
 
     return (
@@ -134,7 +126,33 @@ export default function EmployeeSidebar({ isOpen, setIsOpen, userProfile }) {
                 </div>
 
                 {/* User Profile Footer */}
-                <div className="p-6 mt-auto">
+                <div className="p-6 mt-auto border-t border-gray-100 space-y-4">
+                    {/* Panel Redirects */}
+                    <div className="flex flex-col space-y-1">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-1">Switch Portal</div>
+                        {['admin', 'super_admin'].includes(role) && (
+                            <Link href="/admin" onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors group">
+                                <Shield size={16} className="text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                                <span className="flex-1 text-sm tracking-wide">Admin Panel</span>
+                                <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400" />
+                            </Link>
+                        )}
+                        {['hr_manager', 'admin', 'super_admin'].includes(role) && (
+                            <Link href="/hrm" onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors group">
+                                <Users size={16} className="text-gray-400 group-hover:text-emerald-600 transition-colors" />
+                                <span className="flex-1 text-sm tracking-wide">HRM Panel</span>
+                                <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400" />
+                            </Link>
+                        )}
+                        {['relationship_exec', 'relationship_manager', 'admin', 'super_admin'].includes(role) && (
+                            <Link href="/crm" onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors group">
+                                <LayoutDashboard size={16} className="text-gray-400 group-hover:text-blue-600 transition-colors" />
+                                <span className="flex-1 text-sm tracking-wide">CRM Panel</span>
+                                <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400" />
+                            </Link>
+                        )}
+                    </div>
+
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-4 p-4 rounded-[1.5rem] bg-gray-50/50 hover:bg-gray-100/50 transition-colors cursor-pointer border border-transparent hover:border-gray-200/50">
                             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-700 font-black border-2 border-white shadow-sm relative overflow-hidden shrink-0">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Search, X, ChevronDown, RefreshCw, Briefcase, Phone, Mail, ExternalLink, CheckCircle2, Clock, User, DollarSign, Calendar, MessageSquare, UserCheck, AlertCircle, FileText } from 'lucide-react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -259,6 +260,17 @@ export default function RecruitmentPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 min-h-screen">
+            {/* Banner Illustration */}
+            <div className="w-full h-48 sm:h-56 rounded-[2.5rem] overflow-hidden relative shadow-md shadow-violet-500/10 mb-8">
+                <Image 
+                    src="/images/recruitment_banner.png" 
+                    alt="Recruitment Dashboard Banner" 
+                    fill 
+                    className="object-cover" 
+                    priority
+                />
+            </div>
+
             <AnimatePresence>
                 {selected && <CandidateDrawer app={selected} onClose={() => setSelected(null)} onUpdate={handleUpdate} />}
             </AnimatePresence>

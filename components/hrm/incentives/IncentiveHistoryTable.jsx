@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { Eye, ArrowUpDown, ChevronLeft, ChevronRight, User, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import IncentiveStatusBadge from './IncentiveStatusBadge';
 import { formatPaiseToINR, INCENTIVE_TYPE_LABELS } from '@/lib/hrm/incentives';
 
-export default function IncentiveHistoryTable({ data = [], meta, onPageChange, onSelectRow }) {
+export default function IncentiveHistoryTable({ data = [], meta, onPageChange }) {
+  const router = useRouter();
   const [sortField, setSortField] = useState('created_at');
   const [sortDir, setSortDir] = useState('desc');
 
@@ -34,102 +36,10 @@ export default function IncentiveHistoryTable({ data = [], meta, onPageChange, o
 
   return (
     <div className="space-y-4">
-      {/* Desktop Table */}
-      <div className="hidden md:block bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
-        <table className="w-full text-left text-xs text-slate-600">
-          <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-            <tr>
-              <th className="px-5 py-3.5">Recipient / Target</th>
-              <th className="px-5 py-3.5">Mode & Type</th>
-              <th className="px-5 py-3.5 cursor-pointer select-none" onClick={() => toggleSort('amount')}>
-                <div className="flex items-center gap-1">
-                  <span>Amount</span>
-                  <ArrowUpDown size={12} className="text-slate-400" />
-                </div>
-              </th>
-              <th className="px-5 py-3.5 cursor-pointer select-none" onClick={() => toggleSort('effective_date')}>
-                <div className="flex items-center gap-1">
-                  <span>Effective Date</span>
-                  <ArrowUpDown size={12} className="text-slate-400" />
-                </div>
-              </th>
-              <th className="px-5 py-3.5">Status</th>
-              <th className="px-5 py-3.5 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 font-medium">
-            {sortedData.length === 0 ? (
-              <tr>
-                <td colSpan="6" className="text-center py-10 text-slate-400">
-                  No incentive records match the current filters.
-                </td>
-              </tr>
-            ) : (
-              sortedData.map((batch) => {
-                const isIndividual = batch.recipient_mode === 'individual';
-                const recipientName = isIndividual
-                  ? batch.allocations?.[0]?.employee_name_snapshot || 'Individual Employee'
-                  : batch.team_name_snapshot || 'Team';
-
-                return (
-                  <tr key={batch.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-5 py-3.5 font-semibold text-slate-900">
-                      <div className="flex items-center gap-2">
-                        {isIndividual ? (
-                          <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
-                            <User size={14} />
-                          </div>
-                        ) : (
-                          <div className="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-                            <Users size={14} />
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-semibold text-slate-900">{recipientName}</p>
-                          {!isIndividual && (
-                            <p className="text-[11px] text-slate-400 font-normal">
-                              {batch.eligible_member_count} members ({batch.allocation_mode === 'per_person' ? 'Per Person' : 'Total Pool'})
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <p className="text-slate-800 font-medium">
-                        {INCENTIVE_TYPE_LABELS[batch.incentive_type] || batch.incentive_type}
-                      </p>
-                      <p className="text-[11px] text-slate-400 capitalize">{batch.recipient_mode}</p>
-                    </td>
-                    <td className="px-5 py-3.5 font-semibold text-slate-900 font-mono text-xs">
-                      {formatPaiseToINR(batch.total_amount_paise)}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {batch.effective_date}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <IncentiveStatusBadge status={batch.status} />
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <button
-                        onClick={() => onSelectRow(batch.id)}
-                        className="px-2.5 py-1 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-semibold transition-colors inline-flex items-center gap-1"
-                      >
-                        <Eye size={13} /> View
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile Stacked Cards View */}
-      <div className="md:hidden space-y-3">
+      <div className="divide-y divide-gray-100 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
         {sortedData.length === 0 ? (
-          <div className="bg-white p-6 rounded-xl border border-slate-200 text-center text-xs text-slate-400">
-            No records found.
+          <div className="p-12 text-center text-gray-500">
+            No incentive records match the current filters.
           </div>
         ) : (
           sortedData.map((batch) => {
@@ -141,28 +51,63 @@ export default function IncentiveHistoryTable({ data = [], meta, onPageChange, o
             return (
               <div
                 key={batch.id}
-                onClick={() => onSelectRow(batch.id)}
-                className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-xs active:bg-slate-50 cursor-pointer"
+                onClick={() => {
+                  const slug = recipientName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                  router.push(`/hrm/incentives/${batch.id}-${slug}`);
+                }}
+                className="p-5 bg-white hover:bg-gray-50 border border-transparent hover:border-gray-200 hover:shadow-sm transition-all duration-200 cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group active:scale-[0.99]"
               >
-                <div className="flex justify-between items-start">
+                <div className="flex items-center gap-4 flex-1">
+                  {isIndividual ? (
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold shadow-inner shrink-0">
+                      <User size={20} />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-2xl bg-fuchsia-50 flex items-center justify-center text-fuchsia-600 font-bold shadow-inner shrink-0">
+                      <Users size={20} />
+                    </div>
+                  )}
                   <div>
-                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                      {INCENTIVE_TYPE_LABELS[batch.incentive_type] || batch.incentive_type}
-                    </span>
-                    <h3 className="font-bold text-slate-900 text-sm mt-0.5">{recipientName}</h3>
+                    <p className="font-bold text-gray-900 text-base group-hover:text-indigo-600 transition-colors">{recipientName}</p>
+                    {!isIndividual && (
+                      <p className="text-xs text-gray-400 font-medium tracking-wide mt-0.5">
+                        {batch.eligible_member_count} members ({batch.allocation_mode === 'per_person' ? 'Per Person' : 'Total Pool'})
+                      </p>
+                    )}
                   </div>
-                  <IncentiveStatusBadge status={batch.status} />
                 </div>
 
-                <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-100">
-                  <div>
-                    <p className="text-[10px] text-slate-400 font-semibold uppercase">Total Amount</p>
-                    <p className="font-bold text-slate-900 font-mono text-sm">{formatPaiseToINR(batch.total_amount_paise)}</p>
+                <div className="flex items-center gap-6 sm:gap-10 w-full sm:w-auto overflow-x-auto hide-scrollbar">
+                  <div className="shrink-0">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Type & Mode</p>
+                    <p className="text-sm font-semibold text-gray-700">
+                      {INCENTIVE_TYPE_LABELS[batch.incentive_type] || batch.incentive_type}
+                    </p>
+                    <p className="text-xs text-gray-400 capitalize">{batch.recipient_mode}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] text-slate-400 font-semibold uppercase">Effective Date</p>
-                    <p className="font-medium text-slate-700">{batch.effective_date}</p>
+                  <div className="shrink-0">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Effective Date</p>
+                    <p className="text-sm font-semibold text-gray-700">{batch.effective_date}</p>
                   </div>
+                  <div className="shrink-0 pr-4 sm:pr-0">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Amount</p>
+                    <p className="text-lg font-black text-gray-900 font-mono">{formatPaiseToINR(batch.total_amount_paise)}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 pt-4 sm:pt-0 border-t border-gray-100 sm:border-0 mt-2 sm:mt-0 shrink-0">
+                  <IncentiveStatusBadge status={batch.status} />
+                  
+                  <button
+                    onClick={(e) => { 
+                        e.stopPropagation(); 
+                        const slug = recipientName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                        router.push(`/hrm/incentives/${batch.id}-${slug}`); 
+                    }}
+                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors shrink-0"
+                  >
+                    <Eye size={18} />
+                  </button>
                 </div>
               </div>
             );

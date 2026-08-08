@@ -19,6 +19,8 @@ const EVENT_COLORS = {
     meeting: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
     follow_up: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
     holiday: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
+    present: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
+    absent: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100',
 };
 
 export default function CalendarWidget({ events = [], onDateClick }) {
@@ -45,7 +47,8 @@ export default function CalendarWidget({ events = [], onDateClick }) {
         for (let i = 1; i <= daysInMonth; i++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             const dayEvents = events.filter(e => e.date === dateStr);
-            grid.push({ date: i, fullDate: dateStr, events: dayEvents, key: `day-${i}` });
+            const isSunday = new Date(year, month, i).getDay() === 0;
+            grid.push({ date: i, fullDate: dateStr, events: dayEvents, isSunday, key: `day-${i}` });
         }
         return grid;
     }, [year, month, daysInMonth, firstDay, events]);
@@ -56,47 +59,41 @@ export default function CalendarWidget({ events = [], onDateClick }) {
     };
 
     return (
-        <div className="bg-white rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/30 overflow-hidden flex flex-col h-full">
+        <div className="bg-white flex flex-col h-full">
             {/* Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
-                        <CalendarIcon size={20} />
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                            {currentDate.toLocaleString('default', { month: 'long' })} {year}
-                        </h2>
-                        <p className="text-xs text-slate-500 font-medium">Schedule & Activities</p>
-                    </div>
+            <div className="px-2 py-4 flex items-center justify-between">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+                        {currentDate.toLocaleString('default', { month: 'long' })} {year}
+                    </h2>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={prevMonth} className="p-2 rounded-xl hover:bg-slate-200 text-slate-600 transition-colors">
-                        <ChevronLeft size={18} />
+                    <button onClick={prevMonth} className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 hover:text-gray-900 transition-all">
+                        <ChevronLeft size={20} strokeWidth={2.5} />
                     </button>
-                    <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-sm transition-all">
+                    <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1.5 text-xs font-bold text-gray-500 hover:text-gray-900 transition-colors">
                         Today
                     </button>
-                    <button onClick={nextMonth} className="p-2 rounded-xl hover:bg-slate-200 text-slate-600 transition-colors">
-                        <ChevronRight size={18} />
+                    <button onClick={nextMonth} className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 hover:text-gray-900 transition-all">
+                        <ChevronRight size={20} strokeWidth={2.5} />
                     </button>
                 </div>
             </div>
 
             {/* Calendar Grid */}
-            <div className="p-5 flex-1 overflow-y-auto">
-                <div className="grid grid-cols-7 gap-2 mb-2">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                        <div key={day} className="text-center text-[10px] font-bold uppercase tracking-widest text-slate-400 pb-2">
+            <div className="flex-1 overflow-y-auto hide-scrollbar">
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => (
+                        <div key={day} className={`text-center text-[10px] font-bold uppercase tracking-wider pb-2 ${i === 0 ? 'text-rose-400' : 'text-gray-400'}`}>
                             {day}
                         </div>
                     ))}
                 </div>
                 
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7 gap-1">
                     {days.map((cell) => {
                         if (cell.empty) {
-                            return <div key={cell.key} className="min-h-[100px] rounded-2xl bg-slate-50/50 border border-transparent" />;
+                            return <div key={cell.key} className="min-h-[90px] bg-transparent" />;
                         }
 
                         const hasEvents = cell.events.length > 0;
@@ -105,25 +102,28 @@ export default function CalendarWidget({ events = [], onDateClick }) {
                         return (
                             <motion.div
                                 key={cell.key}
-                                whileHover={{ scale: 0.98 }}
+                                whileHover={{ scale: 0.97 }}
                                 onClick={() => {
                                     setSelectedDate(cell.fullDate);
                                     onDateClick?.(cell.fullDate);
                                 }}
-                                className={`min-h-[100px] p-2 rounded-2xl border transition-all cursor-pointer flex flex-col ${
+                                className={`min-h-[90px] p-2 rounded-2xl transition-colors cursor-pointer flex flex-col ${
                                     active 
-                                        ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/10 shadow-sm' 
-                                        : 'border-slate-100 hover:border-slate-300 hover:shadow-md hover:shadow-slate-200/50 bg-white'
+                                        ? 'bg-gray-50' 
+                                        : cell.isSunday 
+                                            ? 'hover:bg-rose-50/30' 
+                                            : 'hover:bg-gray-50'
                                 }`}
                             >
-                                <div className="flex justify-between items-start mb-2">
-                                    <span className={`w-7 h-7 flex items-center justify-center rounded-xl text-xs font-bold ${
-                                        active ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-700'
+                                <div className="flex justify-between items-start mb-1">
+                                    <span className={`w-7 h-7 flex items-center justify-center rounded-full text-sm font-semibold ${
+                                        active ? 'bg-black text-white' : 
+                                        cell.isSunday ? 'text-rose-500' : 'text-gray-700'
                                     }`}>
                                         {cell.date}
                                     </span>
-                                    {hasEvents && (
-                                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-2.5 mr-1" />
+                                    {hasEvents && !active && (
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2.5 mr-1" />
                                     )}
                                 </div>
                                 
@@ -131,7 +131,7 @@ export default function CalendarWidget({ events = [], onDateClick }) {
                                     {cell.events.map((evt, idx) => (
                                         <div 
                                             key={idx} 
-                                            className={`text-[9px] font-bold px-1.5 py-1 rounded-lg border truncate ${EVENT_COLORS[evt.type] || EVENT_COLORS.meeting}`}
+                                            className={`text-[10px] font-medium px-2 py-1 rounded-md truncate ${EVENT_COLORS[evt.type] || EVENT_COLORS.meeting}`}
                                             title={evt.title}
                                         >
                                             {evt.title}

@@ -152,7 +152,7 @@ export default function HRMDashboard() {
                 >
                     <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
                     <div className="absolute bottom-0 left-1/2 w-64 h-64 bg-teal-400/30 rounded-full blur-3xl transform -translate-x-1/2 pointer-events-none" />
-                    <Image src="/images/hero-bg-glass.png" alt="Overlay" fill className="object-cover opacity-20 mix-blend-overlay pointer-events-none" />
+                    <Image src="/images/hrm_dashboard_banner.png" alt="HRM Dashboard Banner" fill className="object-cover opacity-40 mix-blend-overlay pointer-events-none" />
 
                     <div className="relative z-10 flex flex-col gap-4 max-w-2xl">
                         <div className="flex items-center gap-3 mb-1">

@@ -579,4 +579,12 @@ button, a, [role="button"] {
   .shadow-2xl, .shadow-\[0_4px_30px_rgba\(0\,0\,0\,0\.3\)\] {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
   }
-}
+}@keyframes scan {
+  0% { top: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+.animate-scan {
+  animation: scan 2s linear infinite;
+}

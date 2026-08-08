@@ -134,7 +134,7 @@ export default function AdminTeamsPage() {
     const warningTeams = teams.filter(t => !t.team_lead_id || (t.region_level === 'area' && !t.parent_team_id));
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-6 min-h-screen">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen bg-gray-50/30 dark:bg-gray-900/30 font-[family-name:var(--font-outfit)]">
             {/* Drawers and Modals */}
             <AnimatePresence>
                 {showCreate && (
@@ -192,55 +192,56 @@ export default function AdminTeamsPage() {
             />
 
             {/* Header */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
-                        <Network className="text-indigo-600" size={28} />
-                        Team Hierarchy & Org Chart
+                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 shadow-inner">
+                            <Network size={24} />
+                        </div>
+                        Team Hierarchy
                     </h1>
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-sm font-bold text-gray-500 mt-2">
                         Multi-region team management, atomic assignments & optimistic concurrency control
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-3 flex-wrap">
                     {/* View Switcher */}
-                    <div className="bg-slate-100 p-1 rounded-2xl flex items-center border border-slate-200">
+                    <div className="bg-white dark:bg-gray-800 p-1.5 rounded-2xl flex items-center border border-gray-200 dark:border-gray-700 shadow-sm">
                         <button
                             onClick={() => setViewMode('chart')}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
                                 viewMode === 'chart'
-                                    ? 'bg-white text-indigo-600 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-800'
+                                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md transform scale-100'
+                                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                             }`}
                         >
-                            <LayoutGrid size={14} /> Org Chart
+                            <LayoutGrid size={14} /> Chart
                         </button>
                         <button
                             onClick={() => setViewMode('list')}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
                                 viewMode === 'list'
-                                    ? 'bg-white text-indigo-600 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-800'
+                                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md transform scale-100'
+                                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                             }`}
                         >
-                            <List size={14} /> Table View
+                            <List size={14} /> Table
                         </button>
                     </div>
 
                     <button
                         onClick={fetchTeamsData}
-                        className="p-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-sm"
+                        className="w-10 h-10 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:border-indigo-200 shadow-sm transition-all"
                         title="Refresh"
-                        aria-label="Refresh team data"
                     >
-                        <RefreshCw size={16} className={`text-slate-600 ${loading ? 'animate-spin' : ''}`} />
+                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                     </button>
 
                     {capabilities.canAssignMembers && (
                         <button
                             onClick={() => setShowBulkTransfer(true)}
-                            className="inline-flex items-center gap-2 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3.5 py-2.5 rounded-2xl font-bold transition-all text-xs"
+                            className="inline-flex items-center gap-2 border-2 border-indigo-100 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-400 px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
                         >
                             <ArrowRightLeft size={14} /> Bulk Transfer
                         </button>
@@ -249,7 +250,7 @@ export default function AdminTeamsPage() {
                     {capabilities.canCreateTeam && (
                         <button
                             onClick={() => setShowCreate(true)}
-                            className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 py-2.5 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-500/25 text-sm"
+                            className="inline-flex items-center gap-2 bg-gray-900 dark:bg-white hover:-translate-y-0.5 text-white dark:text-gray-900 px-6 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl"
                         >
                             <Plus size={16} /> Create Team
                         </button>
@@ -258,23 +259,23 @@ export default function AdminTeamsPage() {
             </div>
 
             {/* Filter Toolbar */}
-            <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row items-center gap-3">
-                <div className="relative flex-1 w-full">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <div className="bg-white dark:bg-gray-800 p-2 rounded-full border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 overflow-hidden">
+                <div className="relative flex-1 w-full pl-4">
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                     <input
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search team name..."
-                        className="w-full pl-10 pr-4 py-2 rounded-2xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Search teams..."
+                        className="w-full pl-8 pr-4 py-3 bg-transparent text-sm font-bold text-gray-900 dark:text-white focus:outline-none placeholder:text-gray-400"
                     />
                 </div>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-2 pr-2">
                     <select
                         value={regionFilter}
                         onChange={(e) => setRegionFilter(e.target.value)}
-                        className="px-3 py-2 rounded-2xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white focus:outline-none"
+                        className="px-4 py-2.5 rounded-full border border-gray-100 dark:border-gray-700 text-xs font-black uppercase tracking-wider text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/50 focus:outline-none cursor-pointer"
                     >
                         <option value="">All Levels</option>
                         <option value="state">State</option>
@@ -285,10 +286,10 @@ export default function AdminTeamsPage() {
                     <select
                         value={activeFilter}
                         onChange={(e) => setActiveFilter(e.target.value)}
-                        className="px-3 py-2 rounded-2xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white focus:outline-none"
+                        className="px-4 py-2.5 rounded-full border border-gray-100 dark:border-gray-700 text-xs font-black uppercase tracking-wider text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/50 focus:outline-none cursor-pointer"
                     >
-                        <option value="true">Active Teams</option>
-                        <option value="false">Inactive Teams</option>
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
                     </select>
                 </div>
             </div>
@@ -306,44 +307,41 @@ export default function AdminTeamsPage() {
             )}
 
             {/* KPI Stat Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-                        <Layers size={22} />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="bg-white dark:bg-gray-800 rounded-[2rem] p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                    <div className="w-12 h-12 rounded-[1.25rem] mb-6 flex items-center justify-center font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
+                        <Layers size={24} />
                     </div>
                     <div>
-                        <div className="text-2xl font-black text-slate-900">{teams.length}</div>
-                        <div className="text-xs text-slate-500 font-medium">Teams Displayed</div>
+                        <div className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1">Teams Displayed</div>
+                        <div className="text-3xl font-black text-gray-900 dark:text-white">{teams.length}</div>
                     </div>
                 </div>
-
-                <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                        <Users size={22} />
+                <div className="bg-white dark:bg-gray-800 rounded-[2rem] p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                    <div className="w-12 h-12 rounded-[1.25rem] mb-6 flex items-center justify-center font-bold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400">
+                        <Users size={24} />
                     </div>
                     <div>
-                        <div className="text-2xl font-black text-slate-900">{totalMembers}</div>
-                        <div className="text-xs text-slate-500 font-medium">Team Members</div>
+                        <div className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1">Team Members</div>
+                        <div className="text-3xl font-black text-gray-900 dark:text-white">{totalMembers}</div>
                     </div>
                 </div>
-
-                <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-                        <MapPin size={22} />
+                <div className="bg-white dark:bg-gray-800 rounded-[2rem] p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                    <div className="w-12 h-12 rounded-[1.25rem] mb-6 flex items-center justify-center font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
+                        <MapPin size={24} />
                     </div>
                     <div>
-                        <div className="text-2xl font-black text-slate-900">{totalCities || 1}</div>
-                        <div className="text-xs text-slate-500 font-medium">Active Cities</div>
+                        <div className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1">Active Cities</div>
+                        <div className="text-3xl font-black text-gray-900 dark:text-white">{totalCities || 1}</div>
                     </div>
                 </div>
-
-                <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-                        <Shield size={22} />
+                <div className="bg-white dark:bg-gray-800 rounded-[2rem] p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                    <div className="w-12 h-12 rounded-[1.25rem] mb-6 flex items-center justify-center font-bold bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400">
+                        <Shield size={24} />
                     </div>
                     <div>
-                        <div className="text-2xl font-black text-slate-900">{unassignedUsers.length}</div>
-                        <div className="text-xs text-slate-500 font-medium">Available Reps</div>
+                        <div className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1">Available Reps</div>
+                        <div className="text-3xl font-black text-gray-900 dark:text-white">{unassignedUsers.length}</div>
                     </div>
                 </div>
             </div>
@@ -366,75 +364,77 @@ export default function AdminTeamsPage() {
                 />
             ) : (
                 /* Table View fallback */
-                <div className="bg-white rounded-[2.5rem] border border-slate-200/80 shadow-xl overflow-x-auto">
-                    <table className="w-full text-left min-w-[800px]">
-                        <thead className="bg-slate-50 border-b border-slate-100 text-xs uppercase tracking-wider text-slate-500 font-semibold">
-                            <tr>
-                                <th className="p-4 pl-6">Team Name</th>
-                                <th className="p-4">Level</th>
-                                <th className="p-4">Location</th>
-                                <th className="p-4">Team Lead</th>
-                                <th className="p-4">Members</th>
-                                <th className="p-4">Version</th>
-                                <th className="p-4 pr-6 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {teams.map(t => (
-                                <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
-                                    <td className="p-4 pl-6 font-bold text-slate-900">
-                                        <div className="flex items-center gap-2">
-                                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: t.color || '#6366f1' }} />
-                                            {t.name}
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-700">
-                                            {t.region_level}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-xs font-medium text-slate-600">
-                                        {t.city || 'State'} {t.area ? `• ${t.area}` : ''}
-                                    </td>
-                                    <td className="p-4 text-xs font-bold text-slate-800">
-                                        {t.team_lead?.full_name || 'Unassigned'}
-                                    </td>
-                                    <td className="p-4 text-xs font-semibold text-slate-600">
-                                        {t.members?.length || 0} members
-                                    </td>
-                                    <td className="p-4 text-xs font-mono font-bold text-slate-500">
-                                        v{t.version || 1}
-                                    </td>
-                                    <td className="p-4 pr-6 text-right space-x-2">
-                                        {capabilities.canAssignMembers && (
-                                            <button
-                                                onClick={() => setSelectedTeamForAssign(t)}
-                                                className="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 font-bold text-xs hover:bg-indigo-100 transition-colors"
-                                            >
-                                                + Member
-                                            </button>
-                                        )}
-                                        {capabilities.canEditTeam && (
-                                            <button
-                                                onClick={() => setSelectedTeamForServiceArea(t)}
-                                                className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs hover:bg-emerald-100 transition-colors"
-                                            >
-                                                Coverage
-                                            </button>
-                                        )}
-                                        {capabilities.canEditTeam && (
-                                            <button
-                                                onClick={() => setSelectedTeamForEdit(t)}
-                                                className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-colors"
-                                            >
-                                                Edit
-                                            </button>
-                                        )}
-                                    </td>
+                <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left min-w-[800px]">
+                            <thead className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 text-[10px] uppercase tracking-widest text-gray-400 font-black">
+                                <tr>
+                                    <th className="p-5 pl-8">Team Name</th>
+                                    <th className="p-5">Level</th>
+                                    <th className="p-5">Location</th>
+                                    <th className="p-5">Team Lead</th>
+                                    <th className="p-5">Members</th>
+                                    <th className="p-5">Version</th>
+                                    <th className="p-5 pr-8 text-right">Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {teams.map(t => (
+                                    <tr key={t.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors">
+                                        <td className="p-5 pl-8 font-black text-gray-900 dark:text-white">
+                                            <div className="flex items-center gap-3">
+                                                <span className="w-3 h-3 rounded-full shadow-inner" style={{ backgroundColor: t.color || '#6366f1' }} />
+                                                {t.name}
+                                            </div>
+                                        </td>
+                                        <td className="p-5">
+                                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
+                                                {t.region_level}
+                                            </span>
+                                        </td>
+                                        <td className="p-5 text-xs font-bold text-gray-500">
+                                            {t.city || 'State'} {t.area ? `• ${t.area}` : ''}
+                                        </td>
+                                        <td className="p-5 text-sm font-black text-gray-800 dark:text-gray-200">
+                                            {t.team_lead?.full_name || 'Unassigned'}
+                                        </td>
+                                        <td className="p-5 text-sm font-black text-gray-500">
+                                            {t.members?.length || 0}
+                                        </td>
+                                        <td className="p-5 text-xs font-mono font-bold text-gray-400">
+                                            v{t.version || 1}
+                                        </td>
+                                        <td className="p-5 pr-8 text-right space-x-2">
+                                            {capabilities.canAssignMembers && (
+                                                <button
+                                                    onClick={() => setSelectedTeamForAssign(t)}
+                                                    className="px-4 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-black text-xs uppercase tracking-wider hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                                                >
+                                                    + Member
+                                                </button>
+                                            )}
+                                            {capabilities.canEditTeam && (
+                                                <button
+                                                    onClick={() => setSelectedTeamForServiceArea(t)}
+                                                    className="px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-black text-xs uppercase tracking-wider hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                                                >
+                                                    Coverage
+                                                </button>
+                                            )}
+                                            {capabilities.canEditTeam && (
+                                                <button
+                                                    onClick={() => setSelectedTeamForEdit(t)}
+                                                    className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-black text-xs uppercase tracking-wider hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                                >
+                                                    Edit
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
         </div>
