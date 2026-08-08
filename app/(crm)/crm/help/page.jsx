@@ -57,7 +57,7 @@ const MODULES = [
         color: 'bg-emerald-100 text-emerald-700',
         description: 'View your CRM team members.',
         steps: [
-            'Shows all Sales Executives and their assigned lead counts.',
+            'Shows all Relationship Executives and their assigned lead counts.',
             'Managers can reassign leads from this view.',
             'Click a team member to see their individual pipeline.',
         ],
@@ -104,11 +104,11 @@ const MODULES = [
 ];
 
 const FAQS = [
-    { q: 'Who can assign leads to executives?', a: 'Only users with the Sales Manager, Admin, or Super Admin role can assign leads. Sales Executives can only view leads assigned to them.' },
-    { q: 'How do I move a lead to "Won"?', a: 'Open the lead detail page and change the Status dropdown to "Won". You can also drag the card to the "Won" column on the Pipeline (Kanban) view.' },
-    { q: 'Can I generate an invoice for any amount?', a: 'Yes. The Invoice Generator lets you add custom line items, quantities, and GST rates. The system calculates SGST/CGST automatically.' },
-    { q: 'Why don\'t I see the Performance/Reports menu?', a: 'Performance and Reports are only visible to Sales Manager, Admin, and Super Admin roles. If you\'re a Sales Executive, these sections are hidden.' },
-    { q: 'Can I see another executive\'s leads?', a: 'No. Sales Executives only see leads assigned to them. Managers see all leads across the team.' },
+    { q: 'Who can assign leads to executives?', a: 'Only users with the Sales Manager, Admin, or Super Admin role can assign leads. Relationship Executives can only view leads assigned to them.' },
+    { q: 'Can I reassign a lead?', a: 'Only Managers and Admins can reassign leads. If a lead needs to be moved, please contact your manager.' },
+    { q: 'How does lead distribution work?', a: 'Admins assign leads via the CRM Admin Panel to balance the workload across the team based on capacity and territory.' },
+    { q: 'Why don\'t I see the Performance/Reports menu?', a: 'Performance and Reports are only visible to Sales Manager, Admin, and Super Admin roles. If you\'re a Relationship Executive, these sections are hidden.' },
+    { q: 'Can I see another executive\'s leads?', a: 'No. Relationship Executives only see leads assigned to them. Managers see all leads across the team.' },
     { q: 'How do I share an invoice via WhatsApp?', a: 'Fill in the customer\'s phone number in the Customer Details section, then click the green "WhatsApp" button on the Summary card. It opens a pre-filled WhatsApp message.' },
 ];
 

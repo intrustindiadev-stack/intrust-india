@@ -92,7 +92,7 @@ export default function AdminTeamLeadsPage() {
                                         </div>
                                         <div>
                                             <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">{rep.full_name}</h2>
-                                            <p className="text-sm font-bold text-gray-500 flex items-center gap-1.5"><User size={14}/> {rep.role === 'relationship_manager' ? 'RM Manager' : 'Sales Executive'}</p>
+                                            <p className="text-sm font-bold text-gray-500 flex items-center gap-1.5"><User size={14}/> {rep.role === 'relationship_manager' ? 'RM Manager' : 'Relationship Executive'}</p>
                                         </div>
                                     </div>
                                     
@@ -106,7 +106,7 @@ export default function AdminTeamLeadsPage() {
                                             <p className="text-lg font-black text-indigo-700 dark:text-indigo-400">{stats.open}</p>
                                         </div>
                                         <div className="bg-rose-50 dark:bg-rose-900/20 rounded-2xl p-3 border border-rose-100 dark:border-rose-800/30">
-                                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Hot Priority</p>
+                                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Priority Leads</p>
                                             <p className="text-lg font-black text-rose-700 dark:text-rose-400">{stats.hot}</p>
                                         </div>
                                         <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-3 border border-emerald-100 dark:border-emerald-800/30">

@@ -247,7 +247,7 @@ export default function LeadDetailPage({ params }) {
                                     <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
                                     {lead.status}
                                 </span>
-                                {lead.temperature === 'hot' && <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1"><Zap size={12} fill="currentColor" /> Hot Priority</span>}
+                                {lead.temperature === 'hot' && <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1"><Zap size={12} fill="currentColor" /> Priority Lead</span>}
                             </div>
                         </div>
 
@@ -709,7 +709,7 @@ function CreateTaskModal({ leadId, salesTeam, currentUserProfile, onClose, onSav
                             </select>
                         ) : (
                             <div className="w-full px-4 py-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900 text-sm text-gray-500 font-semibold select-none">
-                                Assigned to Me ({currentUserProfile?.full_name || 'Sales Executive'})
+                                Assigned to Me ({currentUserProfile?.full_name || 'Relationship Executive'})
                             </div>
                         )}
                     </div>

@@ -130,7 +130,7 @@ export default function CRMSettingsPage() {
                                 <p className="text-sm font-medium text-slate-500">Your professional identity within the CRM platform.</p>
                                 <div className="grid grid-cols-1 gap-4 pt-4">
                                     {[
-                                        { label: 'Platform Role', value: profile?.role?.replace(/_/g, ' ').toUpperCase() || 'SALES EXECUTIVE', icon: Shield, color: 'text-indigo-500 bg-indigo-50' },
+                                        { label: 'Platform Role', value: profile?.role?.replace(/_/g, ' ').toUpperCase() || 'RELATIONSHIP EXECUTIVE', icon: Shield, color: 'text-indigo-500 bg-indigo-50' },
                                         { label: 'System Access', value: 'Authorized', icon: CheckCircle2, color: 'text-emerald-500 bg-emerald-50' },
                                         { label: 'Last Login', value: new Date(user?.last_sign_in_at || Date.now()).toLocaleDateString(), icon: Activity, color: 'text-blue-500 bg-blue-50' },
                                     ].map(item => (
