@@ -31,7 +31,7 @@ export async function fetchLeadDistributionStats() {
         const baseSelect = () => supabase.from('crm_leads').select('*', { count: 'exact', head: true });
 
         const [assigned, unassigned, reroutePending] = await Promise.all([
-            getCount(baseSelect().not('assigned_to', 'is', null), 'assigned'),
+            getCount(baseSelect().neq('assigned_to', null), 'assigned'),
             getCount(baseSelect().is('assigned_to', null), 'unassigned'),
             getCount(baseSelect().eq('routing_status', 'reroute_pending'), 'reroutePending')
         ]);
