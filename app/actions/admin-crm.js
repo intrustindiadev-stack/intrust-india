@@ -314,3 +314,33 @@ export async function fetchLeadsForAssignment(page = 1, search = '', filter = 'a
         return { error: 'An unexpected error occurred' };
     }
 }
+
+// ─── 6. Fetch Team Leads Data (For Team Leads Page) ──────────────────────
+
+/**
+ * Fetches team members and their assigned leads.
+ */
+export async function fetchTeamLeadsData() {
+    try {
+        const { error, adminClient } = await verifyAdminCaller();
+        if (error) return { error };
+
+        const { data: teamData } = await adminClient
+            .from('user_profiles')
+            .select('*')
+            .in('role', ['relationship_manager', 'relationship_exec'])
+            .order('full_name');
+
+        const { data: leadsData } = await adminClient
+            .from('crm_leads')
+            .select('*')
+            .neq('source', 'Users')
+            .neq('source', 'App User')
+            .order('created_at', { ascending: false });
+
+        return { team: teamData || [], leads: leadsData || [] };
+    } catch (err) {
+        console.error('[admin-crm] Unexpected error in fetchTeamLeadsData:', err);
+        return { error: 'An unexpected error occurred' };
+    }
+}

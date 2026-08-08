@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { fetchTeamLeadsData } from '@/app/actions/admin-crm';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Target, Users, Zap, CheckCircle2, ChevronDown, ChevronUp, User, MapPin, Building, Target as TargetIcon } from 'lucide-react';
@@ -31,23 +31,14 @@ export default function AdminTeamLeadsPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Fetch team members
-            const { data: teamData } = await supabase
-                .from('user_profiles')
-                .select('*')
-                .in('role', ['relationship_manager', 'relationship_exec'])
-                .order('full_name');
-
-            // Fetch all leads
-            const { data: leadsData } = await supabase
-                .from('crm_leads')
-                .select('*')
-                .neq('source', 'Users')
-                .neq('source', 'App User')
-                .order('created_at', { ascending: false });
-
-            setTeam(teamData || []);
-            setLeads(leadsData || []);
+            const { team: teamData, leads: leadsData, error } = await fetchTeamLeadsData();
+            
+            if (error) {
+                console.error('Error fetching data:', error);
+            } else {
+                setTeam(teamData || []);
+                setLeads(leadsData || []);
+            }
         } catch (error) {
             console.error('Error fetching data:', error);
         } finally {
