@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from 'react-confetti';
 import { 
@@ -144,9 +145,9 @@ export default function WelcomeRoleCelebrationModal({ forceShow = false, onClose
         })
     };
 
-    return (
+    const content = (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[100] flex flex-col bg-white overflow-hidden text-slate-900 font-[family-name:var(--font-outfit)]">
+            <div className="fixed inset-0 z-[1000] flex flex-col bg-white overflow-hidden text-slate-900 font-[family-name:var(--font-outfit)]">
                 {step === 0 && (
                     <Confetti
                         width={windowSize.width}
@@ -290,4 +291,6 @@ export default function WelcomeRoleCelebrationModal({ forceShow = false, onClose
             </div>
         </AnimatePresence>
     );
+
+    return createPortal(content, document.body);
 }
