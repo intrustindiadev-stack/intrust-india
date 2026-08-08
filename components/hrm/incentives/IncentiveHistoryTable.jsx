@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { Eye, ArrowUpDown, ChevronLeft, ChevronRight, User, Users } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import IncentiveStatusBadge from './IncentiveStatusBadge';
 import { formatPaiseToINR, INCENTIVE_TYPE_LABELS } from '@/lib/hrm/incentives';
 
 export default function IncentiveHistoryTable({ data = [], meta, onPageChange }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [sortField, setSortField] = useState('created_at');
   const [sortDir, setSortDir] = useState('desc');
 
@@ -53,7 +54,7 @@ export default function IncentiveHistoryTable({ data = [], meta, onPageChange })
                 key={batch.id}
                 onClick={() => {
                   const slug = recipientName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                  router.push(`/hrm/incentives/${batch.id}-${slug}`);
+                  router.push(`${pathname}/${batch.id}-${slug}`);
                 }}
                 className="p-5 bg-white hover:bg-gray-50 border border-transparent hover:border-gray-200 hover:shadow-sm transition-all duration-200 cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group active:scale-[0.99]"
               >
@@ -102,7 +103,7 @@ export default function IncentiveHistoryTable({ data = [], meta, onPageChange })
                     onClick={(e) => { 
                         e.stopPropagation(); 
                         const slug = recipientName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                        router.push(`/hrm/incentives/${batch.id}-${slug}`); 
+                        router.push(`${pathname}/${batch.id}-${slug}`); 
                     }}
                     className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors shrink-0"
                   >
