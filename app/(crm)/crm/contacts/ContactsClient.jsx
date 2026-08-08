@@ -181,61 +181,73 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
     );
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 font-[family-name:var(--font-outfit)] space-y-8 relative">
-            
-            {/* Header & Tabs */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                <div>
-                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">Ecosystem Directory</h1>
-                    <p className="text-gray-500 text-sm mt-1">
-                        {isManager ? 'Manage leads, platform users, and merchants.' : 'Manage your assigned leads and communication.'}
-                    </p>
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)] relative pb-24 lg:pb-8">
+            {/* Background elements */}
+            <div className="absolute top-0 inset-x-0 h-[40vh] bg-gradient-to-b from-indigo-50/80 dark:from-indigo-900/10 to-transparent pointer-events-none" />
+            <div className="absolute top-20 right-10 w-72 h-72 bg-indigo-200/30 dark:bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none" />
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 relative z-10 space-y-8">
+                
+                {/* Hero Header */}
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+                    <div className="flex flex-col gap-2 flex-1">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 dark:bg-gray-800/60 text-indigo-700 dark:text-indigo-400 text-xs font-bold w-fit border border-white/50 dark:border-gray-700/50 backdrop-blur-md shadow-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                            CRM Contacts Hub
+                        </div>
+                        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">Ecosystem Directory</h1>
+                        <p className="text-slate-500 dark:text-gray-400 font-medium text-lg max-w-xl">
+                            {isManager ? 'Manage leads, platform users, and merchants seamlessly.' : 'Manage your assigned leads and communication efficiently.'}
+                        </p>
+                    </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
+                {/* Search & Tabs Navigation Bar */}
+                <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-gray-700/50 shadow-2xl shadow-indigo-100/20 dark:shadow-none p-2 flex flex-col lg:flex-row gap-2 items-stretch lg:items-center">
+                    
                     {/* View Switcher Tabs */}
-                    <div className="flex items-center p-1.5 bg-slate-100 rounded-2xl border border-slate-200 text-sm font-bold shrink-0 shadow-inner overflow-x-auto hide-scrollbar">
+                    <div className="flex items-center p-1.5 bg-slate-100/50 dark:bg-gray-900/50 rounded-2xl border border-slate-200/50 dark:border-gray-700/50 text-sm font-bold shrink-0 shadow-inner overflow-x-auto hide-scrollbar">
                         <button
                             onClick={() => { setActiveTab('leads'); setSelectedContactIds([]); setSearchQuery(''); }}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all ${
-                                activeTab === 'leads' ? 'bg-white text-indigo-700 shadow-md ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all whitespace-nowrap ${
+                                activeTab === 'leads' ? 'bg-white dark:bg-gray-800 text-indigo-700 dark:text-indigo-400 shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200'
                             }`}
                         >
                             <Briefcase size={16} />
                             <span>Leads</span>
-                            {leads.length > 0 && <span className={`text-[10px] px-2 py-0.5 rounded-full ${activeTab === 'leads' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200'}`}>{leads.length}</span>}
+                            {leads.length > 0 && <span className={`text-[10px] px-2 py-0.5 rounded-full shadow-sm ${activeTab === 'leads' ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-gray-700'}`}>{leads.length}</span>}
                         </button>
                         
                         <button
                             onClick={() => { setActiveTab('users'); setSelectedContactIds([]); setSearchQuery(''); }}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all ${
-                                activeTab === 'users' ? 'bg-white text-blue-700 shadow-md ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all whitespace-nowrap ${
+                                activeTab === 'users' ? 'bg-white dark:bg-gray-800 text-blue-700 dark:text-blue-400 shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200'
                             }`}
                         >
                             <User size={16} />
                             <span>Users</span>
-                            {users.length > 0 && <span className={`text-[10px] px-2 py-0.5 rounded-full ${activeTab === 'users' ? 'bg-blue-100 text-blue-700' : 'bg-slate-200'}`}>{users.length}</span>}
+                            {users.length > 0 && <span className={`text-[10px] px-2 py-0.5 rounded-full shadow-sm ${activeTab === 'users' ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-gray-700'}`}>{users.length}</span>}
                         </button>
 
                         {isManager && (
                             <button
                                 onClick={() => { setActiveTab('merchants'); setSelectedContactIds([]); setSearchQuery(''); }}
-                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all ${
-                                    activeTab === 'merchants' ? 'bg-white text-emerald-700 shadow-md ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all whitespace-nowrap ${
+                                    activeTab === 'merchants' ? 'bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-400 shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200'
                                 }`}
                             >
                                 <Store size={16} />
                                 <span>Merchants</span>
-                                {merchants.length > 0 && <span className={`text-[10px] px-2 py-0.5 rounded-full ${activeTab === 'merchants' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200'}`}>{merchants.length}</span>}
+                                {merchants.length > 0 && <span className={`text-[10px] px-2 py-0.5 rounded-full shadow-sm ${activeTab === 'merchants' ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-gray-700'}`}>{merchants.length}</span>}
                             </button>
                         )}
 
-                        <div className="w-px h-6 bg-slate-300 mx-1" />
+                        <div className="hidden sm:block w-px h-6 bg-slate-300 dark:bg-gray-700 mx-2" />
 
                         <button
                             onClick={() => { setActiveTab('templates'); setSelectedContactIds([]); setSearchQuery(''); }}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all ${
-                                activeTab === 'templates' ? 'bg-white text-slate-900 shadow-md ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all whitespace-nowrap ${
+                                activeTab === 'templates' ? 'bg-white dark:bg-gray-800 text-slate-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200'
                             }`}
                         >
                             <MessageSquare size={16} />
@@ -243,15 +255,18 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
                         </button>
                     </div>
 
+                    {/* Divider */}
+                    {activeTab !== 'templates' && <div className="hidden lg:block w-px bg-slate-200 dark:bg-gray-700 my-2 mx-1"></div>}
+
                     {activeTab !== 'templates' && (
-                        <div className="relative flex-1 sm:w-64">
-                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <div className="relative flex-1">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                             <input
                                 type="text"
                                 placeholder={`Search ${activeTab}...`}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm font-medium bg-white shadow-sm"
+                                className="w-full pl-11 pr-4 py-3.5 bg-transparent border-none text-slate-800 dark:text-white text-sm font-semibold focus:outline-none focus:ring-0 placeholder-slate-400"
                             />
                         </div>
                     )}

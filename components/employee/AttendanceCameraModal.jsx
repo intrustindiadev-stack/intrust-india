@@ -111,145 +111,143 @@ export default function AttendanceCameraModal({ onClose, onConfirm, isClocking }
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }} 
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-md"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 font-[family-name:var(--font-outfit)]"
         >
-            <motion.div 
-                initial={{ y: 20, opacity: 0, scale: 0.95 }} 
-                animate={{ y: 0, opacity: 1, scale: 1 }} 
-                exit={{ y: 20, opacity: 0, scale: 0.95 }} 
-                className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden relative border border-white/20 dark:border-slate-800/60 flex flex-col"
-            >
-                {/* Header */}
-                <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md z-10 relative">
-                    <div>
-                        <h3 className="text-lg font-black text-slate-900 dark:text-white">Verify Attendance</h3>
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">Selfie & Location Required</p>
-                    </div>
-                    <button 
-                        onClick={onClose}
-                        disabled={isClocking}
-                        className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
-                    >
-                        <X size={16} />
-                    </button>
+            <div className="relative w-full max-w-md h-[60vh] flex flex-col bg-slate-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10">
+            {/* Header - Floating */}
+            <div className="absolute top-0 inset-x-0 p-4 flex items-start justify-between z-30 bg-gradient-to-b from-slate-950/80 to-transparent">
+                <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-2xl">
+                    <h3 className="text-lg font-black text-white tracking-tight">Verify Attendance</h3>
+                    <p className="text-xs font-bold text-slate-300">Selfie & Location Required</p>
                 </div>
+                <button 
+                    onClick={onClose}
+                    disabled={isClocking}
+                    className="w-10 h-10 rounded-full bg-slate-900/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white hover:bg-slate-800/60 transition-colors disabled:opacity-50"
+                >
+                    <X size={20} />
+                </button>
+            </div>
 
-                {/* Location Status Pill */}
-                <div className="absolute top-20 left-0 right-0 z-20 flex justify-center pointer-events-none">
-                    <motion.div 
-                        initial={{ y: -10, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border shadow-lg backdrop-blur-md ${
-                            locationState === 'success' 
-                                ? 'bg-emerald-500/90 text-white border-emerald-400/50' 
-                                : locationState === 'error' 
-                                ? 'bg-rose-500/90 text-white border-rose-400/50' 
-                                : 'bg-slate-900/90 text-white border-slate-700/50'
-                        }`}
-                    >
-                        {locationState === 'success' ? (
-                            <><MapPin size={14} /> Location Locked</>
-                        ) : locationState === 'error' ? (
-                            <><AlertCircle size={14} /> Location Error</>
-                        ) : (
-                            <><Loader2 size={14} className="animate-spin" /> Fetching GPS...</>
-                        )}
-                    </motion.div>
-                </div>
-
-                {/* Camera / Preview Area */}
-                <div className="relative w-full aspect-[3/4] bg-slate-950 flex flex-col items-center justify-center overflow-hidden">
-                    {cameraState === 'error' ? (
-                        <div className="text-center p-6 text-slate-400 flex flex-col items-center">
-                            <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center mb-4">
-                                <Camera size={24} className="opacity-50" />
-                            </div>
-                            <p className="text-sm font-bold">Camera Access Denied</p>
-                            <p className="text-xs mt-2 max-w-[200px] text-center opacity-80">Please allow camera permissions to verify attendance.</p>
-                        </div>
+            {/* Location Status Pill - Floating Top Center */}
+            <div className="absolute top-20 left-0 right-0 z-30 flex justify-center pointer-events-none">
+                <motion.div 
+                    initial={{ y: -10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest border shadow-2xl backdrop-blur-xl ${
+                        locationState === 'success' 
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-emerald-500/20' 
+                            : locationState === 'error' 
+                            ? 'bg-rose-500/20 text-rose-400 border-rose-500/30 shadow-rose-500/20' 
+                            : 'bg-slate-800/40 text-white border-white/10'
+                    }`}
+                >
+                    {locationState === 'success' ? (
+                        <><MapPin size={16} /> Location Locked</>
+                    ) : locationState === 'error' ? (
+                        <><AlertCircle size={16} /> Location Error</>
                     ) : (
-                        <>
-                            <video 
-                                ref={videoRef} 
-                                autoPlay 
-                                playsInline 
-                                muted 
-                                className={`absolute inset-0 w-full h-full object-cover transform -scale-x-100 ${capturedImage ? 'opacity-0' : 'opacity-100'}`}
-                            />
-                            
-                            <AnimatePresence>
-                                {capturedImage && (
-                                    <motion.img 
-                                        initial={{ opacity: 0, scale: 1.05 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        src={capturedImage} 
-                                        alt="Selfie preview" 
-                                        className="absolute inset-0 w-full h-full object-cover" 
-                                    />
-                                )}
-                            </AnimatePresence>
-                            
-                            {/* Scanning overlay effect */}
-                            {!capturedImage && cameraState === 'active' && (
-                                <div className="absolute inset-0 pointer-events-none">
-                                    {/* Vignette */}
-                                    <div className="absolute inset-0 shadow-[inset_0_0_100px_rgba(0,0,0,0.5)]" />
-                                    
-                                    {/* Face Guide Frame */}
-                                    <div className="absolute inset-10 border-2 border-white/20 rounded-full sm:rounded-[3rem]">
-                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-2 bg-indigo-500 rounded-full" />
-                                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-8 h-2 bg-indigo-500 rounded-full" />
-                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-8 bg-indigo-500 rounded-full" />
-                                        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-2 h-8 bg-indigo-500 rounded-full" />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Hidden canvas for capturing */}
-                            <canvas ref={canvasRef} className="hidden" />
-                        </>
+                        <><Loader2 size={16} className="animate-spin" /> Fetching GPS...</>
                     )}
-                </div>
+                </motion.div>
+            </div>
 
-                {/* Actions */}
-                <div className="p-5 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800/60 z-10 relative">
+            {/* Camera / Preview Area - Full Screen */}
+            <div className="flex-1 relative w-full h-full bg-slate-950 flex flex-col items-center justify-center overflow-hidden">
+                {cameraState === 'error' ? (
+                    <div className="text-center p-6 text-slate-400 flex flex-col items-center z-10">
+                        <div className="w-20 h-20 rounded-full bg-slate-900 flex items-center justify-center mb-4">
+                            <Camera size={32} className="opacity-50" />
+                        </div>
+                        <p className="text-base font-black text-white">Camera Access Denied</p>
+                        <p className="text-sm mt-2 max-w-[250px] text-center text-slate-400 font-semibold">Please allow camera permissions to verify your attendance.</p>
+                    </div>
+                ) : (
+                    <>
+                        <video 
+                            ref={videoRef} 
+                            autoPlay 
+                            playsInline 
+                            muted 
+                            className={`absolute inset-0 w-full h-full object-cover transform -scale-x-100 transition-opacity duration-300 ${capturedImage ? 'opacity-0' : 'opacity-100'}`}
+                        />
+                        
+                        <AnimatePresence>
+                            {capturedImage && (
+                                <motion.img 
+                                    initial={{ opacity: 0, scale: 1.05 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    src={capturedImage} 
+                                    alt="Selfie preview" 
+                                    className="absolute inset-0 w-full h-full object-cover" 
+                                />
+                            )}
+                        </AnimatePresence>
+                        
+                        {/* Scanning overlay effect */}
+                        {!capturedImage && cameraState === 'active' && (
+                            <div className="absolute inset-0 pointer-events-none z-10 flex flex-col items-center justify-center">
+                                {/* Vignette */}
+                                <div className="absolute inset-0 shadow-[inset_0_0_150px_rgba(0,0,0,0.8)]" />
+                                
+                                {/* Face Guide Frame */}
+                                <div className="relative w-64 h-80 sm:w-80 sm:h-96 border-2 border-white/20 rounded-[4rem] flex items-center justify-center">
+                                    <div className="absolute top-0 w-12 h-2 bg-indigo-500 rounded-full -translate-y-1" />
+                                    <div className="absolute bottom-0 w-12 h-2 bg-indigo-500 rounded-full translate-y-1" />
+                                    <div className="absolute left-0 w-2 h-12 bg-indigo-500 rounded-full -translate-x-1" />
+                                    <div className="absolute right-0 w-2 h-12 bg-indigo-500 rounded-full translate-x-1" />
+                                    <div className="w-full h-full rounded-[4rem] shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]" />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Hidden canvas for capturing */}
+                        <canvas ref={canvasRef} className="hidden" />
+                    </>
+                )}
+            </div>
+
+            {/* Actions - Glassmorphic Bottom Bar */}
+            <div className="absolute bottom-0 inset-x-0 p-6 pb-safe z-30 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent">
+                <div className="max-w-md mx-auto w-full">
                     {!capturedImage ? (
                         <button 
                             onClick={capturePhoto}
                             disabled={cameraState !== 'active'}
-                            className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-indigo-500/20 flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 disabled:hover:bg-indigo-600"
+                            className="w-full py-5 rounded-[2rem] bg-indigo-600/90 backdrop-blur-xl border border-white/10 hover:bg-indigo-600 text-white font-black text-base uppercase tracking-widest shadow-2xl shadow-indigo-500/20 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 disabled:hover:bg-indigo-600/90"
                         >
-                            <Camera size={18} /> Capture Selfie
+                            <Camera size={24} /> Capture Selfie
                         </button>
                     ) : (
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-4">
                             <button 
                                 onClick={retakePhoto}
                                 disabled={isClocking}
-                                className="py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-sm uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-50"
+                                className="py-5 rounded-[2rem] bg-slate-900/60 backdrop-blur-xl border border-white/10 text-white font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 hover:bg-slate-800/80 shadow-lg"
                             >
-                                <RefreshCw size={16} /> Retake
+                                <RefreshCw size={20} /> Retake
                             </button>
                             <button 
                                 onClick={handleConfirm}
                                 disabled={isClocking || locationState !== 'success'}
-                                className={`py-4 rounded-2xl text-white font-black text-sm uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${
+                                className={`py-5 rounded-[2rem] backdrop-blur-xl border border-white/10 text-white font-black text-sm uppercase tracking-widest shadow-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${
                                     locationState === 'success' 
-                                        ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 active:scale-95' 
-                                        : 'bg-slate-400 cursor-not-allowed'
+                                        ? 'bg-emerald-500/90 hover:bg-emerald-500 shadow-emerald-500/30 active:scale-95' 
+                                        : 'bg-slate-800/60 cursor-not-allowed'
                                 }`}
                             >
                                 {isClocking ? (
-                                    <Loader2 size={18} className="animate-spin" />
+                                    <Loader2 size={24} className="animate-spin" />
                                 ) : (
-                                    <><Check size={18} /> Clock In</>
+                                    <><Check size={24} /> Clock In</>
                                 )}
                             </button>
                         </div>
                     )}
                 </div>
-            </motion.div>
+            </div>
+            </div>
         </motion.div>
     );
 }
