@@ -12,15 +12,26 @@ import Link from 'next/link';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-function ProcessModal({ record, approvedIncentives = [], onClose, onSave }) {
+function ProcessModal({ record, approvedIncentives = [], attendanceStats = null, onClose, onSave }) {
   const totalApprovedIncentivesPaise = approvedIncentives.reduce((acc, i) => acc + (i.amount_paise || 0), 0);
   const totalApprovedIncentivesRupees = totalApprovedIncentivesPaise / 100;
+
+  // Calculate Auto Deductions based on attendance
+  // Assuming daily wage = base_salary / 30
+  const dailyWage = record?.base_salary ? record.base_salary / 30 : 0;
+  const autoDeductions = attendanceStats ? (
+      (attendanceStats.absent * dailyWage) +
+      (attendanceStats.half_day * (dailyWage * 0.5))
+  ) : 0;
+
+  // If this is a new processing, prepopulate deductions with autoDeductions
+  const initialDeductions = record?.salary_id ? (record?.deductions || 0) : Math.round(autoDeductions);
 
   const [form, setForm] = useState({
     base_salary: record?.base_salary || 0,
     hra: record?.hra || 0,
     allowances: record?.allowances || 0,
-    deductions: record?.deductions || 0,
+    deductions: initialDeductions,
   });
 
   const [saving, setSaving] = useState(false);
@@ -171,7 +182,7 @@ function ProcessModal({ record, approvedIncentives = [], onClose, onSave }) {
 
           {/* Approved Incentives Itemized Section */}
           {approvedIncentives.length > 0 && (
-            <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl space-y-1.5">
+            <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl space-y-1.5 mb-3">
               <p className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
                 <Gift size={14} /> Approved Incentives & Bonuses ({approvedIncentives.length})
               </p>
@@ -184,6 +195,38 @@ function ProcessModal({ record, approvedIncentives = [], onClose, onSave }) {
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Attendance Breakdown */}
+          {attendanceStats && (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <CalendarIcon size={14} /> Month Attendance Summary
+                </p>
+                <div className="grid grid-cols-4 gap-2 text-center">
+                    <div className="bg-emerald-100 text-emerald-800 rounded-lg p-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Present</p>
+                        <p className="text-sm font-black">{attendanceStats.present}</p>
+                    </div>
+                    <div className="bg-rose-100 text-rose-800 rounded-lg p-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Absent</p>
+                        <p className="text-sm font-black">{attendanceStats.absent}</p>
+                    </div>
+                    <div className="bg-violet-100 text-violet-800 rounded-lg p-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Half Day</p>
+                        <p className="text-sm font-black">{attendanceStats.half_day}</p>
+                    </div>
+                    <div className="bg-amber-100 text-amber-800 rounded-lg p-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Late</p>
+                        <p className="text-sm font-black">{attendanceStats.late}</p>
+                    </div>
+                </div>
+                {autoDeductions > 0 && !record?.salary_id && (
+                    <p className="text-[10px] font-semibold text-rose-600 bg-rose-50 p-1.5 rounded-lg border border-rose-100 mt-2">
+                        Automatic deduction of ₹{Math.round(autoDeductions).toLocaleString('en-IN')} applied based on absences and half-days.
+                    </p>
+                )}
+              </div>
           )}
         </div>
 
@@ -208,6 +251,7 @@ export default function SalaryPage() {
   const [employees, setEmployees] = useState([]);
   const [salaryMap, setSalaryMap] = useState({});
   const [approvedIncentiveMap, setApprovedIncentiveMap] = useState({});
+  const [attendanceMap, setAttendanceMap] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [processing, setProcessing] = useState(null);
   const [month, setMonth] = useState(new Date().getMonth() + 1);
@@ -216,7 +260,10 @@ export default function SalaryPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [empRes, salRes, incRes] = await Promise.all([
+      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+      const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+
+      const [empRes, salRes, incRes, attRes] = await Promise.all([
         supabase.from('user_profiles').select('id, full_name, role, department, base_salary').in('role', [
           'employee', 'relationship_exec', 'relationship_manager', 'hr_manager',
           'freelancer', 'video_editor', 'social_media_manager',
@@ -226,12 +273,14 @@ export default function SalaryPage() {
         supabase.from('incentive_allocations').select(`
           id, batch_id, employee_id, amount_paise, status,
           batch:incentive_batches ( incentive_type, description )
-        `).eq('status', 'approved')
+        `).eq('status', 'approved'),
+        supabase.from('attendance').select('employee_id, status').gte('date', startDate).lte('date', endDate)
       ]);
 
       const emps = empRes.data || [];
       const sals = salRes.data || [];
       const incs = incRes.data || [];
+      const atts = attRes.data || [];
 
       setEmployees(emps);
       const sMap = {};
@@ -244,6 +293,13 @@ export default function SalaryPage() {
         iMap[i.employee_id].push(i);
       });
       setApprovedIncentiveMap(iMap);
+
+      const attMap = {};
+      atts.forEach(a => {
+          if (!attMap[a.employee_id]) attMap[a.employee_id] = { present: 0, absent: 0, half_day: 0, late: 0, leave: 0 };
+          attMap[a.employee_id][a.status] = (attMap[a.employee_id][a.status] || 0) + 1;
+      });
+      setAttendanceMap(attMap);
 
     } catch (err) {
       console.error(err);
@@ -267,7 +323,8 @@ export default function SalaryPage() {
         .select('*')
         .eq('salary_record_id', sal.id);
 
-      const { blob, fileName, download } = await downloadPayslip({ employee: emp, salary: sal, lineItems });
+      const attStats = attendanceMap[emp.id];
+      const { blob, fileName, download } = await downloadPayslip({ employee: emp, salary: sal, lineItems, attendanceStats: attStats });
 
       if (!sal.payslip_url) {
         const { error: uploadError } = await supabase.storage
@@ -305,6 +362,7 @@ export default function SalaryPage() {
           <ProcessModal
             record={processing}
             approvedIncentives={approvedIncentiveMap[processing.id] || []}
+            attendanceStats={attendanceMap[processing.id]}
             onClose={() => setProcessing(null)}
             onSave={handleSave}
           />

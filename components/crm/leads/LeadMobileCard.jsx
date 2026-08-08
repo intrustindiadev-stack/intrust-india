@@ -2,6 +2,7 @@
 
 import { Phone, Mail, MoreVertical, IndianRupee } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 
 const STATUS_STYLE = {
@@ -14,10 +15,18 @@ const STATUS_STYLE = {
 };
 
 export default function LeadMobileCard({ lead, isSelected, onToggleSelect }) {
+    const router = useRouter();
     const repName = lead.user_profiles?.full_name || 'Unassigned';
+    const slug = lead.contact_name ? lead.contact_name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'unknown';
 
     return (
-        <div className={`p-4 rounded-[2rem] border transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${isSelected ? 'bg-indigo-50/50 border-indigo-300 ring-2 ring-indigo-500/20' : 'bg-white border-slate-200/80 shadow-xl shadow-slate-200/40'}`}>
+        <div 
+            onClick={(e) => {
+                if (e.target.closest('input[type="checkbox"]') || e.target.closest('a') || e.target.closest('button')) return;
+                router.push(`/crm/leads/${lead.id}-${slug}`);
+            }}
+            className={`p-4 rounded-[2rem] border transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${isSelected ? 'bg-indigo-50/50 border-indigo-300 ring-2 ring-indigo-500/20' : 'bg-white border-slate-200/80 shadow-xl shadow-slate-200/40'}`}
+        >
             <div className="flex items-start gap-3">
                 <input 
                     type="checkbox" 
@@ -29,7 +38,7 @@ export default function LeadMobileCard({ lead, isSelected, onToggleSelect }) {
                 <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start gap-2 mb-1">
                         <div>
-                            <Link href={`/crm/leads/${lead.id}`} className="font-bold text-gray-900 text-base hover:text-indigo-600 transition-colors truncate block">
+                            <Link href={`/crm/leads/${lead.id}-${slug}`} className="font-bold text-gray-900 text-base hover:text-indigo-600 transition-colors truncate block">
                                 {lead.contact_name || 'Unknown'}
                             </Link>
                             {lead.title && <p className="text-xs text-gray-500 font-medium truncate">{lead.title}</p>}

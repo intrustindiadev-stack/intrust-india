@@ -15,7 +15,7 @@ import BulkAssignDialog from '@/components/crm/leads/BulkAssignDialog';
 import LeadsPagination from '@/components/crm/leads/LeadsPagination';
 import ImportLeadsDrawer from '@/components/crm/leads/ImportLeadsDrawer';
 import AddLeadDrawer from '@/components/crm/leads/AddLeadDrawer';
-
+import LeadFilterDrawer from '@/components/crm/leads/LeadFilterDrawer';
 const STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
 const TEMPERATURES = ['hot', 'warm', 'cold'];
 
@@ -294,147 +294,141 @@ export default function LeadsPage() {
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 min-h-screen max-w-7xl mx-auto space-y-6 pb-24 lg:pb-8">
-            <AnimatePresence>
-                {showAdd && <AddLeadDrawer onClose={() => setShowAdd(false)} onSave={() => fetchLeads(true)} />}
-                {showImport && <ImportLeadsDrawer onClose={() => setShowImport(false)} onSave={() => fetchLeads(true)} />}
-            </AnimatePresence>
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)] relative pb-24 lg:pb-8">
+            {/* Background elements */}
+            <div className="absolute top-0 inset-x-0 h-[40vh] bg-gradient-to-b from-indigo-50/80 dark:from-indigo-900/10 to-transparent pointer-events-none" />
+            <div className="absolute top-20 right-10 w-72 h-72 bg-indigo-200/30 dark:bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none" />
 
-            <BulkAssignDialog 
-                isOpen={showBulkAssign}
-                onClose={() => setShowBulkAssign(false)}
-                selectedCount={selectedIds.length}
-                totalMatchingCount={totalCount - excludedIds.length}
-                selectAllMatching={selectAllMatching}
-                reps={reps}
-                onConfirm={handleBulkAssignConfirm}
-            />
+            <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 relative z-10">
+                <AnimatePresence>
+                    {showAdd && <AddLeadDrawer onClose={() => setShowAdd(false)} onSave={() => fetchLeads(true)} />}
+                    {showImport && <ImportLeadsDrawer onClose={() => setShowImport(false)} onSave={() => fetchLeads(true)} />}
+                </AnimatePresence>
 
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
-                        Leads
-                        {isRefetching && <RefreshCw size={14} className="animate-spin text-gray-400" />}
-                    </h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                        {totalCount} total lead{totalCount !== 1 ? 's' : ''}
-                        {activeFilterCount > 0 && ` matching filters`}
-                    </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <button onClick={() => fetchLeads(true)} className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors shadow-sm text-gray-500">
-                        <RefreshCw size={18} />
-                    </button>
-                    {isManager && (
-                        <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm">
-                            <UploadCloud size={16} /> Import
-                        </button>
-                    )}
-                    <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 text-sm">
-                        <Plus size={16} /> New Lead
-                    </button>
-                </div>
-            </div>
+                <LeadFilterDrawer 
+                    isOpen={showFilters}
+                    onClose={() => setShowFilters(false)}
+                    statusFilter={statusFilter}
+                    tempFilter={tempFilter}
+                    assigneeFilter={assigneeFilter}
+                    reps={reps}
+                    isManager={isManager}
+                    updateParams={updateParams}
+                    activeFilterCount={activeFilterCount}
+                />
 
-            {/* Toolbar / Search & Filters */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 flex flex-col md:flex-row gap-4 relative z-20">
-                <div className="relative flex-1">
-                    <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                        type="text" 
-                        placeholder="Search by name, phone, email, title..."
-                        value={localSearch} 
-                        onChange={e => setLocalSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
-                    />
-                </div>
-                
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 hide-scrollbar">
-                    <div className="flex items-center gap-2 p-1 bg-gray-100/50 rounded-xl border border-gray-200 shrink-0 overflow-x-auto hide-scrollbar">
-                        <button
-                            onClick={() => updateParams({ status: [] }, true)}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${statusFilter.length === 0 ? 'bg-white text-gray-900 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            All Statuses
-                        </button>
-                        {STATUSES.map(s => (
-                            <button
-                                key={s}
-                                onClick={() => updateParams({ status: [s] }, true)}
-                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all capitalize whitespace-nowrap ${statusFilter.includes(s) ? 'bg-white text-indigo-700 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
-                            >
-                                {s}
+                <BulkAssignDialog 
+                    isOpen={showBulkAssign}
+                    onClose={() => setShowBulkAssign(false)}
+                    selectedCount={selectedIds.length}
+                    totalMatchingCount={totalCount - excludedIds.length}
+                    selectAllMatching={selectAllMatching}
+                    reps={reps}
+                    onConfirm={handleBulkAssignConfirm}
+                />
+
+                {/* Hero Header */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div className="flex flex-col gap-2 flex-1">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 dark:bg-gray-800/60 text-indigo-700 dark:text-indigo-400 text-xs font-bold w-fit border border-white/50 dark:border-gray-700/50 backdrop-blur-md shadow-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                            CRM Leads Pipeline
+                        </div>
+                        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+                            Leads Directory
+                            {isRefetching && <RefreshCw size={20} className="animate-spin text-gray-400" />}
+                        </h1>
+                        <p className="text-slate-500 dark:text-gray-400 font-medium text-lg max-w-xl">
+                            {totalCount} total lead{totalCount !== 1 ? 's' : ''} {activeFilterCount > 0 && `(Filtered)`}
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        {isManager && (
+                            <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border border-white/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-800 text-slate-700 dark:text-gray-300 px-5 py-3 rounded-2xl font-bold transition-all shadow-sm shadow-slate-200/40 text-sm">
+                                <UploadCloud size={18} /> Import
                             </button>
-                        ))}
-                    </div>
-
-                    {isManager && (
-                        <div className="relative">
-                            <select 
-                                value={assigneeFilter[0] || ''}
-                                onChange={(e) => updateParams({ assignee: e.target.value ? [e.target.value] : [] }, true)}
-                                className="appearance-none pl-4 pr-9 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            >
-                                <option value="">All Reps</option>
-                                <option value="unassigned">Unassigned</option>
-                                <option value="me">Assigned to me</option>
-                                {reps.map(r => <option key={r.id} value={r.id}>{r.full_name}</option>)}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="relative">
-                        <select 
-                            value={datePreset}
-                            onChange={(e) => handleDatePresetChange(e.target.value)}
-                            className="appearance-none pl-4 pr-9 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        >
-                            <option value="">All Time</option>
-                            <option value="today">Today</option>
-                            <option value="last_7_days">Last 7 Days</option>
-                            <option value="last_30_days">Last 30 Days</option>
-                            <option value="this_month">This Month</option>
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-                        </div>
-                    </div>
-
-                    <button 
-                        onClick={() => setShowFilters(true)}
-                        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm border transition-all ${
-                            activeFilterCount > 0 
-                                ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' 
-                                : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                        }`}
-                    >
-                        <Filter size={16} />
-                        More Filters
-                        {activeFilterCount > 0 && (
-                            <span className="bg-indigo-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full ml-1">
-                                {activeFilterCount}
-                            </span>
                         )}
-                    </button>
-                    
-                    {activeFilterCount > 0 && (
-                        <button 
-                            onClick={() => {
-                                setLocalSearch('');
-                                router.push(pathname);
-                            }}
-                            className="p-2.5 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                            title="Clear all filters"
-                        >
-                            <X size={18} />
+                        <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-xl shadow-indigo-500/30 text-sm">
+                            <Plus size={18} /> New Lead
                         </button>
-                    )}
+                    </div>
                 </div>
-            </div>
+
+                {/* Search & Quick Filters Bar */}
+                <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-gray-700/50 shadow-2xl shadow-indigo-100/20 dark:shadow-none p-2 flex flex-col lg:flex-row gap-2">
+                    {/* Search Bar */}
+                    <div className="relative flex-1">
+                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="text" 
+                            placeholder="Search by name, phone, email, title..."
+                            value={localSearch} 
+                            onChange={e => setLocalSearch(e.target.value)}
+                            className="w-full pl-11 pr-4 py-3.5 bg-transparent border-none text-slate-800 dark:text-white text-sm font-semibold focus:outline-none focus:ring-0 placeholder-slate-400"
+                        />
+                    </div>
+                    
+                    {/* Divider */}
+                    <div className="hidden lg:block w-px bg-slate-200 dark:bg-gray-700 my-2 mx-1"></div>
+
+                    {/* Quick Filters */}
+                    <div className="flex items-center gap-2 p-2 overflow-x-auto hide-scrollbar">
+                        {/* Day-Wise Quick Filters */}
+                        <div className="flex items-center gap-1 bg-slate-100/50 dark:bg-gray-900/50 p-1 rounded-2xl border border-slate-200/50 dark:border-gray-700/50">
+                            {[
+                                { id: '', label: 'All Time' },
+                                { id: 'today', label: 'Today' },
+                                { id: 'last_7_days', label: '7D' },
+                                { id: 'this_month', label: 'Month' }
+                            ].map(preset => (
+                                <button
+                                    key={preset.id}
+                                    onClick={() => handleDatePresetChange(preset.id)}
+                                    className={`px-5 py-2.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap shadow-sm ${
+                                        datePreset === preset.id 
+                                            ? 'bg-white dark:bg-gray-800 text-indigo-700 dark:text-indigo-400 border border-slate-200/50 dark:border-gray-700' 
+                                            : 'text-slate-600 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200 hover:bg-slate-200/50 dark:hover:bg-gray-800/50 border border-transparent'
+                                    }`}
+                                >
+                                    {preset.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Advanced Filters Trigger */}
+                        <button 
+                            onClick={() => setShowFilters(true)}
+                            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-sm transition-all whitespace-nowrap ${
+                                activeFilterCount > 0 
+                                    ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 shadow-inner' 
+                                    : 'bg-white/50 dark:bg-gray-800/50 text-slate-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 border border-slate-200/50 dark:border-gray-700'
+                            }`}
+                        >
+                            <Filter size={16} />
+                            Filters
+                            {activeFilterCount > 0 && (
+                                <span className="bg-indigo-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full ml-1 shadow-sm">
+                                    {activeFilterCount}
+                                </span>
+                            )}
+                        </button>
+                        
+                        {/* Clear Filters */}
+                        {activeFilterCount > 0 && (
+                            <button 
+                                onClick={() => {
+                                    setLocalSearch('');
+                                    router.push(pathname);
+                                }}
+                                className="p-2.5 rounded-2xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+                                title="Clear all filters"
+                            >
+                                <X size={18} />
+                            </button>
+                        )}
+                    </div>
+                </div>
 
             {/* Desktop Table */}
             <LeadsTable 
@@ -493,6 +487,7 @@ export default function LeadsPage() {
                 onSelectAllMatching={handleSelectAllMatching}
                 onOpenAssign={() => setShowBulkAssign(true)}
             />
+        </div>
         </div>
     );
 }

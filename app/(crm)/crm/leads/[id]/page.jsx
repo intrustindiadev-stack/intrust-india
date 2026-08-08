@@ -20,11 +20,11 @@ import {
 } from '@/lib/crm/validation';
 
 const TABS = [
+    { id: 'notes', label: 'Notes', icon: MessageSquare },
     { id: 'activity', label: 'Activity', icon: Activity },
     { id: 'details', label: 'Details', icon: FileText },
     { id: 'tasks', label: 'Tasks', icon: CheckCircle2 },
     { id: 'services', label: 'Services', icon: Package },
-    { id: 'notes', label: 'Notes', icon: MessageSquare },
 ];
 
 const STATUS_CONFIG = {
@@ -42,10 +42,13 @@ import { isValidUUID } from '@/lib/utils';
 export default function LeadDetailPage({ params }) {
     const router = useRouter();
     const unwrappedParams = use(params);
-    const { id } = unwrappedParams;
+    const rawId = unwrappedParams.id;
+    const idMatch = rawId.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+    const id = idMatch ? idMatch[0] : rawId;
+
     const { user, profile } = useAuth();
     
-    const [activeTab, setActiveTab] = useState('activity');
+    const [activeTab, setActiveTab] = useState('notes');
     const [lead, setLead] = useState(null);
     const [tasks, setTasks] = useState([]);
     const [intentServices, setIntentServices] = useState([]);
@@ -228,8 +231,8 @@ export default function LeadDetailPage({ params }) {
                 
                 <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-8">
                     
-                    <div className="bg-white dark:bg-gray-800 rounded-[2rem] border border-gray-100 dark:border-gray-700 p-6 shadow-xl shadow-gray-200/40 dark:shadow-none overflow-hidden relative group">
-                        <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-indigo-500 to-violet-600 opacity-20 group-hover:opacity-30 transition-opacity" />
+                    <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-[2.5rem] border border-white/60 dark:border-gray-700 p-6 shadow-2xl shadow-slate-200/20 overflow-hidden relative group">
+                        <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-indigo-500/20 to-violet-600/20 group-hover:opacity-100 transition-opacity" />
                         
                         <div className="relative flex flex-col items-center text-center mt-4">
                             <div className="w-24 h-24 rounded-[1.5rem] bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-gray-800 dark:to-gray-700 p-1 shadow-lg mb-4 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
@@ -279,7 +282,7 @@ export default function LeadDetailPage({ params }) {
 
 
                     <div className="grid grid-cols-1 gap-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-3xl border border-white/60 dark:border-gray-700 p-5 shadow-xl shadow-slate-200/10 transition-shadow">
                             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><User size={14}/> Assigned Executive</p>
                             {profile && ['relationship_manager', 'admin', 'super_admin'].includes(profile.role) ? (
                                 <select
@@ -322,12 +325,12 @@ export default function LeadDetailPage({ params }) {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:-translate-y-0.5 transition-transform">
+                            <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-3xl border border-white/60 dark:border-gray-700 p-4 shadow-xl shadow-slate-200/10 hover:-translate-y-0.5 transition-transform">
                                 <MapPin size={16} className="text-gray-400 mb-2"/>
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Region</p>
                                 <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{lead.source || 'Unknown'}</p>
                             </div>
-                            <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:-translate-y-0.5 transition-transform">
+                            <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-3xl border border-white/60 dark:border-gray-700 p-4 shadow-xl shadow-slate-200/10 hover:-translate-y-0.5 transition-transform">
                                 <Calendar size={16} className="text-gray-400 mb-2"/>
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Added On</p>
                                 <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{format(new Date(lead.created_at), 'MMM dd, yyyy')}</p>
@@ -362,7 +365,7 @@ export default function LeadDetailPage({ params }) {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.2 }}
-                            className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 p-8 shadow-sm min-h-[400px]"
+                            className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-[2.5rem] border border-white/60 dark:border-gray-700 p-8 shadow-2xl shadow-slate-200/20 min-h-[400px]"
                         >
                             {activeTab === 'activity' && (
                                 <div className="space-y-8">
@@ -554,12 +557,17 @@ export default function LeadDetailPage({ params }) {
                                             </div>
                                         ) : (
                                             notes.map(note => (
-                                                <div key={note.id} className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                                                <div key={note.id} className="bg-indigo-50/50 dark:bg-indigo-900/20 rounded-2xl p-4 border border-indigo-100 dark:border-indigo-800/30">
                                                     <div className="flex items-center justify-between mb-2">
-                                                        <span className="text-xs font-bold text-gray-900 dark:text-white">{note.author?.full_name || 'User'}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-6 h-6 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center text-[10px] font-black text-indigo-700 dark:text-indigo-300">
+                                                                {note.author?.full_name ? note.author.full_name.charAt(0).toUpperCase() : 'U'}
+                                                            </div>
+                                                            <span className="text-xs font-bold text-gray-900 dark:text-white">{note.author?.full_name || 'User'}</span>
+                                                        </div>
                                                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{format(new Date(note.created_at), 'MMM dd, p')}</span>
                                                     </div>
-                                                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{note.content}</p>
+                                                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap ml-8">{note.content}</p>
                                                 </div>
                                             ))
                                         )}

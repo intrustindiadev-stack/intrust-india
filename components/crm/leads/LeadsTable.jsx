@@ -3,6 +3,7 @@
 import React from 'react';
 import { Phone, Mail, MoreHorizontal, User, Calendar, IndianRupee } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 
 const STATUS_STYLE = {
@@ -57,6 +58,8 @@ export default function LeadsTable({
     isAllPageSelected,
     isSomeSelected
 }) {
+    const router = useRouter();
+
     if (isLoading) {
         return (
             <div className="hidden lg:block bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-hidden animate-pulse">
@@ -124,11 +127,16 @@ export default function LeadsTable({
                                     {groupLeads.map(lead => {
                                         const isSelected = selectedIds.includes(lead.id);
                                         const repName = lead.user_profiles?.full_name || 'Unassigned';
+                                        const slug = lead.contact_name ? lead.contact_name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'unknown';
                                         
                                         return (
                                             <tr 
                                                 key={lead.id} 
-                                                className={`group transition-all hover:shadow-md relative hover:z-10 ${isSelected ? 'bg-indigo-50/40 border-l-2 border-l-indigo-500' : 'hover:bg-slate-50/60 border-l-2 border-l-transparent bg-white'}`}
+                                                onClick={(e) => {
+                                                    if (e.target.closest('input[type="checkbox"]') || e.target.closest('a') || e.target.closest('button')) return;
+                                                    router.push(`/crm/leads/${lead.id}-${slug}`);
+                                                }}
+                                                className={`group transition-all hover:shadow-md relative hover:z-10 cursor-pointer ${isSelected ? 'bg-indigo-50/40 border-l-2 border-l-indigo-500' : 'hover:bg-slate-50/60 border-l-2 border-l-transparent bg-white'}`}
                                             >
                                                 <td className="p-4 pl-6">
                                                     <input 
@@ -145,7 +153,7 @@ export default function LeadsTable({
                                                             {(lead.contact_name || '?').charAt(0).toUpperCase()}
                                                         </div>
                                                         <div>
-                                                            <Link href={`/crm/leads/${lead.id}`} className="font-bold text-gray-900 hover:text-indigo-600 transition-colors">
+                                                            <Link href={`/crm/leads/${lead.id}-${slug}`} className="font-bold text-gray-900 hover:text-indigo-600 transition-colors">
                                                                 {lead.contact_name || 'Unknown'}
                                                             </Link>
                                                             {lead.title && <p className="text-xs text-gray-500 font-medium truncate max-w-[180px]">{lead.title}</p>}
