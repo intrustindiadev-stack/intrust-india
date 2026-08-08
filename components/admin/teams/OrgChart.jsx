@@ -174,47 +174,47 @@ export default function OrgChart({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={handleTouchEnd}
-            className="relative w-full h-[650px] bg-slate-50/50 rounded-[2.5rem] overflow-hidden border border-slate-200/60 shadow-inner cursor-grab active:cursor-grabbing canvas-bg touch-none"
+            className="relative w-full h-[650px] bg-gray-50 dark:bg-gray-900/50 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm cursor-grab active:cursor-grabbing canvas-bg touch-none"
             style={{
-                backgroundImage: 'radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                backgroundImage: 'radial-gradient(rgba(156, 163, 175, 0.2) 1px, transparent 1px)',
                 backgroundSize: '24px 24px'
             }}
         >
             {/* Control Bar Floating Overlay */}
-            <div className="absolute top-4 right-4 z-30 flex items-center gap-1.5 bg-white/80 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/60 shadow-sm">
+            <div className="absolute top-4 right-4 z-30 flex items-center gap-1.5 bg-white dark:bg-gray-800 p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
                 <button
                     onClick={handleZoomIn}
-                    className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100/80 transition-colors"
+                    className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     title="Zoom In"
                 >
                     <ZoomIn size={16} />
                 </button>
                 <button
                     onClick={handleZoomOut}
-                    className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100/80 transition-colors"
+                    className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     title="Zoom Out"
                 >
                     <ZoomOut size={16} />
                 </button>
-                <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-0.5" />
                 <button
                     onClick={handleResetView}
-                    className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100/80 transition-colors"
+                    className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     title="Reset View"
                 >
                     <Maximize2 size={16} />
                 </button>
-                <span className="text-xs font-mono font-bold text-slate-600 px-2">
+                <span className="text-xs font-mono font-bold text-gray-600 dark:text-gray-400 px-2">
                     {Math.round(zoom * 100)}%
                 </span>
             </div>
 
             {/* Empty State */}
             {teams.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-slate-500 space-y-3">
-                    <Layers size={48} className="text-slate-300 animate-pulse" />
-                    <p className="font-bold text-slate-800 text-lg">No teams created yet</p>
-                    <p className="text-sm text-slate-500">Click &quot;+ Create Team&quot; to build your region hierarchy.</p>
+                <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-3">
+                    <Layers size={40} className="text-gray-300 dark:text-gray-600" />
+                    <p className="font-semibold text-gray-800 dark:text-gray-200 text-base">No units created yet</p>
+                    <p className="text-sm text-gray-500">Click &quot;+ Create Team&quot; to build your organization hierarchy.</p>
                 </div>
             ) : (
                 /* Transform Canvas Container */

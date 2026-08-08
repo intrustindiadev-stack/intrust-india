@@ -98,6 +98,7 @@ const navigationGroups = [
             { name: 'Career Applications', href: '/admin/careers', icon: Briefcase },
             { name: 'CRM Overview', href: '/admin/crm', icon: BarChart3 },
             { name: 'CRM Leads', href: '/admin/crm/leads', icon: Target },
+            { name: 'Lead Distribution', href: '/admin/crm/distribution', icon: Network },
             { name: 'HRM Overview', href: '/admin/hrm', icon: UserCheck },
             { name: 'HRM Incentives', href: '/admin/hrm/incentives', icon: Gift },
         ]

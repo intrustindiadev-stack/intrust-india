@@ -84,6 +84,19 @@ export default function MemberAssignDrawer({
                     </div>
                 </div>
 
+                {/* CRM Leads Hint */}
+                <div className="px-5 pt-4">
+                    <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex gap-3">
+                        <UserCheck className="text-indigo-600 shrink-0 mt-0.5" size={18} />
+                        <div>
+                            <h4 className="text-sm font-bold text-indigo-900 mb-1">Lead Transfer Note</h4>
+                            <p className="text-xs text-indigo-700/90 leading-relaxed">
+                                If this member is being moved from another team, their existing CRM leads will automatically follow them to this unit.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="flex-1 overflow-y-auto p-5 space-y-2">
                     {filteredUsers.length === 0 ? (
                         <div className="text-center py-10 text-slate-400">

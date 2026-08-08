@@ -235,6 +235,17 @@ export default function BulkTransferDrawer({
                             className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"
                         />
                     </div>
+
+                    {/* CRM Leads Hint */}
+                    <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex gap-3">
+                        <AlertCircle className="text-indigo-600 shrink-0 mt-0.5" size={18} />
+                        <div>
+                            <h4 className="text-sm font-bold text-indigo-900 mb-1">Lead Ownership Notice</h4>
+                            <p className="text-xs text-indigo-700/90 leading-relaxed">
+                                Any CRM leads currently assigned to these members will automatically be transferred to the new unit to preserve customer relationships. If leads should remain with the Source Unit, please reassign them to another member prior to this transfer.
+                            </p>
+                        </div>
+                    </div>
                 </form>
 
                 {/* Footer */}

@@ -4,6 +4,37 @@ import { z } from 'zod';
 export const phoneRegex = /^[6-9]\d{9}$/;
 export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+export function normalizePhone(rawPhone?: string | null): string | null {
+    if (!rawPhone) return null;
+    const trimmed = rawPhone.toString().trim();
+    if (!trimmed) return null;
+    
+    // Extract digits only
+    const digits = trimmed.replace(/\D/g, '');
+    
+    // 10 digits starting with 6-9 -> canonical Indian mobile
+    if (digits.length === 10 && /^[6-9]\d{9}$/.test(digits)) {
+        return digits;
+    }
+    // 12 digits starting with 91 followed by 6-9xxxxxxxxx (+91 format)
+    if (digits.length === 12 && digits.startsWith('91') && /^[6-9]\d{9}$/.test(digits.slice(2))) {
+        return digits.slice(2);
+    }
+    // 11 digits starting with 0 followed by 6-9xxxxxxxxx (09876543210 format)
+    if (digits.length === 11 && digits.startsWith('0') && /^[6-9]\d{9}$/.test(digits.slice(1))) {
+        return digits.slice(1);
+    }
+    
+    // Return raw trimmed value so strict regex validation can catch invalid formats
+    return trimmed;
+}
+
+export function normalizeEmail(rawEmail?: string | null): string | null {
+    if (!rawEmail) return null;
+    const trimmed = rawEmail.toString().trim();
+    return trimmed ? trimmed.toLowerCase() : null;
+}
+
 export const LEAD_STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'] as const;
 export const LEAD_TEMPERATURES = ['hot', 'warm', 'cold'] as const;
 
@@ -40,8 +71,14 @@ export const CrmLeadUpdateSchema = CrmLeadCreateSchema.partial().extend({
 export const CrmLeadCsvRowSchema = z.object({
     contact_name: z.string().min(1, 'Missing contact name'),
     title: z.string().optional(),
-    phone: z.string().refine(val => !val || phoneRegex.test(val), 'Invalid phone — must be a 10-digit Indian mobile starting with 6-9').nullable().optional(),
-    email: z.string().refine(val => !val || emailRegex.test(val), 'Invalid email format').nullable().optional(),
+    phone: z.preprocess(
+        (val) => (typeof val === 'string' ? normalizePhone(val) : val),
+        z.string().refine(val => !val || phoneRegex.test(val), 'Invalid phone — must be a 10-digit Indian mobile starting with 6-9').nullable().optional()
+    ),
+    email: z.preprocess(
+        (val) => (typeof val === 'string' ? normalizeEmail(val) : val),
+        z.string().refine(val => !val || emailRegex.test(val), 'Invalid email format').nullable().optional()
+    ),
     source: z.string().optional(),
     notes: z.string().optional(),
     state: z.string().optional(),
@@ -49,6 +86,8 @@ export const CrmLeadCsvRowSchema = z.object({
     area: z.string().optional(),
     zone: z.string().optional(),
     pincode: z.string().optional(),
+    source_system: z.string().optional(),
+    external_lead_id: z.string().optional(),
 });
 
 export const CrmTaskCreateSchema = z.object({

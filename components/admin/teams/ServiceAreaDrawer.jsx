@@ -32,17 +32,28 @@ export default function ServiceAreaDrawer({ team, onClose }) {
     }, [team]);
 
     const handleAdd = async () => {
-        if (!newArea.value) {
-            toast.error('Please enter a value');
-            return;
-        }
-        if (newArea.type === 'pincode' && !/^[1-9][0-9]{5}$/.test(newArea.value)) {
-            toast.error('Invalid pincode');
-            return;
-        }
-        if ((newArea.type === 'zone' || newArea.type === 'area') && !newArea.city) {
-            toast.error('City is required for Zone or Area');
-            return;
+        let payloadValue = newArea.value;
+        let payloadCity = newArea.city;
+        let payloadState = newArea.state;
+
+        // Semantic mapping to ensure value is correctly set based on area type
+        if (newArea.type === 'city') {
+            if (!newArea.city) { toast.error('City name is required'); return; }
+            payloadValue = newArea.city;
+        } else if (newArea.type === 'state') {
+            if (!newArea.state) { toast.error('State name is required'); return; }
+            payloadValue = newArea.state;
+            payloadCity = '';
+        } else {
+            if (!newArea.value) { toast.error('Please enter a value'); return; }
+            if (newArea.type === 'pincode' && !/^[1-9][0-9]{5}$/.test(newArea.value)) {
+                toast.error('Invalid 6-digit pincode');
+                return;
+            }
+            if ((newArea.type === 'zone' || newArea.type === 'area') && !newArea.city) {
+                toast.error('City is required for Zone or Area');
+                return;
+            }
         }
 
         setSaving(true);
@@ -52,9 +63,9 @@ export default function ServiceAreaDrawer({ team, onClose }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify([{
                     area_type: newArea.type,
-                    value: newArea.value,
-                    city: newArea.city,
-                    state: newArea.state
+                    value: payloadValue,
+                    city: payloadCity,
+                    state: payloadState
                 }])
             });
             if (res.ok) {
@@ -114,7 +125,7 @@ export default function ServiceAreaDrawer({ team, onClose }) {
                     <div className="grid grid-cols-2 gap-3">
                         <select 
                             value={newArea.type} 
-                            onChange={e => setNewArea({ ...newArea, type: e.target.value })}
+                            onChange={e => setNewArea({ type: e.target.value, value: '', city: '', state: '' })}
                             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all font-semibold"
                         >
                             <option value="pincode">Pincode</option>
@@ -123,24 +134,36 @@ export default function ServiceAreaDrawer({ team, onClose }) {
                             <option value="city">City</option>
                             <option value="state">State</option>
                         </select>
-                        <input 
-                            type="text" 
-                            placeholder="Value (e.g. 400001)" 
-                            value={newArea.value}
-                            onChange={e => setNewArea({ ...newArea, value: e.target.value })}
-                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all"
-                        />
+                        
+                        {(newArea.type === 'pincode' || newArea.type === 'zone' || newArea.type === 'area') && (
+                            <input 
+                                type="text" 
+                                placeholder={newArea.type === 'pincode' ? '6-digit Pincode' : 'Zone/Area Name'} 
+                                value={newArea.value}
+                                onChange={e => setNewArea({ ...newArea, value: e.target.value })}
+                                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all"
+                            />
+                        )}
+                        {newArea.type === 'state' && (
+                            <input 
+                                type="text" 
+                                placeholder="State Name" 
+                                value={newArea.state}
+                                onChange={e => setNewArea({ ...newArea, state: e.target.value })}
+                                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all"
+                            />
+                        )}
                     </div>
                     {(newArea.type === 'zone' || newArea.type === 'area' || newArea.type === 'city') && (
                         <div className="grid grid-cols-2 gap-3">
                             <input 
                                 type="text" 
-                                placeholder="City (Required)" 
+                                placeholder="City Name" 
                                 value={newArea.city}
                                 onChange={e => setNewArea({ ...newArea, city: e.target.value })}
                                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all"
                             />
-                            {newArea.type === 'city' && (
+                            {(newArea.type === 'city' || newArea.type === 'zone' || newArea.type === 'area') && (
                                 <input 
                                     type="text" 
                                     placeholder="State (Optional)" 
