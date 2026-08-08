@@ -331,11 +331,14 @@ export async function fetchTeamLeadsData() {
             .in('role', ['relationship_manager', 'relationship_exec'])
             .order('full_name');
 
+        const teamIds = (teamData || []).map(member => member.id);
+
         const { data: leadsData } = await adminClient
             .from('crm_leads')
             .select('*')
             .neq('source', 'Users')
             .neq('source', 'App User')
+            .in('assigned_to', teamIds)
             .order('created_at', { ascending: false });
 
         return { team: teamData || [], leads: leadsData || [] };
