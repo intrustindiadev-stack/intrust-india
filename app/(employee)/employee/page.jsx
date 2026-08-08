@@ -6,12 +6,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import SkeletonCard from '@/components/shared/SkeletonCard';
-import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import WelcomeRoleCelebrationModal from '@/components/shared/WelcomeRoleCelebrationModal';
 import Image from 'next/image';
 import { useAttendanceActions } from '@/hooks/useAttendanceActions';
 import IDCard from '@/components/shared/IDCard';
 import CalendarWidget from '@/components/shared/CalendarWidget';
+import AttendanceCameraModal from '@/components/employee/AttendanceCameraModal';
 
 const QUICK_ACTIONS = [
     { label: 'Attendance', icon: ClipboardList, href: '/employee/attendance', color: 'bg-emerald-500', shadow: 'shadow-emerald-500/30', desc: 'Log your shifts' },
@@ -23,7 +23,7 @@ const QUICK_ACTIONS = [
 ];
 
 // Extracted from lucide-react above to avoid missing imports in array mapping
-import { UserCircle, ShieldCheck } from 'lucide-react';
+import { UserCircle } from 'lucide-react';
 
 export default function EmployeeDashboard() {
     const { user, profile } = useAuth();
@@ -32,6 +32,7 @@ export default function EmployeeDashboard() {
     
     const [data, setData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [showCameraModal, setShowCameraModal] = useState(false);
 
     const fetchDashboardData = useCallback(async () => {
         if (!user) return;
@@ -94,14 +95,10 @@ export default function EmployeeDashboard() {
             <div className="relative z-10 space-y-8 max-w-7xl mx-auto">
                 <WelcomeRoleCelebrationModal />
 
-                {/* Top Bar */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl p-4 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-sm shadow-sky-500/5">
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-center p-1.5">
-                            <Image src="/logo.png" alt="InTrust Logo" width={28} height={28} className="object-contain" />
-                        </div>
-                        <Breadcrumbs />
-                    </div>
+
+
+                {/* Top Bar - Simplified since layout handles breadcrumbs */}
+                <div className="flex justify-end items-center mb-4">
                     <div className="flex items-center gap-3 bg-sky-50/50 dark:bg-sky-900/20 px-4 py-2 rounded-xl border border-sky-100/50 dark:border-sky-800/30">
                         <span className="text-[10px] font-black text-sky-700 dark:text-sky-400 uppercase tracking-widest">
                             {businessDate ? new Date(businessDate).toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Loading...'}
@@ -114,27 +111,27 @@ export default function EmployeeDashboard() {
                     
                     {/* Left Column (Main Ops) */}
                     <div className="lg:col-span-8 space-y-8">
-                        {data?.pending_access_request && (
-                            <div className="bg-amber-50 border border-amber-200 rounded-3xl p-5 flex items-start gap-4 shadow-sm">
-                                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 text-amber-600">
-                                    <ShieldCheck size={20} />
-                                </div>
-                                <div>
-                                    <h3 className="text-amber-900 font-bold text-lg tracking-tight">System Access Pending Approval</h3>
-                                    <p className="text-amber-700/80 text-sm mt-0.5">HR has requested <span className="font-bold">{data.pending_access_request.requested_role}</span> access for your account. You will have limited access to the portal until an Admin approves your request. Please check back later.</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Compact Welcome Header */}
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                        
+                        {/* Unified Hero Section */}
+                        <div className="w-full rounded-[2.5rem] overflow-hidden relative shadow-sm border border-gray-100 bg-white dark:bg-gray-800 dark:border-gray-700 flex flex-col md:flex-row min-h-[16rem]">
+                            <div className="p-8 sm:p-10 flex flex-col justify-center flex-1 relative z-10 bg-gradient-to-r from-white via-white to-transparent dark:from-gray-800 dark:via-gray-800 w-full md:w-3/5 lg:w-2/3">
+                                <h1 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tight mb-2">
                                     {greeting}, <span className="text-blue-600 dark:text-blue-400">{profile?.full_name?.split(' ')[0] || 'Team Member'}</span>!
                                 </h1>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">
+                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                                     {profile?.role ? profile.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Not Assigned'} • {profile?.department || 'Department Not Assigned'}
                                 </p>
+                            </div>
+                            <div className="absolute inset-0 md:inset-y-0 md:right-0 md:left-auto md:w-1/2 z-0 overflow-hidden">
+                                <Image 
+                                    src="/images/employee_banner_illustration.png" 
+                                    alt="Employee Dashboard Banner" 
+                                    fill 
+                                    className="object-cover object-center md:object-[right_center] opacity-20 md:opacity-100" 
+                                    priority
+                                />
+                                {/* Gradient fade for image to blend with the text background */}
+                                <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-white via-transparent to-transparent dark:from-gray-800"></div>
                             </div>
                         </div>
 
@@ -183,7 +180,7 @@ export default function EmployeeDashboard() {
                                     </button>
                                 ) : (
                                     <button 
-                                        onClick={clockedIn ? () => handleClockOut(openShift.id) : () => handleClockIn()} 
+                                        onClick={clockedIn ? () => handleClockOut(openShift.id) : () => setShowCameraModal(true)} 
                                         disabled={clocking}
                                         className={`w-full sm:w-auto px-8 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${clockedIn ? 'bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
                                     >
@@ -253,6 +250,20 @@ export default function EmployeeDashboard() {
 
                     {/* Right Column (Sidebar Summary & ID) */}
                     <div className="lg:col-span-4 space-y-6">
+
+                {/* Modals */}
+                <AnimatePresence>
+                    {showCameraModal && (
+                        <AttendanceCameraModal 
+                            onClose={() => setShowCameraModal(false)}
+                            onConfirm={async (selfieBase64) => {
+                                await handleClockIn(selfieBase64);
+                                setShowCameraModal(false);
+                            }}
+                            isClocking={clocking}
+                        />
+                    )}
+                </AnimatePresence>
                         
                         {/* Digital ID Display */}
                         <div className="hidden sm:block mb-8">

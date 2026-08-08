@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Users, Mail, Phone, Building, Calendar, RefreshCw, MoreVertical, X, Save } from 'lucide-react';
+import { Search, Plus, Users, Mail, Phone, Building, Calendar, RefreshCw, MoreVertical, X, Save, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 const ROLE_LABELS = {
     employee: 'Employee',
@@ -35,307 +36,14 @@ const ROLE_COLOR = {
     support_agent: 'bg-indigo-50 text-indigo-700 border-indigo-100',
 };
 
-function EmployeeDrawer({ employee, onClose, onSave }) {
-    const [form, setForm] = useState({
-        department: employee?.department || '',
-        employee_id: employee?.employee_id || '',
-        joining_date: employee?.joining_date || '',
-        employment_type: employee?.employment_type || 'full_time',
-        city: employee?.city || '',
-        base_salary: employee?.base_salary || 0,
-        role: employee?.role || 'employee',
-    });
-    const [saving, setSaving] = useState(false);
-    const up = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            const { error } = await supabase.from('user_profiles').update(form).eq('id', employee.id);
-            if (error) throw error;
-            toast.success('Employee profile updated');
 
-            // Audit Log Insert
-            supabase.auth.getUser().then(({ data: { user } }) => {
-                if (user) {
-                    supabase.from('audit_logs_hrm').insert({
-                        actor_id: user.id,
-                        actor_name: user.user_metadata?.full_name || 'System',
-                        action: 'Employee profile updated',
-                        table_name: 'user_profiles',
-                        record_id: employee.id,
-                        old_data: employee,
-                        new_data: form,
-                        module: 'Core HR',
-                        severity: 'medium'
-                    }).then(({ error: auditError }) => {
-                        if (auditError) console.warn('Audit log failed:', auditError);
-                    });
-                }
-            });
 
-            onSave({ ...employee, ...form });
-            onClose();
-        } catch (err) { toast.error(err.message); }
-        finally { setSaving(false); }
-    };
-
-    return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex">
-            <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                className="w-full max-w-md bg-white flex flex-col h-full shadow-2xl">
-                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-lg font-bold text-gray-900">{employee?.full_name}</h2>
-                        <p className="text-xs text-gray-400 mt-0.5">Edit employment details</p>
-                    </div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl"><X size={18} className="text-gray-500" /></button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                    {/* Avatar */}
-                    <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100 shadow-sm">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-xl shadow-inner">
-                            {(employee?.full_name || '?').charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <p className="font-bold text-gray-900">{employee?.full_name}</p>
-                            <p className="text-sm text-gray-500">{employee?.email}</p>
-                            <p className="text-xs text-gray-400">{employee?.phone}</p>
-                        </div>
-                    </div>
-
-                    {/* Financial Summary */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 shadow-sm relative overflow-hidden group">
-                            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-1/4 translate-y-1/4 group-hover:scale-110 transition-transform">
-                                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            </div>
-                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1 relative z-10">Monthly Base</p>
-                            <p className="text-lg font-black text-indigo-900 font-mono relative z-10">₹{Number(form.base_salary || 0).toLocaleString('en-IN')}</p>
-                        </div>
-                        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 shadow-sm relative overflow-hidden group">
-                            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-1/4 translate-y-1/4 group-hover:scale-110 transition-transform">
-                                <TrendingUp size={60} />
-                            </div>
-                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1 relative z-10">YTD Earnings (Est)</p>
-                            <p className="text-lg font-black text-emerald-900 font-mono relative z-10">₹{Number((form.base_salary || 0) * (new Date().getMonth() || 1)).toLocaleString('en-IN')}</p>
-                            <p className="text-[10px] font-bold text-emerald-600 mt-1 relative z-10">Current Financial Year</p>
-                        </div>
-                    </div>
-
-                    {[
-                        { label: 'Employee ID', key: 'employee_id', placeholder: 'e.g. EMP001' },
-                        { label: 'City', key: 'city', placeholder: 'e.g. Mumbai' },
-                        { label: 'Base Salary (₹/month)', key: 'base_salary', placeholder: '30000', type: 'number' },
-                    ].map(f => (
-                        <div key={f.key}>
-                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">{f.label}</label>
-                            <input type={f.type || 'text'} value={form[f.key]} onChange={e => up(f.key, e.target.value)} placeholder={f.placeholder}
-                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all" />
-                        </div>
-                    ))}
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Department</label>
-                        <select value={form.department} onChange={e => up('department', e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all">
-                            <option value="">Select Department...</option>
-                            {['Engineering', 'Sales', 'Operations', 'HR', 'Customer Support', 'Marketing', 'Finance'].map(dept => (
-                                <option key={dept} value={dept}>{dept}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Joining Date</label>
-                        <input type="date" value={form.joining_date} onChange={e => up('joining_date', e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Employment Type</label>
-                        <select value={form.employment_type} onChange={e => up('employment_type', e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                            {['full_time', 'part_time', 'contract', 'intern'].map(t => (
-                                <option key={t} value={t}>{t.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Role</label>
-                        <select value={form.role} onChange={e => up('role', e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                            {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                        </select>
-                    </div>
-                </div>
-                <div className="p-5 border-t border-gray-100 flex flex-col gap-3">
-                    <div className="flex gap-3">
-                        <button onClick={onClose} className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">Cancel</button>
-                        <button onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">
-                            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={16} /> Save Changes</>}
-                        </button>
-                    </div>
-                    {form.role !== 'inactive' && (
-                        <button 
-                            onClick={() => {
-                                if (confirm("Are you sure you want to deactivate this employee? They will lose access to the system.")) {
-                                    up('role', 'inactive');
-                                }
-                            }}
-                            className="w-full py-2.5 rounded-2xl border-2 border-rose-100 text-rose-600 font-semibold text-sm hover:bg-rose-50 hover:border-rose-200 transition-colors"
-                        >
-                            Deactivate Employee
-                        </button>
-                    )}
-                </div>
-            </motion.div>
-        </motion.div>
-    );
-}
-
-function AddEmployeeDrawer({ onClose, onSave }) {
-    const [form, setForm] = useState({
-        full_name: '',
-        email: '',
-        phone: '',
-        department: '',
-        employee_id: '',
-        joining_date: new Date().toISOString().split('T')[0],
-        employment_type: 'full_time',
-        city: '',
-        base_salary: 0,
-        role: 'employee',
-    });
-    const [saving, setSaving] = useState(false);
-    const up = (k, v) => setForm(p => ({ ...p, [k]: v }));
-
-    const handleSave = async () => {
-        if (!form.full_name?.trim() || !form.email?.trim()) {
-            toast.error('Full Name and Email are required');
-            return;
-        }
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(form.email.trim())) {
-            toast.error('Please enter a valid email address');
-            return;
-        }
-
-        if (Number(form.base_salary) < 0) {
-            toast.error('Base salary cannot be negative');
-            return;
-        }
-
-        setSaving(true);
-        try {
-            const payload = {
-                ...form,
-                email: form.email.toLowerCase().trim(),
-                base_salary: Math.max(0, Number(form.base_salary) || 0)
-            };
-            
-            const res = await fetch('/api/hrm/employees', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            const data = await res.json();
-            
-            if (!res.ok) {
-                throw new Error(data.error || 'Failed to add employee');
-            }
-            
-            toast.success('New employee added!');
-            onSave(data.user);
-            onClose();
-        } catch (err) { toast.error(err.message); }
-        finally { setSaving(false); }
-    };
-
-    return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex">
-            <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                className="w-full max-w-md bg-white flex flex-col h-full shadow-2xl">
-                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-lg font-bold text-gray-900">Add New Employee</h2>
-                        <p className="text-xs text-gray-400 mt-0.5">Onboard a new team member</p>
-                    </div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl"><X size={18} className="text-gray-500" /></button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                    {[
-                        { label: 'Full Name *', key: 'full_name', placeholder: 'John Doe' },
-                        { label: 'Email *', key: 'email', placeholder: 'john@intrust.com', type: 'email' },
-                        { label: 'Phone', key: 'phone', placeholder: '10-digit mobile' },
-                        { label: 'Employee ID', key: 'employee_id', placeholder: 'e.g. EMP001' },
-                        { label: 'City', key: 'city', placeholder: 'e.g. Mumbai' },
-                        { label: 'Base Salary (₹/month)', key: 'base_salary', placeholder: '30000', type: 'number' },
-                    ].map(f => (
-                        <div key={f.key}>
-                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">{f.label}</label>
-                            <input type={f.type || 'text'} value={form[f.key]} onChange={e => up(f.key, e.target.value)} placeholder={f.placeholder}
-                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all" />
-                        </div>
-                    ))}
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Department</label>
-                        <select value={form.department} onChange={e => up('department', e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all">
-                            <option value="">Select Department...</option>
-                            {['Engineering', 'Sales', 'Operations', 'HR', 'Customer Support', 'Marketing', 'Finance'].map(dept => (
-                                <option key={dept} value={dept}>{dept}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Joining Date</label>
-                        <input type="date" value={form.joining_date} onChange={e => up('joining_date', e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Employment Type</label>
-                        <select value={form.employment_type} onChange={e => up('employment_type', e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                            {['full_time', 'part_time', 'contract', 'intern'].map(t => (
-                                <option key={t} value={t}>{t.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Role</label>
-                        <select value={form.role} onChange={e => up('role', e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                            {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                        </select>
-                    </div>
-                </div>
-                <div className="p-5 border-t border-gray-100 flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">Cancel</button>
-                    <button onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">
-                        {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Plus size={16} /> Add Employee</>}
-                    </button>
-                </div>
-            </motion.div>
-        </motion.div>
-    );
-}
 
 export default function EmployeesPage() {
     const [employees, setEmployees] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [editing, setEditing] = useState(null);
-    const [showAdd, setShowAdd] = useState(false);
 
     const fetchEmployees = useCallback(async () => {
         setIsLoading(true);
@@ -371,10 +79,6 @@ export default function EmployeesPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 min-h-screen">
-            <AnimatePresence>
-                {editing && <EmployeeDrawer employee={editing} onClose={() => setEditing(null)} onSave={handleUpdate} />}
-                {showAdd && <AddEmployeeDrawer onClose={() => setShowAdd(false)} onSave={handleAdd} />}
-            </AnimatePresence>
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -382,11 +86,8 @@ export default function EmployeesPage() {
                     <p className="text-sm text-gray-500 mt-1">{filtered.length} team member{filtered.length !== 1 ? 's' : ''}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={fetchEmployees} className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50">
-                        <RefreshCw size={16} className="text-gray-500" />
-                    </button>
-                    <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-emerald-500/25 text-sm">
-                        <Plus size={16} /> New Employee
+                    <button onClick={fetchEmployees} className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 shadow-sm transition-all">
+                        <RefreshCw size={18} className="text-gray-500 hover:text-emerald-600" />
                     </button>
                 </div>
             </div>
@@ -418,13 +119,13 @@ export default function EmployeesPage() {
                                         {(emp.full_name || '?').charAt(0).toUpperCase()}
                                     </div>
                                     <div>
-                                        <p className="font-bold text-gray-900 group-hover:text-emerald-600 transition-colors">{emp.full_name}</p>
+                                        <Link href={`/hrm/employees/${emp.id}`} className="font-bold text-gray-900 hover:text-emerald-600 transition-colors block">{emp.full_name}</Link>
                                         <p className="text-xs font-mono text-gray-400">{emp.employee_id || 'No ID set'}</p>
                                     </div>
                                 </div>
-                                <button onClick={() => setEditing(emp)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                                <Link href={`/hrm/employees/${emp.id}`} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
                                     <MoreVertical size={16} className="text-gray-400" />
-                                </button>
+                                </Link>
                             </div>
 
                             <div className="space-y-2 mb-4">

@@ -12,7 +12,6 @@ export default function IncentivesPage() {
   const [batches, setBatches] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedBatchId, setSelectedBatchId] = useState(null);
 
   // Filters State
   const [filters, setFilters] = useState({
@@ -101,12 +100,13 @@ export default function IncentivesPage() {
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-xs">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <Gift className="text-slate-700" size={24} /> Incentives & Bonuses
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600"><Gift size={24} /></div>
+              Incentives & Bonuses
             </h1>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-sm text-slate-500 mt-2">
               Enterprise HRMS management of individual and team performance awards.
             </p>
           </div>
@@ -129,28 +129,28 @@ export default function IncentivesPage() {
             value={formatPaiseToINR(metrics.pendingTotalPaise)}
             subtext={`${metrics.pendingCount} awards awaiting review`}
             icon={Clock}
-            iconBg="bg-amber-50 text-amber-600"
+            bgClass="from-amber-500 to-orange-500"
           />
           <IncentiveMetricCard
             label="Approved (Payroll)"
             value={formatPaiseToINR(metrics.approvedTotalPaise)}
             subtext={`${metrics.approvedCount} awards ready for payout`}
             icon={CheckCircle2}
-            iconBg="bg-indigo-50 text-indigo-600"
+            bgClass="from-indigo-500 to-purple-600"
           />
           <IncentiveMetricCard
             label="Paid"
             value={formatPaiseToINR(metrics.paidMonthTotalPaise)}
             subtext={`${metrics.paidMonthCount} awards paid`}
             icon={DollarSign}
-            iconBg="bg-emerald-50 text-emerald-600"
+            bgClass="from-emerald-500 to-teal-600"
           />
           <IncentiveMetricCard
             label="Total Awarded"
             value={formatPaiseToINR(metrics.totalAwardedPaise)}
             subtext="Period summary"
             icon={Gift}
-            iconBg="bg-slate-100 text-slate-700"
+            bgClass="from-sky-500 to-blue-600"
           />
         </div>
 
@@ -221,16 +221,6 @@ export default function IncentivesPage() {
             data={batches}
             meta={meta}
             onPageChange={(p) => setFilters({ ...filters, page: p })}
-            onSelectRow={(id) => setSelectedBatchId(id)}
-          />
-        )}
-
-        {/* Details Drawer */}
-        {selectedBatchId && (
-          <IncentiveDetailsDrawer
-            batchId={selectedBatchId}
-            onClose={() => setSelectedBatchId(null)}
-            onRefresh={fetchIncentives}
           />
         )}
 

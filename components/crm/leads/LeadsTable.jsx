@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { Phone, Mail, MoreHorizontal, User, Calendar, IndianRupee } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -17,6 +18,34 @@ const TEMP_STYLE = {
     hot: 'text-rose-600 bg-rose-50',
     warm: 'text-amber-600 bg-amber-50',
     cold: 'text-sky-600 bg-sky-50'
+};
+
+const groupLeadsByDate = (leads) => {
+    const groups = {
+        'Today': [],
+        'Yesterday': [],
+        'This Week': [],
+        'Older': []
+    };
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const last7Days = new Date(today);
+    last7Days.setDate(last7Days.getDate() - 7);
+
+    leads.forEach(lead => {
+        const leadDate = new Date(lead.created_at);
+        if (leadDate >= today) groups['Today'].push(lead);
+        else if (leadDate >= yesterday) groups['Yesterday'].push(lead);
+        else if (leadDate >= last7Days) groups['This Week'].push(lead);
+        else groups['Older'].push(lead);
+    });
+
+    return groups;
 };
 
 export default function LeadsTable({ 
@@ -55,6 +84,8 @@ export default function LeadsTable({
 
     if (!leads?.length) return null;
 
+    const groupedLeads = groupLeadsByDate(leads);
+
     return (
         <div className="hidden lg:block bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-hidden">
             <div className="overflow-x-auto hide-scrollbar">
@@ -81,103 +112,115 @@ export default function LeadsTable({
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50/80 text-sm">
-                        {leads.map(lead => {
-                            const isSelected = selectedIds.includes(lead.id);
-                            const repName = lead.user_profiles?.full_name || 'Unassigned';
-                            
+                        {Object.entries(groupedLeads).map(([groupName, groupLeads]) => {
+                            if (groupLeads.length === 0) return null;
                             return (
-                                <tr 
-                                    key={lead.id} 
-                                    className={`group transition-all hover:shadow-md relative hover:z-10 ${isSelected ? 'bg-indigo-50/40 border-l-2 border-l-indigo-500' : 'hover:bg-slate-50/60 border-l-2 border-l-transparent bg-white'}`}
-                                >
-                                    <td className="p-4 pl-6">
-                                        <input 
-                                            type="checkbox" 
-                                            className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                                            checked={isSelected}
-                                            onChange={() => onToggleSelect(lead.id)}
-                                            aria-label={`Select ${lead.contact_name}`}
-                                        />
-                                    </td>
-                                    <td className="p-4 min-w-[200px]">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 shadow-sm ${isSelected ? 'bg-indigo-600 text-white shadow-indigo-600/20' : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700'}`}>
-                                                {(lead.contact_name || '?').charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <Link href={`/crm/leads/${lead.id}`} className="font-bold text-gray-900 hover:text-indigo-600 transition-colors">
-                                                    {lead.contact_name || 'Unknown'}
-                                                </Link>
-                                                {lead.title && <p className="text-xs text-gray-500 font-medium truncate max-w-[180px]">{lead.title}</p>}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="space-y-1">
-                                            {lead.phone ? (
-                                                <p className="text-xs text-gray-700 font-medium flex items-center gap-1.5">
-                                                    <Phone size={12} className="text-gray-400" /> {lead.phone}
-                                                </p>
-                                            ) : (
-                                                <p className="text-xs text-gray-400 font-medium flex items-center gap-1.5">
-                                                    <Phone size={12} className="opacity-50" /> —
-                                                </p>
-                                            )}
-                                            {lead.email && (
-                                                <p className="text-[11px] text-gray-500 flex items-center gap-1.5 truncate max-w-[160px]">
-                                                    <Mail size={12} className="text-gray-400" /> {lead.email}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="flex flex-col items-start gap-1.5">
-                                            <span className={`inline-flex text-[11px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md border ${STATUS_STYLE[lead.status] || 'bg-gray-50 border-gray-200 text-gray-600'}`}>
-                                                {lead.status}
-                                            </span>
-                                            {lead.temperature && (
-                                                <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${TEMP_STYLE[lead.temperature] || 'text-gray-500'}`}>
-                                                    {lead.temperature}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="flex items-center gap-2">
-                                            {lead.assigned_to ? (
-                                                <>
-                                                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-[10px] font-bold shrink-0">
-                                                        {repName.charAt(0).toUpperCase()}
+                                <React.Fragment key={groupName}>
+                                    <tr>
+                                        <td colSpan="8" className="bg-slate-50/50 py-3 px-6 text-xs font-black uppercase tracking-wider text-slate-500 border-y border-slate-100">
+                                            {groupName} <span className="ml-2 bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-[10px]">{groupLeads.length}</span>
+                                        </td>
+                                    </tr>
+                                    {groupLeads.map(lead => {
+                                        const isSelected = selectedIds.includes(lead.id);
+                                        const repName = lead.user_profiles?.full_name || 'Unassigned';
+                                        
+                                        return (
+                                            <tr 
+                                                key={lead.id} 
+                                                className={`group transition-all hover:shadow-md relative hover:z-10 ${isSelected ? 'bg-indigo-50/40 border-l-2 border-l-indigo-500' : 'hover:bg-slate-50/60 border-l-2 border-l-transparent bg-white'}`}
+                                            >
+                                                <td className="p-4 pl-6">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                        checked={isSelected}
+                                                        onChange={() => onToggleSelect(lead.id)}
+                                                        aria-label={`Select ${lead.contact_name}`}
+                                                    />
+                                                </td>
+                                                <td className="p-4 min-w-[200px]">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 shadow-sm ${isSelected ? 'bg-indigo-600 text-white shadow-indigo-600/20' : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700'}`}>
+                                                            {(lead.contact_name || '?').charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <Link href={`/crm/leads/${lead.id}`} className="font-bold text-gray-900 hover:text-indigo-600 transition-colors">
+                                                                {lead.contact_name || 'Unknown'}
+                                                            </Link>
+                                                            {lead.title && <p className="text-xs text-gray-500 font-medium truncate max-w-[180px]">{lead.title}</p>}
+                                                        </div>
                                                     </div>
-                                                    <span className="text-xs font-semibold text-gray-700 truncate max-w-[100px]">{repName}</span>
-                                                </>
-                                            ) : (
-                                                <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-md">Unassigned</span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        {lead.deal_value > 0 ? (
-                                            <span className="text-xs font-bold text-gray-900 flex items-center">
-                                                <IndianRupee size={12} className="mr-0.5 text-gray-500" />
-                                                {lead.deal_value.toLocaleString('en-IN')}
-                                            </span>
-                                        ) : (
-                                            <span className="text-xs text-gray-400">—</span>
-                                        )}
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
-                                            <Calendar size={12} className="text-gray-400" />
-                                            {format(new Date(lead.created_at), 'MMM d, yyyy')}
-                                        </div>
-                                    </td>
-                                    <td className="p-4 pr-6 text-right">
-                                        <button className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors" aria-label="Row actions">
-                                            <MoreHorizontal size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="space-y-1">
+                                                        {lead.phone ? (
+                                                            <p className="text-xs text-gray-700 font-medium flex items-center gap-1.5">
+                                                                <Phone size={12} className="text-gray-400" /> {lead.phone}
+                                                            </p>
+                                                        ) : (
+                                                            <p className="text-xs text-gray-400 font-medium flex items-center gap-1.5">
+                                                                <Phone size={12} className="opacity-50" /> —
+                                                            </p>
+                                                        )}
+                                                        {lead.email && (
+                                                            <p className="text-[11px] text-gray-500 flex items-center gap-1.5 truncate max-w-[160px]">
+                                                                <Mail size={12} className="text-gray-400" /> {lead.email}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="flex flex-col items-start gap-1.5">
+                                                        <span className={`inline-flex text-[11px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md border ${STATUS_STYLE[lead.status] || 'bg-gray-50 border-gray-200 text-gray-600'}`}>
+                                                            {lead.status}
+                                                        </span>
+                                                        {lead.temperature && (
+                                                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${TEMP_STYLE[lead.temperature] || 'text-gray-500'}`}>
+                                                                {lead.temperature}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-2">
+                                                        {lead.assigned_to ? (
+                                                            <>
+                                                                <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-[10px] font-bold shrink-0">
+                                                                    {repName.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <span className="text-xs font-semibold text-gray-700 truncate max-w-[100px]">{repName}</span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-md">Unassigned</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    {lead.deal_value > 0 ? (
+                                                        <span className="text-xs font-bold text-gray-900 flex items-center">
+                                                            <IndianRupee size={12} className="mr-0.5 text-gray-500" />
+                                                            {lead.deal_value.toLocaleString('en-IN')}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
+                                                        <Calendar size={12} className="text-gray-400" />
+                                                        {format(new Date(lead.created_at), 'MMM d, yyyy')}
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 pr-6 text-right">
+                                                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors" aria-label="Row actions">
+                                                        <MoreHorizontal size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </React.Fragment>
                             );
                         })}
                     </tbody>
@@ -186,3 +229,4 @@ export default function LeadsTable({
         </div>
     );
 }
+

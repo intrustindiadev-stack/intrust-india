@@ -351,18 +351,22 @@ export default function LeadsPage() {
                 </div>
                 
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 hide-scrollbar">
-                    <div className="relative">
-                        <select 
-                            value={statusFilter[0] || ''}
-                            onChange={(e) => updateParams({ status: e.target.value ? [e.target.value] : [] }, true)}
-                            className="appearance-none pl-4 pr-9 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    <div className="flex items-center gap-2 p-1 bg-gray-100/50 rounded-xl border border-gray-200 shrink-0 overflow-x-auto hide-scrollbar">
+                        <button
+                            onClick={() => updateParams({ status: [] }, true)}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${statusFilter.length === 0 ? 'bg-white text-gray-900 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
                         >
-                            <option value="">All Statuses</option>
-                            {STATUSES.map(s => <option key={s} value={s} className="capitalize">{s}</option>)}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-                        </div>
+                            All Statuses
+                        </button>
+                        {STATUSES.map(s => (
+                            <button
+                                key={s}
+                                onClick={() => updateParams({ status: [s] }, true)}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all capitalize whitespace-nowrap ${statusFilter.includes(s) ? 'bg-white text-indigo-700 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                {s}
+                            </button>
+                        ))}
                     </div>
 
                     {isManager && (

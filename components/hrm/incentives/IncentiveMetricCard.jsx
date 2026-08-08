@@ -1,20 +1,14 @@
 'use client';
 
-export default function IncentiveMetricCard({ label, value, subtext, icon: Icon, iconBg = 'bg-slate-100 text-slate-600' }) {
+export default function IncentiveMetricCard({ label, value, subtext, icon: Icon, bgClass = 'bg-gradient-to-br from-gray-500 to-gray-600' }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex justify-between items-start">
-      <div className="space-y-1">
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
-        <p className="text-2xl font-semibold text-slate-900 tracking-tight font-mono tabular-nums">
-          {value}
-        </p>
-        {subtext && <p className="text-xs text-slate-400 font-medium">{subtext}</p>}
+    <div className={`rounded-3xl p-5 text-white shadow-lg ${bgClass}`}>
+      <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center mb-3">
+        {Icon && <Icon size={20} />}
       </div>
-      {Icon && (
-        <div className={`p-2.5 rounded-lg ${iconBg} shrink-0`}>
-          <Icon size={18} />
-        </div>
-      )}
+      <p className="text-white/70 text-xs font-bold uppercase tracking-widest">{label}</p>
+      <p className="text-3xl font-black mt-1 font-mono">{value}</p>
+      {subtext && <p className="text-white/70 text-xs font-medium mt-1">{subtext}</p>}
     </div>
   );
 }

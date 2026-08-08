@@ -6,6 +6,7 @@ import HRMBottomNav from './HRMBottomNav';
 import { Menu } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import LiveClock from '@/components/shared/LiveClock';
+import Breadcrumbs from '@/components/ui/Breadcrumbs';
 
 export default function HRMLayout({ children, userProfile }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -71,7 +72,10 @@ export default function HRMLayout({ children, userProfile }) {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 bg-slate-50 min-h-full pb-28 md:pb-0">
+                <main className="flex-1 bg-slate-50 min-h-full pb-28 md:pb-0 p-4 sm:p-6 lg:p-8">
+                    <div className="mb-6">
+                        <Breadcrumbs />
+                    </div>
                     {children}
                 </main>
             </div>

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, X, ChevronDown, RefreshCw, Briefcase, Phone, Mail, ExternalLink, CheckCircle2, Clock, User, DollarSign, Calendar, MessageSquare, UserCheck, AlertCircle, FileText, Shield } from 'lucide-react';
+import { Search, X, ChevronDown, RefreshCw, Briefcase, Phone, Mail, ExternalLink, CheckCircle2, Clock, User, DollarSign, Calendar, MessageSquare, UserCheck, AlertCircle, FileText } from 'lucide-react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -28,34 +29,9 @@ function CandidateDrawer({ app, onClose, onUpdate }) {
         joining_bonus: app?.joining_bonus || '',
         offer_letter_notes: app?.offer_letter_notes || '',
         panel_access_granted: app?.panel_access_granted || '',
-        department: app?.role_category || '',
-        team_id: '',
-        reporting_manager_id: '',
     });
     const [saving, setSaving] = useState(false);
-    const [teams, setTeams] = useState([]);
-    const [managers, setManagers] = useState([]);
     const up = (k, v) => setForm(p => ({ ...p, [k]: v }));
-
-    const isOperationalRole = ['relationship_manager', 'relationship_exec', 'sales_manager', 'sales_exec', 'freelancer'].includes(form.panel_access_granted);
-
-    useEffect(() => {
-        if (stage === 'hired' && isOperationalRole) {
-            const fetchAssignmentData = async () => {
-                try {
-                    const [teamsRes, mgrRes] = await Promise.all([
-                        supabase.from('teams').select('id, name, region_level, state, city, area').eq('is_active', true).order('name'),
-                        supabase.from('user_profiles').select('id, full_name, role').in('role', ['admin', 'super_admin', 'sales_manager', 'hr_manager', 'relationship_manager']).order('full_name')
-                    ]);
-                    if (teamsRes.data) setTeams(teamsRes.data);
-                    if (mgrRes.data) setManagers(mgrRes.data);
-                } catch (err) { console.error('Error fetching assignment data', err); }
-            };
-            fetchAssignmentData();
-        }
-    }, [stage, isOperationalRole]);
-
-    const selectedTeam = teams.find(t => t.id === form.team_id);
 
     const PANEL_OPTIONS = [
         { value: '', label: 'No panel access' },
@@ -71,11 +47,6 @@ function CandidateDrawer({ app, onClose, onUpdate }) {
     ];
 
     const handleSave = async () => {
-        if (stage === 'hired' && isOperationalRole && (!form.team_id || !form.reporting_manager_id)) {
-            toast.error('Team and Reporting Manager are required for operational roles.');
-            return;
-        }
-
         setSaving(true);
         try {
             const payload = {
@@ -87,10 +58,7 @@ function CandidateDrawer({ app, onClose, onUpdate }) {
                 joiningBonus: form.joining_bonus,
                 offerLetterNotes: form.offer_letter_notes,
                 interviewDate: form.interview_date,
-                interviewNotes: form.interview_notes,
-                department: form.department || null,
-                teamId: form.team_id || null,
-                reportingManagerId: form.reporting_manager_id || null
+                interviewNotes: form.interview_notes
             };
 
             const response = await fetch('/api/hrm/hire-candidate', {
@@ -232,138 +200,24 @@ function CandidateDrawer({ app, onClose, onUpdate }) {
                         </div>
                     )}
 
-                    {/* Organization Assignment (for hired) */}
-                    {stage === 'hired' && !app?.panel_access_request && (
-                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-indigo-100 space-y-4">
-                            <h3 className="text-xs font-bold text-indigo-700 uppercase tracking-widest border-b border-indigo-50 pb-2">Organization Assignment</h3>
-                            
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Department <span className="text-rose-500">*</span></label>
-                                    <select value={form.department} onChange={e => up('department', e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                        <option value="">Select Department</option>
-                                        <option value="sales">Sales</option>
-                                        <option value="operations">Operations</option>
-                                        <option value="hr">Human Resources</option>
-                                        <option value="marketing">Marketing</option>
-                                        <option value="engineering">Engineering</option>
-                                        <option value="design">Design</option>
-                                        <option value="support">Customer Support</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Role <span className="text-rose-500">*</span></label>
-                                    <select value={form.panel_access_granted} onChange={e => up('panel_access_granted', e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                        {PANEL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            {form.panel_access_granted && (
-                                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-start gap-2">
-                                    <Shield size={16} className="text-emerald-500 mt-0.5" />
-                                    <div>
-                                        <p className="text-xs font-bold text-slate-700">Access Preview</p>
-                                        <p className="text-xs text-slate-500">
-                                            {isOperationalRole ? 'Will be granted CRM and Territory Management access.' : 'Will be granted Standard Employee Portal access.'}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {isOperationalRole && (
-                                <>
-                                    <div className="pt-2 border-t border-indigo-50">
-                                        <label className="block text-xs font-semibold text-gray-600 mb-1">Assign Organization Unit <span className="text-rose-500">*</span></label>
-                                        <select value={form.team_id} onChange={e => up('team_id', e.target.value)}
-                                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                            <option value="">Select Organization Unit</option>
-                                            {teams.map(t => (
-                                                <option key={t.id} value={t.id}>
-                                                    {t.name} ({t.city || t.state})
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {selectedTeam && (
-                                        <div className="bg-indigo-50/50 p-3 rounded-xl border border-indigo-50 space-y-1.5">
-                                            <p className="text-xs font-bold text-indigo-900/60 uppercase tracking-wide">Operational Territory</p>
-                                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                                <div><span className="text-gray-500 text-xs">Country:</span> <span className="font-medium text-gray-800">India</span></div>
-                                                {selectedTeam.state && <div><span className="text-gray-500 text-xs">State:</span> <span className="font-medium text-gray-800">{selectedTeam.state}</span></div>}
-                                                {selectedTeam.city && <div><span className="text-gray-500 text-xs">City:</span> <span className="font-medium text-gray-800">{selectedTeam.city}</span></div>}
-                                                {selectedTeam.area && <div><span className="text-gray-500 text-xs">Area:</span> <span className="font-medium text-gray-800">{selectedTeam.area}</span></div>}
-                                                {selectedTeam.zone && <div><span className="text-gray-500 text-xs">Zone:</span> <span className="font-medium text-gray-800">{selectedTeam.zone}</span></div>}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-600 mb-1">Reporting Manager <span className="text-rose-500">*</span></label>
-                                        <select value={form.reporting_manager_id} onChange={e => up('reporting_manager_id', e.target.value)}
-                                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                            <option value="">Select Reporting Manager</option>
-                                            {managers.map(m => (
-                                                <option key={m.id} value={m.id}>{m.full_name} ({m.role})</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Panel Access Request Status (if exists) */}
-                    {stage === 'hired' && app?.panel_access_request && (
-                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-indigo-100 space-y-4">
-                            <h3 className="text-xs font-bold text-indigo-700 uppercase tracking-widest border-b border-indigo-50 pb-2">Panel Access Request</h3>
-                            <div className="space-y-3 text-sm">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-500">Requested Panel:</span>
-                                    <span className="font-bold text-gray-900">{PANEL_OPTIONS.find(o => o.value === app.panel_access_request.requested_role)?.label || app.panel_access_request.requested_role}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-500">Approval Status:</span>
-                                    <span className={`font-bold px-2 py-0.5 rounded-md text-xs ${app.panel_access_request.status === 'pending' ? 'bg-amber-50 text-amber-600' : app.panel_access_request.status === 'approved' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                        {app.panel_access_request.status.toUpperCase()}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-500">Requested By:</span>
-                                    <span className="font-medium text-gray-800">{app.panel_access_request.hr?.full_name || 'HR'}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-500">Requested On:</span>
-                                    <span className="font-medium text-gray-800">{new Date(app.panel_access_request.created_at).toLocaleDateString()}</span>
-                                </div>
-                                {app.panel_access_request.status === 'approved' && (
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-gray-500">Approval Date:</span>
-                                        <span className="font-medium text-gray-800">{app.panel_access_request.approved_at ? new Date(app.panel_access_request.approved_at).toLocaleDateString() : '—'}</span>
-                                    </div>
-                                )}
-                                {app.panel_access_request.status === 'rejected' && (
-                                    <div className="flex justify-between items-start">
-                                        <span className="text-gray-500">Reason:</span>
-                                        <span className="font-medium text-rose-600 text-right max-w-[60%]">{app.panel_access_request.rejected_reason || '—'}</span>
-                                    </div>
-                                )}
-                            </div>
+                    {/* Panel Access (for hired) */}
+                    {stage === 'hired' && (
+                        <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
+                            <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-widest mb-3">Recommend Panel Access</h3>
+                            <p className="text-xs text-emerald-600 mb-3">Recommend which panel(s) this hire should access (requires Admin approval):</p>
+                            <select value={form.panel_access_granted} onChange={e => up('panel_access_granted', e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-xl border border-emerald-200 bg-white text-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                                {PANEL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
                         </div>
                     )}
                 </div>
 
                 <div className="bg-white p-5 border-t border-gray-100 flex gap-3">
                     <button onClick={onClose} className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold text-sm">Cancel</button>
-                    {(!app?.panel_access_request) && (
-                        <button onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold text-sm flex items-center justify-center gap-2 hover:from-violet-500 disabled:opacity-60">
-                            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><CheckCircle2 size={16} /> Save & Update</>}
-                        </button>
-                    )}
+                    <button onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold text-sm flex items-center justify-center gap-2 hover:from-violet-500 disabled:opacity-60">
+                        {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><CheckCircle2 size={16} /> Save & Update</>}
+                    </button>
                 </div>
             </motion.div>
         </motion.div>
@@ -380,24 +234,11 @@ export default function RecruitmentPage() {
     const fetchApplications = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [appRes, reqRes] = await Promise.all([
-                supabase.from('career_applications').select('*').order('created_at', { ascending: false }),
-                supabase.from('panel_access_requests').select('*, user_profiles!inner(email), hr:requested_by(full_name)')
-            ]);
-            if (appRes.error) throw appRes.error;
-            
-            const reqMap = {};
-            if (reqRes.data) {
-                reqRes.data.forEach(r => {
-                    if (r.user_profiles?.email) reqMap[r.user_profiles.email.toLowerCase()] = r;
-                });
-            }
-            
-            const merged = (appRes.data || []).map(a => ({
-                ...a,
-                panel_access_request: a.email ? reqMap[a.email.toLowerCase()] : null
-            }));
-            setApplications(merged);
+            const { data, error } = await supabase.from('career_applications')
+                .select('*')
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            setApplications(data || []);
         } catch (err) { console.error(err); toast.error('Could not load applications'); }
         finally { setIsLoading(false); }
     }, []);
@@ -419,6 +260,17 @@ export default function RecruitmentPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 min-h-screen">
+            {/* Banner Illustration */}
+            <div className="w-full h-48 sm:h-56 rounded-[2.5rem] overflow-hidden relative shadow-md shadow-violet-500/10 mb-8">
+                <Image 
+                    src="/images/recruitment_banner.png" 
+                    alt="Recruitment Dashboard Banner" 
+                    fill 
+                    className="object-cover" 
+                    priority
+                />
+            </div>
+
             <AnimatePresence>
                 {selected && <CandidateDrawer app={selected} onClose={() => setSelected(null)} onUpdate={handleUpdate} />}
             </AnimatePresence>
@@ -482,19 +334,12 @@ export default function RecruitmentPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex flex-col items-end gap-2 shrink-0">
-                                        <div className="flex items-center gap-2">
-                                            {app.offered_salary > 0 && (
-                                                <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-100">₹{app.offered_salary.toLocaleString('en-IN')}/mo</span>
-                                            )}
-                                            <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border ${stage.light}`}>{stage.label}</span>
-                                            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: stage.color.replace('bg-', '').replace('-500', '') }}></div>
-                                        </div>
-                                        {app.panel_access_request && (
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${app.panel_access_request.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-200' : app.panel_access_request.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>
-                                                {app.panel_access_request.status === 'pending' ? '🟡 Pending Admin' : app.panel_access_request.status === 'approved' ? '🟢 Approved' : '🔴 Rejected'}
-                                            </span>
+                                    <div className="flex items-center gap-3 shrink-0">
+                                        {app.offered_salary > 0 && (
+                                            <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-100">₹{app.offered_salary.toLocaleString('en-IN')}/mo</span>
                                         )}
+                                        <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border ${stage.light}`}>{stage.label}</span>
+                                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: stage.color.replace('bg-', '').replace('-500', '') }}></div>
                                     </div>
                                 </div>
                             </motion.div>
