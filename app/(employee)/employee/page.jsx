@@ -23,7 +23,7 @@ const QUICK_ACTIONS = [
 ];
 
 // Extracted from lucide-react above to avoid missing imports in array mapping
-import { UserCircle } from 'lucide-react';
+import { UserCircle, ShieldCheck } from 'lucide-react';
 
 export default function EmployeeDashboard() {
     const { user, profile } = useAuth();
@@ -112,6 +112,20 @@ export default function EmployeeDashboard() {
                     {/* Left Column (Main Ops) */}
                     <div className="lg:col-span-8 space-y-8">
                         
+                        {data?.pending_access_request && (
+                            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-[2rem] p-5 sm:p-6 flex flex-col sm:flex-row items-start gap-4 shadow-sm">
+                                <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0 text-amber-600 dark:text-amber-400 shadow-inner">
+                                    <ShieldCheck size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-amber-900 dark:text-amber-200 font-black text-lg tracking-tight mb-1">System Access Pending Approval</h3>
+                                    <p className="text-amber-700/90 dark:text-amber-400/80 text-sm font-medium leading-relaxed">
+                                        HR has requested <span className="font-black text-amber-900 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 px-1.5 py-0.5 rounded-md">{data.pending_access_request.requested_role}</span> access for your account. You will have limited access to the portal until an Admin approves your request. Please check back later.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Unified Hero Section */}
                         <div className="w-full rounded-[2.5rem] overflow-hidden relative shadow-sm border border-gray-100 bg-white dark:bg-gray-800 dark:border-gray-700 flex flex-col md:flex-row min-h-[16rem]">
                             <div className="p-8 sm:p-10 flex flex-col justify-center flex-1 relative z-10 bg-gradient-to-r from-white via-white to-transparent dark:from-gray-800 dark:via-gray-800 w-full md:w-3/5 lg:w-2/3">
