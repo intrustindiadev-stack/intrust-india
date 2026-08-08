@@ -81,19 +81,18 @@ export default function OrgChartNode({
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={`w-72 bg-white rounded-[1.75rem] border transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 relative select-none overflow-hidden ${
+            className={`w-72 bg-white dark:bg-gray-800 rounded-[1.75rem] border transition-all duration-300 shadow-xl shadow-gray-200/30 dark:shadow-black/20 hover:shadow-2xl hover:shadow-gray-200/50 hover:-translate-y-1 relative select-none overflow-hidden ${
                 isDragOver
                     ? 'border-indigo-400 ring-4 ring-indigo-500/10 bg-indigo-50/30 scale-105'
-                    : 'border-slate-100 hover:border-slate-200'
+                    : 'border-gray-100 dark:border-gray-700/50 hover:border-gray-200'
             }`}
             style={{
-                borderTopColor: team.color || '#6366f1',
-                borderTopWidth: '3px'
+                // Removed the thick colored top border for a flatter, premium look
             }}
         >
             {/* Header / Region Tag */}
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-2">
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${badgeStyle}`}>
+            <div className="p-4 border-b border-gray-50 dark:border-gray-700/50 flex items-center justify-between gap-2">
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${badgeStyle}`} style={{ color: team.color || 'inherit', borderColor: team.color ? `${team.color}40` : 'inherit', backgroundColor: team.color ? `${team.color}10` : 'inherit' }}>
                     {team.region_level}
                 </span>
 
@@ -128,9 +127,9 @@ export default function OrgChartNode({
             </div>
 
             {/* Team Title & Description */}
-            <div className="p-4 space-y-2">
+            <div className="p-4 space-y-3">
                 <div>
-                    <h3 className="font-bold text-slate-900 text-base leading-snug tracking-tight">
+                    <h3 className="font-black text-gray-900 dark:text-white text-base leading-snug tracking-tight">
                         {team.name}
                     </h3>
                     {team.area && (

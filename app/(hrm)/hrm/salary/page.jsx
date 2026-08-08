@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Calculator, CheckCircle2, AlertCircle, RefreshCw, TrendingUp, Users, X, Save, Gift, Calendar as CalendarIcon, ChevronRight } from 'lucide-react';
+import { Download, Calculator, CheckCircle2, AlertCircle, RefreshCw, TrendingUp, Users, X, Save, Gift, Calendar as CalendarIcon, ChevronRight, ArrowRight, CircleDashed } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { downloadPayslip } from '@/lib/payslipGenerator';
 import { formatPaiseToINR, INCENTIVE_TYPE_LABELS } from '@/lib/hrm/incentives';
+import Link from 'next/link';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -330,6 +331,44 @@ export default function SalaryPage() {
                 <RefreshCw size={16} />
             </button>
         </div>
+      </div>
+
+      {/* Guiding UI Wizard */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-indigo-100 shadow-xl shadow-indigo-50/50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              <div className="max-w-xl">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-black uppercase tracking-widest mb-3 border border-indigo-100">
+                      Monthly Payroll Flow
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">Process {MONTHS[month - 1]} Payroll in 3 Steps</h2>
+                  <p className="text-sm font-medium text-gray-500 mt-1">Complete these steps sequentially to ensure accurate salary disbursement and avoid compliance issues.</p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                  <div className="flex items-center w-full sm:w-auto">
+                      <Link href="/hrm/attendance" className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 rounded-xl text-sm font-bold transition-colors border border-gray-200 hover:border-indigo-200 group relative">
+                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 group-hover:bg-indigo-200 text-[10px] text-gray-600 group-hover:text-indigo-700">1</span>
+                          Review Attendance
+                      </Link>
+                      <ArrowRight size={14} className="text-gray-300 mx-2 hidden sm:block" />
+                  </div>
+                  <div className="flex items-center w-full sm:w-auto">
+                      <Link href="/hrm/incentives" className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 rounded-xl text-sm font-bold transition-colors border border-gray-200 hover:border-indigo-200 group relative">
+                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 group-hover:bg-indigo-200 text-[10px] text-gray-600 group-hover:text-indigo-700">2</span>
+                          Approve Incentives
+                      </Link>
+                      <ArrowRight size={14} className="text-gray-300 mx-2 hidden sm:block" />
+                  </div>
+                  <div className="w-full sm:w-auto">
+                      <div className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/20 cursor-default">
+                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-white/20 text-[10px]">3</span>
+                          Process Below
+                      </div>
+                  </div>
+              </div>
+          </div>
       </div>
 
       {/* Stats */}

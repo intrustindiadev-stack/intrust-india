@@ -20,7 +20,7 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
             
             let query = supabase
                 .from('crm_leads')
-                .select('id, status, deal_value, created_at, assigned_to')
+                .select('id, status, deal_value, created_at, assigned_to, user_profiles(full_name, avatar_url)')
                 .neq('source', 'App User');
 
             if (!isManager) {
@@ -47,6 +47,39 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
     const wonLeads = leads.filter(l => l.status === 'won').length;
     const winRate = totalLeads ? ((wonLeads / totalLeads) * 100).toFixed(1) : 0;
     const totalRevenue = leads.filter(l => l.status === 'won').reduce((sum, l) => sum + Number(l.deal_value || 0), 0);
+
+    // Compute Team Metrics for Managers
+    const teamMetrics = {};
+    if (isManager) {
+        leads.forEach(l => {
+            const assigneeId = l.assigned_to || 'unassigned';
+            const assigneeName = l.user_profiles?.full_name || 'Unassigned';
+            const assigneeAvatar = l.user_profiles?.avatar_url;
+            
+            if (!teamMetrics[assigneeId]) {
+                teamMetrics[assigneeId] = {
+                    id: assigneeId,
+                    name: assigneeName,
+                    avatar: assigneeAvatar,
+                    totalLeads: 0,
+                    wonLeads: 0,
+                    revenue: 0
+                };
+            }
+            
+            teamMetrics[assigneeId].totalLeads += 1;
+            if (l.status === 'won') {
+                teamMetrics[assigneeId].wonLeads += 1;
+                teamMetrics[assigneeId].revenue += Number(l.deal_value || 0);
+            }
+        });
+    }
+    const teamLeaderboard = Object.values(teamMetrics)
+        .map(t => ({
+            ...t,
+            winRate: t.totalLeads > 0 ? ((t.wonLeads / t.totalLeads) * 100).toFixed(1) : 0
+        }))
+        .sort((a, b) => b.revenue - a.revenue || b.wonLeads - a.wonLeads);
 
     // Chart Data Generation (Last 7 days)
     const chartData = [];
@@ -144,6 +177,59 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
                             </ResponsiveContainer>
                         </div>
                     </div>
+
+                    {/* Team Leaderboard (Managers Only) */}
+                    {isManager && teamLeaderboard.length > 0 && (
+                        <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+                            <h2 className="text-lg font-extrabold text-gray-900 mb-6 tracking-tight">Team Performance Leaderboard</h2>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-gray-50/50 text-[11px] uppercase tracking-wider text-gray-500 font-bold border-b border-gray-100">
+                                        <tr>
+                                            <th className="p-4 rounded-tl-xl">Team Member</th>
+                                            <th className="p-4">Leads Assigned</th>
+                                            <th className="p-4">Won Deals</th>
+                                            <th className="p-4">Win Rate</th>
+                                            <th className="p-4 rounded-tr-xl">Revenue Generated</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50 text-sm">
+                                        {teamLeaderboard.map((member, index) => (
+                                            <tr key={member.id} className="hover:bg-gray-50/50 transition-colors">
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs shrink-0 overflow-hidden relative">
+                                                            {member.avatar ? (
+                                                                <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                member.name.charAt(0).toUpperCase()
+                                                            )}
+                                                            {index < 3 && (
+                                                                <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${index === 0 ? 'bg-amber-400' : index === 1 ? 'bg-gray-300' : 'bg-amber-700'}`} />
+                                                            )}
+                                                        </div>
+                                                        <span className="font-semibold text-gray-900">{member.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className="font-medium text-gray-600">{member.totalLeads}</span>
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className="font-bold text-emerald-600">{member.wonLeads}</span>
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className="font-bold text-indigo-600">{member.winRate}%</span>
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className="font-bold text-gray-900">₹{member.revenue.toLocaleString('en-IN')}</span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

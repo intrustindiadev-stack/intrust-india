@@ -12,14 +12,15 @@ export default function CRMReportsPage() {
         activeLeads: 0,
         conversionRate: 0,
         sourceBreakdown: {},
-        statusBreakdown: {}
+        statusBreakdown: {},
+        teamBreakdown: {}
     });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function fetchAnalytics() {
             try {
-                const { data, error } = await supabase.from('crm_leads').select('status, source').is('archived_at', null).neq('source', 'Users').neq('source', 'App User');
+                const { data, error } = await supabase.from('crm_leads').select('status, source, assigned_to, user_profiles(full_name)').is('archived_at', null).neq('source', 'Users').neq('source', 'App User');
                 if (error) throw error;
 
                 const leads = data || [];
@@ -39,13 +40,22 @@ export default function CRMReportsPage() {
                     return acc;
                 }, {});
 
+                const teamBreakdown = leads.reduce((acc, l) => {
+                    const assigneeId = l.assigned_to || 'unassigned';
+                    const assigneeName = l.user_profiles?.full_name || 'Unassigned';
+                    if (!acc[assigneeId]) acc[assigneeId] = { name: assigneeName, count: 0 };
+                    acc[assigneeId].count += 1;
+                    return acc;
+                }, {});
+
                 setStats({
                     totalLeads,
                     wonLeads,
                     activeLeads,
                     conversionRate: totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 100) : 0,
                     sourceBreakdown,
-                    statusBreakdown
+                    statusBreakdown,
+                    teamBreakdown
                 });
             } catch (err) {
                 console.error('Error fetching analytics:', err);
@@ -184,6 +194,30 @@ export default function CRMReportsPage() {
                         ))}
                         {Object.keys(stats.sourceBreakdown).length === 0 && (
                             <p className="text-sm text-gray-500 text-center py-4">No source data available.</p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Team Pipeline Breakdown */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 lg:col-span-2">
+                    <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <Users size={18} className="text-gray-400" />
+                        Pipeline by Team Member
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {Object.entries(stats.teamBreakdown).sort((a,b) => b[1].count - a[1].count).map(([id, data]) => (
+                            <div key={id} className="p-4 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
+                                        {data.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span className="font-bold text-gray-800 truncate max-w-[120px]">{data.name}</span>
+                                </div>
+                                <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">{data.count} leads</span>
+                            </div>
+                        ))}
+                        {Object.keys(stats.teamBreakdown).length === 0 && (
+                            <p className="text-sm text-gray-500 text-center py-4 col-span-full">No team data available.</p>
                         )}
                     </div>
                 </div>

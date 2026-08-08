@@ -270,8 +270,8 @@ export default function EmployeeDashboard() {
                     {showCameraModal && (
                         <AttendanceCameraModal 
                             onClose={() => setShowCameraModal(false)}
-                            onConfirm={async (selfieBase64) => {
-                                await handleClockIn(selfieBase64);
+                            onConfirm={async ({ selfieBase64, locationData }) => {
+                                await handleClockIn(selfieBase64, locationData);
                                 setShowCameraModal(false);
                             }}
                             isClocking={clocking}

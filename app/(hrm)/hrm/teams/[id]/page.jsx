@@ -43,7 +43,7 @@ export default function TeamDetailPage() {
                         joined_at,
                         user:user_profiles(id, full_name, email, role, avatar_url, phone)
                     ),
-                    parent:teams!teams_parent_team_id_fkey(id, name)
+                    parent:teams!parent_team_id(id, name)
                 `)
                 .eq('id', teamId)
                 .single();

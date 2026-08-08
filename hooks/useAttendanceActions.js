@@ -18,19 +18,19 @@ export function useAttendanceActions(onSuccess) {
         });
     };
 
-    const handleClockIn = async (selfieBase64 = null) => {
+    const handleClockIn = async (selfieBase64 = null, providedCoords = null) => {
         setClocking(true);
         try {
-            const coords = await getCoordinates();
-            if (!coords) {
-                toast.error('Location access denied. Please enable location to accurately verify on-site attendance.');
+            const coords = providedCoords || await getCoordinates();
+            if (!coords || !coords.lat || !coords.lng) {
+                throw new Error('Location access denied. Please enable location to accurately verify on-site attendance.');
             }
             const res = await fetch('/api/employee/attendance/clock-in', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    lat: coords?.lat ?? null, 
-                    lng: coords?.lng ?? null,
+                    lat: coords.lat, 
+                    lng: coords.lng,
                     selfieBase64: selfieBase64
                 })
             });
