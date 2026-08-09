@@ -69,6 +69,31 @@ async function verifyAdminCaller() {
 }
 
 
+// ─── Helper: Verify CRM caller ────────────────────────────────────────
+
+async function verifyCRMCaller() {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        return { error: 'Authentication required', user: null, role: null };
+    }
+
+    const adminClient = createAdminClient();
+    const { data: profile } = await adminClient
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    if (!profile || !['relationship_exec', 'relationship_manager', 'admin', 'super_admin'].includes(profile.role)) {
+        return { error: 'Unauthorized: CRM access required', user, role: null };
+    }
+
+    return { error: null, user, role: profile.role, adminClient, supabase };
+}
+
+
 // ─── 1. Fetch Sales Reps ────────────────────────────────────────────────
 
 /**
@@ -344,6 +369,81 @@ export async function fetchTeamLeadsData() {
         return { team: teamData || [], leads: leadsData || [] };
     } catch (err) {
         console.error('[admin-crm] Unexpected error in fetchTeamLeadsData:', err);
+        return { error: 'An unexpected error occurred' };
+    }
+}
+
+
+// ─── 7. Fetch CRM Users ────────────────────────────────────────────────
+
+/**
+ * Fetches all platform users for CRM communication.
+ */
+export async function fetchCRMUsers() {
+    console.log('[CRM USERS] request started');
+    try {
+        const { error, adminClient } = await verifyCRMCaller();
+        if (error) {
+            console.log('[CRM USERS] authorization error:', error);
+            return { error };
+        }
+        console.log('[CRM USERS] caller authorized');
+
+        console.log('[CRM USERS] querying role: user');
+        const { data, error: queryError } = await adminClient
+            .from('user_profiles')
+            .select('id, full_name, email, phone, role, kyc_status')
+            .eq('role', 'user')
+            .order('full_name', { ascending: true });
+
+        if (queryError) {
+            console.log('[CRM USERS] error:', queryError.message || queryError);
+            console.error('[admin-crm] fetchCRMUsers error:', queryError);
+            return { error: 'Failed to fetch users' };
+        }
+
+        console.log('[CRM USERS] query completed. Users found:', data?.length);
+        return { data: data || [] };
+    } catch (err) {
+        console.log('[CRM USERS] error:', err.message || err);
+        console.error('[admin-crm] Unexpected error in fetchCRMUsers:', err);
+        return { error: 'An unexpected error occurred' };
+    }
+}
+
+
+// ─── 8. Fetch CRM Merchants ─────────────────────────────────────────────
+
+/**
+ * Fetches all platform merchants for CRM communication.
+ */
+export async function fetchCRMMerchants() {
+    console.log('[CRM MERCHANTS] request started');
+    try {
+        const { error, adminClient } = await verifyCRMCaller();
+        if (error) {
+            console.log('[CRM MERCHANTS] authorization error:', error);
+            return { error };
+        }
+        console.log('[CRM MERCHANTS] caller authorized');
+
+        console.log('[CRM MERCHANTS] querying merchants');
+        const { data, error: queryError } = await adminClient
+            .from('merchants')
+            .select('id, business_name, business_type, business_address, status, subscription_status, user_id, user_profiles(full_name, phone, email)')
+            .order('business_name', { ascending: true });
+
+        if (queryError) {
+            console.log('[CRM MERCHANTS] error:', queryError.message || queryError);
+            console.error('[admin-crm] fetchCRMMerchants error:', queryError);
+            return { error: 'Failed to fetch merchants' };
+        }
+
+        console.log('[CRM MERCHANTS] query completed. Merchants found:', data?.length);
+        return { data: data || [] };
+    } catch (err) {
+        console.log('[CRM MERCHANTS] error:', err.message || err);
+        console.error('[admin-crm] Unexpected error in fetchCRMMerchants:', err);
         return { error: 'An unexpected error occurred' };
     }
 }

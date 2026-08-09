@@ -18,6 +18,7 @@ import {
     CrmLeadUpdateSchema, CrmTaskCreateSchema, 
     CrmActivityLogSchema, CrmIntentLogSchema 
 } from '@/lib/crm/validation';
+import LeadConversionPanel from '@/components/crm/leads/LeadConversionPanel';
 
 const TABS = [
     { id: 'notes', label: 'Notes', icon: MessageSquare },
@@ -90,7 +91,12 @@ export default function LeadDetailPage({ params }) {
         try {
             // Parallel batch 1: Fetch lead details and all related records concurrently
             const [leadRes, tasksRes, intentRes, notesRes, activitiesRes] = await Promise.all([
-                supabase.from('crm_leads').select('*').eq('id', id).single(),
+                supabase.from('crm_leads').select(`
+                    *,
+                    _converted_customer:user_profiles!converted_user_id(id, full_name, phone, email, kyc_status),
+                    _converted_merchant:merchants!converted_merchant_id(id, business_name, business_phone, status, owner_name),
+                    _converted_by:user_profiles!converted_by(id, full_name)
+                `).eq('id', id).single(),
                 supabase.from('crm_tasks').select('*, user_profiles(full_name)').eq('lead_id', id).order('due_date', { ascending: true }),
                 supabase.from('crm_lead_services').select('*').eq('lead_id', id).order('created_at', { ascending: false }),
                 supabase.from('crm_lead_remarks').select('*, author:user_profiles!author_id(full_name, role)').eq('lead_id', id).order('created_at', { ascending: false }),
@@ -343,6 +349,13 @@ export default function LeadDetailPage({ params }) {
                         <h3 className="text-xs font-black text-indigo-300 uppercase tracking-widest mb-4">Lead Status Notes</h3>
                         <p className="text-sm font-bold leading-relaxed opacity-90 italic">"{lead.notes || 'No active notes for this lead yet.'}"</p>
                     </div>
+
+                    <LeadConversionPanel
+                        lead={lead}
+                        profile={profile}
+                        onRefresh={fetchData}
+                    />
+
                 </div>
 
                 <div className="lg:col-span-8 space-y-6">

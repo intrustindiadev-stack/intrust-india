@@ -21,6 +21,14 @@ const TEMP_STYLE = {
     cold: 'text-sky-600 bg-sky-50'
 };
 
+const LIFECYCLE_BADGE = {
+    converted_customer:  { label: 'Converted – Customer',         cls: 'bg-teal-50 text-teal-700 border-teal-200' },
+    converted_merchant:  { label: 'Converted – Merchant',         cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    converted_both:      { label: 'Converted – Customer + Merchant', cls: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+    lost:                { label: 'Lost',                          cls: 'bg-rose-50 text-rose-600 border-rose-200' },
+    archived:            { label: 'Archived',                      cls: 'bg-gray-100 text-gray-500 border-gray-200' },
+};
+
 const groupLeadsByDate = (leads) => {
     const groups = {
         'Today': [],
@@ -186,6 +194,11 @@ export default function LeadsTable({
                                                         {lead.temperature && (
                                                             <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${TEMP_STYLE[lead.temperature] || 'text-gray-500'}`}>
                                                                 {lead.temperature}
+                                                            </span>
+                                                        )}
+                                                        {lead.lifecycle_status && lead.lifecycle_status !== 'active' && LIFECYCLE_BADGE[lead.lifecycle_status] && (
+                                                            <span className={`inline-flex text-[10px] font-bold px-2 py-0.5 rounded-md border ${LIFECYCLE_BADGE[lead.lifecycle_status].cls}`}>
+                                                                {LIFECYCLE_BADGE[lead.lifecycle_status].label}
                                                             </span>
                                                         )}
                                                     </div>

@@ -7,9 +7,11 @@ import TemplateGallery from '@/components/crm/whatsapp/TemplateGallery';
 import SendWhatsAppDrawer from '@/components/crm/whatsapp/SendWhatsAppDrawer';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { fetchCRMUsers, fetchCRMMerchants } from '@/app/actions/admin-crm';
 
 export default function ContactsClient({ currentUserId, currentUserRole }) {
     const isManager = ['relationship_manager', 'admin', 'super_admin'].includes(currentUserRole);
+    const canViewMerchants = ['relationship_manager', 'relationship_exec', 'admin', 'super_admin'].includes(currentUserRole);
     
     // View mode: 'leads' | 'users' | 'merchants' | 'templates'
     const [activeTab, setActiveTab] = useState('leads');
@@ -65,38 +67,29 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
     const fetchUsers = useCallback(async () => {
         setLoading(prev => ({ ...prev, users: true }));
         try {
-            const { data, error: fetchError } = await supabase
-                .from('user_profiles')
-                .select('id, full_name, email, phone, role, kyc_status')
-                .eq('role', 'customer')
-                .order('full_name', { ascending: true });
-
-            if (fetchError) throw fetchError;
-            setUsers(data || []);
+            const result = await fetchCRMUsers();
+            if (result.error) throw new Error(result.error);
+            setUsers(result.data || []);
         } catch (err) {
             setError(prev => ({ ...prev, users: err.message }));
         } finally {
             setLoading(prev => ({ ...prev, users: false }));
         }
-    }, [supabase]);
+    }, []);
 
     const fetchMerchants = useCallback(async () => {
-        if (!isManager) return;
+        if (!canViewMerchants) return;
         setLoading(prev => ({ ...prev, merchants: true }));
         try {
-            const { data, error: fetchError } = await supabase
-                .from('merchants')
-                .select('id, business_name, business_category, city, status, subscription_status, user_id, user_profiles(full_name, phone, email)')
-                .order('business_name', { ascending: true });
-
-            if (fetchError) throw fetchError;
-            setMerchants(data || []);
+            const result = await fetchCRMMerchants();
+            if (result.error) throw new Error(result.error);
+            setMerchants(result.data || []);
         } catch (err) {
             setError(prev => ({ ...prev, merchants: err.message }));
         } finally {
             setLoading(prev => ({ ...prev, merchants: false }));
         }
-    }, [isManager, supabase]);
+    }, [canViewMerchants]);
 
     const fetchTemplatesData = useCallback(async () => {
         setLoading(prev => ({ ...prev, templates: true }));
@@ -153,9 +146,10 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
 
     const handleOpenModalWithContact = (contact, type = 'lead') => {
         const standardizedContact = {
-            id: contact.id,
+            id: type === 'merchant' ? contact.user_id : contact.id,
             contact_name: type === 'lead' ? contact.contact_name : (type === 'user' ? contact.full_name : contact.business_name),
             phone: type === 'merchant' ? contact.user_profiles?.phone : contact.phone,
+            type: type,
         };
         setWaModalContact(standardizedContact);
         setActiveTab('templates');
@@ -176,7 +170,7 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
 
     const filteredMerchants = merchants.filter(c => 
         (c.business_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-        (c.city?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (c.business_type?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
         (c.user_profiles?.phone?.toLowerCase() || '').includes(searchQuery.toLowerCase())
     );
 
@@ -229,7 +223,7 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
                             {users.length > 0 && <span className={`text-[10px] px-2 py-0.5 rounded-full shadow-sm ${activeTab === 'users' ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-gray-700'}`}>{users.length}</span>}
                         </button>
 
-                        {isManager && (
+                        {canViewMerchants && (
                             <button
                                 onClick={() => { setActiveTab('merchants'); setSelectedContactIds([]); setSearchQuery(''); }}
                                 className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all whitespace-nowrap ${
@@ -482,8 +476,8 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
                 </div>
             )}
 
-            {/* TAB CONTENT: MERCHANTS (MANAGER ONLY) */}
-            {isManager && activeTab === 'merchants' && (
+            {/* TAB CONTENT: MERCHANTS */}
+            {canViewMerchants && activeTab === 'merchants' && (
                 <div className="space-y-6">
                     {loading.merchants ? (
                         <div className="flex flex-col items-center justify-center py-24 gap-3 text-gray-400">
@@ -522,9 +516,9 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="font-extrabold text-gray-900 text-lg truncate">{merchant.business_name || 'Unnamed Business'}</h3>
                                                 <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500 font-medium">
-                                                    <span>{merchant.city || 'No City'}</span>
+                                                    <span>{merchant.business_type || 'Merchant'}</span>
                                                     <span>•</span>
-                                                    <span className="truncate">{merchant.business_category || 'Merchant'}</span>
+                                                    <span className="truncate">{merchant.business_address || 'No Address'}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -783,6 +777,7 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
                         ? (waModalContact.phone.startsWith('+') ? waModalContact.phone : `+${waModalContact.phone.replace(/\D/g, '')}`)
                         : undefined
                 }
+                contactType={waModalContact?.type}
                 onSuccess={() => {}}
                 currentUserRole={currentUserRole}
                 currentUserId={currentUserId}

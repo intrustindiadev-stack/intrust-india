@@ -245,7 +245,7 @@ export default function ImportLeadsDrawer({ onClose, onSave }) {
                                         <Info size={16} className="mt-0.5 flex-shrink-0 text-indigo-500" />
                                         <div className="space-y-1">
                                             <p><strong>Duplicate Detection:</strong> Phone numbers and emails will be checked against existing leads. Duplicates will be safely skipped.</p>
-                                            <p><strong>Routing Priority:</strong> Pincode > Zone > Area > City > State.</p>
+                                            <p><strong>Routing Priority:</strong> Pincode &gt; Zone &gt; Area &gt; City &gt; State.</p>
                                         </div>
                                     </div>
                                     <button onClick={handleDownloadTemplate} className="w-full inline-flex items-center justify-center gap-2 bg-white text-indigo-700 border-2 border-indigo-100 px-4 py-3 rounded-2xl text-sm font-bold hover:bg-indigo-50 hover:border-indigo-200 transition-all">

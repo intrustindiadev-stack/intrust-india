@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { notFound, redirect } from 'next/navigation';
-import { Building2, Phone, Mail, FileText, CheckCircle, XCircle, Clock, MapPin, CreditCard, User, AlertCircle, ShoppingBag, ShoppingCart, Star, TrendingUp } from 'lucide-react';
+import { Building2, Phone, Mail, FileText, CheckCircle, XCircle, Clock, MapPin, CreditCard, User, AlertCircle, ShoppingBag, ShoppingCart, Star, TrendingUp, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import MerchantActions from './MerchantActions';
 import MerchantWalletAdjustSection from './MerchantWalletAdjustSection';
@@ -132,6 +132,23 @@ export default async function AdminMerchantDetailPage({ params }) {
         }
     } catch (e) {
         console.log('Error fetching ratings:', e);
+    }
+
+    // ── CRM History (Leads converted to this merchant) ──────
+    let crmLeads = [];
+    try {
+        const { data } = await supabase
+            .from('crm_leads')
+            .select(`
+                id, title, contact_name, source, converted_at, lifecycle_status, status,
+                _assigned_to:user_profiles!assigned_to(full_name),
+                _converted_by:user_profiles!converted_by(full_name)
+            `)
+            .eq('converted_merchant_id', id)
+            .order('converted_at', { ascending: false });
+        if (data) crmLeads = data;
+    } catch (e) {
+        // crm_leads may not have converted_merchant_id yet (migration pending)
     }
 
     const formatDate = (dateString) => {
@@ -548,6 +565,53 @@ export default async function AdminMerchantDetailPage({ params }) {
                     </div>
                 )}
             </div>
+            {/* ── CRM History ──────────────────────────────────────────── */}
+            {crmLeads.length > 0 && (
+                <div className="bg-white rounded-[2rem] p-6 sm:p-10 border border-gray-200 shadow-sm mt-8">
+                    <h2 className="text-lg font-extrabold text-gray-900 mb-1 tracking-tight flex items-center gap-2">
+                        <User size={18} className="text-indigo-500" />
+                        CRM History
+                    </h2>
+                    <p className="text-xs font-medium text-gray-500 mb-4">
+                        {crmLeads.length} Lead{crmLeads.length > 1 ? 's' : ''}
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {crmLeads.map((lead, idx) => (
+                            <div key={idx} className="bg-slate-50 hover:bg-indigo-50/50 transition-colors rounded-2xl border border-slate-100 p-4">
+                                <div className="flex items-start justify-between mb-2">
+                                    <p className="text-sm font-black text-gray-900">
+                                        {lead.contact_name || lead.title}
+                                    </p>
+                                    <span className="uppercase text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-gray-200 text-gray-600 shadow-sm">
+                                        {lead.status}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col gap-1 text-[11px] text-gray-500 font-medium mb-3">
+                                    {lead.converted_at && (
+                                        <div className="flex items-center gap-1.5">
+                                            <Clock size={12} className="text-gray-400" />
+                                            Converted: {new Date(lead.converted_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                        </div>
+                                    )}
+                                    {lead._assigned_to?.full_name && (
+                                        <div className="flex items-center gap-1.5">
+                                            <User size={12} className="text-gray-400" />
+                                            Assigned to: {lead._assigned_to.full_name}
+                                        </div>
+                                    )}
+                                </div>
+                                <Link
+                                    href={`/crm/leads/${lead.id}`}
+                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline"
+                                >
+                                    View CRM Lead <ExternalLink size={10} />
+                                </Link>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

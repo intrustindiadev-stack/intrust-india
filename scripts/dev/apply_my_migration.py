@@ -8,7 +8,7 @@ VPS_PASSWORD = "Intrustdev@2026"
 VPS_PORT = 22
 
 MIGRATIONS_DIR = "/home/i4yush/Desktop/intrust-india/supabase/migrations"
-mig_file = "20260809010000_enhance_crm_leads_import_tracking.sql"
+mig_file = "20260810070000_crm_1_to_n_conversions.sql"
 
 try:
     c = paramiko.SSHClient()

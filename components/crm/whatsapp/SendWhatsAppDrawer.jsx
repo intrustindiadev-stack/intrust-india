@@ -17,6 +17,7 @@ function SendWhatsAppDrawerContent({
     contactId,
     contactName,
     contactPhoneE164,
+    contactType = 'lead',
     onSuccess,
     currentUserRole,
     currentUserId
@@ -127,21 +128,26 @@ function SendWhatsAppDrawerContent({
     const effectiveRecipients = useMemo(() => {
         if (recipientMode === 'single') {
             const found = crmContacts.find(c => c.id === selectedSingleId);
-            return found ? [found] : [];
-        } else if (recipientMode === 'multiple') {
-            return crmContacts.filter(c => selectedMultipleIds.includes(c.id));
-        } else if (recipientMode === 'segment') {
-            if (selectedSegment === 'all') return crmContacts;
-            if (selectedSegment === 'my_leads') return crmContacts.filter(c => c.assigned_to === currentUserId);
-            if (selectedSegment === 'active') return crmContacts.filter(c => c.status !== 'converted' && c.status !== 'lost');
-            if (selectedSegment === 'converted') return crmContacts.filter(c => c.status === 'converted');
+            if (found) return [{ ...found, type: 'lead' }];
+            if (selectedSingleId === contactId && contactName && contactPhoneE164) {
+                return [{ id: contactId, contact_name: contactName, phone: contactPhoneE164, type: contactType }];
+            }
             return [];
+        } else if (recipientMode === 'multiple') {
+            return crmContacts.filter(c => selectedMultipleIds.includes(c.id)).map(c => ({...c, type: 'lead'}));
+        } else if (recipientMode === 'segment') {
+            let segContacts = [];
+            if (selectedSegment === 'all') segContacts = crmContacts;
+            else if (selectedSegment === 'my_leads') segContacts = crmContacts.filter(c => c.assigned_to === currentUserId);
+            else if (selectedSegment === 'active') segContacts = crmContacts.filter(c => c.status !== 'converted' && c.status !== 'lost');
+            else if (selectedSegment === 'converted') segContacts = crmContacts.filter(c => c.status === 'converted');
+            return segContacts.map(c => ({...c, type: 'lead'}));
         }
         if (recipientMode === 'custom' && customNumber.trim()) {
-            return [{ id: 'custom', contact_name: 'Custom Recipient', phone: customNumber.trim() }];
+            return [{ id: 'custom', contact_name: 'Custom Recipient', phone: customNumber.trim(), type: 'custom' }];
         }
         return [];
-    }, [recipientMode, selectedSingleId, selectedMultipleIds, selectedSegment, customNumber, crmContacts, currentUserId]);
+    }, [recipientMode, selectedSingleId, selectedMultipleIds, selectedSegment, customNumber, crmContacts, currentUserId, contactId, contactName, contactPhoneE164, contactType]);
 
     const toggleMultipleContact = (id) => {
         setSelectedMultipleIds(prev => 
@@ -201,15 +207,16 @@ function SendWhatsAppDrawerContent({
                 });
             }
 
+            const isLead = recipient.type === 'lead';
             const payload = {
                 templateId: selectedTemplate.id,
                 templateName: selectedTemplate.name,
                 templateLanguage: selectedTemplate.language || 'en',
                 variables: recipientVars,
-                recipientType: recipient.id === 'custom' ? 'custom_number' : 'contact',
+                recipientType: isLead ? 'contact' : 'custom_number',
                 phoneE164: cleanedPhone
             };
-            if (recipient.id !== 'custom') {
+            if (isLead) {
                 payload.contactId = recipient.id;
             }
 
@@ -539,7 +546,9 @@ function SendWhatsAppDrawerContent({
 export default function SendWhatsAppDrawer(props) {
     return (
         <WhatsAppSenderErrorBoundary onClose={props.onClose}>
-            <SendWhatsAppDrawerContent {...props} />
+            <SendWhatsAppDrawerContent {...props} 
+                contactType={props.contact?.type || 'lead'} // Pass type from parent standardizedContact if available
+            />
         </WhatsAppSenderErrorBoundary>
     );
 }
