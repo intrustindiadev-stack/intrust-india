@@ -19,32 +19,29 @@ import { PayerContactError, usePayment } from '@/hooks/usePayment';
 import { usePayerContact } from '@/hooks/usePayerContact';
 import { supabase } from '@/lib/supabaseClient';
 import GoldBadge from '@/components/ui/GoldBadge';
-import { TrackOrdersCard, KYCRedirectCard } from '@/components/dashboard/SidebarCards';
+
 
 import { displayName } from '@/lib/auth';
 
-import DashboardStats from '@/components/customer/dashboard/DashboardStats';
-import QuickServices from '@/components/customer/dashboard/QuickServices';
 import RecentActivity from '@/components/customer/dashboard/RecentActivity';
-import QuickActions from '@/components/customer/dashboard/QuickActions';
-import GoldSubscription from '@/components/customer/dashboard/GoldSubscription';
+import FintechWalletCard from '@/components/customer/dashboard/FintechWalletCard';
+import FintechServiceGrid from '@/components/customer/dashboard/FintechServiceGrid';
+import FintechGrowthSection from '@/components/customer/dashboard/FintechGrowthSection';
+import PromoBanners from '@/components/customer/dashboard/PromoBanners';
 import KYCPopup from '@/components/kyc/KYCPopup';
 import { useKYCPopup } from '@/hooks/useKYCPopup';
 import MerchantApplyPopup from '@/components/merchant/MerchantApplyPopup';
 import { useMerchantApplyPopup } from '@/hooks/useMerchantApplyPopup';
 
 const DisclaimerNote = dynamic(() => import('@/components/customer/dashboard/DisclaimerNote'), { ssr: false });
-const ReferralGenzSection = dynamic(() => import('@/components/customer/dashboard/ReferralGenzSection'), {
-    ssr: false,
-    loading: () => <div className="h-44 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-3xl" />
-});
+
 const RecentShoppingOrders = dynamic(() => import('@/components/customer/RecentShoppingOrders'), {
     ssr: false,
     loading: () => <div className="h-52 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-3xl" />
 });
 const PackageSelectionModal = dynamic(() => import('@/components/customer/dashboard/PackageSelectionModal'), { ssr: false });
 const OnboardingModal = dynamic(() => import('@/components/customer/dashboard/OnboardingModal'), { ssr: false });
-const CustomerFeaturesCarousel = dynamic(() => import('@/components/customer/dashboard/CustomerFeaturesCarousel'), { ssr: false });
+
 
 
 function DashboardSkeleton() {
@@ -458,25 +455,7 @@ export default function CustomerDashboardPage() {
         };
     }, [user, authLoading]);
 
-    const quickServices = [
-        { id: 1, label: 'Gift Cards', icon: Gift, color: 'text-purple-600 bg-purple-50', href: '/gift-cards' },
-        { id: 2, label: 'Shopping', icon: ShoppingCart, color: 'text-amber-600 bg-amber-50', href: '/shop' },
-        { id: 3, label: 'NFC Card', icon: Smartphone, color: 'text-blue-600 bg-blue-50', href: '/nfc-service' },
-        { id: 4, label: 'Solar', icon: Sun, color: 'text-yellow-600 bg-yellow-50', href: '/solar' },
-    ];
 
-    const stats = [
-        { label: 'Wallet Balance', value: `₹${userData.walletBalance.toFixed(2)}`, icon: Wallet, color: 'from-blue-600 to-indigo-600' },
-        {
-            label: 'Reward Points',
-            value: userData.rewardPoints?.toLocaleString() || '0',
-            subValue: `₹${(userData.rewardPoints / 100).toFixed(2)}`,
-            icon: Coins,
-            color: 'from-emerald-500 to-teal-500',
-            href: '/rewards'
-        },
-        { label: 'Total Savings', value: `₹${userData.totalSavings.toFixed(2)}`, icon: TrendingUp, color: 'from-amber-500 to-orange-500' },
-    ];
 
     if (authLoading || loading) {
         return <DashboardSkeleton />;
@@ -521,31 +500,15 @@ export default function CustomerDashboardPage() {
                         </p>
                     </motion.div>
 
-                    <DashboardStats stats={stats} />
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-                        {/* Main Content Area */}
-                        <div className="lg:col-span-2 space-y-8">
-                            {/* Referral Genz Section - High Prominence */}
-                            {userData.referralCode && (
-                                <ReferralGenzSection referralCode={userData.referralCode} />
-                            )}
-
-                            <QuickServices services={quickServices} />
-
-                            <CustomerFeaturesCarousel />
-
-                            {/* Insert shopping orders before generic activity */}
+                    <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8 mb-12">
+                        <FintechWalletCard userData={userData} />
+                        <FintechServiceGrid />
+                        <FintechGrowthSection userData={userData} />
+                        <PromoBanners />
+                        
+                        <div className="space-y-6 pt-4">
                             <RecentShoppingOrders userId={user?.id} />
-
                             <RecentActivity orders={recentActivity} />
-
-                        </div>
-
-                        {/* Sidebar */}
-                        <div className="lg:col-span-1 space-y-8">
-                            <TrackOrdersCard />
-                            <KYCRedirectCard status={userData.kycStatus} />
                         </div>
                     </div>
                 </div>

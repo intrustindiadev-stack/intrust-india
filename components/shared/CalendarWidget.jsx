@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 
 // Helper to get days in month
 function getDaysInMonth(year, month) {
@@ -15,14 +16,14 @@ function getFirstDayOfMonth(year, month) {
 }
 
 const EVENT_COLORS = {
-    present: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-    absent: 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20',
-    late: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
-    half_day: 'bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20',
-    leave: 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20',
-    holiday: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20',
-    meeting: 'bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20',
-    default: 'bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20',
+    present: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+    absent: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+    late: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+    half_day: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 border-violet-200 dark:border-violet-800',
+    leave: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300 border-sky-200 dark:border-sky-800',
+    holiday: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+    meeting: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300 border-slate-200 dark:border-slate-800',
+    default: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300 border-slate-200 dark:border-slate-800',
 };
 
 const LEGEND = [
@@ -60,6 +61,9 @@ export default function CalendarWidget({ events = [], onDateClick }) {
             
             let dayEvents = events.filter(e => e.date === dateStr);
             
+            // Fallback for label/title mapping
+            dayEvents = dayEvents.map(e => ({ ...e, title: e.title || e.label || 'Event' }));
+
             // Auto-Absent Engine: If past day, not Sunday, and no attendance/leave/holiday events
             if (isPast && !isSunday && dayEvents.length === 0) {
                 dayEvents = [{ date: dateStr, title: 'Absent', type: 'absent' }];
@@ -108,15 +112,16 @@ export default function CalendarWidget({ events = [], onDateClick }) {
                 </div>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="flex-1 overflow-y-auto hide-scrollbar px-2 pb-2">
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => (
-                        <div key={day} className={`text-center text-[10px] font-black uppercase tracking-widest pb-2 ${i === 0 ? 'text-rose-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                            {day}
-                        </div>
-                    ))}
-                </div>
+            {/* Calendar Grid Container */}
+            <div className="flex-1 overflow-x-auto overflow-y-auto hide-scrollbar px-2 pb-2">
+                <div className="min-w-[700px]">
+                    <div className="grid grid-cols-7 gap-1 mb-2">
+                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => (
+                            <div key={day} className={`text-center text-[10px] font-black uppercase tracking-widest pb-2 ${i === 0 ? 'text-rose-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                                {day}
+                            </div>
+                        ))}
+                    </div>
                 
                 <div className="grid grid-cols-7 gap-1">
                     {days.map((cell) => {
@@ -168,6 +173,66 @@ export default function CalendarWidget({ events = [], onDateClick }) {
                     })}
                 </div>
             </div>
+            </div>
+
+            {/* Detailed Day Modal */}
+            <AnimatePresence>
+                {selectedDate && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setSelectedDate(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800"
+                        >
+                            <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-800">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900 dark:text-white">Day Details</h3>
+                                    <p className="text-sm font-semibold text-slate-500 mt-1">
+                                        {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                    </p>
+                                </div>
+                                <button onClick={() => setSelectedDate(null)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                                    <X size={20} className="text-slate-500" />
+                                </button>
+                            </div>
+                            <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                                {(() => {
+                                    const dayInfo = days.find(d => d.fullDate === selectedDate);
+                                    if (!dayInfo || dayInfo.events.length === 0) {
+                                        return <div className="text-center p-8 text-slate-400 font-medium">No events for this day.</div>;
+                                    }
+                                    return dayInfo.events.map((evt, idx) => (
+                                        <div key={idx} className={`p-4 rounded-2xl border ${EVENT_COLORS[evt.type] || EVENT_COLORS.default} bg-opacity-30 flex flex-col gap-2`}>
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-2 h-2 rounded-full ${EVENT_COLORS[evt.type]?.split(' ')[0] || 'bg-slate-200'}`} />
+                                                <span className="font-black uppercase tracking-widest text-xs opacity-70">{evt.type}</span>
+                                            </div>
+                                            <div className="font-bold text-lg">{evt.title}</div>
+                                            {evt.check_in && (
+                                                <div className="text-sm font-medium mt-1">Check In: {new Date(evt.check_in).toLocaleTimeString()}</div>
+                                            )}
+                                            {evt.check_out && (
+                                                <div className="text-sm font-medium">Check Out: {new Date(evt.check_out).toLocaleTimeString()}</div>
+                                            )}
+                                            {evt.description && (
+                                                <div className="text-sm mt-2 opacity-80 italic">{evt.description}</div>
+                                            )}
+                                        </div>
+                                    ));
+                                })()}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
