@@ -75,8 +75,7 @@ export async function POST(request) {
             }
 
             // Ranges
-            if (filters.minDealValue !== undefined) query = query.gte('deal_value', filters.minDealValue);
-            if (filters.maxDealValue !== undefined) query = query.lte('deal_value', filters.maxDealValue);
+
             if (filters.fromDate) query = query.gte('created_at', filters.fromDate);
             if (filters.toDate) query = query.lte('created_at', filters.toDate);
 

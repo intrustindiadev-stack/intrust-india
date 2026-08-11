@@ -117,7 +117,6 @@ export default function LeadsTable({
                             <th className="p-4">Details</th>
                             <th className="p-4">Status / Temp</th>
                             <th className="p-4 min-w-[140px]">Assignee</th>
-                            <th className="p-4">Deal Value</th>
                             <th className="p-4">Created</th>
                             <th className="p-4 pr-6 w-14"></th>
                         </tr>
@@ -216,16 +215,6 @@ export default function LeadsTable({
                                                             <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-md">Unassigned</span>
                                                         )}
                                                     </div>
-                                                </td>
-                                                <td className="p-4">
-                                                    {lead.deal_value > 0 ? (
-                                                        <span className="text-xs font-bold text-gray-900 flex items-center">
-                                                            <IndianRupee size={12} className="mr-0.5 text-gray-500" />
-                                                            {lead.deal_value.toLocaleString('en-IN')}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-xs text-gray-400">—</span>
-                                                    )}
                                                 </td>
                                                 <td className="p-4">
                                                     <div className="text-xs text-gray-500 font-medium flex items-center gap-1.5">

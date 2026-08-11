@@ -10,15 +10,7 @@ VPS_USER = "intrustindia"
 VPS_PASSWORD = "Intrustdev@2026"
 VPS_PORT = 22
 
-def parse_deal_value(val):
-    if not val:
-        return 0.0
-    # Remove commas and non-numeric chars except period
-    val = re.sub(r'[^\d.]', '', val)
-    try:
-        return float(val)
-    except:
-        return 0.0
+
 
 def escape_sql_str(s):
     if not s:
@@ -70,16 +62,12 @@ def main():
                 if visits:
                     notes.append(f"Visits: {visits}")
                 notes_str = " | ".join(notes)
-                
-                deal_value = parse_deal_value(lifetime_purchased)
-                
                 all_leads.append({
                     "title": contact_name,
                     "contact_name": contact_name,
                     "phone": phone,
                     "city": reg_store,
-                    "notes": notes_str,
-                    "deal_value": deal_value
+                    "notes": notes_str
                 })
             print(f"Extracted page {i+1}/{len(pdf.pages)} - Total leads so far: {len(all_leads)}")
             
@@ -96,10 +84,10 @@ def main():
         batch = all_leads[i:i+batch_size]
         values = []
         for lead in batch:
-            v = f"({escape_sql_str(lead['title'])}, {escape_sql_str(lead['contact_name'])}, {escape_sql_str(lead['phone'])}, {escape_sql_str(lead['city'])}, {escape_sql_str(lead['notes'])}, {lead['deal_value']}, 'PDF Import', 'new', '{ADMIN_ID}')"
+            v = f"({escape_sql_str(lead['title'])}, {escape_sql_str(lead['contact_name'])}, {escape_sql_str(lead['phone'])}, {escape_sql_str(lead['city'])}, {escape_sql_str(lead['notes'])}, 'PDF Import', 'new', '{ADMIN_ID}')"
             values.append(v)
         
-        insert_query = f"INSERT INTO public.crm_leads (title, contact_name, phone, city, notes, deal_value, source, status, created_by) VALUES {','.join(values)};"
+        insert_query = f"INSERT INTO public.crm_leads (title, contact_name, phone, city, notes, source, status, created_by) VALUES {','.join(values)};"
         sql_batches.append(insert_query)
         
     full_sql = "\n".join(sql_batches)

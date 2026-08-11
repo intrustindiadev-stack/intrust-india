@@ -54,7 +54,7 @@ export const CrmLeadCreateSchema = z.object({
     source: z.string().max(100, 'Source is too long').optional().or(z.literal('')),
     status: z.enum(LEAD_STATUSES).default('new'),
     temperature: z.enum(LEAD_TEMPERATURES).default('warm'),
-    deal_value: z.number().min(0, 'Deal value cannot be negative').default(0),
+
     notes: z.string().max(2000, 'Notes are too long').optional().or(z.literal('')),
     assigned_to: z.string().uuid().nullable().optional().or(z.literal('')),
     state: z.string().max(100, 'State name is too long').optional().or(z.literal('')),
@@ -109,7 +109,7 @@ export const CrmActivityLogSchema = z.object({
 export const CrmIntentLogSchema = z.object({
     lead_id: z.string().uuid('Invalid Lead ID'),
     service_name: z.string().min(1, 'Service name is required').max(150),
-    deal_value: z.number().min(0, 'Deal value cannot be negative').default(0),
+
     status: z.enum(['pitched', 'negotiating', 'agreed', 'rejected']).default('pitched'),
 });
 
@@ -121,9 +121,7 @@ export const LeadFilterSchema = z.object({
     assignee: z.union([z.string(), z.array(z.string())]).optional(),
     source: z.union([z.string(), z.array(z.string())]).optional(),
     temperature: z.union([z.string(), z.array(z.string())]).optional(),
-    sort: z.enum(['newest', 'oldest', 'recently_updated', 'name_asc', 'value_desc', 'value_asc', 'next_followup']).default('newest'),
-    minDealValue: z.coerce.number().min(0).optional(),
-    maxDealValue: z.coerce.number().min(0).optional(),
+    sort: z.enum(['newest', 'oldest', 'recently_updated', 'name_asc', 'next_followup']).default('newest'),
     fromDate: z.string().datetime().optional(),
     toDate: z.string().datetime().optional(),
     includeArchived: z.coerce.boolean().default(false),

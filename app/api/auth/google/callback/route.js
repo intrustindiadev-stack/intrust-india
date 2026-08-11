@@ -493,9 +493,9 @@ export async function GET(request) {
                 new URL(`/login?error=${encodeURIComponent(refreshError.message)}`, appUrl)
             );
         }
-        
-        applySupabaseCookies(redirectResponse, cookiesToSet);
-
+        if (!finalProfile?.is_suspended) {
+            applySupabaseCookies(redirectResponse, cookiesToSet);
+        }
         // Non-blocking: ensure WhatsApp binding is up-to-date and send login alert for returning user.
         const userAgent = request.headers.get('user-agent') || '';
         (async () => {

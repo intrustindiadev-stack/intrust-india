@@ -220,6 +220,11 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
 
         setOpen(false); // Close dropdown
 
+        if (n.action_url) {
+            router.push(n.action_url);
+            return;
+        }
+
         if (!n.reference_type) return;
 
         // Determine user context from the API path used by this bell instance
@@ -429,7 +434,11 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                             </span>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-2">
-                                    <p className={`text-sm font-semibold ${!n.read ? 'text-slate-800 dark:text-slate-100' : 'text-slate-600 dark:text-slate-300'}`}>{n.title}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className={`text-sm font-semibold ${!n.read ? 'text-slate-800 dark:text-slate-100' : 'text-slate-600 dark:text-slate-300'}`}>{n.title}</p>
+                                        {n.priority === 'URGENT' && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">URGENT</span>}
+                                        {n.priority === 'HIGH' && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">HIGH</span>}
+                                    </div>
                                     {!n.read && <span className="flex-shrink-0 w-2 h-2 rounded-full bg-[#D4AF37] mt-1" />}
                                 </div>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{n.body}</p>

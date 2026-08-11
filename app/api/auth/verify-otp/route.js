@@ -126,9 +126,13 @@ export async function POST(request) {
             }
         }
 
+        if (prof?.is_suspended) {
+            return NextResponse.json({ error: 'Your account has been suspended.', is_suspended: true }, { status: 403 });
+        }
+
         await supabaseAdmin.auth.admin.updateUserById(userId, { 
             user_metadata: { 
-                is_suspended: prof?.is_suspended || false,
+                is_suspended: false,
                 role: prof?.role || null
             } 
         });

@@ -111,13 +111,7 @@ export async function GET(request) {
             query = query.in('temperature', filters.temperature);
         }
 
-        if (filters.minDealValue !== undefined) {
-            query = query.gte('deal_value', filters.minDealValue);
-        }
 
-        if (filters.maxDealValue !== undefined) {
-            query = query.lte('deal_value', filters.maxDealValue);
-        }
 
         if (filters.fromDate) {
             query = query.gte('created_at', filters.fromDate);
@@ -159,12 +153,7 @@ export async function GET(request) {
             case 'name_asc':
                 query = query.order('contact_name', { ascending: true });
                 break;
-            case 'value_desc':
-                query = query.order('deal_value', { ascending: false });
-                break;
-            case 'value_asc':
-                query = query.order('deal_value', { ascending: true });
-                break;
+
             case 'next_followup':
                 query = query.order('next_followup_date', { ascending: true, nullsFirst: false });
                 break;

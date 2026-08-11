@@ -317,18 +317,7 @@ export default function LeadDetailPage({ params }) {
                             )}
                         </div>
 
-                        <div className="bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-gray-800 rounded-3xl border border-indigo-100 dark:border-indigo-800/50 p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-1/4 translate-y-1/4 group-hover:scale-110 transition-transform"><DollarSign size={80} /></div>
-                            <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-1 relative z-10 flex items-center gap-2"><Target size={14} /> Expected Value</p>
-                            <p className="text-2xl font-black text-gray-900 dark:text-white relative z-10">{formatCurrency(lead.deal_value || 0)}</p>
-                            
-                            {/* CSS Sparkline */}
-                            <div className="mt-4 flex items-end gap-1 h-10 opacity-70 relative z-10">
-                                {[30, 50, 40, 70, 60, 90, 80].map((h, i) => (
-                                    <div key={i} className="w-full bg-indigo-300 dark:bg-indigo-600 rounded-t-sm hover:bg-indigo-500 transition-colors cursor-pointer" style={{ height: `${h}%` }}></div>
-                                ))}
-                            </div>
-                        </div>
+
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-3xl border border-white/60 dark:border-gray-700 p-4 shadow-xl shadow-slate-200/10 hover:-translate-y-0.5 transition-transform">
@@ -473,7 +462,6 @@ export default function LeadDetailPage({ params }) {
                                                                     <p className="text-[10px] font-black text-gray-400 uppercase mt-0.5">{svc.status}</p>
                                                                 </div>
                                                             </div>
-                                                            <p className="text-xs font-black text-gray-900 dark:text-white">{formatCurrency(svc.deal_value)}</p>
                                                         </div>
                                                     ))
                                                 )}
@@ -819,7 +807,6 @@ function LogActivityModal({ leadId, userId, onClose, onSave }) {
 
 function LogIntentModal({ leadId, userId, onClose, onSave }) {
     const [serviceName, setServiceName] = useState('');
-    const [dealValue, setDealValue] = useState('');
     const [status, setStatus] = useState('pitched');
     const [saving, setSaving] = useState(false);
 
@@ -828,7 +815,6 @@ function LogIntentModal({ leadId, userId, onClose, onSave }) {
         const payload = {
             lead_id: leadId,
             service_name: serviceName.trim(),
-            deal_value: Number(dealValue) || 0,
             status
         };
         const validation = CrmIntentLogSchema.safeParse(payload);
@@ -842,7 +828,6 @@ function LogIntentModal({ leadId, userId, onClose, onSave }) {
             const { error } = await supabase.from('crm_lead_services').insert([{
                 lead_id: valid.lead_id,
                 service_name: valid.service_name,
-                deal_value: valid.deal_value,
                 status: valid.status
             }]);
             if (error) throw error;
@@ -868,10 +853,7 @@ function LogIntentModal({ leadId, userId, onClose, onSave }) {
                         <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Service / Product Name</label>
                         <input type="text" value={serviceName} onChange={e => setServiceName(e.target.value)} required placeholder="e.g. 5kW Solar System" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
                     </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Expected Deal Value (₹)</label>
-                        <input type="number" value={dealValue} onChange={e => setDealValue(e.target.value)} placeholder="0" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
-                    </div>
+
                     <div>
                         <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Status</label>
                         <select value={status} onChange={e => setStatus(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm">
@@ -902,7 +884,6 @@ function EditLeadModal({ lead, salesTeam, currentUserProfile, onClose, onSave })
         source: lead.source || '',
         status: lead.status || 'new',
         temperature: lead.temperature || 'warm',
-        deal_value: lead.deal_value || 0,
         assigned_to: lead.assigned_to || '',
         state: lead.state || '',
         city: lead.city || '',
@@ -965,10 +946,7 @@ function EditLeadModal({ lead, salesTeam, currentUserProfile, onClose, onSave })
                             <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Source</label>
                             <input type="text" value={form.source} onChange={e => setForm({...form, source: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Expected Deal Value (₹)</label>
-                            <input type="number" value={form.deal_value} onChange={e => setForm({...form, deal_value: Number(e.target.value)})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
-                        </div>
+
                         <div>
                             <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">State</label>
                             <input type="text" value={form.state} onChange={e => setForm({...form, state: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />

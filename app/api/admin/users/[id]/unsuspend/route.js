@@ -17,36 +17,27 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        // Parse request body
-        const body = await request.json()
-        const { reason } = body
-
-        if (!reason) {
-            return NextResponse.json({ error: 'Missing suspension reason' }, { status: 400 })
-        }
-
         const adminSupabase = createAdminClient();
-        
-        // Call suspend user function
-        const { data, error } = await adminSupabase.rpc('admin_suspend_user', {
+
+        // Call unsuspend user function
+        const { data, error } = await adminSupabase.rpc('admin_unsuspend_user', {
             p_user_id: id,
-            p_reason: reason,
         })
 
         if (error) {
-            console.error('Error suspending user:', error)
+            console.error('Error unsuspending user:', error)
             return NextResponse.json({ error: error.message }, { status: 400 })
         }
 
-        // Sync metadata and instantly invalidate existing sessions
+        // Sync metadata and remove ban to restore access immediately
         await adminSupabase.auth.admin.updateUserById(id, {
-            user_metadata: { is_suspended: true },
-            ban_duration: '876000h'
+            user_metadata: { is_suspended: false },
+            ban_duration: 'none'
         });
 
         return NextResponse.json(data, { status: 200 })
     } catch (error) {
-        console.error('Unexpected error in suspend user API:', error)
+        console.error('Unexpected error in unsuspend user API:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }

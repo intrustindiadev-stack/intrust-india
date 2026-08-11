@@ -7,14 +7,6 @@ export async function fetchLeadDistributionStats() {
         const { createServerSupabaseClient } = await import('@/lib/supabaseServer');
         const supabase = await createServerSupabaseClient();
         
-        // Use the authenticated client for the RPC so auth.uid() is populated correctly
-        const { data: rpcData, error: rpcError } = await supabase.rpc('crm_territory_dashboard');
-        
-        if (rpcError) {
-            console.error('[admin-distribution] Error fetching territory dashboard stats:', rpcError);
-            return { error: 'Failed to fetch distribution stats' };
-        }
-        
         // Use head: true queries to get exact counts without downloading all rows (and avoiding the 1000 row cap)
         const getCount = async (filterBuilder, name) => {
             const { count, error } = await filterBuilder
@@ -30,20 +22,22 @@ export async function fetchLeadDistributionStats() {
 
         const baseSelect = () => supabase.from('crm_leads').select('*', { count: 'exact', head: true });
 
-        const [assigned, unassigned, reroutePending] = await Promise.all([
-            getCount(baseSelect().neq('assigned_to', null), 'assigned'),
-            getCount(baseSelect().is('assigned_to', null), 'unassigned'),
-            getCount(baseSelect().eq('routing_status', 'reroute_pending'), 'reroutePending')
+        const [total, assigned, unassigned, reroutePending, autoMatched] = await Promise.all([
+            getCount(baseSelect(), 'total'),
+            getCount(baseSelect().not('assigned_to', 'is', null), 'assigned'),
+            getCount(baseSelect().not('assigned_team_id', 'is', null).is('assigned_to', null), 'unassigned'),
+            getCount(baseSelect().eq('routing_status', 'reroute_pending'), 'reroutePending'),
+            getCount(baseSelect().eq('routing_status', 'auto_matched'), 'autoMatched')
         ]);
 
         return {
             data: {
-                total: rpcData?.total || 0,
-                assigned: assigned,
-                unassigned: unassigned,
-                unmatched: rpcData?.unmatched || 0,
-                manual: rpcData?.manual || 0,
-                auto: rpcData?.auto || 0,
+                total,
+                assigned,
+                unassigned,
+                unmatched: 0,
+                manual: 0,
+                auto: autoMatched,
                 reroute_pending: reroutePending
             }
         };

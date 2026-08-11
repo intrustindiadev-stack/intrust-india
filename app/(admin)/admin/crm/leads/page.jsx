@@ -51,9 +51,7 @@ export default function AdminTeamLeadsPage() {
         const wonLeads = repLeads.filter(l => l.status === 'won');
         const openLeads = repLeads.filter(l => !['won', 'lost'].includes(l.status));
         const hotLeads = repLeads.filter(l => l.temperature === 'hot');
-        const expectedValue = repLeads.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
-
-        return { total: repLeads.length, won: wonLeads.length, open: openLeads.length, hot: hotLeads.length, expectedValue, leads: repLeads };
+        return { total: repLeads.length, won: wonLeads.length, open: openLeads.length, hot: hotLeads.length, leads: repLeads };
     };
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
@@ -96,7 +94,7 @@ export default function AdminTeamLeadsPage() {
                                         </div>
                                     </div>
                                     
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-1 max-w-2xl">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 flex-1 max-w-2xl">
                                         <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-3 border border-gray-100 dark:border-gray-700">
                                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Leads</p>
                                             <p className="text-lg font-black text-gray-900 dark:text-white">{stats.total}</p>
@@ -108,10 +106,6 @@ export default function AdminTeamLeadsPage() {
                                         <div className="bg-rose-50 dark:bg-rose-900/20 rounded-2xl p-3 border border-rose-100 dark:border-rose-800/30">
                                             <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Priority Leads</p>
                                             <p className="text-lg font-black text-rose-700 dark:text-rose-400">{stats.hot}</p>
-                                        </div>
-                                        <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-3 border border-emerald-100 dark:border-emerald-800/30">
-                                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Expected Val</p>
-                                            <p className="text-base font-black text-emerald-700 dark:text-emerald-400">{formatCurrency(stats.expectedValue)}</p>
                                         </div>
                                     </div>
 
@@ -156,9 +150,8 @@ export default function AdminTeamLeadsPage() {
                                                                         <p className="text-xs font-bold text-gray-500 flex items-center gap-2 truncate"><Building size={14} className="opacity-70"/> {lead.title || 'Individual'}</p>
                                                                         {(lead.area || lead.city) && <p className="text-xs font-bold text-gray-500 flex items-center gap-2 truncate"><MapPin size={14} className="opacity-70"/> {[lead.area, lead.city].filter(Boolean).join(', ')}</p>}
                                                                     </div>
-                                                                    <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
+                                                                    <div className="flex items-center justify-start pt-4 border-t border-gray-100 dark:border-gray-700">
                                                                         <p className="text-[10px] font-black text-gray-400 uppercase">{format(new Date(lead.created_at), 'MMM dd')}</p>
-                                                                        <p className="text-sm font-black text-gray-900 dark:text-white">{formatCurrency(lead.deal_value || 0)}</p>
                                                                     </div>
                                                                 </div>
                                                             );

@@ -51,15 +51,13 @@ export default function CampaignsClient({ currentUserId, currentUserRole }) {
             acc[source] = {
                 name: source,
                 total_leads: 0,
-                won_leads: 0,
-                total_value: 0
+                won_leads: 0
             };
         }
         acc[source].total_leads += 1;
         if (lead.status === 'won') {
             acc[source].won_leads += 1;
         }
-        acc[source].total_value += Number(lead.deal_value || 0);
         return acc;
     }, {});
 

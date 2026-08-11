@@ -70,7 +70,7 @@ function StatCard({ label, value, icon: Icon, colorClass, bgClass, delay = 0, tr
 export default function CRMDashboard() {
     const [leads, setLeads] = useState([]);
     const [tasks, setTasks] = useState([]);
-    const [stats, setStats] = useState({ newLeads: 0, activePipeline: 0, convRate: '0%', followUps: 0, expectedRevenue: 0 });
+    const [stats, setStats] = useState({ newLeads: 0, activePipeline: 0, convRate: '0%', followUps: 0 });
     const [chartData, setChartData] = useState([]);
     const [sourceData, setSourceData] = useState([]);
     const [trendData, setTrendData] = useState([]);
@@ -91,8 +91,8 @@ export default function CRMDashboard() {
             const manager = ['relationship_manager', 'admin', 'super_admin'].includes(role);
             setIsManager(manager);
 
-            let recentQuery = supabase.from('crm_leads').select('id, title, contact_name, phone, email, status, source, created_at, deal_value, temperature').is('archived_at', null).neq('source', 'Users').neq('source', 'App User').order('created_at', { ascending: false }).limit(5);
-            let allQuery = supabase.from('crm_leads').select('status, created_at, deal_value, assigned_to, source').is('archived_at', null).neq('source', 'Users').neq('source', 'App User');
+            let recentQuery = supabase.from('crm_leads').select('id, title, contact_name, phone, email, status, source, created_at, temperature').is('archived_at', null).neq('source', 'Users').neq('source', 'App User').order('created_at', { ascending: false }).limit(5);
+            let allQuery = supabase.from('crm_leads').select('status, created_at, assigned_to, source').is('archived_at', null).neq('source', 'Users').neq('source', 'App User');
             let tasksQuery = supabase.from('crm_tasks').select('*').eq('status', 'pending').order('due_date', { ascending: true }).limit(4);
 
             if (!manager) {
@@ -117,14 +117,11 @@ export default function CRMDashboard() {
 
             const total = all.length;
             const won = all.filter(l => l.status === 'won');
-            const totalRevenue = all.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
-            
             setStats({
                 newLeads: all.filter(l => l.status === 'new').length,
                 activePipeline: all.filter(l => ['contacted', 'qualified', 'proposal'].includes(l.status)).length,
                 convRate: total > 0 ? `${Math.round((won.length / total) * 100)}%` : '0%',
-                followUps: all.filter(l => l.status === 'contacted').length,
-                expectedRevenue: totalRevenue
+                followUps: all.filter(l => l.status === 'contacted').length
             });
 
             if (manager) {
@@ -149,27 +146,6 @@ export default function CRMDashboard() {
             const sources = Object.keys(sourceCounts).map(key => ({ name: key, value: sourceCounts[key] })).sort((a, b) => b.value - a.value);
             setSourceData(sources);
 
-            // Generate mock trend data based on recent months (last 6 months)
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const currentMonth = new Date().getMonth();
-            const mockTrend = [];
-            for (let i = 5; i >= 0; i--) {
-                const d = new Date();
-                d.setMonth(currentMonth - i);
-                const mName = months[d.getMonth()];
-                // Create a realistic looking upward trend using some randomness based on the total expected revenue
-                const baseRev = (totalRevenue / 6) * (1 - (i * 0.1));
-                const variance = baseRev * 0.3 * (Math.random() - 0.5);
-                mockTrend.push({
-                    name: mName,
-                    revenue: Math.max(0, Math.round(baseRev + variance))
-                });
-            }
-            // Ensure the last month's revenue is somewhat close to today's active pipeline
-            if (mockTrend.length > 0) {
-                mockTrend[mockTrend.length - 1].revenue = Math.round(totalRevenue * 0.3);
-            }
-            setTrendData(mockTrend);
 
         } catch (err) {
             console.error('CRM fetch error', err);
@@ -253,7 +229,6 @@ export default function CRMDashboard() {
                         [...Array(4)].map((_, i) => <SkeletonCard key={i} type="stat" />)
                     ) : (
                         <>
-                            <StatCard label={isManager ? "Pipeline Value" : "My Pipeline"} value={formatCurrency(stats.expectedRevenue)} icon={DollarSign} colorClass="text-indigo-600" bgClass="bg-indigo-50 dark:bg-indigo-900/30" delay={0} trend="+12%" />
                             <StatCard label="Active Deals" value={stats.activePipeline} icon={Target} colorClass="text-blue-600" bgClass="bg-blue-50 dark:bg-blue-900/30" delay={0.1} trend="+4%" />
                             <StatCard label="Win Rate" value={stats.convRate} icon={TrendingUp} colorClass="text-emerald-600" bgClass="bg-emerald-50 dark:bg-emerald-900/30" delay={0.2} trend="+2%" />
                             <StatCard label="Follow-ups" value={stats.followUps} icon={Clock} colorClass="text-amber-600" bgClass="bg-amber-50 dark:bg-amber-900/30" delay={0.3} />
@@ -267,37 +242,7 @@ export default function CRMDashboard() {
                     
                     {/* Charts Row */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-                        {/* Revenue Trend Area Chart (Span 2) */}
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="lg:col-span-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-[2rem] shadow-xl shadow-sky-100/20 dark:shadow-black/20 p-6 sm:p-8 border border-white/50 dark:border-gray-700/50 relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-sky-500/10 transition-colors" />
-                            <div className="flex items-center justify-between mb-8 relative z-10">
-                                <div>
-                                    <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2"><TrendingUp size={20} className="text-sky-500" /> Revenue Forecast</h2>
-                                    <p className="text-xs text-gray-400 font-bold tracking-wide mt-1 uppercase">6-Month Trajectory</p>
-                                </div>
-                            </div>
-                            <div className="h-64 w-full relative z-10">
-                                {isLoading ? (
-                                    <Skeleton className="w-full h-full rounded-xl" />
-                                ) : (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                            <defs>
-                                                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3}/>
-                                                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.3} />
-                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 600 }} dy={10} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={(value) => `₹${value > 1000 ? (value/1000).toFixed(0) + 'k' : value}`} />
-                                            <Tooltip formatter={(value) => formatCurrency(value)} cursor={{ stroke: '#0ea5e9', strokeWidth: 2, strokeDasharray: '4 4' }} contentStyle={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)', padding: '12px', fontWeight: 'bold' }} />
-                                            <Area type="monotone" dataKey="revenue" stroke="#0ea5e9" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                )}
-                            </div>
-                        </motion.div>
+
 
                         {/* Revenue Funnel Chart (Span 2 on large) */}
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="lg:col-span-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-[2rem] shadow-xl shadow-indigo-100/20 dark:shadow-black/20 p-6 sm:p-8 border border-white/50 dark:border-gray-700/50 relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
@@ -400,7 +345,6 @@ export default function CRMDashboard() {
                                             </p>
                                             <div className="flex items-center gap-3 mt-1">
                                                 {lead.phone && <span className="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1"><Phone size={10} /> {lead.phone}</span>}
-                                                {lead.deal_value > 0 && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5"><DollarSign size={10} />{formatCurrency(lead.deal_value)}</span>}
                                             </div>
                                         </div>
                                     </div>

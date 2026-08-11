@@ -45,6 +45,21 @@ export async function POST(request) {
         }
         userId = user.id;
 
+        // ── 1.5. KYC Check ──────────────────────────────────────────────────────
+        // Prevent unverified users from making wallet purchases.
+        const { data: profile, error: profileError } = await supabaseAdmin
+            .from('user_profiles')
+            .select('kyc_status')
+            .eq('id', userId)
+            .single();
+
+        if (profileError || !profile || profile.kyc_status !== 'verified') {
+            return NextResponse.json(
+                { error: 'KYC Verification is required to pay via wallet. Please complete KYC from your profile.' },
+                { status: 403 }
+            );
+        }
+
         // ── 2. Atomic wallet checkout ────────────────────────────────────────────
         // customer_checkout_v4 debits the wallet, creates the order group and
         // items, clears the cart — all inside a single PG transaction.

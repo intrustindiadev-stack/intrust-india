@@ -1,4 +1,5 @@
-import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
+import { createAdminClient } from '@/lib/supabaseServer';
+import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
 
 // GET /api/employee/notifications — user's notifications (Employee panel)
@@ -9,23 +10,20 @@ export async function GET(request) {
         const limit = parseInt(searchParams.get('limit') || '30');
         const offset = parseInt(searchParams.get('offset') || '0');
 
-        const supabase = await createServerSupabaseClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const { user, admin, error, status } = await getAuthUser(request);
+        if (error || !user) {
+            return NextResponse.json({ error: error || 'Unauthorized' }, { status: status || 401 });
         }
 
-        const admin = createAdminClient();
-
         // 1. Get notifications with pagination
-        const { data, error, count } = await admin
+        const { data, fetchError, count } = await admin
             .from('notifications')
             .select('*', { count: 'exact' })
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
 
-        if (error) throw error;
+        if (fetchError) throw fetchError;
 
         // 2. Get TOTAL unread count (not just for this page)
         const { count: unreadCount, error: countError } = await admin

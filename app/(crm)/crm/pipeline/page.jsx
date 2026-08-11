@@ -53,7 +53,7 @@ export default function PipelinePage() {
     const fetchLeads = useCallback(async () => {
         let q = supabase
             .from('crm_leads')
-            .select('id, title, contact_name, phone, status, source, created_at, deal_value, temperature')
+            .select('id, title, contact_name, phone, status, source, created_at, temperature')
             .is('archived_at', null)
             .not('status', 'eq', 'lost')
             .neq('source', 'App User')
@@ -177,8 +177,6 @@ export default function PipelinePage() {
                     <div className="flex gap-4 h-full min-w-max px-2">
                         {COLUMNS.map(col => {
                             const colLeads = getByStatus(col.id);
-                            const totalValue = colLeads.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
-                            
                             return (
                                 <div
                                     key={col.id}
@@ -192,8 +190,7 @@ export default function PipelinePage() {
                                             <h3 className="font-bold text-gray-900 dark:text-white text-base">{col.title}</h3>
                                             <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${col.badge}`}>{colLeads.length}</span>
                                         </div>
-                                        <div className="flex items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400 relative z-10">
-                                            <span>{formatCurrency(totalValue)}</span>
+                                        <div className="flex items-center justify-end text-xs font-bold text-gray-500 dark:text-gray-400 relative z-10">
                                             {colLeads.length > 0 && <span>Avg {Math.round(colLeads.reduce((sum, l) => sum + calculateDays(l.created_at), 0) / colLeads.length)}d</span>}
                                         </div>
                                         <div className={`absolute -right-6 -bottom-6 opacity-5 ${col.iconColor}`}><DollarSign size={80} /></div>
@@ -231,7 +228,6 @@ export default function PipelinePage() {
                                                         
                                                         <div className="flex items-center justify-between border-t border-gray-50 dark:border-gray-700/50 pt-3">
                                                             <div className="flex flex-col gap-1">
-                                                                <span className="text-xs font-black text-gray-900 dark:text-white tracking-tight">{formatCurrency(lead.deal_value)}</span>
                                                                 {lead.source && (
                                                                     <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-md border ${SOURCE_COLORS[category] || SOURCE_COLORS.Other}`}>
                                                                         {lead.source}

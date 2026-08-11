@@ -146,6 +146,20 @@ const SuccessPage = () => {
 
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
+                    // ── SameSite=Lax cookie recovery ─────────────────────────────────────
+                    // When SabPaisa POSTs back to our callback and the server issues a 303
+                    // redirect to /payment/success, browsers running a cross-origin-initiated
+                    // redirect chain may not send SameSite=Lax cookies on the initial
+                    // request, so getSession() returns null here.
+                    //
+                    // However, the cookies are NOT deleted — they still exist in the browser.
+                    // supabase.auth.getUser() makes a network call (using the stored token
+                    // from document.cookie or the SDK's in-memory token) which forces the
+                    // Supabase SSR client to re-hydrate and persist the session.
+                    //
+                    // We run this in the background so the success screen renders immediately
+                    // (good UX), while getUser() silently re-establishes the session before
+                    // the auto-redirect timer fires.
                     let inferredUdf1 = undefined;
                     if (txnId.startsWith('MSUB_')) inferredUdf1 = 'MERCHANT_SUBSCRIPTION';
                     else if (txnId.startsWith('WLT_')) inferredUdf1 = 'WALLET_TOPUP';
@@ -156,9 +170,31 @@ const SuccessPage = () => {
                     else if (txnId.startsWith('UDR_')) inferredUdf1 = 'UDHARI_PAYMENT';
                     else if (txnId.startsWith('LKN_')) inferredUdf1 = 'MERCHANT_LOCKIN';
                     else if (txnId.startsWith('AIG_')) inferredUdf1 = 'MERCHANT_AIGROW';
-                    
+
                     setTransaction({ udf1: inferredUdf1 });
                     setState('verified');
+
+                    // Background session recovery: fetch the user via network call.
+                    // This re-hydrates the Supabase session from stored cookies so the
+                    // auto-redirect effect can navigate to protected routes successfully.
+                    supabase.auth.getUser().then(({ data: { user: recoveredUser } }) => {
+                        if (recoveredUser) {
+                            console.log('[SuccessPage] Session recovered via getUser() after cross-origin redirect.');
+                            // Fetch role so the redirect target is role-aware
+                            supabase
+                                .from('user_profiles')
+                                .select('role')
+                                .eq('id', recoveredUser.id)
+                                .single()
+                                .then(({ data: rd }) => { if (rd) setUserRole(rd.role); })
+                                .catch(() => {});
+                        } else {
+                            console.warn('[SuccessPage] Session could not be recovered after cross-origin redirect. User will be redirected to login.');
+                        }
+                    }).catch(() => {
+                        console.warn('[SuccessPage] getUser() failed during background session recovery.');
+                    });
+
                     return;
                 }
 
@@ -202,7 +238,39 @@ const SuccessPage = () => {
     useEffect(() => {
         if (state !== 'verified' || !transaction) return;
         const config = getConfig(txnId, transaction, userRole);
-        const timer = setTimeout(() => router.replace(config.redirectTo), config.redirectDelay);
+
+        const timer = setTimeout(async () => {
+            try {
+                // ── Session-verified redirect ──────────────────────────────────────────
+                // After a cross-origin SabPaisa redirect, SameSite=Lax cookies may not
+                // have been sent on the initial page load request, leaving getSession()
+                // null. Before navigating to a protected route (/wallet, /dashboard, etc.)
+                // we call getUser() — a live network request — which forces the Supabase
+                // SDK to re-read the stored cookie and re-hydrate the session.
+                //
+                // If the user is confirmed → navigate to the intended destination.
+                // If the session truly cannot be recovered → go to /login with returnUrl
+                //   so the user re-authenticates and lands at the correct page.
+                const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+                if (currentUser) {
+                    // Session confirmed — safe to navigate to the protected route
+                    console.log(`[SuccessPage] Session verified. Redirecting to ${config.redirectTo}`);
+                    router.replace(config.redirectTo);
+                } else {
+                    // Session could not be re-established — redirect to login with returnUrl
+                    // The user will be sent back to the correct destination after login.
+                    console.warn(`[SuccessPage] No session after payment return. Redirecting to login with returnUrl=${config.redirectTo}`);
+                    router.replace(`/login?returnUrl=${encodeURIComponent(config.redirectTo)}`);
+                }
+            } catch (err) {
+                // Fail safe: if getUser() errors, still navigate to the destination.
+                // Middleware will redirect to /login if there truly is no session.
+                console.error('[SuccessPage] getUser() error during redirect:', err?.message);
+                router.replace(config.redirectTo);
+            }
+        }, config.redirectDelay);
+
         return () => clearTimeout(timer);
     }, [state, transaction, txnId, userRole, router]);
 

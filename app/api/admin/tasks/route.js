@@ -82,16 +82,6 @@ export async function POST(request) {
 
         if (insertError) throw insertError;
 
-        // Notify the assigned admin
-        await admin.from('notifications').insert({
-            user_id: assigned_to,
-            title: 'New Task Assigned',
-            body: `You have been assigned a new task: "${title}"`,
-            type: 'info',
-            reference_type: 'admin_task',
-            reference_id: task.id,
-        });
-
         return NextResponse.json({ task }, { status: 201 });
     } catch (err) {
         console.error('[API] Admin Tasks POST Error:', err);

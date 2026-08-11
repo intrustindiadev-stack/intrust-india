@@ -20,7 +20,7 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
             
             let query = supabase
                 .from('crm_leads')
-                .select('id, status, deal_value, created_at, assigned_to, user_profiles(full_name, avatar_url)')
+                .select('id, status, created_at, assigned_to, user_profiles(full_name, avatar_url)')
                 .neq('source', 'App User');
 
             if (!isManager) {
@@ -46,7 +46,7 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
     const totalLeads = leads.length;
     const wonLeads = leads.filter(l => l.status === 'won').length;
     const winRate = totalLeads ? ((wonLeads / totalLeads) * 100).toFixed(1) : 0;
-    const totalRevenue = leads.filter(l => l.status === 'won').reduce((sum, l) => sum + Number(l.deal_value || 0), 0);
+
 
     // Compute Team Metrics for Managers
     const teamMetrics = {};
@@ -62,15 +62,13 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
                     name: assigneeName,
                     avatar: assigneeAvatar,
                     totalLeads: 0,
-                    wonLeads: 0,
-                    revenue: 0
+                    wonLeads: 0
                 };
             }
             
             teamMetrics[assigneeId].totalLeads += 1;
             if (l.status === 'won') {
                 teamMetrics[assigneeId].wonLeads += 1;
-                teamMetrics[assigneeId].revenue += Number(l.deal_value || 0);
             }
         });
     }
@@ -79,7 +77,7 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
             ...t,
             winRate: t.totalLeads > 0 ? ((t.wonLeads / t.totalLeads) * 100).toFixed(1) : 0
         }))
-        .sort((a, b) => b.revenue - a.revenue || b.wonLeads - a.wonLeads);
+        .sort((a, b) => b.wonLeads - a.wonLeads);
 
     // Chart Data Generation (Last 7 days)
     const chartData = [];
@@ -118,7 +116,7 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
             ) : (
                 <div className="space-y-6">
                     {/* Key Metrics */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-4 opacity-10">
                                 <Users size={64} />
@@ -140,15 +138,7 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
                             <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">Win Rate</h3>
                             <p className="text-3xl font-black text-indigo-600">{winRate}%</p>
                         </div>
-                        <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-10 text-amber-500">
-                                <CalendarDays size={64} />
-                            </div>
-                            <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">Total Revenue</h3>
-                            <p className="text-3xl font-black text-gray-900">₹{totalRevenue.toLocaleString('en-IN')}</p>
-                        </div>
                     </div>
-
                     {/* Charts */}
                     <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
                         <h2 className="text-lg font-extrabold text-gray-900 mb-6 tracking-tight">Lead Generation (Last 7 Days)</h2>
@@ -189,8 +179,7 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
                                             <th className="p-4 rounded-tl-xl">Team Member</th>
                                             <th className="p-4">Leads Assigned</th>
                                             <th className="p-4">Won Deals</th>
-                                            <th className="p-4">Win Rate</th>
-                                            <th className="p-4 rounded-tr-xl">Revenue Generated</th>
+                                            <th className="p-4 rounded-tr-xl">Win Rate</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50 text-sm">
@@ -219,9 +208,6 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
                                                 </td>
                                                 <td className="p-4">
                                                     <span className="font-bold text-indigo-600">{member.winRate}%</span>
-                                                </td>
-                                                <td className="p-4">
-                                                    <span className="font-bold text-gray-900">₹{member.revenue.toLocaleString('en-IN')}</span>
                                                 </td>
                                             </tr>
                                         ))}

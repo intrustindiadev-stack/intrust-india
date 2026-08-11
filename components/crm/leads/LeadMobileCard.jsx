@@ -88,12 +88,7 @@ export default function LeadMobileCard({ lead, isSelected, onToggleSelect }) {
                                 <span className="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-md">Unassigned</span>
                             )}
                         </div>
-                        {lead.deal_value > 0 && (
-                            <span className="text-xs font-bold text-gray-900 flex items-center bg-gray-50 px-2 py-1 rounded-lg">
-                                <IndianRupee size={10} className="mr-0.5 text-gray-500" />
-                                {lead.deal_value.toLocaleString('en-IN')}
-                            </span>
-                        )}
+
                     </div>
                 </div>
             </div>
