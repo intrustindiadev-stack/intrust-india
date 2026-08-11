@@ -118,12 +118,14 @@ export default function CRMSettingsPage() {
                         </h2>
 
                         {/* Avatar Section */}
-                        <div className="flex flex-col md:flex-row items-center sm:items-start gap-10 p-6 bg-slate-50/50 rounded-[2rem] border border-slate-100">
+                        <div className="flex flex-col xl:flex-row items-center xl:items-start gap-8 lg:gap-12 p-6 sm:p-8 bg-slate-50/50 dark:bg-gray-800/50 rounded-[2rem] border border-slate-100 dark:border-gray-700/50">
+                            <div className="w-full max-w-sm flex-shrink-0 mx-auto xl:mx-0 flex justify-center xl:block">
                             <IDCard 
                                 profile={profile || { ...user?.user_metadata, role: 'relationship_exec' }}
                                 onOpenAvatarModal={() => setIsAvatarModalOpen(true)}
                             />
-                            <div className="flex-1 w-full space-y-4">
+                            </div>
+                            <div className="flex-1 w-full space-y-4 text-center xl:text-left mt-6 xl:mt-0">
                                 <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
                                     <User className="text-[#1e3a5f]" size={20} /> Identity Details
                                 </h3>

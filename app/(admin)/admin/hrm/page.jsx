@@ -4,6 +4,7 @@ import { displayEmail } from '@/lib/auth';
 import { Users, UserPlus, DollarSign, Clock, ShieldCheck, UserCheck } from 'lucide-react';
 import ContactActions from '@/components/shared/ContactActions';
 import CalendarWidget from '@/components/shared/CalendarWidget';
+import WorkforceDirectory from '@/components/admin/hrm/WorkforceDirectory';
 
 function StatCard({ title, value, sub, gradient, icon: Icon }) {
     return (
@@ -35,7 +36,7 @@ export default async function AdminHRMPage() {
     const supabase = createAdminClient();
 
     // Fetch HRM data in parallel
-    const [empRes, leaveRes, hrPendingRes, adminPendingRes] = await Promise.all([
+    const [empRes, leaveRes, hrPendingRes, adminPendingRes, holidayRes] = await Promise.all([
         supabase.from('user_profiles')
             .select('id, full_name, email, phone, role, created_at')
             .in('role', [
@@ -57,16 +58,23 @@ export default async function AdminHRMPage() {
             .select('id', { count: 'exact', head: true })
             .eq('status', 'pending_admin_confirmation')
             .then(r => r.error ? { count: 0 } : r),
+        supabase.from('holidays')
+            .select('holiday_date, name')
+            .then(r => r.error ? { data: [] } : r),
     ]);
 
     const employees = empRes.data || [];
     const leaveRequests = leaveRes.data || [];
     const pendingHRCount = hrPendingRes.count || 0;
     const pendingAdminCount = adminPendingRes.count || 0;
+    const holidays = holidayRes.data || [];
 
-    const totalEmp = employees.length;
-    const hrManagers = employees.filter(e => e.role === 'hr_manager').length;
-    const crmTeam = employees.filter(e => ['relationship_exec', 'relationship_manager'].includes(e.role)).length;
+    // Map holidays for CalendarWidget
+    const calendarEvents = holidays.map(h => ({
+        date: h.holiday_date,
+        type: 'holiday',
+        label: h.name
+    }));
 
     const roleLabel = {
         employee: 'Employee',
@@ -108,6 +116,46 @@ export default async function AdminHRMPage() {
                     </Link>
                 </div>
 
+                {/* Quick Actions */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Link href="/admin/hrm/incentives" className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all group">
+                        <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Gift size={18} />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-gray-900 text-sm">Incentives</h3>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mt-0.5">Manage Rewards</p>
+                        </div>
+                    </Link>
+                    <Link href="/admin/teams" className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all group">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Users size={18} />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-gray-900 text-sm">Organization</h3>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mt-0.5">Team Hierarchy</p>
+                        </div>
+                    </Link>
+                    <Link href="/admin/careers" className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all group">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <UserPlus size={18} />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-gray-900 text-sm">Recruitment</h3>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mt-0.5">Career Apps</p>
+                        </div>
+                    </Link>
+                    <Link href="/admin/payouts" className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all group">
+                        <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <DollarSign size={18} />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-gray-900 text-sm">Payroll</h3>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mt-0.5">Salary & Payouts</p>
+                        </div>
+                    </Link>
+                </div>
+
                 {/* KPI Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <StatCard title="Total Workforce" value={totalEmp} gradient="from-emerald-600 to-teal-600" icon={Users} />
@@ -118,63 +166,11 @@ export default async function AdminHRMPage() {
 
                 {/* Company Calendar & Events */}
                 <div className="h-[450px]">
-                    <CalendarWidget events={[]} />
+                    <CalendarWidget events={calendarEvents} />
                 </div>
 
-                {/* Workforce Directory */}
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-900">Workforce Directory</h2>
-                            <p className="text-sm text-gray-500">{totalEmp} active team members</p>
-                        </div>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-100">
-                                <tr>
-                                    <th className="p-4 pl-6">Employee</th>
-                                    <th className="p-4">Email</th>
-                                    <th className="p-4">Role</th>
-                                    <th className="p-4">Contact</th>
-                                    <th className="p-4 pr-6">Joined</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {employees.length > 0 ? employees.slice(0, 15).map(emp => (
-                                    <tr key={emp.id} className="hover:bg-emerald-50/20 transition-colors">
-                                        <td className="p-4 pl-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center text-sm font-bold text-emerald-700">
-                                                    {emp.full_name?.charAt(0) || '?'}
-                                                </div>
-                                                <span className="font-semibold text-gray-900 text-sm">{emp.full_name || 'N/A'}</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-sm text-gray-500">
-                                            {displayEmail(emp.email) ?? (
-                                                <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No email linked</span>
-                                            )}
-                                        </td>
-                                        <td className="p-4">
-                                            <span className={`inline-flex text-xs font-bold px-2.5 py-1 rounded-lg border ${roleColor[emp.role] || 'bg-gray-50 border-gray-200 text-gray-600'}`}>
-                                                {roleLabel[emp.role] || emp.role}
-                                            </span>
-                                        </td>
-                                        <td className="p-4">
-                                            <ContactActions phone={emp.phone} email={emp.email} name={emp.full_name} compact />
-                                        </td>
-                                        <td className="p-4 pr-6 text-xs text-gray-500">
-                                            {new Date(emp.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                        </td>
-                                    </tr>
-                                )) : (
-                                    <tr><td colSpan="5" className="p-12 text-center text-gray-400 text-sm">No employees found.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                {/* Workforce Directory Component (Client-Side) */}
+                <WorkforceDirectory initialEmployees={employees} />
 
                 {/* Leave Requests Overview */}
                 {leaveRequests.length > 0 && (

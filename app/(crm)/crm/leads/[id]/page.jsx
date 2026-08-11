@@ -288,33 +288,55 @@ export default function LeadDetailPage({ params }) {
 
 
                     <div className="grid grid-cols-1 gap-4">
-                        <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-3xl border border-white/60 dark:border-gray-700 p-5 shadow-xl shadow-slate-200/10 transition-shadow">
-                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><User size={14}/> Assigned Executive</p>
-                            {profile && ['relationship_manager', 'admin', 'super_admin'].includes(profile.role) ? (
-                                <select
-                                    value={lead.assigned_to || ''}
-                                    onChange={async (e) => {
-                                        const newOwner = e.target.value;
-                                        const { error } = await supabase.from('crm_leads').update({ assigned_to: newOwner || null }).eq('id', id);
-                                        if (!error) {
-                                            toast.success('Assigned executive updated');
-                                            fetchData();
-                                        } else {
-                                            toast.error(error.message);
-                                        }
-                                    }}
-                                    className="w-full text-xs font-bold bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                                >
-                                    <option value="">Unassigned</option>
-                                    {salesTeam.map(u => (
-                                        <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
-                                    ))}
-                                </select>
-                            ) : (
-                                <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                    {salesTeam.find(u => u.id === lead.assigned_to)?.full_name || 'Unassigned'}
-                                </p>
-                            )}
+                        <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/30 backdrop-blur-xl rounded-3xl border border-indigo-200 dark:border-indigo-700/50 p-5 shadow-xl shadow-indigo-200/20 dark:shadow-indigo-900/20 transition-shadow">
+                            <p className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2"><User size={14}/> Assignment Details</p>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Assigned To</p>
+                                    {profile && ['relationship_manager', 'admin', 'super_admin'].includes(profile.role) ? (
+                                        <select
+                                            value={lead.assigned_to || ''}
+                                            onChange={async (e) => {
+                                                const newOwner = e.target.value;
+                                                const { error } = await supabase.from('crm_leads').update({ assigned_to: newOwner || null }).eq('id', id);
+                                                if (!error) {
+                                                    toast.success('Assigned executive updated');
+                                                    fetchData();
+                                                } else {
+                                                    toast.error(error.message);
+                                                }
+                                            }}
+                                            className="w-full text-xs font-bold bg-white dark:bg-gray-900 border border-indigo-200 dark:border-indigo-700 rounded-xl p-2.5 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                                        >
+                                            <option value="">Unassigned</option>
+                                            {salesTeam.map(u => (
+                                                <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <div className="flex items-center gap-3 bg-white dark:bg-gray-900 p-2 rounded-xl border border-indigo-100 dark:border-indigo-800/50">
+                                            <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs">
+                                                {salesTeam.find(u => u.id === lead.assigned_to)?.full_name?.charAt(0) || 'U'}
+                                            </div>
+                                            <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                                {salesTeam.find(u => u.id === lead.assigned_to)?.full_name || 'Unassigned'}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-2 border-t border-indigo-200/50 dark:border-indigo-700/30 pt-3">
+                                    <div>
+                                        <p className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-0.5">Assigned By</p>
+                                        <p className="text-xs font-bold text-gray-900 dark:text-gray-300 truncate">Manager / System</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-0.5">Last Updated</p>
+                                        <p className="text-xs font-bold text-gray-900 dark:text-gray-300">{format(new Date(lead.updated_at || lead.created_at), 'MMM dd, yyyy')}</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
 

@@ -11,7 +11,7 @@ import { toast } from 'react-hot-toast';
 
 // Tabs & Views
 import OverviewTab from './OverviewTab';
-import OrgChart from './OrgChart';
+import ResponsiveOrgTree from './ResponsiveOrgTree';
 import TeamsTab from './TeamsTab';
 import WorkforceTab from './WorkforceTab';
 import TerritoriesTab from './TerritoriesTab';
@@ -325,7 +325,7 @@ export default function OrganizationShell() {
 
                                 {activeTab === 'structure' && (
                                     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
-                                        <OrgChart
+                                        <ResponsiveOrgTree
                                             teams={teams}
                                             onEditTeam={setSelectedTeamForDetails}
                                             onAssignMember={capabilities.canAssignMembers ? setSelectedTeamForAssign : undefined}

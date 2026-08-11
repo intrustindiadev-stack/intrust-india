@@ -423,15 +423,7 @@ export default async function AdminDashboard() {
                                     </div>
                                 </Link>
 
-                                <Link href="/admin/employees" className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-indigo-100 transition-all">
-                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white text-xl shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
-                                        🏢
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">Employee Directory</h3>
-                                        <p className="text-sm text-slate-500 mt-1 leading-snug">Manage staff, roles, and compensation</p>
-                                    </div>
-                                </Link>
+
 
                                 <Link href="/admin/merchants" className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-sky-100 transition-all">
                                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center text-white text-xl shadow-lg shadow-sky-500/20 group-hover:scale-110 transition-transform">

@@ -103,10 +103,10 @@ export default function TeamGrid({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 key={user.id}
-                className="bg-white dark:bg-gray-900 rounded-xl p-5 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 relative group"
+                className="bg-white dark:bg-gray-800/80 rounded-[1.25rem] p-5 sm:p-6 border border-gray-100 dark:border-gray-700/50 shadow-lg shadow-gray-200/30 dark:shadow-black/20 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative group overflow-hidden"
             >
                 {isLead && (
-                    <div className="absolute top-0 right-4 -mt-2 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800 flex items-center gap-1">
+                    <div className="absolute top-0 right-4 -mt-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-b-lg shadow-md flex items-center gap-1 z-10">
                         <Shield size={10} /> Lead
                     </div>
                 )}
@@ -123,9 +123,9 @@ export default function TeamGrid({
                     </div>
                 )}
 
-                <div className="flex flex-col items-center text-center">
-                    <div className="relative mb-3">
-                        <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold shadow-sm overflow-hidden border-4 border-white dark:border-gray-800 ${isLead ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                <div className="flex flex-col items-center text-center relative z-10">
+                    <div className="relative mb-4">
+                        <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-xl font-black shadow-lg overflow-hidden border-[3px] border-white dark:border-gray-800 ${isLead ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
                             {user.avatar_url ? (
                                 <Image src={user.avatar_url} alt={user.full_name} fill className="object-cover" />
                             ) : (
@@ -134,7 +134,7 @@ export default function TeamGrid({
                         </div>
                     </div>
 
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white truncate w-full px-2">
+                    <h3 className="text-base font-black text-gray-900 dark:text-white truncate w-full px-2 tracking-tight">
                         {user.full_name || 'Unnamed User'}
                     </h3>
                     
