@@ -55,14 +55,16 @@ export default function EmployeeDetailPage() {
             setEmployee(data);
             setForm({
                 department: data.department || '',
-                employee_id: data.employee_id || '',
-                joining_date: data.joining_date || '',
-                employment_type: data.employment_type || 'full_time',
-                city: data.city || '',
+                designation: data.designation || '',
                 phone: data.phone || '',
-                base_salary: data.base_salary || 0,
-                role: data.role || 'employee',
-                is_active: data.is_active ?? true,
+                date_of_birth: data.date_of_birth || '',
+                gender: data.gender || '',
+                address: data.address || '',
+                blood_group: data.blood_group || '',
+                emergency_contact_name: data.emergency_contact_name || '',
+                emergency_contact_phone: data.emergency_contact_phone || '',
+                // NOTE: role, is_active, is_suspended are NOT in this form.
+                // Those require admin-level operations via secure RPCs.
             });
         } catch (err) {
             console.error(err);
@@ -78,29 +80,20 @@ export default function EmployeeDetailPage() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            const { error } = await supabase.from('user_profiles').update(form).eq('id', employee.id);
-            if (error) throw error;
-            toast.success('Employee profile updated');
-
-            // Audit Log Insert
-            supabase.auth.getUser().then(({ data: { user } }) => {
-                if (user) {
-                    supabase.from('audit_logs_hrm').insert({
-                        actor_id: user.id,
-                        actor_name: user.user_metadata?.full_name || 'System',
-                        action: 'Employee profile updated',
-                        table_name: 'user_profiles',
-                        record_id: employee.id,
-                        old_data: employee,
-                        new_data: form,
-                        module: 'Core HR',
-                        severity: 'medium'
-                    }).then(({ error: auditError }) => {
-                        if (auditError) console.warn('Audit log failed:', auditError);
-                    });
-                }
+            // Use secure server-side API route instead of direct supabase.update().
+            // The API route verifies HR role and only allows whitelisted fields.
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`/api/hrm/employees/${employee.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`,
+                },
+                body: JSON.stringify(form),
             });
-
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || 'Update failed');
+            toast.success('Employee profile updated');
             setEmployee(prev => ({ ...prev, ...form }));
             setIsEditing(false);
         } catch (err) { 
@@ -116,17 +109,13 @@ export default function EmployeeDetailPage() {
         
         setTogglingStatus(true);
         try {
-            const updates = { is_active: newStatus };
-            if (!newStatus && employee.role !== 'inactive') {
-                updates.role = 'inactive';
-            }
-            
-            const { error } = await supabase.from('user_profiles').update(updates).eq('id', employee.id);
-            if (error) throw error;
-            
-            toast.success(`Employee account ${newStatus ? 'activated' : 'deactivated'}`);
-            setEmployee(prev => ({ ...prev, ...updates }));
-            setForm(prev => ({ ...prev, ...updates }));
+            // Account status changes (is_active / role to 'inactive') require
+            // admin-level operations. Direct supabase.update() on these fields
+            // is blocked by the user_profiles_sensitive_column_guard DB trigger.
+            // TODO: Implement via admin_update_user_role RPC for role change
+            // and a dedicated admin_toggle_account_active RPC for is_active.
+            // For now, surface an informative error.
+            toast.error('Account status changes must be performed by an admin via the Admin Panel.');
         } catch (err) {
             toast.error(err.message);
         } finally {
