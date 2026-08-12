@@ -56,7 +56,9 @@ export default function CalendarWidget({ events = [], onDateClick }) {
         for (let i = 1; i <= daysInMonth; i++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             const cellDate = new Date(year, month, i);
-            const isSunday = cellDate.getDay() === 0;
+            const dayOfWeek = cellDate.getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sun=0, Sat=6
+            const isSunday = dayOfWeek === 0; // kept for backward compat (day label styling)
             const isPast = cellDate < new Date(new Date().setHours(0,0,0,0));
             
             let dayEvents = events.filter(e => e.date === dateStr);
@@ -64,12 +66,13 @@ export default function CalendarWidget({ events = [], onDateClick }) {
             // Fallback for label/title mapping
             dayEvents = dayEvents.map(e => ({ ...e, title: e.title || e.label || 'Event' }));
 
-            // Auto-Absent Engine: If past day, not Sunday, and no attendance/leave/holiday events
-            if (isPast && !isSunday && dayEvents.length === 0) {
+            // Auto-Absent Engine: Only fire on past weekdays (Mon–Fri) with no events
+            // Org policy: weekend_days = [0, 6] (Sunday + Saturday)
+            if (isPast && !isWeekend && dayEvents.length === 0) {
                 dayEvents = [{ date: dateStr, title: 'Absent', type: 'absent' }];
             }
             
-            grid.push({ date: i, fullDate: dateStr, events: dayEvents, isSunday, isPast, key: `day-${i}` });
+            grid.push({ date: i, fullDate: dateStr, events: dayEvents, isSunday, isWeekend, isPast, key: `day-${i}` });
         }
         return grid;
     }, [year, month, daysInMonth, firstDay, events]);

@@ -26,17 +26,16 @@ function EditableRow({ label, value, icon: Icon, onSave, type = 'text', placehol
     const cancel = () => { setDraft(value || ''); setEditing(false); };
 
     return (
-        <div className="group flex items-start gap-5 py-5 border-b border-gray-100 dark:border-white/5 last:border-0">
-            <div className={`mt-1 flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${readOnly ? 'bg-gray-100 dark:bg-white/5' : 'bg-[#92BCEA]/10 text-[#92BCEA]'}`}>
-                <Icon size={18} />
+        <div className="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 py-4 border-b border-gray-100 dark:border-white/5 last:border-0">
+            <div className="flex items-center gap-3 sm:w-1/3">
+                <Icon size={16} className="text-gray-400" />
+                <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                    {label} {badge}
+                </p>
             </div>
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1.5">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{label}</p>
-                    {badge}
-                </div>
+            <div className="flex-1 min-w-0 w-full flex items-center justify-between gap-4">
                 {editing ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full">
                         <input
                             ref={inputRef}
                             type={type}
@@ -44,35 +43,37 @@ function EditableRow({ label, value, icon: Icon, onSave, type = 'text', placehol
                             onChange={e => setDraft(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') cancel(); }}
                             placeholder={placeholder}
-                            className="flex-1 text-sm bg-gray-50 dark:bg-white/5 border border-[#92BCEA] rounded-xl px-4 py-2 text-gray-900 dark:text-gray-100 outline-none ring-4 ring-[#92BCEA]/10 min-w-0"
+                            className="flex-1 text-sm bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 transition-colors min-w-0"
                         />
                         <button onClick={handleSave} disabled={saving}
-                            className="w-9 h-9 rounded-xl bg-green-500 flex items-center justify-center text-white flex-shrink-0 hover:bg-green-600 transition-all shadow-lg shadow-green-500/20 disabled:opacity-50">
-                            {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                            className="w-8 h-8 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center text-white dark:text-gray-900 flex-shrink-0 disabled:opacity-50">
+                            {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                         </button>
                         <button onClick={cancel}
-                            className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-500 flex-shrink-0 hover:bg-gray-200 transition-all">
-                            <X size={16} />
+                            className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-500 flex-shrink-0">
+                            <X size={14} />
                         </button>
                     </div>
                 ) : (
-                    <div className="flex items-center gap-2 min-w-0">
-                        <span className={`text-sm font-semibold truncate ${value ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400 italic'}`}>
-                            {value || (placeholder || 'Not set')}
-                        </span>
-                        {readOnly && <Lock size={12} className="text-gray-300 dark:text-gray-600 flex-shrink-0" />}
-                    </div>
+                    <>
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span className={`text-sm font-medium truncate ${value ? 'text-gray-900 dark:text-white' : 'text-gray-400 italic'}`}>
+                                {value || (placeholder || 'Not set')}
+                            </span>
+                            {readOnly && <Lock size={12} className="text-gray-300 dark:text-gray-600 flex-shrink-0" />}
+                        </div>
+                        {!readOnly && (
+                            <button
+                                onClick={() => setEditing(true)}
+                                className="opacity-0 group-hover:opacity-100 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all flex-shrink-0"
+                                title={`Edit ${label}`}
+                            >
+                                <Edit2 size={14} />
+                            </button>
+                        )}
+                    </>
                 )}
             </div>
-            {!readOnly && !editing && (
-                <button
-                    onClick={() => setEditing(true)}
-                    className="mt-1 w-10 h-10 rounded-xl bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center justify-center text-[#92BCEA] transition-all flex-shrink-0 border border-transparent hover:border-gray-200 dark:hover:border-white/10 shadow-sm active:scale-95"
-                    title={`Edit ${label}`}
-                >
-                    <Edit2 size={14} />
-                </button>
-            )}
         </div>
     );
 }
@@ -161,49 +162,45 @@ function PhoneVerification({ currentPhone, authPhone, userId, onVerified, showTo
 
     if (isVerified && step === 'idle') {
         return (
-            <div className="group flex items-start gap-5 py-5 border-b border-gray-100 dark:border-white/5 last:border-0">
-                <div className="mt-1 flex-shrink-0 w-10 h-10 rounded-xl bg-green-500/10 text-green-500 flex items-center justify-center">
-                    <Phone size={18} />
+            <div className="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 py-4 border-b border-gray-100 dark:border-white/5 last:border-0">
+                <div className="flex items-center gap-3 sm:w-1/3">
+                    <Phone size={16} className="text-gray-400" />
+                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Contact Number</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Contact Number</p>
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-green-500 text-white uppercase tracking-widest shadow-lg shadow-green-500/20">✓ Verified</span>
+                <div className="flex-1 min-w-0 w-full flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{displayPhone}</span>
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 uppercase tracking-widest">✓ Verified</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{displayPhone}</span>
-                    </div>
+                    <button
+                        onClick={() => { setStep('input'); setPhone(displayPhone.replace('+91', '')); }}
+                        className="opacity-0 group-hover:opacity-100 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all flex-shrink-0"
+                    >
+                        <Edit2 size={14} />
+                    </button>
                 </div>
-                <button
-                    onClick={() => { setStep('input'); setPhone(displayPhone.replace('+91', '')); }}
-                    className="mt-1 w-10 h-10 rounded-xl bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center justify-center text-[#92BCEA] transition-all flex-shrink-0 active:scale-95"
-                >
-                    <Edit2 size={14} />
-                </button>
             </div>
         );
     }
 
     if (step === 'idle') {
         return (
-            <div className="group flex items-start gap-5 py-5 border-b border-gray-100 dark:border-white/5 last:border-0">
-                <div className="mt-1 flex-shrink-0 w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                    <Phone size={18} />
+            <div className="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 py-4 border-b border-gray-100 dark:border-white/5 last:border-0">
+                <div className="flex items-center gap-3 sm:w-1/3">
+                    <Phone size={16} className="text-gray-400" />
+                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Contact Number</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Contact Number</p>
+                <div className="flex-1 min-w-0 w-full flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-sm font-medium text-gray-400 italic">No number linked</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-400 italic">No number linked</span>
-                    </div>
+                    <button
+                        onClick={() => setStep('input')}
+                        className="px-4 py-1.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-lg hover:bg-blue-500/20 transition-all uppercase tracking-widest flex-shrink-0"
+                    >
+                        Link Now
+                    </button>
                 </div>
-                <button
-                    onClick={() => setStep('input')}
-                    className="mt-1 px-4 py-2 bg-[#1a1a1a] text-amber-500 text-[10px] font-black rounded-xl hover:bg-black transition-all border border-amber-500/20 uppercase tracking-widest active:scale-95 shadow-xl"
-                >
-                    Link Now
-                </button>
             </div>
         );
     }
@@ -508,37 +505,42 @@ export default function PersonalInfoForm({ user, profile, onSave, onPhoneVerifie
     const safeEmail = displayEmail(user?.email);
 
     return (
-        <div id="personal-info-form" className="bg-white dark:bg-gray-900/50 backdrop-blur-xl rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-xl relative overflow-hidden transition-all duration-500">
-            <div className="flex items-center gap-4 mb-10">
-                <div className="w-11 h-11 rounded-[1.25rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/10">
-                    <User size={20} className="text-white" />
+        <div id="personal-info-form" className="space-y-8">
+            {/* Personal Information Section */}
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden transition-all duration-500">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-white/5">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Personal Details</h3>
                 </div>
-                <div>
-                    <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Personal Information</h3>
-                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Legal Identity &amp; Contact Details</p>
+
+                <div className="p-6 divide-y divide-gray-100 dark:divide-gray-800">
+                    <EditableRow label="Full Legal Name" icon={User} value={profile?.full_name} placeholder="Enter your full name" onSave={v => onSave('full_name', v)} />
+                    <EditableRow label="Date of Birth" icon={Calendar} value={profile?.date_of_birth} placeholder="YYYY-MM-DD" type="date" onSave={v => onSave('date_of_birth', v)} />
                 </div>
             </div>
 
-            <div className="divide-y divide-gray-50 dark:divide-white/5">
-                <EditableRow label="Full Legal Name" icon={User} value={profile?.full_name} placeholder="Enter your full name" onSave={v => onSave('full_name', v)} />
+            {/* Contact & Security Section */}
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden transition-all duration-500">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-white/5">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Contact & Security</h3>
+                </div>
 
-                <LoginMethodsSection
-                    user={user}
-                    safeEmail={safeEmail}
-                    showToast={showToast}
-                    refreshUser={refreshUser}
-                />
+                <div className="p-6 divide-y divide-gray-100 dark:divide-gray-800">
+                    <PhoneVerification
+                        currentPhone={profile?.phone}
+                        authPhone={user.phone}
+                        userId={user.id}
+                        onVerified={onPhoneVerified}
+                        showToast={showToast}
+                        supabase={supabase}
+                    />
 
-                <PhoneVerification
-                    currentPhone={profile?.phone}
-                    authPhone={user.phone}
-                    userId={user.id}
-                    onVerified={onPhoneVerified}
-                    showToast={showToast}
-                    supabase={supabase}
-                />
-
-                <EditableRow label="Date of Birth" icon={Calendar} value={profile?.date_of_birth} placeholder="YYYY-MM-DD" type="date" onSave={v => onSave('date_of_birth', v)} />
+                    <LoginMethodsSection
+                        user={user}
+                        safeEmail={safeEmail}
+                        showToast={showToast}
+                        refreshUser={refreshUser}
+                    />
+                </div>
             </div>
         </div>
     );

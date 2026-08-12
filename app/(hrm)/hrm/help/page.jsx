@@ -7,6 +7,7 @@ import {
     MessageCircle, Users, Calendar, Clock, DollarSign, Shield,
     Briefcase, BookMarked, Zap, ExternalLink, UserCheck, TrendingUp
 } from 'lucide-react';
+import Link from 'next/link';
 
 const MODULES = [
     {
@@ -135,7 +136,7 @@ function ModuleCard({ mod }) {
     const Icon = mod.icon;
     return (
         <div className="bg-white/60 backdrop-blur-md border border-white/40 rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group">
-            <button onClick={() => setOpen(!open)} className="w-full flex items-center gap-4 p-5 text-left hover:bg-white/80 transition-colors relative overflow-hidden">
+            <div onClick={() => setOpen(!open)} className="w-full flex items-center gap-4 p-5 text-left hover:bg-white/80 transition-colors relative overflow-hidden cursor-pointer">
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite]" />
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${mod.color} shrink-0 shadow-inner relative z-10`}>
                     <Icon size={22} />
@@ -152,7 +153,7 @@ function ModuleCard({ mod }) {
                         {open ? <ChevronDown size={16} className="text-emerald-600" /> : <ChevronRight size={16} className="text-gray-400" />}
                     </div>
                 </div>
-            </button>
+            </div>
             <AnimatePresence initial={false}>
                 {open && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">

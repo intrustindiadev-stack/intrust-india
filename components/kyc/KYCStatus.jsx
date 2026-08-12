@@ -58,51 +58,54 @@ export default function KYCStatus({ status, onStartKYC }) {
     const Icon = config.icon;
 
     return (
-        <div className="bg-white dark:bg-gray-900/50 backdrop-blur-xl rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-xl relative overflow-hidden transition-all duration-500 group">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden transition-all duration-500 group">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-white/5 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">KYC Status</h3>
+                {/* Visual pulse for pending/not started */}
+                {currentStatus !== 'verified' && currentStatus !== 'rejected' && (
+                    <div className={`w-2 h-2 rounded-full ${config.pulseColor} animate-pulse shadow-sm ${config.shadowColor}`} />
+                )}
+            </div>
 
-            {/* Background elements to match overall theme */}
-            <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-[40px] opacity-20 -mr-10 -mt-10 transition-all duration-700 ${config.pulseColor}`} />
+            <div className="p-6 relative overflow-hidden">
+                {/* Background elements to match overall theme */}
+                <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-[40px] opacity-10 dark:opacity-20 -mr-10 -mt-10 transition-all duration-700 ${config.pulseColor} pointer-events-none`} />
 
-            <div className="flex items-center justify-between mb-8 relative z-10">
-                <div className="flex items-center gap-4">
-                    <div className={`w-11 h-11 rounded-[1.25rem] bg-gradient-to-br ${config.color} flex items-center justify-center shadow-lg ${config.shadowColor}`}>
-                        <Icon size={20} className="text-white" />
+                <div className="flex items-center gap-4 mb-6 relative z-10">
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center shadow-sm ${config.shadowColor}`}>
+                        <Icon size={18} className="text-white" />
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">{config.title}</h3>
+                            <h3 className="text-lg font-black text-gray-900 dark:text-white tracking-tight">{config.title}</h3>
                             {currentStatus === 'verified' && <VerifiedBadge size="sm" />}
                         </div>
                         <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">{config.subtitle}</p>
                     </div>
                 </div>
-                {/* Visual pulse for pending/not started */}
-                {currentStatus !== 'verified' && currentStatus !== 'rejected' && (
-                    <div className={`w-2 h-2 rounded-full ${config.pulseColor} animate-pulse shadow-lg ${config.shadowColor}`} />
+
+                <div className="bg-gray-50 dark:bg-white/[0.02] rounded-xl p-5 border border-gray-100 dark:border-white/5 mb-6 relative z-10">
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 leading-relaxed tracking-tight">
+                        {config.description}
+                    </p>
+                    {currentStatus === 'verified' && (
+                        <div className="flex items-center gap-2 text-[10px] text-blue-600 dark:text-blue-400 font-black tracking-widest uppercase mt-4">
+                            <Shield size={12} />
+                            <span>Instant Verification Protocol</span>
+                        </div>
+                    )}
+                </div>
+
+                {config.action && (
+                    <button
+                        onClick={onStartKYC}
+                        className={`w-full py-3.5 text-[11px] font-black rounded-lg transition-all uppercase tracking-[0.15em] flex items-center justify-center gap-2 active:scale-95 shadow-sm min-h-[44px] relative z-10 group/btn ${config.actionBtnClass}`}
+                    >
+                        {config.action}
+                        <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                    </button>
                 )}
             </div>
-
-            <div className="bg-gray-50 dark:bg-white/[0.02] rounded-3xl p-6 border border-gray-100 dark:border-white/5 mb-6 relative z-10">
-                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 leading-relaxed tracking-tight">
-                    {config.description}
-                </p>
-                {currentStatus === 'verified' && (
-                    <div className="flex items-center gap-2 text-[10px] text-blue-600 dark:text-blue-400 font-black tracking-widest uppercase mt-4">
-                        <Shield size={12} />
-                        <span>Instant Verification Protocol</span>
-                    </div>
-                )}
-            </div>
-
-            {config.action && (
-                <button
-                    onClick={onStartKYC}
-                    className={`w-full py-4 text-[11px] font-black rounded-2xl transition-all uppercase tracking-[0.15em] flex items-center justify-center gap-2 active:scale-95 shadow-2xl relative z-10 group/btn ${config.actionBtnClass}`}
-                >
-                    {config.action}
-                    <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-                </button>
-            )}
         </div>
     );
 }

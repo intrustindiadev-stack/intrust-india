@@ -1,123 +1,104 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { Wallet, Clock, CreditCard, ChevronRight } from 'lucide-react';
+import { Wallet, IndianRupee, Gift, ChevronRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-function StoreCreditCard({ activeCount, totalAmountPaise = 0, onManage }) {
-    const amount = totalAmountPaise / 100;
+function StatItem({ icon: Icon, title, value, subtitle, highlight, onClick, iconColorClass }) {
     return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ scale: 1.02, translateY: -5 }}
-            whileTap={{ scale: 0.98 }}
-            className="bg-white dark:bg-[#0f172a]/40 bg-gradient-to-br from-white via-amber-50/10 to-white dark:from-[#1e293b]/50 dark:via-[#0f172a]/50 dark:to-[#020617]/50 rounded-[2rem] p-6 shadow-xl relative overflow-hidden group cursor-pointer border border-gray-100 dark:border-white/5 backdrop-blur-sm"
-            onClick={onManage}
+        <div 
+            onClick={onClick}
+            className="p-6 flex flex-col group cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
         >
-            {/* Background Accent */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-amber-500/10 transition-all duration-700" />
-
-            <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/10">
-                                <Clock size={18} className="text-white" />
-                            </div>
-                            <h3 className="text-[10px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-[0.2em]">Store Credits</h3>
-                        </div>
-                        {activeCount > 0 && (
-                            <div className="flex flex-col items-end gap-1">
-                                <span className="px-3 py-1 bg-amber-500 text-white dark:text-black rounded-full text-[9px] font-black shadow-lg shadow-amber-500/10 uppercase tracking-widest">
-                                    {activeCount} ACTIVE
-                                </span>
-                                {amount > 0 && (
-                                    <span className="text-[10px] font-black text-amber-600/80">
-                                        ₹{amount.toLocaleString('en-IN', { minimumFractionDigits: 0 })} DUE
-                                    </span>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                <div className="mb-8">
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Available for Use</p>
-                    <p className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">
-                        {activeCount > 0 ? 'Manage Requests' : 'Get Credit'}
-                    </p>
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                    <Icon size={16} className={iconColorClass} />
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        {title}
+                    </h3>
                 </div>
-
-                <div className="flex items-center justify-between text-[11px] font-black text-amber-500 mt-2 pt-4 border-t border-white/5 uppercase tracking-widest">
-                    <span className="flex items-center gap-2">
-                        <CreditCard size={14} />
-                        View Statement
-                    </span>
-                    <motion.div
-                        animate={{ x: [0, 5, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                    >
-                        <ChevronRight size={16} />
-                    </motion.div>
+                <ChevronRight size={14} className="text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1" />
+            </div>
+            
+            <div className="flex flex-col gap-1 mt-auto">
+                <p className="text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
+                    {value}
+                </p>
+                <div className="flex items-center gap-2">
+                    <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">{subtitle}</p>
+                    {highlight && (
+                        <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300">
+                            {highlight}
+                        </span>
+                    )}
                 </div>
             </div>
-        </motion.div>
-    );
-}
-
-function WalletCard({ balancePaise, onManage }) {
-    const balance = (balancePaise || 0) / 100;
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ scale: 1.02, translateY: -5 }}
-            whileTap={{ scale: 0.98 }}
-            className="bg-white dark:bg-[#0f172a]/40 bg-gradient-to-br from-white via-blue-50/10 to-white dark:from-[#0f172a]/50 dark:via-[#1e293b]/50 dark:to-[#020617]/50 rounded-[2rem] p-6 shadow-xl relative overflow-hidden group border border-gray-100 dark:border-white/5 backdrop-blur-sm"
-        >
-            {/* Background Accent */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-blue-500/10 transition-all duration-700" />
-
-            <div className="relative z-10">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/10">
-                            <Wallet size={18} className="text-white" />
-                        </div>
-                        <h3 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em]">Your Wallet</h3>
-                    </div>
-                </div>
-
-                <div className="mb-8">
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Available Balance</p>
-                    <p className="text-3xl font-black tabular-nums tracking-tighter text-gray-900 dark:text-white">
-                        ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </p>
-                </div>
-
-                <button
-                    onClick={onManage}
-                    className="w-full py-3.5 bg-gray-900 dark:bg-white text-white dark:text-black text-[10px] font-black rounded-2xl hover:opacity-90 transition-all flex items-center justify-center gap-2 group/btn uppercase tracking-widest shadow-xl shadow-black/10"
-                >
-                    Add Credits
-                    <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-                </button>
-            </div>
-        </motion.div>
-    );
-}
-
-export default function ProfileStats({ walletBalancePaise, activeUdhariCount, activeUdhariPaise = 0, onManageWallet, onManageUdhari }) {
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <StoreCreditCard 
-                activeCount={activeUdhariCount} 
-                totalAmountPaise={activeUdhariPaise}
-                onManage={onManageUdhari} 
-            />
-            <WalletCard 
-                balancePaise={walletBalancePaise} 
-                onManage={onManageWallet} 
-            />
         </div>
+    );
+}
+
+export default function ProfileStats({ walletBalance, udhariBalance, rewardsBalance, onWalletClick, onUdhariClick, onRewardsClick }) {
+    const totalBalance = ((walletBalance || 0) + (udhariBalance || 0)) / 100;
+    const wBalance = (walletBalance || 0) / 100;
+    const uBalance = (udhariBalance || 0) / 100;
+
+    return (
+        <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden mb-8 w-full">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-white/5">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Account Summary</h3>
+            </div>
+            
+            <div className="p-6 md:p-8">
+                <div className="text-center mb-8 pb-8 border-b border-gray-200 dark:border-gray-800">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Financial Balance</p>
+                    <h4 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
+                        ₹{totalBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </h4>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                    <div 
+                        onClick={onWalletClick}
+                        className="p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                    >
+                        <div className="w-12 h-12 mx-auto bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-3">
+                            <Wallet size={24} />
+                        </div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Wallet</p>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">
+                            ₹{wBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">Available Balance</p>
+                    </div>
+
+                    <div 
+                        onClick={onUdhariClick}
+                        className="p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-800 cursor-pointer"
+                    >
+                        <div className="w-12 h-12 mx-auto bg-amber-500/10 text-amber-600 dark:text-amber-500 rounded-full flex items-center justify-center mb-3">
+                            <IndianRupee size={24} />
+                        </div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Store Credit</p>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">
+                            ₹{uBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </p>
+                        <span className="text-[10px] text-amber-600 dark:text-amber-500 font-semibold mt-1 inline-block hover:underline">Get Credit</span>
+                    </div>
+
+                    <div 
+                        onClick={onRewardsClick}
+                        className="p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-800 cursor-pointer"
+                    >
+                        <div className="w-12 h-12 mx-auto bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 rounded-full flex items-center justify-center mb-3">
+                            <Gift size={24} />
+                        </div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Rewards</p>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">
+                            {rewardsBalance ? rewardsBalance.toLocaleString('en-IN') : '0'}
+                        </p>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-500 font-semibold mt-1 inline-block hover:underline">View Balance</span>
+                    </div>
+                </div>
+            </div>
+        </section>
     );
 }

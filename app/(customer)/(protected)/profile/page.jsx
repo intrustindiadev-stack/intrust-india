@@ -235,7 +235,7 @@ function CustomerProfileContent() {
     const isGold = !!profile?.is_gold_verified;
 
     return (
-        <div className="min-h-screen relative bg-gray-50 dark:bg-gray-950 transition-colors duration-700 selection:bg-blue-500/20 font-[family-name:var(--font-outfit)]">
+        <div className="min-h-screen relative bg-gray-50 dark:bg-gray-950 transition-colors duration-700 selection:bg-blue-500/20">
             <ParticleBackground />
             <Navbar />
 
@@ -255,189 +255,75 @@ function CustomerProfileContent() {
             </div>
 
             <main style={{ paddingTop: '15vh' }} className="relative z-10 pb-32 px-4 sm:px-8">
-                <div className="max-w-6xl mx-auto">
-                    <Breadcrumbs items={[{ label: 'Profile' }]} />
+                <div className="max-w-5xl mx-auto space-y-8">
+                    
+                    {/* ══ HEADER & IDENTITY ══════════════════════════════════════ */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.1 }}
+                        className="flex flex-col items-center"
+                    >
+                        <div className="w-full text-left mb-6">
+                            <Breadcrumbs items={[{ label: 'Profile' }]} />
+                            <div className="flex items-center gap-4 mt-2">
+                                <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-gray-900 dark:text-white">
+                                    Profile
+                                </h1>
+                                <LiveButton />
+                            </div>
+                        </div>
+                        <ProfileHero
+                            user={authUser}
+                            profile={profile}
+                            onAvatarUpload={(url, err) => {
+                                if (err) showToast(err, 'error');
+                                else if (url) saveField('avatar_url', url);
+                            }}
+                            onEditClick={() => {
+                                const el = document.getElementById('personal-info-form');
+                                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                        />
+                    </motion.div>
 
+                    {/* ══ FINANCIAL SNAPSHOT ══════════════════════════════════════ */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="mb-10 mt-4 flex flex-col md:flex-row md:items-end justify-between gap-6"
+                        transition={{ delay: 0.15 }}
                     >
-                        <div>
-                            <div className="flex items-center gap-4 mb-2">
-                                <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-gray-900 dark:text-white">
-                                    Profile
-                                </h1>
-                                {isGold && (
-                                    <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full flex items-center gap-2 shadow-sm">
-                                        <Star size={10} className="text-amber-500 fill-amber-500" />
-                                        <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Premium Member</span>
-                                    </div>
-                                )}
-                                <LiveButton />
-                            </div>
-                            <p className="text-sm font-medium text-gray-400 dark:text-gray-500 max-w-lg leading-relaxed">
-                                View and manage your personal details, linked contact numbers, and verified profile status.
-                            </p>
-                        </div>
+                        <ProfileStats
+                            walletBalance={wallet?.balance_paise}
+                            udhariBalance={udhariPaise}
+                            rewardsBalance={0} /* Add rewards logic if needed */
+                            onWalletClick={() => router.push('/wallet')}
+                            onUdhariClick={() => router.push('/store-credits')}
+                            onRewardsClick={() => router.push('/rewards')}
+                        />
                     </motion.div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-                        {/* ══ SIDEBAR ══════════════════════════════════════ */}
-                        <div className="lg:col-span-4 space-y-6">
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.1 }}
-                            >
-                                <ProfileHero
-                                    user={authUser}
-                                    profile={profile}
-                                    onAvatarUpload={(url, err) => {
-                                        if (err) showToast(err, 'error');
-                                        else if (url) saveField('avatar_url', url);
-                                    }}
-                                    onLinkEmail={() => {
-                                        const el = document.getElementById('personal-info-form');
-                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
-                                    }}
-                                />
-                            </motion.div>
-
+                    {/* ══ 2 COLUMN GRID ══════════════════════════════════════ */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                        
+                        {/* ══ LEFT COLUMN ══════════════════════════════════════ */}
+                        <div className="space-y-8">
+                            
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 0.2 }}
                             >
-                                <ProfileStats
-                                    walletBalancePaise={wallet?.balance_paise}
-                                    activeUdhariCount={udhariCount}
-                                    activeUdhariPaise={udhariPaise}
-                                    onManageWallet={() => router.push('/wallet')}
-                                    onManageUdhari={() => router.push('/store-credits')}
+                                <KYCStatus
+                                    status={kycStatus}
+                                    onStartKYC={() => router.push('/profile/kyc')}
                                 />
                             </motion.div>
 
                             <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.21 }}
-                            >
-                                <MerchantOpportunityBanner
-                                    merchantStatus={merchantData?.status}
-                                    subscriptionStatus={merchantData?.subscription_status}
-                                    subscriptionExpiresAt={merchantData?.subscription_expires_at}
-                                    startingPriceRupees={merchantSub1mPrice ?? undefined}
-                                />
-                            </motion.div>
-
-                            {/* Dashboard shortcut */}
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.22 }}
-                            >
-                                <button
-                                    onClick={() => router.push('/dashboard')}
-                                    className="w-full flex items-center gap-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-[2.5rem] px-6 py-4 shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
-                                >
-                                    <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-                                        <LayoutDashboard size={20} className="text-white" />
-                                    </div>
-                                    <div className="text-left flex-1">
-                                        <p className="font-black text-sm">Dashboard</p>
-                                        <p className="text-white/70 text-xs">Access your main control panel</p>
-                                    </div>
-                                    <ArrowRight size={18} className="text-white/70 flex-shrink-0" />
-                                </button>
-                            </motion.div>
-
-                            {/* Referrals shortcut */}
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.25 }}
-                            >
-                                <button
-                                    onClick={() => router.push('/refer')}
-                                    className="w-full flex items-center gap-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-[2.5rem] px-6 py-4 shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-all"
-                                >
-                                    <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-                                        <Gift size={20} className="text-white" />
-                                    </div>
-                                    <div className="text-left flex-1">
-                                        <p className="font-black text-sm">Referrals</p>
-                                        <p className="text-white/70 text-xs">View your network &amp; earnings</p>
-                                    </div>
-                                    <ArrowRight size={18} className="text-white/70 flex-shrink-0" />
-                                </button>
-                            </motion.div>
-
-                            {/* Reward Points shortcut */}
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.3 }}
-                            >
-                                <button
-                                    onClick={() => router.push('/rewards')}
-                                    className="w-full flex items-center gap-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-[2.5rem] px-6 py-4 shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-all"
-                                >
-                                    <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-                                        <Trophy size={20} className="text-white" />
-                                    </div>
-                                    <div className="text-left flex-1">
-                                        <p className="font-black text-sm">Reward Points</p>
-                                        <p className="text-white/70 text-xs">Redeem &amp; track your IRP balance</p>
-                                    </div>
-                                    <ArrowRight size={18} className="text-white/70 flex-shrink-0" />
-                                </button>
-                            </motion.div>
-
-                            {/* WhatsApp Connect shortcut */}
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.35 }}
-                            >
-                                <button
-                                    onClick={() => router.push('/profile/whatsapp')}
-                                    className="w-full flex items-center gap-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-[2.5rem] px-6 py-4 shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all"
-                                >
-                                    <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-                                        <MessageCircle size={20} className="text-white" />
-                                    </div>
-                                    <div className="text-left flex-1">
-                                        <p className="font-black text-sm">WhatsApp</p>
-                                        <p className="text-white/70 text-xs">WhatsApp alerts &amp; chat</p>
-                                    </div>
-                                    <ArrowRight size={18} className="text-white/70 flex-shrink-0" />
-                                </button>
-                            </motion.div>
-
-
-                            <AccountSummaryCard
-                                purchaseCount={purchaseCount}
-                                totalSavedPaise={totalSavedPaise}
-                                graphData={graphData}
-                            />
-                        </div>
-
-                        {/* ══ MAIN CONTENT ════════════════════════════════════════ */}
-                        <div className="lg:col-span-8 space-y-6">
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.15 }}
-                            >
-                                <RecentShoppingOrders userId={authUser?.id} limit={2} />
-                            </motion.div>
-
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.2 }}
                             >
                                 <PersonalInfoForm
                                     user={authUser}
@@ -464,15 +350,89 @@ function CustomerProfileContent() {
                                     onSave={v => saveField('address', v)}
                                 />
                             </motion.div>
+                        </div>
 
+                        {/* ══ RIGHT COLUMN ══════════════════════════════════════ */}
+                        <div className="space-y-8">
+                            
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.35 }}
+                            >
+                                <MerchantOpportunityBanner
+                                    merchantStatus={merchantData?.status}
+                                    subscriptionStatus={merchantData?.subscription_status}
+                                    subscriptionExpiresAt={merchantData?.subscription_expires_at}
+                                    startingPriceRupees={merchantSub1mPrice ?? undefined}
+                                />
+                            </motion.div>
+                            
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.4 }}
                             >
-                                <KYCStatus
-                                    status={kycStatus}
-                                    onStartKYC={() => router.push('/profile/kyc')}
+                                <RecentShoppingOrders userId={authUser?.id} limit={3} />
+                            </motion.div>
+
+                            {/* Quick Actions Grid */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.45 }}
+                                className="grid grid-cols-2 gap-3"
+                            >
+                                <button
+                                    onClick={() => router.push('/dashboard')}
+                                    className="flex flex-col items-center justify-center p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-all active:scale-95 group"
+                                >
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                        <LayoutDashboard size={18} />
+                                    </div>
+                                    <p className="font-semibold text-xs text-gray-900 dark:text-white text-center uppercase tracking-wider">Dashboard</p>
+                                </button>
+
+                                <button
+                                    onClick={() => router.push('/refer')}
+                                    className="flex flex-col items-center justify-center p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-all active:scale-95 group"
+                                >
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                        <Gift size={18} />
+                                    </div>
+                                    <p className="font-semibold text-xs text-gray-900 dark:text-white text-center uppercase tracking-wider">Referrals</p>
+                                </button>
+
+                                <button
+                                    onClick={() => router.push('/rewards')}
+                                    className="flex flex-col items-center justify-center p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-all active:scale-95 group"
+                                >
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3 bg-amber-500/10 text-amber-600 dark:text-amber-500">
+                                        <Trophy size={18} />
+                                    </div>
+                                    <p className="font-semibold text-xs text-gray-900 dark:text-white text-center uppercase tracking-wider">Rewards</p>
+                                </button>
+
+                                <button
+                                    onClick={() => router.push('/profile/whatsapp')}
+                                    className="flex flex-col items-center justify-center p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-all active:scale-95 group"
+                                >
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3 bg-green-500/10 text-green-600 dark:text-green-500">
+                                        <MessageCircle size={18} />
+                                    </div>
+                                    <p className="font-semibold text-xs text-gray-900 dark:text-white text-center uppercase tracking-wider">WhatsApp</p>
+                                </button>
+                            </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.5 }}
+                            >
+                                <AccountSummaryCard
+                                    purchaseCount={purchaseCount}
+                                    totalSavedPaise={totalSavedPaise}
+                                    graphData={graphData}
                                 />
                             </motion.div>
                         </div>

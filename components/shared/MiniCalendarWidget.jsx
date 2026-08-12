@@ -34,10 +34,11 @@ export default function MiniCalendarWidget({ events = [] }) {
             
             let dayEvents = events.filter(e => e.date === dateStr);
             const isPast = date < new Date(new Date().setHours(0,0,0,0));
-            const isSunday = date.getDay() === 0;
+            const dayOfWeek = date.getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sun=0, Sat=6 (org policy)
             
-            // Auto-Absent Engine for the mini widget
-            if (isPast && !isSunday && dayEvents.length === 0) {
+            // Auto-Absent Engine: Only fire on past weekdays (Mon–Fri) with no events
+            if (isPast && !isWeekend && dayEvents.length === 0) {
                 dayEvents = [{ date: dateStr, title: 'Absent', type: 'absent' }];
             }
 

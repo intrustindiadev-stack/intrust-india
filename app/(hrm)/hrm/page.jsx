@@ -27,32 +27,43 @@ import WelcomeRoleCelebrationModal from '@/components/shared/WelcomeRoleCelebrat
 
 function StatCard({ label, value, icon: Icon, color, subValue, trend, delay = 0 }) {
     const COLOR_VARIANTS = {
-        emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
-        blue: 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800',
-        amber: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
-        violet: 'bg-violet-50 text-violet-600 border-violet-100 dark:bg-violet-900/20 dark:text-violet-400 dark:border-violet-800',
+        emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50',
+        blue: 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50',
+        amber: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/50',
+        violet: 'bg-violet-50 text-violet-600 border-violet-100 dark:bg-violet-900/20 dark:text-violet-400 dark:border-violet-800/50',
+    };
+    
+    const GRADIENT_VARIANTS = {
+        emerald: 'to-emerald-500/5 dark:to-emerald-500/10',
+        blue: 'to-blue-500/5 dark:to-blue-500/10',
+        amber: 'to-amber-500/5 dark:to-amber-500/10',
+        violet: 'to-violet-500/5 dark:to-violet-500/10',
     };
 
     return (
         <motion.div
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
-            className="bg-white dark:bg-gray-800 rounded-[2rem] p-6 border-none shadow-xl shadow-gray-200/40 dark:shadow-black/20 hover:-translate-y-1 transition-all duration-300 group"
+            className="relative bg-white dark:bg-gray-800 rounded-[2rem] p-7 border border-gray-100 dark:border-gray-700/50 shadow-xl shadow-gray-200/40 dark:shadow-black/20 hover:-translate-y-1.5 transition-all duration-300 group overflow-hidden"
         >
-            <div className="flex items-start justify-between mb-4">
-                <div className={`p-4 rounded-[1rem] ${COLOR_VARIANTS[color]} shadow-inner group-hover:scale-110 transition-transform`}>
-                    <Icon size={24} />
+            <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-transparent ${GRADIENT_VARIANTS[color]} rounded-bl-full pointer-events-none transition-opacity opacity-50 group-hover:opacity-100`} />
+            
+            <div className="relative z-10 flex items-start justify-between mb-6">
+                <div className={`p-4 rounded-2xl ${COLOR_VARIANTS[color]} shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
+                    <Icon size={24} strokeWidth={2.5} />
                 </div>
                 {trend && (
-                    <span className="flex items-center gap-1 text-[10px] font-black text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full uppercase tracking-tighter">
-                        <TrendingUp size={10} /> {trend}
+                    <span className={`flex items-center gap-1 text-[10px] font-black ${color === 'amber' ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/30' : 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30'} px-2.5 py-1.5 rounded-full uppercase tracking-tighter shadow-sm`}>
+                        <TrendingUp size={12} strokeWidth={3} /> {trend}
                     </span>
                 )}
             </div>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{label}</p>
-            <div className="flex items-end justify-between">
-                <div>
-                    <p className="text-4xl font-black text-gray-900 dark:text-white tracking-tight drop-shadow-sm">{value}</p>
-                    <p className="text-[10px] font-bold text-gray-400 mt-1">{subValue}</p>
+            <div className="relative z-10">
+                <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">{label}</p>
+                <div className="flex items-end justify-between">
+                    <div>
+                        <p className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tighter drop-shadow-sm">{value}</p>
+                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-2 uppercase tracking-wider">{subValue}</p>
+                    </div>
                 </div>
             </div>
         </motion.div>
@@ -148,56 +159,46 @@ export default function HRMDashboard() {
                 {/* Header Graphic Banner */}
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} 
-                    className="relative w-full rounded-[2.5rem] bg-gradient-to-r from-emerald-500 via-teal-600 to-emerald-800 p-8 sm:p-12 overflow-hidden shadow-2xl shadow-emerald-600/30 text-white flex flex-col md:flex-row justify-between items-center gap-8"
+                    className="relative w-full rounded-[2.5rem] bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 p-6 sm:px-10 sm:py-8 overflow-hidden shadow-2xl shadow-emerald-900/30 text-white flex flex-col md:flex-row justify-between items-center gap-6 border border-emerald-800/50"
                 >
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
-                    <div className="absolute bottom-0 left-1/2 w-64 h-64 bg-teal-400/30 rounded-full blur-3xl transform -translate-x-1/2 pointer-events-none" />
-                    <Image src="/images/hrm_dashboard_banner.png" alt="HRM Dashboard Banner" fill className="object-cover opacity-40 mix-blend-overlay pointer-events-none" />
-
-                    <div className="relative z-10 flex flex-col gap-4 max-w-2xl">
-                        <div className="flex items-center gap-3 mb-1">
-                            <span className="bg-white/10 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-white/20 backdrop-blur-md shadow-lg">
-                                <Zap size={14} fill="currentColor" /> HR Hub
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+                    <div className="absolute bottom-0 left-1/2 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl transform -translate-x-1/2 pointer-events-none" />
+                    
+                    <div className="relative z-10 flex flex-col gap-5 max-w-xl w-full md:w-1/2">
+                        <div className="flex items-center gap-3 mb-2">
+                            <span className="bg-white/10 text-emerald-100 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-white/10 backdrop-blur-md shadow-lg">
+                                <Building size={14} fill="currentColor" className="text-emerald-400" /> People Operations
                             </span>
-                            <span className="text-[10px] font-bold text-emerald-50 uppercase tracking-widest bg-black/20 px-3 py-1.5 rounded-full backdrop-blur-sm hidden sm:block">
-                                {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                            <span className="text-[10px] font-bold text-emerald-200/60 uppercase tracking-widest hidden sm:block">
+                                Command Center
                             </span>
                         </div>
-                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight drop-shadow-md">
-                            Personnel Command
+                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] text-transparent bg-clip-text bg-gradient-to-r from-white to-emerald-100 drop-shadow-sm">
+                            Your Workforce,<br/>In Focus.
                         </h1>
-                        <p className="text-sm font-medium text-emerald-50 mt-2 max-w-xl opacity-90 leading-relaxed">
-                            Manage your workforce, track attendance, and oversee recruitment pipelines all from one powerful interface.
+                        <p className="text-sm font-medium text-emerald-200/80 mt-2 max-w-lg leading-relaxed">
+                            Oversee your entire organization, streamline human resources, and manage performance seamlessly through a unified command dashboard.
                         </p>
                         
-                        <div className="mt-4 flex flex-wrap items-center gap-3">
-                            <Link href="/hrm/recruitment" className="inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-emerald-600 px-8 py-4 rounded-[1.25rem] font-black text-sm shadow-xl shadow-black/10 transition-all hover:-translate-y-1 hover:shadow-2xl">
-                                <UserPlus size={18} strokeWidth={3} /> New Hire
+                        <div className="mt-4 flex flex-wrap items-center gap-4">
+                            <Link href="/hrm/employees" className="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-8 py-4 rounded-[1.25rem] font-black text-sm shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-1 hover:shadow-xl">
+                                <UserPlus size={18} strokeWidth={3} /> Add Employee
+                            </Link>
+                            <Link href="/hrm/recruitment" className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white border border-white/10 px-8 py-4 rounded-[1.25rem] font-black text-sm transition-all hover:-translate-y-1 backdrop-blur-md">
+                                Recruitment <ArrowRight size={16} />
                             </Link>
                         </div>
                     </div>
-                </motion.div>
-
-                {/* ⚡ Quick Actions */}
-                <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-sm font-black text-gray-500 uppercase tracking-widest">Quick Actions</h2>
-                    </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                        {QUICK_ACTIONS.map((action) => {
-                            const Icon = action.icon;
-                            return (
-                                <Link key={action.href} href={action.href} className="group flex flex-col items-center gap-2.5 p-4 bg-white rounded-2xl border border-gray-100 hover:border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 text-center">
-                                    <div className={`w-11 h-11 rounded-xl ${action.color} flex items-center justify-center shadow-lg ${action.shadow} group-hover:scale-110 transition-transform duration-200`}>
-                                        <Icon size={20} className="text-white" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-black text-gray-800">{action.label}</p>
-                                        <p className="text-[10px] text-gray-400 font-medium mt-0.5">{action.desc}</p>
-                                    </div>
-                                </Link>
-                            );
-                        })}
+                    
+                    <div className="relative z-10 w-full md:w-1/2 flex justify-center md:justify-end items-center pointer-events-none mt-6 md:mt-0">
+                        <motion.div 
+                            animate={{ y: [0, -8, 0] }}
+                            transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
+                            className="relative w-full max-w-[380px] aspect-[4/3] scale-110 sm:scale-125"
+                            style={{ WebkitMaskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 75%)', maskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 75%)' }}
+                        >
+                            <Image src="/images/hrm_hero_visual.png" alt="HRM Dashboard Visual" fill className="object-cover drop-shadow-2xl opacity-95" priority />
+                        </motion.div>
                     </div>
                 </motion.div>
 
@@ -215,16 +216,42 @@ export default function HRMDashboard() {
                 )}
             </div>
 
+                {/* ⚡ Quick Actions */}
+                <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-sm font-black text-gray-500 uppercase tracking-widest">Quick Actions</h2>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                        {QUICK_ACTIONS.map((action) => {
+                            const Icon = action.icon;
+                            return (
+                                <Link key={action.href} href={action.href} className="group flex flex-col items-center gap-3 p-5 bg-white dark:bg-gray-800 rounded-[2rem] border border-gray-100 dark:border-gray-700/50 hover:border-emerald-200 dark:hover:border-emerald-800/50 shadow-sm hover:shadow-xl hover:shadow-emerald-900/5 transition-all duration-300 hover:-translate-y-1 text-center relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-transparent dark:from-gray-700/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className={`relative z-10 w-12 h-12 rounded-2xl ${action.color} flex items-center justify-center shadow-lg ${action.shadow} group-hover:scale-110 transition-transform duration-300`}>
+                                        <Icon size={20} className="text-white" />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <p className="text-xs font-black text-gray-900 dark:text-white">{action.label}</p>
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-1 uppercase tracking-wider">{action.desc}</p>
+                                    </div>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </motion.div>
+
+
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Pending Actions */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border-none shadow-xl shadow-gray-200/40 dark:shadow-black/20 overflow-hidden">
+                    <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700/50 shadow-xl shadow-gray-200/40 dark:shadow-black/20 overflow-hidden">
                         <div className="p-8 pb-4 flex items-center justify-between">
                             <div>
                                 <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Leave Approvals</h3>
                                 <p className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest">Pending Requests</p>
                             </div>
-                            <Link href="/hrm/leaves" className="text-xs font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1 group bg-emerald-50 px-4 py-2 rounded-xl">
+                            <Link href="/hrm/leaves" className="text-xs font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1 group bg-emerald-50 dark:bg-emerald-900/30 px-4 py-2 rounded-xl transition-colors">
                                 View Full Queue <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                             </Link>
                         </div>
@@ -247,8 +274,8 @@ export default function HRMDashboard() {
                                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{leave.leave_type} · {new Date(leave.from_date).toLocaleDateString()}</p>
                                             </div>
                                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => handleLeaveAction(leave.id, 'approved')} className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-600 font-black text-[10px] uppercase hover:bg-emerald-600 hover:text-white transition-all">Approve</button>
-                                                <button onClick={() => handleLeaveAction(leave.id, 'rejected')} className="px-4 py-2 rounded-xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase hover:bg-rose-600 hover:text-white transition-all">Reject</button>
+                                                <button onClick={() => handleLeaveAction(leave.id, 'approved')} className="px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-black text-[10px] uppercase hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 transition-all shadow-sm">Approve</button>
+                                                <button onClick={() => handleLeaveAction(leave.id, 'rejected')} className="px-4 py-2 rounded-xl bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 font-black text-[10px] uppercase hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 transition-all shadow-sm">Reject</button>
                                             </div>
                                         </div>
                                     ))}
@@ -288,27 +315,27 @@ export default function HRMDashboard() {
                 </div>
 
                 {/* Live Operations Feed */}
-                <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border-none shadow-xl shadow-gray-200/40 dark:shadow-black/20 p-8 space-y-8">
+                <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700/50 shadow-xl shadow-gray-200/40 dark:shadow-black/20 p-8 space-y-8 flex flex-col justify-between">
                     <div>
                         <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Live Ops</h3>
                         <p className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest">Real-time Activity</p>
                     </div>
 
-                    <div className="space-y-8 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-gray-100 dark:before:bg-gray-700">
+                    <div className="space-y-8 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-gray-100 dark:before:bg-gray-700 flex-1">
                         {isLoading ? (
                             [...Array(4)].map((_, i) => <div key={i} className="relative pl-10 space-y-2"><div className="absolute left-0 top-1.5 w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-700" /><Skeleton className="h-4 w-1/2" /><Skeleton className="h-3 w-1/3" /></div>)
                         ) : recentApps.length > 0 ? (
                             recentApps.map((app, i) => (
-                                <div key={app.id} className="relative pl-10">
-                                    <div className={`absolute left-0 top-1.5 w-5 h-5 rounded-full border-4 border-white dark:border-gray-800 shadow-sm ${app.status === 'pending' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                                <div key={app.id} className="relative pl-10 group">
+                                    <div className={`absolute left-0 top-1.5 w-5 h-5 rounded-full border-4 border-white dark:border-gray-800 shadow-sm group-hover:scale-125 transition-transform ${app.status === 'pending' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                                     <div className="space-y-1">
                                         <p className="text-sm font-black text-gray-900 dark:text-white">{app.full_name}</p>
-                                        <p className="text-xs font-bold text-gray-400">Applied for {app.role_category}</p>
+                                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400">Applied for {app.role_category}</p>
                                         <div className="flex items-center gap-2 mt-2">
-                                            <span className="text-[10px] font-black bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded text-gray-500 uppercase tracking-widest">
+                                            <span className="text-[10px] font-black bg-gray-50 dark:bg-gray-700 px-2.5 py-1 rounded-md text-gray-600 dark:text-gray-300 uppercase tracking-widest border border-gray-100 dark:border-gray-600 shadow-sm">
                                                 {app.status}
                                             </span>
-                                            <span className="text-[10px] font-bold text-gray-300">
+                                            <span className="text-[10px] font-bold text-gray-400">
                                                 {new Date(app.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
@@ -320,7 +347,7 @@ export default function HRMDashboard() {
                         )}
                     </div>
 
-                    <Link href="/hrm/audit" className="block w-full py-4 text-center rounded-2xl bg-gray-50 dark:bg-gray-900 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all uppercase tracking-widest">
+                    <Link href="/hrm/audit" className="block w-full py-4 text-center rounded-2xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 text-xs font-black text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all uppercase tracking-widest hover:shadow-sm">
                         Full Audit Logs
                     </Link>
                 </div>

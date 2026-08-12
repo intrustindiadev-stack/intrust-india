@@ -13,34 +13,50 @@ export default function EmployeeCalendarPage() {
 
     const fetchCalendarData = useCallback(async () => {
         if (!user) return;
+        setIsLoading(true);
         try {
-            // Fetch attendance for current user
+            // Date range: 1 month before → 2 months ahead (3-month window)
+            const now = new Date();
+            const rangeStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+            const rangeEnd = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString().split('T')[0];
+
+            // Own attendance — use work_date (canonical IST date), bounded to 3-month window
             const { data: attendanceData } = await supabase
                 .from('attendance')
-                .select('date, status')
-                .eq('employee_id', user.id);
-            
-            // Fetch holidays
+                .select('work_date, date, status, check_in, check_out')
+                .eq('employee_id', user.id)
+                .gte('work_date', rangeStart)
+                .lte('work_date', rangeEnd);
+
+            // Org-wide holidays (date-bounded)
             const { data: holidaysData } = await supabase
                 .from('holidays')
-                .select('holiday_date, name');
+                .select('holiday_date, name')
+                .gte('holiday_date', rangeStart)
+                .lte('holiday_date', rangeEnd);
 
-            // Fetch approved leaves
+            // Own approved leaves (date-bounded)
             const { data: leavesData } = await supabase
                 .from('leave_requests')
                 .select('from_date, to_date, leave_type')
                 .eq('employee_id', user.id)
-                .eq('status', 'approved');
+                .eq('status', 'approved')
+                .gte('from_date', rangeStart)
+                .lte('to_date', rangeEnd);
 
             const calendarEvents = [];
 
             if (attendanceData) {
                 attendanceData.forEach(record => {
                     if (record.status) {
+                        // Use work_date (IST canonical date) falling back to date
+                        const dateStr = record.work_date || record.date;
                         calendarEvents.push({
-                            date: record.date,
+                            date: dateStr,
                             type: record.status.toLowerCase() === 'present' ? 'present' : 'absent',
-                            title: record.status
+                            title: record.status,
+                            check_in: record.check_in,
+                            check_out: record.check_out,
                         });
                     }
                 });
@@ -60,11 +76,12 @@ export default function EmployeeCalendarPage() {
                 leavesData.forEach(l => {
                     const start = new Date(l.from_date);
                     const end = new Date(l.to_date);
-                    for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
+                    // Use new Date(start) to avoid mutating the iterator variable
+                    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
                         calendarEvents.push({
                             date: d.toISOString().split('T')[0],
                             type: 'leave',
-                            title: l.leave_type || 'Leave'
+                            title: l.leave_type?.replace(/_/g, ' ') || 'Leave'
                         });
                     }
                 });
@@ -72,7 +89,7 @@ export default function EmployeeCalendarPage() {
 
             setEvents(calendarEvents);
         } catch (err) {
-            console.error('Calendar fetch error:', err);
+            console.error('[Employee Calendar] fetch error:', err);
         } finally {
             setIsLoading(false);
         }
