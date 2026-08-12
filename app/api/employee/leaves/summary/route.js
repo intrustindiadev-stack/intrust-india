@@ -104,14 +104,16 @@ export async function GET(request) {
       }
     });
 
-    // 4. Fetch upcoming holidays
-    const todayStr = new Date().toISOString().split('T')[0];
+    // 4. Fetch all holidays for the entire policy year (not just next 10).
+    // This ensures the frontend preview doesn't miss late-year holidays.
+    const yearStart = `${policyYear}-01-01`;
+    const yearEnd = `${policyYear}-12-31`;
     const { data: holidays } = await admin
       .from('holidays')
       .select('*')
-      .gte('holiday_date', todayStr)
-      .order('holiday_date', { ascending: true })
-      .limit(10);
+      .gte('holiday_date', yearStart)
+      .lte('holiday_date', yearEnd)
+      .order('holiday_date', { ascending: true });
 
     const response = NextResponse.json({
       success: true,

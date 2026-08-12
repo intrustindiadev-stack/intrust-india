@@ -256,7 +256,7 @@ export default function EmployeeAttendancePage() {
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <MetricCard label="Attendance Rate" value={`${metrics?.attendanceRatePct || 100}%`} accentColor="emerald" />
+        <MetricCard label="Attendance Rate" value={`${metrics?.attendanceRatePct ?? 0}%`} subtext={metrics ? `${metrics.presentDays}/${metrics.expectedWorkingDays} working days` : ''} accentColor="emerald" />
         <MetricCard label="Present Days" value={metrics?.presentDays || 0} accentColor="blue" />
         <MetricCard label="Late Arrivals" value={metrics?.lateDays || 0} accentColor="amber" />
         <MetricCard label="Total Logged" value={metrics?.totalRecords || 0} accentColor="indigo" />

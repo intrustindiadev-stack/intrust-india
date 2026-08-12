@@ -16,23 +16,71 @@ export interface AttendanceMetrics {
   lateDays: number;
   absentDays: number;
   attendanceRatePct: number;
+  expectedWorkingDays: number; // added
 }
 
-export function computeAttendanceMetrics(records: AttendanceRecord[]): AttendanceMetrics {
+export function computeAttendanceMetrics(
+  records: AttendanceRecord[],
+  windowStartStr?: string,
+  windowEndStr?: string,
+  joiningDateStr?: string,
+  weeklyOffs: number[] = [0, 6], // Sunday=0, Saturday=6
+  holidays: string[] = [], // YYYY-MM-DD
+  leaveDates: string[] = [] // YYYY-MM-DD
+): AttendanceMetrics {
   const totalRecords = records.length;
   const presentDays = records.filter(r => r.status === 'present' || r.status === 'wfh').length;
   const lateDays = records.filter(r => r.status === 'late').length;
   const absentDays = records.filter(r => r.status === 'absent').length;
   
   const effectivePresent = presentDays + lateDays + records.filter(r => r.status === 'half_day').length * 0.5;
-  const attendanceRatePct = totalRecords > 0 ? Math.round((effectivePresent / totalRecords) * 100) : 100;
+  
+  let expectedWorkingDays = 0;
+
+  if (windowStartStr && windowEndStr) {
+    const start = new Date(windowStartStr);
+    const end = new Date(windowEndStr);
+    const joinDate = joiningDateStr ? new Date(joiningDateStr) : new Date('2000-01-01');
+
+    // Calculate actual bounds
+    const actualStart = start < joinDate ? joinDate : start;
+    const actualEnd = end > new Date() ? new Date() : end; // don't count future days
+
+    // Normalize actualEnd to midnight for easy comparison if they are same day
+    actualStart.setHours(0,0,0,0);
+    actualEnd.setHours(0,0,0,0);
+
+    const holidaySet = new Set(holidays);
+    const leaveSet = new Set(leaveDates);
+
+    let currentDate = new Date(actualStart);
+    while (currentDate <= actualEnd) {
+      const dayOfWeek = currentDate.getDay();
+      const dateStr = currentDate.toISOString().split('T')[0];
+      
+      const isWeekend = weeklyOffs.includes(dayOfWeek);
+      const isHoliday = holidaySet.has(dateStr);
+      const isLeave = leaveSet.has(dateStr);
+
+      if (!isWeekend && !isHoliday && !isLeave) {
+        expectedWorkingDays++;
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+  } else {
+    expectedWorkingDays = totalRecords;
+  }
+
+  const attendanceRatePct = expectedWorkingDays > 0 ? Math.round((effectivePresent / expectedWorkingDays) * 100) : (totalRecords > 0 ? 100 : 0);
 
   return {
     totalRecords,
     presentDays: presentDays + lateDays,
     lateDays,
     absentDays,
-    attendanceRatePct
+    attendanceRatePct,
+    expectedWorkingDays
   };
 }
 

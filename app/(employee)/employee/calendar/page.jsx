@@ -10,17 +10,18 @@ export default function EmployeeCalendarPage() {
     const { user } = useAuth();
     const [events, setEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [currentDate, setCurrentDate] = useState(new Date());
 
     const fetchCalendarData = useCallback(async () => {
         if (!user) return;
         setIsLoading(true);
         try {
-            // Date range: 1 month before → 2 months ahead (3-month window)
-            const now = new Date();
-            const rangeStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
-            const rangeEnd = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString().split('T')[0];
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            const rangeStart = new Date(year, month - 1, 1).toISOString().split('T')[0];
+            const rangeEnd = new Date(year, month + 2, 0).toISOString().split('T')[0];
 
-            // Own attendance — use work_date (canonical IST date), bounded to 3-month window
             const { data: attendanceData } = await supabase
                 .from('attendance')
                 .select('work_date, date, status, check_in, check_out')
@@ -28,14 +29,12 @@ export default function EmployeeCalendarPage() {
                 .gte('work_date', rangeStart)
                 .lte('work_date', rangeEnd);
 
-            // Org-wide holidays (date-bounded)
             const { data: holidaysData } = await supabase
                 .from('holidays')
                 .select('holiday_date, name')
                 .gte('holiday_date', rangeStart)
                 .lte('holiday_date', rangeEnd);
 
-            // Own approved leaves (date-bounded)
             const { data: leavesData } = await supabase
                 .from('leave_requests')
                 .select('from_date, to_date, leave_type')
@@ -44,12 +43,13 @@ export default function EmployeeCalendarPage() {
                 .gte('from_date', rangeStart)
                 .lte('to_date', rangeEnd);
 
-            // Real Salary Data
             const { data: salaryData } = await supabase
                 .from('salary_records')
-                .select('year, month, status, net_salary')
+                .select('id, year, month, status, net_salary, processed_at')
                 .eq('employee_id', user.id)
-                .eq('status', 'processed');
+                .eq('status', 'processed')
+                .gte('processed_at', rangeStart)
+                .lte('processed_at', rangeEnd);
 
             const calendarEvents = [];
 
@@ -94,13 +94,12 @@ export default function EmployeeCalendarPage() {
 
             if (salaryData) {
                 salaryData.forEach(sal => {
-                    const salDate = new Date(sal.year, sal.month - 1, 1);
-                    // Add it as an event on the 1st of the month
+                    if (!sal.processed_at) return;
                     calendarEvents.push({
-                        date: salDate.toISOString().split('T')[0],
-                        type: 'salary',
-                        title: 'Salary Credited',
-                        description: `Net Pay: ₹${(sal.net_salary || 0).toLocaleString('en-IN')}`
+                        date: sal.processed_at.split('T')[0],
+                        type: 'payslip',
+                        title: 'Payslip Processed',
+                        metadata: { id: sal.id, month: sal.month, year: sal.year, status: sal.status }
                     });
                 });
             }
@@ -111,7 +110,7 @@ export default function EmployeeCalendarPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [user]);
+    }, [user, currentDate]);
 
     useEffect(() => {
         fetchCalendarData();
@@ -142,7 +141,11 @@ export default function EmployeeCalendarPage() {
                     </div>
                 ) : (
                     <div className="flex-1 overflow-hidden bg-transparent rounded-[2.5rem]">
-                        <CalendarWidget events={events} />
+                        <CalendarWidget 
+                            events={events} 
+                            currentDate={currentDate} 
+                            onDateChange={setCurrentDate} 
+                        />
                     </div>
                 )}
             </motion.div>

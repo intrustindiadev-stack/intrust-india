@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, X, Briefcase, Banknote, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Briefcase, Banknote, CheckCircle, Clock, XCircle, Receipt } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 // Helper to get days in month
 function getDaysInMonth(year, month) {
@@ -22,12 +23,23 @@ const EVENT_COLORS = {
     leave: 'bg-sky-500',
     holiday: 'bg-indigo-500',
     salary: 'bg-teal-500',
+    payslip: 'bg-green-700',
     default: 'bg-slate-400',
 };
 
-export default function CalendarWidget({ events = [], onDateClick }) {
-    const [currentDate, setCurrentDate] = useState(new Date());
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+export default function CalendarWidget({ events = [], onDateClick, currentDate: externalDate, onDateChange }) {
+    const [internalDate, setInternalDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(null);
+
+    // Use externally-controlled date if provided (enables parent to re-fetch on month change),
+    // otherwise fall back to internal state for standalone usage.
+    const currentDate = externalDate ?? internalDate;
+    const setCurrentDate = (date) => {
+        if (onDateChange) onDateChange(date);
+        else setInternalDate(date);
+    };
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -133,7 +145,7 @@ export default function CalendarWidget({ events = [], onDateClick }) {
                                     {cell.events.slice(0, 3).map((evt, idx) => (
                                         <div 
                                             key={idx} 
-                                            className={`w-1.5 h-1.5 rounded-full ${EVENT_COLORS[evt.type] || EVENT_COLORS.default}`}
+                                            className={`w-1.5 h-1.5 rounded-full ${EVENT_COLORS[evt.type] || EVENT_COLORS.default} ${evt.type === 'payslip' ? 'animate-pulse shadow-[0_0_6px_rgba(21,128,61,0.8)] ring-[0.5px] ring-green-400' : ''}`}
                                         />
                                     ))}
                                 </div>
@@ -191,8 +203,8 @@ export default function CalendarWidget({ events = [], onDateClick }) {
                                         let EventIcon = CheckCircle;
                                         let badgeColor = 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300';
                                         
-                                        if (evt.type === 'salary') {
-                                            EventIcon = Banknote;
+                                        if (evt.type === 'salary' || evt.type === 'payslip') {
+                                            EventIcon = evt.type === 'payslip' ? Receipt : Banknote;
                                             badgeColor = 'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300';
                                         } else if (evt.type === 'leave') {
                                             EventIcon = Briefcase;
@@ -217,8 +229,26 @@ export default function CalendarWidget({ events = [], onDateClick }) {
                                                             {evt.type}
                                                         </span>
                                                     </div>
-                                                    
-                                                    {(evt.check_in || evt.check_out) ? (
+
+                                                    {/* Payslip-specific detail */}
+                                                    {evt.type === 'payslip' && evt.metadata ? (
+                                                        <div className="mt-2 space-y-2">
+                                                            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                                                                {MONTHS[(evt.metadata.month ?? 1) - 1]} {evt.metadata.year} Salary
+                                                            </p>
+                                                            <p className="text-xs text-slate-400 dark:text-slate-500">
+                                                                Status: <span className="capitalize font-semibold text-teal-600 dark:text-teal-400">{evt.metadata.status || 'Processed'}</span>
+                                                            </p>
+                                                            <Link
+                                                                href="/employee/payslips"
+                                                                onClick={() => setSelectedDate(null)}
+                                                                className="inline-flex items-center gap-1.5 mt-1 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 px-3 py-1.5 rounded-lg transition-colors"
+                                                            >
+                                                                <Receipt size={13} />
+                                                                View Payslip
+                                                            </Link>
+                                                        </div>
+                                                    ) : (evt.check_in || evt.check_out) ? (
                                                         <div className="flex items-center gap-4 mt-3">
                                                             {evt.check_in && (
                                                                 <div className="flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 px-3 py-1.5 rounded-xl">

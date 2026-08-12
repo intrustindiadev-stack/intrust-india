@@ -31,8 +31,26 @@ export default function LeaveRequestForm({
   let warnings = [];
 
   if (form.from_date && form.to_date && form.to_date >= form.from_date) {
-    const start = new Date(form.from_date);
-    const end = new Date(form.to_date);
+    // Use pure date-string arithmetic to avoid JS Date timezone bugs.
+    // Parsing 'YYYY-MM-DD' as local date via string split avoids UTC midnight drift.
+    const parseLocalDate = (s) => {
+      const [y, m, d] = s.split('-').map(Number);
+      return new Date(y, m - 1, d); // local midnight, no UTC conversion
+    };
+    const addDays = (d, n) => {
+      const r = new Date(d);
+      r.setDate(r.getDate() + n);
+      return r;
+    };
+    const toDateStr = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    const start = parseLocalDate(form.from_date);
+    const end = parseLocalDate(form.to_date);
 
     let calDays = 0;
     let weekendDays = 0;
@@ -40,22 +58,23 @@ export default function LeaveRequestForm({
     let chargeableDays = 0;
     const holidayNames = [];
 
-    const curr = new Date(start);
+    let curr = new Date(start);
     while (curr <= end) {
       calDays++;
-      const dateStr = curr.toISOString().split('T')[0];
-      const dow = curr.getDay(); // 0=Sun, 6=Sat
+      const dateStr = toDateStr(curr);
+      const dow = curr.getDay(); // 0=Sun, 6=Sat (local day, no UTC drift)
 
-      const matchedHol = holidays.find(h => h.holiday_date === dateStr);
+      const matchedHol = holidays.find(h => h.holiday_date === dateStr && !h.is_optional);
       if (matchedHol) {
         holidayDays++;
         holidayNames.push({ date: dateStr, name: matchedHol.name });
       } else if (dow === 0 || dow === 6) {
+        // Weekend (Sun=0, Sat=6) — matches organization_policy.weekend_days={0,6}
         weekendDays++;
       } else {
         chargeableDays++;
       }
-      curr.setDate(curr.getDate() + 1);
+      curr = addDays(curr, 1);
     }
 
     breakdown = {
@@ -67,9 +86,9 @@ export default function LeaveRequestForm({
       weekends: []
     };
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const daysNotice = Math.ceil((start.getTime() - today.getTime()) / (1000 * 3600 * 24));
+    // Compute notice days using local dates
+    const today = parseLocalDate(toDateStr(new Date()));
+    const daysNotice = Math.round((start.getTime() - today.getTime()) / (1000 * 3600 * 24));
 
     if (selectedPolicy) {
       if (selectedPolicy.min_notice_days > 0 && daysNotice < selectedPolicy.min_notice_days) {
@@ -78,9 +97,10 @@ export default function LeaveRequestForm({
       if (selectedPolicy.max_consecutive_days && calDays > selectedPolicy.max_consecutive_days) {
         warnings.push(`Exceeds maximum consecutive limit of ${selectedPolicy.max_consecutive_days} days.`);
       }
-      if (selectedPolicy.requires_balance && currentBalance) {
+      // Only warn about balance for balance-based leave types
+      if (selectedPolicy.requires_balance && currentBalance && !selectedPolicy.allow_negative_balance) {
         const avail = Number(currentBalance.available_days) || 0;
-        if (chargeableDays > avail && !selectedPolicy.allow_negative_balance) {
+        if (chargeableDays > avail) {
           warnings.push(`Insufficient balance. Available: ${avail} day(s), Requested: ${chargeableDays} day(s).`);
         }
       }
@@ -115,11 +135,24 @@ export default function LeaveRequestForm({
           className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none"
         >
           {activePolicies.length > 0 ? (
-            activePolicies.map(pol => (
-              <option key={pol.id} value={pol.leave_type_key}>
-                {pol.display_name} {balances[pol.leave_type_key] ? `(${balances[pol.leave_type_key].available_days} available)` : ''}
-              </option>
-            ))
+            activePolicies.map(pol => {
+              const bal = balances[pol.leave_type_key];
+              // Only show balance count for balance-based leave types.
+              // Non-balance types (Unpaid, Maternity, Paternity) are not balance-limited.
+              let balanceLabel = '';
+              if (!pol.requires_balance) {
+                balanceLabel = ''; // No balance display for unlimited/policy-controlled types
+              } else if (bal && !bal.is_unallocated) {
+                balanceLabel = ` (${bal.available_days} available)`;
+              } else if (bal && bal.is_unallocated) {
+                balanceLabel = ' (not yet allocated)';
+              }
+              return (
+                <option key={pol.id} value={pol.leave_type_key}>
+                  {pol.display_name}{balanceLabel}
+                </option>
+              );
+            })
           ) : (
             <option value="casual">Casual Leave</option>
           )}
@@ -128,6 +161,9 @@ export default function LeaveRequestForm({
         {selectedPolicy && (
           <p className="text-[11px] text-slate-500 mt-1">
             {selectedPolicy.description || (selectedPolicy.is_paid ? 'Paid time off entitlement' : 'Unpaid leave')}
+            {!selectedPolicy.requires_balance && (
+              <span className="ml-1 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded text-[10px] font-semibold">Unlimited / No cap</span>
+            )}
             {selectedPolicy.min_notice_days > 0 && ` · ${selectedPolicy.min_notice_days}d advance notice`}
             {selectedPolicy.max_consecutive_days && ` · Max ${selectedPolicy.max_consecutive_days} consecutive days`}
           </p>

@@ -24,12 +24,24 @@ export async function GET(request) {
       .maybeSingle();
 
     const timezone = policy?.timezone || 'Asia/Kolkata';
+    const weeklyOffs = policy?.weekly_offs || [0, 6];
+
+    // Fetch employee profile to get joining date and actual employee ID
+    const { data: empProfile } = await admin
+      .from('employee_profiles')
+      .select('id, joining_date')
+      .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+      .limit(1)
+      .maybeSingle();
+
+    const employeeId = empProfile?.id || user.id;
+    const joiningDate = empProfile?.joining_date || '2000-01-01';
 
     // Fetch open shift across all dates
     const { data: openShift } = await admin
       .from('attendance')
       .select('*')
-      .eq('employee_id', user.id)
+      .eq('employee_id', employeeId)
       .is('check_out', null)
       .limit(1)
       .maybeSingle();
@@ -38,12 +50,58 @@ export async function GET(request) {
     const { data: history, count } = await admin
       .from('attendance')
       .select('*', { count: 'exact' })
-      .eq('employee_id', user.id)
+      .eq('employee_id', employeeId)
       .order('work_date', { ascending: false })
       .range(offset, offset + limit - 1);
 
     const records = history || [];
-    const metrics = computeAttendanceMetrics(records);
+
+    // Calculate window based on today and 30 days ago
+    const endDateObj = new Date();
+    const startDateObj = new Date();
+    startDateObj.setDate(endDateObj.getDate() - 30);
+    const windowStartStr = startDateObj.toISOString().split('T')[0];
+    const windowEndStr = endDateObj.toISOString().split('T')[0];
+
+    // Fetch holidays in window
+    const { data: holidaysData } = await admin
+      .from('holidays')
+      .select('holiday_date')
+      .gte('holiday_date', windowStartStr)
+      .lte('holiday_date', windowEndStr);
+    const holidays = (holidaysData || []).map(h => h.holiday_date);
+
+    // Fetch approved leaves overlapping window
+    const { data: leavesData } = await admin
+      .from('leave_requests')
+      .select('start_date, end_date')
+      .eq('employee_id', employeeId)
+      .eq('status', 'approved')
+      .lte('start_date', windowEndStr)
+      .gte('end_date', windowStartStr);
+
+    const leaveDatesSet = new Set();
+    if (leavesData) {
+      leavesData.forEach(leave => {
+        let d = new Date(leave.start_date);
+        const e = new Date(leave.end_date);
+        while (d <= e) {
+           leaveDatesSet.add(d.toISOString().split('T')[0]);
+           d.setDate(d.getDate() + 1);
+        }
+      });
+    }
+    const leaveDates = Array.from(leaveDatesSet);
+
+    const metrics = computeAttendanceMetrics(
+      records,
+      windowStartStr,
+      windowEndStr,
+      joiningDate,
+      weeklyOffs,
+      holidays,
+      leaveDates
+    );
 
     const response = NextResponse.json({
       success: true,
