@@ -45,6 +45,7 @@ import {
     ChevronDown,
     Network,
     Target,
+    MessageSquare,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { displayEmail } from '@/lib/auth';
@@ -98,6 +99,7 @@ const navigationGroups = [
             { name: 'Career Applications', href: '/admin/careers', icon: Briefcase },
             { name: 'CRM Overview', href: '/admin/crm', icon: BarChart3 },
             { name: 'CRM Leads', href: '/admin/crm/leads', icon: Target },
+            { name: 'Communication Logs', href: '/admin/crm/communications', icon: MessageSquare },
             { name: 'Lead Distribution', href: '/admin/crm/distribution', icon: Network },
             { name: 'HRM Overview', href: '/admin/hrm', icon: UserCheck },
             { name: 'HRM Incentives', href: '/admin/hrm/incentives', icon: Gift },

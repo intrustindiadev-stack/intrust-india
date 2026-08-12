@@ -173,6 +173,29 @@ export async function POST(request) {
             variables
         };
 
+        // 4.5 Check WhatsApp Daily Limit
+        const todayStr = new Date().toISOString().split('T')[0];
+        const { data: usageCount, error: usageError } = await adminClient.rpc('increment_crm_whatsapp_usage', {
+            p_crm_user_id: agentId,
+            p_date: todayStr,
+            p_limit: 100
+        });
+
+        if (usageError) {
+            console.error('[send-template] Error checking WhatsApp limit:', usageError);
+            return NextResponse.json(
+                { error: { type: 'server_error', message: 'Failed to verify usage limit.' } },
+                { status: 500 }
+            );
+        }
+
+        if (usageCount === -1) {
+            return NextResponse.json(
+                { error: { type: 'limit_exceeded', message: 'Daily WhatsApp limit of 100 messages reached.' } },
+                { status: 429 }
+            );
+        }
+
         // 5. Call Omniflow Provider
         let sendResult = null;
         let providerMessageId = null;
@@ -221,7 +244,12 @@ export async function POST(request) {
                 error_code: errorCode,
                 error_message: errorMessage,
                 sent_at: sentAt,
-                failed_at: failedAt
+                failed_at: failedAt,
+                direction: 'outbound',
+                channel: 'whatsapp',
+                audience: 'customer',
+                user_id: agentId,
+                content_preview: templateName
             })
             .select('id')
             .single();

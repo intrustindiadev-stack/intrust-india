@@ -41,6 +41,9 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
 
     const supabase = createClient();
 
+    // Usage Limit State
+    const [usage, setUsage] = useState({ count: 0, limit: 100, loading: true });
+
     const fetchLeads = useCallback(async () => {
         setLoading(prev => ({ ...prev, leads: true }));
         try {
@@ -63,6 +66,27 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
             setLoading(prev => ({ ...prev, leads: false }));
         }
     }, [isManager, currentUserId, supabase]);
+
+    const fetchUsage = useCallback(async () => {
+        try {
+            const res = await fetch('/api/crm/whatsapp/usage');
+            if (res.ok) {
+                const data = await res.json();
+                setUsage({ count: data.usage || 0, limit: data.limit || 100, loading: false });
+            } else {
+                setUsage(prev => ({ ...prev, loading: false }));
+            }
+        } catch (err) {
+            console.error('Failed to fetch WhatsApp usage', err);
+            setUsage(prev => ({ ...prev, loading: false }));
+        }
+    }, []);
+
+    // Initial Fetch for Leads and Usage
+    useEffect(() => {
+        fetchLeads();
+        fetchUsage();
+    }, [fetchLeads, fetchUsage]);
 
     const fetchUsers = useCallback(async () => {
         setLoading(prev => ({ ...prev, users: true }));
@@ -105,11 +129,6 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
             setLoading(prev => ({ ...prev, templates: false }));
         }
     }, []);
-
-    // Initial Fetch for Leads
-    useEffect(() => {
-        fetchLeads();
-    }, [fetchLeads]);
 
     // Lazy load tabs
     useEffect(() => {
@@ -185,9 +204,18 @@ export default function ContactsClient({ currentUserId, currentUserRole }) {
                 {/* Hero Header */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
                     <div className="flex flex-col gap-2 flex-1">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 dark:bg-gray-800/60 text-indigo-700 dark:text-indigo-400 text-xs font-bold w-fit border border-white/50 dark:border-gray-700/50 backdrop-blur-md shadow-sm">
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
-                            CRM Contacts Hub
+                        <div className="flex items-center gap-3">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 dark:bg-gray-800/60 text-indigo-700 dark:text-indigo-400 text-xs font-bold w-fit border border-white/50 dark:border-gray-700/50 backdrop-blur-md shadow-sm">
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                                CRM Contacts Hub
+                            </div>
+                            
+                            {!usage.loading && (
+                                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-bold shadow-sm ${usage.count >= usage.limit ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+                                    <MessageSquare size={12} />
+                                    <span>WhatsApp Usage: {usage.count} / {usage.limit} today</span>
+                                </div>
+                            )}
                         </div>
                         <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">Ecosystem Directory</h1>
                         <p className="text-slate-500 dark:text-gray-400 font-medium text-lg max-w-xl">

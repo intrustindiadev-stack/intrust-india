@@ -52,11 +52,31 @@ function SendWhatsAppDrawerContent({
     // API send hook
     const { sendTemplate, resetState: resetApiState } = useSendWhatsAppTemplate();
 
-    // Fetch CRM contacts list
+    // Usage limit state
+    const [usage, setUsage] = useState({ count: 0, limit: 100, loading: false });
+
+    // Fetch CRM contacts list and usage limit
     useEffect(() => {
         if (!isOpen) return;
 
         let isMounted = true;
+        
+        async function fetchUsage() {
+            setUsage(prev => ({ ...prev, loading: true }));
+            try {
+                const res = await fetch('/api/crm/whatsapp/usage');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (isMounted) setUsage({ count: data.usage || 0, limit: data.limit || 100, loading: false });
+                } else {
+                    if (isMounted) setUsage(prev => ({ ...prev, loading: false }));
+                }
+            } catch (err) {
+                console.error('Failed to fetch WhatsApp usage', err);
+                if (isMounted) setUsage(prev => ({ ...prev, loading: false }));
+            }
+        }
+
         async function fetchContacts() {
             setLoadingContacts(true);
             try {
@@ -83,6 +103,8 @@ function SendWhatsAppDrawerContent({
                 if (isMounted) setLoadingContacts(false);
             }
         }
+        
+        fetchUsage();
         fetchContacts();
         return () => { isMounted = false; };
     }, [isOpen, currentUserRole, currentUserId]);
@@ -164,6 +186,12 @@ function SendWhatsAppDrawerContent({
             return false;
         }
 
+        const remainingLimit = usage.limit - usage.count;
+        if (effectiveRecipients.length > remainingLimit) {
+            toast.error(`Limit exceeded. You can only send ${remainingLimit} more messages today.`);
+            return false;
+        }
+
         if (selectedTemplate && Array.isArray(selectedTemplate.variables)) {
             selectedTemplate.variables.forEach((varObj) => {
                 if (varObj.required && (!variableValues[varObj.key] || !variableValues[varObj.key].trim())) {
@@ -223,6 +251,8 @@ function SendWhatsAppDrawerContent({
             const res = await sendTemplate(payload);
             if (res.success) {
                 successCount++;
+                // Optimistically update usage count
+                setUsage(prev => ({ ...prev, count: prev.count + 1 }));
             } else {
                 failedCount++;
             }
@@ -250,6 +280,8 @@ function SendWhatsAppDrawerContent({
     const hasHeader = !!(selectedTemplate?.header && (selectedTemplate.header.text || selectedTemplate.header.format !== 'TEXT'));
     const hasFooter = !!selectedTemplate?.footer;
     const hasButtons = Array.isArray(selectedTemplate?.buttons) && selectedTemplate.buttons.length > 0;
+    
+    const isLimitReached = usage.count >= usage.limit;
 
     return (
         <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60 backdrop-blur-sm transition-opacity">
@@ -276,9 +308,16 @@ function SendWhatsAppDrawerContent({
                                     </span>
                                 )}
                             </div>
-                            <p className="text-xs text-slate-500">
-                                Choose recipients and customize dynamic variables.
-                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <p className="text-xs text-slate-500">
+                                    Choose recipients and customize dynamic variables.
+                                </p>
+                                {!usage.loading && (
+                                    <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${isLimitReached ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>
+                                        {usage.count} / {usage.limit} Today
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
