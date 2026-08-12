@@ -50,7 +50,7 @@ export default async function SolarServicePage() {
                 <Navbar />
             </div>
 
-            <main className="relative z-10 pt-4">
+            <main className="relative z-10 pt-[104px]">
                 <SolarHero />
 
                 {/* Optional tracker logic based on user session */}

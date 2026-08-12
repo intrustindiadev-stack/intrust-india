@@ -44,12 +44,12 @@ export default function ProfileStats({ walletBalance, udhariBalance, rewardsBala
     return (
         <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden mb-8 w-full">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-white/5">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Account Summary</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Account Overview</h3>
             </div>
             
             <div className="p-6 md:p-8">
                 <div className="text-center mb-8 pb-8 border-b border-gray-200 dark:border-gray-800">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Financial Balance</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Value</p>
                     <h4 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
                         ₹{totalBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </h4>

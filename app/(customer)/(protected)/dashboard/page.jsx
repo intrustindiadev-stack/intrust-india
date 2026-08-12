@@ -23,7 +23,7 @@ import GoldBadge from '@/components/ui/GoldBadge';
 
 import { displayName } from '@/lib/auth';
 
-import RecentActivity from '@/components/customer/dashboard/RecentActivity';
+
 import FintechWalletCard from '@/components/customer/dashboard/FintechWalletCard';
 import FintechServiceGrid from '@/components/customer/dashboard/FintechServiceGrid';
 import FintechGrowthSection from '@/components/customer/dashboard/FintechGrowthSection';
@@ -34,6 +34,8 @@ import MerchantApplyPopup from '@/components/merchant/MerchantApplyPopup';
 import { useMerchantApplyPopup } from '@/hooks/useMerchantApplyPopup';
 
 const DisclaimerNote = dynamic(() => import('@/components/customer/dashboard/DisclaimerNote'), { ssr: false });
+const EcommerceHub = dynamic(() => import('@/components/customer/dashboard/EcommerceHub'), { ssr: false });
+const RecentActivity = dynamic(() => import('@/components/customer/dashboard/RecentActivity'), { ssr: false });
 
 const RecentShoppingOrders = dynamic(() => import('@/components/customer/RecentShoppingOrders'), {
     ssr: false,
@@ -46,7 +48,7 @@ const OnboardingModal = dynamic(() => import('@/components/customer/dashboard/On
 
 function DashboardSkeleton() {
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)] flex flex-col">
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B1014] font-[family-name:var(--font-outfit)] flex flex-col">
             <Navbar />
             <div className="pt-24 sm:pt-32 px-4 sm:px-6 flex-grow">
                 <div className="max-w-7xl mx-auto animate-pulse">
@@ -107,6 +109,8 @@ export default function CustomerDashboardPage() {
     }, [profile, user]);
 
     const [recentActivity, setRecentActivity] = useState([]);
+    const [topMerchants, setTopMerchants] = useState([]);
+    const [shoppingCategories, setShoppingCategories] = useState([]);
 
     const [showPackages, setShowPackages] = useState(false);
     const [timeLeft, setTimeLeft] = useState(null);
@@ -298,6 +302,8 @@ export default function CustomerDashboardPage() {
                 supabase.from('merchants').select('status, subscription_status').eq('user_id', user.id).maybeSingle(),
                 supabase.from('reward_points_balance').select('total_earned').eq('user_id', user.id).maybeSingle(),
                 supabase.from('platform_settings').select('value').eq('key', 'merchant_sub_price_1m').maybeSingle(),
+                supabase.from('merchants').select('id, slug, business_name, shopping_banner_url, is_open').eq('status', 'approved').eq('subscription_status', 'active').order('business_name', { ascending: true }).limit(6),
+                supabase.from('shopping_categories').select('*').order('name', { ascending: true }),
             ]);
 
             const results = await Promise.race([mainFetch, timeoutTx]);
@@ -311,6 +317,8 @@ export default function CustomerDashboardPage() {
             const merchantResult = results[5];
             const rewardsResult = results[6];
             const sub1mResult   = results[7];
+            const topMerchantsResult = results[8];
+            const categoriesResult = results[9];
 
             // 1. Process Profile
             let profile = null;
@@ -373,6 +381,14 @@ export default function CustomerDashboardPage() {
             processActivityFeed(coupons.slice(0, 5), walletTxs);
 
             const rewardPoints = rewardsResult.status === 'fulfilled' && rewardsResult.value.data ? rewardsResult.value.data.total_earned : 0;
+            
+            if (topMerchantsResult && topMerchantsResult.status === 'fulfilled' && topMerchantsResult.value.data) {
+                setTopMerchants(topMerchantsResult.value.data);
+            }
+
+            if (categoriesResult && categoriesResult.status === 'fulfilled' && categoriesResult.value.data) {
+                setShoppingCategories(categoriesResult.value.data);
+            }
 
             setUserData({
                 name: displayName(profile, user),
@@ -501,14 +517,29 @@ export default function CustomerDashboardPage() {
                     </motion.div>
 
                     <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8 mb-12">
-                        <FintechWalletCard userData={userData} />
-                        <FintechServiceGrid />
-                        <FintechGrowthSection userData={userData} />
-                        <PromoBanners />
+                        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
+                            <FintechWalletCard userData={userData} />
+                        </motion.div>
+                        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
+                            <FintechServiceGrid />
+                        </motion.div>
+                        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
+                            <EcommerceHub merchants={topMerchants} categories={shoppingCategories} />
+                        </motion.div>
+                        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
+                            <FintechGrowthSection userData={userData} />
+                        </motion.div>
+                        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
+                            <PromoBanners />
+                        </motion.div>
                         
                         <div className="space-y-6 pt-4">
-                            <RecentShoppingOrders userId={user?.id} />
-                            <RecentActivity orders={recentActivity} />
+                            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
+                                <RecentShoppingOrders userId={user?.id} />
+                            </motion.div>
+                            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
+                                <RecentActivity orders={recentActivity} />
+                            </motion.div>
                         </div>
                     </div>
                 </div>

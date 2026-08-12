@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import CalendarWidget from '@/components/shared/CalendarWidget';
-import Breadcrumbs from '@/components/ui/Breadcrumbs';
+import { motion } from 'framer-motion';
 
 export default function EmployeeCalendarPage() {
     const { user } = useAuth();
@@ -44,12 +44,18 @@ export default function EmployeeCalendarPage() {
                 .gte('from_date', rangeStart)
                 .lte('to_date', rangeEnd);
 
+            // Real Salary Data
+            const { data: salaryData } = await supabase
+                .from('salary_records')
+                .select('year, month, status, net_salary')
+                .eq('employee_id', user.id)
+                .eq('status', 'processed');
+
             const calendarEvents = [];
 
             if (attendanceData) {
                 attendanceData.forEach(record => {
                     if (record.status) {
-                        // Use work_date (IST canonical date) falling back to date
                         const dateStr = record.work_date || record.date;
                         calendarEvents.push({
                             date: dateStr,
@@ -76,7 +82,6 @@ export default function EmployeeCalendarPage() {
                 leavesData.forEach(l => {
                     const start = new Date(l.from_date);
                     const end = new Date(l.to_date);
-                    // Use new Date(start) to avoid mutating the iterator variable
                     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
                         calendarEvents.push({
                             date: d.toISOString().split('T')[0],
@@ -84,6 +89,19 @@ export default function EmployeeCalendarPage() {
                             title: l.leave_type?.replace(/_/g, ' ') || 'Leave'
                         });
                     }
+                });
+            }
+
+            if (salaryData) {
+                salaryData.forEach(sal => {
+                    const salDate = new Date(sal.year, sal.month - 1, 1);
+                    // Add it as an event on the 1st of the month
+                    calendarEvents.push({
+                        date: salDate.toISOString().split('T')[0],
+                        type: 'salary',
+                        title: 'Salary Credited',
+                        description: `Net Pay: ₹${(sal.net_salary || 0).toLocaleString('en-IN')}`
+                    });
                 });
             }
 
@@ -100,17 +118,34 @@ export default function EmployeeCalendarPage() {
     }, [fetchCalendarData]);
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-[#F8FAFC] dark:bg-gray-900">
-            <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-6 shadow-sm border border-gray-200 dark:border-gray-700 h-[calc(100vh-140px)] min-h-[600px] flex flex-col overflow-hidden">
-                <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-6 tracking-tight">My Calendar</h1>
+        <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-[#F8FAFC] dark:bg-gray-900 relative">
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-2xl rounded-[3rem] p-2 sm:p-4 shadow-xl shadow-indigo-100/20 dark:shadow-none border border-white/60 dark:border-gray-700/60 h-[calc(100vh-80px)] min-h-[700px] flex flex-col overflow-hidden w-full max-w-5xl mx-auto"
+            >
                 {isLoading ? (
-                    <div className="animate-pulse flex-1 bg-gray-50/50 dark:bg-gray-900/50 rounded-3xl"></div>
+                    <div className="flex-1 w-full h-full flex flex-col p-4 sm:p-8 animate-pulse">
+                        <div className="flex justify-between items-center mb-8">
+                            <div className="h-8 w-48 bg-slate-200 dark:bg-gray-700 rounded-xl"></div>
+                            <div className="h-10 w-32 bg-slate-200 dark:bg-gray-700 rounded-2xl"></div>
+                        </div>
+                        <div className="grid grid-cols-7 gap-2 mb-4">
+                            {[1, 2, 3, 4, 5, 6, 7].map(i => <div key={i} className="h-6 bg-slate-200 dark:bg-gray-700 rounded-md"></div>)}
+                        </div>
+                        <div className="flex-1 grid grid-cols-7 gap-2">
+                            {Array.from({length: 35}).map((_, i) => (
+                                <div key={i} className="bg-slate-100 dark:bg-gray-800/50 rounded-2xl border border-slate-200/50 dark:border-gray-700/50"></div>
+                            ))}
+                        </div>
+                    </div>
                 ) : (
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden bg-transparent rounded-[2.5rem]">
                         <CalendarWidget events={events} />
                     </div>
                 )}
-            </div>
+            </motion.div>
         </div>
     );
 }

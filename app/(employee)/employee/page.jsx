@@ -1,6 +1,6 @@
 'use client';
 
-import { Clock, Calendar, FileText, CheckCircle2, ChevronRight, Bell, ClipboardList, Zap, Building, Plus, DollarSign, BookOpen, HelpCircle, UserCircle, ShieldCheck } from 'lucide-react';
+import { Clock, Calendar, FileText, CheckCircle2, ChevronRight, Bell, ClipboardList, Zap, Building, Plus, DollarSign, BookOpen, HelpCircle, UserCircle, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -52,13 +52,32 @@ export default function EmployeeDashboard() {
 
     const { clocking, handleClockIn, handleClockOut, handleForceCheckoutPrevious } = useAttendanceActions(fetchDashboardData);
 
+    const [themeClass, setThemeClass] = useState('from-sky-600 to-indigo-600');
+    const [iconType, setIconType] = useState('day');
+
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        // We will base greeting on user's current local time for personal feel, 
-        // though business dates are strict IST.
-        const h = new Date().getHours();
-        setGreeting(h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening');
         return () => clearInterval(timer);
+    }, []);
+
+    useEffect(() => {
+        const currentH = new Date().getHours();
+        const stages = [
+            { theme: 'from-amber-400 to-orange-500 dark:from-amber-500/80 dark:to-orange-600/80', icon: 'morning', text: 'Good morning' },
+            { theme: 'from-sky-400 to-blue-600 dark:from-sky-500/80 dark:to-blue-600/80', icon: 'afternoon', text: 'Good afternoon' },
+            { theme: 'from-indigo-500 to-purple-600 dark:from-indigo-600/80 dark:to-purple-700/80', icon: 'evening', text: 'Good evening' },
+            { theme: 'from-slate-800 to-slate-950 dark:from-slate-900 dark:to-black', icon: 'night', text: 'Good evening' },
+        ];
+
+        let targetIndex = 0;
+        if (currentH >= 5 && currentH < 12) targetIndex = 0;
+        else if (currentH >= 12 && currentH < 17) targetIndex = 1;
+        else if (currentH >= 17 && currentH < 20) targetIndex = 2;
+        else targetIndex = 3;
+
+        setThemeClass(stages[targetIndex].theme);
+        setIconType(stages[targetIndex].icon);
+        setGreeting(stages[targetIndex].text);
     }, []);
 
     const openShift = data?.open_shift;
@@ -140,92 +159,150 @@ export default function EmployeeDashboard() {
                             </div>
                         )}
 
-                        {/* Unified Hero Section (Glassmorphic) */}
-                        <div className="w-full rounded-[2.5rem] overflow-hidden relative shadow-2xl shadow-sky-100/20 border border-white/60 dark:border-gray-700/50 bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl flex flex-col md:flex-row min-h-[18rem]">
-                            <div className="p-8 sm:p-12 flex flex-col justify-center flex-1 relative z-10 w-full md:w-3/5 lg:w-2/3">
-                                <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight mb-3">
-                                    {greeting}, <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-indigo-600 dark:from-sky-400 dark:to-indigo-400">{profile?.full_name?.split(' ')[0] || 'Team Member'}</span>!
+                        {/* Unified Premium Hero Section */}
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`w-full transition-all duration-[2000ms] ease-in-out rounded-[2.5rem] overflow-hidden relative shadow-2xl border border-white/80 dark:border-gray-700/80 bg-gradient-to-br ${themeClass} flex flex-col md:flex-row min-h-[22rem]`}>
+                            {/* Decorative Elements */}
+                            <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay pointer-events-none" />
+                            <div className="absolute -top-32 -right-32 w-96 h-96 bg-white/20 rounded-full blur-[80px]" />
+                            <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-black/10 rounded-full blur-[80px]" />
+
+                            <div className="p-8 sm:p-12 flex flex-col justify-center flex-1 relative z-10 w-full text-white">
+                                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/10 backdrop-blur-md border border-white/20 shadow-sm w-max mb-6">
+                                    <Sparkles size={16} className="text-white" />
+                                    <span className="text-xs font-black text-white tracking-widest uppercase">Welcome to the Portal</span>
+                                </div>
+                                <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight mb-4 leading-tight drop-shadow-md">
+                                    {greeting}, <br/><span className="text-white/90">{profile?.full_name?.split(' ')[0] || 'Team Member'}</span>!
                                 </h1>
-                                <p className="text-base font-bold text-slate-500 dark:text-gray-400 flex items-center gap-2">
-                                    <span className="px-3 py-1 bg-white/50 dark:bg-gray-900/50 rounded-lg backdrop-blur-sm border border-white/50 dark:border-gray-600/50 text-sky-700 dark:text-sky-300">
+                                <p className="text-lg font-medium text-white/80 mb-8 max-w-md">
+                                    Stay connected, be productive, and track your daily progress seamlessly.
+                                </p>
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <span className="px-5 py-2.5 bg-white/20 rounded-xl backdrop-blur-md border border-white/30 text-white font-bold shadow-inner">
                                         {profile?.role ? profile.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Not Assigned'}
                                     </span>
-                                    <span>•</span>
-                                    <span>{profile?.department || 'Department Not Assigned'}</span>
-                                </p>
+                                    <span className="px-5 py-2.5 bg-black/20 rounded-xl backdrop-blur-md border border-white/10 text-white/90 font-bold flex items-center gap-2 shadow-inner">
+                                        <Building size={16} />
+                                        {profile?.department || 'Dept Not Assigned'}
+                                    </span>
+                                </div>
                             </div>
-                            <div className="absolute inset-0 md:inset-y-0 md:right-0 md:left-auto md:w-1/2 z-0 overflow-hidden mix-blend-multiply dark:mix-blend-lighten opacity-80">
-                                <Image 
-                                    src="/images/employee_banner_illustration.png" 
-                                    alt="Employee Dashboard Banner" 
-                                    fill 
-                                    className="object-cover object-[right_center]" 
-                                    priority
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-r from-[#F8FAFC] dark:from-gray-900 via-transparent to-transparent"></div>
-                            </div>
-                        </div>
+                            
+                            {/* Visual Time Indicator instead of generic Image */}
+                            <div className="hidden md:flex relative w-1/3 min-h-[250px] z-0 items-center justify-center p-6 border-l border-white/10 overflow-hidden">
+                                <motion.div 
+                                    animate={{ 
+                                        y: [20, 0],
+                                        rotate: iconType === 'morning' || iconType === 'afternoon' ? [5, 0] : 0,
+                                        scale: iconType === 'evening' || iconType === 'night' ? [0.9, 1] : 1
+                                    }} 
+                                    transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
+                                    key={iconType} // Forces re-animation when type changes
+                                    className="relative w-48 h-48 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl flex items-center justify-center overflow-hidden"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/20" />
+                                    {iconType === 'morning' || iconType === 'afternoon' ? (
+                                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-200 to-amber-500 shadow-[0_0_50px_rgba(252,211,77,0.8)] flex items-center justify-center">
+                                            {/* Sun Rays */}
+                                            <div className="absolute w-32 h-32 bg-amber-400/20 rounded-full animate-ping" />
+                                        </div>
+                                    ) : (
+                                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-slate-200 to-slate-400 shadow-[0_0_50px_rgba(226,232,240,0.4)] relative overflow-hidden">
+                                            {/* Moon craters */}
+                                            <div className="absolute top-3 right-4 w-4 h-4 rounded-full bg-slate-300/50" />
+                                            <div className="absolute bottom-5 left-4 w-6 h-6 rounded-full bg-slate-300/40" />
+                                            <div className="absolute top-10 left-8 w-3 h-3 rounded-full bg-slate-300/60" />
+                                            {iconType === 'night' && (
+                                                <div className="absolute -top-2 -right-2 w-20 h-20 rounded-full bg-slate-800 shadow-[inset_-10px_-10px_0_0_rgba(0,0,0,0.1)] opacity-40 mix-blend-multiply" />
+                                            )}
+                                        </div>
+                                    )}
+                                </motion.div>
 
-                        {/* Glass Attendance Card */}
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-[2.5rem] p-8 shadow-2xl shadow-indigo-100/10 flex flex-col sm:flex-row justify-between items-center sm:items-start gap-8">
-                            <div className="flex-1 text-center sm:text-left">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100/50 dark:bg-gray-900/50 border border-slate-200/50 dark:border-gray-700/50 text-slate-500 dark:text-gray-400 text-xs font-bold uppercase tracking-widest mb-4">
-                                    <Clock size={12} /> Time Clock
+                                {/* Stars for Evening/Night */}
+                                {(iconType === 'evening' || iconType === 'night') && (
+                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="absolute inset-0 pointer-events-none">
+                                        <div className="absolute top-10 left-10 w-1 h-1 bg-white rounded-full animate-ping" style={{ animationDelay: '0s', animationDuration: '2s' }} />
+                                        <div className="absolute top-20 right-20 w-1.5 h-1.5 bg-white rounded-full animate-ping" style={{ animationDelay: '0.5s', animationDuration: '3s' }} />
+                                        <div className="absolute bottom-20 left-1/4 w-1 h-1 bg-white rounded-full animate-ping" style={{ animationDelay: '1s', animationDuration: '2.5s' }} />
+                                        <div className="absolute top-1/3 right-10 w-2 h-2 bg-white/50 rounded-full blur-[1px]" />
+                                    </motion.div>
+                                )}
+                            </div>
+                        </motion.div>
+
+                        {/* Premium Glass Attendance Card */}
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-2xl border border-white/60 dark:border-gray-700/60 rounded-[2.5rem] p-8 sm:p-10 shadow-2xl shadow-indigo-100/20 dark:shadow-none flex flex-col lg:flex-row justify-between items-center lg:items-center gap-8 relative overflow-hidden">
+                            {/* Animated Background Gradient for Active Shift */}
+                            {clockedIn && !isStaleShift && (
+                                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-teal-500/5 animate-pulse pointer-events-none" />
+                            )}
+                            
+                            <div className="flex-1 text-center lg:text-left relative z-10 w-full">
+                                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 text-slate-600 dark:text-gray-400 text-xs font-black uppercase tracking-widest mb-6 shadow-sm">
+                                    <Clock size={14} className="text-indigo-500" /> Time Clock
                                 </div>
                                 
                                 {isLoading ? (
-                                    <div className="h-14 bg-slate-200/50 dark:bg-gray-700 rounded-2xl animate-pulse w-56 mb-2"></div>
+                                    <div className="h-16 bg-slate-200 dark:bg-gray-700 rounded-2xl animate-pulse w-64 mb-3 mx-auto lg:mx-0"></div>
                                 ) : isStaleShift ? (
                                     <>
-                                        <p className="text-3xl font-mono text-amber-600 font-black tracking-tight">Pending Checkout</p>
-                                        <p className="text-sm font-semibold text-slate-500 mt-2">Please close your shift from {new Date(openShift.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} before clocking in today.</p>
+                                        <p className="text-4xl sm:text-5xl font-mono text-amber-600 font-black tracking-tight mb-2">Action Required</p>
+                                        <p className="text-base font-semibold text-slate-600 dark:text-gray-400">Please close your previous shift from {new Date(openShift.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}.</p>
                                     </>
                                 ) : clockedIn ? (
                                     <>
-                                        <div className="text-5xl sm:text-6xl font-black tracking-tighter font-mono text-slate-900 dark:text-white mb-3">
+                                        <div className="text-6xl sm:text-7xl font-black tracking-tighter font-mono text-slate-900 dark:text-white mb-4 drop-shadow-sm">
                                             {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                                         </div>
-                                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-2">
-                                            <span className="px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 inline-flex items-center gap-2 w-max">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+                                            <span className="px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-2 shadow-inner">
+                                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping absolute"></span>
+                                                <span className="w-2 h-2 rounded-full bg-emerald-500 relative"></span>
                                                 Active Shift
                                             </span>
-                                            <span className="text-sm font-semibold text-slate-500">
-                                                Clocked in at {new Date(openShift.check_in).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                            <span className="text-base font-semibold text-slate-500 bg-white/50 dark:bg-gray-900/50 px-4 py-2 rounded-xl border border-slate-200 dark:border-gray-700">
+                                                In: {new Date(openShift.check_in).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
                                     </>
                                 ) : (
                                     <>
-                                        <div className="text-5xl sm:text-6xl font-black tracking-tighter font-mono text-slate-900 dark:text-white mb-3 opacity-50">
+                                        <div className="text-6xl sm:text-7xl font-black tracking-tighter font-mono text-slate-400 dark:text-gray-600 mb-4 opacity-70">
                                             {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                                         </div>
-                                        <p className="text-sm font-bold text-slate-500 mt-2">Not clocked in yet today</p>
+                                        <p className="text-base font-bold text-slate-500 dark:text-gray-400">You are not clocked in yet today.</p>
                                     </>
                                 )}
                             </div>
 
-                            <div className="flex flex-col items-center sm:items-end gap-4 w-full sm:w-auto border-t sm:border-t-0 pt-6 sm:pt-0 border-slate-200/50 dark:border-gray-700/50">
+                            <div className="flex flex-col items-center lg:items-end gap-5 w-full lg:w-auto relative z-10">
                                 {isLoading ? (
-                                    <div className="w-40 h-14 bg-slate-200/50 dark:bg-gray-700 rounded-2xl animate-pulse"></div>
+                                    <div className="w-48 h-16 bg-slate-200 dark:bg-gray-700 rounded-2xl animate-pulse"></div>
                                 ) : isStaleShift ? (
-                                    <button onClick={() => handleForceCheckoutPrevious(openShift.id)} disabled={clocking} className="w-full sm:w-auto px-8 py-4 rounded-2xl text-sm font-black transition-all bg-amber-500 text-white hover:bg-amber-600 shadow-xl shadow-amber-500/20 flex items-center justify-center">
-                                        {clocking ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Force Close Shift'}
+                                    <button onClick={() => handleForceCheckoutPrevious(openShift.id)} disabled={clocking} className="w-full lg:w-auto px-10 py-5 rounded-2xl text-base font-black transition-all bg-amber-500 text-white hover:bg-amber-600 hover:scale-105 shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2">
+                                        {clocking ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><AlertCircle size={20} /> Force Close Shift</>}
                                     </button>
                                 ) : (
                                     <button 
                                         onClick={clockedIn ? () => handleClockOut(openShift.id) : () => setShowCameraModal(true)} 
                                         disabled={clocking}
-                                        className={`w-full sm:w-auto px-10 py-4 rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-2 shadow-xl ${clockedIn ? 'bg-rose-500 text-white hover:bg-rose-600 shadow-rose-500/20' : 'bg-gradient-to-r from-indigo-600 to-sky-600 text-white hover:from-indigo-700 hover:to-sky-700 shadow-indigo-500/20'}`}
+                                        className={`w-full lg:w-auto px-12 py-5 rounded-2xl text-lg font-black transition-all flex items-center justify-center gap-3 shadow-2xl hover:-translate-y-1 ${clockedIn ? 'bg-rose-500 text-white hover:bg-rose-600 shadow-rose-500/30' : 'bg-gradient-to-r from-indigo-600 to-sky-600 text-white hover:from-indigo-700 hover:to-sky-700 shadow-indigo-500/30'}`}
                                     >
-                                        {clocking ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : clockedIn ? 'Clock Out Now' : 'Start My Shift'}
+                                        {clocking ? (
+                                            <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : clockedIn ? (
+                                            <><Zap size={22} className="fill-white/20" /> Clock Out Now</>
+                                        ) : (
+                                            <><CheckCircle2 size={22} /> Start My Shift</>
+                                        )}
                                     </button>
                                 )}
                                 
                                 {clockedIn && !isStaleShift && (
-                                    <div className="bg-white/50 dark:bg-gray-900/50 px-5 py-3 rounded-2xl border border-white/50 dark:border-gray-800/50 text-center w-full sm:w-auto backdrop-blur-sm">
-                                        <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block sm:inline sm:mr-3">Elapsed Time</span>
-                                        <span className="text-base font-mono font-black text-slate-900 dark:text-white">{getElapsedTime()}</span>
+                                    <div className="bg-white dark:bg-gray-900 px-6 py-4 rounded-2xl border border-slate-100 dark:border-gray-800 text-center w-full lg:w-auto shadow-sm">
+                                        <span className="text-xs text-slate-500 font-bold uppercase tracking-widest block lg:inline lg:mr-4 mb-1 lg:mb-0">Session Duration</span>
+                                        <span className="text-xl font-mono font-black text-indigo-600 dark:text-indigo-400">{getElapsedTime()}</span>
                                     </div>
                                 )}
                             </div>

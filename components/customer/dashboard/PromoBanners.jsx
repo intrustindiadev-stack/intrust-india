@@ -2,116 +2,112 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Gift, Zap, ShieldCheck } from 'lucide-react';
+import { Gift, Zap, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PromoBanners() {
     const banners = [
         {
             id: 1,
-            title: 'Elite Gold Member',
-            subtitle: 'Unlock 5% extra cashback on all purchases',
-            bg: 'bg-gradient-to-r from-amber-500 to-orange-500',
+            title: 'Elite Gold',
+            subtitle: 'Unlock Premium Benefits',
+            color: 'from-amber-400 to-orange-500',
             icon: ShieldCheck,
-            href: '/dashboard', // Adjust to point to package modal if needed
-            btnText: 'Upgrade Now'
+            href: '/gold'
         },
         {
             id: 2,
-            title: 'Flash Sale Live!',
-            subtitle: 'Get up to 20% off on premium Gift Cards.',
-            bg: 'bg-gradient-to-r from-purple-600 to-indigo-600',
-            icon: Gift,
-            href: '/gift-cards',
-            btnText: 'Shop Now'
+            title: 'Festive Sale',
+            subtitle: 'Up to 50% Off Electronics',
+            color: 'from-indigo-500 to-purple-600',
+            icon: Zap,
+            href: '/shop'
         },
         {
             id: 3,
-            title: 'Solar Investments',
-            subtitle: 'Earn up to 12% p.a. returns with Solar.',
-            bg: 'bg-gradient-to-r from-blue-500 to-cyan-500',
-            icon: Zap,
-            href: '/solar',
-            btnText: 'Explore Solar'
+            title: 'Gift Cards',
+            subtitle: 'Perfect for every occasion',
+            color: 'from-emerald-400 to-teal-500',
+            icon: Gift,
+            href: '/gift-cards'
         }
     ];
 
-    const [currentIndex, setCurrentIndex] = useState(0);
+    const [currentBanner, setCurrentBanner] = useState(0);
 
-    // Auto scroll
     useEffect(() => {
         const timer = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % banners.length);
+            setCurrentBanner((prev) => (prev + 1) % banners.length);
         }, 5000);
         return () => clearInterval(timer);
     }, [banners.length]);
 
-    const handleNext = () => setCurrentIndex((prev) => (prev + 1) % banners.length);
-    const handlePrev = () => setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
+    const banner = banners[currentBanner];
 
     return (
-        <div className="relative mt-6 sm:mt-8 overflow-hidden rounded-3xl group shadow-xl shadow-gray-200/40 dark:shadow-black/20">
-            <div className="w-full h-40 sm:h-48 relative">
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={currentIndex}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.3 }}
-                        className={`absolute inset-0 ${banners[currentIndex].bg} p-6 sm:p-8 flex items-center justify-between`}
-                    >
-                        {/* Background pattern */}
-                        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] pointer-events-none mix-blend-overlay" />
-                        
-                        <div className="relative z-10 w-2/3">
-                            <h3 className="text-xl sm:text-2xl font-black text-white mb-2 leading-tight tracking-tight">
-                                {banners[currentIndex].title}
-                            </h3>
-                            <p className="text-white/80 text-xs sm:text-sm font-medium mb-4">
-                                {banners[currentIndex].subtitle}
-                            </p>
-                            <Link 
-                                href={banners[currentIndex].href}
-                                className="inline-block bg-white/20 hover:bg-white/30 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition-all"
-                            >
-                                {banners[currentIndex].btnText}
+        <div className="w-full relative h-[140px] sm:h-[160px] rounded-[2rem] overflow-hidden shadow-lg group">
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={banner.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.05 }}
+                    transition={{ duration: 0.5 }}
+                    className={`absolute inset-0 bg-gradient-to-r ${banner.color} p-6 sm:p-8 flex items-center justify-between`}
+                >
+                    <div className="z-10 text-white space-y-1">
+                        <motion.div
+                            initial={{ y: 10, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2"
+                        >
+                            <banner.icon size={12} />
+                            Trending
+                        </motion.div>
+                        <motion.h3 
+                            initial={{ x: -20, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-2xl sm:text-3xl font-black tracking-tight leading-none"
+                        >
+                            {banner.title}
+                        </motion.h3>
+                        <motion.p 
+                            initial={{ x: -20, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            transition={{ delay: 0.4 }}
+                            className="text-sm font-medium text-white/90"
+                        >
+                            {banner.subtitle}
+                        </motion.p>
+                        <motion.div
+                            initial={{ y: 10, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.5 }}
+                            className="pt-2"
+                        >
+                            <Link href={banner.href} className="inline-flex items-center text-xs font-bold bg-white text-slate-900 px-4 py-2 rounded-xl hover:scale-105 transition-transform shadow-md">
+                                Explore Now
                             </Link>
-                        </div>
-                        
-                        <div className="relative z-10 w-1/3 flex justify-end">
-                            <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md shadow-2xl">
-                                {(() => {
-                                    const Icon = banners[currentIndex].icon;
-                                    return <Icon size={32} className="text-white sm:w-12 sm:h-12" />;
-                                })()}
-                            </div>
-                        </div>
-                    </motion.div>
-                </AnimatePresence>
-            </div>
-
-            {/* Controls */}
-            <button 
-                onClick={handlePrev}
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/20 text-white flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/40"
-            >
-                <ChevronLeft size={16} />
-            </button>
-            <button 
-                onClick={handleNext}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/20 text-white flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/40"
-            >
-                <ChevronRight size={16} />
-            </button>
-
+                        </motion.div>
+                    </div>
+                    
+                    {/* Decorative Elements */}
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-20 pointer-events-none transition-transform duration-1000 group-hover:scale-110 group-hover:rotate-12">
+                        <banner.icon size={120} />
+                    </div>
+                    <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+                </motion.div>
+            </AnimatePresence>
+            
             {/* Dots */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
                 {banners.map((_, idx) => (
-                    <button
+                    <button 
                         key={idx}
-                        onClick={() => setCurrentIndex(idx)}
-                        className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentIndex ? 'bg-white w-4' : 'bg-white/40 hover:bg-white/60'}`}
+                        onClick={() => setCurrentBanner(idx)}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${currentBanner === idx ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`}
                     />
                 ))}
             </div>
