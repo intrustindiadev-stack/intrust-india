@@ -4,10 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, RefreshCw, Calendar, AlertCircle, Info, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-import LeaveBalanceCard from '@/components/hrm/leaves/LeaveBalanceCard';
-import LeaveRequestForm from '@/components/hrm/leaves/LeaveRequestForm';
-import LeaveRequestTable from '@/components/hrm/leaves/LeaveRequestTable';
-import LeaveRequestDetailDrawer from '@/components/hrm/leaves/LeaveRequestDetailDrawer';
+import EmployeeLeaveRequestForm from '@/components/employee/leaves/EmployeeLeaveRequestForm';
+import EmployeeLeaveHistory from '@/components/employee/leaves/EmployeeLeaveHistory';
+import EmployeeLeaveDetailModal from '@/components/employee/leaves/EmployeeLeaveDetailModal';
 import Dialog from '@/components/hrm/Dialog';
 
 export default function EmployeeLeavesPage() {
@@ -108,11 +107,11 @@ export default function EmployeeLeavesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-            My Time Off & Leaves
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+            Leave
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Request leave, check live entitlement balances, and track approval progress.
+          <p className="text-sm text-slate-500 mt-1">
+            Manage your time off and track your leave requests.
           </p>
         </div>
 
@@ -128,9 +127,9 @@ export default function EmployeeLeavesPage() {
           {isConfigured && (
             <button
               onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-xs flex items-center gap-1.5 transition-colors"
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-sm flex items-center gap-2 transition-colors"
             >
-              <Plus size={16} /> Request Time Off
+              <Plus size={18} /> Apply for Leave
             </button>
           )}
         </div>
@@ -149,70 +148,51 @@ export default function EmployeeLeavesPage() {
         </div>
       )}
 
-      {/* Dynamic Balance Cards Grid */}
-      {isConfigured && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {activePolicies.map(pol => (
-            <LeaveBalanceCard
-              key={pol.id}
-              policy={pol}
-              balance={balances[pol.leave_type_key]}
+
+
+
+
+      {/* Request History */}
+      <div className="mt-8">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4 tracking-tight">My Leave Requests</h3>
+        <EmployeeLeaveHistory
+          requests={requests}
+          isLoading={isLoading}
+          onSelectRequest={(req) => {
+            setSelectedRequest(req);
+            setShowDrawer(true);
+          }}
+        />
+      </div>
+
+      {/* Submit Leave Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
+            <EmployeeLeaveRequestForm
+              activePolicies={activePolicies}
+              balances={balances}
+              onSubmit={handleSubmitLeave}
+              submitting={submitting}
+              onCancel={() => setShowModal(false)}
             />
-          ))}
+          </div>
         </div>
       )}
 
-      {/* Status Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {['all', 'pending_hr_review', 'pending_admin_confirmation', 'approved', 'rejected_by_hr', 'rejected_by_admin', 'cancelled'].map(st => (
-          <button
-            key={st}
-            onClick={() => setStatusFilter(st)}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap capitalize transition-all ${
-              statusFilter === st
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            {st.replace(/_/g, ' ')}
-          </button>
-        ))}
-      </div>
-
-      {/* Request History Table */}
-      <LeaveRequestTable
-        requests={requests}
-        isLoading={isLoading}
-        onSelectRequest={(req) => {
-          setSelectedRequest(req);
-          setShowDrawer(true);
-        }}
-        onCancelRequest={handleCancelRequest}
-      />
-
-      {/* Submit Leave Modal */}
-      <Dialog
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title="Request Time Off"
-        description="Select leave type and dates to submit for multi-stage approval."
-      >
-        <LeaveRequestForm
-          activePolicies={activePolicies}
-          balances={balances}
-          holidays={holidays}
-          onSubmit={handleSubmitLeave}
-          submitting={submitting}
-        />
-      </Dialog>
-
-      {/* Detail Drawer */}
-      <LeaveRequestDetailDrawer
-        isOpen={showDrawer}
-        onClose={() => setShowDrawer(false)}
-        request={selectedRequest}
-        onCancel={handleCancelRequest}
-      />
+      {/* Detail Modal */}
+      {showDrawer && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
+            <EmployeeLeaveDetailModal
+              request={selectedRequest}
+              onClose={() => setShowDrawer(false)}
+              onCancel={handleCancelRequest}
+              userId={summaryData?.employee_id}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

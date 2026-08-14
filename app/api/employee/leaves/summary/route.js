@@ -50,7 +50,13 @@ export async function GET(request) {
       throw polError;
     }
 
-    // 3. Fetch existing employee balances (NO INSERTS!)
+    // 3. Filter out unsupported leave types from employee experience (Maternity/Paternity)
+    // The business rule is that employees should not see these in their dropdowns or summaries.
+    const filteredPolicies = (activePolicies || []).filter(
+      pol => !['maternity', 'paternity'].includes(pol.leave_type_key)
+    );
+
+    // 4. Fetch existing employee balances (NO INSERTS!)
     const { data: balances, error: balError } = await admin
       .from('employee_leave_balances')
       .select('*, policy:policy_id(*)')
@@ -66,7 +72,7 @@ export async function GET(request) {
 
     // Map balances by leave_type key for active policies
     const balancesByType = {};
-    (activePolicies || []).forEach(pol => {
+    filteredPolicies.forEach(pol => {
       const found = existingBalances.find(b => b.leave_type === pol.leave_type_key);
       if (found) {
         const entitled = Number(found.entitled_days) || 0;
@@ -120,7 +126,7 @@ export async function GET(request) {
       policy_year: policyYear,
       is_policy_configured: true,
       policy_year_data: policyYearData,
-      active_policies: activePolicies || [],
+      active_policies: filteredPolicies,
       balances: balancesByType,
       holidays: holidays || []
     }, { status: 200 });

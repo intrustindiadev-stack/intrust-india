@@ -7,7 +7,6 @@ import { toast } from 'react-hot-toast';
 import LeaveRequestTable from '@/components/hrm/leaves/LeaveRequestTable';
 import LeaveRequestDetailDrawer from '@/components/hrm/leaves/LeaveRequestDetailDrawer';
 import LeaveReviewDialog from '@/components/hrm/leaves/LeaveReviewDialog';
-import LeaveBalanceCard from '@/components/hrm/leaves/LeaveBalanceCard';
 import LeaveRequestForm from '@/components/hrm/leaves/LeaveRequestForm';
 import Dialog from '@/components/hrm/Dialog';
 
@@ -265,16 +264,7 @@ export default function HRMLeavesPage() {
             </div>
           </div>
 
-          {/* Balances */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {activePolicies.map(pol => (
-              <LeaveBalanceCard
-                key={pol.id}
-                policy={pol}
-                balance={balances[pol.leave_type_key]}
-              />
-            ))}
-          </div>
+
 
           {/* My Requests Table */}
           <LeaveRequestTable

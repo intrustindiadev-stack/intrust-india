@@ -97,13 +97,6 @@ export default function LeaveRequestForm({
       if (selectedPolicy.max_consecutive_days && calDays > selectedPolicy.max_consecutive_days) {
         warnings.push(`Exceeds maximum consecutive limit of ${selectedPolicy.max_consecutive_days} days.`);
       }
-      // Only warn about balance for balance-based leave types
-      if (selectedPolicy.requires_balance && currentBalance && !selectedPolicy.allow_negative_balance) {
-        const avail = Number(currentBalance.available_days) || 0;
-        if (chargeableDays > avail) {
-          warnings.push(`Insufficient balance. Available: ${avail} day(s), Requested: ${chargeableDays} day(s).`);
-        }
-      }
     }
   }
 
@@ -134,25 +127,14 @@ export default function LeaveRequestForm({
           onChange={e => setForm(prev => ({ ...prev, leave_type: e.target.value }))}
           className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none"
         >
-          {activePolicies.length > 0 ? (
-            activePolicies.map(pol => {
-              const bal = balances[pol.leave_type_key];
-              // Only show balance count for balance-based leave types.
-              // Non-balance types (Unpaid, Maternity, Paternity) are not balance-limited.
-              let balanceLabel = '';
-              if (!pol.requires_balance) {
-                balanceLabel = ''; // No balance display for unlimited/policy-controlled types
-              } else if (bal && !bal.is_unallocated) {
-                balanceLabel = ` (${bal.available_days} available)`;
-              } else if (bal && bal.is_unallocated) {
-                balanceLabel = ' (not yet allocated)';
-              }
-              return (
-                <option key={pol.id} value={pol.leave_type_key}>
-                  {pol.display_name}{balanceLabel}
-                </option>
-              );
-            })
+            {activePolicies.length > 0 ? (
+              activePolicies.map(pol => {
+                return (
+                  <option key={pol.id} value={pol.leave_type_key}>
+                    {pol.display_name}
+                  </option>
+                );
+              })
           ) : (
             <option value="casual">Casual Leave</option>
           )}
@@ -161,9 +143,6 @@ export default function LeaveRequestForm({
         {selectedPolicy && (
           <p className="text-[11px] text-slate-500 mt-1">
             {selectedPolicy.description || (selectedPolicy.is_paid ? 'Paid time off entitlement' : 'Unpaid leave')}
-            {!selectedPolicy.requires_balance && (
-              <span className="ml-1 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded text-[10px] font-semibold">Unlimited / No cap</span>
-            )}
             {selectedPolicy.min_notice_days > 0 && ` · ${selectedPolicy.min_notice_days}d advance notice`}
             {selectedPolicy.max_consecutive_days && ` · Max ${selectedPolicy.max_consecutive_days} consecutive days`}
           </p>

@@ -22,6 +22,7 @@ export async function GET(request) {
       .from('leave_requests')
       .select('*, leave_request_actions(*, user_profiles:actor_id(full_name, role)), user_profiles!employee_id(full_name, department)', { count: 'exact' })
       .eq('employee_id', user.id)
+      .not('leave_type', 'in', '("maternity","paternity")')
       .order('created_at', { ascending: false });
 
     if (status && status !== 'all') {
