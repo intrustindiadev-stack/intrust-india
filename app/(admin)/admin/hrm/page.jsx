@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import Link from 'next/link';
 import { displayEmail } from '@/lib/auth';
-import { Users, UserPlus, DollarSign, Clock, ShieldCheck, UserCheck } from 'lucide-react';
+import { Users, UserPlus, DollarSign, Clock, ShieldCheck, UserCheck, Gift } from 'lucide-react';
 import ContactActions from '@/components/shared/ContactActions';
 import CalendarWidget from '@/components/shared/CalendarWidget';
 import WorkforceDirectory from '@/components/admin/hrm/WorkforceDirectory';
@@ -68,6 +68,9 @@ export default async function AdminHRMPage() {
     const pendingHRCount = hrPendingRes.count || 0;
     const pendingAdminCount = adminPendingRes.count || 0;
     const holidays = holidayRes.data || [];
+
+    const totalEmp = employees.length;
+    const hrManagers = employees.filter(e => e.role === 'hr_manager').length;
 
     // Map holidays for CalendarWidget
     const calendarEvents = holidays.map(h => ({

@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, MapPin, RefreshCw, UserCheck, Edit3, X, Check, AlertTriangle, Plus, Camera } from 'lucide-react';
+import { Search, MapPin, RefreshCw, UserCheck, Edit3, X, Check, AlertTriangle, Plus, Camera, CalendarDays } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 import StatusBadge from '@/components/hrm/StatusBadge';
 import { formatDateIST, formatTimeIST, calculateDuration } from '@/lib/hrm/date';
@@ -230,6 +231,9 @@ export default function HRMAttendancePage() {
             onChange={e => setSelectedDate(e.target.value)}
             className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none"
           />
+          <Link href="/hrm/attendance-overview" className="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs flex items-center gap-1.5 hover:bg-emerald-100 transition-colors shadow-xs border border-emerald-200">
+            <CalendarDays size={14} /> Monthly Overview
+          </Link>
           <button onClick={() => setMarking(true)} className="px-3 py-2 rounded-lg bg-indigo-600 text-white font-semibold text-xs flex items-center gap-1.5 hover:bg-indigo-700 transition-colors shadow-xs">
             <Plus size={14} /> Mark Attendance
           </button>

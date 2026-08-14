@@ -102,13 +102,15 @@ export default function LeadsPage() {
 
     const fetchReps = useCallback(async () => {
         try {
-            const { data } = await supabase.from('user_profiles')
-                .select('id, full_name, role, email')
-                .in('role', ['relationship_exec', 'relationship_manager', 'admin', 'super_admin'])
-                .order('full_name', { ascending: true });
-            if (data) setReps(data);
+            const res = await fetch('/api/crm/reps');
+            const data = await res.json();
+            if (res.ok && data.reps) {
+                setReps(data.reps);
+            } else {
+                console.error('[Frontend] Error fetching reps:', data.error);
+            }
         } catch (err) {
-            console.error(err);
+            console.error('[Frontend] Failed to fetch reps:', err);
         }
     }, []);
 

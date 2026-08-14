@@ -92,6 +92,29 @@ export default function AttendanceCameraModal({ onClose, onConfirm, isClocking }
         setCameraState('requesting');
         setCapturedImage(null);
 
+        // 1. Secure context check
+        if (typeof window !== 'undefined' && !window.isSecureContext) {
+            console.error('[Camera] Insecure context. HTTPS is required.');
+            setCameraState('insecure');
+            return;
+        }
+
+        // 2. Browser support check
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.error('[Camera] getUserMedia is not supported in this browser.');
+            setCameraState('unavailable');
+            return;
+        }
+
+        // 3. Optional Permissions API check (supplementary only)
+        let permState = 'unknown';
+        if (navigator.permissions && navigator.permissions.query) {
+            try {
+                const p = await navigator.permissions.query({ name: 'camera' });
+                permState = p.state;
+            } catch (e) { /* ignore */ }
+        }
+
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'user' },
@@ -110,17 +133,28 @@ export default function AttendanceCameraModal({ onClose, onConfirm, isClocking }
         } catch (err) {
             console.error('[Camera] getUserMedia error:', err.name, err.message);
             stopStream();
+            
+            // Webview/In-App Browser check
+            const isWebView = typeof navigator !== 'undefined' && /WebView|wv|Instagram|FBAV|FBAN|Line|MicroMessenger|WhatsApp/i.test(navigator.userAgent);
 
             switch (err.name) {
                 case 'NotAllowedError':
                 case 'PermissionDeniedError':
-                    setCameraState('denied');
+                    if (isWebView) {
+                        setCameraState('webview_blocked');
+                    } else if (permState === 'denied' || err.name === 'PermissionDeniedError') {
+                        setCameraState('denied');
+                    } else {
+                        setCameraState('denied');
+                    }
                     break;
                 case 'NotFoundError':
                 case 'DevicesNotFoundError':
+                    setCameraState('unavailable');
+                    break;
                 case 'NotSupportedError':
                 case 'SecurityError':
-                    setCameraState('unavailable');
+                    setCameraState('insecure');
                     break;
                 case 'NotReadableError':
                 case 'TrackStartError':
@@ -136,9 +170,13 @@ export default function AttendanceCameraModal({ onClose, onConfirm, isClocking }
                             try { await videoRef.current.play(); } catch { /* ignore */ }
                         }
                         setCameraState('active');
-                    } catch {
+                    } catch (fallbackErr) {
+                        console.error('[Camera] fallback error:', fallbackErr.name);
                         setCameraState('error');
                     }
+                    break;
+                case 'TypeError':
+                    setCameraState('unavailable');
                     break;
                 default:
                     setCameraState('error');
@@ -148,26 +186,68 @@ export default function AttendanceCameraModal({ onClose, onConfirm, isClocking }
 
     // ─── Geolocation ──────────────────────────────────────────────────────────
     const getLocation = useCallback(() => {
-        if (!navigator.geolocation) {
-            setLocationState('error');
-            return;
-        }
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                setLocationState('success');
-                setLocationData({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
-            },
-            () => setLocationState('error'),
-            { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
-        );
+        return new Promise((resolve) => {
+            if (!navigator.geolocation) {
+                setLocationState('error');
+                resolve(false);
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    setLocationState('success');
+                    setLocationData({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
+                    resolve(true);
+                },
+                (err) => {
+                    console.warn('[Location] error:', err.message);
+                    setLocationState('error');
+                    resolve(false);
+                },
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+            );
+        });
     }, []);
 
-    // ─── Mount: start camera + location ──────────────────────────────────────
+    // ─── Mount & Retry Handlers ─────────────────────────────────────────────
+    const isRequesting = useRef(false);
+
+    const handleTryAgain = async () => {
+        if (isRequesting.current) return;
+        isRequesting.current = true;
+
+        if (locationState !== 'success') {
+            setLocationState('fetching');
+            await getLocation();
+        }
+
+        await requestCamera();
+        isRequesting.current = false;
+    };
+
     useEffect(() => {
-        requestCamera();
-        getLocation();
-        return () => { stopStream(); };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+        let mounted = true;
+        
+        const init = async () => {
+            if (isRequesting.current) return;
+            isRequesting.current = true;
+
+            // Fetch location first to avoid concurrent native prompt race condition on mobile
+            await getLocation();
+            if (mounted) {
+                await requestCamera();
+            }
+            if (mounted) {
+                isRequesting.current = false;
+            }
+        };
+
+        init();
+        return () => { 
+            mounted = false;
+            isRequesting.current = false;
+            stopStream(); 
+        };
+    }, [getLocation, requestCamera, stopStream]);
 
     // ─── Capture photo ────────────────────────────────────────────────────────
     const capturePhoto = () => {
@@ -202,6 +282,34 @@ export default function AttendanceCameraModal({ onClose, onConfirm, isClocking }
     const browserInfo = getBrowserInstructions();
 
     const renderCameraArea = () => {
+        if (cameraState === 'insecure') {
+            return (
+                <div className="flex flex-col items-center justify-center p-6 text-center z-10 gap-3 h-full">
+                    <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                        <ShieldAlert size={28} className="text-rose-400" />
+                    </div>
+                    <p className="text-base font-black text-white">Connection Not Secure</p>
+                    <p className="text-sm text-slate-400 max-w-[250px]">
+                        Camera access requires a secure connection (HTTPS). Please ensure you are on a secure network.
+                    </p>
+                </div>
+            );
+        }
+
+        if (cameraState === 'webview_blocked') {
+            return (
+                <div className="flex flex-col items-center justify-center p-6 text-center z-10 gap-3 h-full">
+                    <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                        <ShieldAlert size={28} className="text-rose-400" />
+                    </div>
+                    <p className="text-base font-black text-white">App Browser Blocked</p>
+                    <p className="text-sm text-slate-400 max-w-[250px]">
+                        You are using an in-app browser which blocked the camera. Please tap the menu (top right) and select <span className="text-white font-bold">"Open in Browser"</span>.
+                    </p>
+                </div>
+            );
+        }
+
         if (cameraState === 'denied') {
             return (
                 <div className="flex flex-col items-center justify-center p-5 text-center z-10 gap-4 h-full">
@@ -223,7 +331,7 @@ export default function AttendanceCameraModal({ onClose, onConfirm, isClocking }
                         ))}
                     </ol>
                     <button
-                        onClick={requestCamera}
+                        onClick={handleTryAgain}
                         className="flex items-center gap-2 px-5 py-2.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
                     >
                         <RefreshCw size={14} /> Try Again
@@ -243,7 +351,7 @@ export default function AttendanceCameraModal({ onClose, onConfirm, isClocking }
                         No camera device was detected. Please use a device with a camera.
                     </p>
                     <button
-                        onClick={requestCamera}
+                        onClick={handleTryAgain}
                         className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-white/10 text-slate-300 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
                     >
                         <RefreshCw size={14} /> Try Again
@@ -263,7 +371,7 @@ export default function AttendanceCameraModal({ onClose, onConfirm, isClocking }
                         Your camera is being used by another app. Close video calls or other camera apps, then try again.
                     </p>
                     <button
-                        onClick={requestCamera}
+                        onClick={handleTryAgain}
                         className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
                     >
                         <RefreshCw size={14} /> Try Again
@@ -281,7 +389,7 @@ export default function AttendanceCameraModal({ onClose, onConfirm, isClocking }
                     <p className="text-base font-black text-white">Camera Error</p>
                     <p className="text-sm text-slate-400 max-w-[250px]">An unexpected error occurred. Please try again.</p>
                     <button
-                        onClick={requestCamera}
+                        onClick={handleTryAgain}
                         className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-white/10 text-slate-300 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
                     >
                         <RefreshCw size={14} /> Try Again

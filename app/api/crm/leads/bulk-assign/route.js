@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { BulkAssignSchema } from '@/lib/crm/validation';
+import { getAuthorizedTeamScope } from '@/lib/teamAuth';
 
 export async function POST(request) {
     try {
@@ -30,6 +31,28 @@ export async function POST(request) {
         }
 
         const { selectAllMatching, explicitIds, excludedIds, newRepId, filters } = parsed.data;
+
+        // --- Server-Side Authorization Validation for newRepId ---
+        if (newRepId) {
+            const scope = await getAuthorizedTeamScope(user, profile, adminClient);
+            
+            if (newRepId !== user.id && scope.authorizedTeamIds !== null) {
+                const { data: targetRep } = await adminClient
+                    .from('user_profiles')
+                    .select('team_id')
+                    .eq('id', newRepId)
+                    .single();
+                
+                if (!targetRep) {
+                    return NextResponse.json({ error: 'Target representative not found' }, { status: 400 });
+                }
+
+                if (scope.authorizedTeamIds.length === 0 || !scope.authorizedTeamIds.includes(targetRep.team_id)) {
+                    return NextResponse.json({ error: 'Unauthorized: Cannot assign to a representative outside your team scope' }, { status: 403 });
+                }
+            }
+        }
+        // ---------------------------------------------------------
 
         let targetLeadIds = [];
 
