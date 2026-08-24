@@ -35,8 +35,34 @@ const FailurePage = () => {
 
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
+                    let inferredUdf1 = undefined;
+                    if (txnId.startsWith('MSUB_')) inferredUdf1 = 'MERCHANT_SUBSCRIPTION';
+                    else if (txnId.startsWith('WLT_')) inferredUdf1 = 'WALLET_TOPUP';
+                    else if (txnId.startsWith('GC_')) inferredUdf1 = 'GIFT_CARD';
+                    else if (txnId.startsWith('GOLD_')) inferredUdf1 = 'GOLD_SUBSCRIPTION';
+                    else if (txnId.startsWith('CART_')) inferredUdf1 = 'CART_CHECKOUT';
+                    else if (txnId.startsWith('NFC_')) inferredUdf1 = 'NFC_ORDER';
+                    else if (txnId.startsWith('UDR_')) inferredUdf1 = 'UDHARI_PAYMENT';
+                    else if (txnId.startsWith('LKN_')) inferredUdf1 = 'MERCHANT_LOCKIN';
+                    else if (txnId.startsWith('AIG_')) inferredUdf1 = 'MERCHANT_AIGROW';
+
+                    setTransaction({ udf1: inferredUdf1 });
                     setFetchError(true);
                     setState('ready');
+
+                    // Background session recovery: fetch the user via network call.
+                    // This re-hydrates the Supabase session from stored cookies so the
+                    // subsequent navigations work correctly.
+                    supabase.auth.getUser().then(({ data: { user: recoveredUser } }) => {
+                        if (recoveredUser) {
+                            console.log('[FailurePage] Session recovered via getUser() after cross-origin redirect.');
+                        } else {
+                            console.warn('[FailurePage] Session could not be recovered after cross-origin redirect.');
+                        }
+                    }).catch(() => {
+                        console.warn('[FailurePage] getUser() failed during background session recovery.');
+                    });
+                    
                     return;
                 }
 
@@ -66,28 +92,55 @@ const FailurePage = () => {
     const isFallbackWallet = !transaction && txnId && txnId.startsWith('WLT_');
     const isFallbackGiftCard = !transaction && txnId && txnId.startsWith('GC_');
 
+    const navigateWithAuth = async (destination, forceRoleRedirect = false) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            if (user) {
+                const role = user.user_metadata?.role;
+                if (role === 'merchant' && (forceRoleRedirect || destination === '/dashboard')) {
+                    destination = destination === '/dashboard' ? '/merchant/dashboard' : destination;
+                }
+                router.push(destination);
+            } else {
+                router.push(`/login?returnUrl=${encodeURIComponent(destination)}`);
+            }
+        } catch (err) {
+            console.error('[FailurePage] getUser() error during redirect:', err?.message);
+            router.push(destination);
+        }
+    };
+
     const handleTryAgain = () => {
+        let destination = '/dashboard';
+
         if (transaction?.udf1 === 'GIFT_CARD' && transaction?.udf2) {
-            router.push(`/gift-cards/${transaction.udf2}`);
-            return;
+            destination = `/gift-cards/${transaction.udf2}`;
+        } else if (transaction?.udf1 === 'GIFT_CARD' || isFallbackGiftCard) {
+            destination = '/gift-cards';
+        } else if (transaction?.udf1 === 'WALLET_TOPUP' || isFallbackWallet) {
+            destination = '/wallet';
+        } else if (transaction?.udf1 === 'MERCHANT_TOPUP') {
+            destination = '/merchant/wallet';
+        } else if (transaction?.udf1 === 'GOLD_SUBSCRIPTION') {
+            destination = '/wallet';
+        } else if (transaction?.udf1 === 'MERCHANT_SUBSCRIPTION') {
+            destination = '/merchant/dashboard';
+        } else if (transaction?.udf1 === 'MERCHANT_LOCKIN') {
+            destination = '/merchant/lockin';
+        } else if (transaction?.udf1 === 'MERCHANT_AIGROW') {
+            destination = '/merchant/investments';
+        } else if (transaction?.udf1 === 'WHOLESALE_PURCHASE') {
+            destination = '/merchant/shopping/wholesale';
+        } else if (transaction?.udf1 === 'CART_CHECKOUT') {
+            destination = '/orders';
         }
-        if (transaction?.udf1 === 'GIFT_CARD' || isFallbackGiftCard) {
-            router.push('/gift-cards');
-            return;
-        }
-        if (transaction?.udf1 === 'WALLET_TOPUP' || isFallbackWallet) {
-            router.push('/wallet');
-            return;
-        }
-        if (transaction?.udf1 === 'MERCHANT_TOPUP') {
-            router.push('/merchant/wallet');
-            return;
-        }
-        if (transaction?.udf1 === 'GOLD_SUBSCRIPTION') {
-            router.push('/wallet');
-            return;
-        }
-        router.push('/dashboard');
+        
+        navigateWithAuth(destination);
+    };
+
+    const handleDashboard = () => {
+        navigateWithAuth('/dashboard', true);
     };
 
     // ── Loading ──────────────────────────────────────────────────────────────
@@ -207,13 +260,13 @@ const FailurePage = () => {
                             Try Again
                         </button>
                         
-                        <Link 
-                            href="/dashboard"
+                        <button 
+                            onClick={handleDashboard}
                             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-transparent hover:border-slate-200 dark:text-white/60 dark:hover:text-white dark:hover:bg-white/5 dark:hover:border-white/10 transition-all active:scale-[0.98]"
                         >
                             <Home size={16} />
                             Go to Dashboard
-                        </Link>
+                        </button>
                     </motion.div>
 
                 </motion.div>
