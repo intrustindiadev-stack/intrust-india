@@ -17,6 +17,7 @@ export default function CategoryForm({ initialData = null }) {
         description: initialData?.description || '',
         image_url: initialData?.image_url || '',
         display_order: initialData?.display_order?.toString() || '0',
+        hsn_code: initialData?.hsn_code || '',
         is_active: initialData?.is_active ?? true,
     });
 
@@ -131,6 +132,19 @@ export default function CategoryForm({ initialData = null }) {
                                     className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold"
                                 />
                                 <p className="text-[10px] font-black text-slate-400 mt-2 px-1">Lower numbers appear first (e.g. 10, 20).</p>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">HSN Code</label>
+                                <input
+                                    type="text"
+                                    name="hsn_code"
+                                    value={formData.hsn_code}
+                                    onChange={handleChange}
+                                    placeholder="e.g. 9971"
+                                    className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold"
+                                />
+                                <p className="text-[10px] font-black text-slate-400 mt-2 px-1">Auto-applied to new products in this category.</p>
                             </div>
                         </div>
                     </div>

@@ -34,7 +34,7 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
         const fetchCategories = async () => {
             const { data, error } = await supabase
                 .from('shopping_categories')
-                .select('id, name')
+                .select('id, name, hsn_code')
                 .eq('is_active', true)
                 .order('display_order', { ascending: true });
             if (!error && data) {
@@ -46,10 +46,19 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
+        setFormData(prev => {
+            const newData = {
+                ...prev,
+                [name]: type === 'checkbox' ? checked : value
+            };
+            if (name === 'category' && value) {
+                const selectedCat = categories.find(c => c.name === value);
+                if (selectedCat && selectedCat.hsn_code) {
+                    newData.hsn_code = selectedCat.hsn_code;
+                }
+            }
+            return newData;
+        });
     };
 
     const handleSubmit = async (e) => {

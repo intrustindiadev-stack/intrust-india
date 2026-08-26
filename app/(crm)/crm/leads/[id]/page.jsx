@@ -422,7 +422,7 @@ export default function LeadDetailPage({ params, backHref }) {
                             )}
                         </div>
                         <div className="flex flex-wrap gap-3">
-                            {['E-commerce', 'Solar', 'NFC', 'Loan', 'CIBIL', 'POS System', 'Fastag'].map(svc => {
+                            {['E-commerce', 'Solar', 'NFC', 'Loan', 'CIBIL', 'Fastag', 'Recharge', 'Merchant'].map(svc => {
                                 const isSelected = intentServices.some(s => s.service_name.toLowerCase() === svc.toLowerCase());
                                 return (
                                     <button
@@ -981,7 +981,6 @@ function LogIntentModal({ leadId, onClose, onSave }) {
                             <option value="NFC">NFC</option>
                             <option value="Loan">Loan</option>
                             <option value="CIBIL">CIBIL</option>
-                            <option value="POS System">POS System</option>
                             <option value="Fastag">Fastag</option>
                             <option value="Recharge">Recharge</option>
                             <option value="Merchant">Merchant</option>

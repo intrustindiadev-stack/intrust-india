@@ -11,7 +11,6 @@ const SERVICES = [
     { id: 'nfc', name: 'NFC', icon: Smartphone, color: 'from-purple-400 to-purple-600', shadow: 'shadow-purple-500/30' },
     { id: 'loan', name: 'Loan', icon: CreditCard, color: 'from-emerald-400 to-emerald-600', shadow: 'shadow-emerald-500/30' },
     { id: 'cibil', name: 'CIBIL', icon: FileText, color: 'from-slate-600 to-slate-800', shadow: 'shadow-slate-500/30' },
-    { id: 'pos-system', name: 'POS System', icon: Monitor, color: 'from-indigo-400 to-indigo-600', shadow: 'shadow-indigo-500/30' },
     { id: 'fastag', name: 'Fastag', icon: Car, color: 'from-rose-400 to-rose-600', shadow: 'shadow-rose-500/30' },
     { id: 'recharge', name: 'Recharge', icon: Zap, color: 'from-yellow-400 to-yellow-600', shadow: 'shadow-yellow-500/30' },
     { id: 'merchant', name: 'Merchant', icon: Store, color: 'from-teal-400 to-teal-600', shadow: 'shadow-teal-500/30' },

@@ -8,7 +8,6 @@ const createServiceSchema = z.object({
     lead_id: z.string().uuid(),
     service_name: z.string().min(1).max(150),
     status: z.enum(SERVICE_STATUSES).default('interested'),
-    deal_value: z.number().min(0).optional().default(0),
 });
 
 const updateServiceSchema = z.object({
@@ -149,7 +148,6 @@ export async function POST(request) {
                 lead_id: parsed.data.lead_id,
                 service_name: parsed.data.service_name,
                 status: parsed.data.status,
-                deal_value: parsed.data.deal_value ?? 0,
             })
             .select('*')
             .single();

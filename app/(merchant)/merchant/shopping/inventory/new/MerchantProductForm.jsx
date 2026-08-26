@@ -41,7 +41,7 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
         const fetchCategories = async () => {
             const { data, error } = await supabase
                 .from('shopping_categories')
-                .select('id, name')
+                .select('id, name, hsn_code')
                 .eq('is_active', true)
                 .order('display_order', { ascending: true });
             if (!error && data) {
@@ -54,7 +54,16 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData(prev => {
+            const newData = { ...prev, [name]: value };
+            if (name === 'category' && value) {
+                const selectedCat = fullCategories.find(c => c.name === value);
+                if (selectedCat && selectedCat.hsn_code) {
+                    newData.hsn_code = selectedCat.hsn_code;
+                }
+            }
+            return newData;
+        });
     };
 
     const handleSubmit = async (e) => {
