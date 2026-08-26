@@ -31,10 +31,9 @@ export default function CsrfProvider({ children }) {
             if (isMutation) {
                 const csrfToken = getCookie('csrf_token');
                 if (csrfToken) {
-                    config.headers = {
-                        ...config.headers,
-                        'X-CSRF-Token': csrfToken
-                    };
+                    const newHeaders = new Headers(config.headers);
+                    newHeaders.set('X-CSRF-Token', csrfToken);
+                    config.headers = newHeaders;
                 }
             }
 
