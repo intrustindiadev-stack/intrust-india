@@ -93,6 +93,10 @@ export async function POST(request) {
             throw error;
         }
 
+        if (data && data.success === false) {
+            return NextResponse.json({ error: data.error || 'Failed to insert product' }, { status: 403 });
+        }
+
         // Notify all merchants about the new product
         try {
             const { createAdminClient } = await import('@/lib/supabaseServer');
@@ -166,6 +170,10 @@ export async function PATCH(request) {
                 throw error;
             }
 
+            if (data && data.success === false) {
+                return NextResponse.json({ error: data.error || 'Failed to update stock' }, { status: 403 });
+            }
+
             return NextResponse.json({ product: data }, { status: 200 });
         }
 
@@ -198,6 +206,10 @@ export async function PATCH(request) {
             }
             console.error('RPC Error:', error);
             throw error;
+        }
+
+        if (data && data.success === false) {
+            return NextResponse.json({ error: data.error || 'Failed to update product' }, { status: 403 });
         }
 
         return NextResponse.json({ product: data }, { status: 200 });
