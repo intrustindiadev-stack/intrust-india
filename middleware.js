@@ -203,13 +203,19 @@ export async function middleware(request) {
         // Strict Origin/Referer Validation (Fallback)
         const origin = request.headers.get('origin');
         const referer = request.headers.get('referer');
-        const allowedHost = 'intrustindia.com';
+        const allowedHosts = ['intrustindia.com', 'www.intrustindia.com'];
         
         let isValidOrigin = false;
         if (origin) {
-            try { isValidOrigin = new URL(origin).hostname === allowedHost || new URL(origin).hostname === 'localhost'; } catch (e) {}
+            try { 
+                const host = new URL(origin).hostname;
+                isValidOrigin = allowedHosts.includes(host) || host === 'localhost'; 
+            } catch (e) {}
         } else if (referer) {
-            try { isValidOrigin = new URL(referer).hostname === allowedHost || new URL(referer).hostname === 'localhost'; } catch (e) {}
+            try { 
+                const host = new URL(referer).hostname;
+                isValidOrigin = allowedHosts.includes(host) || host === 'localhost'; 
+            } catch (e) {}
         }
 
         if (!isValidOrigin && process.env.NODE_ENV === 'production') {

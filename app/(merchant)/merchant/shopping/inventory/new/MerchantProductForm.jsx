@@ -69,12 +69,6 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
         const { name, value } = e.target;
         setFormData(prev => {
             const newData = { ...prev, [name]: value };
-            if (name === 'category' && value) {
-                const selectedCat = fullCategories.find(c => c.name === value);
-                if (selectedCat && selectedCat.hsn_code) {
-                    newData.hsn_code = selectedCat.hsn_code;
-                }
-            }
             return newData;
         });
     };
@@ -265,14 +259,19 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
                                     <span>GST Classification (Auto-fill)</span>
                                 </label>
                                 <select
+                                    name="gst_classification"
+                                    value={formData.gst_classification || ""}
                                     onChange={(e) => {
                                         const selected = gstRates.find(r => r.item_name === e.target.value);
                                         if (selected) {
                                             setFormData(prev => ({
                                                 ...prev,
+                                                gst_classification: e.target.value,
                                                 hsn_code: selected.code || prev.hsn_code,
                                                 gst_percentage: selected.gst_rate.toString()
                                             }));
+                                        } else {
+                                            setFormData(prev => ({ ...prev, gst_classification: "" }));
                                         }
                                     }}
                                     className="w-full px-5 py-3.5 rounded-2xl bg-indigo-50/10 border border-indigo-100 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-black text-slate-700 appearance-none"
