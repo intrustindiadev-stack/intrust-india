@@ -1,0 +1,156 @@
+import re
+import json
+
+text = """
+Fresh fruits & vegetables 0% HSN 07/08
+Milk, curd, lassi, buttermilk 0% HSN 0401-0403
+Eggs (hen, duck) 0% HSN 0407
+Fresh/chilled meat & fish 0% HSN 0201-0306 Unprocessed only
+Rice, wheat, maize (unbranded) 0% HSN 1006/1001 Packaged branded: 5%
+Bread (not pizza bread) 0% HSN 1905
+Salt(all kinds) 0% HSN 2501
+Jaggery (unbranded) 0% HSN 1701 Pre-packaged: 5%
+Newspapers, journals 0% HSN 4902
+Educational books (non-periodic) 0% HSN 4901
+Human blood & blood components 0% HSN 3002
+Healthcare services (hospitals) 0% SAC 9993
+Educational services (school, university) 0% SAC 9992
+Public transport(metro, localtrain) 0% SAC 9964
+Postal services (basic) 0% SAC 9961 Speed post, courier:18%
+Agricultural equipment(hand tools) 0% HSN 8201
+Life-saving drugs & vaccines 0% HSN 3002 Selected items only
+Stamps, judicial/non-judicial papers 0% HSN 4907
+Packaged/branded cereals,rice, wheat 5% HSN 1006/1001 5% since 2022
+Sugar 5% HSN 1701
+Tea (all varieties) 5% HSN 0902
+Edible oils (all) 5% HSN 1507-1516
+Cream, skimmed milk powder 5% HSN 0402
+Frozen vegetables 5% HSN 0710 Fresh: 0%
+Fish (frozen/processed) 5% HSN 0303
+Coal, lignite 5% HSN 2701
+Domestic LPG 5% HSN 2711 Commercial cylinders:18%
+Medicines (essential) 5% HSN 3004 Life-saving: 0%
+Dialysis equipment 5% HSN 9018
+Railway tickets (economy class) 5% SAC 9964 AC class: 5% with ITC
+Airtravel (economy) 5% SAC 9964 Business class:12%
+AC restaurants (standalone) 5% SAC 9963 No ITC allowed
+Takeaway food (packaged) 5% SAC 9963
+Fabric (woven), yarn 5% HSN 52-55 Readygarments: 5% or 12%
+Footwear(up to ₹1,000 MRP) 5% HSN 6401-6406 Above₹1,000:12%
+Handmade items, khadi 5% Various
+Bio-diesel blended with petrol 5% HSN 3826
+Mobile phones,tablets 12% HSN 8517
+Computers, laptops 12% HSN 8471
+Butter, ghee, cheese 12% HSN 0405-0406
+Packaged dry fruits 12% HSN 0801-0813
+Fruitjuices (branded) 12% HSN 2009
+Jam, jelly, ketchup 12% HSN 2007-2103
+Namkeen, bhujia, mixtures 12% HSN 1904
+Bicycle 12% HSN 8712
+Sewing machines 12% HSN 8452
+Processed/canned fish, meat 12% HSN 1601-1605
+Textiles,readymade garments (>₹1000) 12% HSN 61/62 ≤₹1000: 5%
+Footwear(>₹1,000 MRP) 12% HSN 6401-6406
+Business class airtravel 12% SAC 9964
+Construction services (residential) 12% SAC 9954 Affordable housing:1%
+Works contract(non-immovable property) 12% SAC 9954
+Printing and publishing services 12% SAC 9989
+Agri equipment(tractors) 12% HSN 8701
+Medical/surgical instruments 12% HSN 9018 Except exemptitems
+IT services (software, SaaS) 18% SAC 998314 Most software services
+Professional services (CA, legal, architect) 18% SAC 9982/9983
+Restaurantin hotel (room >₹7,500) 18% SAC 9963 With ITC
+Financial services (banking, insurance) 18% SAC 9971
+Hotel accommodation (₹2,500– 7,500/night) 18% SAC 9963
+Commercialrent(office, warehouse) 18% SAC 9972
+Telecom services (mobile, broadband) 18% SAC 9984
+Electricity (commercial) 18% HSN 2716 Residential: exempt
+Cement 18% HSN 2523
+Paint, varnish 18% HSN 3208-3210
+Refrigerators, washing machines 18% HSN 8418/8450
+Air conditioners 18% HSN 8415 Capacity≤2 ton; >2 ton: 28%
+Steel products (pipes, bars) 18% HSN 7208-7306
+Aluminium products 18% HSN 7601-7616
+Capital goods (machinery) 18% HSN 84-85 Generalrate
+Cables, wires 18% HSN 8544
+Passenger vehicles (petrol, <1200cc) 18% HSN 8703 + cess
+Security services 18% SAC 9985
+Courier services 18% SAC 9961
+Printing of books (contract) 18% SAC 9989
+Mining services 18% SAC 9986
+Outdoor catering 18% SAC 9963
+Cigarettes,tobacco products 28% HSN 2402 + additional cess
+Pan masala, chewing tobacco 28% HSN 2403 + cess up to 60%
+Luxury cars (petrol >1500cc, diesel >1500cc) 28% HSN 8703 + cess 1-22%
+Two-wheelers (engine >350cc) 28% HSN 8711 + cess 3%
+Aerated drinks, carbonated beverages 28% HSN 2202 + 12% cess
+Online gaming (real money) 28% SAC 9996 On fullface value
+Casinos,race clubs 28% SAC 9996 On fullface value
+Lottery tickets 28% HSN 4907 State/governmentrun
+Cement(above 25kg bags) 28% HSN 2523 28% confirmed
+Air conditioners (>2 ton) 28% HSN 8415
+Dishwashers, washing machines (>10kg) 28% HSN 8422/8450
+Large screen TVs (>68 inches) 28% HSN 8528
+Paints, enamels (premium) 28% HSN 3208
+Caffeinated beverages 28% HSN 2202
+Aircraftfor private use 28% HSN 8802
+Yachts, pleasure boats 28% HSN 8903
+"""
+
+lines = text.strip().split('\n')
+parsed = []
+
+for line in lines:
+    # Match percentage
+    match = re.search(r' (\d+)% ', line)
+    if not match:
+        # try without trailing space
+        match = re.search(r' (\d+)%', line)
+    if not match:
+        continue
+    
+    rate = int(match.group(1))
+    
+    # Split the line
+    parts = line.split(f" {rate}% ")
+    item = parts[0].strip()
+    
+    rest = parts[1].strip() if len(parts) > 1 else ""
+    
+    code_type = ""
+    code = ""
+    notes = ""
+    
+    if "HSN" in rest:
+        code_type = "HSN"
+        rest_parts = rest.split("HSN", 1)[1].strip()
+    elif "SAC" in rest:
+        code_type = "SAC"
+        rest_parts = rest.split("SAC", 1)[1].strip()
+    elif "Various" in rest:
+        code_type = "Various"
+        rest_parts = rest.split("Various", 1)[1].strip()
+    else:
+        code_type = "Unknown"
+        rest_parts = rest
+        
+    # extract code, usually continuous characters, digits, slashes, dashes
+    code_match = re.match(r'([0-9\-\/]+)', rest_parts)
+    if code_match:
+        code = code_match.group(1)
+        notes = rest_parts[len(code):].strip()
+    else:
+        notes = rest_parts
+        
+    parsed.append({
+        "item": item,
+        "rate": rate,
+        "code_type": code_type,
+        "code": code,
+        "notes": notes
+    })
+
+with open('parsed_gst.json', 'w') as f:
+    json.dump(parsed, f, indent=2)
+
+print(f"Parsed {len(parsed)} items.")

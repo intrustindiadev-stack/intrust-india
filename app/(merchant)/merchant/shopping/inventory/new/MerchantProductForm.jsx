@@ -13,6 +13,7 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState([]);
     const [fullCategories, setFullCategories] = useState([]);
+    const [gstRates, setGstRates] = useState([]);
     const [formData, setFormData] = useState(existingProduct ? {
         title: existingProduct.title || '',
         description: existingProduct.description || '',
@@ -49,7 +50,19 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
                 setCategories(data.map(c => c.name));
             }
         };
+
+        const fetchGstRates = async () => {
+            const { data, error } = await supabase
+                .from('gst_rates')
+                .select('*')
+                .order('item_name', { ascending: true });
+            if (!error && data) {
+                setGstRates(data);
+            }
+        };
+
         fetchCategories();
+        fetchGstRates();
     }, []);
 
     const handleChange = (e) => {
@@ -243,6 +256,34 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
                                         className="w-full pl-10 pr-5 py-3.5 rounded-2xl bg-orange-50/50 border border-orange-100 focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all font-black text-orange-900"
                                     />
                                 </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1 flex justify-between items-center">
+                                    <span>GST Classification (Auto-fill)</span>
+                                </label>
+                                <select
+                                    onChange={(e) => {
+                                        const selected = gstRates.find(r => r.item_name === e.target.value);
+                                        if (selected) {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                hsn_code: selected.code || prev.hsn_code,
+                                                gst_percentage: selected.gst_rate.toString()
+                                            }));
+                                        }
+                                    }}
+                                    className="w-full px-5 py-3.5 rounded-2xl bg-indigo-50/10 border border-indigo-100 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-black text-slate-700 appearance-none"
+                                >
+                                    <option value="">Select classification...</option>
+                                    {gstRates.map(rate => (
+                                        <option key={rate.item_name} value={rate.item_name}>
+                                            {rate.item_name} ({rate.gst_rate}%)
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 

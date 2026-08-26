@@ -1,0 +1,653 @@
+[
+  {
+    "item": "Fresh fruits & vegetables",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "07/08",
+    "notes": ""
+  },
+  {
+    "item": "Milk, curd, lassi, buttermilk",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "0401-0403",
+    "notes": ""
+  },
+  {
+    "item": "Eggs (hen, duck)",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "0407",
+    "notes": ""
+  },
+  {
+    "item": "Fresh/chilled meat & fish",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "0201-0306",
+    "notes": "Unprocessed only"
+  },
+  {
+    "item": "Rice, wheat, maize (unbranded)",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "1006/1001",
+    "notes": "Packaged branded: 5%"
+  },
+  {
+    "item": "Bread (not pizza bread)",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "1905",
+    "notes": ""
+  },
+  {
+    "item": "Salt(all kinds)",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "2501",
+    "notes": ""
+  },
+  {
+    "item": "Jaggery (unbranded)",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "1701",
+    "notes": "Pre-packaged: 5%"
+  },
+  {
+    "item": "Newspapers, journals",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "4902",
+    "notes": ""
+  },
+  {
+    "item": "Educational books (non-periodic)",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "4901",
+    "notes": ""
+  },
+  {
+    "item": "Human blood & blood components",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "3002",
+    "notes": ""
+  },
+  {
+    "item": "Healthcare services (hospitals)",
+    "rate": 0,
+    "code_type": "SAC",
+    "code": "9993",
+    "notes": ""
+  },
+  {
+    "item": "Educational services (school, university)",
+    "rate": 0,
+    "code_type": "SAC",
+    "code": "9992",
+    "notes": ""
+  },
+  {
+    "item": "Public transport(metro, localtrain)",
+    "rate": 0,
+    "code_type": "SAC",
+    "code": "9964",
+    "notes": ""
+  },
+  {
+    "item": "Postal services (basic)",
+    "rate": 0,
+    "code_type": "SAC",
+    "code": "9961",
+    "notes": "Speed post, courier:18%"
+  },
+  {
+    "item": "Agricultural equipment(hand tools)",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "8201",
+    "notes": ""
+  },
+  {
+    "item": "Life-saving drugs & vaccines",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "3002",
+    "notes": "Selected items only"
+  },
+  {
+    "item": "Stamps, judicial/non-judicial papers",
+    "rate": 0,
+    "code_type": "HSN",
+    "code": "4907",
+    "notes": ""
+  },
+  {
+    "item": "Packaged/branded cereals,rice, wheat",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "1006/1001",
+    "notes": ""
+  },
+  {
+    "item": "Sugar",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "1701",
+    "notes": ""
+  },
+  {
+    "item": "Tea (all varieties)",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "0902",
+    "notes": ""
+  },
+  {
+    "item": "Edible oils (all)",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "1507-1516",
+    "notes": ""
+  },
+  {
+    "item": "Cream, skimmed milk powder",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "0402",
+    "notes": ""
+  },
+  {
+    "item": "Frozen vegetables",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "0710",
+    "notes": "Fresh: 0%"
+  },
+  {
+    "item": "Fish (frozen/processed)",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "0303",
+    "notes": ""
+  },
+  {
+    "item": "Coal, lignite",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "2701",
+    "notes": ""
+  },
+  {
+    "item": "Domestic LPG",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "2711",
+    "notes": "Commercial cylinders:18%"
+  },
+  {
+    "item": "Medicines (essential)",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "3004",
+    "notes": "Life-saving: 0%"
+  },
+  {
+    "item": "Dialysis equipment",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "9018",
+    "notes": ""
+  },
+  {
+    "item": "Railway tickets (economy class)",
+    "rate": 5,
+    "code_type": "SAC",
+    "code": "9964",
+    "notes": "AC class:"
+  },
+  {
+    "item": "Airtravel (economy)",
+    "rate": 5,
+    "code_type": "SAC",
+    "code": "9964",
+    "notes": "Business class:12%"
+  },
+  {
+    "item": "AC restaurants (standalone)",
+    "rate": 5,
+    "code_type": "SAC",
+    "code": "9963",
+    "notes": "No ITC allowed"
+  },
+  {
+    "item": "Takeaway food (packaged)",
+    "rate": 5,
+    "code_type": "SAC",
+    "code": "9963",
+    "notes": ""
+  },
+  {
+    "item": "Fabric (woven), yarn",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "52-55",
+    "notes": "Readygarments:"
+  },
+  {
+    "item": "Footwear(up to \u20b91,000 MRP)",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "6401-6406",
+    "notes": "Above\u20b91,000:12%"
+  },
+  {
+    "item": "Handmade items, khadi",
+    "rate": 5,
+    "code_type": "Various",
+    "code": "",
+    "notes": ""
+  },
+  {
+    "item": "Bio-diesel blended with petrol",
+    "rate": 5,
+    "code_type": "HSN",
+    "code": "3826",
+    "notes": ""
+  },
+  {
+    "item": "Mobile phones,tablets",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "8517",
+    "notes": ""
+  },
+  {
+    "item": "Computers, laptops",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "8471",
+    "notes": ""
+  },
+  {
+    "item": "Butter, ghee, cheese",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "0405-0406",
+    "notes": ""
+  },
+  {
+    "item": "Packaged dry fruits",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "0801-0813",
+    "notes": ""
+  },
+  {
+    "item": "Fruitjuices (branded)",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "2009",
+    "notes": ""
+  },
+  {
+    "item": "Jam, jelly, ketchup",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "2007-2103",
+    "notes": ""
+  },
+  {
+    "item": "Namkeen, bhujia, mixtures",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "1904",
+    "notes": ""
+  },
+  {
+    "item": "Bicycle",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "8712",
+    "notes": ""
+  },
+  {
+    "item": "Sewing machines",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "8452",
+    "notes": ""
+  },
+  {
+    "item": "Processed/canned fish, meat",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "1601-1605",
+    "notes": ""
+  },
+  {
+    "item": "Textiles,readymade garments (>\u20b91000)",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "61/62",
+    "notes": "\u2264\u20b91000: 5%"
+  },
+  {
+    "item": "Footwear(>\u20b91,000 MRP)",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "6401-6406",
+    "notes": ""
+  },
+  {
+    "item": "Business class airtravel",
+    "rate": 12,
+    "code_type": "SAC",
+    "code": "9964",
+    "notes": ""
+  },
+  {
+    "item": "Construction services (residential)",
+    "rate": 12,
+    "code_type": "SAC",
+    "code": "9954",
+    "notes": "Affordable housing:1%"
+  },
+  {
+    "item": "Works contract(non-immovable property)",
+    "rate": 12,
+    "code_type": "SAC",
+    "code": "9954",
+    "notes": ""
+  },
+  {
+    "item": "Printing and publishing services",
+    "rate": 12,
+    "code_type": "SAC",
+    "code": "9989",
+    "notes": ""
+  },
+  {
+    "item": "Agri equipment(tractors)",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "8701",
+    "notes": ""
+  },
+  {
+    "item": "Medical/surgical instruments",
+    "rate": 12,
+    "code_type": "HSN",
+    "code": "9018",
+    "notes": "Except exemptitems"
+  },
+  {
+    "item": "IT services (software, SaaS)",
+    "rate": 18,
+    "code_type": "SAC",
+    "code": "998314",
+    "notes": "Most software services"
+  },
+  {
+    "item": "Professional services (CA, legal, architect)",
+    "rate": 18,
+    "code_type": "SAC",
+    "code": "9982/9983",
+    "notes": ""
+  },
+  {
+    "item": "Restaurantin hotel (room >\u20b97,500)",
+    "rate": 18,
+    "code_type": "SAC",
+    "code": "9963",
+    "notes": "With ITC"
+  },
+  {
+    "item": "Financial services (banking, insurance)",
+    "rate": 18,
+    "code_type": "SAC",
+    "code": "9971",
+    "notes": ""
+  },
+  {
+    "item": "Hotel accommodation (\u20b92,500\u2013 7,500/night)",
+    "rate": 18,
+    "code_type": "SAC",
+    "code": "9963",
+    "notes": ""
+  },
+  {
+    "item": "Commercialrent(office, warehouse)",
+    "rate": 18,
+    "code_type": "SAC",
+    "code": "9972",
+    "notes": ""
+  },
+  {
+    "item": "Telecom services (mobile, broadband)",
+    "rate": 18,
+    "code_type": "SAC",
+    "code": "9984",
+    "notes": ""
+  },
+  {
+    "item": "Electricity (commercial)",
+    "rate": 18,
+    "code_type": "HSN",
+    "code": "2716",
+    "notes": "Residential: exempt"
+  },
+  {
+    "item": "Cement",
+    "rate": 18,
+    "code_type": "HSN",
+    "code": "2523",
+    "notes": ""
+  },
+  {
+    "item": "Paint, varnish",
+    "rate": 18,
+    "code_type": "HSN",
+    "code": "3208-3210",
+    "notes": ""
+  },
+  {
+    "item": "Refrigerators, washing machines",
+    "rate": 18,
+    "code_type": "HSN",
+    "code": "8418/8450",
+    "notes": ""
+  },
+  {
+    "item": "Air conditioners",
+    "rate": 18,
+    "code_type": "HSN",
+    "code": "8415",
+    "notes": "Capacity\u22642 ton; >2 ton: 28%"
+  },
+  {
+    "item": "Steel products (pipes, bars)",
+    "rate": 18,
+    "code_type": "HSN",
+    "code": "7208-7306",
+    "notes": ""
+  },
+  {
+    "item": "Aluminium products",
+    "rate": 18,
+    "code_type": "HSN",
+    "code": "7601-7616",
+    "notes": ""
+  },
+  {
+    "item": "Capital goods (machinery)",
+    "rate": 18,
+    "code_type": "HSN",
+    "code": "84-85",
+    "notes": "Generalrate"
+  },
+  {
+    "item": "Cables, wires",
+    "rate": 18,
+    "code_type": "HSN",
+    "code": "8544",
+    "notes": ""
+  },
+  {
+    "item": "Passenger vehicles (petrol, <1200cc)",
+    "rate": 18,
+    "code_type": "HSN",
+    "code": "8703",
+    "notes": "+ cess"
+  },
+  {
+    "item": "Security services",
+    "rate": 18,
+    "code_type": "SAC",
+    "code": "9985",
+    "notes": ""
+  },
+  {
+    "item": "Courier services",
+    "rate": 18,
+    "code_type": "SAC",
+    "code": "9961",
+    "notes": ""
+  },
+  {
+    "item": "Printing of books (contract)",
+    "rate": 18,
+    "code_type": "SAC",
+    "code": "9989",
+    "notes": ""
+  },
+  {
+    "item": "Mining services",
+    "rate": 18,
+    "code_type": "SAC",
+    "code": "9986",
+    "notes": ""
+  },
+  {
+    "item": "Outdoor catering",
+    "rate": 18,
+    "code_type": "SAC",
+    "code": "9963",
+    "notes": ""
+  },
+  {
+    "item": "Cigarettes,tobacco products",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "2402",
+    "notes": "+ additional cess"
+  },
+  {
+    "item": "Pan masala, chewing tobacco",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "2403",
+    "notes": "+ cess up to 60%"
+  },
+  {
+    "item": "Luxury cars (petrol >1500cc, diesel >1500cc)",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "8703",
+    "notes": "+ cess 1-22%"
+  },
+  {
+    "item": "Two-wheelers (engine >350cc)",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "8711",
+    "notes": "+ cess 3%"
+  },
+  {
+    "item": "Aerated drinks, carbonated beverages",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "2202",
+    "notes": "+ 12% cess"
+  },
+  {
+    "item": "Online gaming (real money)",
+    "rate": 28,
+    "code_type": "SAC",
+    "code": "9996",
+    "notes": "On fullface value"
+  },
+  {
+    "item": "Casinos,race clubs",
+    "rate": 28,
+    "code_type": "SAC",
+    "code": "9996",
+    "notes": "On fullface value"
+  },
+  {
+    "item": "Lottery tickets",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "4907",
+    "notes": "State/governmentrun"
+  },
+  {
+    "item": "Cement(above 25kg bags)",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "2523",
+    "notes": ""
+  },
+  {
+    "item": "Air conditioners (>2 ton)",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "8415",
+    "notes": ""
+  },
+  {
+    "item": "Dishwashers, washing machines (>10kg)",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "8422/8450",
+    "notes": ""
+  },
+  {
+    "item": "Large screen TVs (>68 inches)",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "8528",
+    "notes": ""
+  },
+  {
+    "item": "Paints, enamels (premium)",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "3208",
+    "notes": ""
+  },
+  {
+    "item": "Caffeinated beverages",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "2202",
+    "notes": ""
+  },
+  {
+    "item": "Aircraftfor private use",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "8802",
+    "notes": ""
+  },
+  {
+    "item": "Yachts, pleasure boats",
+    "rate": 28,
+    "code_type": "HSN",
+    "code": "8903",
+    "notes": ""
+  }
+]
