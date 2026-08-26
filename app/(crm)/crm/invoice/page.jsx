@@ -88,7 +88,14 @@ export default function CRMInvoicePage() {
 
     const handleShareWhatsApp = () => {
         if (!validate()) return;
-        const text = `Dear ${customer.name},\n\nPlease find your invoice details:\n\nInvoice No: ${invoiceMeta.invoice_number}\nDate: ${invoiceMeta.invoice_date}\nAmount: ₹${totals.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n\nFor any queries, contact us at: ${seller.company_email}\n\nThank you for choosing ${seller.company_name}!`;
+        
+        try {
+            generateManualInvoice({ seller, customer, items: items.map(item => ({ ...item, ...calculateItemTotal(item) })), totals, meta: invoiceMeta });
+        } catch (err) {
+            toast.error('Failed to generate PDF');
+        }
+
+        const text = `Dear ${customer.name},\n\nPlease find your invoice attached.`;
         const phone = customer.phone.replace(/\D/g, '');
         const url = `https://wa.me/${phone ? `91${phone}` : ''}?text=${encodeURIComponent(text)}`;
         window.open(url, '_blank');
@@ -96,8 +103,15 @@ export default function CRMInvoicePage() {
 
     const handleShareEmail = () => {
         if (!validate()) return;
+
+        try {
+            generateManualInvoice({ seller, customer, items: items.map(item => ({ ...item, ...calculateItemTotal(item) })), totals, meta: invoiceMeta });
+        } catch (err) {
+            toast.error('Failed to generate PDF');
+        }
+
         const subject = `Invoice ${invoiceMeta.invoice_number} from ${seller.company_name}`;
-        const body = `Dear ${customer.name},\n\nPlease find attached your invoice.\n\nInvoice No: ${invoiceMeta.invoice_number}\nDate: ${invoiceMeta.invoice_date}\nTotal Amount: ₹${totals.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n\nFor queries: intrustindiadev@gmail.com\n\nThank you,\n${seller.company_name}`;
+        const body = `Dear ${customer.name},\n\nPlease find your invoice attached.`;
         window.open(`mailto:${customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
     };
 
@@ -330,7 +344,12 @@ export default function CRMInvoicePage() {
                                     </button>
                                 </div>
 
-                                <p className="text-[10px] text-slate-400 text-center font-medium mt-1">PDF downloads to your device</p>
+                                <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-2">
+                                    <div className="text-amber-500 mt-0.5"><FileText size={14} /></div>
+                                    <p className="text-[10px] text-amber-700 font-medium leading-relaxed">
+                                        <strong>Heads up:</strong> Clicking share downloads the PDF automatically. You will need to manually attach this downloaded PDF before sending!
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

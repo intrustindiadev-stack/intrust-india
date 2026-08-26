@@ -130,6 +130,7 @@ export const LeadFilterSchema = z.object({
     zone: z.string().optional(),
     area_type: z.enum(['pincode', 'zone', 'area', 'city', 'state']).optional(),
     routing_status: z.enum(['unmatched', 'auto_matched', 'manual_override', 'reroute_pending']).optional(),
+    service: z.string().optional(),
 });
 
 export const BulkAssignSchema = z.object({

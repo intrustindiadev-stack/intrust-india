@@ -45,6 +45,7 @@ export async function GET(request) {
         if (url.searchParams.has('zone')) queryParams.zone = url.searchParams.get('zone');
         if (url.searchParams.has('area_type')) queryParams.area_type = url.searchParams.get('area_type');
         if (url.searchParams.has('routing_status')) queryParams.routing_status = url.searchParams.get('routing_status');
+        if (url.searchParams.has('service')) queryParams.service = url.searchParams.get('service');
 
         const parsed = LeadFilterSchema.safeParse(queryParams);
         
@@ -135,6 +136,23 @@ export async function GET(request) {
         }
         if (filters.routing_status) {
             query = query.eq('routing_status', filters.routing_status);
+        }
+
+        if (filters.service) {
+            const { data: serviceLeads } = await adminClient
+                .from('crm_lead_services')
+                .select('lead_id')
+                .ilike('service_name', filters.service);
+            
+            const leadIds = (serviceLeads || []).map(s => s.lead_id);
+            if (leadIds.length === 0) {
+                 return NextResponse.json({ 
+                     data: [], 
+                     pagination: { page, pageSize: limit, total: 0, totalPages: 0, hasNext: false, hasPrevious: false },
+                     appliedFilters: filters 
+                 });
+            }
+            query = query.in('id', leadIds);
         }
 
         if (filters.search) {
