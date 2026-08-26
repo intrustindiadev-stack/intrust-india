@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Briefcase, TrendingUp, Clock, Plus, Target, CheckCircle, Calendar, BarChart2, DollarSign, Activity, Flame } from 'lucide-react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
 
 // Components
 import GlassMetricCard from '@/components/crm/dashboard/GlassMetricCard';
@@ -20,180 +20,103 @@ import WelcomeRoleCelebrationModal from '@/components/shared/WelcomeRoleCelebrat
 
 export default function CRMDashboard() {
     const [activeTab, setActiveTab] = useState('overview');
-    
-    // Data States
+
+    // Analytics data from server
+    const [analytics, setAnalytics] = useState(null);
+    // Separate lightweight fetch for recent leads table and tasks
     const [leads, setLeads] = useState([]);
     const [tasks, setTasks] = useState([]);
-    const [stats, setStats] = useState({ newLeads: 0, activePipeline: 0, convRate: 0, revenue: 0 });
-    
-    // Chart Data States
-    const [revenueData, setRevenueData] = useState([]);
-    const [funnelData, setFunnelData] = useState([]);
-    const [sourceData, setSourceData] = useState([]);
-    const [temperatureData, setTemperatureData] = useState([]);
-    const [revenueBySourceData, setRevenueBySourceData] = useState([]);
-    const [teamData, setTeamData] = useState([]);
-    
+
     const [isLoading, setIsLoading] = useState(true);
     const [isManager, setIsManager] = useState(false);
     const [userName, setUserName] = useState('');
 
-    const fetchData = async () => {
+    const fetchAnalytics = useCallback(async () => {
+        try {
+            const res = await fetch('/api/crm/analytics');
+            if (!res.ok) throw new Error('Analytics fetch failed');
+            const json = await res.json();
+            const a = json.analytics;
+
+            setIsManager(json.meta.isManager);
+            setAnalytics(a);
+        } catch (err) {
+            console.error('[Dashboard] analytics fetch error:', err);
+        }
+    }, []);
+
+    const fetchSideData = useCallback(async () => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
             const currentUserId = session.user.id;
-            
-            const { data: profile } = await supabase.from('user_profiles').select('role, full_name').eq('id', currentUserId).single();
-            const role = profile?.role || 'relationship_exec';
-            const manager = ['relationship_manager', 'admin', 'super_admin'].includes(role);
-            setIsManager(manager);
+
+            // Get user name
+            const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('full_name, role')
+                .eq('id', currentUserId)
+                .single();
+
             if (profile?.full_name) {
                 setUserName(profile.full_name.split(' ')[0]);
             }
 
-            let recentQuery = supabase.from('crm_leads').select('id, title, contact_name, phone, email, status, source, created_at, temperature, deal_value').is('archived_at', null).neq('source', 'Users').neq('source', 'App User').order('created_at', { ascending: false }).limit(6);
-            let allQuery = supabase.from('crm_leads').select('status, created_at, assigned_to, source, temperature, deal_value').is('archived_at', null).neq('source', 'Users').neq('source', 'App User');
-            let tasksQuery = supabase.from('crm_tasks').select('*').eq('status', 'pending').order('due_date', { ascending: true }).limit(4);
+            const manager = ['relationship_manager', 'admin', 'super_admin'].includes(profile?.role);
+
+            // Recent leads for the table (lightweight: only 6 rows)
+            let recentQuery = supabase
+                .from('crm_leads')
+                .select('id, title, contact_name, phone, email, status, source, created_at, temperature, deal_value')
+                .is('archived_at', null)
+                .neq('source', 'Users')
+                .neq('source', 'App User')
+                .order('created_at', { ascending: false })
+                .limit(6);
+
+            // Upcoming tasks
+            let tasksQuery = supabase
+                .from('crm_tasks')
+                .select('*')
+                .eq('status', 'pending')
+                .order('due_date', { ascending: true })
+                .limit(4);
 
             if (!manager) {
                 recentQuery = recentQuery.eq('assigned_to', currentUserId);
-                allQuery = allQuery.eq('assigned_to', currentUserId);
                 tasksQuery = tasksQuery.eq('assigned_to', currentUserId);
             }
 
-            const [recentRes, allRes, tasksRes] = await Promise.all([recentQuery, allQuery, tasksQuery]);
-            
-            const all = allRes.data || [];
+            const [recentRes, tasksRes] = await Promise.all([recentQuery, tasksQuery]);
             setLeads(recentRes.data || []);
             setTasks(tasksRes.data || []);
-
-            // 1. Calculate Stats
-            const total = all.length;
-            const won = all.filter(l => l.status === 'won');
-            const totalRevenue = won.reduce((sum, lead) => sum + (lead.deal_value || 0), 0);
-            
-            setStats({
-                newLeads: all.length,
-                activePipeline: all.filter(l => ['contacted', 'qualified', 'proposal'].includes(l.status)).length,
-                convRate: total > 0 ? Math.round((won.length / total) * 100) : 0,
-                revenue: totalRevenue
-            });
-
-            // 2. Prepare Funnel Data
-            const funnel = [
-                { name: 'New', count: all.filter(l => l.status === 'new').length },
-                { name: 'Contacted', count: all.filter(l => l.status === 'contacted').length },
-                { name: 'Qualified', count: all.filter(l => l.status === 'qualified').length },
-                { name: 'Proposal', count: all.filter(l => l.status === 'proposal').length },
-                { name: 'Won', count: won.length },
-            ];
-            setFunnelData(funnel);
-
-            // 3. Prepare Lead Source Data
-            const sourceCounts = all.reduce((acc, lead) => {
-                const src = lead.source || 'Other';
-                acc[src] = (acc[src] || 0) + 1;
-                return acc;
-            }, {});
-            const sources = Object.keys(sourceCounts)
-                .map(key => ({ name: key, value: sourceCounts[key] }))
-                .sort((a, b) => b.value - a.value)
-                .slice(0, 5);
-            setSourceData(sources);
-
-            // 4. Prepare Revenue Trend Data (Last 6 Months)
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const currentMonth = new Date().getMonth();
-            const trend = [];
-            
-            for (let i = 5; i >= 0; i--) {
-                const targetMonthIndex = (currentMonth - i + 12) % 12;
-                const monthName = months[targetMonthIndex];
-                
-                const monthlyRevenue = won.filter(lead => {
-                    if (!lead.created_at) return false;
-                    const leadMonth = new Date(lead.created_at).getMonth();
-                    return leadMonth === targetMonthIndex;
-                }).reduce((sum, lead) => sum + (lead.deal_value || 0), 0);
-                
-                trend.push({
-                    name: monthName,
-                    value: monthlyRevenue > 0 ? monthlyRevenue : (i === 0 ? 0 : Math.floor(Math.random() * 50000))
-                });
-            }
-            setRevenueData(trend);
-
-            // 5. Prepare Temperature Data
-            const tempCounts = all.reduce((acc, lead) => {
-                const temp = lead.temperature || 'Cold';
-                acc[temp] = (acc[temp] || 0) + 1;
-                return acc;
-            }, {});
-            const temps = ['Hot', 'Warm', 'Cold'].map(key => ({
-                name: key,
-                value: tempCounts[key] || 0
-            })).filter(t => t.value > 0);
-            setTemperatureData(temps.length > 0 ? temps : [{name: 'Cold', value: 1}]);
-
-            // 6. Prepare Revenue By Source Data
-            const revenueBySource = won.reduce((acc, lead) => {
-                const src = lead.source || 'Other';
-                acc[src] = (acc[src] || 0) + (lead.deal_value || 0);
-                return acc;
-            }, {});
-            const revSources = Object.keys(revenueBySource)
-                .map(key => ({ name: key, value: revenueBySource[key] }))
-                .sort((a, b) => b.value - a.value)
-                .slice(0, 5);
-            
-            if (revSources.length === 0) {
-                revSources.push({name: 'Website', value: 120000});
-                revSources.push({name: 'Referral', value: 85000});
-            }
-            setRevenueBySourceData(revSources);
-
-            // 7. Team Leaderboard
-            const { data: users } = await supabase.from('user_profiles').select('id, full_name, avatar_url');
-            const usersData = users || [];
-            
-            const teamMap = {};
-            usersData.forEach(u => {
-                teamMap[u.id] = { id: u.id, name: u.full_name || 'Unknown', avatar_url: u.avatar_url, dealsWon: 0, revenue: 0, totalAssigned: 0 };
-            });
-            
-            all.forEach(lead => {
-                if (lead.assigned_to && teamMap[lead.assigned_to]) {
-                    teamMap[lead.assigned_to].totalAssigned++;
-                    if (lead.status === 'won') {
-                        teamMap[lead.assigned_to].dealsWon++;
-                        teamMap[lead.assigned_to].revenue += (lead.deal_value || 0);
-                    }
-                }
-            });
-            
-            const teamArr = Object.values(teamMap)
-                .filter(member => member.totalAssigned > 0)
-                .map(member => ({
-                    ...member,
-                    winRate: member.totalAssigned > 0 ? Math.round((member.dealsWon / member.totalAssigned) * 100) : 0
-                }))
-                .sort((a, b) => b.revenue - a.revenue);
-            
-            setTeamData(teamArr);
-
         } catch (err) {
-            console.error('CRM fetch error', err);
-        } finally {
-            setIsLoading(false);
+            console.error('[Dashboard] side data fetch error:', err);
         }
-    };
-
-    useEffect(() => {
-        fetchData();
     }, []);
 
-    const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+    useEffect(() => {
+        Promise.all([fetchAnalytics(), fetchSideData()]).finally(() => setIsLoading(false));
+    }, [fetchAnalytics, fetchSideData]);
+
+    const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val || 0);
+
+    // Derived chart-ready data from server analytics
+    const totals = analytics?.totals ?? {};
+    const funnelData = (analytics?.by_status ?? []).map(s => ({ name: s.name.charAt(0).toUpperCase() + s.name.slice(1), count: s.count }));
+    const sourceData = analytics?.by_source ?? [];
+    const temperatureData = analytics?.by_temperature ?? [];
+    const revenueData = (analytics?.monthly_trend ?? []).map(m => ({ name: m.name, value: m.value }));
+    const revenueBySourceData = analytics?.revenue_by_source ?? [];
+    const teamData = (analytics?.team_leaderboard ?? []).map(m => ({
+        id: m.id,
+        name: m.name,
+        avatar_url: m.avatar_url,
+        dealsWon: m.deals_won,
+        revenue: m.revenue,
+        totalAssigned: m.total_assigned,
+        winRate: m.win_rate,
+    }));
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: Target },
@@ -224,7 +147,7 @@ export default function CRMDashboard() {
                             Your complete CRM command center.
                         </p>
                     </motion.div>
-                    
+
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-3">
                         <Link
                             href="/crm/leads"
@@ -244,7 +167,7 @@ export default function CRMDashboard() {
                 <AnimatePresence mode="wait">
                     {/* OVERVIEW TAB */}
                     {activeTab === 'overview' && (
-                        <motion.div 
+                        <motion.div
                             key="overview"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -254,10 +177,10 @@ export default function CRMDashboard() {
                         >
                             {/* Metric Cards Row */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <GlassMetricCard title="Total Leads" value={stats.newLeads} icon={Users} trend="Pipeline Health" trendUp={true} accentColor="cyan" delay={0.1} href="/crm/leads" />
-                                <GlassMetricCard title="Active Deals" value={stats.activePipeline} icon={Target} progress={stats.convRate > 0 ? stats.convRate : 0} accentColor="purple" delay={0.2} href="/crm/pipeline" />
+                                <GlassMetricCard title="Total Leads" value={totals.total ?? 0} icon={Users} trend="Pipeline Health" trendUp={true} accentColor="cyan" delay={0.1} href="/crm/leads" isLoading={isLoading} />
+                                <GlassMetricCard title="Active Deals" value={totals.active ?? 0} icon={Target} progress={totals.win_rate ?? 0} accentColor="purple" delay={0.2} href="/crm/pipeline" isLoading={isLoading} />
                                 {isManager && (
-                                    <GlassMetricCard title="Total Revenue" value={formatCurrency(stats.revenue)} icon={DollarSign} trend="Closed Won" trendUp={true} accentColor="emerald" delay={0.3} href="/crm/reports" />
+                                    <GlassMetricCard title="Total Revenue" value={formatCurrency(totals.revenue)} icon={DollarSign} trend="Closed Won" trendUp={true} accentColor="emerald" delay={0.3} href="/crm/reports" isLoading={isLoading} />
                                 )}
                             </div>
 
@@ -267,10 +190,10 @@ export default function CRMDashboard() {
                                         <GradientAreaChart data={revenueData} title="Revenue Growth" subtitle="6-Month Pipeline Velocity" icon={BarChart2} isLoading={isLoading} />
                                     </Link>
                                 )}
-                                
+
                                 {/* Actionable Tasks */}
-                                <motion.div 
-                                    initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} 
+                                <motion.div
+                                    initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
                                     className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-[1.25rem] p-6 border border-gray-100 dark:border-gray-700/50 shadow-xl shadow-gray-200/20 dark:shadow-black/20 relative overflow-hidden flex flex-col"
                                 >
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 dark:bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
@@ -300,7 +223,7 @@ export default function CRMDashboard() {
 
                     {/* LEAD ANALYTICS TAB */}
                     {activeTab === 'analytics' && (
-                        <motion.div 
+                        <motion.div
                             key="analytics"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -329,7 +252,7 @@ export default function CRMDashboard() {
 
                     {/* TEAM PERFORMANCE TAB */}
                     {activeTab === 'team' && (
-                        <motion.div 
+                        <motion.div
                             key="team"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -339,12 +262,18 @@ export default function CRMDashboard() {
                         >
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 <div className="lg:col-span-2">
-                                    <TeamLeaderboard teamData={teamData} totalRevenue={stats.revenue} isLoading={isLoading} />
+                                    <TeamLeaderboard teamData={teamData} totalRevenue={totals.revenue ?? 0} isLoading={isLoading} />
                                 </div>
                                 <div className="space-y-6">
-                                    {/* Additional team metrics can go here in the future */}
-                                    <GlassMetricCard title="Total Team Deals" value={teamData.reduce((acc, m) => acc + m.dealsWon, 0)} icon={Briefcase} accentColor="cyan" delay={0.1} />
-                                    <GlassMetricCard title="Average Win Rate" value={`${teamData.length > 0 ? Math.round(teamData.reduce((acc, m) => acc + m.winRate, 0) / teamData.length) : 0}%`} icon={TrendingUp} accentColor="emerald" delay={0.2} />
+                                    <GlassMetricCard title="Total Team Deals" value={teamData.reduce((acc, m) => acc + m.dealsWon, 0)} icon={Briefcase} accentColor="cyan" delay={0.1} isLoading={isLoading} />
+                                    <GlassMetricCard
+                                        title="Average Win Rate"
+                                        value={`${teamData.length > 0 ? Math.round(teamData.reduce((acc, m) => acc + Number(m.winRate), 0) / teamData.length) : 0}%`}
+                                        icon={TrendingUp}
+                                        accentColor="emerald"
+                                        delay={0.2}
+                                        isLoading={isLoading}
+                                    />
                                 </div>
                             </div>
                         </motion.div>

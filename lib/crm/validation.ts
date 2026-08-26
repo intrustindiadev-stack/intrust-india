@@ -109,8 +109,8 @@ export const CrmActivityLogSchema = z.object({
 export const CrmIntentLogSchema = z.object({
     lead_id: z.string().uuid('Invalid Lead ID'),
     service_name: z.string().min(1, 'Service name is required').max(150),
-
-    status: z.enum(['pitched', 'negotiating', 'agreed', 'rejected']).default('pitched'),
+    // Must match crm_lead_services status CHECK constraint
+    status: z.enum(['interested', 'pitched', 'negotiating', 'won', 'lost']).default('interested'),
 });
 
 export const LeadFilterSchema = z.object({

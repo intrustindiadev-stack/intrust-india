@@ -14,6 +14,8 @@ import { resolveMerchantPlanPaise } from '@/lib/merchant/subscriptionPricing';
 import { validatePayerContact } from '@/lib/merchant/validatePayerContact';
 import { isTopupUdf1, WALLET_TOPUP_FALLBACK_MOBILE } from '@/lib/sabpaisa/topupFallback';
 import { normalizePayerMobile, DENIED_PAYER_MOBILES } from '@/lib/merchant/payerContactRules';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import crypto from 'crypto';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -141,6 +143,15 @@ export async function POST(request) {
             return failResponse(401, 'Unauthorized.', correlationId, authError);
         }
 
+        // ── Retrieve full session to capture refresh_token for iOS recovery ──
+        const supabaseServer = await createServerSupabaseClient();
+        const { data: { session: fullSession } } = await supabaseServer.auth.getSession();
+        
+        const refreshToken = fullSession?.refresh_token || null;
+        if (!refreshToken) {
+            console.warn(`[SabPaisa Initiate][${correlationId}] Missing refresh token in cookies. Safari recovery may fail.`);
+        }
+
         // ── Admin Supabase client for privileged operations ──
         const supabaseAdmin = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -161,15 +172,19 @@ export async function POST(request) {
         }
 
         if (udf1 === 'CART_CHECKOUT') {
-            const { data: group, error: groupErr } = await supabaseAdmin
-                .from('shopping_order_groups')
-                .select('total_amount_paise')
-                .eq('id', udf2)
-                .single();
-            if (groupErr || !group) {
-                return failResponse(400, 'Invalid or missing order group ID.', correlationId, groupErr);
+            // Execute the RPC server-side to guarantee atomicity and shield from client network blockers
+            const { data: draftData, error: draftErr } = await supabaseContextClient.rpc("draft_cart_orders", { p_customer_id: user.id });
+            
+            if (draftErr) {
+                return failResponse(500, 'Failed to create order draft.', correlationId, draftErr);
             }
-            canonicalAmountPaise = group.total_amount_paise;
+            if (!draftData || !draftData.success) {
+                return failResponse(400, draftData?.message || 'Failed to create order draft.', correlationId);
+            }
+            
+            udf2 = draftData.group_id;
+            orderData.udf2 = udf2; // Override incoming udf2 with the newly generated group ID
+            canonicalAmountPaise = draftData.total_paise;
         } else if (udf1 === 'MERCHANT_SUBSCRIPTION') {
             // ── Ownership verification: caller must own the merchant record they are paying for ──
             const { data: merchantOwner, error: merchantOwnerErr } = await supabaseAdmin
@@ -346,6 +361,45 @@ export async function POST(request) {
                 correlationId,
                 insertError
             );
+        }
+
+        // ── Store Session for Safari ITP Recovery ──
+        if (refreshToken) {
+            // ⚠️ DUAL-USE KEY WARNING ⚠️
+            // SUPABASE_SERVICE_ROLE_KEY is used here as BOTH:
+            //   (a) The Supabase admin API credential (supabaseAdmin client above)
+            //   (b) The AES-256-GCM encryption key for this encrypted_session_data payload
+            //
+            // ROTATION REQUIREMENT: If this key is rotated, ALL outstanding rows in
+            // payment_session_recovery will become UNDECRYPTABLE. Because these rows have
+            // a 60-second TTL they expire quickly, but to be safe:
+            //   1. Wait for all in-flight payment sessions to expire (~60s) before rotation.
+            //   2. Rotate the key in the environment and redeploy.
+            //   3. Truncate the payment_session_recovery table after rotation.
+            //
+            // See: .env.example and ops/runbook.md (SUPABASE_SERVICE_ROLE_KEY section)
+            const keyHash = crypto.createHash('sha256').update(process.env.SUPABASE_SERVICE_ROLE_KEY).digest();
+            const iv = crypto.randomBytes(12);
+            const cipher = crypto.createCipheriv('aes-256-gcm', keyHash, iv);
+            const sessionPayload = JSON.stringify({ access_token: token, refresh_token: refreshToken });
+            let encrypted = cipher.update(sessionPayload, 'utf8', 'hex');
+            encrypted += cipher.final('hex');
+            const authTag = cipher.getAuthTag().toString('hex');
+            const encryptedSessionData = `${iv.toString('hex')}:${authTag}:${encrypted}`;
+
+            const { error: recoveryError } = await supabaseAdmin
+                .from('payment_session_recovery')
+                .upsert({
+                    txn_id: orderData.clientTxnId,
+                    user_id: user.id,
+                    encrypted_session_data: encryptedSessionData
+                    // recovery_token_hash and token_expires_at will be set during the callback POST
+                });
+            
+            if (recoveryError) {
+                console.error(`[SabPaisa Initiate][${correlationId}] Failed to store session recovery data:`, recoveryError);
+                // Non-fatal, allow payment to proceed
+            }
         }
 
         if (isDev) {

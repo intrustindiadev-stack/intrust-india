@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '@/lib/supabase/queries';
 import { mapStatusToInternal } from '@/lib/sabpaisa/utils';
 import { fulfillTransaction } from '@/lib/sabpaisa/fulfillment';
+import crypto from 'crypto';
 
 const ALLOWED_IPS = (process.env.SABPAISA_ALLOWED_IPS || '').split(',').map(ip => ip.trim()).filter(Boolean);
 
@@ -358,7 +359,53 @@ export async function POST(request) {
             redirectQuery = `?txnId=${clientTxnId}&status=timeout`;
         }
 
-        return NextResponse.redirect(buildRedirectUrl(redirectPath + redirectQuery), 303);
+        const destination = redirectPath + redirectQuery;
+
+        // ── 9. Generate and Store Recovery Token for iOS ITP ──
+        let recoveryTokenCookie = null;
+        if (clientTxnId) {
+            try {
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
+                
+                const recoveryToken = crypto.randomBytes(32).toString('hex');
+                const hashedToken = crypto.createHash('sha256').update(recoveryToken).digest('hex');
+                
+                // Use a strict 60-second expiry from NOW
+                const { error: tokenErr } = await supabaseAdmin
+                    .from('payment_session_recovery')
+                    .update({
+                        recovery_token_hash: hashedToken,
+                        token_expires_at: new Date(Date.now() + 60000).toISOString()
+                    })
+                    .eq('txn_id', clientTxnId);
+                
+                if (!tokenErr) {
+                    recoveryTokenCookie = recoveryToken;
+                    console.log(`[Callback] Generated 60s recovery token for txn ${clientTxnId}`);
+                } else {
+                    console.error(`[Callback] Failed to store recovery token for txn ${clientTxnId}:`, tokenErr);
+                }
+            } catch (err) {
+                console.error(`[Callback] Error generating recovery token:`, err);
+            }
+        }
+
+        const response = NextResponse.redirect(buildRedirectUrl(`/payment/bounce?to=${encodeURIComponent(destination)}&txnId=${clientTxnId}`), 303);
+        
+        if (recoveryTokenCookie) {
+            response.cookies.set('payment_recovery_token', recoveryTokenCookie, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 60, // 60 seconds
+                path: '/api/sabpaisa/exchange-token'
+            });
+        }
+        
+        return response;
 
     } catch (error) {
         console.error('API Callback Error:', error);

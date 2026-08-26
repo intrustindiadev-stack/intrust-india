@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Skeleton from '@/components/ui/Skeleton';
-import { useTheme } from 'next-themes';
+
 import { useEffect, useState } from 'react';
 
 export default function TemperatureChart({ 
@@ -13,14 +13,14 @@ export default function TemperatureChart({
     icon: Icon, 
     isLoading 
 }) {
-    const { theme, systemTheme } = useTheme();
+    
     const [mounted, setMounted] = useState(false);
     
     useEffect(() => {
         setMounted(true);
     }, []);
 
-    const isDark = mounted && (theme === 'dark' || (theme === 'system' && systemTheme === 'dark'));
+    const isDark = mounted && window.matchMedia("(prefers-color-scheme: dark)").matches;
     
     // Custom colors for Hot, Warm, Cold
     const COLOR_MAP = {

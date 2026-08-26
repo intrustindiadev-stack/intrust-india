@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Skeleton from '@/components/ui/Skeleton';
-import { useTheme } from 'next-themes';
+
 import { useEffect, useState } from 'react';
 
 export default function GradientAreaChart({ 
@@ -13,14 +13,14 @@ export default function GradientAreaChart({
     icon: Icon, 
     isLoading 
 }) {
-    const { theme, systemTheme } = useTheme();
+    
     const [mounted, setMounted] = useState(false);
     
     useEffect(() => {
         setMounted(true);
     }, []);
 
-    const isDark = mounted && (theme === 'dark' || (theme === 'system' && systemTheme === 'dark'));
+    const isDark = mounted && window.matchMedia("(prefers-color-scheme: dark)").matches;
     const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
     const textColor = isDark ? '#64748b' : '#94a3b8';
 

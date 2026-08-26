@@ -55,7 +55,7 @@ async function issueSessionForUser(userId, email) {
     const exchangeClient = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        { cookies: { getAll: () => [], setAll: () => {} } }
+        { cookies: { getAll: () => [], setAll: () => { } } }
     );
 
     const { data: otpData, error: otpErr } = await exchangeClient.auth.verifyOtp({
@@ -86,11 +86,11 @@ async function issueSessionForUser(userId, email) {
  */
 export async function GET(request) {
     const requestUrl = new URL(request.url);
-    const code  = requestUrl.searchParams.get('code');
+    const code = requestUrl.searchParams.get('code');
     const state = requestUrl.searchParams.get('state');
-    const host  = request.headers.get('host') || 'localhost:3000';
+    const host = request.headers.get('host') || 'localhost:3000';
     const protocol = (host.includes('localhost') || host.match(/^[0-9.]+(?::[0-9]+)?$/)) ? 'http' : (request.headers.get('x-forwarded-proto') || 'https');
-    const appUrl   = `${protocol}://${host}`;
+    const appUrl = `${protocol}://${host}`;
 
     if (!code) {
         console.error('[Google OAuth] No code in callback');
@@ -98,10 +98,10 @@ export async function GET(request) {
     }
 
     // Parse state
-    const stateData    = parseState(state);
-    const linkMode     = stateData.link_mode;     // 'email' → account merge Flow A
+    const stateData = parseState(state);
+    const linkMode = stateData.link_mode;     // 'email' → account merge Flow A
     const pendingEmail = stateData.pending_email; // email the user typed before clicking Google link
-    const nextPath     = stateData.next;
+    const nextPath = stateData.next;
 
     try {
         // ── Step 1: Exchange authorization code for Google tokens ─────────────────
@@ -110,10 +110,10 @@ export async function GET(request) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
                 code,
-                client_id:     process.env.GOOGLE_CLIENT_ID,
+                client_id: process.env.GOOGLE_CLIENT_ID,
                 client_secret: process.env.GOOGLE_CLIENT_SECRET,
-                redirect_uri:  `${appUrl}/api/auth/google/callback`,
-                grant_type:    'authorization_code',
+                redirect_uri: `${appUrl}/api/auth/google/callback`,
+                grant_type: 'authorization_code',
             }),
         });
 
@@ -123,8 +123,8 @@ export async function GET(request) {
             return NextResponse.redirect(new URL('/login?error=token_exchange', appUrl));
         }
 
-        const tokenData   = await tokenRes.json();
-        const idToken     = tokenData.id_token;
+        const tokenData = await tokenRes.json();
+        const idToken = tokenData.id_token;
         const accessToken = tokenData.access_token;
 
         if (!idToken) {
@@ -146,14 +146,14 @@ export async function GET(request) {
 
         const { data: authData, error: authError } = await tempSupabase.auth.signInWithIdToken({
             provider: 'google',
-            token:        idToken,
+            token: idToken,
             access_token: accessToken,
         });
 
         if (authError) {
             console.error('[Google OAuth] Supabase signInWithIdToken error:', authError);
-            const errMsg = authError?.message && typeof authError.message === 'string' 
-                ? authError.message 
+            const errMsg = authError?.message && typeof authError.message === 'string'
+                ? authError.message
                 : 'Authentication failed due to a server error. Please try again.';
             return NextResponse.redirect(
                 new URL(`/login?error=${encodeURIComponent(errMsg)}`, appUrl)
@@ -161,16 +161,16 @@ export async function GET(request) {
         }
 
         let session = authData?.session;
-        let user    = authData?.user;
+        let user = authData?.user;
 
         if (!session || !user) {
             console.error('[Google OAuth] No session or user returned from signInWithIdToken');
             return NextResponse.redirect(new URL('/login?error=no_session', appUrl));
         }
 
-        const googleEmail   = user.email?.toLowerCase();
+        const googleEmail = user.email?.toLowerCase();
         const googlePicture = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
-        const googleName    = user.user_metadata?.full_name  || user.user_metadata?.name || null;
+        const googleName = user.user_metadata?.full_name || user.user_metadata?.name || null;
 
         // ── Flow A: link_mode=email — user proved Google ownership, now merge ─────
         // The user had a Google account and wanted to add email+password.
@@ -202,8 +202,8 @@ export async function GET(request) {
             // Audit log
             try {
                 await supabaseAdmin.from('audit_logs').insert({
-                    user_id:  user.id,
-                    action:   'account_linked',
+                    user_id: user.id,
+                    action: 'account_linked',
                     metadata: { method: 'google_verify_for_email_link', email: googleEmail }
                 });
             } catch (_) { /* non-fatal */ }
@@ -213,10 +213,10 @@ export async function GET(request) {
             // Fall through to set session and redirect to /link-complete
             const redirectPath = '/link-complete';
             const redirectResp = NextResponse.redirect(new URL(redirectPath, appUrl));
-            
+
             let currentCookies = request.cookies.getAll();
             const cookiesToSet = [];
-            const rbSupabase   = createServerClient(
+            const rbSupabase = createServerClient(
                 process.env.NEXT_PUBLIC_SUPABASE_URL,
                 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
                 {
@@ -236,24 +236,24 @@ export async function GET(request) {
                     },
                 }
             );
-            
+
             const { error: setSessionErr } = await rbSupabase.auth.setSession({
-                access_token:  session.access_token,
+                access_token: session.access_token,
                 refresh_token: session.refresh_token,
             });
             if (setSessionErr) {
-                 console.error('[Google OAuth][Flow A] setSession error:', setSessionErr.message);
-                 return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(setSessionErr.message)}`, appUrl));
+                console.error('[Google OAuth][Flow A] setSession error:', setSessionErr.message);
+                return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(setSessionErr.message)}`, appUrl));
             }
-            
+
             const { error: refreshErr } = await rbSupabase.auth.refreshSession(); // Force updated metadata into cookies
             if (refreshErr) {
-                 console.error('[Google OAuth][Flow A] refreshSession error:', refreshErr.message);
-                 return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(refreshErr.message)}`, appUrl));
+                console.error('[Google OAuth][Flow A] refreshSession error:', refreshErr.message);
+                return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(refreshErr.message)}`, appUrl));
             }
-            
+
             applySupabaseCookies(redirectResp, cookiesToSet);
-            
+
             console.log('[Google OAuth][Flow A] Merged Google user:', user.id, '→ /link-complete');
             return redirectResp;
         }
@@ -268,7 +268,7 @@ export async function GET(request) {
 
         const userCreatedAtMs = user.created_at ? new Date(user.created_at).getTime() : 0;
         const isBrandNew = (Date.now() - userCreatedAtMs < 10000) &&
-                           (user.identities?.length <= 1 || (user.app_metadata?.providers?.length === 1 && user.app_metadata.providers[0] === 'google'));
+            (user.identities?.length <= 1 || (user.app_metadata?.providers?.length === 1 && user.app_metadata.providers[0] === 'google'));
 
         const signedInEstablished = !!selfProfile && (
             selfProfile.role !== 'user' ||
@@ -321,10 +321,10 @@ export async function GET(request) {
                 await supabaseAdmin
                     .from('user_profiles')
                     .update({
-                        auth_provider:      'multiple',
-                        avatar_url:         preservedSurvivingAvatar,
-                        email_verified:     true,
-                        email_verified_at:  new Date().toISOString(),
+                        auth_provider: 'multiple',
+                        avatar_url: preservedSurvivingAvatar,
+                        email_verified: true,
+                        email_verified_at: new Date().toISOString(),
                     })
                     .eq('id', survivingId);
 
@@ -339,13 +339,13 @@ export async function GET(request) {
                 // 4. Audit log
                 try {
                     await supabaseAdmin.from('audit_logs').insert({
-                        user_id:  survivingId,
-                        action:   'account_linked',
+                        user_id: survivingId,
+                        action: 'account_linked',
                         metadata: {
-                            method:           'google_merged_into_email',
-                            google_user_id:   user.id,
-                            surviving_id:     survivingId,
-                            email:            googleEmail,
+                            method: 'google_merged_into_email',
+                            google_user_id: user.id,
+                            surviving_id: survivingId,
+                            email: googleEmail,
                         }
                     });
                 } catch (_) { /* non-fatal */ }
@@ -366,9 +366,9 @@ export async function GET(request) {
                     await supabaseAdmin
                         .from('user_profiles')
                         .update({
-                            full_name:        googleName || 'Google User',
-                            avatar_url:       preservedAvatar,
-                            email_verified:   true,
+                            full_name: googleName || 'Google User',
+                            avatar_url: preservedAvatar,
+                            email_verified: true,
                             email_verified_at: new Date().toISOString(),
                         })
                         .eq('id', user.id);
@@ -382,9 +382,9 @@ export async function GET(request) {
                 await supabaseAdmin
                     .from('user_profiles')
                     .update({
-                        full_name:        googleName || 'Google User',
-                        avatar_url:       preservedAvatar,
-                        email_verified:   true,
+                        full_name: googleName || 'Google User',
+                        avatar_url: preservedAvatar,
+                        email_verified: true,
                         email_verified_at: new Date().toISOString(),
                     })
                     .eq('id', user.id);
@@ -393,13 +393,13 @@ export async function GET(request) {
                 const { error: insertErr } = await supabaseAdmin
                     .from('user_profiles')
                     .insert({
-                        id:               user.id,
-                        full_name:        googleName || 'Google User',
-                        avatar_url:       googlePicture,
-                        email:            user.email,
-                        auth_provider:    'google',
-                        role:             'user',
-                        email_verified:   true,
+                        id: user.id,
+                        full_name: googleName || 'Google User',
+                        avatar_url: googlePicture,
+                        email: user.email,
+                        auth_provider: 'google',
+                        role: 'user',
+                        email_verified: true,
                         email_verified_at: new Date().toISOString(),
                     });
 
@@ -474,7 +474,7 @@ export async function GET(request) {
         );
 
         const { error: setSessionError } = await responseBoundSupabase.auth.setSession({
-            access_token:  session.access_token,
+            access_token: session.access_token,
             refresh_token: session.refresh_token,
         });
 

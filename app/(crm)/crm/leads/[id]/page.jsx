@@ -40,12 +40,13 @@ const STATUS_CONFIG = {
 import { isValidUUID } from '@/lib/utils';
 
 
-export default function LeadDetailPage({ params }) {
+export default function LeadDetailPage({ params, backHref }) {
     const router = useRouter();
     const unwrappedParams = use(params);
     const rawId = unwrappedParams.id;
     const idMatch = rawId.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
     const id = idMatch ? idMatch[0] : rawId;
+    const handleBack = () => { if (backHref) router.push(backHref); else router.back(); };
 
     const { user, profile } = useAuth();
     
@@ -257,7 +258,7 @@ export default function LeadDetailPage({ params }) {
         <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen bg-gray-50/50 dark:bg-gray-900/50 font-[family-name:var(--font-outfit)]">
             
             <div className="flex items-center justify-between">
-                <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm">
+                <button onClick={handleBack} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm">
                     <ArrowLeft size={18} /> Back
                 </button>
                 <div className="flex items-center gap-2">
@@ -381,8 +382,8 @@ export default function LeadDetailPage({ params }) {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-3xl border border-white/60 dark:border-gray-700 p-4 shadow-xl shadow-slate-200/10 hover:-translate-y-0.5 transition-transform">
                                 <MapPin size={16} className="text-gray-400 mb-2"/>
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Region</p>
-                                <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{lead.source || 'Unknown'}</p>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Zone / Region</p>
+                                <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{[lead.zone, lead.city, lead.state].filter(Boolean).join(', ') || '—'}</p>
                             </div>
                             <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-3xl border border-white/60 dark:border-gray-700 p-4 shadow-xl shadow-slate-200/10 hover:-translate-y-0.5 transition-transform">
                                 <Calendar size={16} className="text-gray-400 mb-2"/>
@@ -555,6 +556,32 @@ export default function LeadDetailPage({ params }) {
                                                                     <p className="text-[10px] font-black text-gray-400 uppercase mt-0.5">{svc.status}</p>
                                                                 </div>
                                                             </div>
+                                                            {/* Inline status updater */}
+                                                            <select
+                                                                value={svc.status}
+                                                                onChange={async (e) => {
+                                                                    const newStatus = e.target.value;
+                                                                    try {
+                                                                        const res = await fetch('/api/crm/lead-services', {
+                                                                            method: 'PATCH',
+                                                                            headers: { 'Content-Type': 'application/json' },
+                                                                            body: JSON.stringify({ id: svc.id, status: newStatus })
+                                                                        });
+                                                                        if (!res.ok) throw new Error('Update failed');
+                                                                        toast.success(`Status updated to ${newStatus}`);
+                                                                        fetchData();
+                                                                    } catch (err) {
+                                                                        toast.error(err.message);
+                                                                    }
+                                                                }}
+                                                                className="text-[10px] font-bold uppercase rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 cursor-pointer focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                                            >
+                                                                <option value="interested">Interested</option>
+                                                                <option value="pitched">Pitched</option>
+                                                                <option value="negotiating">Negotiating</option>
+                                                                <option value="won">Won</option>
+                                                                <option value="lost">Lost</option>
+                                                            </select>
                                                         </div>
                                                     ))
                                                 )}
@@ -713,7 +740,6 @@ export default function LeadDetailPage({ params }) {
                 {showLogIntent && (
                     <LogIntentModal
                         leadId={id}
-                        userId={user?.id}
                         onClose={() => setShowLogIntent(false)}
                         onSave={fetchData}
                     />
@@ -898,32 +924,37 @@ function LogActivityModal({ leadId, userId, onClose, onSave }) {
     );
 }
 
-function LogIntentModal({ leadId, userId, onClose, onSave }) {
-    const [serviceName, setServiceName] = useState('');
-    const [status, setStatus] = useState('pitched');
+function LogIntentModal({ leadId, onClose, onSave }) {
+    const [serviceName, setServiceName] = useState('E-commerce');
+    const [status, setStatus] = useState('interested');
     const [saving, setSaving] = useState(false);
 
     const handleSave = async (e) => {
         e.preventDefault();
-        const payload = {
-            lead_id: leadId,
-            service_name: serviceName.trim(),
-            status
-        };
-        const validation = CrmIntentLogSchema.safeParse(payload);
-        if (!validation.success) {
-            toast.error(validation.error.issues[0]?.message || 'Invalid sales intent details');
+        if (!serviceName.trim()) {
+            toast.error('Service name is required');
             return;
         }
         setSaving(true);
         try {
-            const valid = validation.data;
-            const { error } = await supabase.from('crm_lead_services').insert([{
-                lead_id: valid.lead_id,
-                service_name: valid.service_name,
-                status: valid.status
-            }]);
-            if (error) throw error;
+            const res = await fetch('/api/crm/lead-services', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lead_id: leadId,
+                    service_name: serviceName.trim(),
+                    status
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                if (res.status === 409) {
+                    toast.error('This service is already added for this lead');
+                } else {
+                    throw new Error(data.error || 'Failed to log intent');
+                }
+                return;
+            }
             toast.success('Intent logged');
             onSave();
             onClose();
@@ -944,16 +975,27 @@ function LogIntentModal({ leadId, userId, onClose, onSave }) {
                 <form onSubmit={handleSave} className="space-y-4">
                     <div>
                         <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Service / Product Name</label>
-                        <input type="text" value={serviceName} onChange={e => setServiceName(e.target.value)} required placeholder="e.g. 5kW Solar System" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
+                        <select value={serviceName} onChange={e => setServiceName(e.target.value)} required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm">
+                            <option value="E-commerce">E-commerce</option>
+                            <option value="Solar">Solar</option>
+                            <option value="NFC">NFC</option>
+                            <option value="Loan">Loan</option>
+                            <option value="CIBIL">CIBIL</option>
+                            <option value="POS System">POS System</option>
+                            <option value="Fastag">Fastag</option>
+                            <option value="Recharge">Recharge</option>
+                            <option value="Merchant">Merchant</option>
+                        </select>
                     </div>
 
                     <div>
                         <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Status</label>
                         <select value={status} onChange={e => setStatus(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm">
+                            <option value="interested">Interested</option>
                             <option value="pitched">Pitched</option>
                             <option value="negotiating">Negotiating</option>
-                            <option value="agreed">Agreed</option>
-                            <option value="rejected">Rejected</option>
+                            <option value="won">Won</option>
+                            <option value="lost">Lost</option>
                         </select>
                     </div>
                     <div className="flex gap-3 pt-2">

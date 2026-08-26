@@ -7,6 +7,7 @@ import { Toaster } from 'react-hot-toast';
 import { ConfettiProvider } from '@/components/ui/ConfettiProvider';
 import { ChatProvider } from '@/components/chat/ChatProvider';
 import ErrorBoundary from '@/components/error/ErrorBoundary';
+import CsrfProvider from '@/components/csrf/CsrfProvider';
 import React, { Suspense } from 'react';
 
 const GlobalChat = React.lazy(() => import('@/components/chat/GlobalChat'));
@@ -141,17 +142,19 @@ export default function RootLayout({ children }) {
         <ConfettiProvider>
           <ThemeProvider>
             <AuthProvider>
-              <ChatProvider>
-                <StructuredData />
-                <ErrorBoundary>
-                  {children}
-                </ErrorBoundary>
-                <Suspense fallback={null}>
-                  <GlobalChat />
-                  <PWAInstallPrompt />
-                </Suspense>
-                <Toaster position="top-center" reverseOrder={false} />
-              </ChatProvider>
+              <CsrfProvider>
+                <ChatProvider>
+                  <StructuredData />
+                  <ErrorBoundary>
+                    {children}
+                  </ErrorBoundary>
+                  <Suspense fallback={null}>
+                    <GlobalChat />
+                    <PWAInstallPrompt />
+                  </Suspense>
+                  <Toaster position="top-center" reverseOrder={false} />
+                </ChatProvider>
+              </CsrfProvider>
             </AuthProvider>
           </ThemeProvider>
         </ConfettiProvider>

@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Skeleton from '@/components/ui/Skeleton';
-import { useTheme } from 'next-themes';
+
 import { useEffect, useState } from 'react';
 
 export default function LeadSourcesChart({ 
@@ -13,14 +13,14 @@ export default function LeadSourcesChart({
     icon: Icon, 
     isLoading 
 }) {
-    const { theme, systemTheme } = useTheme();
+    
     const [mounted, setMounted] = useState(false);
     
     useEffect(() => {
         setMounted(true);
     }, []);
 
-    const isDark = mounted && (theme === 'dark' || (theme === 'system' && systemTheme === 'dark'));
+    const isDark = mounted && window.matchMedia("(prefers-color-scheme: dark)").matches;
     const COLORS = ['#8b5cf6', '#0ea5e9', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
 
     return (

@@ -249,6 +249,15 @@ def main():
     print("  Target: https://intrustindia.com")
     print("=" * 55)
 
+    # Step 0: Pre-deployment Guard
+    print("\nChecking for uncommitted changes...")
+    guard_result = subprocess.run(['git', 'status', '--porcelain', '-uno'], capture_output=True, text=True, cwd=PROJECT_DIR)
+    if guard_result.stdout.strip():
+        print("[ERROR] Uncommitted changes present in the repository.")
+        print("You must commit your changes before deploying so the build is traceable to a specific commit hash.")
+        sys.exit(1)
+    print("[OK] Working directory is clean.")
+
     # Step 1: Build locally
     build_local()
 
