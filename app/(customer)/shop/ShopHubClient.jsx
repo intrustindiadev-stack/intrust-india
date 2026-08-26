@@ -70,7 +70,7 @@ const FeedCard = memo(function FeedCard({ merchant, rating, isOpen, isOfficial, 
                         </div>
                         <div>
                             <h3 className="text-[17px] font-black text-slate-900 dark:text-white line-clamp-1 leading-tight tracking-tight">
-                                {isOfficial ? 'Intrust Mart' : merchant.business_name}
+                                {isOfficial ? 'Intrust Official Store' : merchant.business_name}
                             </h3>
                             <div className="flex items-center gap-1.5 text-[12px] text-slate-500 font-bold mt-1 uppercase tracking-wider">
                                 <MapPin size={12} className="text-indigo-400" />
