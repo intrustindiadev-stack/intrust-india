@@ -26,6 +26,7 @@ const nextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '5mb',
+      allowedOrigins: ['intrustindia.com', 'www.intrustindia.com', 'https://www.intrustindia.com'],
     },
   },
   // Performance optimizations
