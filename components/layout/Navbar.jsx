@@ -9,6 +9,7 @@ import { displayInitial } from '@/lib/auth';
 
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 import MobileNav from './MobileNav';
 import GoldBadge from '@/components/ui/GoldBadge';
 import NotificationBell from '@/components/notifications/NotificationBell';
@@ -62,6 +63,9 @@ export default function Navbar() {
         setShowLogoutModal(false);
         setIsLoggingOut(true);
         try {
+            // Client-side first: this clears local caches natively, bypassing Safari AJAX redirect bugs.
+            await supabase.auth.signOut();
+            
             await fetch('/auth/logout', {
                 method: 'POST',
             });

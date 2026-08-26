@@ -13,17 +13,13 @@ export async function POST(request) {
             await supabase.auth.signOut();
         }
 
-        const requestUrl = new URL(request.url);
-        const origin = process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin;
-
-        // Force redirect to login page with a hard reload by returning a 303 (See Other)
-        // preventing any form resubmission and clearing client state
-        return NextResponse.redirect(new URL('/login', origin), {
-            status: 303,
-        });
+        // Return a direct 200 OK so that the client-side fetch doesn't
+        // trigger a 303 Redirect, which causes iOS Safari to drop the Set-Cookie headers.
+        // Navigation is handled by the client.
+        return NextResponse.json({ success: true }, { status: 200 });
 
     } catch (error) {
         console.error('Logout error:', error);
-        return NextResponse.redirect(new URL('/login', request.url));
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
