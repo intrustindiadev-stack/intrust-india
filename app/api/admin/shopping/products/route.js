@@ -22,6 +22,7 @@ export async function POST(request) {
             admin_stock,
             product_images,
             is_active,
+            platform_listed,
             gst_percentage,
             hsn_code
         } = body;
@@ -75,6 +76,7 @@ export async function POST(request) {
             p_admin_stock: admin_stock,
             p_product_images: product_images || [],
             p_is_active: is_active,
+            p_platform_listed: platform_listed !== undefined ? platform_listed : true,
             p_gst_percentage: gst_percentage || 0,
             p_hsn_code: hsn_code || '9971'
         });
@@ -190,6 +192,7 @@ export async function PATCH(request) {
             p_admin_stock: payload.admin_stock,
             p_product_images: payload.product_images || [],
             p_is_active: payload.is_active,
+            p_platform_listed: payload.platform_listed !== undefined ? payload.platform_listed : true,
             p_gst_percentage: payload.gst_percentage || 0,
             p_hsn_code: payload.hsn_code || '9971'
         });
