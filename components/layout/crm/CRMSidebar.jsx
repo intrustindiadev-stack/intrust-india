@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
     Home, Users, BarChart2, Briefcase, X, Settings, LogOut, 
-    Loader2, User, FileText, HelpCircle, Target, ChevronRight
+    Loader2, User, FileText, HelpCircle, Target, ChevronRight, CheckCircle
 } from 'lucide-react';
 import { useState } from 'react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
@@ -45,6 +45,7 @@ export default function CRMSidebar({ isOpen, setIsOpen, userProfile }) {
     const menuItems = [
         { name: 'Dashboard', icon: Home, path: '/crm' },
         { name: 'Leads', icon: Users, path: '/crm/leads' },
+        { name: 'Qualified Leads', icon: CheckCircle, path: '/crm/qualified-leads' },
         { name: 'Contacts', icon: User, path: '/crm/contacts' },
         { name: 'Pipeline', icon: Briefcase, path: '/crm/pipeline' },
         { name: 'Tasks', icon: Target, path: '/crm/tasks' },

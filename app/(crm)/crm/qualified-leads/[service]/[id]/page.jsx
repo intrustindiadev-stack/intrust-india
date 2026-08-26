@@ -40,10 +40,12 @@ const STATUS_CONFIG = {
 import { isValidUUID } from '@/lib/utils';
 
 
-export default function LeadDetailPage({ params }) {
+export default function LeadDetailPage({ params: paramsProp }) {
+    const params = useParams();
     const router = useRouter();
-    const unwrappedParams = use(params);
+    const unwrappedParams = use(paramsProp);
     const rawId = unwrappedParams.id;
+    const service = params?.service;
     const idMatch = rawId.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
     const id = idMatch ? idMatch[0] : rawId;
 
@@ -257,9 +259,9 @@ export default function LeadDetailPage({ params }) {
         <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen bg-gray-50/50 dark:bg-gray-900/50 font-[family-name:var(--font-outfit)]">
             
             <div className="flex items-center justify-between">
-                <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm">
-                    <ArrowLeft size={18} /> Back
-                </button>
+                <Link href={`/crm/qualified-leads/${service || 'all'}`} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white transition-colors font-bold text-sm mb-6 w-fit bg-white/50 dark:bg-gray-800/50 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-200/50 dark:border-gray-700/50 shadow-sm">
+                    <ArrowLeft size={16} /> Back to {service ? service.replace('-', ' ') : 'Leads'}
+                </Link>
                 <div className="flex items-center gap-2">
                     <button onClick={() => setShowEditLead(true)} className="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">
                         <Edit size={18} />

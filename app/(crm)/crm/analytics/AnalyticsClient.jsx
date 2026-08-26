@@ -22,7 +22,7 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
             
             let query = supabase
                 .from('crm_leads')
-                .select('id, status, deal_value, created_at, assigned_to, user_profiles(full_name, avatar_url)')
+                .select('id, status, deal_value, created_at, assigned_to')
                 .neq('source', 'App User');
 
             if (!isManager) {
@@ -36,10 +36,26 @@ export default function AnalyticsClient({ currentUserId, currentUserRole }) {
                 query = query.gte('created_at', date.toISOString());
             }
 
-            const { data, error: fetchError } = await query;
+            const { data: leadsData, error: fetchError } = await query;
             if (fetchError) throw fetchError;
             
-            setLeads(data || []);
+            const { data: usersData, error: usersError } = await supabase
+                .from('user_profiles')
+                .select('id, full_name, avatar_url');
+                
+            if (usersError) throw usersError;
+            
+            const usersMap = {};
+            (usersData || []).forEach(u => {
+                usersMap[u.id] = u;
+            });
+            
+            const enrichedLeads = (leadsData || []).map(lead => ({
+                ...lead,
+                user_profiles: usersMap[lead.assigned_to] || null
+            }));
+            
+            setLeads(enrichedLeads);
         } catch (err) {
             setError(err.message);
         } finally {
