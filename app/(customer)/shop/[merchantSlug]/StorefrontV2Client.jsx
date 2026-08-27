@@ -564,7 +564,13 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                 return (
                                     <button
                                         key={sub}
-                                        onClick={() => setActiveSubCategory(sub)}
+                                        onClick={() => {
+                                            if (sub.toLowerCase() === 'fashion' && liveMerchant.id === 'official') {
+                                                router.push('/shop/fashion');
+                                            } else {
+                                                setActiveSubCategory(sub);
+                                            }
+                                        }}
                                         className={`relative px-4 py-2 flex items-center gap-2 rounded-full text-xs font-bold whitespace-nowrap outline-none transition-colors ${
                                             isActive 
                                                 ? 'text-white' 

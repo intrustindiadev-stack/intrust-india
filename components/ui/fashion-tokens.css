@@ -1,0 +1,40 @@
+@layer base {
+  :root {
+    --fashion-color-bg: #ffffff;
+    --fashion-color-surface: #f8f8f8;
+    --fashion-color-surface-muted: #f0f0f0;
+    --fashion-color-text: #111111;
+    --fashion-color-text-muted: #555555;
+    --fashion-color-border: #e0e0e0;
+    --fashion-color-accent: #000000;
+    --fashion-color-accent-contrast: #ffffff;
+    --fashion-color-danger: #d93025;
+    --fashion-color-success: #188038;
+
+    --fashion-space-page: 2rem;
+    --fashion-radius-card: 0px; /* Editorial square look */
+    --fashion-radius-pill: 9999px;
+    --fashion-shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    --fashion-shadow-overlay: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+
+    --fashion-font-display: 'Inter', system-ui, sans-serif;
+    --fashion-font-body: 'Inter', system-ui, sans-serif;
+    
+    --fashion-container-max: 1440px;
+    --fashion-header-height: 4rem;
+    
+    --fashion-motion-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --fashion-motion-standard: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --fashion-color-bg: #111111;
+    --fashion-color-surface: #1a1a1a;
+    --fashion-color-surface-muted: #2a2a2a;
+    --fashion-color-text: #ffffff;
+    --fashion-color-text-muted: #a0a0a0;
+    --fashion-color-border: #333333;
+    --fashion-color-accent: #ffffff;
+    --fashion-color-accent-contrast: #000000;
+  }
+}

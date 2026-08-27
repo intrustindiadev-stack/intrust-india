@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { Loader2, Plus, ArrowRight, Package, Upload, Save, Trash2 } from 'lucide-react';
 import MultiImageUploader from '@/components/shared/MultiImageUploader';
 import { uploadProductImage } from './upload-product-image';
+import FashionVariantsEditor from '@/components/admin/shopping/FashionVariantsEditor';
 
 export default function ProductForm({ initialData = null, merchantId = null }) {
     const router = useRouter();
@@ -15,6 +16,12 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [categories, setCategories] = useState([]);
     const [gstRates, setGstRates] = useState([]);
+    
+    // Fashion Mode State
+    const [isFashionMode, setIsFashionMode] = useState(false);
+    const [fashionCategoryId, setFashionCategoryId] = useState('');
+    const [fashionVariants, setFashionVariants] = useState([]);
+
     const [formData, setFormData] = useState({
         title: initialData?.title || '',
         description: initialData?.description || '',
@@ -54,9 +61,31 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
             }
         };
 
+        const fetchFashionData = async () => {
+            if (initialData?.id) {
+                const { data: catData } = await supabase
+                    .from('fashion_product_categories')
+                    .select('category_id')
+                    .eq('product_id', initialData.id)
+                    .maybeSingle();
+
+                const { data: varData } = await supabase
+                    .from('fashion_variants')
+                    .select('*, media:fashion_variant_media(*)')
+                    .eq('product_id', initialData.id);
+
+                if (catData || (varData && varData.length > 0)) {
+                    setIsFashionMode(true);
+                    if (catData) setFashionCategoryId(catData.category_id);
+                    if (varData) setFashionVariants(varData);
+                }
+            }
+        };
+
         fetchCategories();
         fetchGstRates();
-    }, []);
+        fetchFashionData();
+    }, [initialData?.id]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -112,6 +141,32 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
 
             const result = await res.json();
             if (!res.ok) throw new Error(result.error || 'Failed to save product');
+
+            const savedProductId = initialData?.id || result.product?.id || result.productId;
+
+            // Save fashion data if enabled
+            if (savedProductId) {
+                if (isFashionMode && fashionVariants.length > 0) {
+                    const fashionRes = await fetch('/api/admin/shopping/fashion-data', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            product_id: savedProductId,
+                            category_id: fashionCategoryId,
+                            variants: fashionVariants
+                        })
+                    });
+                    if (!fashionRes.ok) {
+                        const err = await fashionRes.json();
+                        toast.error(err.error || 'Failed to save fashion variants');
+                    }
+                } else if (!isFashionMode && initialData?.id) {
+                    // Clean up if turned off
+                    await fetch(`/api/admin/shopping/fashion-data?product_id=${savedProductId}`, {
+                        method: 'DELETE'
+                    });
+                }
+            }
 
             toast.success(initialData?.id ? 'Product updated successfully' : 'Product added successfully');
             router.push('/admin/shopping');
@@ -379,6 +434,17 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
                     </div>
                 </div>
             </div>
+
+            <FashionVariantsEditor 
+                enabled={isFashionMode}
+                onToggle={setIsFashionMode}
+                fashionCategoryId={fashionCategoryId}
+                onCategoryChange={setFashionCategoryId}
+                variants={fashionVariants}
+                onVariantsChange={setFashionVariants}
+                uploadAction={uploadProductImage}
+                role="admin"
+            />
 
             <div className="flex items-center justify-between gap-4 pt-6 border-t border-slate-200">
                 {/* Delete — only in edit mode */}

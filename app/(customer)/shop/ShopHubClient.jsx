@@ -274,7 +274,13 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                                 {categories.map(cat => (
                                     <button 
                                         key={cat.id} 
-                                        onClick={() => setSelectedCategory(cat.id === selectedCategory ? null : cat.id)}
+                                        onClick={() => {
+                                            if (cat.name.toLowerCase() === 'fashion') {
+                                                router.push('/shop/fashion');
+                                            } else {
+                                                setSelectedCategory(cat.id === selectedCategory ? null : cat.id);
+                                            }
+                                        }}
                                         className="flex flex-col items-center gap-3 flex-shrink-0"
                                     >
                                         <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-[0_8px_20px_rgb(0,0,0,0.06)] transition-transform hover:scale-110 ${selectedCategory === cat.id ? 'bg-blue-600 text-white shadow-blue-500/30' : 'bg-white dark:bg-gray-800'}`}>

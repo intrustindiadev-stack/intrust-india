@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { ShoppingBag, Laptop, Carrot, Pill, Shirt, Coffee, Utensils } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const CATEGORIES = [
     { id: 'groceries', name: 'Groceries', icon: Carrot, color: 'bg-emerald-50 text-emerald-600', ring: 'ring-emerald-500/20' },
@@ -14,6 +15,8 @@ const CATEGORIES = [
 ];
 
 export default function ShopCategoriesCarousel() {
+    const router = useRouter();
+
     return (
         <div className="py-2 -mx-4 px-4 sm:mx-0 sm:px-0">
             <h3 className="text-slate-800 dark:text-slate-200 font-black text-sm uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -28,6 +31,13 @@ export default function ShopCategoriesCarousel() {
                         return (
                             <motion.button
                                 key={cat.id}
+                                onClick={() => {
+                                    if (cat.id === 'fashion') {
+                                        router.push('/shop/fashion');
+                                    } else {
+                                        router.push(`/shop/official`); // basic fallback
+                                    }
+                                }}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.05 }}

@@ -20,7 +20,7 @@ export async function POST(request) {
 
         // 2. Get Request Data
         const body = await request.json();
-        const { merchantId, editMode, productId, formData } = body;
+        const { merchantId, editMode, productId, formData, fashionData } = body;
 
         // Verify that the user is the owner of this merchant account or an admin
         // Fetch merchantProfile via adminSupabase (bypasses RLS for reliability)
@@ -140,6 +140,24 @@ export async function POST(request) {
                 }]);
 
             if (invError) throw invError;
+        }
+
+        // Handle Fashion Data
+        if (fashionData) {
+            if (fashionData.delete_fashion_data) {
+                await adminSupabase.rpc('delete_fashion_product_data', {
+                    p_product_id: savedProduct.id
+                });
+            } else if (fashionData.variants && fashionData.variants.length > 0) {
+                const fashionResult = await adminSupabase.rpc('upsert_fashion_product_data', {
+                    p_product_id: savedProduct.id,
+                    p_category_id: fashionData.category_id,
+                    p_variants: fashionData.variants
+                });
+                if (fashionResult.error) {
+                    console.error('Error saving fashion data:', fashionResult.error);
+                }
+            }
         }
 
         // 3. Notify Admins

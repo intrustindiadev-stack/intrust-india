@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Loader2, Save, X, Upload, Package, Tag, DollarSign, Box, Info } from 'lucide-react';
 import MultiImageUploader from '@/components/shared/MultiImageUploader';
 import { uploadProductImage } from '@/app/(admin)/admin/shopping/upload-product-image';
+import FashionVariantsEditor from '@/components/admin/shopping/FashionVariantsEditor';
 
 export default function MerchantProductForm({ merchantId, editMode = false, existingProduct = null }) {
     const router = useRouter();
@@ -14,6 +14,12 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
     const [categories, setCategories] = useState([]);
     const [fullCategories, setFullCategories] = useState([]);
     const [gstRates, setGstRates] = useState([]);
+
+    // Fashion Mode State
+    const [isFashionMode, setIsFashionMode] = useState(false);
+    const [fashionCategoryId, setFashionCategoryId] = useState('');
+    const [fashionVariants, setFashionVariants] = useState([]);
+
     const [formData, setFormData] = useState(existingProduct ? {
         title: existingProduct.title || '',
         description: existingProduct.description || '',
@@ -61,9 +67,31 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
             }
         };
 
+        const fetchFashionData = async () => {
+            if (existingProduct?.id) {
+                const { data: catData } = await supabase
+                    .from('fashion_product_categories')
+                    .select('category_id')
+                    .eq('product_id', existingProduct.id)
+                    .maybeSingle();
+
+                const { data: varData } = await supabase
+                    .from('fashion_variants')
+                    .select('*, media:fashion_variant_media(*)')
+                    .eq('product_id', existingProduct.id);
+
+                if (catData || (varData && varData.length > 0)) {
+                    setIsFashionMode(true);
+                    if (catData) setFashionCategoryId(catData.category_id);
+                    if (varData) setFashionVariants(varData);
+                }
+            }
+        };
+
         fetchCategories();
         fetchGstRates();
-    }, []);
+        fetchFashionData();
+    }, [existingProduct?.id]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -103,6 +131,17 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
                     stock_quantity: parseInt(formData.stock_quantity || 0)
                 }
             };
+
+            if (isFashionMode && fashionVariants.length > 0) {
+                submissionData.fashionData = {
+                    category_id: fashionCategoryId,
+                    variants: fashionVariants
+                };
+            } else if (!isFashionMode && existingProduct?.id) {
+                submissionData.fashionData = {
+                    delete_fashion_data: true
+                };
+            }
 
             const response = await fetch('/api/merchant/shopping/submit-product', {
                 method: 'POST',
@@ -350,6 +389,17 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
                     </div>
                 </div>
             </div>
+
+            <FashionVariantsEditor 
+                enabled={isFashionMode}
+                onToggle={setIsFashionMode}
+                fashionCategoryId={fashionCategoryId}
+                onCategoryChange={setFashionCategoryId}
+                variants={fashionVariants}
+                onVariantsChange={setFashionVariants}
+                uploadAction={uploadProductImage}
+                role="merchant"
+            />
 
             <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pt-10 border-t border-slate-100">
                 <button
