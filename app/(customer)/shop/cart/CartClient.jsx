@@ -1231,7 +1231,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
       </div>
 
       {/* Mobile Sticky Bar */}
-      <div className={`fixed bottom-[110px] left-0 w-full p-3 pb-5 sm:hidden z-40 border-t rounded-t-3xl backdrop-blur-xl ${isDark ? 'bg-[#080a10]/90 border-white/[0.06]' : 'bg-white/95 border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]'}`}>
+      <div className={`fixed bottom-0 left-0 w-full p-3.5 pb-6 sm:hidden z-40 border-t rounded-t-3xl backdrop-blur-xl ${isDark ? 'bg-[#080a10]/95 border-white/[0.06]' : 'bg-white/95 border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]'}`}>
         {error && (
           <div className={`flex items-center gap-2 p-2 rounded-lg mb-2 ${isDark ? 'bg-red-900/20 border border-red-800/20' : 'bg-red-50'}`}>
             <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Menu, X, ChevronRight, User, Moon, Sun } from 'lucide-react';
+import { Menu, X, ChevronRight, User, Moon, Sun, Heart, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -107,7 +107,7 @@ export default function Navbar() {
                 >
                     <div className="flex items-center justify-between">
                         {/* Logo - Left */}
-                        <a
+                        <Link
                             href="/"
                             className="flex items-center gap-2.5 md:gap-3 z-10 group hover:scale-[1.03] active:scale-[0.97] transition-transform"
                         >
@@ -124,13 +124,13 @@ export default function Navbar() {
                             <span className="text-lg md:text-xl font-bold bg-gradient-to-r from-[#7A93AC] via-[#92BCEA] to-[#AFB3F7] bg-clip-text text-transparent font-[family-name:var(--font-outfit)] tracking-tight">
                                 INTRUST
                             </span>
-                        </a>
+                        </Link>
 
                         {/* Desktop Menu - Center */}
                         <div className="hidden lg:flex flex-1 items-center justify-center gap-4 px-8">
                             <div className="flex items-center gap-4 mr-2">
-                                {menuItems.map((item, index) => (
-                                    <a
+                                {menuItems.map((item) => (
+                                    <Link
                                         key={item.label}
                                         href={item.href}
                                         className="
@@ -145,7 +145,7 @@ export default function Navbar() {
                                         <span
                                             className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] rounded-full group-hover:w-full transition-all duration-300"
                                         />
-                                    </a>
+                                    </Link>
                                 ))}
                             </div>
                             <div className="w-full max-w-lg">
@@ -154,7 +154,25 @@ export default function Navbar() {
                         </div>
 
                         {/* Actions - Right */}
-                        <div className="flex items-center gap-2 md:gap-3 z-10">
+                        <div className="flex items-center gap-1.5 md:gap-3 z-10">
+                            {/* Wishlist Link */}
+                            <Link
+                                href="/wishlist"
+                                className="p-2.5 rounded-full text-gray-500 hover:text-rose-500 dark:text-gray-400 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors flex items-center justify-center"
+                                aria-label="Wishlist"
+                            >
+                                <Heart size={20} />
+                            </Link>
+
+                            {/* Cart Link */}
+                            <Link
+                                href="/shop/cart"
+                                className="p-2.5 rounded-full text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors flex items-center justify-center"
+                                aria-label="Shopping Cart"
+                            >
+                                <ShoppingBag size={20} />
+                            </Link>
+
                             {/* Notifications - desktop only, mobile uses sidebar */}
                             {isAuthenticated && (
                                 <div
@@ -166,12 +184,11 @@ export default function Navbar() {
                             {/* Theme Toggle */}
                             <button
                                 onClick={toggleTheme}
-                                className="hidden lg:flex p-2 rounded-full text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                                className="hidden lg:flex p-2.5 rounded-full text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                                aria-label="Toggle Theme"
                             >
                                 {theme === 'light' ? <Sun size={20} /> : <Moon size={20} />}
                             </button>
-
-
 
                             {isAuthenticated ? (
                                 <div className="hidden lg:flex items-center gap-4">

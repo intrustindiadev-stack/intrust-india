@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronRight, Moon, Sun, Gift, Sparkles, History, ShoppingBag, CreditCard, ScanFace, ChevronDown } from 'lucide-react';
+import { X, ChevronRight, Moon, Sun, Gift, Sparkles, History, ShoppingBag, CreditCard, ScanFace, ChevronDown, Heart } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -119,34 +119,82 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                                 ))}
                             </div>
 
-                            {/* My Orders Link */}
-                            {isAuthenticated && (
-                                <div className="mt-4">
+                            {/* Shopping Links */}
+                            <div className="mt-4 space-y-1">
+                                <Link href="/shop/cart" passHref legacyBehavior>
+                                    <motion.a
+                                        onClick={onClose}
+                                        className="
+                                            group flex items-center justify-between 
+                                            px-4 py-3.5 text-[#171A21] dark:text-gray-100
+                                            active:bg-gray-50 dark:active:bg-gray-800
+                                            rounded-2xl font-medium text-[15px]
+                                            transition-colors duration-200
+                                            border border-transparent hover:border-gray-100 dark:hover:border-gray-800
+                                        "
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <ShoppingBag size={18} className="text-blue-500" />
+                                            <span>Cart</span>
+                                        </div>
+                                        <ChevronRight
+                                            size={16}
+                                            className="text-gray-300 group-active:text-blue-500 transition-colors"
+                                            strokeWidth={2.5}
+                                        />
+                                    </motion.a>
+                                </Link>
+
+                                <Link href="/wishlist" passHref legacyBehavior>
+                                    <motion.a
+                                        onClick={onClose}
+                                        className="
+                                            group flex items-center justify-between 
+                                            px-4 py-3.5 text-[#171A21] dark:text-gray-100
+                                            active:bg-gray-50 dark:active:bg-gray-800
+                                            rounded-2xl font-medium text-[15px]
+                                            transition-colors duration-200
+                                            border border-transparent hover:border-gray-100 dark:hover:border-gray-800
+                                        "
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Heart size={18} className="text-rose-500" />
+                                            <span>Wishlist</span>
+                                        </div>
+                                        <ChevronRight
+                                            size={16}
+                                            className="text-gray-300 group-active:text-rose-500 transition-colors"
+                                            strokeWidth={2.5}
+                                        />
+                                    </motion.a>
+                                </Link>
+
+                                {isAuthenticated && (
                                     <Link href="/orders" passHref legacyBehavior>
                                         <motion.a
                                             onClick={onClose}
                                             className="
                                                 group flex items-center justify-between 
-                                                px-4 py-4 text-[#171A21] dark:text-gray-100
+                                                px-4 py-3.5 text-[#171A21] dark:text-gray-100
                                                 active:bg-gray-50 dark:active:bg-gray-800
-                                                rounded-2xl font-medium text-[16px]
+                                                rounded-2xl font-medium text-[15px]
                                                 transition-colors duration-200
                                                 border border-transparent hover:border-gray-100 dark:hover:border-gray-800
                                             "
                                         >
                                             <div className="flex items-center gap-3">
-                                                <History size={20} className="text-[#92BCEA]" />
+                                                <History size={18} className="text-[#92BCEA]" />
                                                 <span>My Orders</span>
                                             </div>
                                             <ChevronRight
-                                                size={18}
+                                                size={16}
                                                 className="text-gray-300 group-active:text-[#92BCEA] transition-colors"
                                                 strokeWidth={2.5}
                                             />
                                         </motion.a>
                                     </Link>
-                                </div>
-                            )}
+                                )}
+                            </div>
 
                             <div className="space-y-2">
 
