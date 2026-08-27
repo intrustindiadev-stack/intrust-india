@@ -684,10 +684,13 @@ const OrderDetailsClient = ({ order, orderType, userId, customerProfile }) => {
                             const sellingPrice = item.unit_price_paise;
                             const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
                             const savings = mrp > sellingPrice ? mrp - sellingPrice : 0;
+                            const itemUrl = item.variant_id
+                                ? `/shop/fashion/product/${item.product_id}`
+                                : `/shop/product/${item.shopping_products?.slug || item.product_id}`;
 
                             return (
                                 <div key={item.id} className={`flex gap-3 pb-4 border-b last:border-b-0 last:pb-0 ${isDark ? 'border-white/[0.03]' : 'border-slate-50'} group transition-all duration-300 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] p-2 -mx-2 rounded-xl`}>
-                                    <div className={`w-14 h-14 rounded-xl overflow-hidden p-1 flex items-center justify-center ${isDark ? 'bg-black/20' : 'bg-slate-50 shadow-inner'} relative transition-transform duration-300 group-hover:scale-105`}>
+                                    <Link href={itemUrl} className={`w-14 h-14 rounded-xl overflow-hidden p-1 flex items-center justify-center ${isDark ? 'bg-black/20' : 'bg-slate-50 shadow-inner'} relative transition-transform duration-300 group-hover:scale-105 shrink-0`}>
                                         {item.shopping_products?.product_images?.[0] ? (
                                             <Image
                                                 src={item.shopping_products.product_images[0]}
@@ -700,10 +703,21 @@ const OrderDetailsClient = ({ order, orderType, userId, customerProfile }) => {
                                         ) : (
                                             <Package className="w-6 h-6 text-slate-300" />
                                         )}
-                                    </div>
+                                    </Link>
                                     <div className="flex-1 min-w-0">
-                                        <h4 className="text-sm font-bold line-clamp-1">{item.shopping_products?.title}</h4>
-                                        <p className={`text-[10px] font-bold mt-0.5 ${isDark ? 'text-white/30' : 'text-slate-400'}`}>Qty: {item.quantity}</p>
+                                        <Link href={itemUrl} className="hover:underline">
+                                            <h4 className="text-sm font-bold line-clamp-1">{item.shopping_products?.title}</h4>
+                                        </Link>
+                                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                            <p className={`text-[10px] font-bold ${isDark ? 'text-white/30' : 'text-slate-400'}`}>Qty: {item.quantity}</p>
+                                            {item.variant_snapshot && (
+                                                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.2 rounded">
+                                                    {item.variant_snapshot.color && <span className="capitalize">{item.variant_snapshot.color}</span>}
+                                                    {item.variant_snapshot.color && item.variant_snapshot.size && <span> · </span>}
+                                                    {item.variant_snapshot.size && <span>Size {item.variant_snapshot.size}</span>}
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="mt-1 flex items-center gap-2">
                                             <span className="text-sm font-black">₹{(sellingPrice / 100).toLocaleString('en-IN')}</span>
                                             {savings > 0 && (

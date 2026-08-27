@@ -23,7 +23,7 @@ export default async function OrderDetailsPage({ params }) {
             merchant_ratings (rating_value),
             shopping_order_items (
                 *,
-                shopping_products (title, product_images, mrp_paise, suggested_retail_price_paise, gst_percentage, hsn_code),
+                shopping_products (id, slug, title, product_images, mrp_paise, suggested_retail_price_paise, gst_percentage, hsn_code),
                 merchants (business_name, business_address, business_phone, gst_number)
             )
         `)

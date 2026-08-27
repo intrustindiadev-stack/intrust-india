@@ -215,7 +215,7 @@ const OrdersClient = ({ userId }) => {
               <Image src="/intrust_delivery_graphic.png" alt="No Orders Graphic" fill className="object-contain drop-shadow-xl" unoptimized />
           </div>
           <h3 className={`text-2xl font-black mb-2 tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>No orders found</h3>
-          <p className={`text-sm mb-8 max-w-xs mx-auto ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Looks like you haven't made any purchases for this category yet.</p>
+          <p className={`text-sm mb-8 max-w-xs mx-auto ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Looks like you haven&apos;t made any purchases for this category yet.</p>
         </div>
       ) : (
         <div className="space-y-5">
@@ -256,25 +256,42 @@ const OrdersClient = ({ userId }) => {
                     </div>
                   </div>
                   <div className={`divide-y ${isDark ? 'divide-white/[0.04]' : 'divide-slate-100'}`}>
-                    {group.shopping_order_items?.map((item) => (
-                      <div key={item.id} className="p-5 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-5 group-hover:bg-slate-50/50 transition-colors">
-                        <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden relative ${isDark ? 'bg-white/5' : 'bg-slate-50'}`}>
-                          {item.shopping_products?.product_images?.[0] ? (
-                            <Image src={item.shopping_products.product_images[0]} alt={item.shopping_products.title} fill sizes="100px" className="object-contain p-2 mix-blend-multiply dark:mix-blend-normal" quality={60} />
-                          ) : <Package size={32} className={isDark ? 'text-white/10' : 'text-slate-300'} />}
-                        </div>
-                        <div className="flex-1 flex flex-col justify-between min-w-0">
-                          <div>
-                            <h4 className={`font-black text-sm sm:text-base leading-snug line-clamp-2 mb-1 tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>{item.shopping_products?.title}</h4>
-                            <div className={`text-[10px] sm:text-xs font-bold ${isDark ? 'text-white/40' : 'text-slate-500'}`}>{item.shopping_products?.category || 'Category'}</div>
+                    {group.shopping_order_items?.map((item) => {
+                      const itemUrl = item.variant_id
+                        ? `/shop/fashion/product/${item.product_id}`
+                        : `/shop/product/${item.shopping_products?.slug || item.product_id}`;
+
+                      return (
+                        <div key={item.id} className="p-5 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-5 group-hover:bg-slate-50/50 transition-colors">
+                          <Link href={itemUrl} className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden relative ${isDark ? 'bg-white/5' : 'bg-slate-50'} hover:opacity-90 transition-opacity`}>
+                            {item.shopping_products?.product_images?.[0] ? (
+                              <Image src={item.shopping_products.product_images[0]} alt={item.shopping_products.title} fill sizes="100px" className="object-contain p-2 mix-blend-multiply dark:mix-blend-normal" quality={60} />
+                            ) : <Package size={32} className={isDark ? 'text-white/10' : 'text-slate-300'} />}
+                          </Link>
+                          <div className="flex-1 flex flex-col justify-between min-w-0">
+                            <div>
+                              <Link href={itemUrl} className="hover:underline">
+                                <h4 className={`font-black text-sm sm:text-base leading-snug line-clamp-2 mb-1 tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>{item.shopping_products?.title}</h4>
+                              </Link>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <div className={`text-[10px] sm:text-xs font-bold ${isDark ? 'text-white/40' : 'text-slate-500'}`}>{item.shopping_products?.category || 'Category'}</div>
+                                {item.variant_snapshot && (
+                                  <div className="text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-md">
+                                    {item.variant_snapshot.color && <span className="capitalize">{item.variant_snapshot.color}</span>}
+                                    {item.variant_snapshot.color && item.variant_snapshot.size && <span> · </span>}
+                                    {item.variant_snapshot.size && <span>Size {item.variant_snapshot.size}</span>}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="mt-4 flex items-end justify-between">
+                              <div className={`font-black text-lg ${isDark ? 'text-white' : 'text-slate-900'}`}>₹{((item.unit_price_paise) / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</div>
+                              <div className={`text-xs font-bold px-3 py-1.5 rounded-xl uppercase tracking-widest ${isDark ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-600'}`}>Qty: {item.quantity}</div>
+                            </div>
                           </div>
-                          <div className="mt-4 flex items-end justify-between">
-                            <div className={`font-black text-lg ${isDark ? 'text-white' : 'text-slate-900'}`}>₹{((item.unit_price_paise) / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</div>
-                            <div className={`text-xs font-bold px-3 py-1.5 rounded-xl uppercase tracking-widest ${isDark ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-600'}`}>Qty: {item.quantity}</div>
-                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <div className={`p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-center gap-4 ${isDark ? 'bg-white/[0.01] border-t border-white/[0.04]' : 'bg-slate-50 border-t border-slate-100'}`}>
                     <Link href={`/orders/${group.id}`} className="w-full sm:w-auto text-center px-6 py-2.5 bg-transparent border hover:bg-slate-50 dark:hover:bg-white/5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all" style={{ borderColor: primaryColor, color: primaryColor }}>View Details</Link>
