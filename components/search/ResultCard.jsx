@@ -45,46 +45,57 @@ export default function ResultCard({ result, variant = 'default' }) {
     return (
         <Link 
             href={result.url}
-            className="group block rounded-2xl overflow-hidden border bg-[var(--card-bg)] border-[var(--border-color)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+            className="group flex flex-col rounded-[24px] overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:shadow-2xl hover:shadow-blue-900/5 transition-all duration-500 ease-out h-full"
         >
-            <div className="relative aspect-[4/5] bg-[var(--bg-secondary)] overflow-hidden">
+            <div className="relative aspect-[4/5] bg-gray-50 dark:bg-gray-800 overflow-hidden">
                 {!imgError && result.thumbnail ? (
                     <Image
                         src={result.thumbnail}
                         alt={result.name}
                         fill
                         unoptimized
-                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                         onError={() => setImgError(true)}
-                        sizes="(max-width: 640px) 100vw, 220px"
+                        sizes="(max-width: 640px) 100vw, 250px"
                     />
                 ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-4xl">
+                    <div className="absolute inset-0 flex items-center justify-center text-4xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
                         {emoji}
                     </div>
                 )}
+                {/* Category Badge overlay */}
+                <div className="absolute top-3 left-3 z-10">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-md shadow-sm border border-white/20 ${catStyle}`}>
+                        {result.category}
+                    </span>
+                </div>
             </div>
             
-            <div className="p-3.5">
-                <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mb-2 ${catStyle}`}>
-                    {result.category}
-                </span>
-                
-                <h3 className="text-sm font-semibold line-clamp-2 mb-1" style={{ color: 'var(--text-primary)' }}>
+            <div className="p-5 flex flex-col flex-1">
+                <h3 className="text-[15px] font-bold leading-snug line-clamp-2 text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 transition-colors">
                     {result.name}
                 </h3>
                 
                 {result.description && (
-                    <p className="text-xs line-clamp-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    <p className="text-xs line-clamp-2 text-gray-500 dark:text-gray-400 mb-4 mt-auto">
                         {result.description}
                     </p>
                 )}
                 
-                {result.price !== null && result.price !== undefined && (
-                    <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                        ₹{result.price.toLocaleString('en-IN')}
-                    </p>
-                )}
+                <div className="mt-auto flex items-end justify-between">
+                    {result.price !== null && result.price !== undefined ? (
+                        <div>
+                            <p className="text-sm font-black text-gray-900 dark:text-white tracking-tight">
+                                ₹{result.price.toLocaleString('en-IN')}
+                            </p>
+                        </div>
+                    ) : (
+                        <div />
+                    )}
+                    <div className="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    </div>
+                </div>
             </div>
         </Link>
     );

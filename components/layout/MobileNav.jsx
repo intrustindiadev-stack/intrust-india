@@ -8,6 +8,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { displayInitial, displayEmail } from '@/lib/auth';
+import GlobalSearch from '@/components/search/GlobalSearch';
 
 export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, user, theme, toggleTheme, handleSignOut, menuItems, apiPath }) {
     const router = useRouter();
@@ -85,6 +86,9 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
 
                         {/* Menu Content - Scrollable */}
                         <div className="p-5 flex-1 overflow-y-auto">
+                            <div className="mb-6">
+                                <GlobalSearch className="w-full" />
+                            </div>
                             <div className="space-y-2">
                                 {/* Navigation Links */}
                                 {menuItems.map((item, index) => (

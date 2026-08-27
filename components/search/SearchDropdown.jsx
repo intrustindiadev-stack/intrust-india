@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Loader2, ArrowRight } from 'lucide-react';
 import SearchResultRow from './SearchResultRow';
 
-const CATEGORY_LABELS = {
+export const CATEGORY_LABELS = {
     products: 'Products',
     services: 'Services',
     giftcards: 'Gift Cards',
@@ -12,11 +12,12 @@ const CATEGORY_LABELS = {
     solar: 'Solar Solutions'
 };
 
-const CATEGORY_ORDER = ['products', 'services', 'giftcards', 'offers', 'nfc', 'solar'];
+export const CATEGORY_ORDER = ['products', 'services', 'giftcards', 'offers', 'nfc', 'solar'];
 
 export default function SearchDropdown({
     query,
-    results,
+    results = [],
+    orderedResults = [],
     loading,
     error,
     highlightIndex,
@@ -27,10 +28,11 @@ export default function SearchDropdown({
     // Group results by category
     const groupedResults = {};
     results.forEach(r => {
-        if (!groupedResults[r.category]) {
-            groupedResults[r.category] = [];
+        const cat = r.category || 'products';
+        if (!groupedResults[cat]) {
+            groupedResults[cat] = [];
         }
-        groupedResults[r.category].push(r);
+        groupedResults[cat].push(r);
     });
 
     let rowIndexCounter = 0;
@@ -54,7 +56,7 @@ export default function SearchDropdown({
                 {!loading && results.length === 0 && query.length > 0 && (
                     <div className="py-4">
                         <p className="text-sm text-slate-500 dark:text-gray-400 text-center py-4">
-                            No results found for "<strong>{query}</strong>"
+                            No results found for &ldquo;<strong>{query}</strong>&rdquo;
                         </p>
                         <div className="flex justify-center gap-2 pb-2">
                             <Link href="/shop" className="text-xs font-semibold px-3 py-1.5 rounded-full border border-[var(--border-color)] hover:bg-[var(--bg-secondary)] transition-colors">
@@ -76,7 +78,7 @@ export default function SearchDropdown({
                             const catResults = groupedResults[cat];
                             if (!catResults || catResults.length === 0) return null;
 
-                            const groupRender = (
+                            return (
                                 <div key={cat} className="mb-1">
                                     <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-gray-500">
                                         {CATEGORY_LABELS[cat] || cat}
@@ -97,20 +99,21 @@ export default function SearchDropdown({
                                     </div>
                                 </div>
                             );
-                            return groupRender;
                         })}
                     </div>
                 )}
 
                 {!loading && query.length > 0 && (
                     <button
-                        onMouseDown={(e) => { e.preventDefault(); onSeeAll(); }}
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); onSeeAll(); }}
                         className="w-full flex items-center justify-center gap-1.5 py-3 text-sm font-semibold text-[#92BCEA] hover:text-[#5E7CE2] border-t border-[var(--border-color)] transition-colors"
                     >
-                        See all results for "{query}" <ArrowRight size={14} />
+                        See all results for &ldquo;{query}&rdquo; <ArrowRight size={14} />
                     </button>
                 )}
             </motion.div>
         </AnimatePresence>
     );
 }
+

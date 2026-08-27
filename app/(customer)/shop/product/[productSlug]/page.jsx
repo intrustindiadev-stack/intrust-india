@@ -42,7 +42,8 @@ export default async function ProductDetailPage({ params }) {
             suggested_retail_price_paise, platform_price_paise, platform_listed,
             category_id, category, slug,
             is_active, admin_stock, gst_percentage, hsn_code, approval_status, created_at,
-            shopping_categories(name, color_primary, color_secondary)
+            shopping_categories(name, color_primary, color_secondary),
+            fashion_product_categories(category_id)
         `)
         .eq('slug', productSlug)
         .is('deleted_at', null)
@@ -56,6 +57,11 @@ export default async function ProductDetailPage({ params }) {
     if (!product) {
         console.warn("[PDP] Product not found for slug:", productSlug);
         redirect("/shop");
+    }
+
+    // If product is a fashion product with variants and fashion taxonomy, route to dedicated fashion PDP
+    if (product.fashion_product_categories && product.fashion_product_categories.length > 0) {
+        redirect(`/shop/fashion/product/${product.id}`);
     }
 
     // Block access to pending-approval products on the public storefront.

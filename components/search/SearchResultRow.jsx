@@ -17,6 +17,11 @@ export default function SearchResultRow({ result, isHighlighted, onSelect, onMou
 
     return (
         <button
+            type="button"
+            onClick={(e) => {
+                e.preventDefault();
+                onSelect(result);
+            }}
             onMouseDown={(e) => {
                 e.preventDefault();
                 onSelect(result);
