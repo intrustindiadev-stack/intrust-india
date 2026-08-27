@@ -82,7 +82,9 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
             sku,
             color,
             size,
-            price_paise
+            price_paise,
+            compare_at_price_paise,
+            fashion_variant_media (image_url)
           ),
           merchant_inventory (
             retail_price_paise,
@@ -502,11 +504,15 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
 
   // Bill
   const billDetails = cartItems.reduce((acc, item) => {
-    const sellingPrice = item.is_platform_item
-      ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
-      : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
+    const sellingPrice = item.variant_id && item.fashion_variants?.price_paise
+      ? item.fashion_variants.price_paise
+      : item.is_platform_item
+        ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
+        : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
 
-    const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
+    const mrp = item.variant_id && item.fashion_variants?.compare_at_price_paise
+      ? item.fashion_variants.compare_at_price_paise
+      : (item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice);
     const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;
     const gstRate = item.shopping_products?.gst_percentage || 0;
     const gstAmount = Math.round(sellingPrice * item.quantity * gstRate / 100);
@@ -584,7 +590,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
             transition={{ delay: 0.8 }}
             className={`text-sm font-medium mb-8 ${isDark ? 'text-white/40' : 'text-slate-500'}`}
           >
-            Your order is pending merchant approval. You'll be notified once approved. Redirecting to Store Credits...
+            Your order is pending merchant approval. You&apos;ll be notified once approved. Redirecting to Store Credits...
           </motion.p>
 
           <motion.div className={`w-full h-1 rounded-full overflow-hidden ${isDark ? 'bg-white/[0.06]' : 'bg-slate-100'}`}>
@@ -828,10 +834,14 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
 
               <AnimatePresence mode="popLayout">
                 {cartItems.map((item, idx) => {
-                  const sellingPrice = item.is_platform_item
-                    ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
-                    : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
-                  const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
+                  const sellingPrice = item.variant_id && item.fashion_variants?.price_paise
+                    ? item.fashion_variants.price_paise
+                    : item.is_platform_item
+                      ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
+                      : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
+                  const mrp = item.variant_id && item.fashion_variants?.compare_at_price_paise
+                    ? item.fashion_variants.compare_at_price_paise
+                    : (item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice);
                   const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;
                   const savings = finalMrp - sellingPrice;
                   const merchantName = item.is_platform_item ? "InTrust Official" : (item.merchant_inventory?.merchants?.business_name || "Merchant");
@@ -840,6 +850,14 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
 
                   const merchantId = item.merchant_inventory?.merchants?.id;
                   const isItemStoreOpen = item.is_platform_item ? isPlatformOpen : (merchantStatuses.get(merchantId) ?? true);
+
+                  const itemUrl = item.variant_id
+                    ? `/shop/fashion/product/${item.shopping_products?.id}`
+                    : `/shop/product/${item.shopping_products?.slug || item.shopping_products?.id}`;
+
+                  const itemImage = item.fashion_variants?.fashion_variant_media?.[0]?.image_url
+                    || item.shopping_products?.product_images?.[0]
+                    || null;
 
                   return (
                     <motion.div
@@ -852,13 +870,13 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                       className={`flex gap-3 pb-4 mb-4 border-b last:border-b-0 last:pb-0 last:mb-0 ${isDark ? 'border-white/[0.03]' : 'border-slate-50'}`}
                     >
                       <Link
-                        href={`/shop/product/${item.shopping_products?.slug}`}
+                        href={itemUrl}
                         className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex-shrink-0 p-1.5 flex items-center justify-center ${isDark ? 'bg-[#0c0e14] border border-white/[0.04]' : 'bg-slate-50 border border-slate-100'}`}
                       >
-                        {item.shopping_products?.product_images?.[0] ? (
+                        {itemImage ? (
                           <div className="relative w-full h-full">
                             <Image
-                              src={item.shopping_products.product_images[0]}
+                              src={itemImage}
                               alt="product"
                               fill
                               sizes="(max-width: 640px) 20vw, 80px"

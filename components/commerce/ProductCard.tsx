@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import QuickAddDrawer from './QuickAddDrawer';
 
 export interface ProductCardData {
   id: string;
@@ -74,6 +75,7 @@ export default function ProductCard({
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [isLocalDrawerOpen, setIsLocalDrawerOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   // 2. Resolve Active Variant (if fashion)
@@ -208,13 +210,17 @@ export default function ProductCard({
 
     if (isOOS) return;
 
-    // If parent supplied a custom onQuickAdd (e.g. to open size picker for fashion)
-    if (isFashion && onQuickAdd) {
-      onQuickAdd(product, activeVariant);
+    // If fashion with multiple variants/sizes
+    if (isFashion && variants.length > 1) {
+      if (onQuickAdd) {
+        onQuickAdd(product, activeVariant);
+      } else {
+        setIsLocalDrawerOpen(true);
+      }
       return;
     }
 
-    // For standard product direct quick-add
+    // For single variant or standard product direct quick-add
     if (!activeCustomer) {
       toast.error('Please login to add to cart');
       router.push('/login');
@@ -435,6 +441,16 @@ export default function ProductCard({
           </button>
         )}
       </div>
+
+      {/* Standalone Quick Add Drawer */}
+      {!onQuickAdd && isFashion && (
+        <QuickAddDrawer
+          isOpen={isLocalDrawerOpen}
+          onClose={() => setIsLocalDrawerOpen(false)}
+          product={product}
+          initialVariant={activeVariant}
+        />
+      )}
     </div>
   );
 }
