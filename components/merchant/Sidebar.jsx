@@ -48,7 +48,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 { label: "Portfolio", href: "/merchant/wallet", icon: "account_balance_wallet" },
                 { label: "Store Credits", href: "/merchant/udhari", icon: "credit_score" },
                 { label: "Lockin Portfolio", href: "/merchant/lockin", icon: "lock_clock" },
-                { label: "AI Grow", href: "/merchant/investments", icon: "auto_graph" },
+                { label: "AI Grow", href: "/merchant/investments", icon: "auto_awesome" },
                 { label: "My Network", href: "/merchant/referrals", icon: "share" },
             ]
         },
@@ -118,8 +118,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
                 <div className="p-6 flex items-center justify-between space-x-3 relative z-10 shrink-0">
                     <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-tr from-[#b5952f] to-[#f3e5ab] rounded-xl flex items-center justify-center shadow-[0_4px_15px_rgba(212,175,55,0.3)] relative overflow-hidden">
-                            <span className="material-icons-round text-[#020617] text-xl font-bold">diamond</span>
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-[0_4px_15px_rgba(212,175,55,0.3)] relative overflow-hidden p-1">
+                            <Image src="/logo.png" alt="InTrust Logo" fill className="object-contain p-1" />
                         </div>
                         <div>
                             <h1 className="font-display text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-[#D4AF37] dark:to-[#f3e5ab]">InTrust</h1>
@@ -134,7 +134,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
                 <div className="px-5 mb-5 shrink-0 space-y-3">
                     {!isSubscribed && (
-                        <div 
+                        <div
                             onClick={() => requireSubscription()}
                             className="bg-gradient-to-br from-amber-600 via-[#D4AF37] to-amber-500 p-3 rounded-2xl shadow-lg shadow-amber-500/20 ring-1 ring-white/20 cursor-pointer hover:scale-[1.02] transition-transform"
                         >
@@ -148,7 +148,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                                 <p className="text-white/85 text-[10px] font-semibold pl-8 truncate">
                                     Account ready · Subscription pending
                                 </p>
-                                <button 
+                                <button
                                     onClick={(event) => {
                                         event.stopPropagation();
                                         requireSubscription();
@@ -225,10 +225,10 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                                                     >
                                                         {isActive && (
                                                             <span className="absolute inset-0 rounded-2xl overflow-hidden z-0 pointer-events-none">
-                                                                <motion.span 
+                                                                <motion.span
                                                                     layoutId="sidebar-active"
                                                                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                                                    className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent border-l-4 border-slate-900 dark:border-[#D4AF37]" 
+                                                                    className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent dark:from-[#D4AF37]/15 dark:to-transparent border-l-4 border-slate-900 dark:border-[#D4AF37]"
                                                                 />
                                                             </span>
                                                         )}
@@ -249,9 +249,9 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                     <div className="bg-white/50 dark:bg-[#1a1c23]/60 p-2.5 rounded-2xl flex items-center space-x-3 mb-3 shadow-sm border border-black/5 dark:border-white/5 backdrop-blur-md transition-all hover:shadow-md">
                         <div className="w-10 h-10 rounded-full border-2 border-white dark:border-[#2a2c33] shadow-sm overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 relative group">
                             {merchant?.user_profiles?.avatar_url ? (
-                                <Image 
-                                    src={merchant.user_profiles.avatar_url || '/placeholder.png'} 
-                                    alt={merchant.business_name || 'Merchant Avatar'} 
+                                <Image
+                                    src={merchant.user_profiles.avatar_url || '/placeholder.png'}
+                                    alt={merchant.business_name || 'Merchant Avatar'}
                                     fill
                                     sizes="40px"
                                     className="object-cover transition-transform duration-500 group-hover:scale-110"

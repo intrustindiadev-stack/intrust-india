@@ -7,11 +7,13 @@ import LiveButton from '@/components/merchant/LiveButton';
 import StoreStatusToggle from '@/components/merchant/StoreStatusToggle';
 import { motion } from 'framer-motion';
 import { Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import AIGrowModal from './AIGrowModal';
 
 export default function DashboardHeader({ merchant, profile, walletBalancePaise }) {
     const router = useRouter();
     const [showBalance, setShowBalance] = useState(false);
     const [animatedRevenue, setAnimatedRevenue] = useState(0);
+    const [isAIGrowModalOpen, setIsAIGrowModalOpen] = useState(false);
 
     // Subscription expiry countdown
     const expiryDate = merchant?.subscription_expires_at ? new Date(merchant.subscription_expires_at) : null;
@@ -30,7 +32,7 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
                 // easeOutQuart
                 const easeProgress = 1 - Math.pow(1 - progress, 4);
-                
+
                 setAnimatedRevenue(target * easeProgress);
 
                 if (progress < 1) {
@@ -80,15 +82,14 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
                                 initial={{ opacity: 0, y: -4 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 whileTap={{ scale: 0.96 }}
-                                className={`mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all backdrop-blur-sm ${
-                                    expiryColor === 'expired'
+                                className={`mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all backdrop-blur-sm ${expiryColor === 'expired'
                                         ? 'bg-red-600/20 text-red-700 border border-red-600/30'
                                         : expiryColor === 'urgent'
-                                        ? 'bg-red-500/15 text-red-800 border border-red-500/30 animate-pulse'
-                                        : daysLeft <= 30
-                                        ? 'bg-amber-900/15 text-amber-950 border border-amber-900/20'
-                                        : 'bg-slate-900/10 text-slate-900 border border-slate-900/15 hover:bg-slate-900/20'
-                                }`}
+                                            ? 'bg-red-500/15 text-red-800 border border-red-500/30 animate-pulse'
+                                            : daysLeft <= 30
+                                                ? 'bg-amber-900/15 text-amber-950 border border-amber-900/20'
+                                                : 'bg-slate-900/10 text-slate-900 border border-slate-900/15 hover:bg-slate-900/20'
+                                    }`}
                             >
                                 {expiryColor === 'urgent' || expiryColor === 'expired' ? (
                                     <AlertTriangle size={11} />
@@ -111,7 +112,7 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
 
             {/* Total Balance / Revenue */}
             <div className="relative z-10 mb-8">
-                <div 
+                <div
                     className="flex items-center gap-2 text-slate-800/80 mb-1 cursor-pointer hover:text-slate-900 transition-colors inline-flex"
                     onClick={() => setShowBalance(!showBalance)}
                 >
@@ -123,31 +124,73 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
                 <div className="flex items-end justify-between">
                     <h1 className="text-4xl sm:text-5xl font-black font-display tracking-tight text-slate-900 drop-shadow-sm">
                         <span className="text-2xl mr-1 text-slate-800/80">₹</span>
-                        {showBalance 
+                        {showBalance
                             ? animatedRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             : '••••••'
                         }
                     </h1>
-                    <div className="bg-white/30 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/40 flex items-center gap-1 shadow-sm">
-                        <span className="text-xs font-black uppercase tracking-wider text-slate-900">INR</span>
+                    <div className="flex items-center gap-3">
+                        <div className="flex bg-white/30 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/40 items-center gap-1 shadow-sm mb-1">
+                            <span className="text-xs font-black uppercase tracking-wider text-slate-900">INR</span>
+                        </div>
+                    
+                        {/* Hero space right side - just the INR badge now */}
                     </div>
                 </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="relative z-10 flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
-                <Link href="/merchant/shopping/wholesale" className="flex-1 min-w-[130px] bg-slate-900 hover:bg-slate-800 text-[#D4AF37] font-bold py-3 px-3.5 sm:px-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
+            {/* Action Buttons - 2x2 Grid */}
+            <div className="relative z-10 grid grid-cols-2 gap-3">
+                <Link href="/merchant/shopping/wholesale" className="w-full bg-slate-900 hover:bg-slate-800 text-[#D4AF37] font-bold py-3 px-3.5 sm:px-4 rounded-[1.25rem] flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
                     <span className="material-icons-round text-lg">add</span>
                     <span className="text-xs sm:text-sm">Add Stock</span>
                 </Link>
-                <Link href="/merchant/wallet" className="flex-1 min-w-[130px] bg-white hover:bg-slate-50 text-slate-900 font-bold py-3 px-3.5 sm:px-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 border border-white/50">
+                
+                <Link href="/merchant/wallet" className="w-full bg-white hover:bg-slate-50 text-slate-900 font-bold py-3 px-3.5 sm:px-4 rounded-[1.25rem] flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 border border-white/50">
                     <span className="material-icons-round text-lg">call_made</span>
                     <span className="text-xs sm:text-sm">Withdraw</span>
                 </Link>
-                <div className="bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-2xl py-2 px-3 flex items-center justify-center transition-all border border-white/40 shadow-sm shrink-0">
+                
+                <div className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-[1.25rem] py-2 px-3 flex items-center justify-center transition-all border border-white/40 shadow-sm">
                     <StoreStatusToggle initialStoreData={merchant} compact={true} />
                 </div>
+                
+                {/* AI Grow Widget Box */}
+                <motion.button 
+                    onClick={() => setIsAIGrowModalOpen(true)}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="relative w-full bg-[#0f111a]/80 hover:bg-[#0f111a] backdrop-blur-xl text-white font-bold py-3 px-3.5 sm:px-4 rounded-[1.25rem] flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl border border-white/20 overflow-hidden group"
+                >
+                    {/* Notification Badge */}
+                    <motion.div 
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", delay: 1 }}
+                        className="absolute top-2 right-2 z-20 bg-red-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full shadow-md"
+                    >
+                        3
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    </motion.div>
+
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#D4AF37]/0 via-[#D4AF37]/10 to-[#D4AF37]/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                    
+                    <div className="relative flex items-center justify-center w-5 h-5 shrink-0">
+                        <motion.div 
+                            animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.9, 0.5] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            className="absolute inset-0 bg-[#D4AF37] rounded-full blur-[6px]"
+                        />
+                        <div className="relative w-2 h-2 bg-[#f3e5ab] rounded-full shadow-[0_0_8px_rgba(243,229,171,1)]" />
+                    </div>
+
+                    <span className="text-[11px] font-black font-display tracking-widest uppercase text-white group-hover:text-[#f3e5ab] transition-colors relative z-10">
+                        AI GROW
+                    </span>
+                </motion.button>
             </div>
+
+            <AIGrowModal isOpen={isAIGrowModalOpen} onClose={() => setIsAIGrowModalOpen(false)} />
         </div>
     );
 }

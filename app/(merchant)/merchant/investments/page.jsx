@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { animate, motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
+import { useSearchParams } from 'next/navigation';
 import {
     Plus, AlertTriangle, CheckCircle2, Eye, EyeOff,
     RefreshCw, ShieldCheck, Sparkles, BarChart2, BookOpen, Layers
@@ -71,6 +72,14 @@ export default function AIGrowPage() {
 
     useEffect(() => { fetchData(); }, []);
 
+    // Check for auto-open modal from URL
+    const searchParams = useSearchParams();
+    useEffect(() => {
+        if (searchParams.get('new') === 'true') {
+            setShowModal(true);
+        }
+    }, [searchParams]);
+
     const stats = useMemo(() => {
         const active = investments.filter(i => i.status === 'active');
         const totalDeployed = active.reduce((s, i) => s + i.amount_paise / 100, 0);
@@ -115,17 +124,53 @@ export default function AIGrowPage() {
         return <span className="font-mono tracking-tight">{displayValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
     };
 
-    if (loading) return (
-        <div className="flex h-[70vh] items-center justify-center flex-col gap-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-indigo-600 flex items-center justify-center animate-pulse">
-                <Sparkles className="text-white" size={20} />
-            </div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Loading AI Grow...</p>
-        </div>
-    );
-
     return (
-        <div className="p-4 md:p-6 lg:p-8 min-h-screen bg-[#FAFBFC] dark:bg-[#020617] max-w-7xl mx-auto space-y-6">
+        <>
+            {/* The underlying loading screen */}
+            <AnimatePresence>
+                {loading && (
+                    <motion.div 
+                        key="loader"
+                        exit={{ opacity: 0, transition: { delay: 0.5, duration: 0.5 } }}
+                        className="fixed inset-0 flex items-center justify-center flex-col bg-[#FAFBFC] dark:bg-[#0f111a] z-0"
+                    >
+                        <div className="relative flex items-center justify-center w-12 h-12">
+                            {/* Outer spinning ring */}
+                            <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                className="absolute inset-0 rounded-full border-t-2 border-[#D4AF37] border-opacity-80"
+                            />
+                            {/* Inner pulsing orb */}
+                            <motion.div 
+                                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                className="absolute w-4 h-4 bg-[#D4AF37] rounded-full blur-[4px]"
+                            />
+                            <div className="relative w-2 h-2 bg-[#D4AF37] rounded-full shadow-[0_0_10px_rgba(212,175,55,0.8)]" />
+                        </div>
+                        <motion.p 
+                            animate={{ opacity: [0.4, 1, 0.4] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            className="mt-6 text-[10px] font-black uppercase tracking-[0.3em] text-[#b5952f] dark:text-[#D4AF37]"
+                        >
+                            Connecting AI
+                        </motion.p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* The Page Content revealing via clipPath */}
+            <motion.div 
+                initial={false}
+                animate={{ 
+                    clipPath: loading ? 'circle(0% at 50% 50%)' : 'circle(150% at 50% 50%)',
+                    filter: loading ? 'brightness(0.5)' : 'brightness(1)'
+                }}
+                transition={{ duration: 1.2, ease: [0.76, 0, 0.24, 1] }}
+                className="relative z-10 p-4 md:p-6 lg:p-8 min-h-screen bg-[#FAFBFC] dark:bg-[#020617] max-w-7xl mx-auto space-y-6"
+                style={{ clipPath: 'circle(0% at 50% 50%)' }} // SSR fallback
+            >
 
             {/* Toast */}
             <AnimatePresence>
@@ -402,10 +447,10 @@ export default function AIGrowPage() {
                                                     <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{order.category}</span>
                                                 )}
                                                 {order.location && (
-                                                    <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-[9px] font-black uppercase tracking-widest text-indigo-500 flex items-center gap-1">
+                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-500 flex items-center gap-1">
                                                         <span className="relative flex h-2 w-2 mr-1">
-                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                                                         </span>
                                                         {order.location}
                                                     </span>
@@ -431,23 +476,23 @@ export default function AIGrowPage() {
             <AnimatePresence>
                 {showModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
                         <div className="absolute inset-0" onClick={() => !processing && setShowModal(false)} />
                         <motion.div initial={{ scale: 0.96, opacity: 0, y: 16 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.96, opacity: 0, y: 16 }}
-                            className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative z-10 border border-slate-100 dark:border-slate-800">
+                            className="bg-white dark:bg-[#0f111a] rounded-[2rem] p-8 w-full max-w-md shadow-2xl relative z-10 border border-slate-100 dark:border-white/5">
                             <div className="flex justify-between items-start mb-8">
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
-                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-emerald-500 flex items-center justify-center">
-                                            <Sparkles size={15} className="text-white" />
+                                        <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-[#D4AF37]/10 flex items-center justify-center">
+                                            <Sparkles size={15} className="text-[#D4AF37]" />
                                         </div>
-                                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">AI Grow</p>
+                                        <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Auto-Orders Engine</p>
                                     </div>
-                                    <h3 className="text-2xl font-black text-slate-800 dark:text-white">New Growth Request</h3>
+                                    <h3 className="text-3xl font-black font-display text-slate-900 dark:text-white tracking-tight">Supply Capital</h3>
                                 </div>
-                                <button onClick={() => setShowModal(false)} className="w-9 h-9 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all text-sm font-bold">✕</button>
+                                <button onClick={() => setShowModal(false)} className="w-9 h-9 bg-slate-50 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all text-sm font-bold">✕</button>
                             </div>
-
+                            
                             <form onSubmit={async (e) => {
                                 e.preventDefault();
                                 if (Number(amount) < 10000) return showToast('Minimum ₹10,000 required', 'error');
@@ -466,31 +511,61 @@ export default function AIGrowPage() {
                                 } catch (err) {
                                     showToast(err.message || 'Payment initiation failed', 'error');
                                 }
-                            }} className="space-y-5">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount (₹)</label>
-                                    <div className="relative">
-                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg">₹</span>
-                                        <input type="number" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="Min ₹10,000"
-                                            className="w-full pl-10 pr-5 bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-4 text-xl font-black text-slate-900 dark:text-white focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all [appearance:textfield]" />
+                            }} className="space-y-6">
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Amount (₹)</label>
+                                    <input
+                                        type="number"
+                                        value={amount}
+                                        onChange={e => setAmount(e.target.value)}
+                                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-2xl font-black text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 focus:border-[#D4AF37] transition-all"
+                                        placeholder="e.g. 50000"
+                                        required
+                                    />
+                                    {/* Quick Amount Pills */}
+                                    <div className="flex flex-wrap gap-2 mt-4">
+                                        {[10000, 25000, 50000, 100000].map(val => (
+                                            <button
+                                                key={val}
+                                                type="button"
+                                                onClick={() => setAmount(val.toString())}
+                                                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                                                    Number(amount) === val
+                                                        ? 'bg-[#D4AF37] text-white border-[#D4AF37] shadow-md'
+                                                        : 'bg-white dark:bg-transparent text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-white'
+                                                }`}
+                                            >
+                                                +₹{val.toLocaleString('en-IN')}
+                                            </button>
+                                        ))}
                                     </div>
-                                    <p className="text-[10px] text-slate-400 font-bold">Dynamic profit-sharing model — target 12% p.a. returns.</p>
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Notes (Optional)</label>
-                                    <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Any context for this request..."
-                                        className="w-full bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all min-h-[90px] resize-none" />
+                                
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Description (Optional)</label>
+                                    <input
+                                        type="text"
+                                        value={desc}
+                                        onChange={e => setDesc(e.target.value)}
+                                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-base font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 focus:border-[#D4AF37] transition-all"
+                                        placeholder="e.g. AI Grow Request"
+                                    />
                                 </div>
-                                <button type="submit"
-                                    disabled={paymentLoading}
-                                    className="w-full bg-gradient-to-r from-[#1e3a5f] to-indigo-700 hover:opacity-90 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 text-[11px] uppercase tracking-widest flex items-center justify-center gap-2">
-                                    {paymentLoading ? 'Processing...' : <><Plus size={16} /> Pay Now</>}
+                                
+                                <button
+                                    type="submit"
+                                    disabled={processing || paymentLoading}
+                                    className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-[#D4AF37] dark:hover:bg-[#b5952f] text-white dark:text-slate-900 text-sm font-black uppercase tracking-widest py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(0,0,0,0.15)] disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {(processing || paymentLoading) ? 'Processing...' : 'Confirm Request'}
                                 </button>
                             </form>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </motion.div>
+        </>
     );
 }
+
