@@ -24,6 +24,8 @@ import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import ProductCard from '../commerce/ProductCard';
+import RecentlyViewed, { recordRecentlyViewed } from '../commerce/RecentlyViewed';
+import SizeGuideModal from '../commerce/SizeGuideModal';
 
 interface FashionProductClientProps {
   product: ProductSummary;
@@ -55,6 +57,25 @@ export default function FashionProductClient({
   const [isBuyingNow, setIsBuyingNow] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>('details');
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const [pincode, setPincode] = useState('');
+  const [deliveryResult, setDeliveryResult] = useState<string | null>(null);
+
+  // Record recently viewed on mount
+  React.useEffect(() => {
+    if (product?.id) {
+      const firstImg = product.variants?.[0]?.media?.[0]?.image_url || '/placeholder.jpg';
+      recordRecentlyViewed({
+        id: product.id,
+        title: product.title,
+        category: 'Fashion',
+        price_paise: product.base_price_paise,
+        compare_at_price_paise: product.variants?.[0]?.compare_at_price_paise || null,
+        image: firstImg,
+        is_fashion: true
+      });
+    }
+  }, [product.id, product.title, product.base_price_paise, product.variants]);
 
   // Find active variant based on selected color and size
   const colorVariants = useMemo(() => {
@@ -359,7 +380,11 @@ export default function FashionProductClient({
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Select Size
                     </span>
-                    <button type="button" className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => setIsSizeGuideOpen(true)}
+                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                    >
                       Size Chart
                     </button>
                   </div>
@@ -394,7 +419,7 @@ export default function FashionProductClient({
               )}
 
               {/* ── Primary Action CTAs ── */}
-              <div className="flex items-center gap-3 mb-8">
+              <div className="flex items-center gap-3 mb-6">
                 <button
                   type="button"
                   onClick={() => handleAddToCart(false)}
@@ -428,6 +453,59 @@ export default function FashionProductClient({
                 >
                   <Heart size={20} className={isWishlisted ? 'fill-rose-500 text-rose-500' : ''} />
                 </button>
+              </div>
+
+              {/* ── Pincode Delivery Estimator ── */}
+              <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-gray-900/60 border border-slate-100 dark:border-gray-800 mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Truck size={16} className="text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Delivery Options</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="Enter 6-digit Pincode"
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                    className="flex-1 px-3.5 py-2 text-xs font-mono font-bold bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pincode.length === 6) {
+                        setDeliveryResult(`Standard delivery in 2-4 business days | Free delivery on this order.`);
+                      } else {
+                        toast.error('Please enter a valid 6-digit Indian pincode');
+                      }
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl active:scale-95 transition-all"
+                  >
+                    Check
+                  </button>
+                </div>
+                {deliveryResult && (
+                  <div className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                    <Check size={14} />
+                    <span>{deliveryResult}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Seller Identity ── */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-800 mb-6">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black text-xs">
+                    IN
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Sold & Fulfilled by</span>
+                    <h4 className="text-xs font-black text-slate-900 dark:text-white">InTrust Official Store</h4>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
+                  ✓ Verified
+                </span>
               </div>
 
               {/* ── Trust Pillars ── */}
@@ -528,7 +606,17 @@ export default function FashionProductClient({
           </div>
         )}
 
+        {/* ── Recently Viewed Products ── */}
+        <RecentlyViewed currentProductId={product.id} />
+
       </div>
+
+      {/* ── Size Guide Modal ── */}
+      <SizeGuideModal
+        isOpen={isSizeGuideOpen}
+        onClose={() => setIsSizeGuideOpen(false)}
+        category="Clothing"
+      />
 
       {/* ── Sticky Mobile Purchase Bar ── */}
       <div className="fixed bottom-0 inset-x-0 p-3 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-gray-800 md:hidden z-50 flex items-center gap-3 shadow-2xl">

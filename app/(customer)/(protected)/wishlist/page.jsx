@@ -13,10 +13,11 @@ export default async function WishlistPage() {
   const { data: wishlistItems, error } = await supabase
     .from('user_wishlists')
     .select(`
-      id, added_at, is_platform_item, inventory_id,
+      id, added_at, is_platform_item, inventory_id, variant_id,
       shopping_products ( id, slug, title, product_images, category, suggested_retail_price_paise, platform_price_paise, mrp_paise, admin_stock ),
       merchants ( id, business_name ),
-      merchant_inventory ( retail_price_paise, stock_quantity, is_active )
+      merchant_inventory ( retail_price_paise, stock_quantity, is_active ),
+      fashion_variants ( id, color, size, price_paise, compare_at_price_paise, inventory_quantity, is_active, fashion_variant_media ( image_url ) )
     `)
     .eq('user_id', user.id)
     .order('added_at', { ascending: false });

@@ -48,9 +48,14 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
   }, []);
 
   const moveToCart = useCallback(async (item) => {
-    const isOOS = item.is_platform_item 
-      ? isPlatformProductOOS(item.shopping_products)
-      : isInventoryRowOOS(item.merchant_inventory);
+    let isOOS = false;
+    if (item.variant_id && item.fashion_variants) {
+      isOOS = (item.fashion_variants.inventory_quantity ?? 0) <= 0;
+    } else if (item.is_platform_item) {
+      isOOS = isPlatformProductOOS(item.shopping_products);
+    } else {
+      isOOS = isInventoryRowOOS(item.merchant_inventory);
+    }
 
     if (isOOS) {
       toast.error('This item is out of stock and cannot be added to cart');
@@ -63,6 +68,7 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
         p_customer_id: userId,
         p_inventory_id: item.is_platform_item ? null : item.inventory_id,
         p_product_id: item.shopping_products.id,
+        p_variant_id: item.variant_id || null,
         p_quantity: 1,
         p_is_platform: item.is_platform_item
       });
@@ -87,6 +93,9 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
 
   const addAllToCart = useCallback(async (group) => {
     const availableItems = group.items.filter(item => {
+      if (item.variant_id && item.fashion_variants) {
+        return (item.fashion_variants.inventory_quantity ?? 0) > 0;
+      }
       return item.is_platform_item 
         ? !isPlatformProductOOS(item.shopping_products)
         : !isInventoryRowOOS(item.merchant_inventory);
@@ -104,6 +113,7 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
         p_customer_id: userId,
         p_inventory_id: first.is_platform_item ? null : first.inventory_id,
         p_product_id: first.shopping_products.id,
+        p_variant_id: first.variant_id || null,
         p_quantity: 1,
         p_is_platform: first.is_platform_item
       });
@@ -132,21 +142,18 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
 
   const handleConfirmClearCart = async () => {
     setConfirmModalOpen(false);
-    if (pendingGroup) {
-      const group = pendingGroup;
-      setPendingGroup(null);
-      setPendingWishlistItem(null);
+    try {
       await supabase.from('shopping_cart').delete().eq('customer_id', userId);
-      await addAllToCart(group);
-    } else if (pendingWishlistItem) {
-      const item = pendingWishlistItem;
-      setPendingWishlistItem(null);
-      try {
-        await supabase.from('shopping_cart').delete().eq('customer_id', userId);
-        await moveToCart(item);
-      } catch (err) {
-        console.error('Error clearing cart:', err);
+      if (pendingWishlistItem) {
+        await moveToCart(pendingWishlistItem);
+      } else if (pendingGroup) {
+        await addAllToCart(pendingGroup);
       }
+    } catch (err) {
+      toast.error('Failed to reset cart');
+    } finally {
+      setPendingWishlistItem(null);
+      setPendingGroup(null);
     }
   };
 
@@ -217,13 +224,23 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
               <AnimatePresence mode="popLayout">
                 {group.items.map((item, idx) => {
                   const product = item.shopping_products;
-                  const price = item.is_platform_item 
-                    ? (product?.platform_price_paise ?? product?.suggested_retail_price_paise)
-                    : (item.merchant_inventory?.retail_price_paise || product?.suggested_retail_price_paise);
+                  const fVariant = item.fashion_variants;
+                  const itemUrl = item.variant_id
+                    ? `/shop/fashion/product/${product?.id}`
+                    : `/shop/product/${product?.slug}`;
+
+                  const displayImg = fVariant?.fashion_variant_media?.[0]?.image_url || product?.product_images?.[0];
+
+                  const price = fVariant?.price_paise 
+                    ?? (item.is_platform_item 
+                      ? (product?.platform_price_paise ?? product?.suggested_retail_price_paise)
+                      : (item.merchant_inventory?.retail_price_paise || product?.suggested_retail_price_paise));
                   
-                  const isOOS = item.is_platform_item 
-                    ? isPlatformProductOOS(product)
-                    : isInventoryRowOOS(item.merchant_inventory);
+                  const isOOS = fVariant 
+                    ? (fVariant.inventory_quantity ?? 0) <= 0 
+                    : (item.is_platform_item 
+                      ? isPlatformProductOOS(product)
+                      : isInventoryRowOOS(item.merchant_inventory));
 
                   return (
                     <motion.div
@@ -235,15 +252,15 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
                       transition={{ delay: idx * 0.04 }}
                       className="flex gap-4 p-4 rounded-2xl mb-3 bg-white border border-slate-100 shadow-sm"
                     >
-                      <Link href={`/shop/product/${product?.slug}`} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50 border border-slate-100 relative">
-                        {product?.product_images?.[0] ? (
+                      <Link href={itemUrl} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50 border border-slate-100 relative">
+                        {displayImg ? (
                           <div className="relative w-full h-full">
                             <Image
-                              src={product.product_images[0]}
-                              alt={product.title}
+                              src={displayImg}
+                              alt={product?.title || 'Product'}
                               fill
                               sizes="(max-width: 640px) 20vw, 64px"
-                              className="object-contain"
+                              className="object-contain p-1"
                               quality={60}
                             />
                           </div>
@@ -255,7 +272,18 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
 
                       <div className={`flex-1 min-w-0 ${isOOS ? 'opacity-50' : ''}`}>
                         <p className="text-[9px] uppercase tracking-widest font-black mb-0.5 text-slate-400">{product?.category || 'General'}</p>
-                        <h3 className="text-sm font-bold line-clamp-2 leading-tight text-slate-800">{product?.title}</h3>
+                        <Link href={itemUrl} className="hover:underline">
+                          <h3 className="text-sm font-bold line-clamp-2 leading-tight text-slate-800">{product?.title}</h3>
+                        </Link>
+                        {fVariant && (
+                          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                              {fVariant.color && <span className="capitalize">{fVariant.color}</span>}
+                              {fVariant.color && fVariant.size && <span> · </span>}
+                              {fVariant.size && <span>Size {fVariant.size}</span>}
+                            </span>
+                          </div>
+                        )}
                         {price && <p className="text-sm font-black mt-1 text-slate-900">₹{(price / 100).toLocaleString('en-IN')}</p>}
                       </div>
 

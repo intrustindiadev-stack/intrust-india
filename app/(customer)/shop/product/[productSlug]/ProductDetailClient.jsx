@@ -32,6 +32,7 @@ import OutOfStockOverlay from '@/components/ui/OutOfStockOverlay';
 import OutOfStockBanner from '@/components/ui/OutOfStockBanner';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 import NotifyMeButton from '@/components/ui/NotifyMeButton';
+import RecentlyViewed, { recordRecentlyViewed } from '@/components/commerce/RecentlyViewed';
 
 // Lazy-load modal — only needed on rare cart-conflict path, keep it out of the initial bundle
 const ConfirmModal = lazy(() => import('@/components/ui/ConfirmModal'));
@@ -43,6 +44,22 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const activeCustomer = authProfile || customer;
     const activeEmail = activeCustomer?.email || authUser?.email;
     const isDark = theme === 'dark';
+
+    // Record recently viewed
+    useEffect(() => {
+        if (product?.id) {
+            recordRecentlyViewed({
+                id: product.id,
+                title: product.title,
+                category: product.category || 'General',
+                price_paise: product.platform_price_paise || product.suggested_retail_price_paise || 0,
+                compare_at_price_paise: product.mrp_paise || null,
+                image: product.product_images?.[0] || null,
+                slug: product.slug,
+                is_fashion: false
+            });
+        }
+    }, [product.id, product.title, product.category, product.platform_price_paise, product.suggested_retail_price_paise, product.mrp_paise, product.product_images, product.slug]);
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(false);
     const [buyNowLoading, setBuyNowLoading] = useState(false);
@@ -838,6 +855,9 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                         </div>
                     </div>
                 )}
+
+                {/* ====== RECENTLY VIEWED ====== */}
+                <RecentlyViewed currentProductId={product.id} />
             </div>
 
             {/* ====== MOBILE STICKY ADD TO CART BAR ====== */}
