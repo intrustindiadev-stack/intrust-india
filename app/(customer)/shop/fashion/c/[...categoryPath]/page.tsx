@@ -9,6 +9,7 @@ import { plpQuerySchema } from '@/lib/validation/fashion';
 import FilterDrawer from '@/components/filters/filter-drawer';
 import PLPClientWrapper from '@/components/product/plp-client-wrapper';
 import SortSelect from '@/components/product/sort-select';
+import PLPPagination from '@/components/commerce/PLPPagination';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 
@@ -135,15 +136,20 @@ export default async function FashionPLP({ params, searchParams }: Props) {
 
         {/* ── Product Grid ── */}
         {products.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-y-12 gap-x-4 sm:gap-x-6 lg:gap-x-8">
-            <PLPClientWrapper products={products} viewMode={query.view} />
-          </div>
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-y-10 gap-x-4 sm:gap-x-6 lg:gap-x-8">
+              <PLPClientWrapper products={products} viewMode={query.view} />
+            </div>
+            <Suspense fallback={null}>
+              <PLPPagination page={query.page} totalCount={count} pageSize={24} />
+            </Suspense>
+          </>
         ) : (
           <div className="py-20 text-center">
             <div className="text-4xl mb-4">👗</div>
             <h3 className="text-xl font-bold text-slate-700 dark:text-slate-200 mb-2">No products found</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm">Try adjusting your filters or browsing another category.</p>
-            <Link href="/shop/fashion/c/women" className="mt-6 inline-block px-10 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold uppercase tracking-widest text-sm hover:scale-[1.02] transition-transform">
+            <Link href="/shop/fashion/c/women" className="mt-6 inline-block px-8 py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold uppercase tracking-widest text-xs rounded-xl hover:scale-[1.02] transition-transform shadow-md">
               Browse All Fashion
             </Link>
           </div>

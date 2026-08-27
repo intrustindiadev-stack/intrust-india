@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { SlidersHorizontal, Loader2 } from 'lucide-react';
 import ResultCard from '@/components/search/ResultCard';
+import ProductCard from '@/components/commerce/ProductCard';
 import FiltersSidebar from '@/components/search/FiltersSidebar';
 import Pagination from '@/components/search/Pagination';
 import EmptyState from '@/components/ui/EmptyState';
@@ -250,9 +251,13 @@ export default function SearchResultsClient({ initialParams }) {
 
                     {/* Results Grid */}
                     {!loading && !error && displayResults.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {displayResults.map(r => (
-                                <ResultCard key={r.id || r.url} result={r} />
+                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                            {displayResults.map((r, idx) => (
+                                r.category === 'products' ? (
+                                    <ProductCard key={r.id || r.url} product={r} priority={idx < 4} />
+                                ) : (
+                                    <ResultCard key={r.id || r.url} result={r} />
+                                )
                             ))}
                         </div>
                     )}
