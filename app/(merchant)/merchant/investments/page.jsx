@@ -461,7 +461,7 @@ export default function AIGrowPage() {
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0 space-y-0.5">
-                                            <p className="text-sm font-black text-emerald-600">+₹{(order.profit_paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+                                <p className="text-sm font-black text-emerald-600">+₹{(order.profit_paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
                                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">profit</p>
                                         </div>
                                     </div>
@@ -471,100 +471,100 @@ export default function AIGrowPage() {
                     </div>
                 </div>
             </div>
+        </motion.div>
 
-            {/* ── New Fund Request Modal ── */}
-            <AnimatePresence>
-                {showModal && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-                        <div className="absolute inset-0" onClick={() => !processing && setShowModal(false)} />
-                        <motion.div initial={{ scale: 0.96, opacity: 0, y: 16 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.96, opacity: 0, y: 16 }}
-                            className="bg-white dark:bg-[#0f111a] rounded-[2rem] p-8 w-full max-w-md shadow-2xl relative z-10 border border-slate-100 dark:border-white/5">
-                            <div className="flex justify-between items-start mb-8">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-[#D4AF37]/10 flex items-center justify-center">
-                                            <Sparkles size={15} className="text-[#D4AF37]" />
-                                        </div>
-                                        <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Auto-Orders Engine</p>
+        {/* ── New Fund Request Modal ── */}
+        <AnimatePresence>
+            {showModal && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+                    <div className="absolute inset-0" onClick={() => !processing && setShowModal(false)} />
+                    <motion.div initial={{ scale: 0.96, opacity: 0, y: 16 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.96, opacity: 0, y: 16 }}
+                        className="bg-white dark:bg-[#0f111a] rounded-[2rem] p-8 w-full max-w-md shadow-2xl relative z-10 border border-slate-100 dark:border-white/5">
+                        <div className="flex justify-between items-start mb-8">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-[#D4AF37]/10 flex items-center justify-center">
+                                        <Sparkles size={15} className="text-[#D4AF37]" />
                                     </div>
-                                    <h3 className="text-3xl font-black font-display text-slate-900 dark:text-white tracking-tight">Supply Capital</h3>
+                                    <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Auto-Orders Engine</p>
                                 </div>
-                                <button onClick={() => setShowModal(false)} className="w-9 h-9 bg-slate-50 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all text-sm font-bold">✕</button>
+                                <h3 className="text-3xl font-black font-display text-slate-900 dark:text-white tracking-tight">Supply Capital</h3>
+                            </div>
+                            <button onClick={() => setShowModal(false)} className="w-9 h-9 bg-slate-50 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all text-sm font-bold">✕</button>
+                        </div>
+                        
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (Number(amount) < 10000) return showToast('Minimum ₹10,000 required', 'error');
+                            setShowModal(false);
+                            
+                            showToast('Redirecting to payment gateway...', 'loading');
+                            try {
+                                await initiatePayment({
+                                    amount: Number(amount).toFixed(2),
+                                    payerName: user?.user_metadata?.full_name || "Merchant",
+                                    payerEmail: user?.email || "merchant@intrustindia.com",
+                                    payerMobile: user?.phone || "9999999999",
+                                    udf1: "MERCHANT_AIGROW",
+                                    udf2: desc || 'AI Grow Request'
+                                });
+                            } catch (err) {
+                                showToast(err.message || 'Payment initiation failed', 'error');
+                            }
+                        }} className="space-y-6">
+                            <div>
+                                <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Amount (₹)</label>
+                                <input
+                                    type="number"
+                                    value={amount}
+                                    onChange={e => setAmount(e.target.value)}
+                                    className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-2xl font-black text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 focus:border-[#D4AF37] transition-all"
+                                    placeholder="e.g. 50000"
+                                    required
+                                />
+                                {/* Quick Amount Pills */}
+                                <div className="flex flex-wrap gap-2 mt-4">
+                                    {[10000, 25000, 50000, 100000].map(val => (
+                                        <button
+                                            key={val}
+                                            type="button"
+                                            onClick={() => setAmount(val.toString())}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                                                Number(amount) === val
+                                                    ? 'bg-[#D4AF37] text-white border-[#D4AF37] shadow-md'
+                                                    : 'bg-white dark:bg-transparent text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-white'
+                                            }`}
+                                        >
+                                            +₹{val.toLocaleString('en-IN')}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             
-                            <form onSubmit={async (e) => {
-                                e.preventDefault();
-                                if (Number(amount) < 10000) return showToast('Minimum ₹10,000 required', 'error');
-                                setShowModal(false);
-                                
-                                showToast('Redirecting to payment gateway...', 'loading');
-                                try {
-                                    await initiatePayment({
-                                        amount: Number(amount).toFixed(2),
-                                        payerName: user?.user_metadata?.full_name || "Merchant",
-                                        payerEmail: user?.email || "merchant@intrustindia.com",
-                                        payerMobile: user?.phone || "9999999999",
-                                        udf1: "MERCHANT_AIGROW",
-                                        udf2: desc || 'AI Grow Request'
-                                    });
-                                } catch (err) {
-                                    showToast(err.message || 'Payment initiation failed', 'error');
-                                }
-                            }} className="space-y-6">
-                                <div>
-                                    <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Amount (₹)</label>
-                                    <input
-                                        type="number"
-                                        value={amount}
-                                        onChange={e => setAmount(e.target.value)}
-                                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-2xl font-black text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 focus:border-[#D4AF37] transition-all"
-                                        placeholder="e.g. 50000"
-                                        required
-                                    />
-                                    {/* Quick Amount Pills */}
-                                    <div className="flex flex-wrap gap-2 mt-4">
-                                        {[10000, 25000, 50000, 100000].map(val => (
-                                            <button
-                                                key={val}
-                                                type="button"
-                                                onClick={() => setAmount(val.toString())}
-                                                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                                                    Number(amount) === val
-                                                        ? 'bg-[#D4AF37] text-white border-[#D4AF37] shadow-md'
-                                                        : 'bg-white dark:bg-transparent text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-white'
-                                                }`}
-                                            >
-                                                +₹{val.toLocaleString('en-IN')}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Description (Optional)</label>
-                                    <input
-                                        type="text"
-                                        value={desc}
-                                        onChange={e => setDesc(e.target.value)}
-                                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-base font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 focus:border-[#D4AF37] transition-all"
-                                        placeholder="e.g. AI Grow Request"
-                                    />
-                                </div>
-                                
-                                <button
-                                    type="submit"
-                                    disabled={processing || paymentLoading}
-                                    className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-[#D4AF37] dark:hover:bg-[#b5952f] text-white dark:text-slate-900 text-sm font-black uppercase tracking-widest py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(0,0,0,0.15)] disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {(processing || paymentLoading) ? 'Processing...' : 'Confirm Request'}
-                                </button>
-                            </form>
-                        </motion.div>
+                            <div>
+                                <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Description (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={desc}
+                                    onChange={e => setDesc(e.target.value)}
+                                    className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-base font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 focus:border-[#D4AF37] transition-all"
+                                    placeholder="e.g. AI Grow Request"
+                                />
+                            </div>
+                            
+                            <button
+                                type="submit"
+                                disabled={processing || paymentLoading}
+                                className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-[#D4AF37] dark:hover:bg-[#b5952f] text-white dark:text-slate-900 text-sm font-black uppercase tracking-widest py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(0,0,0,0.15)] disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {(processing || paymentLoading) ? 'Processing...' : 'Confirm Request'}
+                            </button>
+                        </form>
                     </motion.div>
-                )}
-            </AnimatePresence>
-        </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
         </>
     );
 }
