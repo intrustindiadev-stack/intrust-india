@@ -79,9 +79,11 @@ export default function Navbar() {
     };
 
     const menuItems = [
-        { label: 'Services', href: 'services' },
-        { label: 'About', href: 'about' },
-        { label: 'Contact', href: 'contact' },
+        { label: 'Shop', href: '/shop' },
+        { label: 'Fashion', href: '/shop/fashion' },
+        { label: 'Services', href: '/services' },
+        { label: 'About', href: '/about' },
+        { label: 'Contact', href: '/contact' },
     ];
 
     // Get user display info — delegates to shared helper that filters pseudo-emails

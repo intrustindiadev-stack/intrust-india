@@ -8,7 +8,7 @@ VPS_PASSWORD = "Intrustdev@2026"
 VPS_PORT = 22
 
 MIGRATIONS_DIR = "/home/i4yush/Desktop/intrust-india/supabase/migrations"
-mig_file = "20260810070000_crm_1_to_n_conversions.sql"
+mig_file = sys.argv[1] if len(sys.argv) > 1 else "20260810070000_crm_1_to_n_conversions.sql"
 
 try:
     c = paramiko.SSHClient()

@@ -83,7 +83,7 @@ export default function FilterDrawer({ facets, totalResults }: FilterDrawerProps
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold hover:border-slate-300 dark:hover:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex items-center gap-2 px-6 py-2.5 border-b-2 border-slate-900 dark:border-white bg-transparent text-slate-900 dark:text-white text-xs font-bold uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors focus:outline-none"
       >
         <SlidersHorizontal className="w-4 h-4" />
         <span>Filters {activeFilterCount > 0 && `(${activeFilterCount})`}</span>
@@ -109,34 +109,33 @@ export default function FilterDrawer({ facets, totalResults }: FilterDrawerProps
               aria-modal="true"
               aria-labelledby="filter-title"
             >
-              <div className="flex justify-between items-center p-4 border-b border-[var(--fashion-color-border)]">
-                <h2 id="filter-title" className="text-xl font-bold uppercase tracking-wide">Filter & Sort</h2>
+              <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-800">
+                <h2 id="filter-title" className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">Filter & Sort</h2>
                 <button 
                   onClick={() => setIsOpen(false)}
-                  className="p-2 hover:bg-[var(--fashion-color-surface)] rounded-md"
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-900 dark:text-white"
                   aria-label="Close Filters"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              <div className="flex-1 overflow-y-auto p-6 space-y-10 no-scrollbar">
                 {/* Size Section */}
                 {facets.sizes.length > 0 && (
                   <section>
-                    <h3 className="font-semibold text-lg mb-4 flex justify-between items-center">
+                    <h3 className="text-sm font-bold uppercase tracking-widest mb-4 text-slate-900 dark:text-white">
                       Size
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
                     </h3>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-4 gap-3">
                       {facets.sizes.map(size => (
                         <button
                           key={size.value}
                           onClick={() => toggleSelection(setSelectedSizes, size.value)}
-                          className={`py-2 border rounded-md text-sm font-medium transition-colors ${
+                          className={`py-3 border rounded-none text-xs font-bold transition-colors ${
                             selectedSizes.includes(size.value) 
-                              ? 'border-[var(--fashion-color-accent)] bg-[var(--fashion-color-accent)] text-[var(--fashion-color-accent-contrast)]' 
-                              : 'border-[var(--fashion-color-border)] hover:border-[var(--fashion-color-accent)]'
+                              ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900' 
+                              : 'border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-300 hover:border-slate-900 dark:hover:border-white'
                           }`}
                         >
                           {size.value}
@@ -149,25 +148,24 @@ export default function FilterDrawer({ facets, totalResults }: FilterDrawerProps
                 {/* Color Section */}
                 {facets.colors.length > 0 && (
                   <section>
-                    <h3 className="font-semibold text-lg mb-4 flex justify-between items-center">
+                    <h3 className="text-sm font-bold uppercase tracking-widest mb-4 text-slate-900 dark:text-white">
                       Color
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
                     </h3>
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap gap-4">
                       {facets.colors.map(color => {
                         const isSelected = selectedColors.includes(color.value);
                         return (
                           <button
                             key={color.value}
                             onClick={() => toggleSelection(setSelectedColors, color.value)}
-                            className="flex flex-col items-center gap-1"
+                            className="flex flex-col items-center gap-2"
                             aria-pressed={isSelected}
                           >
-                            <div className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${isSelected ? 'ring-2 ring-offset-1 ring-[var(--fashion-color-accent)] border-transparent' : 'border-gray-300'}`}
+                            <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-slate-900 dark:border-white scale-110' : 'border-slate-200 dark:border-slate-700'}`}
                                  style={{ backgroundColor: color.value.toLowerCase() }}>
-                              {isSelected && <Check className="w-4 h-4 text-white drop-shadow-md" />}
+                              {isSelected && <Check className="w-4 h-4 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]" />}
                             </div>
-                            <span className="text-xs text-[var(--fashion-color-text-muted)]">{color.value}</span>
+                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{color.value}</span>
                           </button>
                         );
                       })}
@@ -177,48 +175,49 @@ export default function FilterDrawer({ facets, totalResults }: FilterDrawerProps
 
                 {/* Price Section */}
                 <section>
-                  <h3 className="font-semibold text-lg mb-4 flex justify-between items-center">
+                  <h3 className="text-sm font-bold uppercase tracking-widest mb-4 text-slate-900 dark:text-white">
                     Price (INR)
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
                   </h3>
                   <div className="flex items-center space-x-4">
-                    <div className="flex-1">
+                    <div className="flex-1 relative">
                       <label htmlFor="min-price" className="sr-only">Minimum Price</label>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₹</span>
                       <input 
                         id="min-price"
                         type="number" 
                         placeholder="Min"
                         value={priceRange.min}
                         onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
-                        className="w-full border border-[var(--fashion-color-border)] rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--fashion-color-accent)]"
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none pl-7 pr-3 py-3 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-slate-900 dark:focus:border-white transition-colors"
                       />
                     </div>
-                    <span className="text-gray-400">-</span>
-                    <div className="flex-1">
+                    <span className="text-slate-400">-</span>
+                    <div className="flex-1 relative">
                       <label htmlFor="max-price" className="sr-only">Maximum Price</label>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₹</span>
                       <input 
                         id="max-price"
                         type="number" 
                         placeholder="Max"
                         value={priceRange.max}
                         onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
-                        className="w-full border border-[var(--fashion-color-border)] rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--fashion-color-accent)]"
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none pl-7 pr-3 py-3 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-slate-900 dark:focus:border-white transition-colors"
                       />
                     </div>
                   </div>
                 </section>
               </div>
 
-              <div className="p-4 border-t border-[var(--fashion-color-border)] bg-[var(--fashion-color-surface)] flex gap-4">
+              <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-black flex gap-4 mt-auto">
                 <button 
                   onClick={handleClearAll}
-                  className="flex-1 py-3 text-[var(--fashion-color-text)] font-semibold border border-[var(--fashion-color-border)] rounded-md bg-white hover:bg-gray-50 transition-colors"
+                  className="flex-1 py-4 text-xs font-bold uppercase tracking-widest text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-none hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
                 >
                   Clear All
                 </button>
                 <button 
                   onClick={handleApply}
-                  className="flex-1 py-3 bg-[var(--fashion-color-accent)] text-[var(--fashion-color-accent-contrast)] font-semibold rounded-md hover:opacity-90 transition-opacity shadow-md"
+                  className="flex-1 py-4 text-xs font-bold uppercase tracking-widest bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-none hover:bg-black dark:hover:bg-slate-200 transition-colors shadow-lg"
                 >
                   Apply ({totalResults})
                 </button>

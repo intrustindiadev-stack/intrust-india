@@ -75,7 +75,15 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
           id,
           quantity,
           inventory_id,
+          variant_id,
           is_platform_item,
+          fashion_variants (
+            id,
+            sku,
+            color,
+            size,
+            price_paise
+          ),
           merchant_inventory (
             retail_price_paise,
             custom_title,
@@ -875,6 +883,23 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                             <h3 className={`text-xs sm:text-sm font-bold leading-tight line-clamp-2 ${isDark ? 'text-white/80' : 'text-slate-800'}`}>
                               {item.merchant_inventory?.custom_title || item.shopping_products?.title}
                             </h3>
+                            {item.variant_id && item.fashion_variants && (
+                              <div className="mt-0.5 flex items-center gap-1.5">
+                                {item.fashion_variants.color && (
+                                  <span className={`text-[10px] font-bold ${isDark ? 'text-white/60' : 'text-slate-500'}`}>
+                                    {item.fashion_variants.color}
+                                  </span>
+                                )}
+                                {item.fashion_variants.color && item.fashion_variants.size && (
+                                  <span className={`text-[10px] ${isDark ? 'text-white/30' : 'text-slate-300'}`}>•</span>
+                                )}
+                                {item.fashion_variants.size && (
+                                  <span className={`text-[10px] font-bold ${isDark ? 'text-white/60' : 'text-slate-500'}`}>
+                                    Size {item.fashion_variants.size}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                             {!isItemStoreOpen && (
                               <div className="mt-1 flex gap-1.5 flex-wrap">
                                 <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-red-500 text-white flex items-center gap-1`}>

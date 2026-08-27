@@ -6,6 +6,10 @@ import Link from 'next/link';
 import { Heart, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { ProductSummary, ProductVariant } from '../../lib/fashion/products';
+import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 
 interface ProductCardProps {
   product: ProductSummary;
@@ -14,9 +18,14 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, viewMode = 'grid', onQuickAdd }: ProductCardProps) {
+  const router = useRouter();
+  const { user, profile } = useAuth() as any;
+  const activeCustomer = profile || user;
+
   const colors = Array.from(new Set(product.variants.filter(v => v.color).map(v => v.color)));
   const [selectedColor, setSelectedColor] = useState(colors[0] || '');
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
 
   const displayVariant = product.variants.find(v => v.color === selectedColor) || product.variants[0];
@@ -33,9 +42,58 @@ export default function ProductCard({ product, viewMode = 'grid', onQuickAdd }: 
   const discount = mrp ? Math.round(((mrp - price) / mrp) * 100) : 0;
   const isOOS = !displayVariant || displayVariant.inventory_quantity <= 0;
 
-  const handleWishlist = (e: React.MouseEvent) => {
+  React.useEffect(() => {
+    if (activeCustomer && displayVariant?.id) {
+      supabase.from('user_wishlists')
+        .select('id')
+        .eq('user_id', activeCustomer.id)
+        .eq('product_id', product.id)
+        .eq('variant_id', displayVariant.id)
+        .maybeSingle()
+        .then(({ data }) => setIsWishlisted(!!data));
+    } else {
+      setIsWishlisted(false);
+    }
+  }, [activeCustomer, product.id, displayVariant?.id]);
+
+  const handleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
-    setIsWishlisted(w => !w);
+    if (!activeCustomer) {
+      toast.error('Please login to save items');
+      router.push('/login');
+      return;
+    }
+    
+    setWishlistLoading(true);
+    try {
+      if (isWishlisted) {
+        const { error } = await supabase.from('user_wishlists')
+          .delete()
+          .eq('user_id', activeCustomer.id)
+          .eq('product_id', product.id)
+          .eq('variant_id', displayVariant.id);
+          
+        if (error) throw error;
+        setIsWishlisted(false);
+        toast.success('Removed from wishlist');
+      } else {
+        const { error } = await supabase.from('user_wishlists').insert({
+          user_id: activeCustomer.id,
+          product_id: product.id,
+          variant_id: displayVariant.id,
+          is_platform_item: true
+        });
+        
+        if (error) throw error;
+        setIsWishlisted(true);
+        toast.success('Saved to wishlist! ♥');
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Could not update wishlist');
+    } finally {
+      setWishlistLoading(false);
+    }
   };
 
   const handleQuickAdd = (e: React.MouseEvent) => {
@@ -47,105 +105,121 @@ export default function ProductCard({ product, viewMode = 'grid', onQuickAdd }: 
   };
 
   return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      className="group relative flex flex-col h-full rounded-2xl bg-white dark:bg-[#0c0e16] border border-slate-100 dark:border-white/[0.04] shadow-[0_4px_20px_rgb(0,0,0,0.04)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.1)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 overflow-hidden"
+    <div
+      className="group relative flex flex-col h-full bg-transparent"
+      onMouseEnter={() => {}}
     >
-      {/* Image */}
-      <div className="relative w-full aspect-[3/4] bg-slate-100 dark:bg-slate-800 overflow-hidden">
-        <Link href={`/shop/fashion/product/${product.id}`} className="block w-full h-full">
+      {/* Image Container */}
+      <div className="relative w-full aspect-[3/4] bg-slate-100 dark:bg-slate-900 overflow-hidden rounded-none sm:rounded-md mb-3">
+        <Link href={`/shop/fashion/product/${product.id}`} className="block w-full h-full cursor-pointer">
           <Image
             src={mainImage}
             alt={product.title}
             fill
-            className={`object-cover transition-opacity duration-500 ${hoverImage ? 'group-hover:opacity-0' : ''}`}
+            className={`object-cover transition-opacity duration-700 ease-in-out ${hoverImage ? 'group-hover:opacity-0' : ''}`}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
           {hoverImage && (
             <Image
               src={hoverImage}
-              alt={product.title}
+              alt={`${product.title} secondary`}
               fill
-              className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-in-out"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />
           )}
         </Link>
 
-        {/* Discount badge */}
-        {discount > 0 && (
-          <span className="absolute top-2 left-2 bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow">
-            -{discount}%
-          </span>
-        )}
-        {isOOS && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="bg-white/90 text-slate-800 text-xs font-black px-3 py-1.5 rounded-full">OUT OF STOCK</span>
-          </div>
-        )}
+        {/* Badges */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1 z-10 pointer-events-none">
+          {discount > 0 && (
+            <span className="bg-white/95 dark:bg-black/90 text-slate-900 dark:text-white text-[9px] font-bold uppercase tracking-widest px-2 py-1 shadow-sm">
+              Sale {discount}%
+            </span>
+          )}
+          {isOOS && (
+            <span className="bg-slate-900/90 text-white text-[9px] font-bold uppercase tracking-widest px-2 py-1 shadow-sm">
+              Sold Out
+            </span>
+          )}
+        </div>
 
-        {/* Wishlist */}
+        {/* Wishlist Toggle */}
         <button
           onClick={handleWishlist}
-          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 dark:bg-black/50 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-white dark:hover:bg-black/70 transition-colors"
+          disabled={wishlistLoading}
+          className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 z-10 ${
+            isWishlisted 
+              ? 'bg-white dark:bg-slate-800 shadow-sm opacity-100' 
+              : 'bg-transparent hover:bg-white/90 dark:hover:bg-slate-800/90 opacity-0 group-hover:opacity-100'
+          } ${wishlistLoading ? 'cursor-wait' : 'cursor-pointer'}`}
           aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
         >
-          <Heart size={14} className={isWishlisted ? 'fill-rose-500 text-rose-500' : 'text-slate-600 dark:text-slate-300'} />
+          <Heart size={16} strokeWidth={2} className={isWishlisted ? 'fill-slate-900 text-slate-900 dark:fill-white dark:text-white' : 'text-slate-900 dark:text-white drop-shadow-md'} />
         </button>
 
-        {/* Quick Add */}
+        {/* Quick Add Overlay */}
         {!isOOS && (
-          <button
-            onClick={handleQuickAdd}
-            className="absolute bottom-0 inset-x-0 py-3 bg-slate-900/90 dark:bg-white/90 text-white dark:text-slate-900 text-xs font-black uppercase tracking-widest translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex items-center justify-center gap-2"
-          >
-            {justAdded ? (
-              <span className="text-emerald-400 dark:text-emerald-600">Added ✓</span>
-            ) : (
-              <><ShoppingCart size={13} /> Quick Add</>
-            )}
-          </button>
+          <div className="absolute bottom-0 inset-x-0 p-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out z-10 hidden sm:block">
+            <button
+              onClick={handleQuickAdd}
+              className="w-full py-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-slate-900 dark:text-white text-[11px] font-bold uppercase tracking-widest hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-colors shadow-lg"
+            >
+              {justAdded ? 'Added ✓' : 'Quick Add'}
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Details */}
-      <div className="p-3 flex-1 flex flex-col">
-        <Link href={`/shop/fashion/product/${product.id}`}>
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug mb-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+      {/* Details Container */}
+      <div className="flex flex-col flex-1 px-1">
+        <Link href={`/shop/fashion/product/${product.id}`} className="group-hover:opacity-80 transition-opacity">
+          <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-tight mb-1 line-clamp-1">
             {product.title}
           </h3>
         </Link>
 
-        {/* Price */}
-        <div className="flex items-baseline gap-2 mt-auto pt-2">
-          <span className="text-sm font-black text-slate-900 dark:text-white">{formatPrice(price)}</span>
+        {/* Price Hierarchy */}
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-sm font-semibold text-slate-900 dark:text-white">{formatPrice(price)}</span>
           {mrp && (
-            <span className="text-xs text-slate-400 line-through">{formatPrice(mrp)}</span>
+            <span className="text-xs text-slate-500 line-through font-medium">{formatPrice(mrp)}</span>
           )}
         </div>
 
-        {/* Color Swatches */}
+        {/* Swatches (If multiple colors) */}
         {colors.length > 1 && (
-          <div className="flex gap-1.5 mt-2">
-            {colors.slice(0, 5).map(color => (
-              <button
-                key={color}
-                onClick={() => setSelectedColor(color)}
-                title={color}
-                className={`w-4 h-4 rounded-full border-2 transition-transform ${selectedColor === color ? 'border-blue-500 scale-110' : 'border-slate-300 dark:border-slate-600'}`}
-                style={{ backgroundColor: color.toLowerCase() }}
-              />
-            ))}
+          <div className="flex gap-2 mt-auto pt-1 pb-1">
+            {colors.slice(0, 5).map(color => {
+              const isSelected = selectedColor === color;
+              return (
+                <button
+                  key={color}
+                  onClick={() => setSelectedColor(color)}
+                  aria-label={`Select color ${color}`}
+                  aria-pressed={isSelected}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center p-[2px] transition-all focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-slate-400 ${isSelected ? 'ring-1 ring-slate-400 dark:ring-slate-500 border-transparent' : 'border border-transparent hover:border-slate-300'}`}
+                >
+                  <span 
+                    className="w-full h-full rounded-full border border-slate-200 dark:border-white/10"
+                    style={{ backgroundColor: color.toLowerCase() }}
+                  />
+                </button>
+              );
+            })}
           </div>
         )}
 
-        {/* Sizes */}
-        {availableSizes.length > 0 && (
-          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 truncate">
-            {availableSizes.slice(0, 4).join(' · ')}
-          </p>
+        {/* Mobile Quick Add (visible only on mobile touch devices) */}
+        {!isOOS && (
+          <button
+            onClick={handleQuickAdd}
+            className="sm:hidden mt-3 w-full py-2.5 border border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-widest text-slate-900 dark:text-white"
+          >
+            {justAdded ? 'Added ✓' : '+ Quick Add'}
+          </button>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }
