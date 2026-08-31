@@ -6,6 +6,7 @@ import AdminBottomNav from './AdminBottomNav';
 import { Menu } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import Image from 'next/image';
+import AdminCommandSearch from '@/components/admin/AdminCommandSearch';
 
 export default function AdminLayout({ children, adminProfile }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -47,6 +48,9 @@ export default function AdminLayout({ children, adminProfile }) {
 
                         {/* Right: Notifications + Profile */}
                         <div className="flex items-center gap-3 shrink-0">
+                            {/* Command Search */}
+                            <AdminCommandSearch />
+
                             {/* Notifications */}
                             <NotificationBell apiPath="/api/admin/notifications" />
 

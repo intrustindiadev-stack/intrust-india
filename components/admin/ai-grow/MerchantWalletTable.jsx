@@ -75,7 +75,7 @@ export default function MerchantWalletTable({ wallets = [], onAdjust, onHistory 
     }
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-[#EAEFF4] shadow-sm overflow-hidden">
             {/* Toolbar */}
             <div className="p-5 border-b border-gray-50 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                 <div className="relative flex-1 max-w-sm">

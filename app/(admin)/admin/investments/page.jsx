@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import AddInvestmentModal from '@/components/admin/investment/AddInvestmentModal';
 import GrowthAnalytics from '@/components/admin/investment/GrowthAnalytics';
 import { motion, AnimatePresence } from 'framer-motion';
+import PageGuideWrapper from '@/components/admin/PageGuideWrapper';
 
 const STATUS_CHIP = {
     active: 'bg-emerald-50 text-emerald-600 border-emerald-100',
@@ -113,6 +114,7 @@ export default function AdminInvestmentsPage() {
                         <p className="text-sm text-slate-500 font-medium">Manage capital deployments, monitor ROI, and handle merchant requests.</p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
+                        <PageGuideWrapper pageKey="/admin/investments" />
                         <button onClick={fetchInvestments} className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 rounded-xl transition-all shadow-sm">
                             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                         </button>

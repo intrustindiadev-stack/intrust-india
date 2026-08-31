@@ -39,7 +39,7 @@ function StatCard({ href, color, bgDecor, iconBg, iconText, badge, badgeBg, labe
         <Link
             href={href}
             style={{ animationDelay: `${delay}ms` }}
-            className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all"
+            className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-[#EAEFF4] p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all"
         >
             {/* Decor blob */}
             <div className={`absolute top-0 right-0 w-32 h-32 ${bgDecor} rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500`} />

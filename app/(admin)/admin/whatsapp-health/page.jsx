@@ -17,6 +17,7 @@ import {
     ChevronDown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PageGuideWrapper from '@/components/admin/PageGuideWrapper';
 
 export default function AdminWhatsAppHealthPage() {
     const [window, setWindow] = useState('24h');
@@ -97,14 +98,17 @@ export default function AdminWhatsAppHealthPage() {
                     </p>
                 </div>
 
-                <button
-                    onClick={() => fetchHealthData(true)}
-                    disabled={loading || refreshing}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-700 font-bold text-sm shadow-sm transition-all hover:border-slate-300 disabled:opacity-60 shrink-0"
-                >
-                    <RefreshCw size={16} className={`${refreshing ? 'animate-spin text-blue-600' : 'text-slate-500'}`} />
-                    {refreshing ? 'Refreshing...' : 'Refresh Data'}
-                </button>
+                <div className="flex items-center gap-3 shrink-0">
+                    <PageGuideWrapper pageKey="/admin/whatsapp-health" />
+                    <button
+                        onClick={() => fetchHealthData(true)}
+                        disabled={loading || refreshing}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-700 font-bold text-sm shadow-sm transition-all hover:border-slate-300 disabled:opacity-60"
+                    >
+                        <RefreshCw size={16} className={`${refreshing ? 'animate-spin text-blue-600' : 'text-slate-500'}`} />
+                        {refreshing ? 'Refreshing...' : 'Refresh Data'}
+                    </button>
+                </div>
             </div>
 
             {/* Filters Bar */}

@@ -13,13 +13,13 @@ function formatCurrency(amount) {
 function StatCard({ icon: Icon, label, value, subtext, colorClass, glowClass, delay = 0 }) {
     return (
         <div
-            className="relative overflow-hidden bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 group"
+            className="relative overflow-hidden bg-white rounded-2xl border border-[#EAEFF4] shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 group"
             style={{ animationDelay: `${delay}ms` }}
         >
             {/* Decorative gradient blob */}
             <div className={`absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-10 group-hover:opacity-20 transition-opacity duration-500 ${glowClass}`} />
 
-            <div className="relative p-6">
+            <div className="relative p-5">
                 <div className="flex items-start justify-between mb-4">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${colorClass}`}>
                         <Icon size={22} className="opacity-90" />

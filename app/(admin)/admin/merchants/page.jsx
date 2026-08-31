@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import MerchantCard from '@/components/admin/merchants/MerchantCard';
+import PageGuideWrapper from '@/components/admin/PageGuideWrapper';
 
 /* ─── Production-grade Action Modal (replaces all browser dialogs) ─── */
 function ActionModal({ isOpen, onClose, config, onConfirm, isLoading }) {
@@ -393,6 +394,7 @@ export default function AdminMerchantsPage() {
 
                 <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex items-center gap-3">
+                        <PageGuideWrapper pageKey="/admin/merchants" />
                         <Link href="/admin/merchants/udhari" className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition-all font-black text-xs uppercase tracking-widest shadow-sm group">
                             <CreditCard size={16} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
                             Store Credit

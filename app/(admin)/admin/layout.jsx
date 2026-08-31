@@ -1,7 +1,7 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import AdminLayout from '@/components/layout/admin/AdminLayout';
 import AdminBottomNav from '@/components/layout/admin/AdminBottomNav';
-
+import AdminMotionConfig from '@/components/admin/AdminMotionConfig';
 import UnauthorizedRedirect from '@/components/auth/UnauthorizedRedirect';
 
 // Maps a role to its home portal
@@ -38,8 +38,10 @@ export default async function AdminRootLayout({ children }) {
     }
 
     return (
-        <AdminLayout adminProfile={profile}>
-            {children}
-        </AdminLayout>
+        <AdminMotionConfig>
+            <AdminLayout adminProfile={profile}>
+                {children}
+            </AdminLayout>
+        </AdminMotionConfig>
     );
 }

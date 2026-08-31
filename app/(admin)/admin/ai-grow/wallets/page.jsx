@@ -8,6 +8,7 @@ import WalletStatsCards from '@/components/admin/ai-grow/WalletStatsCards';
 import MerchantWalletTable from '@/components/admin/ai-grow/MerchantWalletTable';
 import AdjustBalanceModal from '@/components/admin/ai-grow/AdjustBalanceModal';
 import WalletAuditDrawer from '@/components/admin/ai-grow/WalletAuditDrawer';
+import PageGuideWrapper from '@/components/admin/PageGuideWrapper';
 
 export default function AIGrowWalletsPage() {
     const supabase = createClient();
@@ -102,14 +103,17 @@ export default function AIGrowWalletsPage() {
                         </p>
                     </div>
                 </div>
-                <button
-                    onClick={fetchWallets}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50"
-                >
-                    <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-                    Refresh
-                </button>
+                <div className="flex items-center gap-3">
+                    <PageGuideWrapper pageKey="/admin/ai-grow/wallets" />
+                    <button
+                        onClick={fetchWallets}
+                        disabled={loading}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50"
+                    >
+                        <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+                        Refresh
+                    </button>
+                </div>
             </div>
 
             {/* Stats Cards */}

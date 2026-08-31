@@ -45,7 +45,7 @@ export default function UserCard({ user }) {
     return (
         <Link
             href={`/admin/users/${user.id}`}
-            className="group bg-white/80 backdrop-blur-xl rounded-[2rem] p-6 border border-white/60 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 hover:-translate-y-1.5 block relative overflow-hidden"
+            className="group bg-white/80 backdrop-blur-xl rounded-[2rem] p-5 border border-[#EAEFF4] shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 block relative overflow-hidden"
         >
             {/* Top Indicator Line */}
             <div className={`absolute top-0 left-0 w-full h-1.5 transition-colors duration-300 ${user.role === 'admin' ? 'bg-slate-800' : user.role === 'merchant' ? 'bg-sky-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'

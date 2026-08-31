@@ -107,7 +107,16 @@ export default function UserRoleManager({ currentAdminId }) {
     const isSelf = (userId) => userId === currentAdminId;
 
     return (
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="space-y-4">
+            {/* Info Banner */}
+            <div className="flex items-start gap-2.5 p-3.5 bg-blue-50/70 border border-blue-100 rounded-xl">
+                <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-blue-700 font-medium">
+                    Role changes take effect on the user&apos;s next page load. You cannot remove your own admin privileges. Only Super Admins can grant the Super Admin role.
+                </p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#EAEFF4] shadow-sm overflow-hidden">
             {/* Toast */}
             {toast.message && (
                 <div className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-sm font-bold transition-all animate-fade-in ${
@@ -120,53 +129,35 @@ export default function UserRoleManager({ currentAdminId }) {
                 </div>
             )}
 
-            {/* Header */}
-            <div className="p-6 border-b border-gray-100">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-rose-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
-                            <Shield size={20} className="text-white" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-900">Role Management</h2>
-                            <p className="text-xs text-gray-500 font-medium">Manage user roles and access levels</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => loadData()}
-                        disabled={isLoading}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl text-sm font-bold transition-colors border border-gray-200"
-                    >
-                        <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-                        Refresh
-                    </button>
-                </div>
-
-                {/* Info Banner */}
-                <div className="mt-4 flex items-start gap-2.5 p-3.5 bg-blue-50/70 border border-blue-100 rounded-xl">
-                    <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
-                    <p className="text-xs text-blue-700 font-medium">
-                        Role changes take effect on the user&apos;s next page load. You cannot remove your own admin privileges. Only Super Admins can grant the Super Admin role.
-                    </p>
-                </div>
-
-                {/* Search */}
-                <div className="relative mt-4">
+            {/* Toolbar */}
+            <div className="p-5 border-b border-gray-50 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                     <input
                         type="text"
                         placeholder="Search by name, email, or phone..."
-                        className="w-full sm:w-96 pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 outline-none transition-all"
+                        className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-all"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                     />
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => loadData()}
+                        disabled={isLoading}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50"
+                    >
+                        <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
+                        Refresh
+                    </button>
                 </div>
             </div>
 
             {/* Table */}
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                    <thead className="bg-gray-50/80 text-xs uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-100">
+                    <thead className="bg-gray-50/50 text-xs uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-50">
                         <tr>
                             <th className="p-4 pl-6">User</th>
                             <th className="p-4">Contact</th>
@@ -284,7 +275,7 @@ export default function UserRoleManager({ currentAdminId }) {
 
             {/* Pagination */}
             {totalPages > 1 && (
-                <div className="p-4 sm:px-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="p-4 sm:px-6 border-t border-gray-50 bg-gray-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
                     <p className="text-sm text-gray-500 font-medium">
                         Showing <span className="font-bold text-gray-900">{users.length}</span> of <span className="font-bold text-gray-900">{total}</span> users
                     </p>
@@ -292,7 +283,7 @@ export default function UserRoleManager({ currentAdminId }) {
                         <button
                             onClick={() => setPage(p => Math.max(1, p - 1))}
                             disabled={page <= 1}
-                            className="p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="p-2 rounded-xl border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
                             <ChevronLeft size={16} />
                         </button>
@@ -302,13 +293,14 @@ export default function UserRoleManager({ currentAdminId }) {
                         <button
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                             disabled={page >= totalPages}
-                            className="p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="p-2 rounded-xl border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
                             <ChevronRight size={16} />
                         </button>
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }

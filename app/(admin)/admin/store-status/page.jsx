@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabaseClient';
 import { Activity, Search, Store, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getPlatformStoreSettings, updatePlatformStoreSettings } from './actions';
+import PageGuideWrapper from '@/components/admin/PageGuideWrapper';
 
 export default function AdminStoreStatusPage() {
     const supabase = createClient();
@@ -82,6 +83,7 @@ export default function AdminStoreStatusPage() {
                         <Activity size={24} />
                     </div>
                     Store Status Management
+                    <PageGuideWrapper pageKey="/admin/store-status" />
                 </h1>
                 <p className="text-slate-500 font-medium text-sm mt-1 ml-14">
                     Toggle any merchant open or closed. Changes reflect in real-time across the platform.

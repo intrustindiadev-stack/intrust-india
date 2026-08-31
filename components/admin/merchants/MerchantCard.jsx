@@ -12,12 +12,12 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
     const { autoModeStatus, autoModeValidUntil } = merchant;
 
     return (
-        <div className={`group bg-white rounded-[2rem] border shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-xl relative overflow-hidden flex flex-col h-full ${isPending ? 'border-amber-200 hover:shadow-amber-200/20' : isSuspended ? 'border-orange-200 hover:shadow-orange-200/20' : isApproved ? 'border-slate-200 hover:shadow-blue-200/20' : 'border-slate-200'}`}>
+        <div className={`group bg-white rounded-[2rem] border shadow-sm transition-all hover:-translate-y-1 hover:shadow-md relative overflow-hidden flex flex-col h-full ${isPending ? 'border-amber-200 hover:shadow-amber-200/20' : isSuspended ? 'border-orange-200 hover:shadow-orange-200/20' : isApproved ? 'border-[#EAEFF4] hover:shadow-blue-200/20' : 'border-[#EAEFF4]'}`}>
             {/* Top Indicator Line */}
             <div className={`absolute top-0 left-0 w-full h-1.5 ${isPending ? 'bg-amber-500' : isApproved ? 'bg-emerald-500' : isSuspended ? 'bg-orange-500' : 'bg-red-500'}`} />
 
             {/* Link wrapper for the clickable body */}
-            <Link href={href || `/admin/merchants/${merchant.id}`} className="p-6 flex-1 flex flex-col cursor-pointer">
+            <Link href={href || `/admin/merchants/${merchant.id}`} className="p-5 flex-1 flex flex-col cursor-pointer">
                 <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-4">
                         <div className="relative">

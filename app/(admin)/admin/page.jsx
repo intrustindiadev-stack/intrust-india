@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import AdminClock from './AdminClock';
 import AdminStatsCards from '@/components/admin/AdminStatsCards';
+import PageGuideWrapper from '@/components/admin/PageGuideWrapper';
 
 // Helper to format price
 function formatPrice(paise) {
@@ -226,14 +227,17 @@ export default async function AdminDashboard() {
                         </p>
                     </div>
                     <div className="flex flex-col items-start sm:items-end gap-3">
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-full border border-emerald-100 shadow-sm transition-all hover:scale-105">
-                            <span className="relative flex h-2.5 w-2.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                            </span>
-                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">
-                                Live
-                            </span>
+                        <div className="flex items-center gap-2">
+                            <PageGuideWrapper pageKey="/admin" />
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-full border border-emerald-100 shadow-sm transition-all hover:scale-105">
+                                <span className="relative flex h-2.5 w-2.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                                </span>
+                                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">
+                                    Live
+                                </span>
+                            </div>
                         </div>
                         <AdminClock />
                     </div>

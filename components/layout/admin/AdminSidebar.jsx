@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
+import SidebarGroup from '@/components/admin/sidebar/SidebarGroup';
 import { useCollapsibleNav } from '@/hooks/useCollapsibleNav';
 import {
     LayoutDashboard,
@@ -256,68 +257,49 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                         </button>
                     </div>
 
-                    {/* Navigation */}
-                    <nav className="flex-1 py-4 px-4 space-y-6 overflow-y-auto hide-scrollbar">
-                        {navigationGroups.map((group, groupIdx) => (
-                            <div key={groupIdx} className="space-y-1.5">
-                                <button
-                                    onClick={() => toggleGroup(group.title)}
-                                    className="w-full flex items-center justify-between px-3 mb-2 group/header"
-                                    aria-expanded={isGroupOpen(group.title)}
-                                    aria-controls={`group-${groupIdx}`}
-                                >
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover/header:text-slate-600 transition-colors">
-                                        {group.title}
-                                    </span>
-                                    <ChevronDown 
-                                        size={14} 
-                                        className={`text-slate-400 transition-transform duration-200 ${isGroupOpen(group.title) ? 'rotate-180' : ''}`} 
-                                    />
-                                </button>
-                                <AnimatePresence initial={false}>
-                                    {isGroupOpen(group.title) && (
-                                        <motion.div
-                                            id={`group-${groupIdx}`}
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            transition={{ duration: 0.2 }}
-                                            className="overflow-hidden"
-                                        >
-                                            <div className="space-y-1.5 pb-2">
-                                                {group.items.map((item) => {
-                                                    const Icon = item.icon;
-                                                    const isActive = checkIsActive(item, pathname);
-
-                                                    return (
-                                                        <Link
-                                                            key={item.name}
-                                                            href={item.href}
-                                                            onClick={() => setIsOpen(false)}
-                                                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group relative overflow-hidden ${isActive
-                                                                ? activeItemBg
-                                                                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                                                                }`}
-                                                        >
-                                                            {isActive && (
-                                                                <div className={activeBar} />
-                                                            )}
-                                                            <Icon size={18} className={`transition-colors ${isActive ? activeIcon : 'text-slate-400 group-hover:text-slate-700'}`} />
-                                                            <span className="font-bold text-sm tracking-tight flex-1">{item.name}</span>
-                                                            {item.name === 'Priority Takeovers' && takeoverCount > 0 && (
-                                                                <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-sm animate-pulse">
-                                                                    {takeoverCount}
-                                                                </span>
-                                                            )}
-                                                        </Link>
-                                                    );
-                                                })}
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        ))}
+                    <nav className="flex-1 py-4 px-4 space-y-2 overflow-y-auto hide-scrollbar">
+                        {navigationGroups.map((group, groupIdx) => {
+                            const isGroupActive = group.items.some(item => checkIsActive(item, pathname));
+                            return (
+                                <SidebarGroup key={groupIdx} id={`group-${groupIdx}`} label={group.title} defaultOpen={isGroupActive}>
+                                    {group.items.map((item) => {
+                                        const Icon = item.icon;
+                                        const isActive = checkIsActive(item, pathname);
+                                        return (
+                                            <motion.li
+                                                key={item.name}
+                                                variants={{ open: { opacity: 1, y: 0 }, closed: { opacity: 0, y: -4 } }}
+                                                transition={{ duration: 0.18, ease: 'easeOut' }}
+                                                className="mb-0.5"
+                                            >
+                                                <Link
+                                                    href={item.href}
+                                                    onClick={() => setIsOpen(false)}
+                                                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors duration-150 group relative overflow-hidden text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                                >
+                                                    {isActive && (
+                                                        <motion.span
+                                                            layoutId="sidebar-active-pill"
+                                                            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                                                            className={`absolute inset-0 rounded-lg ${isSuperAdmin ? 'bg-slate-900/10' : 'bg-[#D4AF37]/10'}`}
+                                                        />
+                                                    )}
+                                                    <div className="relative z-10 flex items-center gap-3 w-full">
+                                                        <Icon size={18} className={`transition-colors ${isActive ? activeIcon : 'text-slate-400 group-hover:text-slate-600'}`} />
+                                                        <span className={`font-bold text-sm tracking-tight flex-1 ${isActive ? (isSuperAdmin ? 'text-slate-900' : 'text-amber-600') : ''}`}>{item.name}</span>
+                                                        {item.name === 'Priority Takeovers' && takeoverCount > 0 && (
+                                                            <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-sm animate-pulse">
+                                                                {takeoverCount}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </Link>
+                                            </motion.li>
+                                        );
+                                    })}
+                                </SidebarGroup>
+                            );
+                        })}
                     </nav>
 
                     {/* User Profile Footer */}

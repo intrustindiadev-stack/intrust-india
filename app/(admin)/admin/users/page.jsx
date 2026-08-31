@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Users, Search, Filter } from 'lucide-react';
 import UserCard from '@/components/admin/users/UserCard';
 import UserSearch from '@/components/admin/users/UserSearch';
+import PageGuideWrapper from '@/components/admin/PageGuideWrapper';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,6 +72,7 @@ export default async function AdminUsersPage({ searchParams }) {
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                        <PageGuideWrapper pageKey="/admin/users" />
                         <UserSearch />
                         <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/60 shadow-lg shadow-slate-200/40 whitespace-nowrap">
                             <span className="text-sm font-bold text-slate-600 tracking-wide">
