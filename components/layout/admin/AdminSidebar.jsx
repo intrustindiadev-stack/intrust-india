@@ -46,6 +46,7 @@ import {
     Network,
     Target,
     MessageSquare,
+    Wallet,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { displayEmail } from '@/lib/auth';
@@ -69,6 +70,7 @@ const navigationGroups = [
             { name: 'Store Status', href: '/admin/store-status', icon: Activity },
             { name: 'Store Credit', href: '/admin/merchants/udhari', icon: CreditCard },
             { name: 'AI Grow', href: '/admin/investments', icon: TrendingUp },
+            { name: 'AI Grow Wallets', href: '/admin/ai-grow/wallets', icon: Wallet },
             { name: 'Lockin', href: '/admin/lockin', icon: ShieldCheck },
         ]
     },

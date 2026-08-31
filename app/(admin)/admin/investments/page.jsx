@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import {
     Search, RefreshCw, Plus, CheckCircle, XCircle,
-    TrendingUp, Briefcase, Activity, Percent, Eye, ChevronRight
+    TrendingUp, Briefcase, Activity, Percent, Eye, ChevronRight, Wallet
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -115,6 +115,10 @@ export default function AdminInvestmentsPage() {
                     <div className="flex items-center gap-3 shrink-0">
                         <button onClick={fetchInvestments} className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 rounded-xl transition-all shadow-sm">
                             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                        </button>
+                        <button onClick={() => router.push('/admin/ai-grow/wallets')}
+                            className="flex items-center gap-2 px-6 py-3 bg-indigo-50 text-indigo-700 font-black text-xs uppercase tracking-widest rounded-xl border border-indigo-200 hover:bg-indigo-100 transition-all shadow-sm active:scale-95">
+                            <Wallet size={16} /> Wallets
                         </button>
                         <button onClick={() => setShowAddModal(true)}
                             className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 active:scale-95">
