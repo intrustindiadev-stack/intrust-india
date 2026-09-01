@@ -1,7 +1,7 @@
 import paramiko
 import sys
 
-def check_nginx():
+def check_cron_file():
     host = '187.124.98.130'
     user = 'intrustindia'
     password = 'Intrustdev@2026'
@@ -12,7 +12,7 @@ def check_nginx():
     try:
         ssh.connect(host, username=user, password=password, timeout=10)
         
-        command = "cat /var/log/nginx/access.log | grep '/api/auth/google/callback' | tail -n 10"
+        command = "cat /etc/cron.d/intrust-morning-greeting"
         stdin, stdout, stderr = ssh.exec_command(command)
         
         print("--- STDOUT ---")
@@ -27,4 +27,4 @@ def check_nginx():
         ssh.close()
 
 if __name__ == '__main__':
-    check_nginx()
+    check_cron_file()

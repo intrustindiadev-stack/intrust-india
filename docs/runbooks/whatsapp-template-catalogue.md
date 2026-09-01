@@ -436,7 +436,10 @@ graph TD
 > [!IMPORTANT]
 > These templates are **Marketing** category. Users must have `whatsapp_opt_in = true` AND `whatsapp_marketing_opt_in = true` to receive them. Submit under **Marketing** in the Omniflow/Meta dashboard, not Utility.
 
-### 19. `intrust_gm_greet_v1`
+### 19. `intrust_gm_greet_v1` ⚠️ RETIRED from morning broadcast
+- **Status**: Template exists in Omniflow but is **no longer fired by `broadcastMorningGreeting()`**.
+  Paused in favour of `intrust_gm_quote_v1`. Contains finance-specific language not
+  appropriate for the current client brief.
 - **Category**: Marketing
 - **Language**: `en_US`
 - **Body**:
@@ -456,11 +459,14 @@ graph TD
 - **Buttons**:
   - [Quick Reply] `Check My Balance`
   - [Quick Reply] `Recent Transactions`
-- **Code symbol**: `GM_GREET_TEMPLATE` in `lib/omniflow.js`
-- **Fired by**: `broadcastMorningGreeting()` on even days of the year
-- **Cron**: `GET /api/cron/morning-greeting` at 08:00 IST daily
+- **Code symbol**: `GM_GREET_TEMPLATE` in `lib/omniflow.js` (retained for possible future use)
+- **Fired by**: ~~`broadcastMorningGreeting()` on even days of the year~~ — **no longer active**
+- **Cron**: ~~`GET /api/cron/morning-greeting` at 08:00 IST daily~~
 
-### 20. `intrust_gm_tip_v1`
+### 20. `intrust_gm_tip_v1` ⚠️ RETIRED from morning broadcast
+- **Status**: Template exists in Omniflow but is **no longer fired by `broadcastMorningGreeting()`**.
+  Paused in favour of `intrust_gm_quote_v1`. Contains finance-specific language not
+  appropriate for the current client brief.
 - **Category**: Marketing
 - **Language**: `en_US`
 - **Body**:
@@ -478,9 +484,32 @@ graph TD
 - **Buttons**:
   - [Quick Reply] `Explore Features`
   - [Quick Reply] `My Wallet`
-- **Code symbol**: `GM_TIP_TEMPLATE` in `lib/omniflow.js`
-- **Fired by**: `broadcastMorningGreeting()` on odd days of the year
+- **Code symbol**: `GM_TIP_TEMPLATE` in `lib/omniflow.js` (retained for possible future use)
+- **Fired by**: ~~`broadcastMorningGreeting()` on odd days of the year~~ — **no longer active**
+- **Cron**: ~~`GET /api/cron/morning-greeting` at 08:00 IST daily~~
+
+### 21. `intrust_gm_quote_v1` ✅ ACTIVE
+- **Category**: Marketing
+- **Language**: `en_US`
+- **Body**:
+  ```text
+  🌅 Good morning, *{{1}}*!
+
+  "{{2}}"
+
+  — Have a wonderful day! ✨
+  ```
+- **Variables**:
+  - `{{1}}` = First name (e.g. `"Rahul"`)
+  - `{{2}}` = Daily quote text, admin-scheduled from the `daily_quotes` table
+- **Footer**: InTrust India
+- **Buttons**: (none)
+- **Code symbol**: `GM_QUOTE_TEMPLATE` in `lib/omniflow.js`
+- **Fired by**: `broadcastMorningGreeting()` when a quote is scheduled in `daily_quotes` for today
 - **Cron**: `GET /api/cron/morning-greeting` at 08:00 IST daily
+- **Admin UI**: `/admin/marketing/daily-quotes`
+- **Fallback**: If no quote is scheduled, broadcast is **skipped entirely** — no message sent that day
+- **Author attribution**: Stored in `daily_quotes.author_or_source` for admin reference only; NOT included in the WhatsApp message body
 
 ### 21. `intrust_ge_greet_v1` *(NEW)*
 - **Category**: Marketing
