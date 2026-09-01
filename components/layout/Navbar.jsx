@@ -15,6 +15,7 @@ import GoldBadge from '@/components/ui/GoldBadge';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import GlobalSearch from '@/components/search/GlobalSearch';
+import toast from 'react-hot-toast';
 
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
@@ -81,7 +82,7 @@ export default function Navbar() {
 
     const menuItems = [
         { label: 'Shop', href: '/shop' },
-        { label: 'Fashion', href: '/shop/fashion' },
+        { label: 'Fashion', href: '/shop/fashion', isComingSoon: true },
         { label: 'Offers', href: '/search?type=offers' },
     ];
 
@@ -132,7 +133,23 @@ export default function Navbar() {
                                 {menuItems.map((item) => (
                                     <Link
                                         key={item.label}
-                                        href={item.href}
+                                        href={item.isComingSoon ? '#' : item.href}
+                                        onClick={(e) => {
+                                            if (item.isComingSoon) {
+                                                e.preventDefault();
+                                                toast('We are tailoring something special. The Fashion category is launching soon!', {
+                                                    icon: '✨',
+                                                    style: {
+                                                        background: '#ffffff',
+                                                        color: '#334155',
+                                                        border: '1px solid #e2e8f0',
+                                                        padding: '16px',
+                                                        fontWeight: '500',
+                                                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+                                                    }
+                                                });
+                                            }
+                                        }}
                                         className="
                         relative px-3 py-2 text-[14px] font-bold uppercase tracking-wider
                         text-[#617073] dark:text-gray-300 hover:text-[#171A21] dark:hover:text-white 

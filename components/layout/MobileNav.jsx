@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { displayInitial, displayEmail } from '@/lib/auth';
 import GlobalSearch from '@/components/search/GlobalSearch';
+import toast from 'react-hot-toast';
 
 export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, user, theme, toggleTheme, handleSignOut, menuItems, apiPath }) {
     const router = useRouter();
@@ -92,13 +93,30 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                             <div className="space-y-2">
                                 {/* Navigation Links */}
                                 {menuItems.map((item, index) => (
-                                    <Link key={item.label} href={item.href} passHref legacyBehavior>
+                                    <Link key={item.label} href={item.isComingSoon ? '#' : item.href} passHref legacyBehavior>
                                         <motion.a
                                             custom={index}
                                             variants={itemVariants}
                                             initial="hidden"
                                             animate="visible"
-                                            onClick={onClose}
+                                            onClick={(e) => {
+                                                if (item.isComingSoon) {
+                                                    e.preventDefault();
+                                                    toast('We are tailoring something special. The Fashion category is launching soon!', {
+                                                        icon: '✨',
+                                                        style: {
+                                                            background: '#ffffff',
+                                                            color: '#334155',
+                                                            border: '1px solid #e2e8f0',
+                                                            padding: '16px',
+                                                            fontWeight: '500',
+                                                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+                                                        }
+                                                    });
+                                                } else {
+                                                    onClose();
+                                                }
+                                            }}
                                             className="
                                                 group flex items-center justify-between 
                                                 px-4 py-4 text-[#171A21] dark:text-gray-100

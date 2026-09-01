@@ -3,12 +3,13 @@
 import { motion } from 'framer-motion';
 import { ShoppingBag, Laptop, Carrot, Pill, Shirt, Coffee, Utensils } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 const CATEGORIES = [
     { id: 'groceries', name: 'Groceries', icon: Carrot, color: 'bg-emerald-50 text-emerald-600', ring: 'ring-emerald-500/20' },
     { id: 'electronics', name: 'Electronics', icon: Laptop, color: 'bg-blue-50 text-blue-600', ring: 'ring-blue-500/20' },
     { id: 'pharmacy', name: 'Pharmacy', icon: Pill, color: 'bg-rose-50 text-rose-600', ring: 'ring-rose-500/20' },
-    { id: 'fashion', name: 'Fashion', icon: Shirt, color: 'bg-indigo-50 text-indigo-600', ring: 'ring-indigo-500/20' },
+    { id: 'fashion', name: 'Fashion', icon: Shirt, color: 'bg-indigo-50 text-indigo-600', ring: 'ring-indigo-500/20', isComingSoon: true },
     { id: 'daily', name: 'Daily Needs', icon: ShoppingBag, color: 'bg-amber-50 text-amber-600', ring: 'ring-amber-500/20' },
     { id: 'cafe', name: 'Cafe & Tea', icon: Coffee, color: 'bg-orange-50 text-orange-600', ring: 'ring-orange-500/20' },
     { id: 'restaurants', name: 'Restaurants', icon: Utensils, color: 'bg-red-50 text-red-600', ring: 'ring-red-500/20' },
@@ -32,6 +33,21 @@ export default function ShopCategoriesCarousel() {
                             <motion.button
                                 key={cat.id}
                                 onClick={() => {
+                                    if (cat.isComingSoon) {
+                                        toast('We are tailoring something special. The Fashion category is launching soon!', {
+                                            icon: '✨',
+                                            style: {
+                                                background: '#ffffff',
+                                                color: '#334155',
+                                                border: '1px solid #e2e8f0',
+                                                padding: '16px',
+                                                fontWeight: '500',
+                                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+                                            }
+                                        });
+                                        return;
+                                    }
+
                                     if (cat.id === 'fashion') {
                                         router.push('/shop/fashion');
                                     } else {

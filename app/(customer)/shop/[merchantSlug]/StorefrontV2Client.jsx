@@ -566,7 +566,18 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                         key={sub}
                                         onClick={() => {
                                             if (sub.toLowerCase() === 'fashion' && liveMerchant.id === 'official') {
-                                                router.push('/shop/fashion');
+                                                toast('We are tailoring something special. The Fashion category is launching soon!', {
+                                                    icon: '✨',
+                                                    style: {
+                                                        background: '#ffffff',
+                                                        color: '#334155',
+                                                        border: '1px solid #e2e8f0',
+                                                        padding: '16px',
+                                                        fontWeight: '500',
+                                                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+                                                    }
+                                                });
+                                                return;
                                             } else {
                                                 setActiveSubCategory(sub);
                                             }
@@ -780,6 +791,21 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                                         <Zap size={12} className="fill-white" /> {discountPct}% OFF
                                                     </div>
                                                 )}
+
+                                                {/* Wishlist Button */}
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); toggleWishlist(pItem); }}
+                                                    className={`absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center z-10 shadow-sm transition-all ${
+                                                        wishlistIds.has(pItem.product_id)
+                                                            ? 'bg-pink-50 text-pink-500 border border-pink-100'
+                                                            : isDark 
+                                                                ? 'bg-black/40 text-white backdrop-blur-md hover:bg-black/60 border border-white/10' 
+                                                                : 'bg-white/80 text-slate-400 border border-slate-200 hover:text-pink-500 hover:border-pink-200 backdrop-blur-md'
+                                                    }`}
+                                                    aria-label="Toggle Wishlist"
+                                                >
+                                                    <Heart size={20} className={wishlistIds.has(pItem.product_id) ? 'fill-current' : ''} />
+                                                </button>
                                             </div>
                                             
                                             {/* Details Area */}

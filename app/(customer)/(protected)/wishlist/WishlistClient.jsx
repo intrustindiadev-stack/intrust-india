@@ -165,23 +165,23 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen pt-24 md:pt-28 px-4 pb-12 bg-[#f7f8fa]">
-        <div className="max-w-3xl mx-auto mb-4">
+      <div className="min-h-screen pt-24 md:pt-28 px-4 pb-12 bg-slate-50">
+        <div className="max-w-7xl mx-auto mb-4">
           <button
             onClick={() => router.push('/shop')}
-            className="w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-all hover:bg-slate-100 text-slate-600 bg-white border border-slate-100 shadow-sm"
+            className="w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-all hover:bg-slate-100 text-slate-600 bg-white border border-gray-200 shadow-sm hover:shadow-md"
           >
             <ArrowLeft size={20} />
           </button>
         </div>
-        <div className="max-w-md mx-auto text-center py-16 px-6 rounded-2xl bg-white border border-slate-100 shadow-sm">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 bg-pink-50">
-            <Heart className="w-9 h-9 text-pink-500" />
+        <div className="max-w-md mx-auto text-center py-16 px-6 rounded-2xl bg-white border border-gray-200 shadow-sm">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 bg-slate-50 border border-slate-100">
+            <Heart className="w-8 h-8 text-slate-300" />
           </div>
-          <h2 className="text-xl font-black mb-2 text-slate-900">Your wishlist is empty</h2>
+          <h2 className="text-xl font-semibold mb-2 text-slate-900">Your wishlist is empty</h2>
           <p className="text-sm mb-6 text-slate-500">Save items you love to buy them later.</p>
-          <Link href="/shop" className="inline-flex items-center justify-center w-full gap-2 px-6 py-3.5 bg-pink-600 hover:bg-pink-500 text-white font-black rounded-xl transition-all active:scale-95">
-            Explore Shop
+          <Link href="/shop" className="inline-flex items-center justify-center w-full gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-all shadow-sm hover:shadow-md">
+            Continue Shopping
           </Link>
         </div>
       </div>
@@ -189,139 +189,142 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
   }
 
   return (
-    <div className="min-h-screen pt-24 md:pt-28 pb-12 px-3 sm:px-4 md:px-6 bg-[#f7f8fa] text-slate-900">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
+    <div className="min-h-screen pt-24 md:pt-28 pb-12 px-4 sm:px-6 lg:px-8 bg-slate-50 text-slate-900">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center gap-4 mb-8">
           <button
             onClick={() => router.push('/shop')}
-            className="w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-all hover:bg-slate-200 text-slate-600 bg-slate-100"
+            className="w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-all hover:bg-slate-100 text-slate-600 bg-white border border-gray-200 shadow-sm hover:shadow-md"
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-2xl font-black flex items-center gap-3 text-slate-900 m-0">
-            <Heart className="text-pink-500" size={24} fill="currentColor" />
+          <h1 className="text-2xl font-semibold flex items-center gap-3 text-slate-900 m-0">
             My Wishlist
-            <span className="text-sm font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500">{items.length}</span>
+            <span className="text-sm font-medium px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600">{items.length}</span>
           </h1>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-10">
           {grouped.map(group => (
             <div key={group.label}>
-              <div className="flex items-center gap-2 mb-3 text-xs font-black uppercase tracking-widest text-slate-400">
-                <Store size={12} /> {group.label}
+              <div className="flex items-center gap-2 mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-gray-200 pb-2">
+                <Store size={14} /> {group.label}
                 {group.items.length > 1 && (
                   <button
                     onClick={() => addAllToCart(group)}
                     disabled={!!addingAllGroupKey || !!movingId}
-                    className="ml-auto flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
+                    className="ml-auto flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 disabled:opacity-50 font-medium transition-all"
                   >
-                    {addingAllGroupKey === group.label ? <Loader2 size={10} className="animate-spin" /> : <ShoppingCart size={10} />}
+                    {addingAllGroupKey === group.label ? <Loader2 size={14} className="animate-spin" /> : <ShoppingCart size={14} />}
                     Add All
                   </button>
                 )}
               </div>
-              <AnimatePresence mode="popLayout">
-                {group.items.map((item, idx) => {
-                  const product = item.shopping_products;
-                  const fVariant = item.fashion_variants;
-                  const itemUrl = item.variant_id
-                    ? `/shop/fashion/product/${product?.id}`
-                    : `/shop/product/${product?.slug}`;
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <AnimatePresence mode="popLayout">
+                  {group.items.map((item, idx) => {
+                    const product = item.shopping_products;
+                    const fVariant = item.fashion_variants;
+                    const itemUrl = item.variant_id
+                      ? `/shop/fashion/product/${product?.id}`
+                      : `/shop/product/${product?.slug}`;
 
-                  const displayImg = fVariant?.fashion_variant_media?.[0]?.image_url || product?.product_images?.[0];
+                    const displayImg = fVariant?.fashion_variant_media?.[0]?.image_url || product?.product_images?.[0];
 
-                  const price = fVariant?.price_paise 
-                    ?? (item.is_platform_item 
-                      ? (product?.platform_price_paise ?? product?.suggested_retail_price_paise)
-                      : (item.merchant_inventory?.retail_price_paise || product?.suggested_retail_price_paise));
-                  
-                  const isOOS = fVariant 
-                    ? (fVariant.inventory_quantity ?? 0) <= 0 
-                    : (item.is_platform_item 
-                      ? isPlatformProductOOS(product)
-                      : isInventoryRowOOS(item.merchant_inventory));
+                    const price = fVariant?.price_paise 
+                      ?? (item.is_platform_item 
+                        ? (product?.platform_price_paise ?? product?.suggested_retail_price_paise)
+                        : (item.merchant_inventory?.retail_price_paise || product?.suggested_retail_price_paise));
+                    
+                    const isOOS = fVariant 
+                      ? (fVariant.inventory_quantity ?? 0) <= 0 
+                      : (item.is_platform_item 
+                        ? isPlatformProductOOS(product)
+                        : isInventoryRowOOS(item.merchant_inventory));
 
-                  return (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: 30, height: 0 }}
-                      transition={{ delay: idx * 0.04 }}
-                      className="flex gap-4 p-4 rounded-2xl mb-3 bg-white border border-slate-100 shadow-sm"
-                    >
-                      <Link href={itemUrl} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50 border border-slate-100 relative">
-                        {displayImg ? (
-                          <div className="relative w-full h-full">
+                    return (
+                      <motion.div
+                        key={item.id}
+                        layout
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ delay: idx * 0.04 }}
+                        className="flex flex-col rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden group"
+                      >
+                        <Link href={itemUrl} className="relative aspect-square w-full bg-slate-50 border-b border-gray-100 overflow-hidden">
+                          {displayImg ? (
                             <Image
                               src={displayImg}
                               alt={product?.title || 'Product'}
                               fill
-                              sizes="(max-width: 640px) 20vw, 64px"
-                              className="object-contain p-1"
-                              quality={60}
+                              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                              className="object-cover transition-transform group-hover:scale-105"
+                              quality={80}
                             />
-                          </div>
-                        ) : (
-                          <Package size={20} className="text-slate-200" />
-                        )}
-                        {isOOS && <OutOfStockOverlay />}
-                      </Link>
-
-                      <div className={`flex-1 min-w-0 ${isOOS ? 'opacity-50' : ''}`}>
-                        <p className="text-[9px] uppercase tracking-widest font-black mb-0.5 text-slate-400">{product?.category || 'General'}</p>
-                        <Link href={itemUrl} className="hover:underline">
-                          <h3 className="text-sm font-bold line-clamp-2 leading-tight text-slate-800">{product?.title}</h3>
+                          ) : (
+                            <div className="flex items-center justify-center w-full h-full text-slate-300">
+                              <Package size={32} />
+                            </div>
+                          )}
+                          {isOOS && <OutOfStockOverlay />}
                         </Link>
-                        {fVariant && (
-                          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                              {fVariant.color && <span className="capitalize">{fVariant.color}</span>}
-                              {fVariant.color && fVariant.size && <span> · </span>}
-                              {fVariant.size && <span>Size {fVariant.size}</span>}
-                            </span>
-                          </div>
-                        )}
-                        {price && <p className="text-sm font-black mt-1 text-slate-900">₹{(price / 100).toLocaleString('en-IN')}</p>}
-                      </div>
 
-                      <div className="flex flex-col gap-2 shrink-0">
-                        {isOOS ? (
-                          <div className="flex flex-col gap-2 items-center">
-                            <OutOfStockBadge variant="soft" size="sm" />
-                            <NotifyMeButton 
-                              productId={product?.id} 
-                              inventoryId={item.inventory_id}
-                              email={userEmail}
-                              variant="outline"
-                              className="h-8"
-                            />
+                        <div className={`flex flex-col flex-1 p-4 ${isOOS ? 'opacity-50' : ''}`}>
+                          <p className="text-[10px] uppercase tracking-wider font-semibold mb-1 text-slate-400">{product?.category || 'General'}</p>
+                          <Link href={itemUrl} className="hover:text-indigo-600 transition-colors">
+                            <h3 className="text-sm font-medium line-clamp-2 leading-tight text-slate-800 mb-2">{product?.title}</h3>
+                          </Link>
+                          {fVariant && (
+                            <div className="mb-2 flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                {fVariant.color && <span className="capitalize">{fVariant.color}</span>}
+                                {fVariant.color && fVariant.size && <span> · </span>}
+                                {fVariant.size && <span>Size {fVariant.size}</span>}
+                              </span>
+                            </div>
+                          )}
+                          <div className="mt-auto pt-2">
+                            {price && <p className="text-lg font-semibold text-slate-900">₹{(price / 100).toLocaleString('en-IN')}</p>}
                           </div>
-                        ) : (
+                        </div>
+
+                        <div className="p-4 pt-0 flex gap-2">
+                          {isOOS ? (
+                            <div className="flex-1 flex flex-col gap-2 items-center">
+                              <OutOfStockBadge variant="soft" size="sm" className="w-full justify-center" />
+                              <NotifyMeButton 
+                                productId={product?.id} 
+                                inventoryId={item.inventory_id}
+                                email={userEmail}
+                                variant="outline"
+                                className="w-full h-9"
+                              />
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => moveToCart(item)}
+                              disabled={!!movingId}
+                              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs font-semibold transition-all shadow-sm hover:shadow"
+                            >
+                              {movingId === item.id ? <Loader2 size={14} className="animate-spin" /> : <ShoppingCart size={14} />}
+                              Add to Cart
+                            </button>
+                          )}
                           <button
-                            onClick={() => moveToCart(item)}
-                            disabled={!!movingId}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
+                            onClick={() => removeFromWishlist(item.id)}
+                            disabled={!!removingId}
+                            title="Remove from wishlist"
+                            className="flex items-center justify-center w-11 h-11 shrink-0 rounded-xl transition-all border border-gray-200 bg-white text-gray-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50"
                           >
-                            {movingId === item.id ? <Loader2 size={12} className="animate-spin" /> : <ShoppingCart size={12} />}
-                            Add to Cart
+                            {removingId === item.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                           </button>
-                        )}
-                        <button
-                          onClick={() => removeFromWishlist(item.id)}
-                          disabled={!!removingId}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50"
-                        >
-                          {removingId === item.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                          Remove
-                        </button>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
             </div>
           ))}
         </div>

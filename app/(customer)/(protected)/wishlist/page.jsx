@@ -25,10 +25,9 @@ export default async function WishlistPage() {
   if (error) console.error('Wishlist fetch error:', error);
 
   return (
-    <main className="min-h-screen pb-20 md:pb-0 bg-[#f7f8fa]">
+    <main className="min-h-screen pb-20 md:pb-0 bg-slate-50">
       <Navbar />
       <WishlistClient userId={user.id} userEmail={user.email} initialItems={wishlistItems || []} />
-      
     </main>
   );
 }
