@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
+import { Info, DollarSign, Upload, Save, Loader2 } from 'lucide-react';
 import MultiImageUploader from '@/components/shared/MultiImageUploader';
 import { uploadProductImage } from '@/app/(admin)/admin/shopping/upload-product-image';
 import FashionVariantsEditor from '@/components/admin/shopping/FashionVariantsEditor';

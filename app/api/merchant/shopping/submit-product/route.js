@@ -191,6 +191,14 @@ export async function POST(request) {
 
     } catch (error) {
         console.error('Unexpected error in submit-product:', error);
+        
+        if (error.code === '23514' && error.message?.includes('shopping_products_check')) {
+            return NextResponse.json(
+                { error: 'Retail price cannot be less than the wholesale price.' },
+                { status: 400 }
+            );
+        }
+
         return NextResponse.json(
             { error: error.message || 'An unexpected error occurred.' },
             { status: 500 }
