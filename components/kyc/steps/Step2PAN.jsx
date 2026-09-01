@@ -25,6 +25,40 @@ import { verifyPANAction } from '@/app/actions/kyc';
  * @property {(field: string) => void} onUnlock
  */
 
+function mapProviderError(errorMsg) {
+    if (!errorMsg) return 'Verification failed. Please try again.';
+    
+    const msg = errorMsg.toLowerCase();
+    
+    // Provider Rejection
+    if (msg.includes('pan does not exist')) {
+        return "We couldn't verify this PAN. Please check the PAN and try again.";
+    }
+    
+    // Format invalid
+    if (msg.includes('format') || msg.includes('invalid pan')) {
+        return "Invalid PAN format. Please check and try again.";
+    }
+    
+    // Provider Unavailable / Temporary Server Failure
+    if (msg.includes('unavailable') || msg.includes('timeout') || msg.includes('network') || msg.includes('500') || msg.includes('502') || msg.includes('503') || msg.includes('504')) {
+        return "Verification service is currently unavailable. Please try again later.";
+    }
+    
+    // Authentication / Configuration error
+    if (msg.includes('unauthorized') || msg.includes('authentication') || msg.includes('missing keys') || msg.includes('401') || msg.includes('403') || msg.includes('forbidden')) {
+        return "Service configuration error. Please try again later.";
+    }
+    
+    // Rate Limited
+    if (msg.includes('rate limit') || msg.includes('too many') || msg.includes('429')) {
+        return "Too many verification attempts. Please try again later.";
+    }
+    
+    // Fallback for other provider rejections
+    return `Verification failed: ${errorMsg}`;
+}
+
 /** @param {Step2PANProps} props */
 export default function Step2PAN({
     formData,
@@ -91,7 +125,7 @@ export default function Step2PAN({
                         label="PAN Number"
                         value={verifyState === 'verified' ? maskedPAN : formData.panNumber}
                         onChange={(e) => handlePANChange(e.target.value)}
-                        error={errors.panNumber || (verifyState === 'error' ? 'Invalid PAN. Try again.' : verifyError)}
+                        error={errors.panNumber || (verifyState === 'error' ? mapProviderError(verifyError) : verifyError)}
                         success={false} /* we use button for success now */
                         maxLength={10}
                         autoComplete="off"
