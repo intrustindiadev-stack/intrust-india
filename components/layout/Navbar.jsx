@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { displayInitial } from '@/lib/auth';
 
 import { useTheme } from '@/lib/contexts/ThemeContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import MobileNav from './MobileNav';
 import GoldBadge from '@/components/ui/GoldBadge';
@@ -26,6 +26,7 @@ export default function Navbar() {
 
     const { theme, toggleTheme } = useTheme();
     const router = useRouter();
+    const pathname = usePathname();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -81,9 +82,9 @@ export default function Navbar() {
     };
 
     const menuItems = [
-        { label: 'Shop', href: '/shop' },
-        { label: 'Fashion', href: '/shop/fashion', isComingSoon: true },
-        { label: 'Offers', href: '/search?type=offers' },
+        { label: 'Services', href: '/services' },
+        { label: 'About', href: '/about' },
+        { label: 'Contact', href: '/contact' },
     ];
 
     // Get user display info — delegates to shared helper that filters pseudo-emails
@@ -151,22 +152,26 @@ export default function Navbar() {
                                             }
                                         }}
                                         className="
-                        relative px-3 py-2 text-[14px] font-bold uppercase tracking-wider
+                        relative px-5 py-2 text-[15px] font-medium 
                         text-[#617073] dark:text-gray-300 hover:text-[#171A21] dark:hover:text-white 
-                        transition-colors duration-300
+                        transition-colors duration-300 rounded-full
                         group hover:scale-105 active:scale-95
                       "
                                     >
                                         <span className="relative z-10">{item.label}</span>
+                                        {/* Hover background */}
+                                        <div
+                                            className="absolute inset-0 bg-gradient-to-r from-[#92BCEA]/10 to-[#AFB3F7]/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                        />
                                         {/* Animated underline */}
                                         <span
-                                            className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] rounded-full group-hover:w-full transition-all duration-300"
+                                            className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] rounded-full group-hover:w-8 transition-all duration-300"
                                         />
                                     </Link>
                                 ))}
                             </div>
                             <div className="w-full max-w-lg">
-                                <GlobalSearch />
+                                {pathname !== '/' && <GlobalSearch />}
                             </div>
                         </div>
 

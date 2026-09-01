@@ -258,7 +258,7 @@ const OrdersClient = ({ userId }) => {
                   <div className={`divide-y ${isDark ? 'divide-white/[0.04]' : 'divide-slate-100'}`}>
                     {group.shopping_order_items?.map((item) => {
                       const itemUrl = item.variant_id
-                        ? `/shop/fashion/product/${item.product_id}`
+                        ? `/shop/product/${item.product_id}`
                         : `/shop/product/${item.shopping_products?.slug || item.product_id}`;
 
                       return (

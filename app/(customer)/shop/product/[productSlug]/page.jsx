@@ -59,10 +59,7 @@ export default async function ProductDetailPage({ params }) {
         redirect("/shop");
     }
 
-    // If product is a fashion product with variants and fashion taxonomy, route to dedicated fashion PDP
-    if (product.fashion_product_categories && product.fashion_product_categories.length > 0) {
-        redirect(`/shop/fashion/product/${product.id}`);
-    }
+
 
     // Block access to pending-approval products on the public storefront.
     // Products with approval_status = null are legacy admin/platform products — allow those.

@@ -685,7 +685,7 @@ const OrderDetailsClient = ({ order, orderType, userId, customerProfile }) => {
                             const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
                             const savings = mrp > sellingPrice ? mrp - sellingPrice : 0;
                             const itemUrl = item.variant_id
-                                ? `/shop/fashion/product/${item.product_id}`
+                                ? `/shop/product/${item.product_id}`
                                 : `/shop/product/${item.shopping_products?.slug || item.product_id}`;
 
                             return (

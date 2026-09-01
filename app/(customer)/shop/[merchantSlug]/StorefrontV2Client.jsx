@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart, Zap, Shirt, Pill, Home, Utensils, Grid, Star, MapPin, Store, Plus, Minus, X, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -16,7 +16,11 @@ import Image from 'next/image';
 import { isStorefrontItemOOS } from '@/lib/shopping/stock';
 import { isValidUUID } from '@/lib/utils';
 import React, { Suspense } from 'react';
-
+import ShopLayout from '@/components/shop/ShopLayout';
+import FilterSidebar from '@/components/shop/FilterSidebar';
+import Pagination from '@/components/ui/Pagination';
+import ProductToolbar from '@/components/shop/filters/ProductToolbar';
+import { STOREFRONT_FILTERS } from '@/lib/shop/filterTypes';
 
 const PAGE_SIZE = 24;
 const storeCache = new Map();
@@ -26,8 +30,10 @@ const AdBannerCarousel = React.lazy(() => import('@/components/customer/dashboar
 const FlashSale = React.lazy(() => import('@/components/customer/shop/FlashSale'));
 const ConfirmModal = React.lazy(() => import('@/components/ui/ConfirmModal'));
 
-export default function StorefrontV2Client({ merchant, initialInventory, initialTotalCount, customer, categories }) {
+export default function StorefrontV2Client({ merchant, initialInventory, initialTotalCount, customer, categories, currentPage }) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
     const { theme } = useTheme();
     const { user: authUser, profile: authProfile } = useAuth();
     const activeCustomer = authProfile || customer;
@@ -35,30 +41,15 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
     const [cart, setCart] = useState([]);
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [isLoading, setIsLoading] = useState(true);
-    const [activeSubCategory, setActiveSubCategory] = useState('All');
-    const [searchInput, setSearchInput] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingCartItem, setPendingCartItem] = useState(null);
     const [selectedProductItem, setSelectedProductItem] = useState(null);
     const [liveMerchant, setLiveMerchant] = useState(merchant);
     const [liveInventory, setLiveInventory] = useState(initialInventory);
-    const debounceRef = useRef(null);
-
-    const [page, setPage] = useState(1);
-    const [totalCount, setTotalCount] = useState(initialTotalCount ?? 0);
-    const [loading, setLoading] = useState(false);
-    const isFirstRender = useRef(true);
-    const [pageLastIds, setPageLastIds] = useState({ 1: null });
 
     useEffect(() => {
         setLiveInventory(initialInventory);
-        setPage(1);
-        setTotalCount(initialTotalCount ?? 0);
-        setPageLastIds({ 1: null });
-        setLoading(false);
-        isFirstRender.current = true;
-    }, [initialInventory, initialTotalCount]);
+    }, [initialInventory]);
 
     // Open-at-top fix: scrolls to top on mount and whenever merchant slug changes
     useEffect(() => {
@@ -72,117 +63,56 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         setLiveMerchant(merchant);
     }, [merchant]);
 
-    const fetchItems = useCallback(async (pageNum, searchVal, catVal, lastIdVal) => {
-        const queryParams = new URLSearchParams({
-            merchantSlug: liveMerchant.slug,
-            offset: ((pageNum - 1) * PAGE_SIZE).toString(),
-            limit: PAGE_SIZE.toString(),
+    const activeFiltersList = useMemo(() => {
+        const filters = [];
+        STOREFRONT_FILTERS.forEach(config => {
+            const val = searchParams.get(config.id);
+            if (val) {
+                const values = val.split(',');
+                values.forEach(v => {
+                    const opt = config.options.find(o => o.value === v);
+                    filters.push({
+                        type: config.id,
+                        value: v,
+                        label: opt ? opt.label : v
+                    });
+                });
+            }
         });
-        if (searchVal) {
-            queryParams.append('search', searchVal);
+        if (searchParams.has('search')) {
+            filters.push({ type: 'search', value: searchParams.get('search'), label: `"${searchParams.get('search')}"` });
         }
-        if (catVal && catVal !== 'All') {
-            queryParams.append('category', catVal);
-        }
-        if (lastIdVal) {
-            queryParams.append('lastId', lastIdVal);
-        }
+        return filters;
+    }, [searchParams]);
 
-        const cacheKey = queryParams.toString();
-        
-        if (storeCache.has(cacheKey)) {
-            const cachedData = storeCache.get(cacheKey);
-            if (pageNum === 1) {
-                setLiveInventory(cachedData.items);
-            } else {
-                setLiveInventory(prev => {
-                    const existingIds = new Set(prev.map(i => i.id));
-                    const newItems = cachedData.items.filter(i => !existingIds.has(i.id));
-                    return [...prev, ...newItems];
-                });
-            }
-            setTotalCount(cachedData.totalCount);
-            setPage(pageNum);
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const res = await fetch(`/api/shopping/storefront?${cacheKey}`);
-            if (!res.ok) throw new Error('Failed to fetch storefront items');
-            const data = await res.json();
-
-            const items = data.items || [];
-            storeCache.set(cacheKey, { items, totalCount: data.totalCount ?? 0 });
-
-            if (pageNum === 1) {
-                setLiveInventory(items);
-            } else {
-                setLiveInventory(prev => {
-                    const existingIds = new Set(prev.map(i => i.id));
-                    const newItems = items.filter(i => !existingIds.has(i.id));
-                    return [...prev, ...newItems];
-                });
-            }
-            setTotalCount(data.totalCount ?? 0);
-            setPage(pageNum);
-
-            // Cache the last seen ID of this page for the next page
-            if (items.length > 0) {
-                const lastItem = items[items.length - 1];
-                const nextLastId = liveMerchant.slug === 'official' ? lastItem.product_id : lastItem.id;
-                setPageLastIds(prev => ({
-                    ...prev,
-                    [pageNum + 1]: nextLastId
-                }));
-            }
-        } catch (err) {
-            console.error('Error fetching storefront items:', err);
-            toast.error('Could not load products');
-        } finally {
-            setLoading(false);
-        }
-    }, [liveMerchant.slug]);
-
-    // Page changes trigger fetches
-    useEffect(() => {
-        if (isFirstRender.current) {
-            return;
-        }
-        const lastId = pageLastIds[page] || null;
-        fetchItems(page, searchQuery, activeSubCategory, lastId);
-    }, [page, fetchItems]);
-
-    const loadMoreRef = useRef(null);
-
-    // IntersectionObserver for infinite scrolling
-    useEffect(() => {
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && !loading && liveInventory.length < totalCount) {
-                setPage(p => p + 1);
-            }
-        }, { threshold: 0.1 });
-
-        if (loadMoreRef.current) {
-            observer.observe(loadMoreRef.current);
-        }
-
-        return () => observer.disconnect();
-    }, [loading, liveInventory.length, totalCount]);
-
-    // Search and Category resets page to 1
-    useEffect(() => {
-        if (isFirstRender.current) {
-            isFirstRender.current = false;
-            return;
-        }
-        setPageLastIds({ 1: null });
-        if (page !== 1) {
-            setPage(1);
+    const handleRemoveFilter = (filter) => {
+        const params = new URLSearchParams(searchParams);
+        if (filter.type === 'search') {
+            params.delete('search');
         } else {
-            fetchItems(1, searchQuery, activeSubCategory, null);
+            const current = params.get(filter.type);
+            if (current) {
+                const updated = current.split(',').filter(v => v !== filter.value);
+                if (updated.length > 0) {
+                    params.set(filter.type, updated.join(','));
+                } else {
+                    params.delete(filter.type);
+                }
+            }
         }
-    }, [searchQuery, activeSubCategory, fetchItems]);
+        params.set('page', '1');
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    const handleClearAllFilters = () => {
+        const params = new URLSearchParams(searchParams);
+        STOREFRONT_FILTERS.forEach(c => params.delete(c.id));
+        params.delete('search');
+        params.delete('min_price');
+        params.delete('max_price');
+        params.set('page', '1');
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    };
 
     useEffect(() => {
         if (!liveMerchant?.id) return;
@@ -471,13 +401,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         return categories || ['All'];
     }, [categories]);
 
-    // Debounce search — 150ms prevents re-filtering large inventories on every keystroke
-    const handleSearchChange = useCallback((e) => {
-        const val = e.target.value;
-        setSearchInput(val);
-        clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => setSearchQuery(val), 150);
-    }, []);
+
 
     const getCategoryIcon = useCallback((category) => {
         const cat = category.toLowerCase();
@@ -512,195 +436,71 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
 
 
     return (
-        <div className={`relative min-h-screen flex flex-col transition-colors duration-700`}>
-
-            {/* ====== CREATIVE AMBIENT BACKGROUND ====== */}
-            <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-                <div className={`absolute inset-0 ${isDark ? 'bg-[#080a10]' : 'bg-[#f7f8fa]'}`} />
-            </div>
-
-            {/* ====== STICKY HEADER — FROSTED GLASS ====== */}
-            <div className="sticky top-[76px] md:top-[92px] z-30 px-2 sm:px-4 md:px-6 max-w-7xl mx-auto w-full mb-4 pointer-events-none">
-                <header
-                    className={`pointer-events-auto md:backdrop-blur-xl rounded-2xl md:rounded-[2rem] border transition-all overflow-hidden flex flex-col ${
-                        isDark 
-                            ? 'bg-[#0c0e16] md:bg-[#080a10]/85 border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.3)]' 
-                            : 'bg-white md:bg-white/95 border-slate-200/80 shadow-lg'
-                    }`}
-                >
-                    {/* Top Row */}
-                    <div className="flex items-center gap-3 px-4 py-3 md:px-5">
-                        <button
-                            onClick={() => router.push('/shop')}
-                            className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-all ${isDark ? 'hover:bg-white/5 text-white/60' : 'hover:bg-slate-100 text-slate-600'}`}
-                        >
-                            <ArrowLeft size={20} />
-                        </button>
-
-                        {/* Search - Desktop AND Mobile inline for sticky bar */}
-                        <div className="flex-1 w-full relative">
-                            <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/40' : 'text-slate-400'}`} />
-                            <input
-                                type="text"
-                                placeholder={`Search for items in ${merchant?.business_name}...`}
-                                value={searchInput}
-                                onChange={handleSearchChange}
-                                className={`w-full pl-10 pr-4 py-2 md:py-2.5 rounded-full text-sm font-medium outline-none transition-all border ${
-                                    isDark 
-                                        ? 'bg-[#0a0c14]/50 text-white placeholder:text-white/30 border-white/[0.08] focus:bg-[#0a0c14] focus:border-white/20' 
-                                        : 'bg-white/50 text-slate-900 placeholder:text-slate-400 border-slate-200 hover:border-slate-300 hover:bg-white focus:border-blue-500 focus:bg-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]'
-                                    }`}
-                            />
-                        </div>
-                    </div>
-
-
-
-                    {/* Animated Subcategory Pills */}
-                    {merchantCategories.length > 1 && (
-                        <div className={`relative flex items-center gap-2 px-4 md:px-5 py-3 overflow-x-auto no-scrollbar border-t ${isDark ? 'border-white/[0.04]' : 'border-slate-100'}`}>
-                            {merchantCategories.map(sub => {
-                                const isActive = activeSubCategory === sub;
-                                return (
-                                    <button
-                                        key={sub}
-                                        onClick={() => {
-                                            if (sub.toLowerCase() === 'fashion' && liveMerchant.id === 'official') {
-                                                toast('We are tailoring something special. The Fashion category is launching soon!', {
-                                                    icon: '✨',
-                                                    style: {
-                                                        background: '#ffffff',
-                                                        color: '#334155',
-                                                        border: '1px solid #e2e8f0',
-                                                        padding: '16px',
-                                                        fontWeight: '500',
-                                                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
-                                                    }
-                                                });
-                                                return;
-                                            } else {
-                                                setActiveSubCategory(sub);
-                                            }
-                                        }}
-                                        className={`relative px-4 py-2 flex items-center gap-2 rounded-full text-xs font-bold whitespace-nowrap outline-none transition-colors ${
-                                            isActive 
-                                                ? 'text-white' 
-                                                : isDark ? 'text-white/40 hover:text-white/80' : 'text-slate-500 hover:text-slate-900'
-                                        }`}
-                                    >
-                                        {isActive && (
-                                            <div
-                                                className="absolute inset-0 bg-blue-500 rounded-full shadow-lg shadow-blue-500/20 md:hidden"
-                                            />
-                                        )}
-                                        {isActive && (
-                                            <motion.div
-                                                layoutId="activeCategoryPill"
-                                                className="absolute inset-0 bg-blue-500 rounded-full shadow-lg shadow-blue-500/20 hidden md:block"
-                                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                            />
-                                        )}
-                                        <div className="relative z-10 flex items-center gap-1.5">
-                                            <span className={isActive ? 'text-white' : ''}>{getCategoryIcon(sub)}</span>
-                                            {sub}
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
-                </header>
-            </div>
-
-            {/* MAIN CONTENT AREA */}
-            <main className="w-full px-2 sm:px-4 md:px-6 flex-1 py-4 md:py-6 relative z-10">
-                {/* pb-44 on mobile gives ~176px clearance below last card, ensuring both
-                    CustomerBottomNav (~92px) and FloatingCart (~60px) cannot occlude content.
-                    Reverts to pb-8 on md+ where those fixed bars are absent. */}
-                <div className="max-w-7xl mx-auto pb-44 md:pb-8">
-                    
-                    {/* AD BANNER */}
-                    <div className="w-full relative z-10 mb-4">
-                        <Suspense fallback={<div className="w-full aspect-[16/9] md:aspect-[32/9] bg-slate-100 dark:bg-white/5 rounded-2xl animate-pulse" />}>
-                            <AdBannerCarousel />
-                        </Suspense>
-                    </div>
-
-                    {/* MERCHANT PROFILE HEADER (Mobile-First) */}
-                    <MerchantProfileCard 
-                        merchant={liveMerchant} 
-                        totalItems={totalCount} 
-                        isStoreOpen={isStoreOpen}
+        <div className="font-[family-name:var(--font-outfit)]">
+            <ShopLayout
+                title={merchant?.business_name || 'Storefront'}
+                sidebar={<FilterSidebar categories={merchantCategories} />}
+                toolbar={
+                    <ProductToolbar 
+                        activeFilters={activeFiltersList}
+                        onRemoveFilter={handleRemoveFilter}
+                        onClearAll={handleClearAllFilters}
+                        resultsCount={initialTotalCount}
                     />
-
-                    {/* FLASH SALE */}
-                    {liveMerchant?.id === 'official' && (
-                        <Suspense fallback={<div className="w-full h-[200px] bg-slate-100 dark:bg-white/5 rounded-2xl animate-pulse mb-6" />}>
-                            <FlashSale
-                                cart={cart}
-                                onAdd={addToCart}
-                                onRemove={removeFromCart}
-                                isStoreOpen={isStoreOpen}
-                                primaryColor={primaryColor}
-                                secondaryColor={secondaryColor}
-                            />
-                        </Suspense>
-                    )}
-
-                    {/* Store Closed Browsing Note */}
-                    {!isStoreOpen && (
-                        <div className={`mt-4 mb-2 md:mt-6 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 ${isDark ? 'bg-amber-500/10 border border-amber-500/20 text-amber-200' : 'bg-amber-50 border border-amber-200 text-amber-800'}`}>
-                            <div className="flex items-center gap-3 w-full sm:w-auto">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-amber-500/20' : 'bg-white shadow-sm'}`}>
-                                    <Store size={20} className={isDark ? 'text-amber-400' : 'text-amber-600'} />
-                                </div>
-                                <div className="flex flex-col">
-                                    <h4 className="font-bold text-sm">Not Acccepting Orders</h4>
-                                    <p className="text-xs font-medium opacity-80 mt-0.5">You can still explore our inventory, but ordering is turned off. Check back soon!</p>
-                                </div>
-                            </div>
+                }
+            >
+                {/* Store Closed Browsing Note */}
+                {!isStoreOpen && (
+                    <div className="mb-6 p-4 rounded-xl flex flex-col sm:flex-row items-center gap-3 bg-amber-50 border border-amber-200 text-amber-800">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white shadow-sm shrink-0">
+                            <Store size={20} className="text-amber-600" />
                         </div>
-                    )}
-                    {(isLoading || loading) ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
-                            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-                                <ProductCardSkeleton key={`psk-${i}`} />
+                        <div className="flex flex-col">
+                            <h4 className="font-bold text-sm">Not Accepting Orders</h4>
+                            <p className="text-xs font-medium opacity-80 mt-0.5">You can still explore our inventory, but ordering is turned off. Check back soon!</p>
+                        </div>
+                    </div>
+                )}
+
+                {isLoading ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                            <ProductCardSkeleton key={`psk-${i}`} />
+                        ))}
+                    </div>
+                ) : filteredItems.length === 0 ? (
+                    <div className="py-20 text-center rounded-2xl bg-white dark:bg-[#0c0e16] shadow-sm border border-slate-100 dark:border-white/10 mt-6">
+                        <Package className="text-slate-300 dark:text-slate-700 mx-auto mb-4" size={48} />
+                        <h3 className="text-lg font-bold text-slate-600 dark:text-slate-400">No items found</h3>
+                    </div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {filteredItems.map(item => (
+                                <ProductCardV2
+                                    key={item.id}
+                                    item={item}
+                                    cartItem={cart.find(i => i.id === item.id)}
+                                    onAdd={() => addToCart(item)}
+                                    onRemove={() => removeFromCart(item)}
+                                    onSelect={() => setSelectedProductItem(item)}
+                                    primaryColor={primaryColor}
+                                    secondaryColor={secondaryColor}
+                                    isWishlisted={wishlistIds.has(item.product_id)}
+                                    onWishlist={() => toggleWishlist(item)}
+                                    isStoreOpen={isStoreOpen}
+                                />
                             ))}
                         </div>
-                    ) : filteredItems.length === 0 ? (
-                        <div className={`py-20 text-center rounded-3xl mt-10 ${isDark ? 'bg-white/[0.03] border border-white/[0.05]' : 'bg-white shadow-sm border border-slate-100'}`}>
-                            <Package className={isDark ? 'text-white/10 mx-auto mb-4' : 'text-slate-300 mx-auto mb-4'} size={48} />
-                            <h3 className={`text-lg font-black uppercase tracking-widest ${isDark ? 'text-white/30' : 'text-slate-600'}`}>No items found</h3>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
-                                {filteredItems.map(item => (
-                                    <ProductCardV2
-                                        key={item.id}
-                                        item={item}
-                                        cartItem={cart.find(i => i.id === item.id)}
-                                        onAdd={() => addToCart(item)}
-                                        onRemove={() => removeFromCart(item)}
-                                        onSelect={() => setSelectedProductItem(item)}
-                                        primaryColor={primaryColor}
-                                        secondaryColor={secondaryColor}
-                                        isWishlisted={wishlistIds.has(item.product_id)}
-                                        onWishlist={() => toggleWishlist(item)}
-                                        isStoreOpen={isStoreOpen}
-                                    />
-                                ))}
-                            </div>
 
-                            {liveInventory.length < totalCount && (
-                                <div ref={loadMoreRef} className="w-full h-20 flex items-center justify-center mt-6">
-                                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
-            </main>
+                        <Pagination
+                            totalCount={initialTotalCount}
+                            pageSize={PAGE_SIZE}
+                            currentPage={currentPage}
+                        />
+                    </>
+                )}
+            </ShopLayout>
 
             {/* FLOATING CART */}
             {totalItems > 0 && isStoreOpen && (

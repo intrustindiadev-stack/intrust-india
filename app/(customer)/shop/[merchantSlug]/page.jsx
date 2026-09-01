@@ -10,8 +10,19 @@ export const revalidate = 60;
 // UUID pattern to detect legacy ID-based URLs
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
 
-export default async function MerchantStorefrontPage({ params }) {
+export default async function MerchantStorefrontPage({ params, searchParams }) {
     const { merchantSlug } = await params;
+    const searchParamsObj = await searchParams;
+    
+    const currentPage = Math.max(1, parseInt(searchParamsObj.page || '1', 10));
+    const category = searchParamsObj.category || '';
+    const search = searchParamsObj.search || '';
+    const brand = searchParamsObj.brand || '';
+    const minPrice = searchParamsObj.min_price ? parseInt(searchParamsObj.min_price, 10) : null;
+    const maxPrice = searchParamsObj.max_price ? parseInt(searchParamsObj.max_price, 10) : null;
+    const size = searchParamsObj.size || '';
+    const color = searchParamsObj.color || '';
+
     const supabase = createStaticSupabaseClient();
     
     let merchant = null;
@@ -27,11 +38,16 @@ export default async function MerchantStorefrontPage({ params }) {
             // Fetch initial products using optimized unified pagination RPC
             supabase.rpc('get_storefront_page', {
                 p_merchant_slug: 'official',
-                p_offset: 0,
+                p_offset: (currentPage - 1) * PAGE_SIZE,
                 p_limit: PAGE_SIZE,
-                p_search: '',
-                p_category: '',
-                p_last_id: null
+                p_search: search,
+                p_category: category,
+                p_last_id: null,
+                p_price_min: minPrice,
+                p_price_max: maxPrice,
+                p_brand: brand,
+                p_size: size,
+                p_color: color
             }),
             createAdminClient().from('platform_settings').select('value').eq('key', 'platform_store').single(),
             supabase.rpc('get_merchant_categories', {
@@ -151,11 +167,16 @@ export default async function MerchantStorefrontPage({ params }) {
             // Inventory via optimized unified pagination RPC
             supabase.rpc('get_storefront_page', {
                 p_merchant_slug: fetchedMerchant.slug,
-                p_offset: 0,
+                p_offset: (currentPage - 1) * PAGE_SIZE,
                 p_limit: PAGE_SIZE,
-                p_search: '',
-                p_category: '',
-                p_last_id: null
+                p_search: search,
+                p_category: category,
+                p_last_id: null,
+                p_price_min: minPrice,
+                p_price_max: maxPrice,
+                p_brand: brand,
+                p_size: size,
+                p_color: color
             }),
             // Optimized categories query
             supabase.rpc('get_merchant_categories', {
@@ -184,6 +205,7 @@ export default async function MerchantStorefrontPage({ params }) {
                         initialInventory={mergedInventory}
                         initialTotalCount={initialTotalCount}
                         categories={categories}
+                        currentPage={currentPage}
                     />
                 </main>
                 <Footer />
@@ -202,6 +224,7 @@ export default async function MerchantStorefrontPage({ params }) {
                     initialInventory={mergedInventory}
                     initialTotalCount={initialTotalCount}
                     categories={categories}
+                    currentPage={currentPage}
                 />
             </main>
 

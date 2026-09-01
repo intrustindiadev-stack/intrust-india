@@ -852,7 +852,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                   const isItemStoreOpen = item.is_platform_item ? isPlatformOpen : (merchantStatuses.get(merchantId) ?? true);
 
                   const itemUrl = item.variant_id
-                    ? `/shop/fashion/product/${item.shopping_products?.id}`
+                    ? `/shop/product/${item.shopping_products?.id}`
                     : `/shop/product/${item.shopping_products?.slug || item.shopping_products?.id}`;
 
                   const itemImage = item.fashion_variants?.fashion_variant_media?.[0]?.image_url

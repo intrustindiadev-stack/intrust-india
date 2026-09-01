@@ -226,7 +226,7 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
                     const product = item.shopping_products;
                     const fVariant = item.fashion_variants;
                     const itemUrl = item.variant_id
-                      ? `/shop/fashion/product/${product?.id}`
+                      ? `/shop/product/${product?.id}`
                       : `/shop/product/${product?.slug}`;
 
                     const displayImg = fVariant?.fashion_variant_media?.[0]?.image_url || product?.product_images?.[0];
