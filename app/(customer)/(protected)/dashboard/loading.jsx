@@ -1,6 +1,6 @@
 export default function CustomerDashboardLoadingSkeleton() {
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)] flex flex-col">
+        <div className="min-h-screen bg-slate-50 dark:bg-gray-900 font-[family-name:var(--font-outfit)] flex flex-col">
             <div className="pt-24 sm:pt-32 px-4 sm:px-6 flex-grow">
                 <div className="max-w-7xl mx-auto animate-pulse">
                     <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-8" />

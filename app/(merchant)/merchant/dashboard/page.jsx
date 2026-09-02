@@ -144,43 +144,31 @@ export default async function MerchantDashboardPage() {
     }));
 
     return (
-        <div className="relative min-h-screen bg-slate-50 dark:bg-[#020617] -mx-4 sm:-mx-8 -mt-4 sm:-mt-8">
-            {/* Header Layer (Normal Flow) */}
+        <div className="space-y-6 max-w-7xl mx-auto pb-24">
+            {/* SECTION 1: Financial & Status Header (replaces yellow banner) */}
             <DashboardHeader merchant={merchant} profile={profile} walletBalancePaise={merchant.wallet_balance_paise || 0} />
+            
+            {/* Welcome Card if no sales */}
+            {stats.totalSales === 0 && stats.activeCoupons === 0 && (
+                <WelcomeCard />
+            )}
 
-            {/* Overlapping Content Layer */}
-            <div className="relative z-10 -mt-16 px-4 sm:px-6 md:px-8 pb-32 max-w-7xl mx-auto">
-                <div className="bg-white dark:bg-slate-900 rounded-[2rem] sm:rounded-[3rem] shadow-xl border border-slate-100 dark:border-slate-800 p-4 sm:p-6 md:p-8 min-h-[500px]">
-                    
-                    {/* Welcome Card if no sales */}
-                    {stats.totalSales === 0 && stats.activeCoupons === 0 && (
-                        <div className="mb-8">
-                            <WelcomeCard />
-                        </div>
-                    )}
+            {/* SECTION 2: Quick Access Grid */}
+            <QuickAccessGrid pendingUdhariCount={pendingUdhariCount} pendingOrdersCount={pendingOrdersCount} />
 
-                    {/* Quick Access Grid */}
-                    <QuickAccessGrid pendingUdhariCount={pendingUdhariCount} pendingOrdersCount={pendingOrdersCount} />
+            {/* Stats List (Great Deals) */}
+            <StatsCards stats={stats} />
 
-                    {/* Banners */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                        <div className="rounded-3xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800">
-                            <MerchantAdBannerCarousel />
-                        </div>
-                        <div className="rounded-3xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800">
-                        <AutoModePromo autoMode={merchant.auto_mode} merchant={merchant} />
-                        </div>
-                    </div>
+            {/* Recent Transactions */}
+            <TransactionsTable coupons={transformedCoupons} />
+            
+            {/* SECTION 3: Promotional Banners (relocated, not deleted) */}
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <MerchantAdBannerCarousel />
+                <AutoModePromo autoMode={merchant.auto_mode} merchant={merchant} />
+            </section>
 
-                    {/* Stats List (Great Deals) */}
-                    <StatsCards stats={stats} />
-
-                    {/* Recent Transactions */}
-                    <TransactionsTable coupons={transformedCoupons} />
-                    
-                    <MerchantDisclaimerNote />
-                </div>
-            </div>
+            <MerchantDisclaimerNote />
         </div>
     );
 }

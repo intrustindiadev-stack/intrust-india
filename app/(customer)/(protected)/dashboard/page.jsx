@@ -48,7 +48,7 @@ const OnboardingModal = dynamic(() => import('@/components/customer/dashboard/On
 
 function DashboardSkeleton() {
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B1014] font-[family-name:var(--font-outfit)] flex flex-col">
+        <div className="min-h-screen bg-slate-50 dark:bg-[#0B1014] font-[family-name:var(--font-outfit)] flex flex-col">
             <Navbar />
             <div className="pt-24 sm:pt-32 px-4 sm:px-6 flex-grow">
                 <div className="max-w-7xl mx-auto animate-pulse">
@@ -478,7 +478,7 @@ export default function CustomerDashboardPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)] flex flex-col">
+        <div className="min-h-screen bg-slate-50 dark:bg-gray-900 font-[family-name:var(--font-outfit)] flex flex-col">
             <KYCPopup isOpen={kycPopupOpen} onClose={closeKYC} />
             <MerchantApplyPopup isOpen={merchantPopupOpen} onClose={closeMerchantPopup} />
             <Navbar />

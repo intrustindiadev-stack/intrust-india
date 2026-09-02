@@ -1,453 +1,343 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Camera, RefreshCw, Check, MapPin, AlertCircle, Loader2, ShieldAlert, VideoOff } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
+import { motion } from 'framer-motion';
+import { X, Camera, RefreshCw, Check, MapPin, MapPinOff, Loader2, CameraOff } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-// ─── Camera State Machine ────────────────────────────────────────────────────
-// idle        → camera not yet requested (initial)
-// requesting  → getUserMedia() in progress
-// active      → stream running, video visible
-// denied      → NotAllowedError — permission explicitly blocked
-// unavailable → NotFoundError — no camera hardware / insecure context
-// busy        → NotReadableError — camera in use by another app
-// error       → unexpected / unknown error
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Error Mapping Functions ──────────────────────────────────────────────────
+function mapCameraError(err) {
+    if (typeof err === 'string') return err;
+    const name = err?.name || '';
+    const msg = err?.message || '';
 
-function getBrowserInstructions() {
-    if (typeof navigator === 'undefined') return { browser: 'your browser', steps: [] };
-    const ua = navigator.userAgent;
-    if (/safari/i.test(ua) && !/chrome/i.test(ua)) {
-        return {
-            browser: 'Safari',
-            steps: [
-                'Open Safari → Settings (or Preferences on Mac)',
-                'Go to Websites → Camera',
-                'Find intrustindia.com and select "Allow"',
-                'Return here and tap "Try Again"',
-            ],
-        };
+    switch (name) {
+        case 'NotFoundError':
+        case 'DevicesNotFoundError':
+            return 'No camera hardware detected. Please connect a webcam.';
+        case 'NotAllowedError':
+        case 'PermissionDeniedError':
+            return 'Camera access denied. Please update your browser site permissions.';
+        case 'NotReadableError':
+        case 'TrackStartError':
+            return 'Camera is already in use by another application or busy.';
+        case 'OverconstrainedError':
+        case 'ConstraintNotSatisfiedError':
+            return 'Camera does not meet requested constraints. Please try again.';
+        case 'AbortError':
+            return 'Camera initialization was aborted. Please try again.';
+        default:
+            if (msg.toLowerCase().includes('in use') || msg.toLowerCase().includes('busy') || msg.toLowerCase().includes('responding')) {
+                return 'Camera is in use by another application or not responding.';
+            }
+            return msg || 'Unable to access camera. Please try again.';
     }
-    if (/edg/i.test(ua)) {
-        return {
-            browser: 'Edge',
-            steps: [
-                'Click the lock icon (🔒) in the address bar',
-                'Find Camera and set it to "Allow"',
-                'Click "Try Again" below',
-            ],
-        };
-    }
-    if (/firefox/i.test(ua)) {
-        return {
-            browser: 'Firefox',
-            steps: [
-                'Click the lock icon (🔒) in the address bar',
-                'Click the "×" next to Blocked: Camera',
-                'Reload the page, then click "Try Again"',
-            ],
-        };
-    }
-    // Chrome / Chromium default
-    return {
-        browser: 'Chrome',
-        steps: [
-            'Click the camera icon (🎥) or lock (🔒) in the address bar',
-            'Set Camera to "Allow"',
-            'Click "Try Again" below',
-        ],
-    };
 }
 
-export default function AttendanceCameraModal({ onClose, onConfirm, isClocking }) {
+function mapLocationError(err) {
+    switch (err?.code) {
+        case 1: // PERMISSION_DENIED
+            return 'Location access denied.';
+        case 2: // POSITION_UNAVAILABLE
+            return 'GPS signal unavailable.';
+        case 3: // TIMEOUT
+            return 'Location request timed out.';
+        default:
+            return 'Unable to determine location.';
+    }
+}
+
+function AttendanceCameraModal({ onClose, onConfirm, isClocking }) {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
-    // Use ref (not state) for stream — avoids stale-closure issues during cleanup
     const streamRef = useRef(null);
+
+    // ─── Hardware State Machine ──────────────────────────────────────────────
+    const [cameraState, setCameraState] = useState('loading'); // 'loading' | 'ready' | 'error'
+    const [cameraError, setCameraError] = useState('');
+    const [isStreamReady, setIsStreamReady] = useState(false);
+
+    const [locationState, setLocationState] = useState('loading');
+    const [locationError, setLocationError] = useState('');
+    const [location, setLocation] = useState(null);
 
     const [capturedImage, setCapturedImage] = useState(null);
 
-    // Location state: fetching | success | error
-    const [locationState, setLocationState] = useState('fetching');
-    const [locationData, setLocationData] = useState(null);
+    // ─── Direct Camera Requester ──────────────────────────────────────────────
+    const acquireCamera = useCallback(async () => {
+        setCameraState('loading');
+        setCameraError('');
+        setIsStreamReady(false);
+        setCapturedImage(null);
 
-    // 7-state camera machine
-    const [cameraState, setCameraState] = useState('requesting');
-
-    // ─── Stop any existing stream before re-requesting ────────────────────────
-    const stopStream = useCallback(() => {
         if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current.getTracks().forEach(t => t.stop());
             streamRef.current = null;
         }
         if (videoRef.current) {
             videoRef.current.srcObject = null;
         }
-    }, []);
-
-    // ─── Request camera access ────────────────────────────────────────────────
-    const requestCamera = useCallback(async () => {
-        stopStream();
-        setCameraState('requesting');
-        setCapturedImage(null);
-
-        // 1. Secure context check
-        if (typeof window !== 'undefined' && !window.isSecureContext) {
-            console.error('[Camera] Insecure context. HTTPS is required.');
-            setCameraState('insecure');
-            return;
-        }
-
-        // 2. Browser support check
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            console.error('[Camera] getUserMedia is not supported in this browser.');
-            setCameraState('unavailable');
-            return;
-        }
-
-        // 3. Optional Permissions API check (supplementary only)
-        let permState = 'unknown';
-        if (navigator.permissions && navigator.permissions.query) {
-            try {
-                const p = await navigator.permissions.query({ name: 'camera' });
-                permState = p.state;
-            } catch (e) { /* ignore */ }
-        }
 
         try {
-            const mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user' },
+            if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+                throw new DOMException('Camera not supported by browser', 'NotFoundError');
+            }
+
+            const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const videoConstraints = isMobile ? { facingMode: 'user' } : true;
+
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: videoConstraints,
                 audio: false,
             });
 
-            streamRef.current = mediaStream;
+            const videoTracks = stream.getVideoTracks();
+            if (!videoTracks || videoTracks.length === 0) {
+                throw new DOMException('No video track available', 'NotFoundError');
+            }
+
+            const track = videoTracks[0];
+            track.onended = () => {
+                setIsStreamReady(false);
+                setCameraState('error');
+                setCameraError('Camera was disconnected or turned off.');
+            };
+
+            streamRef.current = stream;
 
             if (videoRef.current) {
-                videoRef.current.srcObject = mediaStream;
-                // play() returns a Promise — handle the rejection to avoid unhandled errors
-                try { await videoRef.current.play(); } catch { /* autoplay policy — video still shows */ }
+                const video = videoRef.current;
+                video.muted = true;
+                video.defaultMuted = true;
+                video.playsInline = true;
+                video.srcObject = stream;
+                try {
+                    await video.play();
+                } catch (e) {
+                    console.warn('[AttendanceModal] Play notice:', e);
+                }
             }
 
-            setCameraState('active');
+            setCameraState('ready');
         } catch (err) {
-            console.error('[Camera] getUserMedia error:', err.name, err.message);
-            stopStream();
-            
-            // Webview/In-App Browser check
-            const isWebView = typeof navigator !== 'undefined' && /WebView|wv|Instagram|FBAV|FBAN|Line|MicroMessenger|WhatsApp/i.test(navigator.userAgent);
-
-            switch (err.name) {
-                case 'NotAllowedError':
-                case 'PermissionDeniedError':
-                    if (isWebView) {
-                        setCameraState('webview_blocked');
-                    } else if (permState === 'denied' || err.name === 'PermissionDeniedError') {
-                        setCameraState('denied');
-                    } else {
-                        setCameraState('denied');
-                    }
-                    break;
-                case 'NotFoundError':
-                case 'DevicesNotFoundError':
-                    setCameraState('unavailable');
-                    break;
-                case 'NotSupportedError':
-                case 'SecurityError':
-                    setCameraState('insecure');
-                    break;
-                case 'NotReadableError':
-                case 'TrackStartError':
-                    setCameraState('busy');
-                    break;
-                case 'OverconstrainedError':
-                    // Retry with relaxed constraints
-                    try {
-                        const fallback = await navigator.mediaDevices.getUserMedia({ video: true });
-                        streamRef.current = fallback;
-                        if (videoRef.current) {
-                            videoRef.current.srcObject = fallback;
-                            try { await videoRef.current.play(); } catch { /* ignore */ }
-                        }
-                        setCameraState('active');
-                    } catch (fallbackErr) {
-                        console.error('[Camera] fallback error:', fallbackErr.name);
-                        setCameraState('error');
-                    }
-                    break;
-                case 'TypeError':
-                    setCameraState('unavailable');
-                    break;
-                default:
-                    setCameraState('error');
-            }
+            console.error('[AttendanceModal] Camera error:', err);
+            setIsStreamReady(false);
+            setCameraState('error');
+            setCameraError(mapCameraError(err));
         }
-    }, [stopStream]);
-
-    // ─── Geolocation ──────────────────────────────────────────────────────────
-    const getLocation = useCallback(() => {
-        return new Promise((resolve) => {
-            if (!navigator.geolocation) {
-                setLocationState('error');
-                resolve(false);
-                return;
-            }
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    setLocationState('success');
-                    setLocationData({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
-                    resolve(true);
-                },
-                (err) => {
-                    console.warn('[Location] error:', err.message);
-                    setLocationState('error');
-                    resolve(false);
-                },
-                { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
-            );
-        });
     }, []);
 
-    // ─── Mount & Retry Handlers ─────────────────────────────────────────────
-    const isRequesting = useRef(false);
+    // ─── Direct Location Requester ────────────────────────────────────────────
+    const acquireLocation = useCallback(() => {
+        setLocationState('loading');
+        setLocationError('');
 
-    const handleTryAgain = async () => {
-        if (isRequesting.current) return;
-        isRequesting.current = true;
+        if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    setLocation({
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude,
+                    });
+                    setLocationState('ready');
+                },
+                (err) => {
+                    console.error('[AttendanceModal] Location error:', err);
+                    setLocationState('error');
+                    setLocationError(mapLocationError(err));
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0,
+                }
+            );
+        } else {
+            setLocationState('error');
+            setLocationError('Geolocation is not supported by this browser.');
+        }
+    }, []);
 
-        if (locationState !== 'success') {
-            setLocationState('fetching');
-            await getLocation();
+    // ─── Mount Lifecycle (runs ONCE on modal mount, cleanup on unmount) ───────
+    useEffect(() => {
+        let active = true;
+
+        (async () => {
+            try {
+                if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+                    throw new DOMException('Camera not supported by browser', 'NotFoundError');
+                }
+
+                const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const videoConstraints = isMobile ? { facingMode: 'user' } : true;
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: videoConstraints,
+                    audio: false,
+                });
+
+                if (!active) {
+                    stream.getTracks().forEach(t => t.stop());
+                    return;
+                }
+
+                const videoTracks = stream.getVideoTracks();
+                if (!videoTracks || videoTracks.length === 0) {
+                    throw new DOMException('No video track available', 'NotFoundError');
+                }
+
+                const track = videoTracks[0];
+                track.onended = () => {
+                    if (!active) return;
+                    setIsStreamReady(false);
+                    setCameraState('error');
+                    setCameraError('Camera was disconnected or turned off.');
+                };
+
+                streamRef.current = stream;
+
+                if (videoRef.current) {
+                    const video = videoRef.current;
+                    video.muted = true;
+                    video.defaultMuted = true;
+                    video.playsInline = true;
+                    video.srcObject = stream;
+                    try {
+                        await video.play();
+                    } catch (e) {
+                        console.warn('[AttendanceModal] play notice:', e);
+                    }
+                }
+
+                setCameraState('ready');
+            } catch (err) {
+                if (!active) return;
+                console.error('[AttendanceModal] Camera error:', err);
+                setIsStreamReady(false);
+                setCameraState('error');
+                setCameraError(mapCameraError(err));
+            }
+        })();
+
+        // Start Location independently
+        if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    if (!active) return;
+                    setLocation({
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude,
+                    });
+                    setLocationState('ready');
+                },
+                (err) => {
+                    if (!active) return;
+                    console.error('[AttendanceModal] Location error:', err);
+                    setLocationState('error');
+                    setLocationError(mapLocationError(err));
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0,
+                }
+            );
+        } else {
+            setLocationState('error');
+            setLocationError('Geolocation is not supported by this browser.');
         }
 
-        await requestCamera();
-        isRequesting.current = false;
-    };
-
-    useEffect(() => {
-        let mounted = true;
-        
-        const init = async () => {
-            if (isRequesting.current) return;
-            isRequesting.current = true;
-
-            // Fetch location first to avoid concurrent native prompt race condition on mobile
-            await getLocation();
-            if (mounted) {
-                await requestCamera();
+        return () => {
+            active = false;
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach((track) => track.stop());
+                streamRef.current = null;
             }
-            if (mounted) {
-                isRequesting.current = false;
+            if (videoRef.current) {
+                videoRef.current.srcObject = null;
             }
         };
+    }, []); // Empty dependency array: clean single-mount lifecycle
 
-        init();
-        return () => { 
-            mounted = false;
-            isRequesting.current = false;
-            stopStream(); 
-        };
-    }, [getLocation, requestCamera, stopStream]);
-
-    // ─── Capture photo ────────────────────────────────────────────────────────
+    // ─── Photo Capture Handlers with Pixel & Stream Validation ────────────────
     const capturePhoto = () => {
-        if (!videoRef.current || !canvasRef.current) return;
         const video = videoRef.current;
         const canvas = canvasRef.current;
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-        const ctx = canvas.getContext('2d');
-        // Mirror to match what the user sees in the preview
+
+        if (!video || !canvas) {
+            toast.error('Camera is not ready. Please try again.');
+            return;
+        }
+
+        // 1. Validate stream and video readiness
+        if (!video.srcObject || !streamRef.current?.active) {
+            toast.error('Camera stream is not active. Please wait for camera to initialize.');
+            return;
+        }
+
+        const width = video.videoWidth || 640;
+        const height = video.videoHeight || 480;
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) {
+            toast.error('Image capture initialization failed.');
+            return;
+        }
+
+        // Mirror to match user selfie preview
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        setCapturedImage(canvas.toDataURL('image/jpeg', 0.85));
+
+        // 2. Pixel validation: Check that the drawn frame is not completely black/blank
+        try {
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            let totalBrightness = 0;
+            let visiblePixels = 0;
+            const sampleStep = 16; // sample every 4th pixel for high performance
+            const sampleCount = data.length / sampleStep;
+
+            for (let i = 0; i < data.length; i += sampleStep) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const brightness = (r + g + b) / 3;
+                totalBrightness += brightness;
+                if (brightness > 10) {
+                    visiblePixels++;
+                }
+            }
+
+            const avgBrightness = totalBrightness / sampleCount;
+            const visibleRatio = visiblePixels / sampleCount;
+
+            // If average brightness is near zero or virtually no non-black pixels exist
+            if (avgBrightness < 3 || visibleRatio < 0.01) {
+                toast.error('Invalid capture. Please ensure your camera is visible.');
+                return;
+            }
+        } catch (err) {
+            console.warn('[AttendanceModal] Pixel validation skipped:', err);
+        }
+
+        // 3. Valid frame -> convert to base64
+        const base64 = canvas.toDataURL('image/jpeg', 0.85);
+        setCapturedImage(base64);
     };
 
-    const retakePhoto = () => { setCapturedImage(null); };
+    const retakePhoto = () => {
+        setCapturedImage(null);
+    };
 
     const handleConfirm = () => {
         if (!capturedImage) {
             toast.error('Please capture a selfie first.');
             return;
         }
-        if (locationState !== 'success' || !locationData) {
-            toast.error('GPS location is required to clock in.');
-            return;
-        }
-        onConfirm({ selfieBase64: capturedImage, locationData });
-    };
-
-    // ─── Render camera area based on state ───────────────────────────────────
-    const browserInfo = getBrowserInstructions();
-
-    const renderCameraArea = () => {
-        if (cameraState === 'insecure') {
-            return (
-                <div className="flex flex-col items-center justify-center p-6 text-center z-10 gap-3 h-full">
-                    <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
-                        <ShieldAlert size={28} className="text-rose-400" />
-                    </div>
-                    <p className="text-base font-black text-white">Connection Not Secure</p>
-                    <p className="text-sm text-slate-400 max-w-[250px]">
-                        Camera access requires a secure connection (HTTPS). Please ensure you are on a secure network.
-                    </p>
-                </div>
-            );
-        }
-
-        if (cameraState === 'webview_blocked') {
-            return (
-                <div className="flex flex-col items-center justify-center p-6 text-center z-10 gap-3 h-full">
-                    <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
-                        <ShieldAlert size={28} className="text-rose-400" />
-                    </div>
-                    <p className="text-base font-black text-white">App Browser Blocked</p>
-                    <p className="text-sm text-slate-400 max-w-[250px]">
-                        You are using an in-app browser which blocked the camera. Please tap the menu (top right) and select <span className="text-white font-bold">"Open in Browser"</span>.
-                    </p>
-                </div>
-            );
-        }
-
-        if (cameraState === 'denied') {
-            return (
-                <div className="flex flex-col items-center justify-center p-5 text-center z-10 gap-4 h-full">
-                    <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
-                        <ShieldAlert size={28} className="text-rose-400" />
-                    </div>
-                    <div>
-                        <p className="text-base font-black text-white">Camera Access Blocked</p>
-                        <p className="text-xs text-slate-400 mt-1 max-w-[260px]">
-                            Your browser blocked camera access. Follow these steps in <span className="text-slate-300 font-bold">{browserInfo.browser}</span>:
-                        </p>
-                    </div>
-                    <ol className="text-left space-y-1.5 text-xs text-slate-400 max-w-[260px]">
-                        {browserInfo.steps.map((step, i) => (
-                            <li key={i} className="flex gap-2">
-                                <span className="shrink-0 w-4 h-4 rounded-full bg-rose-500/20 text-rose-400 text-[10px] font-black flex items-center justify-center mt-0.5">{i + 1}</span>
-                                <span>{step}</span>
-                            </li>
-                        ))}
-                    </ol>
-                    <button
-                        onClick={handleTryAgain}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
-                    >
-                        <RefreshCw size={14} /> Try Again
-                    </button>
-                </div>
-            );
-        }
-
-        if (cameraState === 'unavailable') {
-            return (
-                <div className="flex flex-col items-center justify-center p-6 text-center z-10 gap-3 h-full">
-                    <div className="w-16 h-16 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center">
-                        <VideoOff size={28} className="text-slate-400" />
-                    </div>
-                    <p className="text-base font-black text-white">No Camera Found</p>
-                    <p className="text-sm text-slate-400 max-w-[250px]">
-                        No camera device was detected. Please use a device with a camera.
-                    </p>
-                    <button
-                        onClick={handleTryAgain}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-white/10 text-slate-300 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
-                    >
-                        <RefreshCw size={14} /> Try Again
-                    </button>
-                </div>
-            );
-        }
-
-        if (cameraState === 'busy') {
-            return (
-                <div className="flex flex-col items-center justify-center p-6 text-center z-10 gap-3 h-full">
-                    <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                        <AlertCircle size={28} className="text-amber-400" />
-                    </div>
-                    <p className="text-base font-black text-white">Camera In Use</p>
-                    <p className="text-sm text-slate-400 max-w-[250px]">
-                        Your camera is being used by another app. Close video calls or other camera apps, then try again.
-                    </p>
-                    <button
-                        onClick={handleTryAgain}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
-                    >
-                        <RefreshCw size={14} /> Try Again
-                    </button>
-                </div>
-            );
-        }
-
-        if (cameraState === 'error') {
-            return (
-                <div className="flex flex-col items-center justify-center p-6 text-center z-10 gap-3 h-full">
-                    <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center">
-                        <Camera size={32} className="opacity-50" />
-                    </div>
-                    <p className="text-base font-black text-white">Camera Error</p>
-                    <p className="text-sm text-slate-400 max-w-[250px]">An unexpected error occurred. Please try again.</p>
-                    <button
-                        onClick={handleTryAgain}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-white/10 text-slate-300 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
-                    >
-                        <RefreshCw size={14} /> Try Again
-                    </button>
-                </div>
-            );
-        }
-
-        if (cameraState === 'requesting') {
-            return (
-                <div className="flex flex-col items-center justify-center gap-3 h-full z-10">
-                    <Loader2 size={32} className="text-indigo-400 animate-spin" />
-                    <p className="text-sm text-slate-400 font-semibold">Starting camera…</p>
-                </div>
-            );
-        }
-
-        // cameraState === 'active'
-        return (
-            <>
-                <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className={`absolute inset-0 w-full h-full object-cover transform -scale-x-100 transition-opacity duration-300 ${capturedImage ? 'opacity-0' : 'opacity-100'}`}
-                />
-
-                <AnimatePresence>
-                    {capturedImage && (
-                        <motion.img
-                            initial={{ opacity: 0, scale: 1.05 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0 }}
-                            src={capturedImage}
-                            alt="Selfie preview"
-                            className="absolute inset-0 w-full h-full object-cover"
-                        />
-                    )}
-                </AnimatePresence>
-
-                {/* Face guide overlay */}
-                {!capturedImage && (
-                    <div className="absolute inset-0 pointer-events-none z-10 flex flex-col items-center justify-center">
-                        <div className="absolute inset-0 shadow-[inset_0_0_150px_rgba(0,0,0,0.8)]" />
-                        <div className="relative w-64 h-80 sm:w-80 sm:h-96 border-2 border-white/20 rounded-[4rem] flex items-center justify-center">
-                            <div className="absolute top-0 w-12 h-2 bg-indigo-500 rounded-full -translate-y-1" />
-                            <div className="absolute bottom-0 w-12 h-2 bg-indigo-500 rounded-full translate-y-1" />
-                            <div className="absolute left-0 w-2 h-12 bg-indigo-500 rounded-full -translate-x-1" />
-                            <div className="absolute right-0 w-2 h-12 bg-indigo-500 rounded-full translate-x-1" />
-                            <div className="w-full h-full rounded-[4rem] shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]" />
-                        </div>
-                    </div>
-                )}
-
-                <canvas ref={canvasRef} className="hidden" />
-            </>
-        );
+        onConfirm({ selfieBase64: capturedImage, locationData: location });
     };
 
     return (
@@ -457,92 +347,164 @@ export default function AttendanceCameraModal({ onClose, onConfirm, isClocking }
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 font-[family-name:var(--font-outfit)]"
         >
-            <div className="relative w-full max-w-md h-[60vh] flex flex-col bg-slate-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10">
-
+            <div className="relative w-full max-w-md bg-slate-950 rounded-[2rem] overflow-hidden shadow-2xl border border-white/10 p-6 flex flex-col gap-4">
                 {/* Header */}
-                <div className="absolute top-0 inset-x-0 p-4 flex items-start justify-between z-30 bg-gradient-to-b from-slate-950/80 to-transparent">
-                    <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-2xl">
+                <div className="flex items-center justify-between">
+                    <div>
                         <h3 className="text-lg font-black text-white tracking-tight">Verify Attendance</h3>
-                        <p className="text-xs font-bold text-slate-300">Selfie & Location Required</p>
+                        <p className="text-xs font-semibold text-slate-400">Selfie & Location Verification</p>
                     </div>
                     <button
                         onClick={onClose}
                         disabled={isClocking}
-                        className="w-10 h-10 rounded-full bg-slate-900/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white hover:bg-slate-800/60 transition-colors disabled:opacity-50"
+                        className="w-9 h-9 rounded-full bg-slate-900/80 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
                     >
-                        <X size={20} />
+                        <X size={18} />
                     </button>
                 </div>
 
-                {/* Location Status Pill */}
-                <div className="absolute top-20 left-0 right-0 z-30 flex justify-center pointer-events-none">
-                    <motion.div
-                        initial={{ y: -10, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest border shadow-2xl backdrop-blur-xl ${
-                            locationState === 'success'
-                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-emerald-500/20'
-                                : locationState === 'error'
-                                ? 'bg-rose-500/20 text-rose-400 border-rose-500/30 shadow-rose-500/20'
-                                : 'bg-slate-800/40 text-white border-white/10'
-                        }`}
-                    >
-                        {locationState === 'success' ? (
-                            <><MapPin size={16} /> Location Locked</>
-                        ) : locationState === 'error' ? (
-                            <><AlertCircle size={16} /> Location Error</>
-                        ) : (
-                            <><Loader2 size={16} className="animate-spin" /> Fetching GPS...</>
-                        )}
-                    </motion.div>
+                {/* Location Status */}
+                <div className="flex items-center justify-center">
+                    {locationState === 'loading' && (
+                        <div className="flex items-center gap-2 text-gray-400 text-xs bg-slate-900 border border-white/10 px-3.5 py-1.5 rounded-full">
+                            <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
+                            <span>Detecting location...</span>
+                        </div>
+                    )}
+
+                    {locationState === 'error' && (
+                        <div className="flex items-center gap-2 text-amber-400 text-xs bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-full">
+                            <MapPinOff className="w-3 h-3" />
+                            <span>{locationError}</span>
+                        </div>
+                    )}
+
+                    {locationState === 'ready' && location && (
+                        <div className="flex items-center gap-2 text-green-400 text-xs bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-1.5 rounded-full">
+                            <MapPin className="w-3 h-3" />
+                            <span>Location detected</span>
+                        </div>
+                    )}
                 </div>
 
-                {/* Camera Area */}
-                <div className="flex-1 relative w-full h-full bg-slate-950 flex flex-col items-center justify-center overflow-hidden">
-                    {renderCameraArea()}
+                {/* ── Video / Camera Area ── */}
+                <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center border border-white/5">
+                    {/* The <video> element is ALWAYS mounted in the DOM to avoid ref race conditions */}
+                    <video
+                        ref={videoRef}
+                        autoPlay={true}
+                        playsInline={true}
+                        muted={true}
+                        onPlaying={() => {
+                            if (videoRef.current?.srcObject && streamRef.current?.active) {
+                                setIsStreamReady(true);
+                            }
+                        }}
+                        onLoadedMetadata={() => {
+                            if (videoRef.current?.videoWidth > 0 && streamRef.current?.active) {
+                                setIsStreamReady(true);
+                            }
+                        }}
+                        onLoadedData={() => {
+                            if (videoRef.current?.videoWidth > 0 && streamRef.current?.active) {
+                                setIsStreamReady(true);
+                            }
+                        }}
+                        onCanPlay={() => {
+                            if (videoRef.current?.videoWidth > 0 && streamRef.current?.active) {
+                                setIsStreamReady(true);
+                            }
+                        }}
+                        className="absolute inset-0 w-full h-full object-cover transform -scale-x-100"
+                    />
+
+                    {/* Captured image preview overlay */}
+                    {capturedImage && (
+                        <img
+                            src={capturedImage}
+                            alt="Selfie preview"
+                            className="absolute inset-0 z-20 w-full h-full object-cover"
+                        />
+                    )}
+
+                    {/* Loading spinner overlay while stream is initializing */}
+                    {(cameraState === 'loading' || (!isStreamReady && cameraState !== 'error')) && !capturedImage && (
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-900">
+                            <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+                            <p className="text-gray-400 text-sm font-medium">Starting camera...</p>
+                        </div>
+                    )}
+
+                    {/* Camera error state overlay */}
+                    {cameraState === 'error' && (
+                        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2.5 bg-slate-900/95 rounded-2xl p-5 text-center">
+                            <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+                                <CameraOff size={24} />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-black text-white uppercase tracking-wider">Camera Unavailable</h4>
+                                <p className="text-xs text-slate-300 mt-1 max-w-[280px] leading-relaxed">
+                                    {cameraError || 'Unable to access camera.'}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={acquireCamera}
+                                className="mt-1 flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 border border-white/10 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+                            >
+                                <RefreshCw size={14} /> Try Again
+                            </button>
+                        </div>
+                    )}
                 </div>
 
-                {/* Bottom Actions — only shown when camera is active */}
-                <div className="absolute bottom-0 inset-x-0 p-6 pb-safe z-30 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent">
-                    <div className="max-w-md mx-auto w-full">
-                        {cameraState === 'active' && (
-                            !capturedImage ? (
-                                <button
-                                    onClick={capturePhoto}
-                                    className="w-full py-5 rounded-[2rem] bg-indigo-600/90 backdrop-blur-xl border border-white/10 hover:bg-indigo-600 text-white font-black text-base uppercase tracking-widest shadow-2xl shadow-indigo-500/20 flex items-center justify-center gap-3 active:scale-95 transition-all"
-                                >
-                                    <Camera size={24} /> Capture Selfie
-                                </button>
-                            ) : (
-                                <div className="grid grid-cols-2 gap-4">
-                                    <button
-                                        onClick={retakePhoto}
-                                        disabled={isClocking}
-                                        className="py-5 rounded-[2rem] bg-slate-900/60 backdrop-blur-xl border border-white/10 text-white font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 hover:bg-slate-800/80 shadow-lg"
-                                    >
-                                        <RefreshCw size={20} /> Retake
-                                    </button>
-                                    <button
-                                        onClick={handleConfirm}
-                                        disabled={isClocking || locationState !== 'success'}
-                                        className={`py-5 rounded-[2rem] backdrop-blur-xl border border-white/10 text-white font-black text-sm uppercase tracking-widest shadow-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${
-                                            locationState === 'success'
-                                                ? 'bg-emerald-500/90 hover:bg-emerald-500 shadow-emerald-500/30 active:scale-95'
-                                                : 'bg-slate-800/60 cursor-not-allowed'
-                                        }`}
-                                    >
-                                        {isClocking ? (
-                                            <Loader2 size={24} className="animate-spin" />
-                                        ) : (
-                                            <><Check size={24} /> Clock In</>
-                                        )}
-                                    </button>
-                                </div>
-                            )
-                        )}
-                    </div>
+                <canvas ref={canvasRef} className="hidden" />
+
+                {/* Bottom Actions */}
+                <div className="pt-2">
+                    {capturedImage ? (
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={retakePhoto}
+                                disabled={isClocking}
+                                className="py-3.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 border border-white/10"
+                            >
+                                <RefreshCw size={16} /> Retake
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirm}
+                                disabled={isClocking}
+                                className="py-3.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
+                            >
+                                {isClocking ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                    <><Check size={16} /> Submit & Clock In</>
+                                )}
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={capturePhoto}
+                            disabled={!isStreamReady || cameraState !== 'ready' || isClocking}
+                            className="w-full py-3.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
+                        >
+                            <Camera size={18} /> {
+                                !isStreamReady && cameraState !== 'error'
+                                    ? 'Starting camera...' 
+                                    : cameraState === 'error' 
+                                    ? 'Camera Unavailable' 
+                                    : 'Capture Selfie'
+                            }
+                        </button>
+                    )}
                 </div>
             </div>
         </motion.div>
     );
 }
+
+export default memo(AttendanceCameraModal);

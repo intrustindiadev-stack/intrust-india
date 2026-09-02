@@ -55,6 +55,7 @@ dump_error.log
 scratch/
 tmp/
 dev-tools/
+dev/
 
 #zip
 .zip

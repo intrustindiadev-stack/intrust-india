@@ -6,8 +6,52 @@ import { useRouter } from 'next/navigation';
 import LiveButton from '@/components/merchant/LiveButton';
 import StoreStatusToggle from '@/components/merchant/StoreStatusToggle';
 import { motion } from 'framer-motion';
-import { Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Plus, ArrowUpRight, ArrowDownRight, Sparkles } from 'lucide-react';
 import AIGrowModal from './AIGrowModal';
+
+/* === STEP 0: AUDIT ===
+   STATE VARIABLES: 
+   - [showBalance, setShowBalance]: Toggles balance visibility
+   - [animatedRevenue, setAnimatedRevenue]: Animates the balance text
+   - [isAIGrowModalOpen, setIsAIGrowModalOpen]: Toggles AI Grow modal
+
+   FUNCTIONS:
+   - setShowBalance(!showBalance)
+   - setIsAIGrowModalOpen(true)
+   
+   EXTERNAL COMPONENTS:
+   - <StoreStatusToggle> (handles LIVE/OFFLINE state)
+   - <LiveButton> (preserved, though original was alongside toggle, we'll keep StoreStatusToggle)
+   - <AIGrowModal>
+   
+   LINKS:
+   - /merchant/profile
+   - /merchant/subscription
+   - /merchant/shopping/wholesale (Add Stock)
+   - /merchant/wallet (Withdraw)
+*/
+
+function getTimeGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
+}
+
+function formatCurrency(amount) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+  }).format(amount);
+}
+
+function getPlanBadgeStyles(tier) {
+  switch (tier?.toLowerCase()) {
+    case 'enterprise': return 'bg-amber-50 text-amber-700 border-amber-200';
+    case 'pro': return 'bg-blue-50 text-blue-700 border-blue-200';
+    default: return 'bg-gray-100 text-gray-700 border-gray-200';
+  }
+}
 
 export default function DashboardHeader({ merchant, profile, walletBalancePaise }) {
     const router = useRouter();
@@ -30,7 +74,6 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
             const step = (timestamp) => {
                 if (!startTimestamp) startTimestamp = timestamp;
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                // easeOutQuart
                 const easeProgress = 1 - Math.pow(1 - progress, 4);
 
                 setAnimatedRevenue(target * easeProgress);
@@ -47,150 +90,124 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
         }
     }, [showBalance, walletBalancePaise]);
 
-    // Determine greeting
-    const hour = new Date().getHours();
-    const greeting = hour < 12 ? 'Good Morning,' : hour < 18 ? 'Good Afternoon,' : 'Good Evening,';
+    const planName = merchant?.subscription_status === 'active' ? 'Pro' : 'Free';
+    const planTier = merchant?.subscription_status === 'active' ? 'pro' : 'free';
 
     return (
-        <div className="bg-[#D4AF37] text-slate-900 rounded-b-[2rem] pt-8 pb-24 px-6 sm:px-8 relative shadow-lg overflow-hidden">
-            {/* Creative Background Elements for Gold Header */}
-            <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
-                <div className="absolute -top-10 -right-10 w-48 h-48 bg-white/20 rounded-full blur-[40px]"></div>
-                <div className="absolute top-20 -left-10 w-32 h-32 bg-[#B8860B]/30 rounded-full blur-[30px]"></div>
-                <div className="absolute bottom-0 right-10 w-64 h-32 bg-gradient-to-t from-white/10 to-transparent skew-y-12 transform origin-bottom-right"></div>
-            </div>
+        <div className="relative overflow-hidden rounded-3xl bg-white shadow-sm border border-slate-200/60 p-5 md:p-8 mb-8">
+          {/* Decorative Ambient Blobs for Premium Light Theme */}
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-blue-100/50 blur-3xl pointer-events-none"></div>
+          <div className="absolute bottom-0 left-10 -mb-20 w-80 h-80 rounded-full bg-purple-100/40 blur-3xl pointer-events-none"></div>
+          <div className="absolute top-10 left-1/3 w-72 h-72 rounded-full bg-amber-50/60 blur-3xl pointer-events-none"></div>
 
-            {/* Top Bar: Profile & Notifications */}
-            <div className="relative z-10 flex items-center justify-between gap-3 mb-6 sm:mb-8 flex-wrap sm:flex-nowrap">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <Link href="/merchant/profile" className="w-11 h-11 sm:w-12 sm:h-12 shrink-0 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40 shadow-sm backdrop-blur-sm overflow-hidden hover:scale-105 hover:brightness-110 transition-all cursor-pointer">
-                        {profile?.avatar_url ? (
-                            <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        ) : (
-                            <span className="material-icons-round text-slate-900 text-2xl">storefront</span>
-                        )}
-                    </Link>
-                    <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm text-slate-800/80 font-bold leading-tight">{greeting}</p>
-                        <h2 className="text-lg sm:text-xl font-bold font-display text-slate-900 truncate">
-                            {merchant.business_name || 'Merchant'}
-                        </h2>
-                        {/* Merchant Plan Expiry Chip */}
-                        {daysLeft !== null && (
-                            <motion.button
-                                onClick={() => router.push('/merchant/subscription')}
-                                initial={{ opacity: 0, y: -4 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                whileTap={{ scale: 0.96 }}
-                                className={`mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all backdrop-blur-sm ${expiryColor === 'expired'
-                                        ? 'bg-red-600/20 text-red-700 border border-red-600/30'
-                                        : expiryColor === 'urgent'
-                                            ? 'bg-red-500/15 text-red-800 border border-red-500/30 animate-pulse'
-                                            : daysLeft <= 30
-                                                ? 'bg-amber-900/15 text-amber-950 border border-amber-900/20'
-                                                : 'bg-slate-900/10 text-slate-900 border border-slate-900/15 hover:bg-slate-900/20'
-                                    }`}
-                            >
-                                {expiryColor === 'urgent' || expiryColor === 'expired' ? (
-                                    <AlertTriangle size={11} />
-                                ) : (
-                                    <Clock size={11} />
-                                )}
-                                {daysLeft <= 0
-                                    ? 'Plan Expired — Renew'
-                                    : `Plan Ends in ${daysLeft} ${daysLeft === 1 ? 'Day' : 'Days'}`}
-                            </motion.button>
-                        )}
-                    </div>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                    <div className="bg-white/20 rounded-full px-1 py-1 backdrop-blur-sm">
-                        <LiveButton />
-                    </div>
-                </div>
-            </div>
-
-            {/* Total Balance / Revenue */}
-            <div className="relative z-10 mb-8">
-                <div
-                    className="flex items-center gap-2 text-slate-800/80 mb-1 cursor-pointer hover:text-slate-900 transition-colors inline-flex"
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-8">
+        
+            {/* ── LEFT: Greeting, Plan, Balance ── */}
+            <div className="flex-1 min-w-0">
+              {/* Greeting */}
+              <div className="flex items-center gap-3.5">
+                  <Link href="/merchant/profile" className="w-12 h-12 shrink-0 rounded-full bg-white flex items-center justify-center border border-slate-200 shadow-sm overflow-hidden hover:scale-105 transition-transform cursor-pointer">
+                      {profile?.avatar_url ? (
+                          <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                          <span className="material-icons-round text-slate-400 text-2xl">storefront</span>
+                      )}
+                  </Link>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 truncate tracking-tight">
+                    Good {getTimeGreeting()}, <span className="text-slate-600">{merchant.business_name || 'Merchant'}</span>
+                  </h1>
+              </div>
+        
+              {/* Plan Status Badge */}
+              <div className="mt-3 flex items-center gap-2 pl-[3.75rem]">
+                <button
+                    onClick={() => router.push('/merchant/subscription')}
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border hover:opacity-80 transition-opacity ${
+                      planTier === 'pro' ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'
+                    }`}
+                >
+                  {planName}
+                </button>
+                
+                {daysLeft !== null && (
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        expiryColor === 'expired'
+                            ? 'bg-red-50 text-red-700 border border-red-200 shadow-sm'
+                            : expiryColor === 'urgent'
+                                ? 'bg-red-50 text-red-700 border border-red-200 shadow-sm animate-pulse'
+                                : daysLeft <= 30
+                                    ? 'bg-amber-50 text-amber-700 border border-amber-200 shadow-sm'
+                                    : 'bg-slate-50 text-slate-500 border border-slate-200'
+                    }`}>
+                        {daysLeft <= 0
+                            ? 'Plan Expired'
+                            : `Ends in ${daysLeft} ${daysLeft === 1 ? 'Day' : 'Days'}`}
+                    </span>
+                )}
+              </div>
+        
+              {/* Portfolio Balance */}
+              <div className="mt-8 pl-1">
+                <p className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Portfolio Balance</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
+                    {!showBalance ? '••••••' : formatCurrency(animatedRevenue)}
+                  </span>
+                  <button
                     onClick={() => setShowBalance(!showBalance)}
-                >
-                    <p className="text-sm font-bold">My Portfolio</p>
-                    <span className="material-icons-round text-[16px]">
-                        {showBalance ? 'visibility' : 'visibility_off'}
-                    </span>
+                    className="text-slate-400 hover:text-blue-600 transition-colors bg-white hover:bg-blue-50 p-2 rounded-xl border border-slate-100 hover:border-blue-100 shadow-sm"
+                    aria-label={!showBalance ? 'Show balance' : 'Hide balance'}
+                  >
+                    {!showBalance ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
-                <div className="flex items-end justify-between">
-                    <h1 className="text-4xl sm:text-5xl font-black font-display tracking-tight text-slate-900 drop-shadow-sm">
-                        <span className="text-2xl mr-1 text-slate-800/80">₹</span>
-                        {showBalance
-                            ? animatedRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                            : '••••••'
-                        }
-                    </h1>
-                    <div className="flex items-center gap-3">
-                        <div className="flex bg-white/30 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/40 items-center gap-1 shadow-sm mb-1">
-                            <span className="text-xs font-black uppercase tracking-wider text-slate-900">INR</span>
-                        </div>
-                    
-                        {/* Hero space right side - just the INR badge now */}
-                    </div>
-                </div>
+              </div>
             </div>
-
-            {/* Action Buttons - 2x2 Grid */}
-            <div className="relative z-10 grid grid-cols-2 gap-3">
-                <Link href="/merchant/shopping/wholesale" className="w-full bg-slate-900 hover:bg-slate-800 text-[#D4AF37] font-bold py-3 px-3.5 sm:px-4 rounded-[1.25rem] flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
-                    <span className="material-icons-round text-lg">add</span>
-                    <span className="text-xs sm:text-sm">Add Stock</span>
-                </Link>
-                
-                <Link href="/merchant/wallet" className="w-full bg-white hover:bg-slate-50 text-slate-900 font-bold py-3 px-3.5 sm:px-4 rounded-[1.25rem] flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 border border-white/50">
-                    <span className="material-icons-round text-lg">call_made</span>
-                    <span className="text-xs sm:text-sm">Withdraw</span>
-                </Link>
-                
-                <div className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-[1.25rem] py-2 px-3 flex items-center justify-center transition-all border border-white/40 shadow-sm">
-                    <StoreStatusToggle initialStoreData={merchant} compact={true} />
-                </div>
-                
-                {/* AI Grow Widget Box */}
-                <motion.button 
-                    onClick={() => setIsAIGrowModalOpen(true)}
-                    whileHover={{ y: -2 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="relative w-full bg-[#0f111a]/80 hover:bg-[#0f111a] backdrop-blur-xl text-white font-bold py-3 px-3.5 sm:px-4 rounded-[1.25rem] flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl border border-white/20 overflow-hidden group"
+        
+            {/* ── RIGHT: Actions & Toggles ── */}
+            <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-start sm:items-center lg:items-end xl:items-center gap-4 flex-shrink-0">
+        
+              {/* Primary Action Buttons */}
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <Link
+                  href="/merchant/shopping/wholesale"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all shadow-[0_4px_14px_0_rgba(79,70,229,0.25)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.15)] hover:-translate-y-0.5"
                 >
-                    {/* Notification Badge */}
-                    <motion.div 
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", delay: 1 }}
-                        className="absolute top-2 right-2 z-20 bg-red-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full shadow-md"
-                    >
-                        3
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    </motion.div>
-
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#D4AF37]/0 via-[#D4AF37]/10 to-[#D4AF37]/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                    
-                    <div className="relative flex items-center justify-center w-5 h-5 shrink-0">
-                        <motion.div 
-                            animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.9, 0.5] }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                            className="absolute inset-0 bg-[#D4AF37] rounded-full blur-[6px]"
-                        />
-                        <div className="relative w-2 h-2 bg-[#f3e5ab] rounded-full shadow-[0_0_8px_rgba(243,229,171,1)]" />
-                    </div>
-
-                    <span className="text-[11px] font-black font-display tracking-widest uppercase text-white group-hover:text-[#f3e5ab] transition-colors relative z-10">
-                        AI GROW
-                    </span>
-                </motion.button>
+                  <Plus className="w-5 h-5" />
+                  Add Stock
+                </Link>
+                <Link
+                  href="/merchant/wallet"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-6 py-3 bg-white text-slate-700 text-sm font-bold rounded-xl border border-slate-200 hover:bg-slate-50 transition-all shadow-sm hover:-translate-y-0.5"
+                >
+                  <ArrowUpRight className="w-4 h-4" />
+                  Withdraw
+                </Link>
+              </div>
+        
+              {/* Operational Toggles */}
+              <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start mt-2 sm:mt-0 p-2 bg-slate-50/80 border border-slate-200/80 rounded-2xl">
+                <LiveButton />
+                
+                <div className="flex items-center pl-1 pr-2 border-r border-slate-200">
+                  <StoreStatusToggle initialStoreData={merchant} compact={true} />
+                </div>
+        
+                {/* AI Grow Button */}
+                <button
+                  onClick={() => setIsAIGrowModalOpen(true)}
+                  className="relative inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-orange-200 text-orange-600 text-xs font-bold hover:from-amber-100 hover:to-orange-100 transition-all shadow-sm group"
+                >
+                  <Sparkles className="w-4 h-4 text-orange-500" />
+                  AI Grow
+                  <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-black shadow-sm ring-2 ring-white animate-pulse">
+                    3
+                  </span>
+                </button>
+              </div>
             </div>
-
-            <AIGrowModal isOpen={isAIGrowModalOpen} onClose={() => setIsAIGrowModalOpen(false)} />
+          </div>
+          <AIGrowModal isOpen={isAIGrowModalOpen} onClose={() => setIsAIGrowModalOpen(false)} />
         </div>
     );
 }

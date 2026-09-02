@@ -23,9 +23,10 @@ const QUICK_ACTIONS = [
 ];
 
 
+import { LiveClock, LiveShiftDuration } from '@/components/employee/LiveClock';
+
 export default function EmployeeDashboard() {
     const { user, profile } = useAuth();
-    const [currentTime, setCurrentTime] = useState(new Date());
     const [greeting, setGreeting] = useState('');
     
     const [data, setData] = useState(null);
@@ -54,11 +55,6 @@ export default function EmployeeDashboard() {
 
     const [themeClass, setThemeClass] = useState('from-sky-600 to-indigo-600');
     const [iconType, setIconType] = useState('day');
-
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
 
     useEffect(() => {
         const currentH = new Date().getHours();
@@ -94,16 +90,6 @@ export default function EmployeeDashboard() {
     }
 
     const clockedIn = !!openShift && !isStaleShift;
-
-    const getElapsedTime = () => {
-        if (!openShift?.check_in) return '';
-        const diff = Math.floor((currentTime - new Date(openShift.check_in)) / 1000);
-        if (diff < 0) return '00:00:00';
-        const h = Math.floor(diff / 3600).toString().padStart(2, '0');
-        const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
-        const s = (diff % 60).toString().padStart(2, '0');
-        return `${h}:${m}:${s}`;
-    };
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen font-[family-name:var(--font-outfit)] bg-[#F8FAFC] dark:bg-gray-900 relative pb-24 lg:pb-8">
@@ -252,8 +238,8 @@ export default function EmployeeDashboard() {
                                     </>
                                 ) : clockedIn ? (
                                     <>
-                                        <div className="text-6xl sm:text-7xl font-black tracking-tighter font-mono text-slate-900 dark:text-white mb-4 drop-shadow-sm">
-                                            {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                                        <div className="mb-4 drop-shadow-sm">
+                                            <LiveClock className="text-6xl sm:text-7xl font-black tracking-tighter font-mono text-slate-900 dark:text-white" />
                                         </div>
                                         <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
                                             <span className="px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-2 shadow-inner">
@@ -268,8 +254,8 @@ export default function EmployeeDashboard() {
                                     </>
                                 ) : (
                                     <>
-                                        <div className="text-6xl sm:text-7xl font-black tracking-tighter font-mono text-slate-400 dark:text-gray-600 mb-4 opacity-70">
-                                            {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                                        <div className="mb-4 opacity-70">
+                                            <LiveClock className="text-6xl sm:text-7xl font-black tracking-tighter font-mono text-slate-400 dark:text-gray-600" />
                                         </div>
                                         <p className="text-base font-bold text-slate-500 dark:text-gray-400">You are not clocked in yet today.</p>
                                     </>
@@ -302,7 +288,7 @@ export default function EmployeeDashboard() {
                                 {clockedIn && !isStaleShift && (
                                     <div className="bg-white dark:bg-gray-900 px-6 py-4 rounded-2xl border border-slate-100 dark:border-gray-800 text-center w-full lg:w-auto shadow-sm">
                                         <span className="text-xs text-slate-500 font-bold uppercase tracking-widest block lg:inline lg:mr-4 mb-1 lg:mb-0">Session Duration</span>
-                                        <span className="text-xl font-mono font-black text-indigo-600 dark:text-indigo-400">{getElapsedTime()}</span>
+                                        <LiveShiftDuration checkInTime={openShift?.check_in} className="text-xl font-mono font-black text-indigo-600 dark:text-indigo-400" />
                                     </div>
                                 )}
                             </div>

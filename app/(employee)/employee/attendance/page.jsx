@@ -9,21 +9,15 @@ import { useAttendanceActions } from '@/hooks/useAttendanceActions';
 import MetricCard from '@/components/hrm/MetricCard';
 import StatusBadge from '@/components/hrm/StatusBadge';
 import DataTable from '@/components/hrm/DataTable';
-import { formatTimeIST, formatDateIST, calculateDuration, calculateElapsedTime } from '@/lib/hrm/date';
+import { formatTimeIST, formatDateIST, calculateDuration } from '@/lib/hrm/date';
 import { getLocationStatusBadge } from '@/lib/hrm/attendance';
+import { LiveClock, LiveShiftDuration } from '@/components/employee/LiveClock';
 
 export default function EmployeeAttendancePage() {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [now, setNow] = useState(new Date());
   const abortControllerRef = useRef(null);
-
-  // Live timer for active shift duration
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const fetchSummary = useCallback(async () => {
     if (abortControllerRef.current) {
@@ -211,9 +205,10 @@ export default function EmployeeAttendancePage() {
             {openShift ? (
               <div>
                 <div className="flex items-baseline gap-3">
-                  <span className="text-3xl sm:text-4xl font-semibold font-mono text-slate-900 dark:text-slate-100">
-                    {calculateElapsedTime(openShift.check_in, now)}
-                  </span>
+                  <LiveShiftDuration
+                    checkInTime={openShift.check_in}
+                    className="text-3xl sm:text-4xl font-semibold font-mono text-slate-900 dark:text-slate-100"
+                  />
                   <span className="text-xs text-slate-500 font-medium">
                     (Clocked in at {formatTimeIST(openShift.check_in)})
                   </span>
@@ -224,9 +219,10 @@ export default function EmployeeAttendancePage() {
               </div>
             ) : (
               <div>
-                <div className="text-3xl font-semibold font-mono text-slate-900 dark:text-slate-100">
-                  {now.toLocaleTimeString('en-IN', { timeZone: timezone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-                </div>
+                <LiveClock
+                  timezone={timezone}
+                  className="text-3xl font-semibold font-mono text-slate-900 dark:text-slate-100 block"
+                />
                 <p className="text-xs text-slate-500 mt-1">Ready to start your work shift.</p>
               </div>
             )}
