@@ -7,7 +7,6 @@ import { toast } from 'react-hot-toast';
 import { Info, DollarSign, Upload, Save, Loader2 } from 'lucide-react';
 import MultiImageUploader from '@/components/shared/MultiImageUploader';
 import { uploadProductImage } from '@/app/(admin)/admin/shopping/upload-product-image';
-import FashionVariantsEditor from '@/components/admin/shopping/FashionVariantsEditor';
 
 export default function MerchantProductForm({ merchantId, editMode = false, existingProduct = null }) {
     const router = useRouter();
@@ -16,15 +15,11 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
     const [fullCategories, setFullCategories] = useState([]);
     const [gstRates, setGstRates] = useState([]);
 
-    // Fashion Mode State
-    const [isFashionMode, setIsFashionMode] = useState(false);
-    const [fashionCategoryId, setFashionCategoryId] = useState('');
-    const [fashionVariants, setFashionVariants] = useState([]);
-
     const [formData, setFormData] = useState(existingProduct ? {
         title: existingProduct.title || '',
         description: existingProduct.description || '',
         category: existingProduct.category || '',
+        sub_category: existingProduct.sub_category || '',
         retail_price_paise: existingProduct.suggested_retail_price_paise ? (existingProduct.suggested_retail_price_paise / 100).toString() : '',
         mrp_paise: existingProduct.mrp_paise ? (existingProduct.mrp_paise / 100).toString() : '',
         gst_percentage: existingProduct.gst_percentage ? existingProduct.gst_percentage.toString() : '0',
@@ -36,6 +31,7 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
         title: '',
         description: '',
         category: '',
+        sub_category: '',
         retail_price_paise: '',
         mrp_paise: '',
         gst_percentage: '0',
@@ -68,30 +64,8 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
             }
         };
 
-        const fetchFashionData = async () => {
-            if (existingProduct?.id) {
-                const { data: catData } = await supabase
-                    .from('fashion_product_categories')
-                    .select('category_id')
-                    .eq('product_id', existingProduct.id)
-                    .maybeSingle();
-
-                const { data: varData } = await supabase
-                    .from('fashion_variants')
-                    .select('*, media:fashion_variant_media(*)')
-                    .eq('product_id', existingProduct.id);
-
-                if (catData || (varData && varData.length > 0)) {
-                    setIsFashionMode(true);
-                    if (catData) setFashionCategoryId(catData.category_id);
-                    if (varData) setFashionVariants(varData);
-                }
-            }
-        };
-
         fetchCategories();
         fetchGstRates();
-        fetchFashionData();
     }, [existingProduct?.id]);
 
     const handleChange = (e) => {
@@ -122,6 +96,7 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
                     title: formData.title,
                     description: formData.description,
                     category: formData.category,
+                    sub_category: formData.category === 'Fashion' ? formData.sub_category : null,
                     category_id: selectedCategory ? selectedCategory.id : null,
                     product_images: formData.product_images,
                     wholesale_price_paise: wholesalePricePaise,
@@ -132,17 +107,6 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
                     stock_quantity: parseInt(formData.stock_quantity || 0)
                 }
             };
-
-            if (isFashionMode && fashionVariants.length > 0) {
-                submissionData.fashionData = {
-                    category_id: fashionCategoryId,
-                    variants: fashionVariants
-                };
-            } else if (!isFashionMode && existingProduct?.id) {
-                submissionData.fashionData = {
-                    delete_fashion_data: true
-                };
-            }
 
             const response = await fetch('/api/merchant/shopping/submit-product', {
                 method: 'POST',
@@ -210,6 +174,24 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
                                     ))}
                                 </select>
                             </div>
+
+                            {formData.category === 'Fashion' && (
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Department</label>
+                                    <select
+                                        name="sub_category"
+                                        value={formData.sub_category}
+                                        onChange={handleChange}
+                                        required
+                                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold appearance-none"
+                                    >
+                                        <option value="" disabled>Select department</option>
+                                        <option value="Men">Men</option>
+                                        <option value="Women">Women</option>
+                                        <option value="Kids">Kids</option>
+                                    </select>
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Description</label>
@@ -390,17 +372,6 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
                     </div>
                 </div>
             </div>
-
-            <FashionVariantsEditor 
-                enabled={isFashionMode}
-                onToggle={setIsFashionMode}
-                fashionCategoryId={fashionCategoryId}
-                onCategoryChange={setFashionCategoryId}
-                variants={fashionVariants}
-                onVariantsChange={setFashionVariants}
-                uploadAction={uploadProductImage}
-                role="merchant"
-            />
 
             <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pt-10 border-t border-slate-100">
                 <button

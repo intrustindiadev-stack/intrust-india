@@ -7,7 +7,6 @@ import { toast } from 'react-hot-toast';
 import { Loader2, Plus, ArrowRight, Package, Upload, Save, Trash2 } from 'lucide-react';
 import MultiImageUploader from '@/components/shared/MultiImageUploader';
 import { uploadProductImage } from './upload-product-image';
-import FashionVariantsEditor from '@/components/admin/shopping/FashionVariantsEditor';
 
 export default function ProductForm({ initialData = null, merchantId = null }) {
     const router = useRouter();
@@ -16,16 +15,12 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [categories, setCategories] = useState([]);
     const [gstRates, setGstRates] = useState([]);
-    
-    // Fashion Mode State
-    const [isFashionMode, setIsFashionMode] = useState(false);
-    const [fashionCategoryId, setFashionCategoryId] = useState('');
-    const [fashionVariants, setFashionVariants] = useState([]);
 
     const [formData, setFormData] = useState({
         title: initialData?.title || '',
         description: initialData?.description || '',
         category: initialData?.category || '',
+        sub_category: initialData?.sub_category || '',
         wholesale_price_paise: initialData?.wholesale_price_paise ? (initialData.wholesale_price_paise / 100).toString() : '',
         suggested_retail_price_paise: initialData?.suggested_retail_price_paise ? (initialData.suggested_retail_price_paise / 100).toString() : '',
         mrp_paise: initialData?.mrp_paise ? (initialData.mrp_paise / 100).toString() : (initialData?.suggested_retail_price_paise ? (initialData.suggested_retail_price_paise / 100).toString() : ''),
@@ -61,30 +56,8 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
             }
         };
 
-        const fetchFashionData = async () => {
-            if (initialData?.id) {
-                const { data: catData } = await supabase
-                    .from('fashion_product_categories')
-                    .select('category_id')
-                    .eq('product_id', initialData.id)
-                    .maybeSingle();
-
-                const { data: varData } = await supabase
-                    .from('fashion_variants')
-                    .select('*, media:fashion_variant_media(*)')
-                    .eq('product_id', initialData.id);
-
-                if (catData || (varData && varData.length > 0)) {
-                    setIsFashionMode(true);
-                    if (catData) setFashionCategoryId(catData.category_id);
-                    if (varData) setFashionVariants(varData);
-                }
-            }
-        };
-
         fetchCategories();
         fetchGstRates();
-        fetchFashionData();
     }, [initialData?.id]);
 
     const handleChange = (e) => {
@@ -112,6 +85,7 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
 
             const payload = {
                 ...formData,
+                sub_category: formData.category === 'Fashion' ? formData.sub_category : null,
                 wholesale_price_paise: Math.round(parseFloat(formData.wholesale_price_paise) * 100),
                 suggested_retail_price_paise: Math.round(parseFloat(formData.suggested_retail_price_paise) * 100),
                 mrp_paise: Math.round(parseFloat(formData.mrp_paise) * 100),
@@ -141,32 +115,6 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
 
             const result = await res.json();
             if (!res.ok) throw new Error(result.error || 'Failed to save product');
-
-            const savedProductId = initialData?.id || result.product?.id || result.productId;
-
-            // Save fashion data if enabled
-            if (savedProductId) {
-                if (isFashionMode && fashionVariants.length > 0) {
-                    const fashionRes = await fetch('/api/admin/shopping/fashion-data', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            product_id: savedProductId,
-                            category_id: fashionCategoryId,
-                            variants: fashionVariants
-                        })
-                    });
-                    if (!fashionRes.ok) {
-                        const err = await fashionRes.json();
-                        toast.error(err.error || 'Failed to save fashion variants');
-                    }
-                } else if (!isFashionMode && initialData?.id) {
-                    // Clean up if turned off
-                    await fetch(`/api/admin/shopping/fashion-data?product_id=${savedProductId}`, {
-                        method: 'DELETE'
-                    });
-                }
-            }
 
             toast.success(initialData?.id ? 'Product updated successfully' : 'Product added successfully');
             router.push('/admin/shopping');
@@ -236,6 +184,24 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
                                 ))}
                             </select>
                         </div>
+
+                        {formData.category === 'Fashion' && (
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Department (Sub Category)</label>
+                                <select
+                                    name="sub_category"
+                                    value={formData.sub_category}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none bg-white"
+                                >
+                                    <option value="" disabled>Select department</option>
+                                    <option value="Men">Men</option>
+                                    <option value="Women">Women</option>
+                                    <option value="Kids">Kids</option>
+                                </select>
+                            </div>
+                        )}
 
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1.5">Description</label>
@@ -434,17 +400,6 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
                     </div>
                 </div>
             </div>
-
-            <FashionVariantsEditor 
-                enabled={isFashionMode}
-                onToggle={setIsFashionMode}
-                fashionCategoryId={fashionCategoryId}
-                onCategoryChange={setFashionCategoryId}
-                variants={fashionVariants}
-                onVariantsChange={setFashionVariants}
-                uploadAction={uploadProductImage}
-                role="admin"
-            />
 
             <div className="flex items-center justify-between gap-4 pt-6 border-t border-slate-200">
                 {/* Delete — only in edit mode */}

@@ -30,7 +30,7 @@ const AdBannerCarousel = React.lazy(() => import('@/components/customer/dashboar
 const FlashSale = React.lazy(() => import('@/components/customer/shop/FlashSale'));
 const ConfirmModal = React.lazy(() => import('@/components/ui/ConfirmModal'));
 
-export default function StorefrontV2Client({ merchant, initialInventory, initialTotalCount, customer, categories, currentPage }) {
+export default function StorefrontV2Client({ merchant, initialInventory, initialTotalCount, customer, categories, currentPage, categoryNav }) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const pathname = usePathname();
@@ -79,6 +79,16 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                 });
             }
         });
+        const extraFilters = ['sub_category', 'size', 'color'];
+        extraFilters.forEach(type => {
+            const val = searchParams.get(type);
+            if (val) {
+                val.split(',').forEach(v => {
+                    filters.push({ type, value: v, label: v });
+                });
+            }
+        });
+
         if (searchParams.has('search')) {
             filters.push({ type: 'search', value: searchParams.get('search'), label: `"${searchParams.get('search')}"` });
         }
@@ -97,6 +107,11 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                     params.set(filter.type, updated.join(','));
                 } else {
                     params.delete(filter.type);
+                    if (filter.type === 'category') {
+                        params.delete('sub_category');
+                        params.delete('size');
+                        params.delete('color');
+                    }
                 }
             }
         }
@@ -110,6 +125,9 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         params.delete('search');
         params.delete('min_price');
         params.delete('max_price');
+        params.delete('sub_category');
+        params.delete('size');
+        params.delete('color');
         params.set('page', '1');
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
@@ -462,6 +480,12 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                     </div>
                 )}
 
+                {categoryNav && (
+                    <div className="mb-6 -mx-4 sm:mx-0">
+                        {categoryNav}
+                    </div>
+                )}
+
                 {isLoading ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                         {Array.from({ length: PAGE_SIZE }).map((_, i) => (
@@ -475,7 +499,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                     </div>
                 ) : (
                     <>
-                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 lg:gap-6 px-1 sm:px-0">
                             {filteredItems.map(item => (
                                 <ProductCardV2
                                     key={item.id}

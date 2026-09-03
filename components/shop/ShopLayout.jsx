@@ -14,13 +14,13 @@ export default function ShopLayout({
 
     return (
         <div className="bg-[#f7f8fa] dark:bg-[#080a10]">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
                 {/* Header */}
-                <div className="flex items-baseline justify-between border-b border-gray-200 dark:border-white/10 pb-6">
-                    <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white capitalize">
+                <div className="flex items-end justify-between border-b border-gray-200 dark:border-white/10 pb-4 md:pb-6">
+                    <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white capitalize leading-none">
                         {title}
                     </h1>
-                    <div className="flex items-center">
+                    <div className="flex items-center shrink-0 ml-4">
                         {toolbar && React.cloneElement(toolbar, { onOpenMobileFilters: () => setIsMobileFiltersOpen(true) })}
                     </div>
                 </div>

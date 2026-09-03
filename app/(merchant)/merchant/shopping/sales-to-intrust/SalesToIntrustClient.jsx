@@ -48,7 +48,7 @@ export default function SalesToIntrustClient({ initialOrders, merchant }) {
         <div className="p-6 lg:p-10 max-w-7xl mx-auto bg-[#f8f9fb] min-h-screen font-[family-name:var(--font-outfit)]">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
                 <div className="space-y-2">
-                    <Link href="/merchant/shopping" className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-900 transition-colors text-xs font-black uppercase tracking-widest mb-2">
+                    <Link href="/merchant/shopping/wholesale" className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-900 transition-colors text-xs font-black uppercase tracking-widest mb-2">
                         <ChevronLeft size={14} /> Back to Shopping Hub
                     </Link>
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 text-[10px] font-black uppercase tracking-widest">

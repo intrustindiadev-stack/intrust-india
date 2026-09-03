@@ -4,6 +4,7 @@ import Link from 'next/link';
 import StorefrontV2Client from './StorefrontV2Client';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import CategoryScrollNav from '@/components/shop/CategoryScrollNav';
 
 export const revalidate = 60;
 
@@ -22,6 +23,7 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
     const maxPrice = searchParamsObj.max_price ? parseInt(searchParamsObj.max_price, 10) : null;
     const size = searchParamsObj.size || '';
     const color = searchParamsObj.color || '';
+    const sub_category = searchParamsObj.sub_category || '';
 
     const supabase = createStaticSupabaseClient();
     
@@ -47,7 +49,8 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
                 p_price_max: maxPrice,
                 p_brand: brand,
                 p_size: size,
-                p_color: color
+                p_color: color,
+                p_sub_category: sub_category
             }),
             createAdminClient().from('platform_settings').select('value').eq('key', 'platform_store').single(),
             supabase.rpc('get_merchant_categories', {
@@ -176,7 +179,8 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
                 p_price_max: maxPrice,
                 p_brand: brand,
                 p_size: size,
-                p_color: color
+                p_color: color,
+                p_sub_category: sub_category
             }),
             // Optimized categories query
             supabase.rpc('get_merchant_categories', {
@@ -195,6 +199,15 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
         }
         mergedInventory = inventoryResult.data?.items || [];
         initialTotalCount = inventoryResult.data?.totalCount ?? 0;
+        
+        const activeCategory = searchParamsObj?.category ?? null;
+        const preservedParamsObj = { ...searchParamsObj };
+        delete preservedParamsObj.category;
+        delete preservedParamsObj.page;
+        delete preservedParamsObj.sub_category;
+        delete preservedParamsObj.size;
+        delete preservedParamsObj.color;
+        const preservedParams = new URLSearchParams(preservedParamsObj).toString();
 
         return (
             <div className="min-h-screen">
@@ -206,6 +219,7 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
                         initialTotalCount={initialTotalCount}
                         categories={categories}
                         currentPage={currentPage}
+                        categoryNav={<CategoryScrollNav categories={categories} activeCategory={activeCategory} basePath={`/shop/${merchant.slug}`} preservedParams={preservedParams} />}
                     />
                 </main>
                 <Footer />
@@ -213,6 +227,15 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
             </div>
         );
     }
+
+    const activeCategory = searchParamsObj?.category ?? null;
+    const preservedParamsObj = { ...searchParamsObj };
+    delete preservedParamsObj.category;
+    delete preservedParamsObj.page;
+    delete preservedParamsObj.sub_category;
+    delete preservedParamsObj.size;
+    delete preservedParamsObj.color;
+    const preservedParams = new URLSearchParams(preservedParamsObj).toString();
 
     return (
         <div className="min-h-screen">
@@ -225,6 +248,7 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
                     initialTotalCount={initialTotalCount}
                     categories={categories}
                     currentPage={currentPage}
+                    categoryNav={<CategoryScrollNav categories={categories} activeCategory={activeCategory} basePath={`/shop/${merchant.slug}`} preservedParams={preservedParams} />}
                 />
             </main>
 

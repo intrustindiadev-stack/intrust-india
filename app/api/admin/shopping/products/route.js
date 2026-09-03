@@ -24,7 +24,8 @@ export async function POST(request) {
             is_active,
             platform_listed,
             gst_percentage,
-            hsn_code
+            hsn_code,
+            sub_category
         } = body;
 
         if (body.merchant_id) {
@@ -44,6 +45,7 @@ export async function POST(request) {
                 is_active,
                 gst_percentage: gst_percentage || 0,
                 hsn_code: hsn_code || '9971',
+                sub_category: sub_category || null,
                 platform_listed: false,
                 approval_status: 'live',
                 submitted_by_merchant_id: body.merchant_id
@@ -78,7 +80,8 @@ export async function POST(request) {
             p_is_active: is_active,
             p_platform_listed: platform_listed !== undefined ? platform_listed : true,
             p_gst_percentage: gst_percentage || 0,
-            p_hsn_code: hsn_code || '9971'
+            p_hsn_code: hsn_code || '9971',
+            p_sub_category: sub_category || null
         });
 
         if (error) {
@@ -194,7 +197,8 @@ export async function PATCH(request) {
             p_is_active: payload.is_active,
             p_platform_listed: payload.platform_listed !== undefined ? payload.platform_listed : true,
             p_gst_percentage: payload.gst_percentage || 0,
-            p_hsn_code: payload.hsn_code || '9971'
+            p_hsn_code: payload.hsn_code || '9971',
+            p_sub_category: payload.sub_category || null
         });
 
         if (error) {

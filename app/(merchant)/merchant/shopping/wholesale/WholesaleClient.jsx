@@ -174,6 +174,7 @@ export default function WholesaleClient({
     const [isPurchasing, setIsPurchasing] = useState(false);
     const [isProcessingGateway, setIsProcessingGateway] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'All');
+    const [selectedSubCategory, setSelectedSubCategory] = useState('');
     const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '');
     const [showSuccess, setShowSuccess] = useState(false);
     const [successStats, setSuccessStats] = useState(null);
@@ -191,6 +192,12 @@ export default function WholesaleClient({
     useEffect(() => {
         setSearchTerm(initialSearchTerm || '');
     }, [initialSearchTerm]);
+
+    // Sync sub_category from URL on mount
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        setSelectedSubCategory(params.get('sub_category') || '');
+    }, []);
 
     // Debounced search query update to URL
     useEffect(() => {
@@ -213,11 +220,26 @@ export default function WholesaleClient({
 
     const handleCategoryChange = (category) => {
         setSelectedCategory(category);
+        setSelectedSubCategory(''); // Reset sub-category when changing category
         const params = new URLSearchParams(window.location.search);
         if (category === 'All') {
             params.delete('category');
         } else {
             params.set('category', category);
+        }
+        params.delete('sub_category');
+        params.set('page', '1');
+        router.push(`${window.location.pathname}?${params.toString()}`);
+    };
+
+    const handleSubCategoryChange = (dept) => {
+        const next = selectedSubCategory === dept ? '' : dept;
+        setSelectedSubCategory(next);
+        const params = new URLSearchParams(window.location.search);
+        if (next) {
+            params.set('sub_category', next);
+        } else {
+            params.delete('sub_category');
         }
         params.set('page', '1');
         router.push(`${window.location.pathname}?${params.toString()}`);
@@ -672,6 +694,34 @@ export default function WholesaleClient({
                                     {cat.name}
                                 </button>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Department Sub-Category Filter — shown only when Fashion is selected */}
+                    {selectedCategory === 'Fashion' && (
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest shrink-0">Department</span>
+                            {['Men', 'Women', 'Kids'].map(dept => (
+                                <button
+                                    key={dept}
+                                    onClick={() => handleSubCategoryChange(dept)}
+                                    className={`whitespace-nowrap px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex-shrink-0 ${
+                                        selectedSubCategory === dept
+                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
+                                            : 'bg-white dark:bg-white/5 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:border-blue-300 hover:text-blue-600'
+                                    }`}
+                                >
+                                    {dept === 'Men' ? '👔' : dept === 'Women' ? '👗' : '🧒'} {dept}
+                                </button>
+                            ))}
+                            {selectedSubCategory && (
+                                <button
+                                    onClick={() => handleSubCategoryChange(selectedSubCategory)}
+                                    className="text-[10px] font-black text-slate-400 hover:text-red-500 transition-colors ml-1 uppercase tracking-widest"
+                                >
+                                    ✕ Clear
+                                </button>
+                            )}
                         </div>
                     )}
 

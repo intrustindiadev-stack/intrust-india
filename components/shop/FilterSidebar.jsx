@@ -12,27 +12,6 @@ export default function FilterSidebar({ categories = [] }) {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    const activeCategory = searchParams.get('category') || 'All';
-
-    const handleCategoryClick = (category) => {
-        const params = new URLSearchParams(searchParams);
-        if (category === 'All') {
-            params.delete('category');
-        } else {
-            params.set('category', category);
-        }
-        
-        // Phase 14: Reset stale filters when changing categories
-        params.delete('brand');
-        params.delete('size');
-        params.delete('color');
-        params.delete('min_price');
-        params.delete('max_price');
-        params.set('page', '1');
-
-        router.push(`?${params.toString()}`, { scroll: false });
-    };
-
     const handleFilterToggle = (key, value) => {
         const params = new URLSearchParams(searchParams);
         const current = params.get(key) || '';
@@ -110,27 +89,21 @@ export default function FilterSidebar({ categories = [] }) {
 
     return (
         <div className="space-y-2 h-full pb-10">
-            {/* Category Filter Group */}
-            <FilterGroup title="Categories" defaultExpanded={true}>
-                <div className="space-y-2">
-                    {categories.map((cat, idx) => {
-                        const isActive = (cat === 'All' && !searchParams.has('category')) || activeCategory === cat;
-                        return (
-                            <button
-                                key={idx}
-                                onClick={() => handleCategoryClick(cat)}
-                                className={`flex items-center text-sm w-full text-left transition-colors px-3 py-2 rounded-xl ${
-                                    isActive 
-                                        ? 'bg-indigo-50 dark:bg-indigo-500/10 font-bold text-indigo-700 dark:text-indigo-400' 
-                                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-200'
-                                }`}
-                            >
-                                {cat}
-                            </button>
-                        );
-                    })}
-                </div>
-            </FilterGroup>
+            {/* Department Filter (Only for Fashion) */}
+            {searchParams.get('category') === 'Fashion' && (
+                <FilterGroup key="sub_category" title="Department" defaultExpanded={true}>
+                    <div className="space-y-1">
+                        {['Men', 'Women', 'Kids'].map(dept => (
+                            <FilterCheckbox
+                                key={dept}
+                                label={dept}
+                                isChecked={(searchParams.get('sub_category') || '').split(',').includes(dept)}
+                                onChange={() => handleFilterToggle('sub_category', dept)}
+                            />
+                        ))}
+                    </div>
+                </FilterGroup>
+            )}
 
             {/* Advanced Filters */}
             {STOREFRONT_FILTERS.map(filter => (

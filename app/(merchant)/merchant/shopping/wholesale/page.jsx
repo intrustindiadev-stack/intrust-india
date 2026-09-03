@@ -48,6 +48,11 @@ export default async function WholesaleHubPage({ searchParams }) {
     if (selectedCategory && selectedCategory !== 'All') {
         productsQuery = productsQuery.eq('category', selectedCategory);
     }
+    
+    const selectedSubCategory = params?.sub_category || '';
+    if (selectedSubCategory) {
+        productsQuery = productsQuery.eq('sub_category', selectedSubCategory);
+    }
 
     const from = (page - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
