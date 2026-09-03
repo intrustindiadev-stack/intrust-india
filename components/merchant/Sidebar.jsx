@@ -49,6 +49,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 { label: "Store Credits", href: "/merchant/udhari", icon: "credit_score" },
                 { label: "Lockin Portfolio", href: "/merchant/lockin", icon: "lock_clock" },
                 { label: "AI Grow", href: "/merchant/investments", icon: "auto_awesome" },
+                { label: "AI Orders", href: "/merchant/ai-orders", icon: "psychology" },
                 { label: "My Network", href: "/merchant/referrals", icon: "share" },
             ]
         },
