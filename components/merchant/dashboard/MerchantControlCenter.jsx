@@ -14,9 +14,9 @@ const actions = [
     { icon: ShoppingBag, label: 'Coupons',    sub: 'Manage coupons',     href: '/merchant/purchase',           bg: 'bg-amber-50 dark:bg-amber-500/15',     iconColor: 'text-amber-500' },
     { icon: Wallet,      label: 'Credits',    sub: 'Udhari & payables',  href: '/merchant/udhari',             bg: 'bg-rose-50 dark:bg-rose-500/15',       iconColor: 'text-rose-500',     badge: 'udhari' },
     { icon: TrendingUp,  label: 'AI Grow',    sub: 'Growth plans',       href: '/merchant/investments',        bg: 'bg-violet-50 dark:bg-violet-500/15',   iconColor: 'text-violet-500' },
+    { icon: Zap,         label: 'AI Orders',  sub: 'Instant profit',     href: '/merchant/ai-orders',          bg: 'bg-[#D4AF37]/10',                      iconColor: 'text-[#D4AF37]' },
     { icon: BarChart3,   label: 'Analytics',  sub: 'Revenue & trends',   href: '/merchant/analytics',          bg: 'bg-cyan-50 dark:bg-cyan-500/15',       iconColor: 'text-cyan-500' },
     { icon: Store,       label: 'My Shop',    sub: 'Storefront view',    href: '/merchant/shopping/inventory', bg: 'bg-orange-50 dark:bg-orange-500/15',   iconColor: 'text-orange-500' },
-    { icon: Settings,    label: 'Settings',   sub: 'Account & profile',  href: '/merchant/profile',            bg: 'bg-slate-100 dark:bg-slate-500/15',    iconColor: 'text-slate-500' },
 ];
 
 // Container variants — stagger children
